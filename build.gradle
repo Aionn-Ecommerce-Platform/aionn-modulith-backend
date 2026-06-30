@@ -6,6 +6,10 @@ plugins {
     id 'org.sonarqube' version '7.3.1.8318'
 }
 
+jacoco {
+    toolVersion = '0.8.13'
+}
+
 allprojects {
     group = 'com.aionn'
     version = '0.1.0-SNAPSHOT'
