@@ -5,7 +5,7 @@ import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
+import java.util.Objects;
 
 public record OrderPlacedIntegrationEvent(
         String eventId,
@@ -21,9 +21,11 @@ public record OrderPlacedIntegrationEvent(
         Instant occurredAt) implements IntegrationEvent {
 
     public OrderPlacedIntegrationEvent {
-        if (eventId == null) {
-            eventId = UUID.randomUUID().toString();
-        }
+        eventId = IntegrationEvent.requireEventId(eventId);
+        items = IntegrationEvent.freezeList(items, "items");
+        totalAmount = Objects.requireNonNull(totalAmount, "totalAmount must not be null");
+        currency = Objects.requireNonNull(currency, "currency must not be null");
+        occurredAt = IntegrationEvent.defaultOccurredAt(occurredAt);
     }
 
     public record OrderLineItem(

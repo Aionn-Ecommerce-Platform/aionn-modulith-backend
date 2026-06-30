@@ -12,7 +12,7 @@ import java.math.BigDecimal;
  */
 public interface VoucherGatewayPort {
 
-    Discount apply(String userId, String voucherCode, BigDecimal lineSubtotal, String currency);
+    Discount apply(String userId, String voucherCode, BigDecimal orderSubtotal, String currency);
 
     record Discount(BigDecimal amount, String currency, boolean valid, String reason) {
     }

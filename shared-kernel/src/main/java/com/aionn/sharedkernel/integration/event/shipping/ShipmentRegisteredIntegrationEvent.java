@@ -3,7 +3,6 @@ package com.aionn.sharedkernel.integration.event.shipping;
 import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 
 import java.time.Instant;
-import java.util.UUID;
 
 /**
  * Published when a shipment has been registered with the carrier (tracking
@@ -18,8 +17,7 @@ public record ShipmentRegisteredIntegrationEvent(
         Instant occurredAt) implements IntegrationEvent {
 
     public ShipmentRegisteredIntegrationEvent {
-        if (eventId == null) {
-            eventId = UUID.randomUUID().toString();
-        }
+        eventId = IntegrationEvent.requireEventId(eventId);
+        occurredAt = IntegrationEvent.defaultOccurredAt(occurredAt);
     }
 }

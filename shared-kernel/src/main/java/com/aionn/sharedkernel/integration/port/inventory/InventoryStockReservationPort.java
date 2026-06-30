@@ -20,14 +20,20 @@ public interface InventoryStockReservationPort {
 
     class ReservationException extends RuntimeException {
         private final String skuId;
+        private final String warehouseId;
 
-        public ReservationException(String skuId, String message) {
+        public ReservationException(String skuId, String warehouseId, String message) {
             super(message);
             this.skuId = skuId;
+            this.warehouseId = warehouseId;
         }
 
         public String getSkuId() {
             return skuId;
+        }
+
+        public String getWarehouseId() {
+            return warehouseId;
         }
     }
 }

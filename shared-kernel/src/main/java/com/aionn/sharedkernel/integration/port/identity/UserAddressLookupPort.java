@@ -21,8 +21,11 @@ public interface UserAddressLookupPort {
             String phone,
             String detailAddress,
             String wardCode,
+            String wardName,
             String districtCode,
+            String districtName,
             String provinceCode,
+            String provinceName,
             String countryCode) {
     }
 }

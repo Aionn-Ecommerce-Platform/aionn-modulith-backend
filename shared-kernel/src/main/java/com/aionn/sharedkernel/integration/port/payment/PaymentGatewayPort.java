@@ -15,7 +15,7 @@ public interface PaymentGatewayPort {
     PaymentAuthorization authorize(String orderId, String userId, String paymentMethodId,
             BigDecimal amount, String currency);
 
-    void refund(String paymentId, BigDecimal amount, String currency, String reason);
+    void refund(String paymentId, BigDecimal amount, String currency, String reason, String idempotencyKey);
 
     record PaymentAuthorization(String paymentId, boolean approved, String declineReason) {
     }

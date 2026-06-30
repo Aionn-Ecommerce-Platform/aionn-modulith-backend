@@ -36,10 +36,9 @@ public interface CatalogQueryPort {
     LookupResult lookupByProductOrSkuIds(List<String> ids);
 
     /**
-     * Filter passed straight from UCP search; stays here so callers don't
-     * have to translate between minor-unit and decimal representations.
+     * Filter passed straight from UCP search using major-unit decimal prices.
      */
-    record SearchCriteria(String query, int limit, BigDecimal minPriceMinor, BigDecimal maxPriceMinor) {
+    record SearchCriteria(String query, int limit, BigDecimal minPrice, BigDecimal maxPrice) {
     }
 
     record LookupResult(List<ProductView> products, List<String> notFound) {

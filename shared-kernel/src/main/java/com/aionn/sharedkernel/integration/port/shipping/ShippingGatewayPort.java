@@ -14,7 +14,14 @@ public interface ShippingGatewayPort {
 
     ShippingQuote quote(String orderId, String merchantId, ShippingAddress address, String currency);
 
-    String createShipment(String orderId, String merchantId, ShippingAddress address);
+    RegistrationResult createShipment(
+            String orderId,
+            String merchantId,
+            String userId,
+            ShippingAddress address,
+            BigDecimal codAmount,
+            BigDecimal shippingFee,
+            String currency);
 
     /**
      * Snapshot of the recipient address used by Shipping.
@@ -34,5 +41,12 @@ public interface ShippingGatewayPort {
     }
 
     record ShippingQuote(BigDecimal fee, String currency) {
+    }
+
+    record RegistrationResult(
+            String shipmentId,
+            String trackingCode,
+            String carrierOrderId,
+            String labelUrl) {
     }
 }

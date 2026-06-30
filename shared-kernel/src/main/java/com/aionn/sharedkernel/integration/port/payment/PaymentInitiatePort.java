@@ -13,7 +13,7 @@ public interface PaymentInitiatePort {
             String gatewayKind,
             String idempotencyKey);
 
-    void refund(String paymentId, BigDecimal amount, String currency, String reason);
+    void refund(String paymentId, BigDecimal amount, String currency, String reason, String idempotencyKey);
 
     record InitResult(String paymentId, String redirectUrl, boolean captured) {
     }

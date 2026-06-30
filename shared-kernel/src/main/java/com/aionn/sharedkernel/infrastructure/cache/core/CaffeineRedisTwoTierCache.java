@@ -7,9 +7,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -106,7 +111,7 @@ public class CaffeineRedisTwoTierCache<V> implements TwoTierCache<String, V> {
     public void evictAll() {
         l1.invalidateAll();
         try {
-            redisTemplate.delete(redisTemplate.keys(redisKey("*")));
+            scanAndDeleteRedisKeys();
         } catch (Exception ex) {
             log.warn("Two-tier cache L2 evictAll failed for {}: {}",
                     properties.namespace(), ex.getMessage());
@@ -141,6 +146,29 @@ public class CaffeineRedisTwoTierCache<V> implements TwoTierCache<String, V> {
 
     private String redisKey(String key) {
         return "cache:" + properties.namespace() + ":" + key;
+    }
+
+    private void scanAndDeleteRedisKeys() {
+        redisTemplate.execute((RedisConnection connection) -> {
+            ScanOptions options = ScanOptions.scanOptions()
+                    .match(redisKey("*"))
+                    .count(200)
+                    .build();
+            List<byte[]> batch = new ArrayList<>(200);
+            try (Cursor<byte[]> cursor = connection.scan(options)) {
+                while (cursor.hasNext()) {
+                    batch.add(cursor.next());
+                    if (batch.size() >= 200) {
+                        connection.del(batch.toArray(byte[][]::new));
+                        batch.clear();
+                    }
+                }
+                if (!batch.isEmpty()) {
+                    connection.del(batch.toArray(byte[][]::new));
+                }
+            }
+            return null;
+        });
     }
 
     private record Holder<V>(V value) {

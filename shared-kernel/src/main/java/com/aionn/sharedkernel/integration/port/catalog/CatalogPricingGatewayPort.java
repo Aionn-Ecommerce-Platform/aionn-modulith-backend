@@ -2,7 +2,7 @@ package com.aionn.sharedkernel.integration.port.catalog;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
+import java.util.List;
 
 /**
  * Outbound port for resolving SKU pricing from the Catalog module.
@@ -15,7 +15,10 @@ import java.util.Map;
  */
 public interface CatalogPricingGatewayPort {
 
-    Map<String, SkuPricing> resolve(List<String> skuIds);
+    PricingResult resolve(List<String> skuIds);
+
+    record PricingResult(List<SkuPricing> items) {
+    }
 
     record SkuPricing(
             String skuId,
