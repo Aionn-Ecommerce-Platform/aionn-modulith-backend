@@ -1,6 +1,8 @@
 package com.aionn.sharedkernel.domain.vo;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -136,6 +138,44 @@ class MoneyPropertyTest {
         assertThrows(NullPointerException.class, () -> new Money(null, currency));
         assertThrows(NullPointerException.class, () -> new Money(amount, null));
         assertTrue(new Money(amount, currency).currency().length() == 3);
+    }
+
+    @net.jqwik.api.Example
+    void example_moneyHelpersAndComparisonsCoverDeterministicBranches() {
+        Money tenUsd = Money.of(new BigDecimal("10.00"), "usd");
+        Money threeUsd = Money.of(3L, "USD");
+        Money zeroUsd = Money.zero("USD");
+
+        assertEquals(new BigDecimal("10.00"), tenUsd.amount());
+        assertEquals(new BigDecimal("15.00"), tenUsd.multiply(new BigDecimal("1.5")).amount());
+        assertEquals(new BigDecimal("5.00"), tenUsd.divide(2).amount());
+        assertEquals(new BigDecimal("2.50"), tenUsd.divide(new BigDecimal("4")).amount());
+        assertEquals(new BigDecimal("8.00"), tenUsd.applyPercent(new BigDecimal("20")).amount());
+        assertEquals(BigDecimal.ZERO.setScale(2), tenUsd.applyPercent(new BigDecimal("120")).amount());
+
+        assertEquals(threeUsd, tenUsd.min(threeUsd));
+        assertEquals(tenUsd, tenUsd.max(threeUsd));
+        assertTrue(tenUsd.isGreaterThan(threeUsd));
+        assertTrue(tenUsd.isGreaterOrEqual(threeUsd));
+        assertFalse(threeUsd.isGreaterThan(tenUsd));
+        assertTrue(threeUsd.isLessThan(tenUsd));
+        assertTrue(threeUsd.isLessOrEqual(tenUsd));
+        assertEquals(new BigDecimal("-10.00"), tenUsd.negate().amount());
+        assertTrue(tenUsd.isPositive());
+        assertTrue(zeroUsd.isZero());
+        assertTrue(tenUsd.negate().isNegative());
+        assertNotEquals(tenUsd, tenUsd.negate());
+    }
+
+    @net.jqwik.api.Example
+    void example_moneyRejectsNullOrInvalidOperandsInImperativeMethods() {
+        Money tenUsd = Money.of(new BigDecimal("10.00"), "USD");
+
+        assertThrows(NullPointerException.class, () -> tenUsd.multiply((BigDecimal) null));
+        assertThrows(NullPointerException.class, () -> tenUsd.divide((BigDecimal) null));
+        assertThrows(IllegalArgumentException.class, () -> tenUsd.divide(BigDecimal.ZERO));
+        assertThrows(NullPointerException.class, () -> tenUsd.add(null));
+        assertThrows(NullPointerException.class, () -> tenUsd.min(null));
     }
 
     private static int fractionDigits(String currency) {
