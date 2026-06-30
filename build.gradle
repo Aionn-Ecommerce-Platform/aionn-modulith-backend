@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'jacoco'
     id 'org.springframework.boot' version '3.5.14' apply false
     id 'io.spring.dependency-management' version '1.1.7' apply false
     id 'org.sonarqube' version '7.3.1.8318'
@@ -12,6 +13,7 @@ allprojects {
 
 subprojects {
     apply plugin: 'java-library'
+    apply plugin: 'jacoco'
     apply plugin: 'io.spring.dependency-management'
 
     dependencyManagement {
@@ -35,10 +37,19 @@ subprojects {
     tasks.withType(Test).configureEach {
         useJUnitPlatform()
         systemProperty 'file.encoding', 'UTF-8'
+        finalizedBy tasks.named('jacocoTestReport')
     }
 
     tasks.withType(Javadoc).configureEach {
         options.encoding = 'UTF-8'
+    }
+
+    tasks.named('jacocoTestReport') {
+        dependsOn tasks.named('test')
+        reports {
+            xml.required = true
+            html.required = true
+        }
     }
 
     dependencies {
@@ -55,5 +66,9 @@ sonar {
         property 'sonar.projectKey', 'Aionn-Ecommerce-Platform_aionn-modulith-backend'
         property 'sonar.organization', 'aionn-ecommerce-platform'
         property 'sonar.host.url', 'https://sonarcloud.io'
+        property 'sonar.coverage.jacoco.xmlReportPaths',
+                subprojects.collect {
+                    "${it.layout.buildDirectory.get().asFile.path}/reports/jacoco/test/jacocoTestReport.xml"
+                }.join(',')
     }
 }
