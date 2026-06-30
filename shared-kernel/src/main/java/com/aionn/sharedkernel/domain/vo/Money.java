@@ -3,6 +3,7 @@ package com.aionn.sharedkernel.domain.vo;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Currency;
+import java.util.Locale;
 import java.util.Objects;
 
 public record Money(BigDecimal amount, String currency) {
@@ -136,7 +137,7 @@ public record Money(BigDecimal amount, String currency) {
     }
 
     private static Currency parseCurrency(String code) {
-        String normalized = code.trim().toUpperCase();
+        String normalized = code.trim().toUpperCase(Locale.ROOT);
         if (normalized.length() != 3) {
             throw new IllegalArgumentException(
                     "Currency must be ISO-4217 3-letter code, got: " + code);

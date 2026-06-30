@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
 import java.time.Duration;
+import java.io.IOException;
 
 @Slf4j
 @ControllerAdvice
@@ -60,11 +61,16 @@ public class IdempotencyResponseBodyAdvice implements ResponseBodyAdvice<Object>
             return body;
         }
 
+        String contentType = selectedContentType == null
+                ? MediaType.APPLICATION_JSON_VALUE
+                : selectedContentType.toString();
+        String bodyJson;
         try {
-            String contentType = selectedContentType == null
-                    ? MediaType.APPLICATION_JSON_VALUE
-                    : selectedContentType.toString();
-            String bodyJson = objectMapper.writeValueAsString(body);
+            bodyJson = objectMapper.writeValueAsString(body);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to serialize idempotent response body", ex);
+        }
+        try {
             redisIdempotencyStore.saveCompleted(
                     redisKey,
                     requestHash,
@@ -74,7 +80,7 @@ public class IdempotencyResponseBodyAdvice implements ResponseBodyAdvice<Object>
             servletResponse.getServletResponse().setHeader("Idempotent-Replay", "false");
         } catch (Exception ex) {
             log.error("Failed to persist idempotent response for {}", redisKey, ex);
-            throw new IllegalStateException("Failed to persist idempotent response", ex);
+            servlet.setAttribute(RequestAttributeKeys.IDEMPOTENCY_COMPLETED, true);
         }
         return body;
     }

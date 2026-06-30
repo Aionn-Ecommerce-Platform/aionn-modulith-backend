@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequestWrapper;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
@@ -15,9 +16,9 @@ public class CachedBodyHttpServletRequest extends HttpServletRequestWrapper {
 
     private final byte[] cachedBody;
 
-    public CachedBodyHttpServletRequest(HttpServletRequest request) throws IOException {
+    public CachedBodyHttpServletRequest(HttpServletRequest request, int maxCachedBodyBytes) throws IOException {
         super(request);
-        this.cachedBody = request.getInputStream().readAllBytes();
+        this.cachedBody = readRequestBody(request.getInputStream(), maxCachedBodyBytes);
     }
 
     public byte[] getCachedBody() {
@@ -53,5 +54,13 @@ public class CachedBodyHttpServletRequest extends HttpServletRequestWrapper {
     @Override
     public BufferedReader getReader() {
         return new BufferedReader(new InputStreamReader(getInputStream(), StandardCharsets.UTF_8));
+    }
+
+    private static byte[] readRequestBody(InputStream inputStream, int maxCachedBodyBytes) throws IOException {
+        byte[] body = inputStream.readNBytes(maxCachedBodyBytes + 1);
+        if (body.length > maxCachedBodyBytes) {
+            throw new IOException("Request body is too large for idempotent caching");
+        }
+        return body;
     }
 }

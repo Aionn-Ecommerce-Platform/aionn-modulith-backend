@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
+import java.io.IOException;
+
 @Slf4j
 public class RedisCacheInvalidationPublisher implements CacheInvalidationPublisher {
 
@@ -22,8 +24,10 @@ public class RedisCacheInvalidationPublisher implements CacheInvalidationPublish
         try {
             String payload = objectMapper.writeValueAsString(message);
             redisTemplate.convertAndSend(CHANNEL, payload);
-        } catch (Exception ex) {
-            log.warn("Failed to publish cache invalidation for {}: {}", message.namespace(), ex.getMessage());
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to serialize cache invalidation for " + message.namespace(), ex);
+        } catch (RuntimeException ex) {
+            throw new IllegalStateException("Failed to publish cache invalidation for " + message.namespace(), ex);
         }
     }
 }

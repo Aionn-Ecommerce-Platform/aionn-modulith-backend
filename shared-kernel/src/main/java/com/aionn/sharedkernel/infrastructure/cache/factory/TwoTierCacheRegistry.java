@@ -11,7 +11,10 @@ public class TwoTierCacheRegistry {
     private final Map<String, TwoTierCache<String, ?>> caches = new ConcurrentHashMap<>();
 
     public void register(TwoTierCache<String, ?> cache) {
-        caches.put(cache.namespace(), cache);
+        TwoTierCache<String, ?> existing = caches.putIfAbsent(cache.namespace(), cache);
+        if (existing != null) {
+            throw new IllegalStateException("Duplicate two-tier cache namespace: " + cache.namespace());
+        }
     }
 
     public Optional<TwoTierCache<String, ?>> find(String namespace) {

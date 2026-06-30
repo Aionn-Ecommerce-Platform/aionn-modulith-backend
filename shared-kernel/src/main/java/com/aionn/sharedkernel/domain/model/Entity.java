@@ -20,9 +20,8 @@ public abstract class Entity<I extends BaseId> {
     public boolean equals(Object o) {
         if (this == o)
             return true;
-        if (o == null || getClass() != o.getClass())
+        if (!(o instanceof Entity<?> entity))
             return false;
-        Entity<?> entity = (Entity<?>) o;
         return Objects.equals(id, entity.id);
     }
 

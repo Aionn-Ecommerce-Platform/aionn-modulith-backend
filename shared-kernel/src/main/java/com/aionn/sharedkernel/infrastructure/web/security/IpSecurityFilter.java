@@ -88,8 +88,11 @@ public class IpSecurityFilter extends OncePerRequestFilter {
 			String forwardedFor = request.getHeader("X-Forwarded-For");
 			if (forwardedFor != null && !forwardedFor.isBlank()) {
 				List<String> hops = List.of(forwardedFor.split(","));
-				if (!hops.isEmpty()) {
-					return hops.get(0).trim();
+				for (int i = hops.size() - 1; i >= 0; i--) {
+					String candidate = hops.get(i).trim();
+					if (!candidate.isBlank() && !trustedProxies.contains(candidate)) {
+						return candidate;
+					}
 				}
 			}
 		}

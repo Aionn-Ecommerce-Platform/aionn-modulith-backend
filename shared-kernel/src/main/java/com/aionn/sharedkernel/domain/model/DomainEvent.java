@@ -7,6 +7,6 @@ public interface DomainEvent {
     Instant occurredAt();
 
     default String eventType() {
-        return this.getClass().getSimpleName();
+        return this.getClass().getName();
     }
 }

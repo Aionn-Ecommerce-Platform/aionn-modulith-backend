@@ -11,4 +11,5 @@ public class IdempotencyProperties {
 
     private boolean enabled = true;
     private int processingTtlSeconds = 60;
+    private int maxCachedBodyBytes = 1024 * 1024;
 }

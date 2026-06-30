@@ -70,12 +70,12 @@ public abstract class AbstractModuleExceptionHandler {
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiResponse<Map<String, Object>>> handleAuthentication(AuthenticationException ex) {
-        return buildError(HttpStatus.UNAUTHORIZED, "Authentication required", "AUTHENTICATION_REQUIRED", null);
+        return buildError(HttpStatus.UNAUTHORIZED, "Authentication required", "UNAUTHORIZED", null);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Map<String, Object>>> handleAccessDenied(AccessDeniedException ex) {
-        return buildError(HttpStatus.FORBIDDEN, "Access denied", "ACCESS_DENIED", null);
+        return buildError(HttpStatus.FORBIDDEN, "Access denied", "FORBIDDEN", null);
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
