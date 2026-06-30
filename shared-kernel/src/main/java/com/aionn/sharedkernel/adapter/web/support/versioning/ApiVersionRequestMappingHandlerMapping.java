@@ -11,14 +11,14 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
 
     @Override
     @Nullable
-    protected RequestCondition<?> getCustomTypeCondition(Class<?> handlerType) {
+    protected RequestCondition<?> getCustomTypeCondition(Class<?> handlerType) { // NOSONAR
         ApiVersion apiVersion = AnnotationUtils.findAnnotation(handlerType, ApiVersion.class);
         return createCondition(apiVersion);
     }
 
     @Override
     @Nullable
-    protected RequestCondition<?> getCustomMethodCondition(Method method) {
+    protected RequestCondition<?> getCustomMethodCondition(Method method) { // NOSONAR
         ApiVersion apiVersion = AnnotationUtils.findAnnotation(method, ApiVersion.class);
         return createCondition(apiVersion);
     }

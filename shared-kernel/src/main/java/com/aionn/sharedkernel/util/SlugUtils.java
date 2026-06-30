@@ -2,15 +2,8 @@ package com.aionn.sharedkernel.util;
 
 import java.text.Normalizer;
 import java.util.Locale;
-import java.util.regex.Pattern;
 
 public final class SlugUtils {
-
-    private static final Pattern DIACRITICS_PATTERN = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
-    private static final Pattern NON_SLUG_CHARS_PATTERN = Pattern.compile("[^a-z0-9\\s-]");
-    private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
-    private static final Pattern MULTI_DASH_PATTERN = Pattern.compile("-+");
-    private static final Pattern VALID_SLUG_PATTERN = Pattern.compile("^[a-z0-9]+(?:-[a-z0-9]+)*$");
 
     private SlugUtils() {
     }
@@ -21,13 +14,13 @@ public final class SlugUtils {
 
         String normalized = Normalizer.normalize(input.trim(), Normalizer.Form.NFD);
 
-        String slug = DIACRITICS_PATTERN.matcher(normalized).replaceAll("")
+        String slug = normalized.replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
                 .toLowerCase(Locale.ROOT)
                 .replace('\u0111', 'd')
                 .replace('\u0110', 'd');
-        slug = NON_SLUG_CHARS_PATTERN.matcher(slug).replaceAll("").trim();
-        slug = WHITESPACE_PATTERN.matcher(slug).replaceAll("-");
-        slug = MULTI_DASH_PATTERN.matcher(slug).replaceAll("-");
+        slug = slug.replaceAll("[^a-z0-9\\s-]", "").trim();
+        slug = slug.replaceAll("\\s+", "-");
+        slug = collapseDashes(slug);
         return trimEdgeDashes(slug);
     }
 
@@ -42,7 +35,25 @@ public final class SlugUtils {
     public static boolean isValidSlug(String slug) {
         if (slug == null || slug.isBlank())
             return false;
-        return VALID_SLUG_PATTERN.matcher(slug).matches();
+        if (slug.charAt(0) == '-' || slug.charAt(slug.length() - 1) == '-') {
+            return false;
+        }
+        boolean previousDash = false;
+        for (int i = 0; i < slug.length(); i++) {
+            char ch = slug.charAt(i);
+            if (ch == '-') {
+                if (previousDash) {
+                    return false;
+                }
+                previousDash = true;
+                continue;
+            }
+            if (!Character.isLowerCase(ch) && !Character.isDigit(ch)) {
+                return false;
+            }
+            previousDash = false;
+        }
+        return true;
     }
 
     private static String trimEdgeDashes(String slug) {
@@ -55,5 +66,23 @@ public final class SlugUtils {
             end--;
         }
         return slug.substring(start, end);
+    }
+
+    private static String collapseDashes(String slug) {
+        StringBuilder builder = new StringBuilder(slug.length());
+        boolean previousDash = false;
+        for (int i = 0; i < slug.length(); i++) {
+            char ch = slug.charAt(i);
+            if (ch == '-') {
+                if (!previousDash) {
+                    builder.append(ch);
+                }
+                previousDash = true;
+                continue;
+            }
+            builder.append(ch);
+            previousDash = false;
+        }
+        return builder.toString();
     }
 }

@@ -16,6 +16,7 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.nio.charset.StandardCharsets;
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
@@ -92,23 +93,23 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
     }
 
     private boolean handleExistingRecord(
-            IdempotencyRecord record,
+            IdempotencyRecord existingRecord,
             String requestHash,
-            HttpServletResponse response) throws Exception {
-        if (!requestHash.equals(record.requestHash())) {
+            HttpServletResponse response) throws IOException {
+        if (!requestHash.equals(existingRecord.requestHash())) {
             writeConflict(response, "Idempotency key was already used with a different request payload");
             return false;
         }
-        if (record.isProcessing()) {
+        if (existingRecord.isProcessing()) {
             writeConflict(response, "A request with the same idempotency key is already being processed");
             return false;
         }
-        if (record.isCompleted() && record.response() != null) {
-            response.setStatus(record.response().status());
-            response.setContentType(record.response().contentType());
+        if (existingRecord.isCompleted() && existingRecord.response() != null) {
+            response.setStatus(existingRecord.response().status());
+            response.setContentType(existingRecord.response().contentType());
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             response.setHeader("Idempotent-Replay", "true");
-            response.getWriter().write(record.response().bodyJson());
+            response.getWriter().write(existingRecord.response().bodyJson());
             return false;
         }
         writeConflict(response, "Invalid idempotency record state");
@@ -144,7 +145,7 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
         }
     }
 
-    private void writeConflict(HttpServletResponse response, String message) throws Exception {
+    private void writeConflict(HttpServletResponse response, String message) throws IOException {
         response.setStatus(HttpServletResponse.SC_CONFLICT);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
