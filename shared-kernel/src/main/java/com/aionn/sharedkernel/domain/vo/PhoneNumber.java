@@ -6,7 +6,7 @@ import java.util.regex.Pattern;
 
 public record PhoneNumber(String value) {
 
-    private static final Pattern PHONE_PATTERN = Pattern.compile("^\\+?[0-9]{8,15}$");
+    private static final Pattern PHONE_PATTERN = Pattern.compile("^\\+?\\d{8,15}$");
 
     private static final Map<String, String> COUNTRY_CALLING_CODES = Map.ofEntries(
             Map.entry("VN", "+84"),

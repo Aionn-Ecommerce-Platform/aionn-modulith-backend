@@ -8,7 +8,7 @@ import java.util.List;
 
 public abstract class AggregateRoot {
 
-    private final transient List<EventEnvelope> events = new ArrayList<>();
+    private final List<EventEnvelope> events = new ArrayList<>();
 
     protected abstract String aggregateId();
 
@@ -16,7 +16,7 @@ public abstract class AggregateRoot {
         return this.getClass().getSimpleName();
     }
 
-    protected void record(DomainEvent event) {
+    protected void registerEvent(DomainEvent event) {
         events.add(new EventEnvelope(
                 IdGenerator.ulid(),
                 aggregateType(),

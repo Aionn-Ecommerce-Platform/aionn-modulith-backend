@@ -40,6 +40,7 @@ public class CachedBodyHttpServletRequest extends HttpServletRequestWrapper {
 
             @Override
             public void setReadListener(ReadListener readListener) {
+                throw new UnsupportedOperationException("Async read listener is not supported for cached requests");
             }
 
             @Override

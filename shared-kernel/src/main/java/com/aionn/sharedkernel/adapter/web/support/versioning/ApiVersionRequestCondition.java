@@ -43,20 +43,14 @@ public class ApiVersionRequestCondition implements RequestCondition<ApiVersionRe
             return Integer.parseInt(pathMatcher.group(1));
         }
 
-        String param = request.getParameter("version");
-        if (param != null) {
-            try {
-                return Integer.parseInt(param);
-            } catch (NumberFormatException e) {
-            }
+        Integer requestParamVersion = parseVersion(request.getParameter("version"));
+        if (requestParamVersion != null) {
+            return requestParamVersion;
         }
 
-        String header = request.getHeader("X-API-Version");
-        if (header != null) {
-            try {
-                return Integer.parseInt(header);
-            } catch (NumberFormatException e) {
-            }
+        Integer headerVersion = parseVersion(request.getHeader("X-API-Version"));
+        if (headerVersion != null) {
+            return headerVersion;
         }
 
         String accept = request.getHeader("Accept");
@@ -72,5 +66,16 @@ public class ApiVersionRequestCondition implements RequestCondition<ApiVersionRe
 
     public int getVersion() {
         return version;
+    }
+
+    private Integer parseVersion(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 }

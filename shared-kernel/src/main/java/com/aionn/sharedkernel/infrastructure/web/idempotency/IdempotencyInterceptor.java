@@ -17,6 +17,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.HexFormat;
 import java.util.Optional;
@@ -84,8 +85,8 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
         if (Boolean.TRUE.equals(request.getAttribute(RequestAttributeKeys.IDEMPOTENCY_COMPLETED))) {
             return;
         }
-        Object key = request.getAttribute(RequestAttributeKeys.IDEMPOTENCY_KEY);
-        if (key instanceof String redisKey && !redisKey.isBlank()) {
+        Object storedKey = request.getAttribute(RequestAttributeKeys.IDEMPOTENCY_KEY);
+        if (storedKey instanceof String redisKey && !redisKey.isBlank()) {
             redisIdempotencyStore.delete(redisKey);
         }
     }
@@ -138,7 +139,7 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
             digest.update(payload.getBytes(StandardCharsets.UTF_8));
             digest.update(body);
             return HexFormat.of().formatHex(digest.digest());
-        } catch (Exception ex) {
+        } catch (NoSuchAlgorithmException ex) {
             throw new IllegalStateException("Failed to hash idempotent request", ex);
         }
     }

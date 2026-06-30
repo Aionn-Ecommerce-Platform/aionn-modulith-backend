@@ -43,13 +43,13 @@ public record OffsetPagination(
 
     public static OffsetPagination safe(int page, int size) {
         int safePage = Math.max(page, DEFAULT_PAGE);
-        int safeSize = Math.min(Math.max(size, 1), MAX_SIZE);
+        int safeSize = Math.clamp(size, 1, MAX_SIZE);
         return of(safePage, safeSize);
     }
 
     public static OffsetPagination safe(int page, int size, String sortBy, String sortDir) {
         int safePage = Math.max(page, DEFAULT_PAGE);
-        int safeSize = Math.min(Math.max(size, 1), MAX_SIZE);
+        int safeSize = Math.clamp(size, 1, MAX_SIZE);
         return of(safePage, safeSize, sortBy, sortDir);
     }
 

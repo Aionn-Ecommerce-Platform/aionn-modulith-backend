@@ -22,6 +22,6 @@ public class ValidationException extends DomainException {
         return fieldErrors;
     }
 
-    public record FieldError(String field, String message) {
+    public record FieldError(String field, String message) implements java.io.Serializable {
     }
 }

@@ -26,7 +26,9 @@ public class SpringEventPublisher implements EventPublisher {
             return;
         }
         for (EventEnvelope envelope : events) {
-            log.debug("Publishing domain event: {} [{}]", envelope.eventType(), envelope.eventId());
+            if (log.isDebugEnabled()) {
+                log.debug("Publishing domain event: {} [{}]", envelope.eventType(), envelope.eventId());
+            }
             applicationEventPublisher.publishEvent(envelope.payload());
         }
     }

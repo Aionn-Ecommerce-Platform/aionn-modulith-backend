@@ -4,15 +4,15 @@ import com.aionn.sharedkernel.domain.id.BaseId;
 
 import java.util.Objects;
 
-public abstract class Entity<ID extends BaseId> {
+public abstract class Entity<I extends BaseId> {
 
-    protected final ID id;
+    protected final I id;
 
-    protected Entity(ID id) {
+    protected Entity(I id) {
         this.id = Objects.requireNonNull(id, "Entity ID must not be null");
     }
 
-    public ID getId() {
+    public I getId() {
         return id;
     }
 

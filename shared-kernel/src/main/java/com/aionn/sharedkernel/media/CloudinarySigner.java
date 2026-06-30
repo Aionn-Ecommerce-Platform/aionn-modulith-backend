@@ -14,6 +14,7 @@ public final class CloudinarySigner {
     private CloudinarySigner() {
     }
 
+    @SuppressWarnings("java:S4790")
     public static String sign(Map<String, String> params, String apiSecret) {
         String toSign = new TreeMap<>(params).entrySet().stream()
                 .map(e -> e.getKey() + "=" + e.getValue())
