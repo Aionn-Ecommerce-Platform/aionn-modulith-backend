@@ -14,6 +14,22 @@ import net.jqwik.api.constraints.IntRange;
 
 class OffsetPaginationPropertyTest {
 
+        @net.jqwik.api.Example
+        void example_offsetPaginationHelperMethodsCoverRemainingBranches() {
+                OffsetPagination pagination = OffsetPagination.of(2, 10, "createdAt", "desc");
+                OffsetPagination defaultPage = OffsetPagination.defaultPage();
+                OffsetPagination safeNegative = OffsetPagination.safe(-5, 500, "name", null);
+
+                assertEquals(20, pagination.offset());
+                assertEquals(20, pagination.getOffset());
+                assertTrue(pagination.isSortDesc());
+                assertTrue(pagination.hasSorting());
+                assertTrue(defaultPage.isFirstPage());
+                assertEquals(0, safeNegative.page());
+                assertEquals(OffsetPagination.MAX_SIZE, safeNegative.size());
+                assertEquals(SortDirection.ASC, safeNegative.sortDir());
+        }
+
         @Property(tries = 100)
         void property11_safeClampsOversizeToMaxSize(
                         @ForAll int page,

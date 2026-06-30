@@ -6,6 +6,13 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.mock.http.MockHttpInputMessage;
+import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
 import com.aionn.sharedkernel.common.exception.DomainException;
@@ -127,5 +134,36 @@ class AbstractModuleExceptionHandlerTest {
         @Provide
         Arbitrary<String> registeredCodes() {
                 return Arbitraries.of("SAMPLE_001", "SAMPLE_404");
+        }
+
+        @Example
+        void example_moduleExceptionHandlerMapsFrameworkExceptions() throws Exception {
+                SampleModuleExceptionHandler handler = new SampleModuleExceptionHandler();
+                var parameter = new org.springframework.core.MethodParameter(
+                                SampleController.class.getDeclaredMethod("submit", String.class), 0);
+                var bindingResult = new BeanPropertyBindingResult(new Object(), "request");
+                bindingResult.addError(new FieldError("request", "name", "required"));
+
+                var notValid = new MethodArgumentNotValidException(parameter, bindingResult);
+                var typeMismatch = new MethodArgumentTypeMismatchException(
+                                "abc", Integer.class, "page", parameter, new IllegalArgumentException("bad"));
+                var notReadable = new HttpMessageNotReadableException("bad json", new MockHttpInputMessage(new byte[0]));
+                var missingHeader = new MissingRequestHeaderException("X-Trace-Id", parameter);
+                var authenticationException = new org.springframework.security.core.AuthenticationException("auth") {
+                };
+
+                assertEquals(400, handler.handleMethodArgumentNotValid(notValid).getStatusCode().value());
+                assertEquals(401, handler.handleAuthentication(authenticationException).getStatusCode().value());
+                assertEquals(403, handler.handleAccessDenied(new org.springframework.security.access.AccessDeniedException("denied"))
+                                .getStatusCode().value());
+                assertEquals(400, handler.handleTypeMismatch(typeMismatch).getStatusCode().value());
+                assertEquals(400, handler.handleNotReadable(notReadable).getStatusCode().value());
+                assertEquals(400, handler.handleMissingHeader(missingHeader).getStatusCode().value());
+        }
+
+        static class SampleController {
+                void submit(String body) {
+                        // Empty on purpose; only reflective method metadata is needed in this test.
+                }
         }
 }
