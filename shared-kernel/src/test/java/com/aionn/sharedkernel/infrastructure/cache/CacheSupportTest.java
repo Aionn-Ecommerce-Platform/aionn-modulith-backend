@@ -30,6 +30,9 @@ class CacheSupportTest {
 
     @Test
     void twoTierCachePropertiesValidateInputs() {
+        assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties(null, Duration.ofSeconds(1), 1, Duration.ofSeconds(1)));
+        assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties("ns", null, 1, Duration.ofSeconds(1)));
+        assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties("ns", Duration.ofSeconds(1), 1, null));
         assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties(" ", Duration.ofSeconds(1), 1, Duration.ofSeconds(1)));
         assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties("ns", Duration.ZERO, 1, Duration.ofSeconds(1)));
         assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties("ns", Duration.ofSeconds(1), 0, Duration.ofSeconds(1)));
@@ -57,7 +60,7 @@ class CacheSupportTest {
     }
 
     @Test
-    void caffeineRedisTwoTierCacheHandlesHappyPathAndFallbackPaths() {
+    void caffeineRedisTwoTierCacheReadsFromL1L2AndLoader() {
         StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
         @SuppressWarnings("unchecked")
         ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
@@ -86,6 +89,30 @@ class CacheSupportTest {
 
         Map<String, String> loaded = cache.getOrLoad("k3", () -> Map.of("sku", "sku-3"));
         assertEquals("sku-3", loaded.get("sku"));
+    }
+
+    @Test
+    void caffeineRedisTwoTierCacheHandlesInvalidationAndRedisFallbacks() {
+        StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
+        @SuppressWarnings("unchecked")
+        ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        CacheInvalidationPublisher invalidationPublisher = mock(CacheInvalidationPublisher.class);
+        TwoTierCacheProperties properties = new TwoTierCacheProperties("catalog", Duration.ofMinutes(5), 100, Duration.ofMinutes(10));
+
+        CaffeineRedisTwoTierCache<Map<String, String>> cache = new CaffeineRedisTwoTierCache<>(
+                properties,
+                redisTemplate,
+                objectMapper,
+                new TypeReference<>() {
+                },
+                invalidationPublisher,
+                "node-a");
+
+        Map<String, String> value = Map.of("sku", "sku-1");
+        cache.put("k1", value);
 
         cache.evict("k1");
         verify(invalidationPublisher).publish(new CacheInvalidationMessage("catalog", "k1", "node-a", false));

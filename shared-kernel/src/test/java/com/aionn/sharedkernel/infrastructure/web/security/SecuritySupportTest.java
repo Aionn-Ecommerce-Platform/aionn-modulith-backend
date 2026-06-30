@@ -98,17 +98,21 @@ class SecuritySupportTest {
         MockHttpServletRequest blocked = new MockHttpServletRequest("POST", "/api/v1/orders");
         blocked.setRemoteAddr("1.1.1.1");
         MockHttpServletResponse blockedResponse = new MockHttpServletResponse();
+        FilterChain blockedChain = mock(FilterChain.class);
         when(blacklistStore.isBlacklisted("1.1.1.1")).thenReturn(true);
-        filter.doFilter(blocked, blockedResponse, mock(FilterChain.class));
+        filter.doFilter(blocked, blockedResponse, blockedChain);
         assertEquals(403, blockedResponse.getStatus());
+        verify(blockedChain, never()).doFilter(any(), any());
 
         MockHttpServletRequest limited = new MockHttpServletRequest("POST", "/api/v1/orders");
         limited.setRemoteAddr("1.1.1.2");
         MockHttpServletResponse limitedResponse = new MockHttpServletResponse();
+        FilterChain limitedChain = mock(FilterChain.class);
         when(blacklistStore.isBlacklisted("1.1.1.2")).thenReturn(false);
         when(rateLimiter.allow(anyString(), anyInt(), anyInt())).thenReturn(false);
-        filter.doFilter(limited, limitedResponse, mock(FilterChain.class));
+        filter.doFilter(limited, limitedResponse, limitedChain);
         assertEquals(429, limitedResponse.getStatus());
+        verify(limitedChain, never()).doFilter(any(), any());
 
         MockHttpServletRequest forwarded = new MockHttpServletRequest("POST", "/api/v1/orders");
         forwarded.setRemoteAddr("10.0.0.1");
@@ -118,7 +122,7 @@ class SecuritySupportTest {
         when(rateLimiter.allow(anyString(), anyInt(), anyInt())).thenReturn(true);
         filter.doFilter(forwarded, forwardedResponse, forwardedChain);
         assertEquals("203.0.113.10", forwarded.getAttribute(RequestAttributeKeys.CLIENT_IP));
+        verify(blacklistStore).isBlacklisted("203.0.113.10");
         verify(forwardedChain).doFilter(forwarded, forwardedResponse);
-        verify(blacklistStore, never()).isBlacklisted(null);
     }
 }
