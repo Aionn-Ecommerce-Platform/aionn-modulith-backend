@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.5.14' apply false
     id 'io.spring.dependency-management' version '1.1.7' apply false
+    id 'org.sonarqube' version '7.3.1.8318'
 }
 
 allprojects {
@@ -46,5 +47,13 @@ subprojects {
         testCompileOnly 'org.projectlombok:lombok'
         testAnnotationProcessor 'org.projectlombok:lombok'
         testImplementation 'org.junit.jupiter:junit-jupiter'
+    }
+}
+
+sonar {
+    properties {
+        property 'sonar.projectKey', 'Aionn-Ecommerce-Platform_aionn-modulith-backend'
+        property 'sonar.organization', 'aionn-ecommerce-platform'
+        property 'sonar.host.url', 'https://sonarcloud.io'
     }
 }
