@@ -1,3 +1,5 @@
+include envs/common.env
+
 CONTAINER ?= docker
 COMPOSE_FILE := docker/docker-compose.yml
 ENV_FILE := envs/common.env
@@ -41,6 +43,6 @@ infra-config:
 
 reset-db:
 	@echo "Resetting Postgres database schema..."
-	$(CONTAINER) exec aionn-modulith-postgres psql -U postgres -d aionn -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+	$(CONTAINER) exec aionn-modulith-postgres psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 	@echo "Flushing Redis cache..."
-	$(CONTAINER) exec aionn-modulith-redis redis-cli -a hello FLUSHALL
+	$(CONTAINER) exec aionn-modulith-redis redis-cli -a "$(REDIS_PASSWORD)" FLUSHALL

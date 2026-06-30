@@ -28,3 +28,4 @@ application-local.yml
 application-local.yaml
 
 .sonar/
+.scannerwork/
