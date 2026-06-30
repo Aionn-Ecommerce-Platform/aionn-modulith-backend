@@ -31,7 +31,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import org.springframework.security.core.authority.AuthorityUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
@@ -41,10 +40,10 @@ import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.ModelAndViewContainer;
-import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.mvc.condition.RequestCondition;
@@ -121,7 +120,7 @@ class WebSupportAndConfigTest {
     }
 
     @Test
-    void localeInterceptorAndConfigRegisterAndResetLocale() throws Exception {
+    void localeInterceptorAndConfigRegisterAndResetLocale() {
         LocaleInterceptor interceptor = new LocaleInterceptor();
         MockHttpServletRequest request = new MockHttpServletRequest(HttpMethod.GET.name(), "/");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -165,15 +164,19 @@ class WebSupportAndConfigTest {
     static class VersionedController {
         @ApiVersion(2)
         void v2Method() {
+            // Empty on purpose; only annotation metadata matters for mapping tests.
         }
 
         void plainMethod() {
+            // Empty on purpose; this method exists to verify absence of version metadata.
         }
 
         void ipMethod(@ClientIp String clientIp) {
+            // Empty on purpose; argument resolver support is the behavior under test.
         }
 
         void plainArgument(String value) {
+            // Empty on purpose; used as a non-annotated control method.
         }
     }
 

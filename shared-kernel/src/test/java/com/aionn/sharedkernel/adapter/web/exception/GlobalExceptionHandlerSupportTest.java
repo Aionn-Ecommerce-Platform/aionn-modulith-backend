@@ -14,10 +14,8 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.core.MethodParameter;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.mock.http.MockHttpInputMessage;
-import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.BeanPropertyBindingResult;
@@ -32,7 +30,7 @@ class GlobalExceptionHandlerSupportTest {
     private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
     @Test
-    void globalExceptionHandlerMapsCoreExceptionFamilies() throws Exception {
+    void globalExceptionHandlerMapsCoreExceptionFamilies() {
         assertEquals(404, handler.handleNotFound(new NotFoundException("Product", "p-1")).getStatusCode().value());
         assertEquals(409, handler.handleConflict(new ConflictException("Catalog", "CONFLICT", "dup")).getStatusCode().value());
         assertEquals(401, handler.handleUnauthorized(new UnauthorizedException()).getStatusCode().value());
@@ -78,6 +76,7 @@ class GlobalExceptionHandlerSupportTest {
         assertEquals(404, handler.handleNoHandler(noHandler).getStatusCode().value());
 
         AuthenticationException authenticationException = new AuthenticationException("login required") {
+            // Anonymous subclass on purpose to exercise handler against framework base type.
         };
         assertEquals(401, handler.handleAuthentication(authenticationException).getStatusCode().value());
         assertEquals(403, handler.handleAccessDenied(new AccessDeniedException("denied")).getStatusCode().value());
@@ -86,6 +85,7 @@ class GlobalExceptionHandlerSupportTest {
 
     static class SampleController {
         void submit(String body) {
+            // Empty on purpose; only reflective method metadata is needed in this test.
         }
     }
 }

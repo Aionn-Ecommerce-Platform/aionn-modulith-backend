@@ -34,10 +34,12 @@ class IntegrationPublisherSupportTest {
         IntegrationEventPublisher publisher = new IntegrationEventPublisher() {
             @Override
             public void publish(IntegrationEvent event) {
+                // No-op test double; contract instantiation is the behavior under test.
             }
 
             @Override
             public void publishAll(java.util.Collection<IntegrationEvent> events) {
+                // No-op test double; contract instantiation is the behavior under test.
             }
         };
 

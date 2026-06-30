@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -30,17 +29,18 @@ class CacheSupportTest {
 
     @Test
     void twoTierCachePropertiesValidateInputs() {
-        assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties(null, Duration.ofSeconds(1), 1, Duration.ofSeconds(1)));
-        assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties("ns", null, 1, Duration.ofSeconds(1)));
-        assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties("ns", Duration.ofSeconds(1), 1, null));
-        assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties(" ", Duration.ofSeconds(1), 1, Duration.ofSeconds(1)));
-        assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties("ns", Duration.ZERO, 1, Duration.ofSeconds(1)));
-        assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties("ns", Duration.ofSeconds(1), 0, Duration.ofSeconds(1)));
-        assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties("ns", Duration.ofSeconds(1), 1, Duration.ZERO));
+        Duration oneSecond = Duration.ofSeconds(1);
+        assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties(null, oneSecond, 1, oneSecond));
+        assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties("ns", null, 1, oneSecond));
+        assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties("ns", oneSecond, 1, null));
+        assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties(" ", oneSecond, 1, oneSecond));
+        assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties("ns", Duration.ZERO, 1, oneSecond));
+        assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties("ns", oneSecond, 0, oneSecond));
+        assertThrows(IllegalArgumentException.class, () -> new TwoTierCacheProperties("ns", oneSecond, 1, Duration.ZERO));
     }
 
     @Test
-    void redisInvalidationPublisherSerializesAndWrapsFailures() throws Exception {
+    void redisInvalidationPublisherSerializesAndWrapsFailures() {
         StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
         ObjectMapper objectMapper = new ObjectMapper();
         RedisCacheInvalidationPublisher publisher = new RedisCacheInvalidationPublisher(redisTemplate, objectMapper);

@@ -12,7 +12,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -22,7 +21,6 @@ import com.aionn.sharedkernel.adapter.web.support.idempotency.IdempotentRequest;
 import com.aionn.sharedkernel.domain.model.DomainEvent;
 import com.aionn.sharedkernel.domain.model.EventEnvelope;
 import com.aionn.sharedkernel.infrastructure.event.SpringEventPublisher;
-import com.aionn.sharedkernel.infrastructure.persistence.AuditingConfig;
 import com.aionn.sharedkernel.infrastructure.web.idempotency.CachedBodyHttpServletRequest;
 import com.aionn.sharedkernel.infrastructure.web.idempotency.IdempotencyBodyCachingFilter;
 import com.aionn.sharedkernel.infrastructure.web.idempotency.IdempotencyInterceptor;
@@ -37,10 +35,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ReadListener;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletInputStream;
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
@@ -51,7 +46,6 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.slf4j.MDC;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.MethodParameter;
@@ -60,7 +54,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.http.server.ServletServerHttpResponse;
-import org.springframework.mock.web.DelegatingServletInputStream;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -113,7 +106,8 @@ class IdempotencyAndObservabilityTest {
         assertArrayEquals("{\"value\":1}".getBytes(StandardCharsets.UTF_8), cached.getCachedBody());
         assertEquals("{\"value\":1}", new BufferedReader(new InputStreamReader(cached.getInputStream(), StandardCharsets.UTF_8))
                 .readLine());
-        assertThrows(UnsupportedOperationException.class, () -> cached.getInputStream().setReadListener(mock(ReadListener.class)));
+        var readListener = mock(ReadListener.class);
+        assertThrows(UnsupportedOperationException.class, () -> cached.getInputStream().setReadListener(readListener));
 
         MockHttpServletRequest tooLarge = new MockHttpServletRequest();
         tooLarge.setContent("abcdef".getBytes(StandardCharsets.UTF_8));
@@ -165,7 +159,8 @@ class IdempotencyAndObservabilityTest {
         assertTrue(store.find(key).isEmpty());
 
         RedisIdempotencyStore failingStore = new RedisIdempotencyStore(redis.template, new ThrowingObjectMapper());
-        assertThrows(IllegalStateException.class, () -> failingStore.beginProcessing("x", "y", Duration.ofSeconds(1)));
+        Duration oneSecond = Duration.ofSeconds(1);
+        assertThrows(IllegalStateException.class, () -> failingStore.beginProcessing("x", "y", oneSecond));
 
         redis.failDelete = true;
         assertThrows(IllegalStateException.class, () -> store.delete("broken"));

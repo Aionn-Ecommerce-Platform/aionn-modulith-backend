@@ -14,7 +14,6 @@ import com.aionn.sharedkernel.common.exception.ValidationException;
 import com.aionn.sharedkernel.media.CloudinaryAutoConfiguration;
 import com.aionn.sharedkernel.media.CloudinaryCredentialsProperties;
 import com.aionn.sharedkernel.media.CloudinarySigner;
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -53,12 +52,15 @@ class SharedKernelSupportTest {
     @Test
     void cloudinaryHelpersBuildUploadUrlAndStableSignature() {
         String signature = CloudinarySigner.sign(Map.of("public_id", "sample", "timestamp", "1719705600"), "secret");
+        String reorderedSignature = CloudinarySigner.sign(
+                Map.of("timestamp", "1719705600", "public_id", "sample"),
+                "secret");
         CloudinaryCredentialsProperties properties = new CloudinaryCredentialsProperties(
                 "aionn", "key", "secret", "https://api.cloudinary.com/v1_1");
 
         assertNotNull(new CloudinaryAutoConfiguration());
         assertEquals("https://api.cloudinary.com/v1_1/aionn/image/upload", properties.uploadUrl("image"));
-        assertEquals(signature, CloudinarySigner.sign(Map.of("timestamp", "1719705600", "public_id", "sample"), "secret"));
+        assertEquals(signature, reorderedSignature);
         assertEquals("https://api.cloudinary.com/v1_1/aionn/video/upload",
                 CloudinarySigner.uploadUrl("https://api.cloudinary.com/v1_1", "aionn", "video"));
         assertEquals(40, signature.length());

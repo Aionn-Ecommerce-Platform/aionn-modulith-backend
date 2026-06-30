@@ -55,9 +55,7 @@ class IntegrationPortContractTest {
         var resolvedAddress = new AddressLookupPort.ResolvedAddress("province-1", "HCM", "district-1", "Thu Duc", "ward-1", "Long Truong");
         var province = new AddressLookupPort.ResolvedProvince("79", "Ho Chi Minh");
         var userAddress = new UserAddressLookupPort.UserAddress("addr-1", "A", "0909", "123 Street", "ward-1", "Long Truong", "district-1", "Thu Duc", "province-1", "HCM", "VN");
-        var inventoryLine = new InventoryStockReservationPort.ReservationLine("sku-1", "wh-1", 2, BigDecimal.TEN, "VND");
         var inventoryReservation = new InventoryStockReservationPort.Reservation("res-1", "sku-1", "wh-1", 2, BigDecimal.TEN, "VND");
-        var gatewayLine = new StockReservationGatewayPort.ReservationLine("sku-1", "wh-1", 2, BigDecimal.TEN, "VND");
         var gatewayReservation = new StockReservationGatewayPort.Reservation("res-1", "sku-1", "wh-1", 2, BigDecimal.TEN, "VND");
         var inventoryException = new InventoryStockReservationPort.ReservationException("sku-1", "wh-1", "boom");
         var gatewayException = new StockReservationGatewayPort.ReservationException("sku-1", "boom");
@@ -88,18 +86,17 @@ class IntegrationPortContractTest {
                 30L,
                 730L,
                 List.of(new OrderSnapshotQueryPort.OrderSnapshot.Line("sku-1", 2, 350L, 700L)));
-        var shippingAddress = new ShippingGatewayPort.ShippingAddress("addr-1", "A", "0909", "123 Street", "ward-1", "district-1", "province-1", "VN");
-        var shippingQuote = new ShippingGatewayPort.ShippingQuote(BigDecimal.valueOf(25), "VND");
         var shippingRegistration = new ShippingGatewayPort.RegistrationResult("ship-1", "track-1", "carrier-1", "label");
-        var fulfillmentAddress = new ShippingFulfillmentPort.Address("A", "0909", "123 Street", "ward-1", "district-1", "province-1", "VN");
-        var fulfillmentQuote = new ShippingFulfillmentPort.QuoteResult(BigDecimal.valueOf(25), "VND");
         var fulfillmentRegistration = new ShippingFulfillmentPort.RegistrationResult("ship-1", "track-1", "carrier-1", "label");
 
         assertEquals("Alpha", lookup.products().getFirst().name());
+        assertEquals("sku-1", pricing.skuId());
         assertEquals("acct_1", merchantStripe.stripeAccountId());
         assertEquals("Long Truong", resolvedAddress.wardName());
         assertEquals("Ho Chi Minh", province.name());
         assertEquals("HCM", userAddress.provinceName());
+        assertEquals("res-1", inventoryReservation.reservationId());
+        assertEquals("res-1", gatewayReservation.reservationId());
         assertEquals("boom", inventoryException.getMessage());
         assertEquals("wh-1", inventoryException.getWarehouseId());
         assertEquals("sku-1", gatewayException.getSkuId());

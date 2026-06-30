@@ -3,7 +3,6 @@ package com.aionn.sharedkernel.integration.event;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.aionn.sharedkernel.integration.event.catalog.MerchantActivatedIntegrationEvent;
 import com.aionn.sharedkernel.integration.event.catalog.MerchantClosedIntegrationEvent;
@@ -83,6 +82,9 @@ class IntegrationEventContractTest {
 
     @Test
     void eventsWithValidationEnforceContract() {
+        BigDecimal negativeAmount = BigDecimal.valueOf(-1);
+        String blankCurrency = " ";
+
         assertThrows(IllegalArgumentException.class,
                 () -> new StockCommittedIntegrationEvent("evt", "res", "sku", "wh", "order", 0, NOW));
         assertThrows(IllegalArgumentException.class,
@@ -93,17 +95,13 @@ class IntegrationEventContractTest {
                 () -> new StockReservedIntegrationEvent("evt", "res", "sku", "wh", "order", 0, NOW, NOW));
 
         assertThrows(IllegalArgumentException.class,
-                () -> new PaymentCapturedIntegrationEvent("evt", "pay", "order", "txn",
-                        BigDecimal.valueOf(-1), "VND", NOW));
+                () -> new PaymentCapturedIntegrationEvent("evt", "pay", "order", "txn", negativeAmount, "VND", NOW));
         assertThrows(IllegalArgumentException.class,
-                () -> new PaymentInitiatedIntegrationEvent("evt", "pay", "order",
-                        BigDecimal.ONE, " ", "stripe", NOW));
+                () -> new PaymentInitiatedIntegrationEvent("evt", "pay", "order", BigDecimal.ONE, blankCurrency, "stripe", NOW));
         assertThrows(IllegalArgumentException.class,
-                () -> new PaymentPaidIntegrationEvent("evt", "pay", "order",
-                        BigDecimal.ONE, " ", "stripe", "txn", NOW));
+                () -> new PaymentPaidIntegrationEvent("evt", "pay", "order", BigDecimal.ONE, blankCurrency, "stripe", "txn", NOW));
         assertThrows(IllegalArgumentException.class,
-                () -> new PaymentRefundedIntegrationEvent("evt", "pay", "order", "refund",
-                        BigDecimal.valueOf(-1), "VND", "reason", NOW));
+                () -> new PaymentRefundedIntegrationEvent("evt", "pay", "order", "refund", negativeAmount, "VND", "reason", NOW));
     }
 
     @Test
@@ -127,8 +125,10 @@ class IntegrationEventContractTest {
         mutableItems.add(new OrderPlacedIntegrationEvent.OrderLineItem("sku-2", 1, BigDecimal.ONE, "wh-2", "res-2"));
 
         assertEquals(1, event.items().size());
+        OrderPlacedIntegrationEvent.OrderLineItem extraLineItem =
+                new OrderPlacedIntegrationEvent.OrderLineItem("sku-3", 1, BigDecimal.ONE, "wh-3", "res-3");
         assertThrows(UnsupportedOperationException.class,
-                () -> event.items().add(new OrderPlacedIntegrationEvent.OrderLineItem("sku-3", 1, BigDecimal.ONE, "wh-3", "res-3")));
+                () -> event.items().add(extraLineItem));
         assertEquals(OrderPlacedIntegrationEvent.class.getName(), event.eventType());
     }
 
