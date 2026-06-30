@@ -13,7 +13,6 @@ jar {
 dependencies {
     implementation project(':shared-kernel')
     implementation project(':modules:identity')
-    implementation project(':modules:ucp')
     implementation project(':modules:catalog')
     implementation project(':modules:inventory')
     implementation project(':modules:ordering')

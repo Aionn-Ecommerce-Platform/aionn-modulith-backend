@@ -3,6 +3,7 @@ build/
 out/
 bin/
 target/
+.DS_Store
 
 *.class
 *.log
@@ -15,6 +16,15 @@ target/
 .env
 .env.*
 !.env.example
+envs/*.env
+envs/*.local
+envs/*.secret
+!envs/*.example
+
+docker/.env
+docker/*.local.env
 
 application-local.yml
 application-local.yaml
+
+.sonar/
