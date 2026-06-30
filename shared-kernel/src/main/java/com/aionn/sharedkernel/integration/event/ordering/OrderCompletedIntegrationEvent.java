@@ -3,7 +3,6 @@ package com.aionn.sharedkernel.integration.event.ordering;
 import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 
 import java.time.Instant;
-import java.util.UUID;
 
 public record OrderCompletedIntegrationEvent(
         String eventId,
@@ -11,8 +10,7 @@ public record OrderCompletedIntegrationEvent(
         Instant occurredAt) implements IntegrationEvent {
 
     public OrderCompletedIntegrationEvent {
-        if (eventId == null) {
-            eventId = UUID.randomUUID().toString();
-        }
+        eventId = IntegrationEvent.requireEventId(eventId);
+        occurredAt = IntegrationEvent.defaultOccurredAt(occurredAt);
     }
 }

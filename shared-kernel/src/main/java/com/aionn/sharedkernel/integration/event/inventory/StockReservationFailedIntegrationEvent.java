@@ -3,7 +3,6 @@ package com.aionn.sharedkernel.integration.event.inventory;
 import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 
 import java.time.Instant;
-import java.util.UUID;
 
 public record StockReservationFailedIntegrationEvent(
         String eventId,
@@ -15,8 +14,10 @@ public record StockReservationFailedIntegrationEvent(
         Instant occurredAt) implements IntegrationEvent {
 
     public StockReservationFailedIntegrationEvent {
-        if (eventId == null) {
-            eventId = UUID.randomUUID().toString();
+        eventId = IntegrationEvent.requireEventId(eventId);
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("quantity must be positive");
         }
+        occurredAt = IntegrationEvent.defaultOccurredAt(occurredAt);
     }
 }

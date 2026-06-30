@@ -3,7 +3,6 @@ package com.aionn.sharedkernel.integration.event.identity;
 import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 
 import java.time.Instant;
-import java.util.UUID;
 
 public record PasswordChangedIntegrationEvent(
         String eventId,
@@ -12,8 +11,7 @@ public record PasswordChangedIntegrationEvent(
         Instant occurredAt) implements IntegrationEvent {
 
     public PasswordChangedIntegrationEvent {
-        if (eventId == null) {
-            eventId = UUID.randomUUID().toString();
-        }
+        eventId = IntegrationEvent.requireEventId(eventId);
+        occurredAt = IntegrationEvent.defaultOccurredAt(occurredAt);
     }
 }

@@ -3,7 +3,6 @@ package com.aionn.sharedkernel.integration.event.chat;
 import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 
 import java.time.Instant;
-import java.util.UUID;
 
 public record MessageSentIntegrationEvent(
         String eventId,
@@ -16,8 +15,7 @@ public record MessageSentIntegrationEvent(
         Instant occurredAt) implements IntegrationEvent {
 
     public MessageSentIntegrationEvent {
-        if (eventId == null) {
-            eventId = UUID.randomUUID().toString();
-        }
+        eventId = IntegrationEvent.requireEventId(eventId);
+        occurredAt = IntegrationEvent.defaultOccurredAt(occurredAt);
     }
 }

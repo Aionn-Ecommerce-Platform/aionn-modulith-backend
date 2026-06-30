@@ -3,7 +3,6 @@ package com.aionn.sharedkernel.integration.event.identity;
 import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 
 import java.time.Instant;
-import java.util.UUID;
 
 public record EmailChangedIntegrationEvent(
         String eventId,
@@ -13,8 +12,7 @@ public record EmailChangedIntegrationEvent(
         Instant occurredAt) implements IntegrationEvent {
 
     public EmailChangedIntegrationEvent {
-        if (eventId == null) {
-            eventId = UUID.randomUUID().toString();
-        }
+        eventId = IntegrationEvent.requireEventId(eventId);
+        occurredAt = IntegrationEvent.defaultOccurredAt(occurredAt);
     }
 }

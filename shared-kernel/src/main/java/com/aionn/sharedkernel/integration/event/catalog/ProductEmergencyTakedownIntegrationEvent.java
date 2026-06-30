@@ -3,7 +3,6 @@ package com.aionn.sharedkernel.integration.event.catalog;
 import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 
 import java.time.Instant;
-import java.util.UUID;
 
 public record ProductEmergencyTakedownIntegrationEvent(
         String eventId,
@@ -13,8 +12,7 @@ public record ProductEmergencyTakedownIntegrationEvent(
         Instant occurredAt) implements IntegrationEvent {
 
     public ProductEmergencyTakedownIntegrationEvent {
-        if (eventId == null) {
-            eventId = UUID.randomUUID().toString();
-        }
+        eventId = IntegrationEvent.requireEventId(eventId);
+        occurredAt = IntegrationEvent.defaultOccurredAt(occurredAt);
     }
 }

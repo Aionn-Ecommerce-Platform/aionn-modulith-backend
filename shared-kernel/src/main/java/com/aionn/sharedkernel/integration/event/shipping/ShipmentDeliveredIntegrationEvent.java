@@ -3,7 +3,6 @@ package com.aionn.sharedkernel.integration.event.shipping;
 import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 
 import java.time.Instant;
-import java.util.UUID;
 
 public record ShipmentDeliveredIntegrationEvent(
         String eventId,
@@ -14,8 +13,7 @@ public record ShipmentDeliveredIntegrationEvent(
         Instant occurredAt) implements IntegrationEvent {
 
     public ShipmentDeliveredIntegrationEvent {
-        if (eventId == null) {
-            eventId = UUID.randomUUID().toString();
-        }
+        eventId = IntegrationEvent.requireEventId(eventId);
+        occurredAt = IntegrationEvent.defaultOccurredAt(occurredAt);
     }
 }

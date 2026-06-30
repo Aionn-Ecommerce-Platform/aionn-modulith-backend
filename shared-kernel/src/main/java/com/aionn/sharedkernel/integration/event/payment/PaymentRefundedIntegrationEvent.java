@@ -4,7 +4,7 @@ import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.UUID;
+import java.util.Objects;
 
 public record PaymentRefundedIntegrationEvent(
         String eventId,
@@ -17,8 +17,15 @@ public record PaymentRefundedIntegrationEvent(
         Instant occurredAt) implements IntegrationEvent {
 
     public PaymentRefundedIntegrationEvent {
-        if (eventId == null) {
-            eventId = UUID.randomUUID().toString();
+        eventId = IntegrationEvent.requireEventId(eventId);
+        amount = Objects.requireNonNull(amount, "amount must not be null");
+        if (amount.signum() < 0) {
+            throw new IllegalArgumentException("amount must not be negative");
         }
+        currency = Objects.requireNonNull(currency, "currency must not be null");
+        if (currency.isBlank()) {
+            throw new IllegalArgumentException("currency must not be blank");
+        }
+        occurredAt = IntegrationEvent.defaultOccurredAt(occurredAt);
     }
 }

@@ -3,7 +3,6 @@ package com.aionn.sharedkernel.integration.event.inventory;
 import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 
 import java.time.Instant;
-import java.util.UUID;
 
 public record SafetyStockBreachedIntegrationEvent(
         String eventId,
@@ -15,8 +14,7 @@ public record SafetyStockBreachedIntegrationEvent(
         int safetyStockQty) implements IntegrationEvent {
 
     public SafetyStockBreachedIntegrationEvent {
-        if (eventId == null) {
-            eventId = UUID.randomUUID().toString();
-        }
+        eventId = IntegrationEvent.requireEventId(eventId);
+        occurredAt = IntegrationEvent.defaultOccurredAt(occurredAt);
     }
 }
