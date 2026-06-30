@@ -1,0 +1,30 @@
+plugins {
+    id 'org.springframework.boot'
+}
+
+bootJar {
+    enabled = false
+}
+
+jar {
+    enabled = true
+}
+
+dependencies {
+    implementation project(':shared-kernel')
+    implementation project(':modules:identity')
+    implementation project(':modules:ucp')
+    implementation project(':modules:catalog')
+    implementation project(':modules:inventory')
+    implementation project(':modules:ordering')
+    implementation project(':modules:payment')
+    implementation project(':modules:shipping')
+    implementation project(':modules:notification')
+    implementation project(':modules:promotion')
+    implementation project(':modules:chat')
+
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
