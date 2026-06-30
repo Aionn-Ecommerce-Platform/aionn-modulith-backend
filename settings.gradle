@@ -1,0 +1,27 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'aionn-modulith-backend'
+
+include 'shared-kernel'
+include 'modules:identity'
+include 'modules:catalog'
+include 'modules:inventory'
+include 'modules:ordering'
+include 'modules:payment'
+include 'modules:shipping'
+include 'modules:notification'
+include 'modules:promotion'
+include 'modules:chat'
+include 'app'
