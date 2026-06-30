@@ -16,6 +16,9 @@ public record StockReservedIntegrationEvent(
 
     public StockReservedIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("quantity must be positive");
+        }
         occurredAt = IntegrationEvent.defaultOccurredAt(occurredAt);
     }
 }
