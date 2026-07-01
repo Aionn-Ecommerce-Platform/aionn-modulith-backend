@@ -1,30 +1,30 @@
 server:
-  port: ${SERVER_PORT}
+  port: ${SERVER_PORT:8080}
 
 spring:
   application:
-    name: ${APP_NAME}
+    name: ${APP_NAME:aionn-modulith-backend}
 
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_LOCAL_PORT}/${POSTGRES_DB}
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_LOCAL_PORT:5432}/${POSTGRES_DB:aionn}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
   data:
     redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_LOCAL_PORT}
-      password: ${REDIS_PASSWORD}
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_LOCAL_PORT:6379}
+      password: ${REDIS_PASSWORD:}
 
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: false
+      ddl-auto: none
+    show-sql: ${SPRING_JPA_SHOW_SQL:false}
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: false
+        format_sql: ${SPRING_JPA_FORMAT_SQL:false}
 
   flyway:
     enabled: false
@@ -38,7 +38,7 @@ springdoc:
 
 logging:
   level:
-    "[com.aionn]": ${LOG_LEVEL}
+    "[com.aionn]": ${LOG_LEVEL:INFO}
 
 management:
   endpoints:
