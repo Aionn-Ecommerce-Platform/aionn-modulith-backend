@@ -10,9 +10,17 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class AionnApplication {
 
     public static void main(String[] args) {
+        runApplication(args);
+    }
+
+    static void runApplication(String[] args) {
+        createApplication().run(args);
+    }
+
+    static SpringApplication createApplication() {
         SpringApplication application = new SpringApplication(AionnApplication.class);
         application.setDefaultProperties(loadDotenvDefaults());
-        application.run(args);
+        return application;
     }
 
     static Map<String, Object> loadDotenvDefaults() {
