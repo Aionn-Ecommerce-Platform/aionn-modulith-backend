@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.List;
 
 /**
  * Outbound port for resolving SKU pricing from the Catalog module.

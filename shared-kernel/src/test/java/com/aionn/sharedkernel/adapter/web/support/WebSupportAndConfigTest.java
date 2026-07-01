@@ -25,7 +25,6 @@ import com.aionn.sharedkernel.infrastructure.web.RequestAttributeKeys;
 import com.aionn.sharedkernel.infrastructure.web.i18n.I18nWebConfig;
 import com.aionn.sharedkernel.infrastructure.web.i18n.LocaleInterceptor;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.lang.reflect.Method;
 import java.time.Instant;
 import java.util.List;

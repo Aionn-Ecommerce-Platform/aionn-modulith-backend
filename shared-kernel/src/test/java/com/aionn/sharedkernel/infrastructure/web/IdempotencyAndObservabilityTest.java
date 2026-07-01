@@ -33,7 +33,6 @@ import com.aionn.sharedkernel.infrastructure.web.observability.RequestIdFilter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.FilterChain;
 import jakarta.servlet.ReadListener;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -104,8 +103,10 @@ class IdempotencyAndObservabilityTest {
 
         CachedBodyHttpServletRequest cached = new CachedBodyHttpServletRequest(request, 1024);
         assertArrayEquals("{\"value\":1}".getBytes(StandardCharsets.UTF_8), cached.getCachedBody());
-        assertEquals("{\"value\":1}", new BufferedReader(new InputStreamReader(cached.getInputStream(), StandardCharsets.UTF_8))
-                .readLine());
+        try (BufferedReader reader =
+                new BufferedReader(new InputStreamReader(cached.getInputStream(), StandardCharsets.UTF_8))) {
+            assertEquals("{\"value\":1}", reader.readLine());
+        }
         var readListener = mock(ReadListener.class);
         assertThrows(UnsupportedOperationException.class, () -> cached.getInputStream().setReadListener(readListener));
 
@@ -220,7 +221,7 @@ class IdempotencyAndObservabilityTest {
         assertEquals(409, invalidStateResponse.getStatus());
 
         MockHttpServletResponse racedResponse = new MockHttpServletResponse();
-        when(store.find(anyString())).thenReturn(Optional.empty(), Optional.empty());
+        when(store.find(anyString())).thenAnswer(invocation -> Optional.empty());
         when(store.beginProcessing(anyString(), anyString(), any(Duration.class))).thenReturn(false);
         CachedBodyHttpServletRequest racedRequest = new CachedBodyHttpServletRequest(request, 1024);
         assertFalse(interceptor.preHandle(racedRequest, racedResponse, handler));
@@ -338,11 +339,10 @@ class IdempotencyAndObservabilityTest {
     static final class StringRedisTemplateStub {
         final org.springframework.data.redis.core.StringRedisTemplate template =
                 mock(org.springframework.data.redis.core.StringRedisTemplate.class);
-        final ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
+        final ValueOperations<String, String> valueOperations = mockValueOperations();
         final java.util.Map<String, String> storage = new java.util.HashMap<>();
         boolean failDelete;
 
-        @SuppressWarnings("unchecked")
         StringRedisTemplateStub() {
             when(template.opsForValue()).thenReturn(valueOperations);
             when(valueOperations.get(anyString())).thenAnswer(invocation -> storage.get(invocation.getArgument(0)));
@@ -364,6 +364,11 @@ class IdempotencyAndObservabilityTest {
                 }
                 return storage.remove(invocation.getArgument(0)) != null;
             });
+        }
+
+        @SuppressWarnings("unchecked")
+        private static ValueOperations<String, String> mockValueOperations() {
+            return (ValueOperations<String, String>) mock(ValueOperations.class);
         }
     }
 

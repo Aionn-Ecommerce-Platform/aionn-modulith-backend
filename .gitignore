@@ -24,8 +24,7 @@ envs/*.secret
 docker/.env
 docker/*.local.env
 
-application-local.yml
-application-local.yaml
-
 .sonar/
 .scannerwork/
+.jqwik-database
+**/.jqwik-database

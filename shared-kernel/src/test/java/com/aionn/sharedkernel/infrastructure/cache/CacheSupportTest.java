@@ -123,12 +123,17 @@ class CacheSupportTest {
         when(redisTemplate.delete("cache:catalog:k5")).thenThrow(new RuntimeException("redis down"));
         cache.evict("k5");
 
-        when(redisTemplate.execute(any(RedisCallback.class))).thenReturn(null);
+        when(redisTemplate.execute(anyRedisCallback())).thenReturn(null);
         cache.evictAll();
         verify(invalidationPublisher).publish(new CacheInvalidationMessage("catalog", null, "node-a", true));
 
         cache.invalidateLocal("k2");
         cache.invalidateAllLocal();
         assertNotNull(cache);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static RedisCallback<Object> anyRedisCallback() {
+        return (RedisCallback<Object>) any(RedisCallback.class);
     }
 }

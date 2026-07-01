@@ -155,16 +155,16 @@ public class CaffeineRedisTwoTierCache<V> implements TwoTierCache<String, V> {
                     .count(200)
                     .build();
             List<byte[]> batch = new ArrayList<>(200);
-            try (Cursor<byte[]> cursor = connection.scan(options)) {
+            try (Cursor<byte[]> cursor = connection.keyCommands().scan(options)) {
                 while (cursor.hasNext()) {
                     batch.add(cursor.next());
                     if (batch.size() >= 200) {
-                        connection.del(batch.toArray(byte[][]::new));
+                        connection.keyCommands().del(batch.toArray(byte[][]::new));
                         batch.clear();
                     }
                 }
                 if (!batch.isEmpty()) {
-                    connection.del(batch.toArray(byte[][]::new));
+                    connection.keyCommands().del(batch.toArray(byte[][]::new));
                 }
             }
             return null;
