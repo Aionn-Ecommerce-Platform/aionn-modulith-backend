@@ -27,7 +27,6 @@ public class IdentityUser {
     private LocalDateTime lockedUntil;
     private final LocalDateTime createdAt;
 
-    @SuppressWarnings("java:S107")
     public IdentityUser(
             String userId,
             String email,

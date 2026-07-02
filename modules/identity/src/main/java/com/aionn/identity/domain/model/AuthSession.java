@@ -18,7 +18,6 @@ public class AuthSession {
     private LocalDateTime lastActiveAt;
     private LocalDateTime expiresAt;
 
-    @SuppressWarnings("java:S107")
     public AuthSession(
             String sessionId,
             String userId,
