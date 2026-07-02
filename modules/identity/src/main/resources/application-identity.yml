@@ -1,0 +1,72 @@
+spring:
+  application:
+    name: identity
+
+  flyway:
+    enabled: true
+    locations: classpath:db
+
+identity:
+  registration:
+    max-verify-attempts: ${IDENTITY_REGISTRATION_MAX_VERIFY_ATTEMPTS:5}
+    resend-cooldown-seconds: ${IDENTITY_REGISTRATION_RESEND_COOLDOWN_SECONDS:60}
+    otp-expiry-seconds: ${IDENTITY_REGISTRATION_OTP_EXPIRY_SECONDS:300}
+    lock-timeout-seconds: ${IDENTITY_REGISTRATION_LOCK_TIMEOUT_SECONDS:30}
+    session-expires-days: ${IDENTITY_REGISTRATION_SESSION_EXPIRES_DAYS:30}
+    rate-limit:
+      ip-max-attempts: ${IDENTITY_REGISTRATION_IP_MAX_ATTEMPTS:3}
+      ip-window-seconds: ${IDENTITY_REGISTRATION_IP_WINDOW_SECONDS:300}
+      phone-max-attempts: ${IDENTITY_REGISTRATION_PHONE_MAX_ATTEMPTS:1}
+      phone-window-seconds: ${IDENTITY_REGISTRATION_PHONE_WINDOW_SECONDS:60}
+    captcha:
+      provider: ${CAPTCHA_PROVIDER:google}
+      expected-token: ${CAPTCHA_EXPECTED_TOKEN:}
+      google-site-key: ${CAPTCHA_GOOGLE_SITE_KEY:}
+      google-secret-key: ${CAPTCHA_GOOGLE_SECRET_KEY:}
+  jwt:
+    issuer: ${IDENTITY_JWT_ISSUER:aionn-identity}
+    secret: ${IDENTITY_JWT_SECRET:}
+    access-token-expiry-minutes: ${IDENTITY_JWT_ACCESS_TOKEN_EXPIRY_MINUTES:15}
+    refresh-token-expiry-days: ${IDENTITY_JWT_REFRESH_TOKEN_EXPIRY_DAYS:30}
+  auth:
+    client-type-header: ${IDENTITY_AUTH_CLIENT_TYPE_HEADER:X-Client-Type}
+    mobile-client-value: ${IDENTITY_AUTH_MOBILE_CLIENT_VALUE:mobile}
+    max-failed-login-attempts: ${IDENTITY_AUTH_MAX_FAILED_LOGIN_ATTEMPTS:5}
+    lockout-minutes: ${IDENTITY_AUTH_LOCKOUT_MINUTES:15}
+    password-reset-token-ttl-minutes: ${IDENTITY_AUTH_PASSWORD_RESET_TOKEN_TTL_MINUTES:15}
+    session:
+      expires-days: ${IDENTITY_AUTH_SESSION_EXPIRES_DAYS:30}
+    cookie:
+      secure: ${IDENTITY_AUTH_COOKIE_SECURE:true}
+      same-site: ${IDENTITY_AUTH_COOKIE_SAME_SITE:Lax}
+      domain: ${IDENTITY_AUTH_COOKIE_DOMAIN:}
+      path: ${IDENTITY_AUTH_COOKIE_PATH:/}
+    social:
+      google:
+        provider: ${IDENTITY_AUTH_GOOGLE_PROVIDER:remote}
+        client-id: ${IDENTITY_AUTH_GOOGLE_CLIENT_ID:}
+        token-info-url: ${IDENTITY_AUTH_GOOGLE_TOKEN_INFO_URL:https://oauth2.googleapis.com/tokeninfo}
+  mfa:
+    issuer: ${IDENTITY_MFA_ISSUER:Aionn}
+    encryption-key: ${IDENTITY_MFA_ENCRYPTION_KEY:}
+    backup-code-count: ${IDENTITY_MFA_BACKUP_CODE_COUNT:8}
+  kyc:
+    provider: ${IDENTITY_KYC_PROVIDER:local}
+    sumsub:
+      base-url: ${IDENTITY_KYC_SUMSUB_BASE_URL:https://api.sumsub.com}
+      app-token: ${IDENTITY_KYC_SUMSUB_APP_TOKEN:}
+      secret-key: ${IDENTITY_KYC_SUMSUB_SECRET_KEY:}
+      webhook-secret: ${IDENTITY_KYC_SUMSUB_WEBHOOK_SECRET:}
+      level-name: ${IDENTITY_KYC_SUMSUB_LEVEL_NAME:basic-kyc-level}
+  media:
+    provider: ${IDENTITY_MEDIA_PROVIDER:cloudinary}
+    cloudinary:
+      avatar-folder: ${CLOUDINARY_AVATAR_FOLDER:identity/avatars}
+      kyc-folder: ${CLOUDINARY_KYC_FOLDER:identity/kyc}
+  address:
+    max-address-numbers: ${IDENTITY_ADDRESS_MAX_NUMBERS:5}
+  cache:
+    geography:
+      l1-ttl-seconds: ${IDENTITY_GEOGRAPHY_L1_TTL_SECONDS:1800}
+      l1-max-size: ${IDENTITY_GEOGRAPHY_L1_MAX_SIZE:5000}
+      l2-ttl-seconds: ${IDENTITY_GEOGRAPHY_L2_TTL_SECONDS:86400}

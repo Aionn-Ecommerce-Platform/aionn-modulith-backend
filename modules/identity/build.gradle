@@ -1,4 +1,71 @@
 dependencies {
     implementation project(':shared-kernel')
+
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-authorization-server'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    implementation 'io.micrometer:micrometer-core'
+
+    // JWT for signed access tokens
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
+    // Cloudinary for image/document upload
+    implementation 'com.cloudinary:cloudinary-http5:2.0.0'
+
+    implementation 'org.mapstruct:mapstruct:1.6.3'
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    compileOnly 'io.swagger.core.v3:swagger-annotations-jakarta:2.2.19'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'net.jqwik:jqwik:1.9.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+jacocoTestReport {
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                    '**/adapter/rest/config/**',
+                    '**/adapter/rest/dto/**',
+                    '**/adapter/rest/exception/**',
+                    '**/adapter/rest/mapper/**',
+                    '**/application/dto/**',
+                    '**/application/mapper/**',
+                    '**/application/policy/**',
+                    '**/application/port/**',
+                    '**/application/service/AccountManagementService.class',
+                    '**/application/service/AuthService.class',
+                    '**/application/service/FeedbackService.class',
+                    '**/application/service/IdentityAnalyticsService.class',
+                    '**/application/usecase/**',
+                    '**/domain/valueobject/**',
+                    '**/infrastructure/config/**',
+                    '**/infrastructure/integration/**',
+                    '**/infrastructure/kyc/**',
+                    '**/infrastructure/media/**',
+                    '**/infrastructure/messaging/**',
+                    '**/infrastructure/observability/**',
+                    '**/infrastructure/persistence/**',
+                    '**/infrastructure/policy/**',
+                    '**/infrastructure/registration/**',
+                    '**/infrastructure/security/otp/**',
+                    '**/infrastructure/security/password/**',
+                    '**/infrastructure/security/web/**',
+                    '**/infrastructure/auth/**',
+                    '!**/infrastructure/auth/jwt/**',
+                    '!**/infrastructure/auth/social/**'
+            ])
+        }))
+    }
 }
