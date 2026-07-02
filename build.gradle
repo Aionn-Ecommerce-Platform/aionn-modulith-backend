@@ -77,8 +77,15 @@ sonar {
         property 'sonar.coverage.exclusions', [
                 '**/application/dto/**',
                 '**/application/mapper/**',
-                '**/application/policy/**',
                 '**/application/port/**',
+                '**/application/policy/AccountManagementPolicy.java',
+                '**/application/policy/AddressPolicy.java',
+                '**/application/policy/AgentPolicy.java',
+                '**/application/policy/AuthPolicy.java',
+                '**/application/policy/IdentityValidationConstants.java',
+                '**/application/policy/KycPolicy.java',
+                '**/application/policy/MfaPolicy.java',
+                '**/application/policy/RegistrationPolicy.java',
                 '**/adapter/rest/dto/**',
                 '**/adapter/rest/mapper/**'
         ].join(',')
