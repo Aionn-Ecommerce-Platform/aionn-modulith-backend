@@ -9,7 +9,7 @@ public record EnableMfaCommand(
                 String clientIp) implements Command {
     @Override
     public String toString() {
-        return "EnableMfaCommand[userId=%s, password=***, mfaCode=***, clientIp=%s]"
+        return "EnableMfaCommand[userId=%s, credential=***, mfaCode=***, clientIp=%s]"
                 .formatted(userId, clientIp);
     }
 }

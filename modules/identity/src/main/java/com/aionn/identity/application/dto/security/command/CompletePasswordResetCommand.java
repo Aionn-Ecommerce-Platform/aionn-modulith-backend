@@ -8,7 +8,7 @@ public record CompletePasswordResetCommand(
                 String clientIp) implements Command {
     @Override
     public String toString() {
-        return "CompletePasswordResetCommand[token=***, newPassword=***, clientIp=%s]".formatted(clientIp);
+        return "CompletePasswordResetCommand[token=***, newCredential=***, clientIp=%s]".formatted(clientIp);
     }
 }
 

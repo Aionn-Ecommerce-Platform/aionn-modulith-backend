@@ -9,7 +9,7 @@ public record RegenerateBackupCodesCommand(
         String clientIp) implements Command {
     @Override
     public String toString() {
-        return "RegenerateBackupCodesCommand[userId=%s, password=***, mfaCode=***, clientIp=%s]"
+        return "RegenerateBackupCodesCommand[userId=%s, credential=***, mfaCode=***, clientIp=%s]"
                 .formatted(userId, clientIp);
     }
 }

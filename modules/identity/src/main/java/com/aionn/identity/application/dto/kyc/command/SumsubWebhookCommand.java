@@ -20,18 +20,27 @@ public record SumsubWebhookCommand(
         if (this == other) {
             return true;
         }
-        if (!(other instanceof SumsubWebhookCommand that)) {
+        if (!(other instanceof SumsubWebhookCommand(
+                byte[] otherPayload,
+                String otherDigest,
+                String otherDigestAlgorithm,
+                String otherProviderApplicantId,
+                String otherProviderReviewStatus,
+                String otherReviewAnswer,
+                String otherModerationComment,
+                String otherClientComment,
+                String otherCorrelationId))) {
             return false;
         }
-        return Arrays.equals(payload, that.payload)
-                && Objects.equals(digest, that.digest)
-                && Objects.equals(digestAlgorithm, that.digestAlgorithm)
-                && Objects.equals(providerApplicantId, that.providerApplicantId)
-                && Objects.equals(providerReviewStatus, that.providerReviewStatus)
-                && Objects.equals(reviewAnswer, that.reviewAnswer)
-                && Objects.equals(moderationComment, that.moderationComment)
-                && Objects.equals(clientComment, that.clientComment)
-                && Objects.equals(correlationId, that.correlationId);
+        return Arrays.equals(payload, otherPayload)
+                && Objects.equals(digest, otherDigest)
+                && Objects.equals(digestAlgorithm, otherDigestAlgorithm)
+                && Objects.equals(providerApplicantId, otherProviderApplicantId)
+                && Objects.equals(providerReviewStatus, otherProviderReviewStatus)
+                && Objects.equals(reviewAnswer, otherReviewAnswer)
+                && Objects.equals(moderationComment, otherModerationComment)
+                && Objects.equals(clientComment, otherClientComment)
+                && Objects.equals(correlationId, otherCorrelationId);
     }
 
     @Override

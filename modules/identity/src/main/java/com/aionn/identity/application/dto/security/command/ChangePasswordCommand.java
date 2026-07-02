@@ -9,7 +9,7 @@ public record ChangePasswordCommand(
                 String clientIp) implements Command {
     @Override
     public String toString() {
-        return "ChangePasswordCommand[userId=%s, currentPassword=***, newPassword=***, clientIp=%s]"
+        return "ChangePasswordCommand[userId=%s, currentCredential=***, newCredential=***, clientIp=%s]"
                 .formatted(userId, clientIp);
     }
 }

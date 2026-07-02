@@ -10,7 +10,7 @@ public record LoginCommand(
                 String userAgent) implements Command {
     @Override
     public String toString() {
-        return "LoginCommand[identity=%s, password=***, mfaCode=***, ipAddress=%s, userAgent=%s]"
+        return "LoginCommand[identity=%s, credential=***, mfaCode=***, ipAddress=%s, userAgent=%s]"
                 .formatted(identity, ipAddress, userAgent);
     }
 }

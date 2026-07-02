@@ -8,6 +8,6 @@ public record InitiateMfaSetupCommand(
         String clientIp) implements Command {
     @Override
     public String toString() {
-        return "InitiateMfaSetupCommand[userId=%s, password=***, clientIp=%s]".formatted(userId, clientIp);
+        return "InitiateMfaSetupCommand[userId=%s, credential=***, clientIp=%s]".formatted(userId, clientIp);
     }
 }
