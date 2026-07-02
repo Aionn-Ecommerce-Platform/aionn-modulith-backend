@@ -14,7 +14,7 @@ public enum KycStatus {
             case SUBMITTED -> newStatus == IN_REVIEW || newStatus == APPROVED || newStatus == REJECTED
                     || newStatus == CANCELLED;
             case IN_REVIEW -> newStatus == APPROVED || newStatus == REJECTED;
-            case REJECTED -> newStatus == DRAFT;
+            case REJECTED -> newStatus == DRAFT || newStatus == SUBMITTED;
             case APPROVED, CANCELLED -> false;
         };
     }

@@ -17,7 +17,7 @@ public enum FeedbackCategory {
         try {
             return FeedbackCategory.valueOf(raw.trim().toUpperCase());
         } catch (IllegalArgumentException ex) {
-            throw new IdentityException(IdentityErrorCode.INVALID_USER_STATUS,
+            throw new IdentityException(IdentityErrorCode.INVALID_FEEDBACK_CATEGORY,
                     "Unsupported feedback category: " + raw);
         }
     }

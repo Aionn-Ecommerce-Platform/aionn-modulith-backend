@@ -58,16 +58,18 @@ public class RegistrationVerificationSession implements Serializable {
     }
 
     public void verify(String inputOtpCode) {
+        if (verified) {
+            throw new IdentityException(IdentityErrorCode.REGISTRATION_ALREADY_VERIFIED);
+        }
         if (isExpired()) {
             throw new IdentityException(IdentityErrorCode.OTP_EXPIRED);
         }
         if (isLocked()) {
             throw new IdentityException(IdentityErrorCode.OTP_ATTEMPTS_EXCEEDED);
         }
-        if (!Objects.equals(otpCode, inputOtpCode)) {
+        if (inputOtpCode == null || inputOtpCode.isBlank() || !Objects.equals(otpCode, inputOtpCode)) {
             attemptCount++;
             if (isLocked()) {
-                expiredAt = LocalDateTime.now();
                 throw new IdentityException(IdentityErrorCode.OTP_ATTEMPTS_EXCEEDED);
             }
             throw new IdentityException(IdentityErrorCode.OTP_INVALID);

@@ -73,6 +73,18 @@ class KycProfileTest {
     }
 
     @Test
+    void submitMovesRejectedToSubmitted() {
+        KycProfile kyc = submitted();
+        kyc.adminReject("admin-1", "blurred");
+
+        kyc.submit();
+
+        assertEquals(KycStatus.SUBMITTED, kyc.getStatus());
+        assertNull(kyc.getRejectReason());
+        assertNull(kyc.getApprovedAt());
+    }
+
+    @Test
     void attachBlobUrlKeepsFirstDocumentUrl() {
         KycProfile kyc = draft();
 
@@ -112,5 +124,14 @@ class KycProfileTest {
 
         assertEquals(KycStatus.REJECTED, kyc.getStatus());
         assertEquals("fraud", kyc.getRejectReason());
+    }
+
+    @Test
+    void syncExternalReviewCannotOverrideApprovedWithRejected() {
+        KycProfile kyc = submitted();
+        kyc.syncExternalReview("completed", "corr-2", KycReviewAnswer.GREEN, "ok", null);
+
+        assertThrows(IllegalStateException.class,
+                () -> kyc.syncExternalReview("completed", "corr-3", KycReviewAnswer.RED, "fraud", null));
     }
 }

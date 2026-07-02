@@ -10,8 +10,6 @@ public enum IdentityErrorCode {
 	EMAIL_ALREADY_EXISTS("IDENTITY_002", "Email already exists in the system"),
 	USERNAME_ALREADY_EXISTS("IDENTITY_005", "Username already exists in the system"),
 	PHONE_INVALID("IDENTITY_006", "Invalid phone number format"),
-	REGISTRATION_NOT_FOUND("IDENTITY_003", "Registration session not found"),
-	REGISTRATION_EXPIRED("IDENTITY_004", "Registration session has expired"),
 
 	OTP_INVALID("IDENTITY_101", "Invalid OTP code"),
 	OTP_EXPIRED("IDENTITY_102", "OTP code has expired"),
@@ -20,7 +18,7 @@ public enum IdentityErrorCode {
 	CAPTCHA_INVALID("IDENTITY_105", "Invalid captcha token"),
 	VERIFICATION_TOKEN_INVALID("IDENTITY_106", "Verification Token invalid"),
 	RATE_LIMIT_EXCEEDED("IDENTITY_107", "Rate limit exceeded"),
-	ADDRESS_NUMBER_EXCEEDED("IDENTITY_108", "Too much addresses, just 5 max"),
+	ADDRESS_NUMBER_EXCEEDED("IDENTITY_108", "Too many addresses, maximum 5 allowed"),
 	REGISTRATION_SESSION_NOT_FOUND("IDENTITY_109", "Registration session not found"),
 	REGISTRATION_ALREADY_VERIFIED("IDENTITY_110", "Registration already verified"),
 	REGISTRATION_SESSION_EXPIRED("IDENTITY_111", "Registration session has expired"),
@@ -53,6 +51,7 @@ public enum IdentityErrorCode {
 	ACCESS_DENIED("IDENTITY_225", "Access denied"),
 	INVALID_USER_STATUS("IDENTITY_226", "Invalid user status"),
 	INVALID_USER_ROLE("IDENTITY_227", "Invalid user role"),
+	INVALID_FEEDBACK_CATEGORY("IDENTITY_228", "Invalid feedback category"),
 
 	INVALID_ADDRESS_TYPE("IDENTITY_301", "Invalid address type. Supported types are HOME or OFFICE"),
 	ADDRESS_NOT_FOUND("IDENTITY_302", "Address not found"),

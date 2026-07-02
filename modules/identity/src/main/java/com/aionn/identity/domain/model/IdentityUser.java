@@ -103,12 +103,12 @@ public class IdentityUser {
 
     public void updateEmail(String newEmail) {
         this.email = newEmail;
-        this.emailVerifiedAt = LocalDateTime.now();
+        this.emailVerifiedAt = null;
     }
 
     public void updatePhone(String newPhone) {
         this.phone = newPhone;
-        this.phoneVerifiedAt = LocalDateTime.now();
+        this.phoneVerifiedAt = null;
     }
 
     public void ban() {

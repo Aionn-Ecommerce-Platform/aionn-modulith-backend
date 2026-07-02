@@ -35,6 +35,25 @@ class RegistrationVerificationSessionTest {
     }
 
     @Test
+    void shouldRejectVerificationAfterSessionAlreadyVerified() {
+        RegistrationVerificationSession session = new RegistrationVerificationSession(
+                "reg-1",
+                "+84987654321",
+                "123456",
+                0,
+                5,
+                LocalDateTime.now().plusSeconds(60),
+                LocalDateTime.now().plusMinutes(5),
+                false,
+                null,
+                null);
+
+        session.verify("123456");
+
+        assertThrows(IdentityException.class, () -> session.verify(null));
+    }
+
+    @Test
     void shouldFailWhenOtpAttemptsExceeded() {
         RegistrationVerificationSession session = new RegistrationVerificationSession(
                 "reg-1",
@@ -49,6 +68,8 @@ class RegistrationVerificationSessionTest {
                 null);
 
         assertThrows(IdentityException.class, () -> session.verify("999999"));
+        assertTrue(session.isLocked());
+        assertTrue(session.getExpiredAt().isAfter(LocalDateTime.now()));
     }
 
     @Test
@@ -71,5 +92,4 @@ class RegistrationVerificationSessionTest {
         assertTrue("654321".equals(session.getOtpCode()));
     }
 }
-
 

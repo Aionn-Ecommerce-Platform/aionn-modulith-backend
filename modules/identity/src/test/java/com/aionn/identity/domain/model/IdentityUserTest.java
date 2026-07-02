@@ -225,27 +225,27 @@ class IdentityUserTest {
     }
 
     @Test
-    void updateEmail_newEmail_updatesEmailAndVerifiesIt() {
+    void updateEmail_newEmail_updatesEmailAndResetsVerification() {
         IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
-        assertThat(user.getEmailVerifiedAt()).isNull();
+        user.verifyEmail();
+        assertThat(user.getEmailVerifiedAt()).isNotNull();
 
         user.updateEmail("alice.new@example.com");
 
         assertThat(user.getEmail()).isEqualTo("alice.new@example.com");
-        assertThat(user.getEmailVerifiedAt()).isNotNull();
-        assertThat(user.getEmailVerifiedAt()).isBeforeOrEqualTo(LocalDateTime.now());
+        assertThat(user.getEmailVerifiedAt()).isNull();
     }
 
     @Test
-    void updatePhone_newPhone_updatesPhoneAndVerifiesIt() {
+    void updatePhone_newPhone_updatesPhoneAndResetsVerification() {
         IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
-        assertThat(user.getPhoneVerifiedAt()).isNull();
+        user.verifyPhone();
+        assertThat(user.getPhoneVerifiedAt()).isNotNull();
 
         user.updatePhone("0999888777");
 
         assertThat(user.getPhone()).isEqualTo("0999888777");
-        assertThat(user.getPhoneVerifiedAt()).isNotNull();
-        assertThat(user.getPhoneVerifiedAt()).isBeforeOrEqualTo(LocalDateTime.now());
+        assertThat(user.getPhoneVerifiedAt()).isNull();
     }
 
     @Test

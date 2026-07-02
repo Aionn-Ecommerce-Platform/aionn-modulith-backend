@@ -39,7 +39,32 @@ public class DataExportRequest {
                 null,
                 null);
     }
-}
 
+    public void markProcessing() {
+        transitionTo(DataExportStatus.PROCESSING);
+    }
+
+    public void complete(String fileUrl) {
+        if (fileUrl == null || fileUrl.isBlank()) {
+            throw new IllegalArgumentException("fileUrl must not be blank");
+        }
+        transitionTo(DataExportStatus.COMPLETED);
+        this.fileUrl = fileUrl;
+        this.completedAt = LocalDateTime.now();
+    }
+
+    public void fail() {
+        transitionTo(DataExportStatus.FAILED);
+        this.completedAt = LocalDateTime.now();
+    }
+
+    private void transitionTo(DataExportStatus newStatus) {
+        if (!this.status.canTransitionTo(newStatus)) {
+            throw new IllegalStateException(
+                    "Data export cannot transition from " + this.status + " to " + newStatus);
+        }
+        this.status = newStatus;
+    }
+}
 
 

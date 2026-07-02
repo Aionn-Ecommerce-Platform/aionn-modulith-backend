@@ -39,7 +39,7 @@ public class KycProfile {
         this.providerLevelName = providerLevelName;
         this.providerReviewStatus = providerReviewStatus;
         this.providerCorrelationId = providerCorrelationId;
-        this.status = KycStatus.SUBMITTED;
+        transitionTo(KycStatus.SUBMITTED);
         if (this.submittedAt == null) {
             this.submittedAt = LocalDateTime.now();
         }
@@ -57,7 +57,7 @@ public class KycProfile {
 
         if (reviewAnswer == null) {
             if (this.status == KycStatus.DRAFT) {
-                this.status = KycStatus.SUBMITTED;
+                transitionTo(KycStatus.SUBMITTED);
                 this.submittedAt = this.submittedAt == null ? LocalDateTime.now() : this.submittedAt;
             }
             return;
@@ -65,13 +65,13 @@ public class KycProfile {
 
         switch (reviewAnswer) {
             case GREEN -> {
-                this.status = KycStatus.APPROVED;
+                transitionTo(KycStatus.APPROVED);
                 this.decisionAdminId = providerDecisionSource();
                 this.rejectReason = null;
                 this.approvedAt = LocalDateTime.now();
             }
             case RED -> {
-                this.status = KycStatus.REJECTED;
+                transitionTo(KycStatus.REJECTED);
                 this.decisionAdminId = providerDecisionSource();
                 this.rejectReason = moderationComment != null && !moderationComment.isBlank()
                         ? moderationComment
@@ -92,11 +92,7 @@ public class KycProfile {
     }
 
     public void submit() {
-        if (this.status != KycStatus.DRAFT && this.status != KycStatus.REJECTED) {
-            throw new IllegalStateException(
-                    "KYC can only be submitted from DRAFT or REJECTED (current=" + this.status + ")");
-        }
-        this.status = KycStatus.SUBMITTED;
+        transitionTo(KycStatus.SUBMITTED);
         this.submittedAt = LocalDateTime.now();
         this.reviewerId = null;
         this.reviewNote = null;
@@ -106,11 +102,7 @@ public class KycProfile {
     }
 
     public void adminApprove(String adminId, String note) {
-        if (this.status != KycStatus.SUBMITTED && this.status != KycStatus.IN_REVIEW) {
-            throw new IllegalStateException(
-                    "KYC can only be approved from SUBMITTED or IN_REVIEW (current=" + this.status + ")");
-        }
-        this.status = KycStatus.APPROVED;
+        transitionTo(KycStatus.APPROVED);
         this.decisionAdminId = adminId;
         this.reviewerId = adminId;
         this.reviewNote = note;
@@ -119,11 +111,7 @@ public class KycProfile {
     }
 
     public void adminReject(String adminId, String reason) {
-        if (this.status != KycStatus.SUBMITTED && this.status != KycStatus.IN_REVIEW) {
-            throw new IllegalStateException(
-                    "KYC can only be rejected from SUBMITTED or IN_REVIEW (current=" + this.status + ")");
-        }
-        this.status = KycStatus.REJECTED;
+        transitionTo(KycStatus.REJECTED);
         this.decisionAdminId = adminId;
         this.reviewerId = adminId;
         this.rejectReason = reason;
@@ -131,11 +119,7 @@ public class KycProfile {
     }
 
     public void adminMarkInReview(String adminId, String note) {
-        if (this.status != KycStatus.SUBMITTED) {
-            throw new IllegalStateException(
-                    "KYC can only enter IN_REVIEW from SUBMITTED (current=" + this.status + ")");
-        }
-        this.status = KycStatus.IN_REVIEW;
+        transitionTo(KycStatus.IN_REVIEW);
         this.reviewerId = adminId;
         if (note != null && !note.isBlank()) {
             this.reviewNote = note;
@@ -146,5 +130,16 @@ public class KycProfile {
         return provider == null || provider.isBlank()
                 ? "SYSTEM"
                 : provider.toUpperCase();
+    }
+
+    private void transitionTo(KycStatus newStatus) {
+        if (this.status == newStatus) {
+            return;
+        }
+        if (!this.status.canTransitionTo(newStatus)) {
+            throw new IllegalStateException(
+                    "KYC cannot transition from " + this.status + " to " + newStatus);
+        }
+        this.status = newStatus;
     }
 }
