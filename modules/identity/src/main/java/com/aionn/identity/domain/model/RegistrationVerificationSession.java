@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.Serializable;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -50,7 +51,7 @@ public class RegistrationVerificationSession implements Serializable {
     }
 
     public boolean isExpired() {
-        return expiredAt != null && !expiredAt.isAfter(LocalDateTime.now());
+        return expiredAt != null && !expiredAt.isAfter(LocalDateTime.now(Clock.systemUTC()));
     }
 
     public boolean isLocked() {
@@ -78,7 +79,7 @@ public class RegistrationVerificationSession implements Serializable {
         verified = true;
         otpCode = null;
         verificationToken = IdGenerator.ulid();
-        verifiedAt = LocalDateTime.now();
+        verifiedAt = LocalDateTime.now(Clock.systemUTC());
     }
 
     public void resend(String newOtpCode, LocalDateTime newResendAvailableAt, LocalDateTime newExpiredAt) {
@@ -91,7 +92,7 @@ public class RegistrationVerificationSession implements Serializable {
         if (isLocked()) {
             throw new IdentityException(IdentityErrorCode.OTP_ATTEMPTS_EXCEEDED);
         }
-        if (resendAvailableAt != null && LocalDateTime.now().isBefore(resendAvailableAt)) {
+        if (resendAvailableAt != null && LocalDateTime.now(Clock.systemUTC()).isBefore(resendAvailableAt)) {
             throw new IdentityException(IdentityErrorCode.OTP_RESEND_TOO_SOON);
         }
 

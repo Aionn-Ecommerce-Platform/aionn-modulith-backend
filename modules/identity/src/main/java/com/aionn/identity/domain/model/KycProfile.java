@@ -5,6 +5,7 @@ import com.aionn.identity.domain.valueobject.KycStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 @Getter
@@ -41,7 +42,7 @@ public class KycProfile {
         this.providerCorrelationId = providerCorrelationId;
         transitionTo(KycStatus.SUBMITTED);
         if (this.submittedAt == null) {
-            this.submittedAt = LocalDateTime.now();
+            this.submittedAt = LocalDateTime.now(Clock.systemUTC());
         }
     }
 
@@ -58,7 +59,7 @@ public class KycProfile {
         if (reviewAnswer == null) {
             if (this.status == KycStatus.DRAFT) {
                 transitionTo(KycStatus.SUBMITTED);
-                this.submittedAt = this.submittedAt == null ? LocalDateTime.now() : this.submittedAt;
+                this.submittedAt = this.submittedAt == null ? LocalDateTime.now(Clock.systemUTC()) : this.submittedAt;
             }
             return;
         }
@@ -68,7 +69,7 @@ public class KycProfile {
                 transitionTo(KycStatus.APPROVED);
                 this.decisionAdminId = providerDecisionSource();
                 this.rejectReason = null;
-                this.approvedAt = LocalDateTime.now();
+                this.approvedAt = LocalDateTime.now(Clock.systemUTC());
             }
             case RED -> {
                 transitionTo(KycStatus.REJECTED);
@@ -93,7 +94,7 @@ public class KycProfile {
 
     public void submit() {
         transitionTo(KycStatus.SUBMITTED);
-        this.submittedAt = LocalDateTime.now();
+        this.submittedAt = LocalDateTime.now(Clock.systemUTC());
         this.reviewerId = null;
         this.reviewNote = null;
         this.decisionAdminId = null;
@@ -107,7 +108,7 @@ public class KycProfile {
         this.reviewerId = adminId;
         this.reviewNote = note;
         this.rejectReason = null;
-        this.approvedAt = LocalDateTime.now();
+        this.approvedAt = LocalDateTime.now(Clock.systemUTC());
     }
 
     public void adminReject(String adminId, String reason) {

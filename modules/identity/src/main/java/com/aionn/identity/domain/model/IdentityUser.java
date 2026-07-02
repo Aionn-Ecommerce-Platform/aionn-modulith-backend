@@ -5,6 +5,7 @@ import com.aionn.identity.domain.exception.IdentityException;
 import com.aionn.identity.domain.valueobject.UserRole;
 import com.aionn.identity.domain.valueobject.UserStatus;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.Objects;
@@ -26,6 +27,7 @@ public class IdentityUser {
     private LocalDateTime lockedUntil;
     private final LocalDateTime createdAt;
 
+    @SuppressWarnings("java:S107")
     public IdentityUser(
             String userId,
             String email,
@@ -71,7 +73,7 @@ public class IdentityUser {
                 null,
                 null,
                 null,
-                LocalDateTime.now());
+                LocalDateTime.now(Clock.systemUTC()));
     }
 
     public void updateDisplayName(String displayName) {
@@ -88,13 +90,13 @@ public class IdentityUser {
     public void verifyEmail() {
         if (this.emailVerifiedAt != null)
             return;
-        this.emailVerifiedAt = LocalDateTime.now();
+        this.emailVerifiedAt = LocalDateTime.now(Clock.systemUTC());
     }
 
     public void verifyPhone() {
         if (this.phoneVerifiedAt != null)
             return;
-        this.phoneVerifiedAt = LocalDateTime.now();
+        this.phoneVerifiedAt = LocalDateTime.now(Clock.systemUTC());
     }
 
     public void updatePasswordHash(String passwordHash) {
@@ -137,7 +139,7 @@ public class IdentityUser {
     }
 
     public boolean isLocked() {
-        return lockedUntil != null && lockedUntil.isAfter(LocalDateTime.now());
+        return lockedUntil != null && lockedUntil.isAfter(LocalDateTime.now(Clock.systemUTC()));
     }
 
     public boolean isActive() {

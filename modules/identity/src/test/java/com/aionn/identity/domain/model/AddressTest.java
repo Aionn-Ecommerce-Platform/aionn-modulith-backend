@@ -3,6 +3,7 @@ package com.aionn.identity.domain.model;
 import com.aionn.identity.domain.valueobject.AddressType;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.*;
@@ -11,7 +12,7 @@ class AddressTest {
 
     @Test
     void constructor_validInput_createsInstance() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
 
         Address address = new Address(
                 "addr-123",
@@ -51,7 +52,7 @@ class AddressTest {
 
     @Test
     void canBeDeleted_defaultAddress_returnsFalse() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
         Address address = new Address(
                 "addr-default",
                 "user-123",
@@ -75,7 +76,7 @@ class AddressTest {
 
     @Test
     void canBeDeleted_nonDefaultAddress_returnsTrue() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
         Address address = new Address(
                 "addr-secondary",
                 "user-123",
@@ -99,7 +100,7 @@ class AddressTest {
 
     @Test
     void recordsAreEqualWhenAllFieldsMatch() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
         Address address1 = new Address(
                 "addr-123",
                 "user-456",
@@ -141,7 +142,7 @@ class AddressTest {
 
     @Test
     void recordsAreNotEqualWhenAddressIdDiffers() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
         Address address1 = new Address(
                 "addr-123",
                 "user-456",

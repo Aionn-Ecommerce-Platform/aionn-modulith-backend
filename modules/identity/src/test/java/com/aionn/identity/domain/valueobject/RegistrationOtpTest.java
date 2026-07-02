@@ -2,6 +2,7 @@ package com.aionn.identity.domain.valueobject;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -12,7 +13,7 @@ class RegistrationOtpTest {
     void generate_shouldCreateOtpWithCorrectTimings() {
         int resendCooldownSeconds = 60;
         int expirySeconds = 300;
-        LocalDateTime beforeGeneration = LocalDateTime.now();
+        LocalDateTime beforeGeneration = LocalDateTime.now(Clock.systemUTC());
 
         RegistrationOtp otp = RegistrationOtp.generate(resendCooldownSeconds, expirySeconds);
 

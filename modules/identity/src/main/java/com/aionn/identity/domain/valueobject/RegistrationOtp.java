@@ -2,6 +2,7 @@ package com.aionn.identity.domain.valueobject;
 
 import com.aionn.sharedkernel.util.OtpGenerator;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -26,7 +27,7 @@ public final class RegistrationOtp {
         }
 
         String code = OtpGenerator.generate6DigitOtp();
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
         LocalDateTime resendAvailableAt = now.plusSeconds(resendCooldownSeconds);
         LocalDateTime expiredAt = now.plusSeconds(expirySeconds);
 
@@ -46,7 +47,7 @@ public final class RegistrationOtp {
     }
 
     public boolean isExpired() {
-        return !expiredAt.isAfter(LocalDateTime.now());
+        return !expiredAt.isAfter(LocalDateTime.now(Clock.systemUTC()));
     }
 
     @Override

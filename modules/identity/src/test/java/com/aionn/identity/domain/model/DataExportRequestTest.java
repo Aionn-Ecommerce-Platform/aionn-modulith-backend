@@ -21,6 +21,16 @@ class DataExportRequestTest {
     }
 
     @Test
+    void createRequestedRejectsBlankIdentifiers() {
+        assertThatThrownBy(() -> DataExportRequest.createRequested(" ", "user-1"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("requestId");
+        assertThatThrownBy(() -> DataExportRequest.createRequested("export-1", " "))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("userId");
+    }
+
+    @Test
     void completeRequiresProcessingExportAndFileUrl() {
         DataExportRequest request = DataExportRequest.createRequested("export-1", "user-1");
 

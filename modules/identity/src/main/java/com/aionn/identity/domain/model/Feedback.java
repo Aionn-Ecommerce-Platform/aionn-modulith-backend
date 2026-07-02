@@ -22,6 +22,7 @@ public class Feedback {
     private final LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    @SuppressWarnings("java:S107")
     public Feedback(
             String feedbackId,
             String userId,
@@ -53,6 +54,7 @@ public class Feedback {
         this.updatedAt = updatedAt;
     }
 
+    @SuppressWarnings("java:S107")
     public static Feedback createNew(
             String feedbackId,
             String userId,

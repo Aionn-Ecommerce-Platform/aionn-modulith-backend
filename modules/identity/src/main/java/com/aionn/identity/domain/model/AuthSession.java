@@ -3,6 +3,7 @@ package com.aionn.identity.domain.model;
 import com.aionn.identity.domain.valueobject.AuthSessionStatus;
 import lombok.Getter;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 @Getter
@@ -17,6 +18,7 @@ public class AuthSession {
     private LocalDateTime lastActiveAt;
     private LocalDateTime expiresAt;
 
+    @SuppressWarnings("java:S107")
     public AuthSession(
             String sessionId,
             String userId,
@@ -42,7 +44,7 @@ public class AuthSession {
             String ipAddress,
             String userAgent,
             LocalDateTime expiresAt) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
         return new AuthSession(
                 sessionId,
                 userId,
@@ -55,7 +57,7 @@ public class AuthSession {
     }
 
     public void touch() {
-        this.lastActiveAt = LocalDateTime.now();
+        this.lastActiveAt = LocalDateTime.now(Clock.systemUTC());
     }
 
     public void revoke() {
@@ -63,20 +65,20 @@ public class AuthSession {
     }
 
     public void extendExpiry(LocalDateTime newExpiresAt) {
-        if (newExpiresAt == null || !newExpiresAt.isAfter(LocalDateTime.now())) {
+        if (newExpiresAt == null || !newExpiresAt.isAfter(LocalDateTime.now(Clock.systemUTC()))) {
             throw new IllegalArgumentException("New expiry must be in the future");
         }
         this.expiresAt = newExpiresAt;
-        this.lastActiveAt = LocalDateTime.now();
+        this.lastActiveAt = LocalDateTime.now(Clock.systemUTC());
     }
 
     public boolean isActive() {
         return AuthSessionStatus.ACTIVE.equals(status)
                 && expiresAt != null
-                && expiresAt.isAfter(LocalDateTime.now());
+                && expiresAt.isAfter(LocalDateTime.now(Clock.systemUTC()));
     }
 
     public boolean isExpired() {
-        return expiresAt != null && !expiresAt.isAfter(LocalDateTime.now());
+        return expiresAt != null && !expiresAt.isAfter(LocalDateTime.now(Clock.systemUTC()));
     }
 }

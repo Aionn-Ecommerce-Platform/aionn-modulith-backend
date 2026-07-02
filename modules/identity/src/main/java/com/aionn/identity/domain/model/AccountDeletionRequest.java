@@ -3,6 +3,7 @@ package com.aionn.identity.domain.model;
 import com.aionn.identity.domain.valueobject.AccountDeletionStatus;
 import lombok.Getter;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 @Getter
@@ -31,7 +32,7 @@ public class AccountDeletionRequest {
     }
 
     public static AccountDeletionRequest createPending(String requestId, String userId, int graceDays) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
         return new AccountDeletionRequest(
                 requestId,
                 userId,
@@ -43,7 +44,7 @@ public class AccountDeletionRequest {
 
     public void cancel() {
         this.status = AccountDeletionStatus.CANCELLED;
-        this.canceledAt = LocalDateTime.now();
+        this.canceledAt = LocalDateTime.now(Clock.systemUTC());
     }
 }
 

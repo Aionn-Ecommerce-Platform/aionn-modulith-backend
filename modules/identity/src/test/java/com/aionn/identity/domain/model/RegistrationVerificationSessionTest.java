@@ -3,10 +3,12 @@ package com.aionn.identity.domain.model;
 import com.aionn.identity.domain.exception.IdentityException;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -20,8 +22,8 @@ class RegistrationVerificationSessionTest {
                 "123456",
                 0,
                 5,
-                LocalDateTime.now().plusSeconds(60),
-                LocalDateTime.now().plusMinutes(5),
+                LocalDateTime.now(Clock.systemUTC()).plusSeconds(60),
+                LocalDateTime.now(Clock.systemUTC()).plusMinutes(5),
                 false,
                 null,
                 null);
@@ -42,8 +44,8 @@ class RegistrationVerificationSessionTest {
                 "123456",
                 0,
                 5,
-                LocalDateTime.now().plusSeconds(60),
-                LocalDateTime.now().plusMinutes(5),
+                LocalDateTime.now(Clock.systemUTC()).plusSeconds(60),
+                LocalDateTime.now(Clock.systemUTC()).plusMinutes(5),
                 false,
                 null,
                 null);
@@ -61,15 +63,15 @@ class RegistrationVerificationSessionTest {
                 "123456",
                 0,
                 1,
-                LocalDateTime.now().plusSeconds(60),
-                LocalDateTime.now().plusMinutes(5),
+                LocalDateTime.now(Clock.systemUTC()).plusSeconds(60),
+                LocalDateTime.now(Clock.systemUTC()).plusMinutes(5),
                 false,
                 null,
                 null);
 
         assertThrows(IdentityException.class, () -> session.verify("999999"));
         assertTrue(session.isLocked());
-        assertTrue(session.getExpiredAt().isAfter(LocalDateTime.now()));
+        assertTrue(session.getExpiredAt().isAfter(LocalDateTime.now(Clock.systemUTC())));
     }
 
     @Test
@@ -80,16 +82,18 @@ class RegistrationVerificationSessionTest {
                 "123456",
                 3,
                 5,
-                LocalDateTime.now().minusSeconds(1),
-                LocalDateTime.now().plusMinutes(5),
+                LocalDateTime.now(Clock.systemUTC()).minusSeconds(1),
+                LocalDateTime.now(Clock.systemUTC()).plusMinutes(5),
                 false,
                 null,
                 null);
 
-        session.resend("654321", LocalDateTime.now().plusSeconds(60), LocalDateTime.now().plusMinutes(5));
+        session.resend(
+                "654321",
+                LocalDateTime.now(Clock.systemUTC()).plusSeconds(60),
+                LocalDateTime.now(Clock.systemUTC()).plusMinutes(5));
 
-        assertTrue(session.getAttemptCount() == 0);
-        assertTrue("654321".equals(session.getOtpCode()));
+        assertEquals(0, session.getAttemptCount());
+        assertEquals("654321", session.getOtpCode());
     }
 }
-

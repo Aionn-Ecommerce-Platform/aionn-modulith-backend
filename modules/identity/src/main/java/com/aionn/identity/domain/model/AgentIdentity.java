@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 @Getter
@@ -24,22 +25,22 @@ public class AgentIdentity {
 
     public void updatePermissions(String permissions) {
         this.permissions = permissions;
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(Clock.systemUTC());
     }
 
     public void suspend() {
         this.status = AgentStatus.SUSPENDED;
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(Clock.systemUTC());
     }
 
     public void revoke() {
         this.status = AgentStatus.REVOKED;
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(Clock.systemUTC());
     }
 
     public void activate() {
         this.status = AgentStatus.ACTIVE;
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(Clock.systemUTC());
     }
 
     public boolean isActive() {
@@ -47,6 +48,6 @@ public class AgentIdentity {
     }
 
     public boolean isExpired() {
-        return expiresAt != null && !expiresAt.isAfter(LocalDateTime.now());
+        return expiresAt != null && !expiresAt.isAfter(LocalDateTime.now(Clock.systemUTC()));
     }
 }

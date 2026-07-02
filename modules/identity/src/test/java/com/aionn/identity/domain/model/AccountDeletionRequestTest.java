@@ -3,6 +3,7 @@ package com.aionn.identity.domain.model;
 import com.aionn.identity.domain.valueobject.AccountDeletionStatus;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.*;
@@ -11,7 +12,7 @@ class AccountDeletionRequestTest {
 
     @Test
     void constructor_validInput_createsInstance() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
         LocalDateTime scheduled = now.plusDays(30);
 
         AccountDeletionRequest request = new AccountDeletionRequest(
@@ -38,7 +39,7 @@ class AccountDeletionRequestTest {
         assertThat(request.getUserId()).isEqualTo("user-123");
         assertThat(request.getStatus()).isEqualTo(AccountDeletionStatus.PENDING);
         assertThat(request.getRequestedAt()).isNotNull();
-        assertThat(request.getRequestedAt()).isBeforeOrEqualTo(LocalDateTime.now());
+        assertThat(request.getRequestedAt()).isBeforeOrEqualTo(LocalDateTime.now(Clock.systemUTC()));
         assertThat(request.getScheduledDeletionAt()).isNotNull();
         assertThat(request.getScheduledDeletionAt())
                 .isAfterOrEqualTo(request.getRequestedAt().plusDays(29))
@@ -65,7 +66,7 @@ class AccountDeletionRequestTest {
 
         assertThat(request.getStatus()).isEqualTo(AccountDeletionStatus.CANCELLED);
         assertThat(request.getCanceledAt()).isNotNull();
-        assertThat(request.getCanceledAt()).isBeforeOrEqualTo(LocalDateTime.now());
+        assertThat(request.getCanceledAt()).isBeforeOrEqualTo(LocalDateTime.now(Clock.systemUTC()));
     }
 
     @Test
@@ -74,12 +75,6 @@ class AccountDeletionRequestTest {
         request.cancel();
         LocalDateTime firstCancellation = request.getCanceledAt();
 
-        // Wait a bit and cancel again
-        try {
-            Thread.sleep(10);
-        } catch (InterruptedException e) {
-            // ignore
-        }
         request.cancel();
 
         assertThat(request.getStatus()).isEqualTo(AccountDeletionStatus.CANCELLED);

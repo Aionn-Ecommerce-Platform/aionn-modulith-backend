@@ -4,6 +4,7 @@ import com.aionn.identity.domain.valueobject.KycReviewAnswer;
 import com.aionn.identity.domain.valueobject.KycStatus;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -20,7 +21,7 @@ class KycProfileTest {
                 null, KycStatus.DRAFT,
                 null, null, null, null, null,
                 null, null, null, null,
-                null, null, LocalDateTime.now());
+                null, null, LocalDateTime.now(Clock.systemUTC()));
     }
 
     private static KycProfile submitted() {

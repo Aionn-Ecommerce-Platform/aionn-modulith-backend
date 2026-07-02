@@ -3,6 +3,7 @@ package com.aionn.identity.domain.model;
 import com.aionn.identity.domain.valueobject.DataExportStatus;
 import lombok.Getter;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 @Getter
@@ -31,11 +32,17 @@ public class DataExportRequest {
     }
 
     public static DataExportRequest createRequested(String requestId, String userId) {
+        if (requestId == null || requestId.isBlank()) {
+            throw new IllegalArgumentException("requestId must not be blank");
+        }
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("userId must not be blank");
+        }
         return new DataExportRequest(
                 requestId,
                 userId,
                 DataExportStatus.REQUESTED,
-                LocalDateTime.now(),
+                LocalDateTime.now(Clock.systemUTC()),
                 null,
                 null);
     }
@@ -50,12 +57,12 @@ public class DataExportRequest {
         }
         transitionTo(DataExportStatus.COMPLETED);
         this.fileUrl = fileUrl;
-        this.completedAt = LocalDateTime.now();
+        this.completedAt = LocalDateTime.now(Clock.systemUTC());
     }
 
     public void fail() {
         transitionTo(DataExportStatus.FAILED);
-        this.completedAt = LocalDateTime.now();
+        this.completedAt = LocalDateTime.now(Clock.systemUTC());
     }
 
     private void transitionTo(DataExportStatus newStatus) {
@@ -66,5 +73,4 @@ public class DataExportRequest {
         this.status = newStatus;
     }
 }
-
 
