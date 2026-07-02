@@ -74,5 +74,13 @@ sonar {
                 subprojects.collect {
                     "${it.layout.buildDirectory.get().asFile.path}/reports/jacoco/test/jacocoTestReport.xml"
                 }.join(',')
+        property 'sonar.coverage.exclusions', [
+                '**/application/dto/**',
+                '**/application/mapper/**',
+                '**/application/policy/**',
+                '**/application/port/**',
+                '**/adapter/rest/dto/**',
+                '**/adapter/rest/mapper/**'
+        ].join(',')
     }
 }

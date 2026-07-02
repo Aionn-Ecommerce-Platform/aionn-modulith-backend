@@ -1,5 +1,7 @@
 package com.aionn.identity.application.dto.feedback.command;
 
+import com.aionn.sharedkernel.application.command.Command;
+
 public record SubmitFeedbackCommand(
         String userId,
         String category,
@@ -7,5 +9,5 @@ public record SubmitFeedbackCommand(
         String content,
         Integer rating,
         String contactEmail,
-        String contactPhone) {
+        String contactPhone) implements Command {
 }

@@ -17,13 +17,17 @@ public interface AdminResultMapper {
 
     @Mapping(target = "userId", expression = "java(user.getUserId())")
     @Mapping(target = "roles", expression = "java(mapRoles(user))")
-    @Mapping(target = "status", expression = "java(user.getStatus().name())")
+    @Mapping(target = "status", expression = "java(mapStatus(user))")
     UserDetailResult toUserDetailResult(IdentityUser user);
 
     default Set<String> mapRoles(IdentityUser user) {
         return user.getRoles().stream()
                 .map(Enum::name)
                 .collect(Collectors.toSet());
+    }
+
+    default String mapStatus(IdentityUser user) {
+        return user.getStatus() == null ? null : user.getStatus().name();
     }
 
     default UserRolesResult toUserRolesResult(Set<String> roles) {

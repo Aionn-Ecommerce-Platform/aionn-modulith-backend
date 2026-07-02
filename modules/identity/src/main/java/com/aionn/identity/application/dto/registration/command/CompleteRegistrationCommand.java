@@ -9,5 +9,10 @@ public record CompleteRegistrationCommand(
                 String verificationToken,
                 String ipAddress,
                 String userAgent) implements Command {
+    @Override
+    public String toString() {
+        return "CompleteRegistrationCommand[regId=%s, password=***, username=%s, verificationToken=***, ipAddress=%s, userAgent=%s]"
+                .formatted(regId, username, ipAddress, userAgent);
+    }
 }
 

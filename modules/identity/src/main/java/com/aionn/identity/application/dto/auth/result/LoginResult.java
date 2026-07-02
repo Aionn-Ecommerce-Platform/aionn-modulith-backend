@@ -9,4 +9,9 @@ public record LoginResult(
                 String refreshToken,
                 LocalDateTime expiresAt,
                 LocalDateTime sessionExpiresAt) {
+    @Override
+    public String toString() {
+        return "LoginResult[userId=%s, sessionId=%s, accessToken=***, refreshToken=***, expiresAt=%s, sessionExpiresAt=%s]"
+                .formatted(userId, sessionId, expiresAt, sessionExpiresAt);
+    }
 }

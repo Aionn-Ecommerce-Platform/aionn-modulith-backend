@@ -4,5 +4,9 @@ import java.util.List;
 
 public record BackupCodesResult(
                 List<String> backupCodes) {
+    @Override
+    public String toString() {
+        return "BackupCodesResult[backupCodes=***]";
+    }
 }
 

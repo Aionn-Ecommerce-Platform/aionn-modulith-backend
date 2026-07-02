@@ -10,4 +10,9 @@ public record SocialLoginResult(
         LocalDateTime expiresAt,
         LocalDateTime sessionExpiresAt,
         boolean newUser) {
+    @Override
+    public String toString() {
+        return "SocialLoginResult[userId=%s, sessionId=%s, accessToken=***, refreshToken=***, expiresAt=%s, sessionExpiresAt=%s, newUser=%s]"
+                .formatted(userId, sessionId, expiresAt, sessionExpiresAt, newUser);
+    }
 }

@@ -7,6 +7,11 @@ public record InitiateRegistrationResult(
 		LocalDateTime resendAvailableAt,
 		LocalDateTime expiredAt,
 		String otpCode) {
+    @Override
+    public String toString() {
+        return "InitiateRegistrationResult[regId=%s, resendAvailableAt=%s, expiredAt=%s, otpCode=***]"
+                .formatted(regId, resendAvailableAt, expiredAt);
+    }
 }
 
 

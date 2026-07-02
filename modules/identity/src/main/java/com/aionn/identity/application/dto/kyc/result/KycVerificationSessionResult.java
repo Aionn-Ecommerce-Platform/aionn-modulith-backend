@@ -8,4 +8,9 @@ public record KycVerificationSessionResult(
         String sdkAccessToken,
         int expiresInSeconds,
         boolean sandbox) {
+    @Override
+    public String toString() {
+        return "KycVerificationSessionResult[kycId=%s, provider=%s, providerApplicantId=%s, levelName=%s, sdkAccessToken=***, expiresInSeconds=%s, sandbox=%s]"
+                .formatted(kycId, provider, providerApplicantId, levelName, expiresInSeconds, sandbox);
+    }
 }

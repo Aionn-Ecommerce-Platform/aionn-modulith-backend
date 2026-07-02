@@ -9,4 +9,9 @@ public record RefreshAccessTokenResult(
         String refreshToken,
         LocalDateTime expiresAt,
         LocalDateTime sessionExpiresAt) {
+    @Override
+    public String toString() {
+        return "RefreshAccessTokenResult[userId=%s, sessionId=%s, accessToken=***, refreshToken=***, expiresAt=%s, sessionExpiresAt=%s]"
+                .formatted(userId, sessionId, expiresAt, sessionExpiresAt);
+    }
 }

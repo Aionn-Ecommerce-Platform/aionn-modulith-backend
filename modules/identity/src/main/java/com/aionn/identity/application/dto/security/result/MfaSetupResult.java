@@ -5,4 +5,9 @@ public record MfaSetupResult(
         String otpauthUri,
         String issuer,
         String accountName) {
+    @Override
+    public String toString() {
+        return "MfaSetupResult[secret=***, otpauthUri=***, issuer=%s, accountName=%s]"
+                .formatted(issuer, accountName);
+    }
 }
