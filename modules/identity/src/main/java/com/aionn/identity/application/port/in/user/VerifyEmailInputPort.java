@@ -1,8 +1,11 @@
 package com.aionn.identity.application.port.in.user;
 
+import com.aionn.identity.application.dto.user.command.ConfirmEmailVerificationCommand;
+import com.aionn.identity.application.dto.user.command.RequestEmailVerificationOtpCommand;
+
 public interface VerifyEmailInputPort {
 
-    void sendOtp(String userId);
+    void requestOtp(RequestEmailVerificationOtpCommand command);
 
-    void confirm(String userId, String otpCode);
+    void confirm(ConfirmEmailVerificationCommand command);
 }

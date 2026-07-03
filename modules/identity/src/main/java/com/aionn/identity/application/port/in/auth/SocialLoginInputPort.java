@@ -5,5 +5,5 @@ import com.aionn.identity.application.dto.auth.result.SocialLoginResult;
 
 public interface SocialLoginInputPort {
 
-    SocialLoginResult socialLogin(SocialLoginCommand command);
+    SocialLoginResult execute(SocialLoginCommand command);
 }
