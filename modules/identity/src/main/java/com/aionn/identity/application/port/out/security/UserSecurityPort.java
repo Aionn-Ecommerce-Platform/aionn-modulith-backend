@@ -1,0 +1,27 @@
+package com.aionn.identity.application.port.out.security;
+
+import com.aionn.identity.domain.valueobject.UserStatus;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+public interface UserSecurityPort {
+
+    Optional<UserSecurityData> findById(String userId);
+
+    Optional<UserSecurityData> findByIdentity(String identity);
+
+    void recordFailedLoginAttempt(String userId, int failedAttempts, LocalDateTime lockedUntil);
+
+    void resetFailedLoginAttempts(String userId);
+
+    record UserSecurityData(
+            String userId,
+            String passwordHash,
+            UserStatus status,
+            boolean mfaEnabled,
+            String mfaSecret,
+            LocalDateTime lockedUntil,
+            int failedLoginAttempts) {
+    }
+}
