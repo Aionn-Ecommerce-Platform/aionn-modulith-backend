@@ -1,6 +1,7 @@
 package com.aionn.identity.application.port.out.kyc;
 
 import com.aionn.identity.domain.model.KycProfile;
+import com.aionn.identity.domain.model.KycDocument;
 import com.aionn.identity.domain.valueobject.KycStatus;
 
 import java.util.List;
@@ -18,6 +19,10 @@ public interface KycPersistencePort {
     List<KycProfile> findByUserIdOrderBySubmittedAtDesc(String userId);
 
     List<KycProfile> findByStatus(KycStatus status, int limit);
+
+    KycDocument saveDocument(KycDocument document);
+
+    List<KycDocument> findDocumentsByKycId(String kycId);
 
     void delete(KycProfile kycProfile);
 }

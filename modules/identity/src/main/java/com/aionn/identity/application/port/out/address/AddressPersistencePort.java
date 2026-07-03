@@ -11,6 +11,8 @@ public interface AddressPersistencePort {
 
     long countByUserId(String userId);
 
+    Address createAtomically(Address address, long maxAddressNumbers, boolean makeDefaultWhenFirst);
+
     Address save(Address address);
 
     Optional<Address> findByAddressIdAndUserId(String addressId, String userId);
