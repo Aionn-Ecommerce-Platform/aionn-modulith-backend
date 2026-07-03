@@ -23,5 +23,10 @@ public interface UserSecurityPort {
             String mfaSecret,
             LocalDateTime lockedUntil,
             int failedLoginAttempts) {
+        @Override
+        public String toString() {
+            return "UserSecurityData[userId=%s, credentialHash=***, status=%s, mfaEnabled=%s, mfaSecret=***, lockedUntil=%s, failedLoginAttempts=%s]"
+                    .formatted(userId, status, mfaEnabled, lockedUntil, failedLoginAttempts);
+        }
     }
 }

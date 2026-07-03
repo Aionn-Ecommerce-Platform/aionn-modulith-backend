@@ -1,5 +1,7 @@
 package com.aionn.identity.application.port.out.registration;
 
+import java.util.Optional;
+
 /**
  * Distributed lock primitive used during registration to serialise concurrent
  * "complete registration" attempts on the same phone number.
@@ -9,9 +11,9 @@ public interface RegistrationLockManagerPort {
     /**
      * Attempts to acquire a lock for {@code key} with the given timeout.
      *
-     * @return a non-empty lock token if acquired, an empty string otherwise
+     * @return the lock token when acquired, otherwise {@link Optional#empty()}
      */
-    String tryLock(String key, int timeoutSeconds);
+    Optional<String> tryLock(String key, int timeoutSeconds);
 
     /**
      * Releases the lock identified by {@code lockToken} on {@code key}

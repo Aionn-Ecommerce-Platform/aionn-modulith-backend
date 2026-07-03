@@ -19,5 +19,5 @@ public interface AgentPersistencePort {
 
     AgentIdentity update(AgentIdentity agentIdentity);
 
-    void delete(String agentId);
+    void deleteByIdAndOwnerId(String agentId, String ownerId);
 }

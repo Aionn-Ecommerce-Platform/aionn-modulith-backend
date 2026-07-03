@@ -5,13 +5,13 @@ import java.util.Optional;
 
 public interface PasswordResetPort {
 
-    void savePasswordResetToken(String token, String userId, LocalDateTime expiresAt);
+    void savePasswordResetTokenHash(String tokenHash, String userId, LocalDateTime expiresAt);
 
-    Optional<PasswordResetTokenData> findPasswordResetToken(String token);
+    Optional<PasswordResetTokenData> findPasswordResetTokenHash(String tokenHash);
 
-    Optional<PasswordResetTokenData> consumePasswordResetToken(String token);
+    Optional<PasswordResetTokenData> consumePasswordResetTokenHash(String tokenHash);
 
-    void deletePasswordResetToken(String token);
+    void deletePasswordResetTokenHash(String tokenHash);
 
     void updatePassword(String userId, String passwordHash);
 
