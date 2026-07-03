@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 public enum IdentityErrorCode {
 	PHONE_ALREADY_EXISTS("IDENTITY_001", "Phone number already exists in the system"),
 	EMAIL_ALREADY_EXISTS("IDENTITY_002", "Email already exists in the system"),
+	EMAIL_REQUIRED("IDENTITY_003", "Email is required"),
+	PHONE_REQUIRED("IDENTITY_004", "Phone number is required"),
 	USERNAME_ALREADY_EXISTS("IDENTITY_005", "Username already exists in the system"),
 	PHONE_INVALID("IDENTITY_006", "Invalid phone number format"),
 
@@ -52,6 +54,7 @@ public enum IdentityErrorCode {
 	INVALID_USER_STATUS("IDENTITY_226", "Invalid user status"),
 	INVALID_USER_ROLE("IDENTITY_227", "Invalid user role"),
 	INVALID_FEEDBACK_CATEGORY("IDENTITY_228", "Invalid feedback category"),
+	FEEDBACK_CONTENT_REQUIRED("IDENTITY_229", "Feedback content is required"),
 
 	INVALID_ADDRESS_TYPE("IDENTITY_301", "Invalid address type. Supported types are HOME or OFFICE"),
 	ADDRESS_NOT_FOUND("IDENTITY_302", "Address not found"),
@@ -68,6 +71,7 @@ public enum IdentityErrorCode {
 	KYC_WEBHOOK_SIGNATURE_INVALID("IDENTITY_407", "Invalid KYC webhook signature"),
 	KYC_DOCUMENT_REQUIRED("IDENTITY_408", "KYC document is required"),
 	KYC_DOCUMENT_NOT_FOUND("IDENTITY_409", "KYC document not found"),
+	KYC_DOCUMENT_TYPE_INVALID("IDENTITY_410", "KYC document type is invalid"),
 
 	AGENT_NOT_FOUND("IDENTITY_501", "Agent identity not found"),
 	AGENT_CREATION_NOT_ALLOWED("IDENTITY_502", "User is not allowed to create agents"),

@@ -8,7 +8,8 @@ public enum SecurityAuditEventType {
     MFA_SETUP_INITIATED("MFA_SETUP_INITIATED", "MFA setup initiated"),
     MFA_ENABLED("MFA_ENABLED", "MFA enabled"),
     MFA_DISABLED("MFA_DISABLED", "MFA disabled"),
-    MFA_BACKUP_CODES_REGENERATED("MFA_BACKUP_CODES_REGENERATED", "Backup codes regenerated");
+    MFA_BACKUP_CODES_REGENERATED("MFA_BACKUP_CODES_REGENERATED", "Backup codes regenerated"),
+    AGENT_SUSPENDED("AGENT_SUSPENDED", "Agent identity suspended");
 
     private final String eventType;
     private final String description;
