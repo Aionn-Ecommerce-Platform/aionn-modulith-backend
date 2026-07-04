@@ -32,7 +32,7 @@ class AuthTokenResponseHandlerTest {
 
     @BeforeEach
     void setUp() {
-        AuthCookieProperties cookieProperties = new AuthCookieProperties(true, "Strict");
+        AuthCookieProperties cookieProperties = new AuthCookieProperties(true, "Strict", "/api/v1/auth");
         NoStoreResponseFactory noStoreResponseFactory = new NoStoreResponseFactory();
         authTokenResponseHandler = new AuthTokenResponseHandler(
                 authProperties, cookieProperties, noStoreResponseFactory);

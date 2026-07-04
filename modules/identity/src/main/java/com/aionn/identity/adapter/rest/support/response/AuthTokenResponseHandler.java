@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
@@ -20,7 +21,6 @@ import java.time.ZoneOffset;
 public class AuthTokenResponseHandler {
 
     private static final String REFRESH_COOKIE_NAME = "refresh_token";
-    private static final String REFRESH_COOKIE_PATH = "/api/v1/auth";
 
     private final AuthProperties authProperties;
     private final AuthCookieProperties cookieProperties;
@@ -71,10 +71,11 @@ public class AuthTokenResponseHandler {
     }
 
     private ResponseCookie buildRefreshCookie(String refreshToken, LocalDateTime expiresAt) {
-        // Session timestamps are produced in UTC (see AuthService.nowUtc()), so
-        // compare against UTC "now" here — otherwise a non-UTC host would emit
-        // a Max-Age offset by the local zone.
-        long maxAgeSeconds = Duration.between(LocalDateTime.now(ZoneOffset.UTC), expiresAt).getSeconds();
+        // Session timestamps are produced in UTC (see AuthService.nowUtc()).
+        // Convert both sides to Instant so the arithmetic is explicitly
+        // zone-anchored rather than depending on the JVM default zone.
+        Instant expires = expiresAt.toInstant(ZoneOffset.UTC);
+        long maxAgeSeconds = Duration.between(Instant.now(), expires).getSeconds();
         if (maxAgeSeconds < 0) {
             maxAgeSeconds = 0;
         }
@@ -82,7 +83,7 @@ public class AuthTokenResponseHandler {
                 .httpOnly(true)
                 .secure(cookieProperties.secure())
                 .sameSite(cookieProperties.sameSite())
-                .path(REFRESH_COOKIE_PATH)
+                .path(cookieProperties.refreshPath())
                 .maxAge(maxAgeSeconds)
                 .build();
     }
@@ -92,7 +93,7 @@ public class AuthTokenResponseHandler {
                 .httpOnly(true)
                 .secure(cookieProperties.secure())
                 .sameSite(cookieProperties.sameSite())
-                .path(REFRESH_COOKIE_PATH)
+                .path(cookieProperties.refreshPath())
                 .maxAge(0)
                 .build();
     }

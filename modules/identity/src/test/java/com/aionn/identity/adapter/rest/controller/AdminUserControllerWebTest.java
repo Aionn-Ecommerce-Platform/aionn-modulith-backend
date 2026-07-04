@@ -150,7 +150,7 @@ class AdminUserControllerWebTest {
                 UserListResult result = new UserListResult(List.of(), 0, 100, 0L);
                 ListUsersQuery query = new ListUsersQuery(null, null, 0, 100);
 
-                when(adminUserDtoMapper.toListUsersQuery(eq(null), eq(null), eq(0), eq(100))).thenReturn(query);
+                when(adminUserDtoMapper.toListUsersQuery(null, null, 0, 100)).thenReturn(query);
                 when(listUsersQueryPort.execute(query)).thenReturn(result);
                 when(adminUserDtoMapper.toUserSummaryResponses(result)).thenReturn(List.of());
                 when(adminUserDtoMapper.toUserListPaging(result)).thenReturn(new PageMetadata(0, 100, 0L, 0));
@@ -161,7 +161,7 @@ class AdminUserControllerWebTest {
                                 .andExpect(status().isOk());
 
                 // Ensure the page size handed to the query is clamped, not the raw 9999.
-                verify(adminUserDtoMapper).toListUsersQuery(eq(null), eq(null), eq(0), eq(100));
+                verify(adminUserDtoMapper).toListUsersQuery(null, null, 0, 100);
         }
 
         @Test

@@ -24,7 +24,11 @@ class AuthClientTypeArgumentResolverTest {
     private AuthProperties authProperties;
 
     static class Sample {
+        // Dummy handler — the body is deliberately empty because the tests
+        // only reflect on its signature (via MethodParameter) to feed the
+        // resolver; the method is never invoked.
         public void handle(@AuthClientType String clientType, String otherParam) {
+            // no-op: reflection target only
         }
     }
 

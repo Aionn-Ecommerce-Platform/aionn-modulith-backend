@@ -125,8 +125,8 @@ class RegistrationControllerWebTest {
                 .andExpect(jsonPath("$.data.otpCode").doesNotExist());
 
         verify(registrationDtoMapper).toInitiateCommand(
-                eq(new InitiateRegistrationRequest("0912345678", "captcha-ok")),
-                eq("203.0.113.10"));
+                new InitiateRegistrationRequest("0912345678", "captcha-ok"),
+                "203.0.113.10");
     }
 
     @Test
@@ -185,10 +185,10 @@ class RegistrationControllerWebTest {
                 .andExpect(jsonPath("$.data.refreshToken").value("refresh-1"));
 
         verify(registrationDtoMapper).toCompleteCommand(
-                eq("reg-1"),
-                eq(new CompleteRegistrationRequest("Password1!", "alice", "verify-token")),
-                eq("198.51.100.20"),
-                eq("JUnit/1.0"));
+                "reg-1",
+                new CompleteRegistrationRequest("Password1!", "alice", "verify-token"),
+                "198.51.100.20",
+                "JUnit/1.0");
         verify(authTokenResponseHandler).success(authTokenResponse, "mobile", "Registration completed!");
     }
 
@@ -214,8 +214,7 @@ class RegistrationControllerWebTest {
                 .andExpect(jsonPath("$.data.regId").value("reg-1"))
                 .andExpect(jsonPath("$.data.verificationToken").value("verify-token"));
 
-        verify(registrationDtoMapper).toVerifyOtpCommand(eq("reg-1"),
-                eq(new VerifyOtpRequest("123456")));
+        verify(registrationDtoMapper).toVerifyOtpCommand("reg-1", new VerifyOtpRequest("123456"));
         verify(verifyRegistrationOtpInputPort).execute(any());
     }
 
@@ -232,7 +231,7 @@ class RegistrationControllerWebTest {
                 result.resendAvailableAt(),
                 result.expiredAt());
 
-        when(registrationDtoMapper.toResendOtpCommand(eq("reg-1"), eq("198.51.100.20")))
+        when(registrationDtoMapper.toResendOtpCommand("reg-1", "198.51.100.20"))
                 .thenReturn(new ResendRegistrationOtpCommand("reg-1", "198.51.100.20"));
         when(resendRegistrationOtpInputPort.execute(any())).thenReturn(result);
         when(registrationDtoMapper.toResendOtpResponse(result)).thenReturn(response);
@@ -245,7 +244,7 @@ class RegistrationControllerWebTest {
                 // OTP code must not leak into the response body — only session metadata.
                 .andExpect(jsonPath("$.data.otpCode").doesNotExist());
 
-        verify(registrationDtoMapper).toResendOtpCommand(eq("reg-1"), eq("198.51.100.20"));
+        verify(registrationDtoMapper).toResendOtpCommand("reg-1", "198.51.100.20");
         verify(resendRegistrationOtpInputPort).execute(any());
     }
 }
