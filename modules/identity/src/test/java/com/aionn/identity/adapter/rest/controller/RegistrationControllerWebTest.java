@@ -3,15 +3,21 @@ package com.aionn.identity.adapter.rest.controller;
 import com.aionn.identity.adapter.rest.dto.auth.response.AuthTokenResponse;
 import com.aionn.identity.adapter.rest.dto.registration.request.CompleteRegistrationRequest;
 import com.aionn.identity.adapter.rest.dto.registration.request.InitiateRegistrationRequest;
+import com.aionn.identity.adapter.rest.dto.registration.request.VerifyOtpRequest;
 import com.aionn.identity.adapter.rest.dto.registration.response.RegistrationSessionResponse;
+import com.aionn.identity.adapter.rest.dto.registration.response.VerifyOtpResponse;
 import com.aionn.identity.adapter.rest.mapper.registration.RegistrationDtoMapper;
 import com.aionn.identity.adapter.rest.support.client.AuthClientTypeArgumentResolver;
 import com.aionn.identity.adapter.rest.support.client.ClientUserAgentArgumentResolver;
 import com.aionn.identity.adapter.rest.support.response.AuthTokenResponseHandler;
 import com.aionn.identity.application.dto.registration.command.CompleteRegistrationCommand;
 import com.aionn.identity.application.dto.registration.command.InitiateRegistrationCommand;
+import com.aionn.identity.application.dto.registration.command.ResendRegistrationOtpCommand;
+import com.aionn.identity.application.dto.registration.command.VerifyRegistrationOtpCommand;
 import com.aionn.identity.application.dto.registration.result.CompleteRegistrationResult;
 import com.aionn.identity.application.dto.registration.result.InitiateRegistrationResult;
+import com.aionn.identity.application.dto.registration.result.ResendRegistrationOtpResult;
+import com.aionn.identity.application.dto.registration.result.VerifyRegistrationOtpResult;
 import com.aionn.identity.application.port.in.registration.CompleteRegistrationInputPort;
 import com.aionn.identity.application.port.in.registration.InitiateRegistrationInputPort;
 import com.aionn.identity.application.port.in.registration.ResendRegistrationOtpInputPort;
@@ -185,5 +191,62 @@ class RegistrationControllerWebTest {
                 anyString(),
                 eq("JUnit/1.0"));
         verify(authTokenResponseHandler).success(authTokenResponse, "mobile", "Registration completed!");
+    }
+
+    @Test
+    void verifyOtpDelegatesAndReturnsVerificationToken() throws Exception {
+        VerifyRegistrationOtpResult result = new VerifyRegistrationOtpResult("reg-1", "verify-token");
+        VerifyOtpResponse response = new VerifyOtpResponse("reg-1", "verify-token");
+
+        when(registrationDtoMapper.toVerifyOtpCommand(eq("reg-1"), any(VerifyOtpRequest.class)))
+                .thenReturn(new VerifyRegistrationOtpCommand("reg-1", "123456"));
+        when(verifyRegistrationOtpInputPort.execute(any())).thenReturn(result);
+        when(registrationDtoMapper.toVerifyOtpResponse(result)).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/registrations/reg-1/verify-otp")
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "otpCode": "123456"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("OTP verified successfully!"))
+                .andExpect(jsonPath("$.data.regId").value("reg-1"))
+                .andExpect(jsonPath("$.data.verificationToken").value("verify-token"));
+
+        verify(registrationDtoMapper).toVerifyOtpCommand(eq("reg-1"),
+                eq(new VerifyOtpRequest("123456")));
+        verify(verifyRegistrationOtpInputPort).execute(any());
+    }
+
+    @Test
+    void resendOtpResolvesClientIpAndReturnsSessionMetadata() throws Exception {
+        LocalDateTime now = LocalDateTime.now();
+        ResendRegistrationOtpResult result = new ResendRegistrationOtpResult(
+                "reg-1",
+                now.plusSeconds(60),
+                now.plusMinutes(5),
+                "654321");
+        RegistrationSessionResponse response = new RegistrationSessionResponse(
+                "reg-1",
+                result.resendAvailableAt(),
+                result.expiredAt());
+
+        when(registrationDtoMapper.toResendOtpCommand(eq("reg-1"), anyString()))
+                .thenReturn(new ResendRegistrationOtpCommand("reg-1", "198.51.100.20"));
+        when(resendRegistrationOtpInputPort.execute(any())).thenReturn(result);
+        when(registrationDtoMapper.toResendOtpResponse(result)).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/registrations/reg-1/resend-otp")
+                        .header("X-Forwarded-For", "198.51.100.20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("OTP resent successfully!"))
+                .andExpect(jsonPath("$.data.regId").value("reg-1"))
+                // OTP code must not leak into the response body — only session metadata.
+                .andExpect(jsonPath("$.data.otpCode").doesNotExist());
+
+        verify(registrationDtoMapper).toResendOtpCommand(eq("reg-1"), anyString());
+        verify(resendRegistrationOtpInputPort).execute(any());
     }
 }

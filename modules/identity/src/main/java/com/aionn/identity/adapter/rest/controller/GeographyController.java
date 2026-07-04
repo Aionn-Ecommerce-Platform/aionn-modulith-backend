@@ -14,9 +14,11 @@ import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.util.List;
 
 @RestController
@@ -24,6 +26,14 @@ import java.util.List;
 @RequiredArgsConstructor
 @Tag(name = "Geography", description = "Geographic reference data endpoints - countries, provinces, districts, wards")
 public class GeographyController {
+
+    // Geography is administrative reference data that changes on the order of
+    // months (province splits, ward renames); an hour of shared-cache is a
+    // reasonable trade between load reduction and staleness. Individual
+    // endpoints keep this cache header so browsers, CDNs, and API gateways
+    // can hold on to the payload without hammering the DB.
+    private static final CacheControl GEOGRAPHY_CACHE =
+            CacheControl.maxAge(Duration.ofHours(1)).cachePublic();
 
     private final ListCountriesQueryPort listCountriesQueryPort;
     private final GetCountryQueryPort getCountryQueryPort;
@@ -39,14 +49,14 @@ public class GeographyController {
     @Operation(summary = "List countries", description = "Get all active countries")
     public ResponseEntity<ApiResponse<List<GeographyResponse>>> listCountries() {
         var result = listCountriesQueryPort.execute();
-        return ResponseEntity.ok(ApiResponse.success(geographyDtoMapper.toResponses(result), "Countries fetched"));
+        return cached(ApiResponse.success(geographyDtoMapper.toResponses(result), "Countries fetched"));
     }
 
     @GetMapping("/countries/{code}")
     @Operation(summary = "Get country", description = "Get country by code")
     public ResponseEntity<ApiResponse<GeographyResponse>> getCountry(@PathVariable String code) {
         var result = getCountryQueryPort.execute(code);
-        return ResponseEntity.ok(ApiResponse.success(geographyDtoMapper.toResponse(result), "Country fetched"));
+        return cached(ApiResponse.success(geographyDtoMapper.toResponse(result), "Country fetched"));
     }
 
     @GetMapping("/provinces")
@@ -54,14 +64,14 @@ public class GeographyController {
     public ResponseEntity<ApiResponse<List<GeographyResponse>>> listProvinces(
             @RequestParam(required = false) String countryCode) {
         var result = listProvincesQueryPort.execute(countryCode);
-        return ResponseEntity.ok(ApiResponse.success(geographyDtoMapper.toResponses(result), "Provinces fetched"));
+        return cached(ApiResponse.success(geographyDtoMapper.toResponses(result), "Provinces fetched"));
     }
 
     @GetMapping("/provinces/{code}")
     @Operation(summary = "Get province", description = "Get province by code")
     public ResponseEntity<ApiResponse<GeographyResponse>> getProvince(@PathVariable String code) {
         var result = getProvinceQueryPort.execute(code);
-        return ResponseEntity.ok(ApiResponse.success(geographyDtoMapper.toResponse(result), "Province fetched"));
+        return cached(ApiResponse.success(geographyDtoMapper.toResponse(result), "Province fetched"));
     }
 
     @GetMapping("/districts")
@@ -69,14 +79,14 @@ public class GeographyController {
     public ResponseEntity<ApiResponse<List<GeographyResponse>>> listDistricts(
             @RequestParam String provinceCode) {
         var result = listDistrictsQueryPort.execute(provinceCode);
-        return ResponseEntity.ok(ApiResponse.success(geographyDtoMapper.toResponses(result), "Districts fetched"));
+        return cached(ApiResponse.success(geographyDtoMapper.toResponses(result), "Districts fetched"));
     }
 
     @GetMapping("/districts/{code}")
     @Operation(summary = "Get district", description = "Get district by code")
     public ResponseEntity<ApiResponse<GeographyResponse>> getDistrict(@PathVariable String code) {
         var result = getDistrictQueryPort.execute(code);
-        return ResponseEntity.ok(ApiResponse.success(geographyDtoMapper.toResponse(result), "District fetched"));
+        return cached(ApiResponse.success(geographyDtoMapper.toResponse(result), "District fetched"));
     }
 
     @GetMapping("/wards")
@@ -84,13 +94,17 @@ public class GeographyController {
     public ResponseEntity<ApiResponse<List<GeographyResponse>>> listWards(
             @RequestParam String districtCode) {
         var result = listWardsQueryPort.execute(districtCode);
-        return ResponseEntity.ok(ApiResponse.success(geographyDtoMapper.toResponses(result), "Wards fetched"));
+        return cached(ApiResponse.success(geographyDtoMapper.toResponses(result), "Wards fetched"));
     }
 
     @GetMapping("/wards/{code}")
     @Operation(summary = "Get ward", description = "Get ward by code")
     public ResponseEntity<ApiResponse<GeographyResponse>> getWard(@PathVariable String code) {
         var result = getWardQueryPort.execute(code);
-        return ResponseEntity.ok(ApiResponse.success(geographyDtoMapper.toResponse(result), "Ward fetched"));
+        return cached(ApiResponse.success(geographyDtoMapper.toResponse(result), "Ward fetched"));
+    }
+
+    private static <T> ResponseEntity<T> cached(T body) {
+        return ResponseEntity.ok().cacheControl(GEOGRAPHY_CACHE).body(body);
     }
 }

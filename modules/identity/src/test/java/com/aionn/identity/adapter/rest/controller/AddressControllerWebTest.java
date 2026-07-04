@@ -87,11 +87,11 @@ class AddressControllerWebTest {
                 AddressResponse resp1 = new AddressResponse("addr-1", "John Doe", "0912345678",
                                 "01", "Hanoi", "001", "Ba Dinh", "00001", "Cong Vi Ward",
                                 "123 Main St, Apt 4", "123 Main St, Apt 4, Cong Vi Ward, Ba Dinh, Hanoi",
-                                AddressType.HOME, true, now, now);
+                                "HOME", true, now, now);
                 AddressResponse resp2 = new AddressResponse("addr-2", "Jane Smith", "0987654321",
                                 "79", "Ho Chi Minh", "760", "District 1", "26734", "Ben Nghe Ward",
                                 "456 Work Ave", "456 Work Ave, Ben Nghe Ward, District 1, Ho Chi Minh",
-                                AddressType.OFFICE, false, now, now);
+                                "OFFICE", false, now, now);
 
                 when(listAddressesQueryPort.execute("alice@example.com")).thenReturn(results);
                 when(addressDtoMapper.toResponses(results)).thenReturn(List.of(resp1, resp2));
@@ -116,7 +116,7 @@ class AddressControllerWebTest {
                 AddressResponse response = new AddressResponse("addr-new-789", "Bob Johnson", "0901234567",
                                 "01", "Hanoi", "002", "Hoan Kiem", "00019", "Hang Bong Ward",
                                 "789 Elm St, Suite 10", "789 Elm St, Suite 10, Hang Bong Ward, Hoan Kiem, Hanoi",
-                                AddressType.HOME, false, now, now);
+                                "HOME", false, now, now);
 
                 when(addressDtoMapper.toCreateCommand(eq("alice@example.com"), any(CreateAddressRequest.class)))
                                 .thenReturn(new CreateAddressCommand("user-123", "Bob Johnson", "0901234567",
@@ -158,7 +158,7 @@ class AddressControllerWebTest {
                                 "79", "Ho Chi Minh", "766", "District 7", "27127", "Tan Thuan Dong Ward",
                                 "999 Business Rd, Floor 5",
                                 "999 Business Rd, Floor 5, Tan Thuan Dong Ward, District 7, Ho Chi Minh",
-                                AddressType.OFFICE, false, now, now);
+                                "OFFICE", false, now, now);
 
                 when(addressDtoMapper.toUpdateCommand(eq("alice@example.com"), eq("addr-123"),
                                 any(UpdateAddressRequest.class)))
@@ -212,7 +212,7 @@ class AddressControllerWebTest {
                 AddressResponse response = new AddressResponse("addr-789", "Mark Default", "0911223344",
                                 "01", "Hanoi", "005", "Cau Giay", "00169", "Dich Vong Ward",
                                 "321 Pine St", "321 Pine St, Dich Vong Ward, Cau Giay, Hanoi",
-                                AddressType.HOME, true, now, now);
+                                "HOME", true, now, now);
 
                 when(addressDtoMapper.toSetDefaultCommand("alice@example.com", "addr-789"))
                                 .thenReturn(new SetDefaultAddressCommand("user-123", "addr-789"));

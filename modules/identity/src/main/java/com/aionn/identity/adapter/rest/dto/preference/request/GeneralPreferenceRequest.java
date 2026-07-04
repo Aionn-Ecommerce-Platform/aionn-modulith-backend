@@ -1,5 +1,6 @@
 package com.aionn.identity.adapter.rest.dto.preference.request;
 
+import com.aionn.identity.adapter.rest.validation.ValidTimezone;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -9,7 +10,7 @@ public record GeneralPreferenceRequest(
 
                 @NotBlank(message = "Currency is required") @Pattern(regexp = "^[A-Z]{3}$", message = "Currency must be an ISO-4217 code, e.g. 'VND'") String currency,
 
-                @NotBlank(message = "Timezone is required") @Size(max = 50, message = "Timezone must be at most 50 characters") String timezone,
+                @NotBlank(message = "Timezone is required") @Size(max = 50, message = "Timezone must be at most 50 characters") @ValidTimezone String timezone,
 
                 @NotBlank(message = "Theme is required") @Pattern(regexp = "^(light|dark|system)$", message = "Theme must be light, dark or system") String theme) {
 }

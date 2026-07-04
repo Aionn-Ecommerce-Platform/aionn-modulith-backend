@@ -31,6 +31,9 @@ public interface AddressDtoMapper {
 	SetDefaultAddressCommand toSetDefaultCommand(String userId, String addressId);
 
 	// result -> response
+	// Serialize the domain enum as its name so the REST contract doesn't
+	// depend on the domain enum type.
+	@Mapping(target = "type", expression = "java(result.type() == null ? null : result.type().name())")
 	AddressResponse toResponse(AddressResult result);
 
 	List<AddressResponse> toResponses(List<AddressResult> results);
