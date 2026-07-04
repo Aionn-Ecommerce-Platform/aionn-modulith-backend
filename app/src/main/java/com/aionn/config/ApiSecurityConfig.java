@@ -29,9 +29,18 @@ public class ApiSecurityConfig {
     }
 
     @Bean
+    @SuppressWarnings("java:S4502") // CSRF disabled by design — see rationale below.
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // Stateless bearer/JWT auth: browsers never receive a session
+                // cookie from us, so there is no ambient authority for a
+                // cross-site form to abuse — CSRF has nothing to protect.
+                // Disabling is also required so third-party provider webhooks
+                // (Sumsub KYC callbacks, etc.) can POST without a token.
+                // Every mutating endpoint requires an explicit Authorization
+                // bearer header, which browsers do not attach automatically.
+                .csrf(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers
                         .contentTypeOptions(opt -> {
                         })

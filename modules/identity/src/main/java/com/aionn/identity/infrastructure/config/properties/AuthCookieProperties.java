@@ -13,11 +13,24 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @ConfigurationProperties(prefix = "identity.auth.cookie")
 public record AuthCookieProperties(
         @DefaultValue("true") boolean secure,
-        @DefaultValue("Strict") String sameSite) {
+        @DefaultValue("Strict") String sameSite,
+        // Path the refresh cookie is scoped to. Defaults to /api/v1/auth so
+        // the cookie is only sent on auth endpoints; override when the API
+        // lives behind a gateway with a different prefix.
+        @DefaultValue("/api/v1/auth") String refreshPath) {
 
     public AuthCookieProperties {
         if (sameSite == null || sameSite.isBlank()) {
             sameSite = "Strict";
+        }
+        if (refreshPath == null || refreshPath.isBlank()) {
+            refreshPath = "/api/v1/auth";
+        }
+        // Cookie Path attribute must be absolute per RFC 6265; browsers
+        // silently ignore relative paths, which would defeat the scoping.
+        if (!refreshPath.startsWith("/")) {
+            throw new IllegalArgumentException(
+                    "identity.auth.cookie.refresh-path must start with '/', got: " + refreshPath);
         }
     }
 }
