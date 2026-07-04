@@ -159,7 +159,7 @@ class AuthControllerWebTest {
         @Test
         void loginWithMfaCodeIncludesItInCommand() throws Exception {
                 LocalDateTime now = LocalDateTime.now();
-                LoginResult result = new LoginResult("user-123", "session-456", "refresh-abc", "access-xyz",
+                LoginResult result = new LoginResult("user-123", "session-456", "access-xyz", "refresh-abc",
                                 now.plusMinutes(15), now.plusDays(7));
                 AuthTokenResponse response = new AuthTokenResponse(result.userId(), result.sessionId(),
                                 result.refreshToken(), result.accessToken(), result.expiresAt(),

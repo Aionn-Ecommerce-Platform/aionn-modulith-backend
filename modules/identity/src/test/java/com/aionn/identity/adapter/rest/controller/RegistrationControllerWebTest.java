@@ -97,8 +97,7 @@ class RegistrationControllerWebTest {
         RegistrationSessionResponse response = new RegistrationSessionResponse(
                 "reg-1",
                 result.resendAvailableAt(),
-                result.expiredAt(),
-                result.otpCode());
+                result.expiredAt());
 
         when(registrationDtoMapper.toInitiateCommand(any(InitiateRegistrationRequest.class), anyString()))
                 .thenReturn(new InitiateRegistrationCommand("0912345678", "captcha-ok", "203.0.113.10"));
@@ -118,7 +117,7 @@ class RegistrationControllerWebTest {
                 .andExpect(jsonPath("$.statusCode").value("201"))
                 .andExpect(jsonPath("$.message").value("Registration initiated successfully!"))
                 .andExpect(jsonPath("$.data.regId").value("reg-1"))
-                .andExpect(jsonPath("$.data.otpCode").value("123456"));
+                .andExpect(jsonPath("$.data.otpCode").doesNotExist());
 
         verify(registrationDtoMapper).toInitiateCommand(
                 eq(new InitiateRegistrationRequest("0912345678", "captcha-ok")),

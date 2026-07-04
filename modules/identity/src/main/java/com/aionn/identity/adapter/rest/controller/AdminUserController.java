@@ -5,11 +5,11 @@ import com.aionn.identity.adapter.rest.dto.admin.request.UpdateUserStatusRequest
 import com.aionn.identity.adapter.rest.dto.admin.response.UserDetailResponse;
 import com.aionn.identity.adapter.rest.dto.admin.response.UserRolesResponse;
 import com.aionn.identity.adapter.rest.dto.admin.response.UserStatusResponse;
+import com.aionn.identity.adapter.rest.dto.admin.response.UserAnalyticsResponse;
 import com.aionn.identity.adapter.rest.dto.admin.response.UserSummaryResponse;
 import com.aionn.identity.adapter.rest.dto.security.request.UnlockAccountRequest;
 import com.aionn.identity.adapter.rest.mapper.admin.AdminUserDtoMapper;
 import com.aionn.identity.adapter.rest.mapper.security.SecurityDtoMapper;
-import com.aionn.identity.application.dto.analytics.result.UserAnalyticsResult;
 import com.aionn.identity.application.port.in.admin.*;
 import com.aionn.identity.application.port.in.security.UnlockAccountInputPort;
 import com.aionn.identity.domain.valueobject.UserRole;
@@ -49,13 +49,14 @@ public class AdminUserController {
 	@GetMapping("/analytics")
 	@PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
 	@Operation(summary = "User signup + role/status analytics (sysadmin)")
-	public ResponseEntity<ApiResponse<UserAnalyticsResult>> analytics(
+	public ResponseEntity<ApiResponse<UserAnalyticsResponse>> analytics(
 			@RequestParam(required = false)
 			@DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
 			@RequestParam(required = false)
 			@DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+		var result = getUserAnalyticsQueryPort.execute(from, to);
 		return ResponseEntity.ok(ApiResponse.success(
-				getUserAnalyticsQueryPort.execute(from, to), "User analytics fetched"));
+				adminUserDtoMapper.toUserAnalyticsResponse(result), "User analytics fetched"));
 	}
 
 	@GetMapping

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 @Component
 @RequiredArgsConstructor
@@ -70,7 +71,10 @@ public class AuthTokenResponseHandler {
     }
 
     private ResponseCookie buildRefreshCookie(String refreshToken, LocalDateTime expiresAt) {
-        long maxAgeSeconds = Duration.between(LocalDateTime.now(), expiresAt).getSeconds();
+        // Session timestamps are produced in UTC (see AuthService.nowUtc()), so
+        // compare against UTC "now" here — otherwise a non-UTC host would emit
+        // a Max-Age offset by the local zone.
+        long maxAgeSeconds = Duration.between(LocalDateTime.now(ZoneOffset.UTC), expiresAt).getSeconds();
         if (maxAgeSeconds < 0) {
             maxAgeSeconds = 0;
         }

@@ -47,7 +47,6 @@ public interface AgentIdentityDtoMapper {
     @Mapping(target = "agentId", source = "agentId")
     RevokeAgentCommand toRevokeCommand(String userId, String agentId);
 
-    @Mapping(target = "key", source = "keyHash")
     AgentIdentityResponse toResponse(AgentIdentityResult entity);
 
     List<AgentIdentityResponse> toResponses(List<AgentIdentityResult> entities);

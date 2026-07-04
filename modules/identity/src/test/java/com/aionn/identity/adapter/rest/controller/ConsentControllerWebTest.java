@@ -181,7 +181,7 @@ class ConsentControllerWebTest {
                                 .contentType(APPLICATION_JSON)
                                 .content("""
                                                 {
-                                                  "agreed": true
+                                                  "subscribed": true
                                                 }
                                                 """))
                                 .andExpect(status().isOk())

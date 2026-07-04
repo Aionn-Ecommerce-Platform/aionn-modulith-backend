@@ -134,7 +134,9 @@ public class SecurityController {
 	@Operation(summary = "Get security audit logs", description = "Get security-related audit logs for the authenticated user")
 	public ResponseEntity<ApiResponse<List<SecurityAuditLogResponse>>> getAuditLogs(Authentication authentication) {
 		var result = getSecurityAuditLogsQueryPort.execute(authentication.getName());
-		return ResponseEntity.ok(
+		// Audit rows carry IP addresses and device identifiers; keep parity with
+		// the rest of this controller and mark them uncacheable.
+		return noStoreResponseFactory.ok(
 				ApiResponse.success(securityDtoMapper.toAuditLogResponse(result), "Security audit logs"));
 	}
 }

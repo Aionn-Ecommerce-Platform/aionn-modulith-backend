@@ -299,6 +299,8 @@ class SecurityControllerWebTest {
 
     when(getSecurityAuditLogsQueryPort.execute("alice@example.com")).thenReturn(logs);
     when(securityDtoMapper.toAuditLogResponse(logs)).thenReturn(List.of(resp1, resp2));
+    when(noStoreResponseFactory.ok(any()))
+        .thenReturn(ResponseEntity.ok(ApiResponse.success(List.of(resp1, resp2), "Security audit logs")));
 
     mockMvc.perform(get("/api/v1/security/audit-logs")
         .with(user("alice@example.com").roles("USER")))

@@ -2,11 +2,13 @@ package com.aionn.identity.adapter.rest.mapper.admin;
 
 import com.aionn.identity.adapter.rest.dto.admin.request.UpdateRolesRequest;
 import com.aionn.identity.adapter.rest.dto.admin.request.UpdateUserStatusRequest;
+import com.aionn.identity.adapter.rest.dto.admin.response.UserAnalyticsResponse;
 import com.aionn.identity.adapter.rest.dto.admin.response.UserDetailResponse;
 import com.aionn.identity.adapter.rest.dto.admin.response.UserRolesResponse;
 import com.aionn.identity.adapter.rest.dto.admin.response.UserStatusResponse;
 import com.aionn.identity.adapter.rest.dto.admin.response.UserSummaryResponse;
 import com.aionn.identity.application.dto.admin.query.GetUserQuery;
+import com.aionn.identity.application.dto.analytics.result.UserAnalyticsResult;
 import com.aionn.identity.application.dto.admin.command.RemoveUserRolesCommand;
 import com.aionn.identity.application.dto.admin.result.UserDetailResult;
 import com.aionn.identity.application.dto.admin.command.UpdateUserRolesCommand;
@@ -51,6 +53,14 @@ public interface AdminUserDtoMapper {
     UserSummaryResponse toUserSummaryResponse(UserListResult.UserSummary user);
 
     UserDetailResponse toUserDetailResponse(UserDetailResult result);
+
+    UserAnalyticsResponse.DailySignup toDailySignup(UserAnalyticsResult.DailySignup src);
+
+    UserAnalyticsResponse.RoleCount toRoleCount(UserAnalyticsResult.RoleCount src);
+
+    UserAnalyticsResponse.StatusCount toStatusCount(UserAnalyticsResult.StatusCount src);
+
+    UserAnalyticsResponse toUserAnalyticsResponse(UserAnalyticsResult result);
 
     default List<UserSummaryResponse> toUserSummaryResponses(UserListResult result) {
         return result.users().stream()
