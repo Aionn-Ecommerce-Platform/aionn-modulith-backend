@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
 @Constraint(validatedBy = ValidTimezoneValidator.class)
 public @interface ValidTimezone {
 
-    String message() default "Timezone must be a valid IANA zone id";
+    String message() default "Timezone must be a valid zone id (IANA name, e.g. 'Asia/Ho_Chi_Minh', or an offset like '+07:00')";
 
     Class<?>[] groups() default {};
 

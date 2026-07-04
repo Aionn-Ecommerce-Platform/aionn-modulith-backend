@@ -40,7 +40,6 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
@@ -105,14 +104,14 @@ class RegistrationControllerWebTest {
                 result.resendAvailableAt(),
                 result.expiredAt());
 
-        when(registrationDtoMapper.toInitiateCommand(any(InitiateRegistrationRequest.class), anyString()))
+        when(registrationDtoMapper.toInitiateCommand(any(InitiateRegistrationRequest.class), eq("203.0.113.10")))
                 .thenReturn(new InitiateRegistrationCommand("0912345678", "captcha-ok", "203.0.113.10"));
         when(initiateRegistrationInputPort.execute(any())).thenReturn(result);
         when(registrationDtoMapper.toInitiateResponse(result)).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/registrations/initiate")
                         .contentType(APPLICATION_JSON)
-                        .header("X-Forwarded-For", "203.0.113.10")
+                        .with(req -> { req.setRemoteAddr("203.0.113.10"); return req; })
                         .content("""
                                 {
                                   "phoneNumber": "0912345678",
@@ -127,7 +126,7 @@ class RegistrationControllerWebTest {
 
         verify(registrationDtoMapper).toInitiateCommand(
                 eq(new InitiateRegistrationRequest("0912345678", "captcha-ok")),
-                anyString());
+                eq("203.0.113.10"));
     }
 
     @Test
@@ -153,7 +152,7 @@ class RegistrationControllerWebTest {
         when(registrationDtoMapper.toCompleteCommand(
                 eq("reg-1"),
                 any(CompleteRegistrationRequest.class),
-                anyString(),
+                eq("198.51.100.20"),
                 eq("JUnit/1.0")))
                 .thenReturn(new CompleteRegistrationCommand(
                         "reg-1",
@@ -169,7 +168,7 @@ class RegistrationControllerWebTest {
 
         mockMvc.perform(post("/api/v1/registrations/reg-1/complete")
                         .contentType(APPLICATION_JSON)
-                        .header("X-Forwarded-For", "198.51.100.20")
+                        .with(req -> { req.setRemoteAddr("198.51.100.20"); return req; })
                         .header("User-Agent", "JUnit/1.0")
                         .header("X-Client-Type", "mobile")
                         .content("""
@@ -188,7 +187,7 @@ class RegistrationControllerWebTest {
         verify(registrationDtoMapper).toCompleteCommand(
                 eq("reg-1"),
                 eq(new CompleteRegistrationRequest("Password1!", "alice", "verify-token")),
-                anyString(),
+                eq("198.51.100.20"),
                 eq("JUnit/1.0"));
         verify(authTokenResponseHandler).success(authTokenResponse, "mobile", "Registration completed!");
     }
@@ -233,20 +232,20 @@ class RegistrationControllerWebTest {
                 result.resendAvailableAt(),
                 result.expiredAt());
 
-        when(registrationDtoMapper.toResendOtpCommand(eq("reg-1"), anyString()))
+        when(registrationDtoMapper.toResendOtpCommand(eq("reg-1"), eq("198.51.100.20")))
                 .thenReturn(new ResendRegistrationOtpCommand("reg-1", "198.51.100.20"));
         when(resendRegistrationOtpInputPort.execute(any())).thenReturn(result);
         when(registrationDtoMapper.toResendOtpResponse(result)).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/registrations/reg-1/resend-otp")
-                        .header("X-Forwarded-For", "198.51.100.20"))
+                        .with(req -> { req.setRemoteAddr("198.51.100.20"); return req; }))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("OTP resent successfully!"))
                 .andExpect(jsonPath("$.data.regId").value("reg-1"))
                 // OTP code must not leak into the response body — only session metadata.
                 .andExpect(jsonPath("$.data.otpCode").doesNotExist());
 
-        verify(registrationDtoMapper).toResendOtpCommand(eq("reg-1"), anyString());
+        verify(registrationDtoMapper).toResendOtpCommand(eq("reg-1"), eq("198.51.100.20"));
         verify(resendRegistrationOtpInputPort).execute(any());
     }
 }

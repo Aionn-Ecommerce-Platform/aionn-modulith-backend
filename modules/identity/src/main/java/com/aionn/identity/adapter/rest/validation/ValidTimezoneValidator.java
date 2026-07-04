@@ -11,7 +11,10 @@ public class ValidTimezoneValidator implements ConstraintValidator<ValidTimezone
     @Override
     public boolean isValid(String value, ConstraintValidatorContext context) {
         // null / blank is treated as "unset" and passes — pair with @NotBlank
-        // when presence is required.
+        // when presence is required. ZoneId.of() also accepts fixed offsets
+        // ("+07:00") and short ids ("UTC"/"Z") in addition to IANA region
+        // names — that's intentional here; the constraint rejects strings
+        // that ZoneId can't resolve at all (e.g. "Foo/Bar").
         if (value == null || value.isBlank()) {
             return true;
         }
