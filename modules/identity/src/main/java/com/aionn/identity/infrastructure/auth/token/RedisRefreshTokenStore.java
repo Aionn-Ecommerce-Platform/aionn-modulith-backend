@@ -24,12 +24,14 @@ public class RedisRefreshTokenStore implements RefreshTokenStorePort {
     // concurrent store() that adds a new token+index entry after we read cannot
     // outrun the delete.
     private static final DefaultRedisScript<Long> REVOKE_BY_SESSION_SCRIPT = new DefaultRedisScript<>(
-            "local members = redis.call('SMEMBERS', KEYS[1]) "
-                    + "for _, hash in ipairs(members) do "
-                    + "  redis.call('DEL', ARGV[1] .. hash) "
-                    + "end "
-                    + "redis.call('DEL', KEYS[1]) "
-                    + "return #members",
+            """
+            local members = redis.call('SMEMBERS', KEYS[1])
+            for _, hash in ipairs(members) do
+              redis.call('DEL', ARGV[1] .. hash)
+            end
+            redis.call('DEL', KEYS[1])
+            return #members
+            """,
             Long.class);
 
     private final StringRedisTemplate redisTemplate;
