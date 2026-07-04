@@ -1,16 +1,13 @@
 package com.aionn.identity.infrastructure.auth.token;
 
 import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
+import com.aionn.sharedkernel.util.Sha256Hasher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 
@@ -94,12 +91,6 @@ public class RedisRefreshTokenStore implements RefreshTokenStorePort {
     }
 
     private static String sha256(String value) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] digest = md.digest(value.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 not available", e);
-        }
+        return Sha256Hasher.hexDigest(value);
     }
 }

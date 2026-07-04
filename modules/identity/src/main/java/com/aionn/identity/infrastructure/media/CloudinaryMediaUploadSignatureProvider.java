@@ -39,7 +39,8 @@ public class CloudinaryMediaUploadSignatureProvider implements MediaUploadSignat
         params.put("folder", folder);
         params.put("timestamp", String.valueOf(timestamp));
         String signature = CloudinarySigner.sign(params, credentials.apiSecret());
-        log.debug("Generated {} upload signature, folder={}", resourceType, folder);
+        // Don't log the raw folder; it embeds the user id.
+        log.debug("Generated {} upload signature", resourceType);
         return new UploadSignatureResult(
                 signature,
                 String.valueOf(timestamp),

@@ -1,16 +1,13 @@
 package com.aionn.identity.infrastructure.security.password;
 
+import com.aionn.sharedkernel.util.Sha256Hasher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.HexFormat;
 import java.util.Optional;
 
 @Component
@@ -67,15 +64,6 @@ public class RedisPasswordResetTokenStore {
     }
 
     private static String key(String token) {
-        return KEY_PREFIX + sha256(token);
-    }
-
-    private static String sha256(String value) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(md.digest(value.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 not available", e);
-        }
+        return KEY_PREFIX + Sha256Hasher.hexDigest(token);
     }
 }
