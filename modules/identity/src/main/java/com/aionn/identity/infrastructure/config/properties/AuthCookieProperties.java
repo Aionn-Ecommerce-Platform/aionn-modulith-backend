@@ -26,5 +26,11 @@ public record AuthCookieProperties(
         if (refreshPath == null || refreshPath.isBlank()) {
             refreshPath = "/api/v1/auth";
         }
+        // Cookie Path attribute must be absolute per RFC 6265; browsers
+        // silently ignore relative paths, which would defeat the scoping.
+        if (!refreshPath.startsWith("/")) {
+            throw new IllegalArgumentException(
+                    "identity.auth.cookie.refresh-path must start with '/', got: " + refreshPath);
+        }
     }
 }
