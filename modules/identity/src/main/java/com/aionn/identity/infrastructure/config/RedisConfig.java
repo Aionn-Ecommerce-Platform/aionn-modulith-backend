@@ -36,10 +36,17 @@ public class RedisConfig {
     }
 
     private static ObjectMapper redisObjectMapper() {
+        // Narrow polymorphic deserialization to the packages actually written to
+        // Redis: aionn domain objects, and the JDK types they compose (strings,
+        // collections, time). Avoid opening the whole java.* namespace, which
+        // includes historical Jackson gadget classes.
         PolymorphicTypeValidator typeValidator = BasicPolymorphicTypeValidator.builder()
                 .allowIfBaseType(Object.class)
                 .allowIfSubType("com.aionn.")
-                .allowIfSubType("java.")
+                .allowIfSubType("java.lang.")
+                .allowIfSubType("java.util.")
+                .allowIfSubType("java.time.")
+                .allowIfSubType("java.math.")
                 .build();
 
         return new ObjectMapper()

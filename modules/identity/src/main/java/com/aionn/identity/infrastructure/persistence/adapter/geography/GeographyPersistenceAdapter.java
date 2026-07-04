@@ -18,9 +18,14 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 @Component
 public class GeographyPersistenceAdapter implements GeographyPersistencePort {
+
+    // Sentinel written to the cache when a code is confirmed absent. Distinct
+    // instance (code=null) so a real GeographyResult can never collide with it.
+    private static final GeographyResult MISS_SENTINEL = new GeographyResult(null, null, null);
 
     private final CountryRepository countryRepository;
     private final ProvinceRepository provinceRepository;
@@ -50,10 +55,9 @@ public class GeographyPersistenceAdapter implements GeographyPersistencePort {
 
     @Override
     public Optional<GeographyResult> findCountryByCode(String code) {
-        return Optional.ofNullable(cache.getOrLoad("country:" + code, () -> countryRepository
+        return lookupCached("country:" + code, () -> countryRepository
                 .findByCodeAndActiveTrue(code)
-                .map(c -> new GeographyResult(c.getCode(), c.getName(), c.getNameEn()))
-                .orElse(null)));
+                .map(c -> new GeographyResult(c.getCode(), c.getName(), c.getNameEn())));
     }
 
     @Override
@@ -72,10 +76,9 @@ public class GeographyPersistenceAdapter implements GeographyPersistencePort {
 
     @Override
     public Optional<GeographyResult> findProvinceByCode(String code) {
-        return Optional.ofNullable(cache.getOrLoad("province:" + code, () -> provinceRepository
+        return lookupCached("province:" + code, () -> provinceRepository
                 .findByCodeAndActiveTrue(code)
-                .map(p -> new GeographyResult(p.getCode(), p.getName(), p.getNameEn()))
-                .orElse(null)));
+                .map(p -> new GeographyResult(p.getCode(), p.getName(), p.getNameEn())));
     }
 
     @Override
@@ -87,10 +90,9 @@ public class GeographyPersistenceAdapter implements GeographyPersistencePort {
 
     @Override
     public Optional<GeographyResult> findDistrictByCode(String code) {
-        return Optional.ofNullable(cache.getOrLoad("district:" + code, () -> districtRepository
+        return lookupCached("district:" + code, () -> districtRepository
                 .findByCodeAndActiveTrue(code)
-                .map(d -> new GeographyResult(d.getCode(), d.getName(), d.getNameEn()))
-                .orElse(null)));
+                .map(d -> new GeographyResult(d.getCode(), d.getName(), d.getNameEn())));
     }
 
     @Override
@@ -102,10 +104,19 @@ public class GeographyPersistenceAdapter implements GeographyPersistencePort {
 
     @Override
     public Optional<GeographyResult> findWardByCode(String code) {
-        return Optional.ofNullable(cache.getOrLoad("ward:" + code, () -> wardRepository
+        return lookupCached("ward:" + code, () -> wardRepository
                 .findByCodeAndActiveTrue(code)
-                .map(w -> new GeographyResult(w.getCode(), w.getName(), w.getNameEn()))
-                .orElse(null)));
+                .map(w -> new GeographyResult(w.getCode(), w.getName(), w.getNameEn())));
+    }
+
+    // Cache both hits and misses. Misses are cached as MISS_SENTINEL to spare
+    // subsequent lookups a DB round-trip when unknown codes keep coming in.
+    private Optional<GeographyResult> lookupCached(String cacheKey, Supplier<Optional<GeographyResult>> loader) {
+        GeographyResult cached = cache.getOrLoad(cacheKey, () -> loader.get().orElse(MISS_SENTINEL));
+        if (cached == null || cached.code() == null) {
+            return Optional.empty();
+        }
+        return Optional.of(cached);
     }
 
     @Override

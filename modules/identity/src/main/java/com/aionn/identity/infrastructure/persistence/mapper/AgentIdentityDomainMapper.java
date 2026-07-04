@@ -17,7 +17,6 @@ public interface AgentIdentityDomainMapper {
     @Mapping(target = "status", expression = "java(AgentStatus.valueOf(entity.getStatus()))")
     @Mapping(target = "id", source = "agentId")
     @Mapping(target = "ownerId", source = "owner.userId")
-    @Mapping(target = "name", source = "agentId")
     @Mapping(target = "expiresAt", source = "expiryAt")
     @Mapping(target = "updatedAt", ignore = true)
     AgentIdentity toDomain(AgentIdentityEntity entity);

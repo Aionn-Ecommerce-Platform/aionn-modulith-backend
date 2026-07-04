@@ -2,6 +2,8 @@ package com.aionn.identity.infrastructure.persistence.adapter.account;
 
 import com.aionn.identity.application.dto.user.view.DataExportRequestView;
 import com.aionn.identity.application.port.out.user.DataExportPort;
+import com.aionn.identity.domain.exception.IdentityErrorCode;
+import com.aionn.identity.domain.exception.IdentityException;
 import com.aionn.identity.domain.valueobject.DataExportStatus;
 import com.aionn.identity.infrastructure.persistence.entity.DataExportRequestEntity;
 import com.aionn.identity.infrastructure.persistence.entity.UserEntity;
@@ -10,6 +12,7 @@ import com.aionn.identity.infrastructure.persistence.repository.user.UserReposit
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,8 +25,18 @@ public class DataExportPersistenceAdapter implements DataExportPort {
     private final UserRepository userRepository;
 
     @Override
+    @Transactional
     public DataExportRequestView save(String userId) {
-        UserEntity user = userRepository.getReferenceById(userId);
+        // Serialize concurrent requests for the same user via the user row lock
+        // so two REQUESTED/PROCESSING rows can never be inserted at once.
+        UserEntity user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new IdentityException(IdentityErrorCode.USER_NOT_FOUND));
+        boolean active = dataExportRequestRepository.existsByUser_UserIdAndStatusIn(
+                userId,
+                List.of(DataExportStatus.REQUESTED, DataExportStatus.PROCESSING));
+        if (active) {
+            throw new IdentityException(IdentityErrorCode.DATA_EXPORT_ALREADY_IN_PROGRESS);
+        }
         DataExportRequestEntity request = DataExportRequestEntity.builder()
                 .exportRequestId(IdGenerator.ulid())
                 .user(user)

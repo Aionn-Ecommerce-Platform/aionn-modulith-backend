@@ -34,7 +34,7 @@ public class AgentAuditAdapter implements AgentAuditPort {
     public List<SecurityAudit> findByAgentId(String agentId, int limit) {
         PageRequest pageRequest = PageRequest.of(0, limit);
         return securityAuditRepository
-                .findByDescriptionContainingOrderByTimestampDesc(agentId, pageRequest)
+                .findByDeviceIdOrderByTimestampDesc(agentId, pageRequest)
                 .stream()
                 .map(mapper::toDomain)
                 .toList();

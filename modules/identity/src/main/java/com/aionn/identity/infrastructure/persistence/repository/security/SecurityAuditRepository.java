@@ -9,7 +9,9 @@ import java.util.List;
 public interface SecurityAuditRepository extends JpaRepository<SecurityAuditEntity, String> {
 
     List<SecurityAuditEntity> findTop100ByUser_UserIdOrderByTimestampDesc(String userId);
-    List<SecurityAuditEntity> findByDescriptionContainingOrderByTimestampDesc(String descriptionPattern,
-            Pageable pageable);
-}
 
+    // Agent audit rows are written with deviceId = agentId (see AgentService).
+    // Query the exact column instead of doing LIKE '%agentId%' on description so
+    // the index can be used and unrelated audit entries never leak through.
+    List<SecurityAuditEntity> findByDeviceIdOrderByTimestampDesc(String deviceId, Pageable pageable);
+}

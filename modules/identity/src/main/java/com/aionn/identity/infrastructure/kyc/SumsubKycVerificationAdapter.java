@@ -7,9 +7,10 @@ import com.aionn.identity.domain.model.IdentityUser;
 import com.aionn.identity.infrastructure.config.properties.KycProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
+import org.springframework.boot.http.client.ClientHttpRequestFactorySettings;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -18,20 +19,35 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "identity.kyc", name = "provider", havingValue = "sumsub")
 public class SumsubKycVerificationAdapter implements ExternalKycVerificationPort {
 
     private static final String PROVIDER = "sumsub";
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration READ_TIMEOUT = Duration.ofSeconds(15);
 
     private final KycProperties kycProperties;
     private final ObjectMapper objectMapper;
+    // Shared client with explicit timeouts so a stalled Sumsub upstream can't
+    // block identity threads indefinitely; baseUrl comes from config each call.
+    private final RestClient.Builder clientBuilder;
+
+    public SumsubKycVerificationAdapter(KycProperties kycProperties, ObjectMapper objectMapper) {
+        this.kycProperties = kycProperties;
+        this.objectMapper = objectMapper;
+        var settings = ClientHttpRequestFactorySettings.defaults()
+                .withConnectTimeout(CONNECT_TIMEOUT)
+                .withReadTimeout(READ_TIMEOUT);
+        this.clientBuilder = RestClient.builder()
+                .requestFactory(ClientHttpRequestFactoryBuilder.detect().build(settings));
+    }
 
     @Override
     public ExternalKycApplicant createApplicant(IdentityUser user, String kycId, String docType) {
@@ -137,7 +153,8 @@ public class SumsubKycVerificationAdapter implements ExternalKycVerificationPort
         String timestamp = String.valueOf(Instant.now().getEpochSecond());
         String signature = sign(timestamp, method, pathWithQuery, bodyJson, config.secretKey());
 
-        RestClient client = RestClient.builder()
+        RestClient client = clientBuilder
+                .clone()
                 .baseUrl(config.baseUrl())
                 .build();
 

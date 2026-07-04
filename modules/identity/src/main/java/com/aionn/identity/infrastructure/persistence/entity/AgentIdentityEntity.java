@@ -30,6 +30,9 @@ public class AgentIdentityEntity {
     @JoinColumn(name = "owner_id", nullable = false)
     private UserEntity owner;
 
+    @Column(name = "name", nullable = false, length = 128)
+    private String name;
+
     @Column(name = "key_hash", nullable = false, length = 255)
     private String keyHash;
 
