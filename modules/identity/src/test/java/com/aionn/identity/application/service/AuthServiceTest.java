@@ -20,7 +20,6 @@ import com.aionn.identity.application.port.out.social.SocialTokenVerifierPort;
 import com.aionn.identity.application.port.out.user.UserPersistencePort;
 import com.aionn.identity.domain.exception.IdentityException;
 import com.aionn.identity.domain.model.AuthSession;
-import com.aionn.identity.domain.model.IdentityUser;
 import com.aionn.identity.domain.valueobject.AuthSessionStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -71,10 +70,6 @@ class AuthServiceTest {
                 socialLinkPersistencePort, mfaPersistencePort, passwordHasher,
                 totpManager, accessTokenIssuer, socialTokenVerifier, authPolicy,
                 refreshTokenStore, authResultMapper, tokenBlacklist, identityMetrics);
-    }
-
-    private static IdentityUser activeUser() {
-        return IdentityUser.createNew(USER_ID, "u@example.com", null, "user");
     }
 
     private static AuthSession activeSession() {

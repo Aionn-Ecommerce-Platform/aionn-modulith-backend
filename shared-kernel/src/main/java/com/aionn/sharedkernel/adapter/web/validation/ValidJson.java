@@ -1,4 +1,4 @@
-package com.aionn.identity.adapter.rest.validation;
+package com.aionn.sharedkernel.adapter.web.validation;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;

@@ -1,6 +1,6 @@
 package com.aionn.identity.adapter.rest.dto.preference.request;
 
-import com.aionn.identity.adapter.rest.validation.ValidJson;
+import com.aionn.sharedkernel.adapter.web.validation.ValidJson;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
