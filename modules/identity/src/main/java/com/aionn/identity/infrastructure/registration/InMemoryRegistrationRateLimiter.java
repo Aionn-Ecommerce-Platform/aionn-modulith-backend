@@ -25,16 +25,35 @@ public class InMemoryRegistrationRateLimiter implements RegistrationRateLimiterP
         long now = Instant.now().getEpochSecond();
         long threshold = now - windowSeconds;
 
-        ArrayDeque<Long> queue = requestsByKey.computeIfAbsent(bucket, k -> new ArrayDeque<>());
-        synchronized (queue) {
-            while (!queue.isEmpty() && queue.peekFirst() <= threshold) {
-                queue.pollFirst();
+        // Atomic load-or-create + prune inside a single ConcurrentHashMap slot
+        // lock; evictDrainedBuckets() removes buckets that go quiet.
+        boolean[] allowed = new boolean[1];
+        requestsByKey.compute(bucket, (k, queue) -> {
+            ArrayDeque<Long> q = queue == null ? new ArrayDeque<>() : queue;
+            while (!q.isEmpty() && q.peekFirst() <= threshold) {
+                q.pollFirst();
             }
-            if (queue.size() >= maxAttempts) {
-                return false;
+            if (q.size() >= maxAttempts) {
+                allowed[0] = false;
+                return q;
             }
-            queue.addLast(now);
-            return true;
-        }
+            q.addLast(now);
+            allowed[0] = true;
+            return q;
+        });
+        return allowed[0];
+    }
+
+    // In-memory limiter is dev-only (Redis is used in production), but still
+    // sweep drained buckets periodically so long-running dev sessions do not
+    // accumulate stale entries.
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelayString = "PT10M")
+    void evictDrainedBuckets() {
+        long threshold = Instant.now().getEpochSecond() - 3600;
+        requestsByKey.entrySet().removeIf(entry -> {
+            ArrayDeque<Long> q = entry.getValue();
+            Long last = q.peekLast();
+            return last != null && last <= threshold;
+        });
     }
 }

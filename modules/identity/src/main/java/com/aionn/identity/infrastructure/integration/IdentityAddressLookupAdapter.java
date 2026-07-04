@@ -3,6 +3,8 @@ package com.aionn.identity.infrastructure.integration;
 import com.aionn.identity.application.dto.geography.result.GeographyResult;
 import com.aionn.identity.application.dto.geography.result.ResolvedLocation;
 import com.aionn.identity.application.service.GeographyService;
+import com.aionn.identity.domain.exception.IdentityErrorCode;
+import com.aionn.identity.domain.exception.IdentityException;
 import com.aionn.sharedkernel.integration.port.identity.AddressLookupPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,10 +30,15 @@ public class IdentityAddressLookupAdapter implements AddressLookupPort {
                     loc.province().code(), loc.province().name(),
                     loc.district().code(), loc.district().name(),
                     loc.ward().code(), loc.ward().name()));
-        } catch (RuntimeException ex) {
-            log.warn("AddressLookup failed for province={} district={} ward={}: {}",
-                    provinceCode, districtCode, wardCode, ex.getMessage());
-            return Optional.empty();
+        } catch (IdentityException ex) {
+            // Only "not found" style errors map to Optional.empty(); infrastructure
+            // failures (DB / cache outages) propagate so callers can retry or fail.
+            if (IdentityErrorCode.INVALID_GEOGRAPHY_CODE.getCode().equals(ex.getErrorCode())) {
+                log.debug("Address lookup miss province={} district={} ward={}",
+                        provinceCode, districtCode, wardCode);
+                return Optional.empty();
+            }
+            throw ex;
         }
     }
 
@@ -43,9 +50,12 @@ public class IdentityAddressLookupAdapter implements AddressLookupPort {
         try {
             GeographyResult province = geographyService.getProvince(provinceCode);
             return Optional.of(new ResolvedProvince(province.code(), province.name()));
-        } catch (RuntimeException ex) {
-            log.warn("Province lookup failed for code={}: {}", provinceCode, ex.getMessage());
-            return Optional.empty();
+        } catch (IdentityException ex) {
+            if (IdentityErrorCode.INVALID_GEOGRAPHY_CODE.getCode().equals(ex.getErrorCode())) {
+                log.debug("Province lookup miss code={}", provinceCode);
+                return Optional.empty();
+            }
+            throw ex;
         }
     }
 }

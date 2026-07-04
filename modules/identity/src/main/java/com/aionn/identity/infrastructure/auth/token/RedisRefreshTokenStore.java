@@ -3,6 +3,7 @@ package com.aionn.identity.infrastructure.auth.token;
 import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -10,6 +11,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -18,6 +20,20 @@ public class RedisRefreshTokenStore implements RefreshTokenStorePort {
 
     private static final String TOKEN_KEY_PREFIX = "identity:auth:refresh:";
     private static final String SESSION_INDEX_PREFIX = "identity:auth:refresh:session:";
+
+    // Server-side atomic revoke-by-session:
+    // KEYS[1] = session index key, ARGV[1] = token key prefix.
+    // Drains the index set and deletes each token key inside the same call, so a
+    // concurrent store() that adds a new token+index entry after we read cannot
+    // outrun the delete.
+    private static final DefaultRedisScript<Long> REVOKE_BY_SESSION_SCRIPT = new DefaultRedisScript<>(
+            "local members = redis.call('SMEMBERS', KEYS[1]) "
+                    + "for _, hash in ipairs(members) do "
+                    + "  redis.call('DEL', ARGV[1] .. hash) "
+                    + "end "
+                    + "redis.call('DEL', KEYS[1]) "
+                    + "return #members",
+            Long.class);
 
     private final StringRedisTemplate redisTemplate;
 
@@ -63,14 +79,10 @@ public class RedisRefreshTokenStore implements RefreshTokenStorePort {
 
     @Override
     public void revokeBySessionId(String sessionId) {
-        String indexKey = sessionIndexKey(sessionId);
-        var members = redisTemplate.opsForSet().members(indexKey);
-        if (members != null) {
-            for (String tokenHash : members) {
-                redisTemplate.delete(tokenKey(tokenHash));
-            }
-        }
-        redisTemplate.delete(indexKey);
+        redisTemplate.execute(
+                REVOKE_BY_SESSION_SCRIPT,
+                List.of(sessionIndexKey(sessionId)),
+                TOKEN_KEY_PREFIX);
     }
 
     private static String tokenKey(String tokenHash) {

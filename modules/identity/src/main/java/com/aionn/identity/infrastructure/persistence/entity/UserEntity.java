@@ -85,7 +85,9 @@ public class UserEntity {
     @Column(name = "mfa_enabled", nullable = false)
     private boolean mfaEnabled;
 
-    @Column(name = "mfa_secret", length = 64)
+    // 20-byte TOTP secret → Base32 (32 chars) → AES-GCM (IV+tag+ct = 60 bytes)
+    // → Base64 (80 chars). 128 leaves headroom for future rotation.
+    @Column(name = "mfa_secret", length = 128)
     private String mfaSecret;
 
     @Column(name = "locked_until")

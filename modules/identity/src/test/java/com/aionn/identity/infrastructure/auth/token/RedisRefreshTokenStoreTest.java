@@ -3,18 +3,22 @@ package com.aionn.identity.infrastructure.auth.token;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.RedisScript;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Duration;
+import java.util.List;
 import java.util.HexFormat;
-import java.util.Set;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -57,16 +61,21 @@ class RedisRefreshTokenStoreTest {
     }
 
     @Test
-    void revokeBySessionIdDeletesOnlyHashedTokenKeys() {
-        when(redisTemplate.opsForSet()).thenReturn(setOperations);
-        when(setOperations.members("identity:auth:refresh:session:session-1"))
-                .thenReturn(Set.of("hash-a", "hash-b"));
+    void revokeBySessionIdRunsAtomicLuaScript() {
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<RedisScript<Long>> scriptCaptor = ArgumentCaptor.forClass(RedisScript.class);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<String>> keysCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<Object> argCaptor = ArgumentCaptor.forClass(Object.class);
 
         store.revokeBySessionId("session-1");
 
-        verify(redisTemplate).delete("identity:auth:refresh:hash-a");
-        verify(redisTemplate).delete("identity:auth:refresh:hash-b");
-        verify(redisTemplate).delete("identity:auth:refresh:session:session-1");
+        verify(redisTemplate).execute(scriptCaptor.capture(), keysCaptor.capture(), argCaptor.capture());
+        assertThat(scriptCaptor.getValue().getScriptAsString()).contains("SMEMBERS").contains("DEL");
+        assertThat(keysCaptor.getValue()).containsExactly("identity:auth:refresh:session:session-1");
+        assertThat(argCaptor.getValue()).isEqualTo("identity:auth:refresh:");
+        // Should not fall back to the individual per-key delete path.
+        verify(redisTemplate, never()).delete(any(String.class));
     }
 
     private static String sha256(String value) throws Exception {

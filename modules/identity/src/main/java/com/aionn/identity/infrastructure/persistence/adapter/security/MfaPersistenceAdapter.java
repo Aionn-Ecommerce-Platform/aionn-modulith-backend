@@ -10,6 +10,7 @@ import com.aionn.identity.infrastructure.security.mfa.MfaSecretCipher;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -39,6 +40,7 @@ public class MfaPersistenceAdapter implements MfaPersistencePort {
     }
 
     @Override
+    @Transactional
     public void clearMfa(String userId) {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.USER_NOT_FOUND));
@@ -77,16 +79,8 @@ public class MfaPersistenceAdapter implements MfaPersistencePort {
     }
 
     @Override
+    @Transactional
     public boolean markBackupCodeUsed(String backupCodeId, LocalDateTime usedAt) {
-        return backupCodeRepository.findById(backupCodeId)
-                .map(code -> {
-                    if (code.getUsedAt() != null) {
-                        return false;
-                    }
-                    code.setUsedAt(usedAt);
-                    backupCodeRepository.save(code);
-                    return true;
-                })
-                .orElse(false);
+        return backupCodeRepository.markAsUsedIfUnused(backupCodeId, usedAt) == 1;
     }
 }

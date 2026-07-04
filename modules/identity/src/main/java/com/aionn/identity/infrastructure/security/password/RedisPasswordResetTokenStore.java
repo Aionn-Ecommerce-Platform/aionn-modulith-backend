@@ -9,7 +9,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.HexFormat;
 import java.util.Optional;
 
@@ -25,11 +25,14 @@ public class RedisPasswordResetTokenStore {
     private final StringRedisTemplate redisTemplate;
 
     public void save(String token, String userId, LocalDateTime expiresAt) {
-        Duration ttl = Duration.between(LocalDateTime.now(), expiresAt);
+        // Callers pass expiresAt in UTC (PasswordResetService uses ZoneOffset.UTC).
+        // Compare and serialize consistently in UTC so non-UTC hosts do not
+        // skew TTLs or persisted expiry timestamps.
+        Duration ttl = Duration.between(LocalDateTime.now(ZoneOffset.UTC), expiresAt);
         if (ttl.isNegative() || ttl.isZero()) {
             ttl = Duration.ofMinutes(1);
         }
-        long epochSecond = expiresAt.atZone(ZoneId.systemDefault()).toEpochSecond();
+        long epochSecond = expiresAt.toEpochSecond(ZoneOffset.UTC);
         redisTemplate.opsForValue().set(key(token), userId + ":" + epochSecond, ttl);
     }
 
@@ -52,9 +55,7 @@ public class RedisPasswordResetTokenStore {
         try {
             long epoch = Long.parseLong(value.substring(sep + 1));
             String userId = value.substring(0, sep);
-            LocalDateTime expiresAt = java.time.Instant.ofEpochSecond(epoch)
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDateTime();
+            LocalDateTime expiresAt = LocalDateTime.ofEpochSecond(epoch, 0, ZoneOffset.UTC);
             return Optional.of(new PasswordResetTokenData(userId, expiresAt));
         } catch (NumberFormatException ex) {
             return Optional.empty();

@@ -3,6 +3,7 @@ package com.aionn.identity.infrastructure.integration;
 import com.aionn.identity.application.port.out.auth.AccessTokenClaims;
 import com.aionn.identity.application.port.out.auth.AccessTokenIssuerPort;
 import com.aionn.identity.application.port.out.auth.AuthSessionPersistencePort;
+import com.aionn.identity.application.port.out.auth.TokenBlacklistPort;
 import com.aionn.identity.domain.model.AuthSession;
 import com.aionn.identity.domain.valueobject.AuthSessionStatus;
 import com.aionn.sharedkernel.integration.port.identity.AccessTokenVerifierPort;
@@ -29,6 +30,7 @@ public class IdentityAccessTokenVerifierAdapter implements AccessTokenVerifierPo
 
     private final AccessTokenIssuerPort tokenIssuer;
     private final AuthSessionPersistencePort authSessionPersistencePort;
+    private final TokenBlacklistPort tokenBlacklist;
 
     @Override
     public Optional<String> verifyAndExtractUserId(String authorizationHeader) {
@@ -43,7 +45,14 @@ public class IdentityAccessTokenVerifierAdapter implements AccessTokenVerifierPo
         AccessTokenClaims claims = parsed.get();
         String sessionId = claims.sessionId();
         String userId = claims.userId();
+        String jti = claims.jti();
         if (sessionId == null || userId == null) {
+            return Optional.empty();
+        }
+        // Reject revoked tokens; parity with BearerAuthenticationFilter so a
+        // logged-out user cannot keep authenticating cross-service until token
+        // expiry.
+        if (jti != null && tokenBlacklist.isBlacklisted(jti)) {
             return Optional.empty();
         }
         Optional<AuthSession> sessionOpt = authSessionPersistencePort.findById(sessionId);

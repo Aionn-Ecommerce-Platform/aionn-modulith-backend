@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
@@ -32,7 +33,7 @@ public class RedisUserOtpChallengeStore implements UserOtpChallengeStorePort {
         String key = key(challenge.userId(), challenge.purpose());
         String value = serialize(challenge);
 
-        Duration ttl = Duration.between(LocalDateTime.now(), challenge.expiresAt()).plus(EXPIRY_BUFFER);
+        Duration ttl = Duration.between(LocalDateTime.now(ZoneOffset.UTC), challenge.expiresAt()).plus(EXPIRY_BUFFER);
         if (ttl.isNegative() || ttl.isZero()) {
             ttl = Duration.ofMinutes(10);
         }

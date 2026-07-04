@@ -5,6 +5,7 @@ import com.aionn.sharedkernel.integration.event.identity.EmailChangedIntegration
 import com.aionn.sharedkernel.integration.event.identity.PasswordChangedIntegrationEvent;
 import com.aionn.sharedkernel.integration.event.identity.PhoneChangedIntegrationEvent;
 import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -22,20 +23,20 @@ public class IdentityIntegrationEventPublisher implements IdentityIntegrationEve
     public void publishPasswordChanged(String userId, String channelHint) {
         log.debug("Publishing PasswordChangedIntegrationEvent for user: {}", userId);
         integrationEventPublisher.publish(new PasswordChangedIntegrationEvent(
-                null, userId, channelHint, Instant.now()));
+                IdGenerator.ulid(), userId, channelHint, Instant.now()));
     }
 
     @Override
     public void publishEmailChanged(String userId, String oldEmail, String newEmail) {
         log.debug("Publishing EmailChangedIntegrationEvent for user: {}", userId);
         integrationEventPublisher.publish(new EmailChangedIntegrationEvent(
-                null, userId, oldEmail, newEmail, Instant.now()));
+                IdGenerator.ulid(), userId, oldEmail, newEmail, Instant.now()));
     }
 
     @Override
     public void publishPhoneChanged(String userId, String oldPhone, String newPhone) {
         log.debug("Publishing PhoneChangedIntegrationEvent for user: {}", userId);
         integrationEventPublisher.publish(new PhoneChangedIntegrationEvent(
-                null, userId, oldPhone, newPhone, Instant.now()));
+                IdGenerator.ulid(), userId, oldPhone, newPhone, Instant.now()));
     }
 }

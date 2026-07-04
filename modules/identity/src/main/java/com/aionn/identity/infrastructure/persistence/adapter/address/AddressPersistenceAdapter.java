@@ -41,6 +41,9 @@ public class AddressPersistenceAdapter implements AddressPersistencePort {
     @Override
     @Transactional(propagation = Propagation.REQUIRED)
     public Address createAtomically(Address address, long maxAddressNumbers, boolean makeDefaultWhenFirst) {
+        UserEntity userEntity = userRepository.findByIdForUpdate(address.userId())
+                .orElseThrow(() -> new IdentityException(IdentityErrorCode.USER_NOT_FOUND));
+
         long currentCount = addressRepository.countByUser_UserId(address.userId());
         if (currentCount >= maxAddressNumbers) {
             throw new IdentityException(IdentityErrorCode.ADDRESS_NUMBER_EXCEEDED);
@@ -71,7 +74,6 @@ public class AddressPersistenceAdapter implements AddressPersistencePort {
                         address.updatedAt())
                 : address;
 
-        UserEntity userEntity = userRepository.getReferenceById(addressToPersist.userId());
         UserAddressEntity entity = addressDomainMapper.toEntity(addressToPersist, userEntity);
         UserAddressEntity saved = addressRepository.save(entity);
         return addressDomainMapper.toDomain(saved);

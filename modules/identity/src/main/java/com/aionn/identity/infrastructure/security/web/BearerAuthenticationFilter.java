@@ -65,10 +65,23 @@ public class BearerAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (claims.jti() != null && tokenBlacklist.isBlacklisted(claims.jti())) {
-            log.debug("Bearer token jti={} is blacklisted", claims.jti());
-            filterChain.doFilter(request, response);
-            return;
+        if (claims.jti() != null) {
+            boolean revoked;
+            try {
+                revoked = tokenBlacklist.isBlacklisted(claims.jti());
+            } catch (RuntimeException ex) {
+                // Fail closed: if the blacklist store is unreachable we cannot
+                // prove the token has not been revoked, so treat this request
+                // as unauthenticated instead of accepting it silently.
+                log.warn("Blacklist check failed for jti={}, denying auth", claims.jti(), ex);
+                filterChain.doFilter(request, response);
+                return;
+            }
+            if (revoked) {
+                log.debug("Bearer token jti={} is blacklisted", claims.jti());
+                filterChain.doFilter(request, response);
+                return;
+            }
         }
 
         List<String> roles = claims.roles();

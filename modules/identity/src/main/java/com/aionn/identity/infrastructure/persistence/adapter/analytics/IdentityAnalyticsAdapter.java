@@ -157,9 +157,18 @@ public class IdentityAnalyticsAdapter implements UserAnalyticsQueryPort, KycAnal
                 avgHours, byCategory);
     }
 
+    // Guard against unbounded per-day iteration and memory growth on the
+    // caller-supplied range. 366 days covers a full year plus leap-day buffer,
+    // which matches the analytics UI's max period.
+    private static final long MAX_RANGE_DAYS = 366;
+
     private static void validateRange(LocalDate from, LocalDate to) {
         if (from.isAfter(to)) {
             throw new IllegalArgumentException("from must be on or before to");
+        }
+        if (java.time.temporal.ChronoUnit.DAYS.between(from, to) > MAX_RANGE_DAYS) {
+            throw new IllegalArgumentException(
+                    "Analytics range must not exceed " + MAX_RANGE_DAYS + " days");
         }
     }
 }

@@ -31,6 +31,13 @@ public class KycPersistenceAdapter implements KycPersistencePort {
 
     @Override
     public KycProfile save(KycProfile kycProfile) {
+        Optional<KycProfileEntity> managed = kycRepository.findById(kycProfile.getKycId());
+        if (managed.isPresent()) {
+            KycProfileEntity existing = managed.get();
+            mapper.updateEntity(existing, kycProfile);
+            KycProfileEntity saved = kycRepository.save(existing);
+            return mapper.toDomain(saved);
+        }
         KycProfileEntity entity = mapper.toEntity(kycProfile);
         UserEntity userRef = userRepository.getReferenceById(kycProfile.getUserId());
         entity.setUser(userRef);

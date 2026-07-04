@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 
 @ConfigurationProperties(prefix = "identity.auth.social")
 public record SocialAuthProperties(
-        Google google) {
+        @DefaultValue Google google) {
 
     public record Google(
             @DefaultValue("remote") String provider,

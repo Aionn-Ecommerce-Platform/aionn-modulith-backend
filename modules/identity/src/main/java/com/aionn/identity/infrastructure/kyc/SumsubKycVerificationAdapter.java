@@ -123,7 +123,10 @@ public class SumsubKycVerificationAdapter implements ExternalKycVerificationPort
         };
 
         String calculated = hmacHex(algorithm, config.webhookSecret(), payload);
-        if (!calculated.equalsIgnoreCase(digest)) {
+        // Constant-time comparison to avoid leaking the HMAC digest via timing.
+        byte[] expected = calculated.toLowerCase().getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        byte[] actual = digest.toLowerCase().getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        if (!java.security.MessageDigest.isEqual(expected, actual)) {
             throw new IdentityException(IdentityErrorCode.KYC_WEBHOOK_SIGNATURE_INVALID);
         }
     }
