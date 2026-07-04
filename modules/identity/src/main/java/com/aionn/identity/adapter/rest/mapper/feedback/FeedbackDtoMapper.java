@@ -3,7 +3,9 @@ package com.aionn.identity.adapter.rest.mapper.feedback;
 import com.aionn.identity.adapter.rest.dto.feedback.request.AdminChangeFeedbackStatusRequest;
 import com.aionn.identity.adapter.rest.dto.feedback.request.AdminReplyFeedbackRequest;
 import com.aionn.identity.adapter.rest.dto.feedback.request.SubmitFeedbackRequest;
+import com.aionn.identity.adapter.rest.dto.feedback.response.FeedbackAnalyticsResponse;
 import com.aionn.identity.adapter.rest.dto.feedback.response.FeedbackResponse;
+import com.aionn.identity.application.dto.analytics.result.FeedbackAnalyticsResult;
 import com.aionn.identity.application.dto.common.PageResult;
 import com.aionn.identity.application.dto.feedback.command.AdminFeedbackCommands;
 import com.aionn.identity.application.dto.feedback.command.SubmitFeedbackCommand;
@@ -40,6 +42,10 @@ public interface FeedbackDtoMapper {
     FeedbackResponse toResponse(FeedbackResult result);
 
     List<FeedbackResponse> toResponses(List<FeedbackResult> results);
+
+    FeedbackAnalyticsResponse.CategoryCount toCategoryCount(FeedbackAnalyticsResult.CategoryCount src);
+
+    FeedbackAnalyticsResponse toAnalyticsResponse(FeedbackAnalyticsResult result);
 
     default PageMetadata toPageMetadata(PageResult<?> result) {
         return new PageMetadata(

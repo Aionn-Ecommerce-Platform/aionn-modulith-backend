@@ -2,9 +2,9 @@ package com.aionn.identity.adapter.rest.controller;
 
 import com.aionn.identity.adapter.rest.dto.feedback.request.AdminChangeFeedbackStatusRequest;
 import com.aionn.identity.adapter.rest.dto.feedback.request.AdminReplyFeedbackRequest;
+import com.aionn.identity.adapter.rest.dto.feedback.response.FeedbackAnalyticsResponse;
 import com.aionn.identity.adapter.rest.dto.feedback.response.FeedbackResponse;
 import com.aionn.identity.adapter.rest.mapper.feedback.FeedbackDtoMapper;
-import com.aionn.identity.application.dto.analytics.result.FeedbackAnalyticsResult;
 import com.aionn.identity.application.dto.common.PageResult;
 import com.aionn.identity.application.dto.feedback.result.FeedbackResult;
 import com.aionn.identity.application.port.in.feedback.ChangeFeedbackStatusInputPort;
@@ -55,13 +55,14 @@ public class AdminFeedbackController {
 
     @GetMapping("/analytics")
     @Operation(summary = "Feedback queue analytics (admin)")
-    public ResponseEntity<ApiResponse<FeedbackAnalyticsResult>> analytics(
+    public ResponseEntity<ApiResponse<FeedbackAnalyticsResponse>> analytics(
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        var result = getFeedbackAnalyticsQueryPort.execute(from, to);
         return ResponseEntity.ok(ApiResponse.success(
-                getFeedbackAnalyticsQueryPort.execute(from, to), "Feedback analytics fetched"));
+                feedbackDtoMapper.toAnalyticsResponse(result), "Feedback analytics fetched"));
     }
 
     @GetMapping

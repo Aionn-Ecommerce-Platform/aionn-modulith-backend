@@ -7,7 +7,6 @@ import com.aionn.identity.adapter.rest.dto.auth.request.SocialAuthRequest;
 import com.aionn.identity.adapter.rest.dto.auth.response.AuthSessionResponse;
 import com.aionn.identity.adapter.rest.dto.auth.response.AuthTokenResponse;
 import com.aionn.identity.adapter.rest.dto.auth.response.LogoutAllResponse;
-import com.aionn.identity.adapter.rest.dto.auth.response.SocialAuthResponse;
 import com.aionn.identity.adapter.rest.dto.auth.response.SocialLinkResponse;
 import com.aionn.identity.application.dto.auth.command.LinkSocialCommand;
 import com.aionn.identity.application.dto.auth.command.LoginCommand;
@@ -82,12 +81,6 @@ public interface AuthDtoMapper {
     AuthTokenResponse toAuthTokenResponse(RefreshAccessTokenResult result);
 
     AuthTokenResponse toAuthTokenResponse(SocialLoginResult result);
-
-    @Mapping(target = "userId", source = "userId")
-    @Mapping(target = "sessionId", source = "sessionId")
-    @Mapping(target = "accessToken", source = "accessToken")
-    @Mapping(target = "expiresAt", source = "expiresAt")
-    SocialAuthResponse toSocialLoginResponse(SocialLoginResult result);
 
     SocialLinkResponse toSocialLinkResponse(SocialLinkResult result);
 

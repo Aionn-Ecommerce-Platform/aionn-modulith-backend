@@ -32,6 +32,11 @@ public class ApiSecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // Stateless bearer/JWT auth: no session cookies, so CSRF has
+                // nothing to protect. Explicitly disabling also allows
+                // third-party provider webhooks (Sumsub KYC callbacks, etc.)
+                // to POST without a token.
+                .csrf(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers
                         .contentTypeOptions(opt -> {
                         })

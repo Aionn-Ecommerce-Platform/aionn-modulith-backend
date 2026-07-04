@@ -82,6 +82,9 @@ public class AdminUserController {
 	}
 
 	@PutMapping("/{userId}/roles")
+	// Only sysadmin can grant/replace roles — CS admin must not be able to
+	// escalate itself or others to SYSTEM_ADMIN.
+	@PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
 	@Operation(summary = "Update user roles", description = "Replace user roles with the provided role set")
 	public ResponseEntity<ApiResponse<UserRolesResponse>> updateRoles(
 			@PathVariable String userId,
@@ -91,6 +94,7 @@ public class AdminUserController {
 	}
 
 	@DeleteMapping("/{userId}/roles")
+	@PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
 	@Operation(summary = "Remove user roles", description = "Remove specific roles from a user account")
 	public ResponseEntity<ApiResponse<Void>> removeRoles(
 			@PathVariable String userId,

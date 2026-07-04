@@ -13,7 +13,7 @@ public record CompleteRegistrationRequest(
         )
         String password,
 
-        @NotBlank(message = "Username name is required")
+        @NotBlank(message = "Username is required")
         @Size(min = 2, max = 50, message = "Username must be between 2 and 50 characters")
         String username,
 

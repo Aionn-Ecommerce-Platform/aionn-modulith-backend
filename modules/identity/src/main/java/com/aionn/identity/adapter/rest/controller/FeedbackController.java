@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,7 +33,15 @@ public class FeedbackController {
     public ResponseEntity<ApiResponse<FeedbackResponse>> submit(
             Authentication authentication,
             @Valid @RequestBody SubmitFeedbackRequest request) {
-        String userId = authentication != null && authentication.isAuthenticated() ? authentication.getName() : null;
+        // Spring Security populates an AnonymousAuthenticationToken for
+        // unauthenticated requests whose isAuthenticated() returns true and
+        // whose name is "anonymousUser" — treat that as no user, otherwise
+        // "anonymousUser" would end up in the SubmitFeedbackCommand.
+        String userId = (authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken))
+                        ? authentication.getName()
+                        : null;
         FeedbackResponse response = feedbackDtoMapper.toResponse(
                 submitFeedbackInputPort.execute(feedbackDtoMapper.toSubmitCommand(userId, request)));
         return ResponseEntity.ok(ApiResponse.success(response, "Feedback submitted"));

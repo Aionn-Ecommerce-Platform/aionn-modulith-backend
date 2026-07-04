@@ -2,9 +2,11 @@ package com.aionn.identity.adapter.rest.mapper.kyc;
 
 import com.aionn.identity.adapter.rest.dto.kyc.request.AttachKycDocumentRequest;
 import com.aionn.identity.adapter.rest.dto.kyc.request.CreateKycRequest;
+import com.aionn.identity.adapter.rest.dto.kyc.response.KycAnalyticsResponse;
 import com.aionn.identity.adapter.rest.dto.kyc.response.KycDocumentResponse;
 import com.aionn.identity.adapter.rest.dto.kyc.response.KycResponse;
 import com.aionn.identity.adapter.rest.dto.kyc.response.KycVerificationSessionResponse;
+import com.aionn.identity.application.dto.analytics.result.KycAnalyticsResult;
 import com.aionn.identity.application.dto.kyc.command.AttachKycDocumentCommand;
 import com.aionn.identity.application.dto.kyc.command.CreateKycCommand;
 import com.aionn.identity.application.dto.kyc.query.GetKycQuery;
@@ -46,4 +48,6 @@ public interface KycDtoMapper {
     List<KycDocumentResponse> toDocumentResponses(List<KycDocumentResult> results);
 
     KycVerificationSessionResponse toVerificationSessionResponse(KycVerificationSessionResult result);
+
+    KycAnalyticsResponse toAnalyticsResponse(KycAnalyticsResult result);
 }

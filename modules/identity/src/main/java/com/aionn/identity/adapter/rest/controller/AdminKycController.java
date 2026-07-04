@@ -3,9 +3,9 @@ package com.aionn.identity.adapter.rest.controller;
 import com.aionn.identity.adapter.rest.dto.kyc.request.AdminApproveKycRequest;
 import com.aionn.identity.adapter.rest.dto.kyc.request.AdminMarkInReviewKycRequest;
 import com.aionn.identity.adapter.rest.dto.kyc.request.AdminRejectKycRequest;
+import com.aionn.identity.adapter.rest.dto.kyc.response.KycAnalyticsResponse;
 import com.aionn.identity.adapter.rest.dto.kyc.response.KycResponse;
 import com.aionn.identity.adapter.rest.mapper.kyc.KycDtoMapper;
-import com.aionn.identity.application.dto.analytics.result.KycAnalyticsResult;
 import com.aionn.identity.application.dto.kyc.command.KycAdminCommands;
 import com.aionn.identity.application.port.in.kyc.ApproveKycInputPort;
 import com.aionn.identity.application.port.in.kyc.GetAdminKycQueryPort;
@@ -56,13 +56,14 @@ public class AdminKycController {
 
     @GetMapping("/analytics")
     @Operation(summary = "KYC queue analytics (admin)")
-    public ResponseEntity<ApiResponse<KycAnalyticsResult>> analytics(
+    public ResponseEntity<ApiResponse<KycAnalyticsResponse>> analytics(
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        var result = getKycAnalyticsQueryPort.execute(from, to);
         return ResponseEntity.ok(ApiResponse.success(
-                getKycAnalyticsQueryPort.execute(from, to), "KYC analytics fetched"));
+                kycDtoMapper.toAnalyticsResponse(result), "KYC analytics fetched"));
     }
 
     @GetMapping

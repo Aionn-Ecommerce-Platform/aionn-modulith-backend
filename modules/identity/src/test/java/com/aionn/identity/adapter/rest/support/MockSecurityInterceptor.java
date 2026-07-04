@@ -47,6 +47,11 @@ public class MockSecurityInterceptor implements HandlerInterceptor {
                 }
             }
             if (requiresAuth && request.getUserPrincipal() == null) {
+                // afterCompletion doesn't run when preHandle throws, so clear
+                // the thread-local context ourselves — otherwise stale auth
+                // bleeds into the next JUnit method reusing the same thread
+                // and lets an unauthenticated request appear authenticated.
+                SecurityContextHolder.clearContext();
                 throw new InsufficientAuthenticationException("Full authentication is required to access this resource");
             }
         }
