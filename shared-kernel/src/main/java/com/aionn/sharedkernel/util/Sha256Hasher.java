@@ -7,6 +7,8 @@ import java.util.HexFormat;
 
 public final class Sha256Hasher {
 
+    private static final HexFormat HEX = HexFormat.of();
+
     private Sha256Hasher() {
     }
 
@@ -17,7 +19,7 @@ public final class Sha256Hasher {
     public static String hexDigest(String value) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(md.digest(value.getBytes(StandardCharsets.UTF_8)));
+            return HEX.formatHex(md.digest(value.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException ex) {
             throw new IllegalStateException("SHA-256 not available", ex);
         }
