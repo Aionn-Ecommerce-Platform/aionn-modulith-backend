@@ -16,18 +16,16 @@ import com.aionn.identity.domain.exception.IdentityErrorCode;
 import com.aionn.identity.domain.exception.IdentityException;
 import com.aionn.identity.domain.model.AuthSession;
 import com.aionn.identity.domain.valueobject.AuthSessionStatus;
+import com.aionn.sharedkernel.util.Sha256Hasher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
-import java.security.MessageDigest;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Base64;
-import java.util.HexFormat;
 
 @Service
 @RequiredArgsConstructor
@@ -147,12 +145,7 @@ public class PasswordResetService {
     }
 
     private static String hashToken(String token) {
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
-                    .digest(token.getBytes(StandardCharsets.UTF_8)));
-        } catch (java.security.NoSuchAlgorithmException ex) {
-            throw new IllegalStateException("SHA-256 digest is not available", ex);
-        }
+        return Sha256Hasher.hexDigest(token);
     }
 
     private static LocalDateTime nowUtc() {
