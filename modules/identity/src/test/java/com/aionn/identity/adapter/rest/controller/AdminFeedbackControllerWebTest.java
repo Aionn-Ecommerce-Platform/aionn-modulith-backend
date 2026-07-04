@@ -31,6 +31,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -71,16 +72,30 @@ class AdminFeedbackControllerWebTest {
                 .build();
     }
 
+    private static FeedbackResult sampleResult(String feedbackId, String status,
+            String handledBy, LocalDateTime handledAt, String adminReply) {
+        LocalDateTime now = LocalDateTime.now();
+        return new FeedbackResult(feedbackId, "u-1", null, null, "c",
+                null, null, null, status, handledBy, handledAt, adminReply, now);
+    }
+
+    private static FeedbackResponse sampleResponse(String feedbackId, String status,
+            String handledBy, LocalDateTime handledAt, String adminReply) {
+        LocalDateTime now = LocalDateTime.now();
+        return new FeedbackResponse(feedbackId, "u-1", null, null, "c",
+                null, null, null, status, handledBy, handledAt, adminReply, now);
+    }
+
     @Test
     void analyticsReturnsAnalyticsResponse() throws Exception {
         FeedbackAnalyticsResult result = new FeedbackAnalyticsResult(
-                LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31),
+                LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.JANUARY, 31),
                 5, 10, 2, 3.5, List.of(new FeedbackAnalyticsResult.CategoryCount("BUG", 3L)));
         FeedbackAnalyticsResponse response = new FeedbackAnalyticsResponse(
-                LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31),
+                LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.JANUARY, 31),
                 5, 10, 2, 3.5, List.of(new FeedbackAnalyticsResponse.CategoryCount("BUG", 3L)));
 
-        when(getFeedbackAnalyticsQueryPort.execute(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(getFeedbackAnalyticsQueryPort.execute(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.JANUARY, 31)))
                 .thenReturn(result);
         when(feedbackDtoMapper.toAnalyticsResponse(result)).thenReturn(response);
 
@@ -94,11 +109,8 @@ class AdminFeedbackControllerWebTest {
 
     @Test
     void listReturnsPaginatedFeedbacks() throws Exception {
-        LocalDateTime now = LocalDateTime.now();
-        FeedbackResult r1 = new FeedbackResult("fb-1", "u-1", "BUG", "s", "c",
-                null, null, null, "OPEN", null, null, null, now);
-        FeedbackResponse resp1 = new FeedbackResponse("fb-1", "u-1", "BUG", "s", "c",
-                null, null, null, "OPEN", null, null, null, now);
+        FeedbackResult r1 = sampleResult("fb-1", "OPEN", null, null, null);
+        FeedbackResponse resp1 = sampleResponse("fb-1", "OPEN", null, null, null);
         PageResult<FeedbackResult> page = new PageResult<>(List.of(r1), 0, 20, 1L);
 
         when(listAdminFeedbackQueryPort.execute(FeedbackStatus.OPEN, 0, 20)).thenReturn(page);
@@ -115,11 +127,8 @@ class AdminFeedbackControllerWebTest {
 
     @Test
     void getReturnsSingleFeedback() throws Exception {
-        LocalDateTime now = LocalDateTime.now();
-        FeedbackResult r = new FeedbackResult("fb-9", "u-1", null, null, "c",
-                null, null, null, "OPEN", null, null, null, now);
-        FeedbackResponse resp = new FeedbackResponse("fb-9", "u-1", null, null, "c",
-                null, null, null, "OPEN", null, null, null, now);
+        FeedbackResult r = sampleResult("fb-9", "OPEN", null, null, null);
+        FeedbackResponse resp = sampleResponse("fb-9", "OPEN", null, null, null);
 
         when(getAdminFeedbackQueryPort.execute("fb-9")).thenReturn(r);
         when(feedbackDtoMapper.toResponse(r)).thenReturn(resp);
@@ -133,10 +142,8 @@ class AdminFeedbackControllerWebTest {
     @Test
     void replyPersistsAdminReply() throws Exception {
         LocalDateTime now = LocalDateTime.now();
-        FeedbackResult r = new FeedbackResult("fb-1", "u-1", null, null, "c",
-                null, null, null, "IN_REVIEW", "admin@example.com", now, "thanks", now);
-        FeedbackResponse resp = new FeedbackResponse("fb-1", "u-1", null, null, "c",
-                null, null, null, "IN_REVIEW", "admin@example.com", now, "thanks", now);
+        FeedbackResult r = sampleResult("fb-1", "IN_REVIEW", "admin@example.com", now, "thanks");
+        FeedbackResponse resp = sampleResponse("fb-1", "IN_REVIEW", "admin@example.com", now, "thanks");
 
         when(feedbackDtoMapper.toReplyCommand(any(), any(), any(AdminReplyFeedbackRequest.class)))
                 .thenReturn(new AdminFeedbackCommands.ReplyFeedback("fb-1", "admin@example.com", "thanks", null));
@@ -158,10 +165,8 @@ class AdminFeedbackControllerWebTest {
     @Test
     void changeStatusUpdatesStatus() throws Exception {
         LocalDateTime now = LocalDateTime.now();
-        FeedbackResult r = new FeedbackResult("fb-1", "u-1", null, null, "c",
-                null, null, null, "RESOLVED", "admin@example.com", now, null, now);
-        FeedbackResponse resp = new FeedbackResponse("fb-1", "u-1", null, null, "c",
-                null, null, null, "RESOLVED", "admin@example.com", now, null, now);
+        FeedbackResult r = sampleResult("fb-1", "RESOLVED", "admin@example.com", now, null);
+        FeedbackResponse resp = sampleResponse("fb-1", "RESOLVED", "admin@example.com", now, null);
 
         when(feedbackDtoMapper.toChangeStatusCommand(any(), any(), any(AdminChangeFeedbackStatusRequest.class)))
                 .thenReturn(new AdminFeedbackCommands.ChangeFeedbackStatus("fb-1", "admin@example.com", FeedbackStatus.RESOLVED));

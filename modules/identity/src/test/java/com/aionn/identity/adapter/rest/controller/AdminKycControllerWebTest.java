@@ -28,6 +28,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -82,12 +83,12 @@ class AdminKycControllerWebTest {
 
     @Test
     void analyticsReturnsAnalyticsResponse() throws Exception {
-        KycAnalyticsResult result = new KycAnalyticsResult(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31),
+        KycAnalyticsResult result = new KycAnalyticsResult(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.JANUARY, 31),
                 5, 3, 1, 10, 0.6, 24.0);
-        KycAnalyticsResponse response = new KycAnalyticsResponse(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31),
+        KycAnalyticsResponse response = new KycAnalyticsResponse(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.JANUARY, 31),
                 5, 3, 1, 10, 0.6, 24.0);
 
-        when(getKycAnalyticsQueryPort.execute(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(getKycAnalyticsQueryPort.execute(LocalDate.of(2024, Month.JANUARY, 1), LocalDate.of(2024, Month.JANUARY, 31)))
                 .thenReturn(result);
         when(kycDtoMapper.toAnalyticsResponse(result)).thenReturn(response);
 

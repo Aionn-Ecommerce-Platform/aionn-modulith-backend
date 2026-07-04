@@ -4,6 +4,7 @@ import com.aionn.identity.domain.valueobject.AuthProvider;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.time.temporal.ChronoUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,7 +28,7 @@ class SocialLinkTest {
 
     @Test
     void recordConstructorPreservesProvidedFields() {
-        LocalDateTime ts = LocalDateTime.of(2024, 5, 1, 12, 0);
+        LocalDateTime ts = LocalDateTime.of(2024, Month.MAY, 1, 12, 0);
         SocialLink link = new SocialLink("sa-9", "user-9", AuthProvider.GOOGLE, "gid-9", ts);
 
         assertThat(link.createdAt()).isEqualTo(ts);
