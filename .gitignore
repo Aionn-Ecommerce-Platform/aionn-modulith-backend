@@ -21,6 +21,8 @@ envs/*.local
 envs/*.secret
 !envs/*.example
 
+.kiro/
+
 docker/.env
 docker/*.local.env
 
@@ -28,3 +30,4 @@ docker/*.local.env
 .scannerwork/
 .jqwik-database
 **/.jqwik-database
+.disabled-tests-phase4/

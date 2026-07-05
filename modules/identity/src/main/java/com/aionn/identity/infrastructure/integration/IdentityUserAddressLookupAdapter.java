@@ -8,11 +8,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 
-/**
- * Identity-side adapter for the cross-service user-address port. Strips
- * domain types and exposes only the fields downstream services need to snapshot
- * an address onto an order.
- */
 @Component
 @RequiredArgsConstructor
 public class IdentityUserAddressLookupAdapter implements UserAddressLookupPort {
