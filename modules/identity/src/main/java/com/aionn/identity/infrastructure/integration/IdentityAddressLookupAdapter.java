@@ -31,8 +31,6 @@ public class IdentityAddressLookupAdapter implements AddressLookupPort {
                     loc.district().code(), loc.district().name(),
                     loc.ward().code(), loc.ward().name()));
         } catch (IdentityException ex) {
-            // Only "not found" style errors map to Optional.empty(); infrastructure
-            // failures (DB / cache outages) propagate so callers can retry or fail.
             if (IdentityErrorCode.INVALID_GEOGRAPHY_CODE.getCode().equals(ex.getErrorCode())) {
                 log.debug("Address lookup miss province={} district={} ward={}",
                         provinceCode, districtCode, wardCode);

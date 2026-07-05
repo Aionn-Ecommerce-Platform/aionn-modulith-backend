@@ -1,8 +1,10 @@
 package com.aionn.config;
 
+import com.aionn.sharedkernel.infrastructure.web.security.SecurityIpProperties;
 import lombok.extern.slf4j.Slf4j;
 import java.util.Arrays;
 import java.util.List;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -20,6 +22,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 @Slf4j
 @EnableMethodSecurity
+@EnableConfigurationProperties(SecurityIpProperties.class)
 public class ApiSecurityConfig {
 
     private final String allowedOrigins;

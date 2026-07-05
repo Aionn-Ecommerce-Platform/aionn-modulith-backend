@@ -1,10 +1,6 @@
 spring:
-  application:
-    name: identity
-
   flyway:
     enabled: true
-    locations: classpath:db
 
 identity:
   registration:
@@ -46,6 +42,11 @@ identity:
         provider: ${IDENTITY_AUTH_GOOGLE_PROVIDER:remote}
         client-id: ${IDENTITY_AUTH_GOOGLE_CLIENT_ID:}
         token-info-url: ${IDENTITY_AUTH_GOOGLE_TOKEN_INFO_URL:https://oauth2.googleapis.com/tokeninfo}
+      facebook:
+        provider: ${IDENTITY_AUTH_FACEBOOK_PROVIDER:remote}
+        app-id: ${IDENTITY_AUTH_FACEBOOK_APP_ID:}
+        app-secret: ${IDENTITY_AUTH_FACEBOOK_APP_SECRET:}
+        debug-token-url: ${IDENTITY_AUTH_FACEBOOK_DEBUG_TOKEN_URL:https://graph.facebook.com/debug_token}
   mfa:
     issuer: ${IDENTITY_MFA_ISSUER:Aionn}
     encryption-key: ${IDENTITY_MFA_ENCRYPTION_KEY:}

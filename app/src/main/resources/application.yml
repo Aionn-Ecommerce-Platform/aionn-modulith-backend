@@ -5,6 +5,11 @@ spring:
   application:
     name: ${APP_NAME:aionn-modulith-backend}
 
+  config:
+    import:
+      - classpath:application-identity.yml
+      - classpath:application-catalog.yml
+
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_LOCAL_PORT:5432}/${POSTGRES_DB:aionn}
     username: ${POSTGRES_USER:postgres}
@@ -27,8 +32,27 @@ spring:
         format_sql: ${SPRING_JPA_FORMAT_SQL:false}
 
   flyway:
-    enabled: false
+    enabled: ${FLYWAY_ENABLED:false}
+    locations: classpath:db
     out-of-order: true
+
+  mail:
+    host: ${SPRING_MAIL_HOST:${DEV_MAIL_HOST:smtp.gmail.com}}
+    port: ${SPRING_MAIL_PORT:${DEV_MAIL_PORT:587}}
+    username: ${SPRING_MAIL_USERNAME:${DEV_MAIL_USERNAME:}}
+    password: ${SPRING_MAIL_PASSWORD:${DEV_MAIL_PASSWORD:}}
+    properties:
+      mail:
+        smtp:
+          auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:true}
+
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+  api-key: ${CLOUDINARY_API_KEY:}
+  api-secret: ${CLOUDINARY_API_SECRET:}
+  upload-base-url: ${CLOUDINARY_UPLOAD_BASE_URL:https://api.cloudinary.com/v1_1}
 
 springdoc:
   api-docs:

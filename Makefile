@@ -3,7 +3,8 @@ include envs/common.env
 CONTAINER ?= docker
 COMPOSE_FILE := docker/docker-compose.yml
 ENV_FILE := envs/common.env
-COMPOSE := $(CONTAINER) compose -f $(COMPOSE_FILE) --env-file $(ENV_FILE)
+PROJECT := aionn-modulith-backend
+COMPOSE := $(CONTAINER) compose -p $(PROJECT) -f $(COMPOSE_FILE) --env-file $(ENV_FILE)
 
 .PHONY: build test smoke run clean infra-up infra-down infra-restart infra-logs infra-ps infra-config reset-db
 
