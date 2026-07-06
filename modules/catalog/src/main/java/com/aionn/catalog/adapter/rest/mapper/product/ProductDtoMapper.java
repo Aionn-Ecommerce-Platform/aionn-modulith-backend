@@ -25,30 +25,47 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface ProductDtoMapper {
 
-    CreateProductCommand toCreateProductCommand(String merchantId, CreateProductRequest request);
+        CreateProductCommand toCreateProductCommand(String merchantId, CreateProductRequest request);
 
-    DefineVariantCommand toDefineVariantCommand(String productId, String merchantId, DefineVariantRequest request);
+        DefineVariantCommand toDefineVariantCommand(String productId, String merchantId, DefineVariantRequest request);
 
-    ChangeVariantPriceCommand toChangeVariantPriceCommand(String productId, String merchantId, String skuId,
-            ChangeVariantPriceRequest request);
+        ChangeVariantPriceCommand toChangeVariantPriceCommand(String productId, String merchantId, String skuId,
+                        ChangeVariantPriceRequest request);
 
-    default BulkPriceUpdateCommand toBulkPriceUpdateCommand(String merchantId, BulkPriceUpdateRequest request) {
-        List<BulkPriceUpdateCommand.Item> items = request.items().stream()
-                .map(i -> new BulkPriceUpdateCommand.Item(i.productId(), i.skuId(), i.newPrice(), i.currency()))
-                .toList();
-        return new BulkPriceUpdateCommand(merchantId, items);
-    }
+        default BulkPriceUpdateCommand toBulkPriceUpdateCommand(String merchantId, BulkPriceUpdateRequest request) {
+                List<BulkPriceUpdateCommand.Item> items = request.items().stream()
+                                .map(i -> new BulkPriceUpdateCommand.Item(i.productId(), i.skuId(), i.newPrice(),
+                                                i.currency()))
+                                .toList();
+                return new BulkPriceUpdateCommand(merchantId, items);
+        }
 
-    AssignBrandCommand toAssignBrandCommand(String productId, String merchantId, AssignBrandRequest request);
+        AssignBrandCommand toAssignBrandCommand(String productId, String merchantId, AssignBrandRequest request);
 
-    AssignCategoriesCommand toAssignCategoriesCommand(String productId, String merchantId,
-            AssignCategoriesRequest request);
+        AssignCategoriesCommand toAssignCategoriesCommand(String productId, String merchantId,
+                        AssignCategoriesRequest request);
 
-    DefineAttributesCommand toDefineAttributesCommand(String productId, String merchantId,
-            DefineAttributesRequest request);
+        DefineAttributesCommand toDefineAttributesCommand(String productId, String merchantId,
+                        DefineAttributesRequest request);
 
-    RejectProductCommand toRejectProductCommand(String productId, String adminId, RejectProductRequest request);
+        RejectProductCommand toRejectProductCommand(String productId, String adminId, RejectProductRequest request);
 
-    DeactivateProductCommand toDeactivateProductCommand(String productId, String merchantId,
-            DeactivateProductRequest request);
+        DeactivateProductCommand toDeactivateProductCommand(String productId, String merchantId,
+                        DeactivateProductRequest request);
+
+        com.aionn.catalog.application.dto.product.command.UpdateMediaCommand toUpdateMediaCommand(
+                        String productId, String merchantId,
+                        com.aionn.catalog.adapter.rest.dto.product.UpdateMediaRequest request);
+
+        com.aionn.catalog.application.dto.product.command.UpdateAiMetadataCommand toUpdateAiMetadataCommand(
+                        String productId, String merchantId,
+                        com.aionn.catalog.adapter.rest.dto.product.UpdateAiMetadataRequest request);
+
+        com.aionn.catalog.application.dto.product.command.AssignCollectionsCommand toAssignCollectionsCommand(
+                        String productId, String merchantId,
+                        com.aionn.catalog.adapter.rest.dto.product.AssignCollectionsRequest request);
+
+        com.aionn.catalog.application.dto.product.command.EmergencyTakedownCommand toEmergencyTakedownCommand(
+                        String productId, String adminId,
+                        com.aionn.catalog.adapter.rest.dto.product.EmergencyTakedownRequest request);
 }

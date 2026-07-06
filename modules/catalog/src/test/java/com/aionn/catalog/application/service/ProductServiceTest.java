@@ -349,4 +349,99 @@ class ProductServiceTest {
 
         assertThat(page.content()).containsExactly(sampleResult);
     }
+
+    @Test
+    void removeVariantDelegatesToDomain() {
+        Product product = publishableProduct();
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
+
+        productService.removeVariant(new com.aionn.catalog.application.dto.product.command.RemoveVariantCommand(
+                PRODUCT_ID, MERCHANT_ID, "sku-1"));
+
+        assertThat(product.variants()).isEmpty();
+    }
+
+    @Test
+    void updateMediaReplacesImages() {
+        Product product = publishableProduct();
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
+
+        productService.updateMedia(new com.aionn.catalog.application.dto.product.command.UpdateMediaCommand(
+                PRODUCT_ID, MERCHANT_ID, List.of("img1", "img2")));
+
+        assertThat(product.imageList()).containsExactly("img1", "img2");
+    }
+
+    @Test
+    void updateAiMetadataAppliesTagsAndDescription() {
+        Product product = publishableProduct();
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
+
+        productService.updateAiMetadata(new com.aionn.catalog.application.dto.product.command.UpdateAiMetadataCommand(
+                PRODUCT_ID, MERCHANT_ID, List.of("premium"), "handmade widget"));
+
+        assertThat(product.tags()).containsExactly("premium");
+        assertThat(product.getAiDescription()).isEqualTo("handmade widget");
+    }
+
+    @Test
+    void assignCollectionsReplacesList() {
+        Product product = publishableProduct();
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
+
+        productService.assignCollections(new com.aionn.catalog.application.dto.product.command.AssignCollectionsCommand(
+                PRODUCT_ID, MERCHANT_ID, List.of("coll-1", "coll-2")));
+
+        assertThat(product.collectionIds()).containsExactly("coll-1", "coll-2");
+    }
+
+    @Test
+    void emergencyTakedownRemovesFromSearchIndex() {
+        Product product = publishableProduct();
+        product.publish(ADMIN_ID);
+        product.pullEvents();
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
+
+        productService.emergencyTakedown(
+                new com.aionn.catalog.application.dto.product.command.EmergencyTakedownCommand(
+                        PRODUCT_ID, ADMIN_ID, "policy"));
+
+        assertThat(product.getStatus()).isEqualTo(ProductStatus.TAKEN_DOWN);
+        verify(searchIndex).delete(PRODUCT_ID);
+    }
+
+    @Test
+    void searchDelegatesToIndex() {
+        when(searchIndex.searchIds("keyword", OffsetPagination.of(0, 20))).thenReturn(List.of(PRODUCT_ID));
+        Product product = publishableProduct();
+        when(productRepository.findAllByIds(List.of(PRODUCT_ID))).thenReturn(List.of(product));
+        when(searchIndex.countMatches("keyword")).thenReturn(1L);
+        when(productResultMapper.toResult(product)).thenReturn(sampleResult);
+
+        PageResult<ProductResult> page = productService.search("keyword", OffsetPagination.of(0, 20));
+
+        assertThat(page.content()).containsExactly(sampleResult);
+        assertThat(page.totalElements()).isEqualTo(1L);
+    }
+
+    @Test
+    void searchReturnsEmptyWhenIndexEmpty() {
+        when(searchIndex.searchIds("nothing", OffsetPagination.of(0, 20))).thenReturn(List.of());
+        when(productRepository.findAllByIds(List.of())).thenReturn(List.of());
+        when(searchIndex.countMatches("nothing")).thenReturn(0L);
+
+        PageResult<ProductResult> page = productService.search("nothing", OffsetPagination.of(0, 20));
+
+        assertThat(page.content()).isEmpty();
+    }
 }

@@ -82,6 +82,61 @@ public class ProductService {
         return productResultMapper.toResult(saved);
     }
 
+    public ProductResult removeVariant(com.aionn.catalog.application.dto.product.command.RemoveVariantCommand command) {
+        Product product = ownedBy(command.productId(), command.merchantId());
+        product.removeVariant(command.skuId());
+        Product saved = productRepository.save(product);
+        eventPublisher.publish(product.pullEvents());
+        return productResultMapper.toResult(saved);
+    }
+
+    public ProductResult updateMedia(com.aionn.catalog.application.dto.product.command.UpdateMediaCommand command) {
+        Product product = ownedBy(command.productId(), command.merchantId());
+        product.updateMedia(command.images());
+        Product saved = productRepository.save(product);
+        eventPublisher.publish(product.pullEvents());
+        return productResultMapper.toResult(saved);
+    }
+
+    public ProductResult updateAiMetadata(
+            com.aionn.catalog.application.dto.product.command.UpdateAiMetadataCommand command) {
+        Product product = ownedBy(command.productId(), command.merchantId());
+        product.updateAiMetadata(command.tags(), command.aiDescription());
+        Product saved = productRepository.save(product);
+        eventPublisher.publish(product.pullEvents());
+        return productResultMapper.toResult(saved);
+    }
+
+    public ProductResult assignCollections(
+            com.aionn.catalog.application.dto.product.command.AssignCollectionsCommand command) {
+        Product product = ownedBy(command.productId(), command.merchantId());
+        product.assignToCollections(command.collectionIds());
+        Product saved = productRepository.save(product);
+        eventPublisher.publish(product.pullEvents());
+        return productResultMapper.toResult(saved);
+    }
+
+    public ProductResult emergencyTakedown(
+            com.aionn.catalog.application.dto.product.command.EmergencyTakedownCommand command) {
+        Product product = required(command.productId());
+        product.emergencyTakedown(command.adminId(), command.reason());
+        Product saved = productRepository.save(product);
+        eventPublisher.publish(product.pullEvents());
+        searchIndex.delete(product.getProductId());
+        return productResultMapper.toResult(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResult<ProductResult> search(String keyword, OffsetPagination pagination) {
+        List<String> ids = searchIndex.searchIds(keyword, pagination);
+        List<Product> products = productRepository.findAllByIds(ids);
+        List<ProductResult> content = products.stream()
+                .map(productResultMapper::toResult)
+                .toList();
+        long total = searchIndex.countMatches(keyword);
+        return new PageResult<>(content, pagination.page(), pagination.size(), total);
+    }
+
     public ProductResult changeVariantPrice(ChangeVariantPriceCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         product.changeVariantPrice(command.skuId(), Money.of(command.newPrice(), command.currency()));
