@@ -200,6 +200,9 @@ class MerchantControllerWebTest {
                 mockMvc.perform(get("/api/v1/catalog/merchants"))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.data[0].merchantId").value("m-1"));
+
+                verify(listMerchantsInputPort).execute(any(
+                                com.aionn.catalog.application.dto.merchant.query.ListMerchantsQuery.class));
         }
 
         @Test

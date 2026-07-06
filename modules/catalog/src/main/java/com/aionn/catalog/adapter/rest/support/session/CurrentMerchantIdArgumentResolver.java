@@ -6,8 +6,6 @@ import com.aionn.sharedkernel.integration.port.catalog.MerchantOwnershipVerifier
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.MethodParameter;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
@@ -34,18 +32,14 @@ public class CurrentMerchantIdArgumentResolver implements HandlerMethodArgumentR
             ModelAndViewContainer mavContainer,
             NativeWebRequest webRequest,
             WebDataBinderFactory binderFactory) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()
-                || authentication.getName() == null || authentication.getName().isBlank()) {
-            throw new CatalogException(CatalogErrorCode.MERCHANT_FORBIDDEN, "Authenticated principal required");
-        }
+        String ownerId = SessionAuthentications.requirePrincipalName();
         HttpServletRequest httpRequest = webRequest.getNativeRequest(HttpServletRequest.class);
         String merchantId = httpRequest == null ? null : httpRequest.getHeader(MERCHANT_HEADER);
         if (merchantId == null || merchantId.isBlank()) {
             throw new CatalogException(CatalogErrorCode.MERCHANT_FORBIDDEN,
                     "Missing required header: " + MERCHANT_HEADER);
         }
-        if (!merchantOwnershipVerifier.isOwnedBy(merchantId, authentication.getName())) {
+        if (!merchantOwnershipVerifier.isOwnedBy(merchantId, ownerId)) {
             throw new CatalogException(CatalogErrorCode.MERCHANT_FORBIDDEN,
                     "User does not own merchant " + merchantId);
         }

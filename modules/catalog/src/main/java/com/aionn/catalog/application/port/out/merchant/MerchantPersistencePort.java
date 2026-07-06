@@ -17,5 +17,6 @@ public interface MerchantPersistencePort {
     boolean existsByOwnerId(String ownerId);
 
     List<Merchant> list(OffsetPagination pagination);
-}
 
+    long count();
+}

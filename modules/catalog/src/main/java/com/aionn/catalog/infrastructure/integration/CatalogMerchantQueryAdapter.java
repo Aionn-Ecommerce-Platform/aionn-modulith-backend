@@ -1,6 +1,8 @@
 package com.aionn.catalog.infrastructure.integration;
 
 import com.aionn.catalog.application.port.out.merchant.MerchantPersistencePort;
+import com.aionn.catalog.domain.exception.CatalogErrorCode;
+import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.catalog.domain.model.Merchant;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantCommandPort;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
@@ -61,7 +63,7 @@ public class CatalogMerchantQueryAdapter implements MerchantQueryPort, MerchantC
     @Transactional
     public void saveStripeAccountId(String merchantId, String stripeAccountId) {
         Merchant merchant = merchantRepository.findById(merchantId)
-                .orElseThrow(() -> new IllegalArgumentException("Merchant not found: " + merchantId));
+                .orElseThrow(() -> new CatalogException(CatalogErrorCode.MERCHANT_NOT_FOUND));
         merchant.linkStripeAccount(stripeAccountId);
         merchantRepository.save(merchant);
     }
@@ -70,7 +72,7 @@ public class CatalogMerchantQueryAdapter implements MerchantQueryPort, MerchantC
     @Transactional
     public void updateStripeCapabilities(String merchantId, boolean chargesEnabled, boolean payoutsEnabled) {
         Merchant merchant = merchantRepository.findById(merchantId)
-                .orElseThrow(() -> new IllegalArgumentException("Merchant not found: " + merchantId));
+                .orElseThrow(() -> new CatalogException(CatalogErrorCode.MERCHANT_NOT_FOUND));
         merchant.updateStripeCapabilities(chargesEnabled, payoutsEnabled);
         merchantRepository.save(merchant);
     }

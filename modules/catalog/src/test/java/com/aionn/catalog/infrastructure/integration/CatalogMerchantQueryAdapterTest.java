@@ -111,7 +111,7 @@ class CatalogMerchantQueryAdapterTest {
         when(merchantRepository.findById("m-1")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> adapter.saveStripeAccountId("m-1", "acct_test"))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(com.aionn.catalog.domain.exception.CatalogException.class);
 
         verify(merchantRepository, never()).save(any(Merchant.class));
     }
@@ -135,6 +135,6 @@ class CatalogMerchantQueryAdapterTest {
         when(merchantRepository.findById("m-1")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> adapter.updateStripeCapabilities("m-1", true, true))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(com.aionn.catalog.domain.exception.CatalogException.class);
     }
 }

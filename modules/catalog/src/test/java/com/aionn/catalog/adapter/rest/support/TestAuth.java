@@ -9,7 +9,6 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Test helper that installs a {@link Authentication} into the
@@ -33,7 +32,7 @@ public final class TestAuth {
                     : Arrays.stream(roles)
                             .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role)
                             .map(SimpleGrantedAuthority::new)
-                            .collect(Collectors.toList());
+                            .toList();
             Authentication auth = new UsernamePasswordAuthenticationToken(principal, "N/A", authorities);
             SecurityContextHolder.setContext(new SecurityContextImpl(auth));
             request.setUserPrincipal(auth);

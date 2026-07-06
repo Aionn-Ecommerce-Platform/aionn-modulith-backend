@@ -117,19 +117,12 @@ public class MerchantService {
     }
 
     @Transactional(readOnly = true)
-    public List<MerchantResult> list(int page, int size) {
-        return merchantRepository.list(OffsetPagination.of(page, size)).stream()
-                .map(merchantResultMapper::toResult)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
     public PageResult<MerchantResult> list(OffsetPagination pagination) {
         List<MerchantResult> results = merchantRepository.list(pagination).stream()
                 .map(merchantResultMapper::toResult)
                 .toList();
-        return new PageResult<>(
-                results, pagination.page(), pagination.size(), results.size());
+        long total = merchantRepository.count();
+        return new PageResult<>(results, pagination.page(), pagination.size(), total);
     }
 
     public MerchantResult updateCommissionRate(UpdateMerchantCommissionRateCommand command) {

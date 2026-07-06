@@ -89,4 +89,26 @@ class MerchantPersistenceAdapterTest {
 
         assertThat(merchants).containsExactly(domain);
     }
+
+    @Test
+    void listAppliesStableSortByCreatedAtThenMerchantId() {
+        MerchantEntity entity = new MerchantEntity();
+        when(jpa.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of(entity)));
+        when(mapper.toDomain(entity)).thenReturn(
+                Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05")));
+
+        adapter.list(OffsetPagination.of(0, 10));
+
+        org.mockito.ArgumentCaptor<PageRequest> captor = org.mockito.ArgumentCaptor.forClass(PageRequest.class);
+        org.mockito.Mockito.verify(jpa).findAll(captor.capture());
+        org.springframework.data.domain.Sort sort = captor.getValue().getSort();
+        assertThat(sort.getOrderFor("createdAt")).isNotNull();
+        assertThat(sort.getOrderFor("merchantId")).isNotNull();
+    }
+
+    @Test
+    void countDelegatesToJpa() {
+        when(jpa.count()).thenReturn(42L);
+        assertThat(adapter.count()).isEqualTo(42L);
+    }
 }
