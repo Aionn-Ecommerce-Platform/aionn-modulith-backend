@@ -87,4 +87,17 @@ class AttributeTemplatePersistenceAdapterTest {
 
         assertThat(adapter.findByCategoryIds(List.of(CATEGORY_ID))).containsExactly(domain);
     }
+
+    @Test
+    void saveTranslatesUniqueConstraintViolationToDomainException() {
+        AttributeTemplate domain = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"));
+        AttributeTemplateEntity entity = new AttributeTemplateEntity();
+        when(mapper.toEntity(domain)).thenReturn(entity);
+        when(jpa.save(entity)).thenThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate"));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> adapter.save(domain))
+                .isInstanceOf(com.aionn.catalog.domain.exception.CatalogException.class)
+                .extracting("errorCode")
+                .isEqualTo(com.aionn.catalog.domain.exception.CatalogErrorCode.INVALID_ARGUMENT.getCode());
+    }
 }

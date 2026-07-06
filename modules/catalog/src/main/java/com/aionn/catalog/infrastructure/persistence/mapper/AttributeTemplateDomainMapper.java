@@ -2,41 +2,40 @@ package com.aionn.catalog.infrastructure.persistence.mapper;
 
 import com.aionn.catalog.domain.model.AttributeTemplate;
 import com.aionn.catalog.infrastructure.persistence.entity.AttributeTemplateEntity;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.ReportingPolicy;
+import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface AttributeTemplateDomainMapper {
+@Component
+public class AttributeTemplateDomainMapper {
 
-    @Mapping(target = "attributes", ignore = true)
-    AttributeTemplateEntity toEntityBasic(AttributeTemplate template);
-    
-    default AttributeTemplateEntity toEntity(AttributeTemplate template) {
-        if (template == null) return null;
-        AttributeTemplateEntity entity = toEntityBasic(template);
-        Map<String, Boolean> attrs = new LinkedHashMap<>();
-        if (template.snapshot() != null) {
-            template.snapshot().forEach((k, v) -> attrs.put(k, v.filterable()));
+    public AttributeTemplateEntity toEntity(AttributeTemplate template) {
+        if (template == null) {
+            return null;
         }
-        entity.setAttributes(attrs);
-        return entity;
+        return AttributeTemplateEntity.builder()
+                .templateId(template.getTemplateId())
+                .categoryId(template.getCategoryId())
+                .attributes(template.filterabilityMap())
+                .createdAt(template.getCreatedAt())
+                .updatedAt(template.getUpdatedAt())
+                .build();
     }
-    
-    @Mapping(target = "attributes", ignore = true)
-    AttributeTemplate toDomainBasic(AttributeTemplateEntity entity);
-    
-    default AttributeTemplate toDomain(AttributeTemplateEntity entity) {
-        if (entity == null) return null;
-        AttributeTemplate domain = toDomainBasic(entity);
+
+    public AttributeTemplate toDomain(AttributeTemplateEntity entity) {
+        if (entity == null) {
+            return null;
+        }
         Map<String, AttributeTemplate.AttributeDefinition> defs = new LinkedHashMap<>();
         if (entity.getAttributes() != null) {
             entity.getAttributes().forEach((k, v) -> defs.put(k, new AttributeTemplate.AttributeDefinition(k, v)));
         }
-        return new AttributeTemplate(domain.getTemplateId(), domain.getCategoryId(), defs, domain.getCreatedAt(), domain.getUpdatedAt());
+        return new AttributeTemplate(
+                entity.getTemplateId(),
+                entity.getCategoryId(),
+                defs,
+                entity.getCreatedAt(),
+                entity.getUpdatedAt());
     }
 }
-

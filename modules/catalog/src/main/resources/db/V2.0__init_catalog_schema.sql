@@ -64,6 +64,7 @@ CREATE TABLE attribute_templates (
     attributes  JSONB       NOT NULL DEFAULT '{}'::jsonb,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    version     BIGINT      NOT NULL DEFAULT 0,
     CONSTRAINT fk_attribute_templates_category FOREIGN KEY (category_id) REFERENCES categories(category_id)
 );
 

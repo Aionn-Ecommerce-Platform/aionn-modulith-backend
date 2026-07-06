@@ -1,10 +1,13 @@
 package com.aionn.catalog.infrastructure.persistence.adapter.attribute;
 
 import com.aionn.catalog.application.port.out.attribute.AttributeTemplatePersistencePort;
+import com.aionn.catalog.domain.exception.CatalogErrorCode;
+import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.catalog.domain.model.AttributeTemplate;
 import com.aionn.catalog.infrastructure.persistence.mapper.AttributeTemplateDomainMapper;
 import com.aionn.catalog.infrastructure.persistence.repository.attribute.AttributeTemplateRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
 import java.util.Collection;
@@ -20,7 +23,12 @@ public class AttributeTemplatePersistenceAdapter implements AttributeTemplatePer
 
     @Override
     public AttributeTemplate save(AttributeTemplate template) {
-        return mapper.toDomain(jpa.save(mapper.toEntity(template)));
+        try {
+            return mapper.toDomain(jpa.save(mapper.toEntity(template)));
+        } catch (DataIntegrityViolationException e) {
+            throw new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
+                    "Attribute template already exists for this category");
+        }
     }
 
     @Override

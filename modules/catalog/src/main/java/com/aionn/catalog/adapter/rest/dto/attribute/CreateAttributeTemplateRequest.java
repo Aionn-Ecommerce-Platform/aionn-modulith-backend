@@ -6,7 +6,6 @@ import jakarta.validation.constraints.NotEmpty;
 import java.util.List;
 
 public record CreateAttributeTemplateRequest(
-        @NotBlank String categoryId,
-        @NotEmpty List<String> attributeKeys) {
+                @NotBlank String categoryId,
+                @NotEmpty List<@NotBlank String> attributeKeys) {
 }
-

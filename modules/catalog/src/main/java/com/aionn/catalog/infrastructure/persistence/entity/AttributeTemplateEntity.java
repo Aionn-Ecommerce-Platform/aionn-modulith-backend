@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -33,10 +34,6 @@ public class AttributeTemplateEntity {
     @Column(name = "category_id", length = 50, nullable = false, unique = true)
     private String categoryId;
 
-    /**
-     * Map of attribute key -> isFilterable. Stored as JSONB so we can extend
-     * with more metadata (label, type, options) without another migration.
-     */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "attributes", columnDefinition = "jsonb", nullable = false)
     private Map<String, Boolean> attributes;
@@ -48,5 +45,8 @@ public class AttributeTemplateEntity {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private Instant updatedAt;
-}
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private long version;
+}
