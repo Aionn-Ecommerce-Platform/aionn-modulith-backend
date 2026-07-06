@@ -7,11 +7,13 @@ import com.aionn.catalog.infrastructure.persistence.repository.merchant.Merchant
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -19,6 +21,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -99,11 +102,13 @@ class MerchantPersistenceAdapterTest {
 
         adapter.list(OffsetPagination.of(0, 10));
 
-        org.mockito.ArgumentCaptor<PageRequest> captor = org.mockito.ArgumentCaptor.forClass(PageRequest.class);
-        org.mockito.Mockito.verify(jpa).findAll(captor.capture());
-        org.springframework.data.domain.Sort sort = captor.getValue().getSort();
+        ArgumentCaptor<PageRequest> captor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(jpa).findAll(captor.capture());
+        Sort sort = captor.getValue().getSort();
         assertThat(sort.getOrderFor("createdAt")).isNotNull();
+        assertThat(sort.getOrderFor("createdAt").isDescending()).isTrue();
         assertThat(sort.getOrderFor("merchantId")).isNotNull();
+        assertThat(sort.getOrderFor("merchantId").isAscending()).isTrue();
     }
 
     @Test
