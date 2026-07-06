@@ -13,14 +13,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 
-/**
- * Bridges the cross-service {@link AccessTokenVerifierPort} contract to
- * identity's internal token issuer + session repository. Modular monolith
- * resolves this bean via Spring DI; in microservices the chat / notification /
- * etc. service receives the same interface but a transport-backed impl
- * (HTTP / gRPC introspection call to identity) registered under their own
- * configuration.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -49,9 +41,6 @@ public class IdentityAccessTokenVerifierAdapter implements AccessTokenVerifierPo
         if (sessionId == null || userId == null) {
             return Optional.empty();
         }
-        // Reject revoked tokens; parity with BearerAuthenticationFilter so a
-        // logged-out user cannot keep authenticating cross-service until token
-        // expiry.
         if (jti != null && tokenBlacklist.isBlacklisted(jti)) {
             return Optional.empty();
         }

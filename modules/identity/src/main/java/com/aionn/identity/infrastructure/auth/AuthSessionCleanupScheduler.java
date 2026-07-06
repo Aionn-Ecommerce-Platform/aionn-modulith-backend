@@ -9,18 +9,6 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
-/**
- * Removes auth_sessions rows that have been idle for over 90 days.
- *
- * <p>Backend creates a new session row on every login and refresh-token
- * rotation by design (audit trail + reuse-detection). Without cleanup the
- * table grows unbounded; under load it bloats the joins on the security page
- * and slows session lookups. 90 days is well past any reasonable refresh
- * window, so anything older is dead data.
- *
- * <p>Hard delete (not soft) since this is operational data — once a session
- * is past its useful audit window, keeping it adds no value.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor

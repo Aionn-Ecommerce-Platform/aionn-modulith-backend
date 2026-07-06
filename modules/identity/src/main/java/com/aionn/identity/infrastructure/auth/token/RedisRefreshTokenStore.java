@@ -17,12 +17,7 @@ public class RedisRefreshTokenStore implements RefreshTokenStorePort {
 
     private static final String TOKEN_KEY_PREFIX = "identity:auth:refresh:";
     private static final String SESSION_INDEX_PREFIX = "identity:auth:refresh:session:";
-
-    // Server-side atomic revoke-by-session:
-    // KEYS[1] = session index key, ARGV[1] = token key prefix.
-    // Drains the index set and deletes each token key inside the same call, so a
-    // concurrent store() that adds a new token+index entry after we read cannot
-    // outrun the delete.
+    
     private static final DefaultRedisScript<Long> REVOKE_BY_SESSION_SCRIPT = new DefaultRedisScript<>(
             """
             local members = redis.call('SMEMBERS', KEYS[1])
