@@ -36,7 +36,7 @@ public class CategoryEntity {
     @Column(name = "name", length = 150, nullable = false)
     private String name;
 
-    @Column(name = "slug", length = 150, nullable = false, unique = true)
+    @Column(name = "slug", length = 150, nullable = false)
     private String slug;
 
     @Column(name = "icon_url", columnDefinition = "TEXT")
