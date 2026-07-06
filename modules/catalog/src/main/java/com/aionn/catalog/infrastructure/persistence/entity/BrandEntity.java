@@ -47,8 +47,12 @@ public class BrandEntity {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @jakarta.persistence.Version
+    @Column(name = "version", nullable = false)
+    private long version;
+
     @jakarta.persistence.OneToMany(mappedBy = "brand", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true, fetch = jakarta.persistence.FetchType.LAZY)
+    @org.hibernate.annotations.BatchSize(size = 50)
     @Builder.Default
     private java.util.List<BrandTranslationEntity> translations = new java.util.ArrayList<>();
 }
-

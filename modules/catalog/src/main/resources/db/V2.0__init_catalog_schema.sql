@@ -47,6 +47,7 @@ CREATE TABLE brands (
     logo_url    TEXT,
     description TEXT,
     status      VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    version     BIGINT      NOT NULL DEFAULT 0,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -104,7 +105,7 @@ CREATE INDEX idx_variants_product ON product_variants(product_id);
 
 CREATE TABLE product_translations (
     product_id VARCHAR(50) NOT NULL,
-    locale VARCHAR(5) NOT NULL,
+    locale VARCHAR(20) NOT NULL,
     name VARCHAR(255) NOT NULL,
     ai_description TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -116,7 +117,7 @@ CREATE INDEX idx_product_translations_locale ON product_translations(locale);
 
 CREATE TABLE category_translations (
     category_id VARCHAR(50) NOT NULL,
-    locale VARCHAR(5) NOT NULL,
+    locale VARCHAR(20) NOT NULL,
     name VARCHAR(150) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -127,7 +128,7 @@ CREATE INDEX idx_category_translations_locale ON category_translations(locale);
 
 CREATE TABLE brand_translations (
     brand_id VARCHAR(50) NOT NULL,
-    locale VARCHAR(5) NOT NULL,
+    locale VARCHAR(20) NOT NULL,
     name VARCHAR(150) NOT NULL,
     description TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

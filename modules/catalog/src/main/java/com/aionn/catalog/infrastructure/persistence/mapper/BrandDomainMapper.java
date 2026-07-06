@@ -10,15 +10,17 @@ import org.mapstruct.ReportingPolicy;
 import java.util.ArrayList;
 import java.util.List;
 
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface BrandDomainMapper {
 
     @Mapping(target = "status", expression = "java(brand.getStatus() != null ? brand.getStatus().name() : null)")
     @Mapping(target = "translations", ignore = true)
+    @Mapping(target = "version", ignore = true)
     BrandEntity toEntityBasic(Brand brand);
 
     default BrandEntity toEntity(Brand brand) {
-        if (brand == null) return null;
+        if (brand == null)
+            return null;
         BrandEntity entity = toEntityBasic(brand);
 
         List<BrandTranslationEntity> translationEntities = new ArrayList<>();
@@ -42,9 +44,10 @@ public interface BrandDomainMapper {
     Brand toDomainBasic(BrandEntity entity);
 
     default Brand toDomain(BrandEntity entity) {
-        if (entity == null) return null;
+        if (entity == null)
+            return null;
         Brand brand = toDomainBasic(entity);
-        
+
         List<Brand.Translation> translations = new ArrayList<>();
         if (entity.getTranslations() != null) {
             for (BrandTranslationEntity te : entity.getTranslations()) {
@@ -62,4 +65,3 @@ public interface BrandDomainMapper {
                 translations);
     }
 }
-

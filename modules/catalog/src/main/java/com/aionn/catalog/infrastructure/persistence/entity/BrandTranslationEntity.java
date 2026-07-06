@@ -63,7 +63,7 @@ public class BrandTranslationEntity {
         @Column(name = "brand_id", nullable = false, length = 50)
         private String brandId;
 
-        @Column(name = "locale", nullable = false, length = 5)
+        @Column(name = "locale", nullable = false, length = 20)
         private String locale;
     }
 }
