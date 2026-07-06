@@ -22,4 +22,6 @@ public interface CategoryPersistencePort {
     List<Category> findActiveChildren(String parentId);
 
     List<Category> findAllActive();
+
+    boolean hasProducts(String categoryId);
 }

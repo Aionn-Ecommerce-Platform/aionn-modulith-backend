@@ -14,6 +14,8 @@ public interface BrandPersistencePort {
 
     boolean existsByName(String name);
 
+    boolean hasActiveProducts(String brandId);
+
     List<Brand> list(OffsetPagination pagination);
 
     long count();

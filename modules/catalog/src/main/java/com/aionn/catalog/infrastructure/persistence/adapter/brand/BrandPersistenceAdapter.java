@@ -2,8 +2,10 @@ package com.aionn.catalog.infrastructure.persistence.adapter.brand;
 
 import com.aionn.catalog.application.port.out.brand.BrandPersistencePort;
 import com.aionn.catalog.domain.model.Brand;
+import com.aionn.catalog.domain.valueobject.ProductStatus;
 import com.aionn.catalog.infrastructure.persistence.mapper.BrandDomainMapper;
 import com.aionn.catalog.infrastructure.persistence.repository.brand.BrandRepository;
+import com.aionn.catalog.infrastructure.persistence.repository.product.ProductRepository;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -18,6 +20,7 @@ import java.util.Optional;
 public class BrandPersistenceAdapter implements BrandPersistencePort {
 
     private final BrandRepository jpa;
+    private final ProductRepository productJpa;
     private final BrandDomainMapper mapper;
 
     @Override
@@ -34,6 +37,11 @@ public class BrandPersistenceAdapter implements BrandPersistencePort {
     @Override
     public boolean existsByName(String name) {
         return jpa.existsByNameIgnoreCase(name);
+    }
+
+    @Override
+    public boolean hasActiveProducts(String brandId) {
+        return productJpa.existsByBrandIdAndStatus(brandId, ProductStatus.PUBLISHED.name());
     }
 
     @Override
