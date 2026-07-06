@@ -74,6 +74,20 @@ class CategoryServiceTest {
         }
 
         @Test
+        void createTrimsNameBeforeUniquenessCheck() {
+                when(categoryRepository.existsByParentAndName(null, "Electronics")).thenReturn(false);
+                when(categoryRepository.existsBySlug(anyString())).thenReturn(false);
+                when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(categoryResultMapper.toResult(any(Category.class))).thenReturn(sampleResult);
+
+                categoryService.create(new CreateCategoryCommand(null, "  Electronics  ", null));
+
+                ArgumentCaptor<Category> captor = ArgumentCaptor.forClass(Category.class);
+                verify(categoryRepository).save(captor.capture());
+                assertThat(captor.getValue().getName()).isEqualTo("Electronics");
+        }
+
+        @Test
         void createGeneratesSlugFromNameWhenSlugBlank() {
                 when(categoryRepository.existsByParentAndName(null, "Home Appliances")).thenReturn(false);
                 when(categoryRepository.existsBySlug(anyString())).thenReturn(false);
@@ -126,7 +140,7 @@ class CategoryServiceTest {
         }
 
         @Test
-        void updateAppliesChangesAndSaves() {
+        void updateAppliesChangesAndPublishesEvent() {
                 Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics");
                 category.pullEvents();
                 when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
@@ -139,6 +153,21 @@ class CategoryServiceTest {
                 assertThat(category.getName()).isEqualTo("Consumer Electronics");
                 assertThat(category.getIconUrl()).isEqualTo("https://icon");
                 assertThat(category.isActive()).isFalse();
+                verify(eventPublisher).publish(anyCollection());
+        }
+
+        @Test
+        void updateTrimsNameBeforeUniquenessCheck() {
+                Category category = Category.create(CATEGORY_ID, null, "Old", "old");
+                category.pullEvents();
+                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+                when(categoryRepository.existsByParentAndName(null, "Zenith")).thenReturn(true);
+
+                assertThatThrownBy(() -> categoryService.update(
+                                new UpdateCategoryCommand(CATEGORY_ID, "  Zenith  ", null, null)))
+                                .isInstanceOf(CatalogException.class)
+                                .extracting("errorCode")
+                                .isEqualTo(CatalogErrorCode.CATEGORY_NAME_CONFLICT.getCode());
         }
 
         @Test
@@ -198,6 +227,22 @@ class CategoryServiceTest {
         }
 
         @Test
+        void moveRejectsWhenSiblingWithSameNameExists() {
+                Category category = Category.create(CATEGORY_ID, null, "Duplicate", "duplicate");
+                category.pullEvents();
+                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+                when(categoryRepository.findById("new-parent"))
+                                .thenReturn(Optional.of(Category.create("new-parent", null, "P", "p")));
+                when(categoryRepository.findDescendantIds(CATEGORY_ID)).thenReturn(List.of());
+                when(categoryRepository.existsByParentAndName("new-parent", "Duplicate")).thenReturn(true);
+
+                assertThatThrownBy(() -> categoryService.move(new MoveCategoryCommand(CATEGORY_ID, "new-parent")))
+                                .isInstanceOf(CatalogException.class)
+                                .extracting("errorCode")
+                                .isEqualTo(CatalogErrorCode.CATEGORY_NAME_CONFLICT.getCode());
+        }
+
+        @Test
         void moveAppliesReparent() {
                 Category category = Category.create(CATEGORY_ID, null, "A", "a");
                 category.pullEvents();
@@ -205,6 +250,7 @@ class CategoryServiceTest {
                 when(categoryRepository.findById("new-parent"))
                                 .thenReturn(Optional.of(Category.create("new-parent", null, "P", "p")));
                 when(categoryRepository.findDescendantIds(CATEGORY_ID)).thenReturn(List.of());
+                when(categoryRepository.existsByParentAndName("new-parent", "A")).thenReturn(false);
                 when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
                 when(categoryResultMapper.toResult(any(Category.class))).thenReturn(sampleResult);
 
@@ -267,7 +313,7 @@ class CategoryServiceTest {
         }
 
         @Test
-        void treeBuildsHierarchyFromActiveCategories() {
+        void getTreeBuildsHierarchyFromActiveCategories() {
                 Category root = Category.create("root", null, "Root", "root");
                 Category child = Category.create("child", "root", "Child", "child");
                 when(categoryRepository.findAllActive()).thenReturn(List.of(root, child));
@@ -279,7 +325,7 @@ class CategoryServiceTest {
                 when(categoryResultMapper.toResult(root)).thenReturn(rootResult);
                 when(categoryResultMapper.toResult(child)).thenReturn(childResult);
 
-                List<CategoryTreeNode> tree = categoryService.tree();
+                List<CategoryTreeNode> tree = categoryService.getTree();
 
                 assertThat(tree).hasSize(1);
                 assertThat(tree.get(0).category().categoryId()).isEqualTo("root");
@@ -288,7 +334,7 @@ class CategoryServiceTest {
         }
 
         @Test
-        void getTreeDelegatesToTree() {
+        void getTreeReturnsEmptyWhenNoActiveCategories() {
                 when(categoryRepository.findAllActive()).thenReturn(List.of());
 
                 assertThat(categoryService.getTree()).isEmpty();

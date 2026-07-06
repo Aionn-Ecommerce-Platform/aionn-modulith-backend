@@ -61,27 +61,40 @@ public class Category extends AggregateRoot {
     public static Category create(String categoryId, String parentId, String name, String slug) {
         Guard.require(name != null && !name.isBlank(),
                 () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT, "name must not be blank"));
+        Guard.require(slug != null && !slug.isBlank(),
+                () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT, "slug must not be blank"));
         Instant now = Instant.now();
         String trimmedName = name.trim();
-        Category category = new Category(categoryId, parentId, trimmedName, slug, null, true, now, now, null,
+        String trimmedSlug = slug.trim();
+        Category category = new Category(categoryId, parentId, trimmedName, trimmedSlug, null, true, now, now, null,
                 List.of());
-        category.registerEvent(new CategoryEvents.CategoryCreated(categoryId, parentId, trimmedName, slug, now));
+        category.registerEvent(new CategoryEvents.CategoryCreated(categoryId, parentId, trimmedName, trimmedSlug, now));
         return category;
     }
 
     public void update(String name, String iconUrl, Boolean active) {
         Guard.require(deletedAt == null,
                 () -> new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND, "Cannot update deleted category"));
+        boolean changed = false;
         if (name != null) {
             Guard.require(!name.isBlank(),
                     () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT, "name must not be blank"));
-            this.name = name.trim();
+            String trimmed = name.trim();
+            if (!trimmed.equals(this.name)) {
+                this.name = trimmed;
+                changed = true;
+            }
         }
-        if (iconUrl != null) {
+        if (iconUrl != null && !iconUrl.equals(this.iconUrl)) {
             this.iconUrl = iconUrl;
+            changed = true;
         }
-        if (active != null) {
+        if (active != null && active != this.active) {
             this.active = active;
+            changed = true;
+        }
+        if (!changed) {
+            return;
         }
         this.updatedAt = Instant.now();
         registerEvent(new CategoryEvents.CategoryUpdated(categoryId, this.name, this.iconUrl, this.active, updatedAt));

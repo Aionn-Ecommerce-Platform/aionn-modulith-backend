@@ -33,19 +33,20 @@ public class CategoryService {
     private final EventPublisher eventPublisher;
 
     public CategoryResult create(CreateCategoryCommand command) {
+        String normalizedName = command.name() != null ? command.name().trim() : null;
         if (command.parentId() != null && categoryRepository.findById(command.parentId()).isEmpty()) {
             throw new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND, "Parent category not found");
         }
-        if (categoryRepository.existsByParentAndName(command.parentId(), command.name())) {
+        if (categoryRepository.existsByParentAndName(command.parentId(), normalizedName)) {
             throw new CatalogException(CatalogErrorCode.CATEGORY_NAME_CONFLICT);
         }
         String slug = command.slug() != null && !command.slug().isBlank()
-                ? command.slug()
-                : SlugUtils.slugify(command.name());
+                ? command.slug().trim()
+                : SlugUtils.slugify(normalizedName);
         if (categoryRepository.existsBySlug(slug)) {
             throw new CatalogException(CatalogErrorCode.CATEGORY_SLUG_CONFLICT);
         }
-        Category category = Category.create(IdGenerator.ulid(), command.parentId(), command.name(), slug);
+        Category category = Category.create(IdGenerator.ulid(), command.parentId(), normalizedName, slug);
         Category saved = categoryRepository.save(category);
         eventPublisher.publish(category.pullEvents());
         return categoryResultMapper.toResult(saved);
@@ -53,12 +54,13 @@ public class CategoryService {
 
     public CategoryResult update(UpdateCategoryCommand command) {
         Category category = required(command.categoryId());
-        if (command.name() != null
-                && !command.name().equalsIgnoreCase(category.getName())
-                && categoryRepository.existsByParentAndName(category.getParentId(), command.name())) {
+        String normalizedName = command.name() != null ? command.name().trim() : null;
+        if (normalizedName != null
+                && !normalizedName.equalsIgnoreCase(category.getName())
+                && categoryRepository.existsByParentAndName(category.getParentId(), normalizedName)) {
             throw new CatalogException(CatalogErrorCode.CATEGORY_NAME_CONFLICT);
         }
-        category.update(command.name(), command.iconUrl(), command.active());
+        category.update(normalizedName, command.iconUrl(), command.active());
         Category saved = categoryRepository.save(category);
         eventPublisher.publish(category.pullEvents());
         return categoryResultMapper.toResult(saved);
@@ -76,6 +78,9 @@ public class CategoryService {
             if (categoryRepository.findDescendantIds(category.getCategoryId())
                     .contains(command.newParentId())) {
                 throw new CatalogException(CatalogErrorCode.CATEGORY_CYCLE);
+            }
+            if (categoryRepository.existsByParentAndName(command.newParentId(), category.getName())) {
+                throw new CatalogException(CatalogErrorCode.CATEGORY_NAME_CONFLICT);
             }
         }
         category.moveTo(command.newParentId());
@@ -111,7 +116,7 @@ public class CategoryService {
     }
 
     @Transactional(readOnly = true)
-    public List<CategoryTreeNode> tree() {
+    public List<CategoryTreeNode> getTree() {
         List<Category> allActive = categoryRepository.findAllActive();
         List<CategoryResult> results = allActive.stream()
                 .map(categoryResultMapper::toResult)
@@ -128,11 +133,6 @@ public class CategoryService {
         return roots.stream()
                 .map(root -> buildNode(root, byParent))
                 .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<CategoryTreeNode> getTree() {
-        return tree();
     }
 
     private CategoryTreeNode buildNode(CategoryResult category, Map<String, List<CategoryResult>> byParent) {

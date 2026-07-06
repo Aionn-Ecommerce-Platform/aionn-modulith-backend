@@ -15,11 +15,16 @@ public class CategoryResultMapper {
         }
 
         Locale locale = LocaleContextHolder.getLocale();
+        String fullTag = locale.toLanguageTag();
+        String language = locale.getLanguage();
         String name = category.getName();
 
         Category.Translation trans = category.translations().stream()
-                .filter(t -> t.locale().equalsIgnoreCase(locale.getLanguage()))
+                .filter(t -> t.locale().equalsIgnoreCase(fullTag))
                 .findFirst()
+                .or(() -> category.translations().stream()
+                        .filter(t -> t.locale().equalsIgnoreCase(language))
+                        .findFirst())
                 .orElse(null);
         if (trans != null) {
             name = trans.name();
@@ -33,7 +38,6 @@ public class CategoryResultMapper {
                 category.getIconUrl(),
                 category.isActive(),
                 category.getCreatedAt(),
-                category.getUpdatedAt()
-        );
+                category.getUpdatedAt());
     }
 }

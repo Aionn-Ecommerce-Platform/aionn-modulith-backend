@@ -8,7 +8,6 @@ import com.aionn.catalog.adapter.rest.mapper.category.CategoryDtoMapperImpl;
 import com.aionn.catalog.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.catalog.adapter.rest.support.TestAuth;
 import com.aionn.catalog.application.dto.category.command.CreateCategoryCommand;
-import com.aionn.catalog.application.dto.category.command.DeleteCategoryCommand;
 import com.aionn.catalog.application.dto.category.command.MoveCategoryCommand;
 import com.aionn.catalog.application.dto.category.command.UpdateCategoryCommand;
 import com.aionn.catalog.application.dto.category.query.GetCategoryQuery;
@@ -54,154 +53,154 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class CategoryControllerWebTest {
 
-    private static final String CATEGORY_ID = "01HZCAT0000000000000000001";
+        private static final String CATEGORY_ID = "01HZCAT0000000000000000001";
 
-    @Mock
-    private CreateCategoryInputPort createCategoryInputPort;
-    @Mock
-    private UpdateCategoryInputPort updateCategoryInputPort;
-    @Mock
-    private MoveCategoryInputPort moveCategoryInputPort;
-    @Mock
-    private DeleteCategoryInputPort deleteCategoryInputPort;
-    @Mock
-    private ListCategoryRootsInputPort listCategoryRootsInputPort;
-    @Mock
-    private ListCategoryChildrenInputPort listCategoryChildrenInputPort;
-    @Mock
-    private GetCategoryTreeInputPort getCategoryTreeInputPort;
-    @Mock
-    private GetCategoryInputPort getCategoryInputPort;
+        @Mock
+        private CreateCategoryInputPort createCategoryInputPort;
+        @Mock
+        private UpdateCategoryInputPort updateCategoryInputPort;
+        @Mock
+        private MoveCategoryInputPort moveCategoryInputPort;
+        @Mock
+        private DeleteCategoryInputPort deleteCategoryInputPort;
+        @Mock
+        private ListCategoryRootsInputPort listCategoryRootsInputPort;
+        @Mock
+        private ListCategoryChildrenInputPort listCategoryChildrenInputPort;
+        @Mock
+        private GetCategoryTreeInputPort getCategoryTreeInputPort;
+        @Mock
+        private GetCategoryInputPort getCategoryInputPort;
 
-    private MockMvc mockMvc;
-    private final ObjectMapper objectMapper = Jackson2ObjectMapperBuilder.json().build();
+        private MockMvc mockMvc;
+        private final ObjectMapper objectMapper = Jackson2ObjectMapperBuilder.json().build();
 
-    @BeforeEach
-    void setUp() {
-        CategoryController controller = new CategoryController(
-                createCategoryInputPort,
-                updateCategoryInputPort,
-                moveCategoryInputPort,
-                deleteCategoryInputPort,
-                listCategoryRootsInputPort,
-                listCategoryChildrenInputPort,
-                getCategoryTreeInputPort,
-                getCategoryInputPort,
-                new CategoryDtoMapperImpl());
-        mockMvc = MockMvcBuilders.standaloneSetup(controller)
-                .setControllerAdvice(new CatalogExceptionHandler())
-                .addInterceptors(new MockSecurityInterceptor())
-                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
-                .build();
-    }
+        @BeforeEach
+        void setUp() {
+                CategoryController controller = new CategoryController(
+                                createCategoryInputPort,
+                                updateCategoryInputPort,
+                                moveCategoryInputPort,
+                                deleteCategoryInputPort,
+                                listCategoryRootsInputPort,
+                                listCategoryChildrenInputPort,
+                                getCategoryTreeInputPort,
+                                getCategoryInputPort,
+                                new CategoryDtoMapperImpl());
+                mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                                .setControllerAdvice(new CatalogExceptionHandler())
+                                .addInterceptors(new MockSecurityInterceptor())
+                                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                                .build();
+        }
 
-    private CategoryResult sample() {
-        return new CategoryResult(
-                CATEGORY_ID, null, "Electronics", "electronics",
-                null, true, Instant.now(), Instant.now());
-    }
+        private CategoryResult sample() {
+                return new CategoryResult(
+                                CATEGORY_ID, null, "Electronics", "electronics",
+                                null, true, Instant.now(), Instant.now());
+        }
 
-    @Test
-    void createReturnsCreated() throws Exception {
-        when(createCategoryInputPort.execute(any(CreateCategoryCommand.class))).thenReturn(sample());
+        @Test
+        void createReturnsCreated() throws Exception {
+                when(createCategoryInputPort.execute(any(CreateCategoryCommand.class))).thenReturn(sample());
 
-        mockMvc.perform(post("/api/v1/catalog/categories")
-                .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN"))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(
-                        new CreateCategoryRequest(null, "Electronics", "electronics"))))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.categoryId").value(CATEGORY_ID));
+                mockMvc.perform(post("/api/v1/catalog/categories")
+                                .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(
+                                                new CreateCategoryRequest(null, "Electronics", "electronics"))))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.data.categoryId").value(CATEGORY_ID));
 
-        verify(createCategoryInputPort).execute(any(CreateCategoryCommand.class));
-    }
+                verify(createCategoryInputPort).execute(any(CreateCategoryCommand.class));
+        }
 
-    @Test
-    void updateReturnsOk() throws Exception {
-        when(updateCategoryInputPort.execute(any(UpdateCategoryCommand.class))).thenReturn(sample());
+        @Test
+        void updateReturnsOk() throws Exception {
+                when(updateCategoryInputPort.execute(any(UpdateCategoryCommand.class))).thenReturn(sample());
 
-        mockMvc.perform(put("/api/v1/catalog/categories/" + CATEGORY_ID)
-                .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN"))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(
-                        new UpdateCategoryRequest("Renamed", null, null))))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.categoryId").value(CATEGORY_ID));
+                mockMvc.perform(put("/api/v1/catalog/categories/" + CATEGORY_ID)
+                                .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(
+                                                new UpdateCategoryRequest("Renamed", null, null))))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.categoryId").value(CATEGORY_ID));
 
-        verify(updateCategoryInputPort).execute(any(UpdateCategoryCommand.class));
-    }
+                verify(updateCategoryInputPort).execute(any(UpdateCategoryCommand.class));
+        }
 
-    @Test
-    void moveReturnsOk() throws Exception {
-        when(moveCategoryInputPort.execute(any(MoveCategoryCommand.class))).thenReturn(sample());
+        @Test
+        void moveReturnsOk() throws Exception {
+                when(moveCategoryInputPort.execute(any(MoveCategoryCommand.class))).thenReturn(sample());
 
-        mockMvc.perform(post("/api/v1/catalog/categories/" + CATEGORY_ID + "/move")
-                .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN"))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new MoveCategoryRequest("new-parent"))))
-                .andExpect(status().isOk());
+                mockMvc.perform(post("/api/v1/catalog/categories/" + CATEGORY_ID + "/move")
+                                .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new MoveCategoryRequest("new-parent"))))
+                                .andExpect(status().isOk());
 
-        verify(moveCategoryInputPort).execute(any(MoveCategoryCommand.class));
-    }
+                verify(moveCategoryInputPort).execute(any(MoveCategoryCommand.class));
+        }
 
-    @Test
-    void deleteReturnsNoContent() throws Exception {
-        mockMvc.perform(delete("/api/v1/catalog/categories/" + CATEGORY_ID)
-                .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN")))
-                .andExpect(status().isNoContent());
+        @Test
+        void deleteReturnsNoContent() throws Exception {
+                mockMvc.perform(delete("/api/v1/catalog/categories/" + CATEGORY_ID)
+                                .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN")))
+                                .andExpect(status().isNoContent());
 
-        verify(deleteCategoryInputPort).execute(argThat(cmd -> CATEGORY_ID.equals(cmd.categoryId())));
-    }
+                verify(deleteCategoryInputPort).execute(argThat(cmd -> CATEGORY_ID.equals(cmd.categoryId())));
+        }
 
-    @Test
-    void listRootsReturnsCategories() throws Exception {
-        when(listCategoryRootsInputPort.execute()).thenReturn(List.of(sample()));
+        @Test
+        void listRootsReturnsCategories() throws Exception {
+                when(listCategoryRootsInputPort.execute()).thenReturn(List.of(sample()));
 
-        mockMvc.perform(get("/api/v1/catalog/categories/roots"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].categoryId").value(CATEGORY_ID));
-    }
+                mockMvc.perform(get("/api/v1/catalog/categories/roots"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data[0].categoryId").value(CATEGORY_ID));
+        }
 
-    @Test
-    void listChildrenReturnsCategories() throws Exception {
-        when(listCategoryChildrenInputPort.execute(any(ListCategoryChildrenQuery.class)))
-                .thenReturn(List.of(sample()));
+        @Test
+        void listChildrenReturnsCategories() throws Exception {
+                when(listCategoryChildrenInputPort.execute(any(ListCategoryChildrenQuery.class)))
+                                .thenReturn(List.of(sample()));
 
-        mockMvc.perform(get("/api/v1/catalog/categories/" + CATEGORY_ID + "/children"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].categoryId").value(CATEGORY_ID));
+                mockMvc.perform(get("/api/v1/catalog/categories/" + CATEGORY_ID + "/children"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data[0].categoryId").value(CATEGORY_ID));
 
-        verify(listCategoryChildrenInputPort)
-                .execute(argThat(q -> CATEGORY_ID.equals(q.parentId())));
-    }
+                verify(listCategoryChildrenInputPort)
+                                .execute(argThat(q -> CATEGORY_ID.equals(q.parentId())));
+        }
 
-    @Test
-    void treeReturnsHierarchy() throws Exception {
-        CategoryTreeNode node = new CategoryTreeNode(sample(), List.of());
-        when(getCategoryTreeInputPort.execute()).thenReturn(List.of(node));
+        @Test
+        void treeReturnsHierarchy() throws Exception {
+                CategoryTreeNode node = new CategoryTreeNode(sample(), List.of());
+                when(getCategoryTreeInputPort.execute()).thenReturn(List.of(node));
 
-        mockMvc.perform(get("/api/v1/catalog/categories/tree"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].category.categoryId").value(CATEGORY_ID));
-    }
+                mockMvc.perform(get("/api/v1/catalog/categories/tree"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data[0].category.categoryId").value(CATEGORY_ID));
+        }
 
-    @Test
-    void getReturnsCategory() throws Exception {
-        when(getCategoryInputPort.execute(any(GetCategoryQuery.class))).thenReturn(sample());
+        @Test
+        void getReturnsCategory() throws Exception {
+                when(getCategoryInputPort.execute(any(GetCategoryQuery.class))).thenReturn(sample());
 
-        mockMvc.perform(get("/api/v1/catalog/categories/" + CATEGORY_ID))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.categoryId").value(CATEGORY_ID));
-    }
+                mockMvc.perform(get("/api/v1/catalog/categories/" + CATEGORY_ID))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.categoryId").value(CATEGORY_ID));
+        }
 
-    @Test
-    void getReturnsNotFoundWhenServiceThrows() throws Exception {
-        when(getCategoryInputPort.execute(any(GetCategoryQuery.class)))
-                .thenThrow(new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND));
+        @Test
+        void getReturnsNotFoundWhenServiceThrows() throws Exception {
+                when(getCategoryInputPort.execute(any(GetCategoryQuery.class)))
+                                .thenThrow(new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND));
 
-        mockMvc.perform(get("/api/v1/catalog/categories/missing"))
-                .andExpect(status().isNotFound());
+                mockMvc.perform(get("/api/v1/catalog/categories/missing"))
+                                .andExpect(status().isNotFound());
 
-        verify(getCategoryInputPort).execute(argThat(q -> "missing".equals(q.categoryId())));
-    }
+                verify(getCategoryInputPort).execute(argThat(q -> "missing".equals(q.categoryId())));
+        }
 }

@@ -32,14 +32,32 @@ class CategoryTest {
     }
 
     @Test
-    void createTrimsNameConsistentlyOnStateAndEvent() {
-        Category category = Category.create(CATEGORY_ID, null, "  Electronics  ", "electronics");
+    void createRejectsBlankSlug() {
+        assertThatThrownBy(() -> Category.create(CATEGORY_ID, null, "Electronics", " "))
+                .isInstanceOf(CatalogException.class)
+                .extracting("errorCode")
+                .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
+    }
+
+    @Test
+    void createRejectsNullSlug() {
+        assertThatThrownBy(() -> Category.create(CATEGORY_ID, null, "Electronics", null))
+                .isInstanceOf(CatalogException.class)
+                .extracting("errorCode")
+                .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
+    }
+
+    @Test
+    void createTrimsNameAndSlugConsistentlyOnStateAndEvent() {
+        Category category = Category.create(CATEGORY_ID, null, "  Electronics  ", "  electronics  ");
 
         assertThat(category.getName()).isEqualTo("Electronics");
+        assertThat(category.getSlug()).isEqualTo("electronics");
         var events = category.pullEvents();
         assertThat(events).hasSize(1);
         var created = (com.aionn.catalog.domain.event.CategoryEvents.CategoryCreated) events.get(0).payload();
         assertThat(created.name()).isEqualTo("Electronics");
+        assertThat(created.slug()).isEqualTo("electronics");
     }
 
     @Test
@@ -56,7 +74,7 @@ class CategoryTest {
     }
 
     @Test
-    void updateIgnoresNullFieldsAndKeepsExisting() {
+    void updateEmitsNoEventWhenNothingChanged() {
         Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics");
         category.pullEvents();
 
@@ -64,6 +82,18 @@ class CategoryTest {
 
         assertThat(category.getName()).isEqualTo("Electronics");
         assertThat(category.isActive()).isTrue();
+        assertThat(category.pullEvents()).isEmpty();
+    }
+
+    @Test
+    void updateEmitsNoEventWhenAllValuesEqualCurrent() {
+        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics");
+        category.update("Renamed", "https://icon", false);
+        category.pullEvents();
+
+        category.update("Renamed", "https://icon", false);
+
+        assertThat(category.pullEvents()).isEmpty();
     }
 
     @Test
