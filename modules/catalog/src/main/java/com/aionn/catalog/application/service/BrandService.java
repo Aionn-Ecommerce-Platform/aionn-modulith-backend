@@ -55,6 +55,9 @@ public class BrandService {
 
     public void delete(DeleteBrandCommand command) {
         Brand brand = required(command.brandId());
+        if (brandRepository.hasActiveProducts(command.brandId())) {
+            throw new CatalogException(CatalogErrorCode.BRAND_HAS_ACTIVE_PRODUCTS);
+        }
         brand.softDelete(command.reason());
         brandRepository.save(brand);
         eventPublisher.publish(brand.pullEvents());

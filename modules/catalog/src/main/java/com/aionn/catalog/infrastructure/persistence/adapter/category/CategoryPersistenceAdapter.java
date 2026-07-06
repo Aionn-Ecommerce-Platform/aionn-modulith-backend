@@ -4,6 +4,7 @@ import com.aionn.catalog.application.port.out.category.CategoryPersistencePort;
 import com.aionn.catalog.domain.model.Category;
 import com.aionn.catalog.infrastructure.persistence.mapper.CategoryDomainMapper;
 import com.aionn.catalog.infrastructure.persistence.repository.category.CategoryRepository;
+import com.aionn.catalog.infrastructure.persistence.repository.product.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -15,6 +16,7 @@ import java.util.Optional;
 public class CategoryPersistenceAdapter implements CategoryPersistencePort {
 
     private final CategoryRepository jpa;
+    private final ProductRepository productJpa;
     private final CategoryDomainMapper mapper;
 
     @Override
@@ -62,5 +64,10 @@ public class CategoryPersistenceAdapter implements CategoryPersistencePort {
         return jpa.findAllActive().stream()
                 .map(mapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    public boolean hasProducts(String categoryId) {
+        return productJpa.existsByCategoryId(categoryId);
     }
 }

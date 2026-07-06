@@ -91,6 +91,9 @@ public class CategoryService {
 
     public void delete(String categoryId) {
         Category category = required(categoryId);
+        if (categoryRepository.hasProducts(categoryId)) {
+            throw new CatalogException(CatalogErrorCode.CATEGORY_HAS_PRODUCTS);
+        }
         category.markDeleted();
         categoryRepository.save(category);
         eventPublisher.publish(category.pullEvents());

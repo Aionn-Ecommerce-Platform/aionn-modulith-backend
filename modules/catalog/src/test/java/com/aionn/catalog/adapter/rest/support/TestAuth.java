@@ -39,4 +39,13 @@ public final class TestAuth {
             return request;
         };
     }
+
+    public static RequestPostProcessor authMerchant(String principal, String merchantId, String... roles) {
+        RequestPostProcessor auth = authUser(principal, roles);
+        return request -> {
+            auth.postProcessRequest(request);
+            request.addHeader("X-Merchant-Id", merchantId);
+            return request;
+        };
+    }
 }
