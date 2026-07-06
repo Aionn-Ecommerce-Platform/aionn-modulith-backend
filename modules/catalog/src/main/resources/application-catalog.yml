@@ -10,7 +10,7 @@ catalog:
     provider: ${CATALOG_ORDERING_PROVIDER:assume-empty}
   product:
     default-currency: ${CATALOG_PRODUCT_DEFAULT_CURRENCY:VND}
-    clone-name-suffix: ${CATALOG_PRODUCT_CLONE_NAME_SUFFIX: (Copy)}
+    clone-name-suffix: "${CATALOG_PRODUCT_CLONE_NAME_SUFFIX: (Copy)}"
     bulk-price-update-max-size: ${CATALOG_PRODUCT_BULK_PRICE_UPDATE_MAX_SIZE:100}
     reindex-page-size: ${CATALOG_PRODUCT_REINDEX_PAGE_SIZE:200}
   search:
