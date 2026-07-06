@@ -34,7 +34,9 @@ CREATE TABLE categories (
     deleted_at  TIMESTAMPTZ,
     CONSTRAINT fk_categories_parent FOREIGN KEY (parent_id) REFERENCES categories(category_id)
 );
-CREATE UNIQUE INDEX uq_categories_slug ON categories(slug);
+CREATE UNIQUE INDEX uq_categories_slug_active
+    ON categories(slug)
+    WHERE deleted_at IS NULL;
 CREATE INDEX idx_categories_parent ON categories(parent_id);
 -- Case-insensitive uniqueness within a parent for non-deleted categories
 CREATE UNIQUE INDEX uq_categories_parent_name_active
