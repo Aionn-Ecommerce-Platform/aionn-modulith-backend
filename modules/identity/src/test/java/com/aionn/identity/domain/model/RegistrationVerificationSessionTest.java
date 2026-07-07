@@ -96,4 +96,82 @@ class RegistrationVerificationSessionTest {
         assertEquals(0, session.getAttemptCount());
         assertEquals("654321", session.getOtpCode());
     }
+
+    @Test
+    void shouldRejectVerificationWhenSessionExpired() {
+        RegistrationVerificationSession session = new RegistrationVerificationSession(
+                "reg-1", "+84987654321", "123456", 0, 5,
+                LocalDateTime.now(Clock.systemUTC()).minusMinutes(2),
+                LocalDateTime.now(Clock.systemUTC()).minusMinutes(1),
+                false, null, null);
+
+        assertThrows(IdentityException.class, () -> session.verify("123456"));
+    }
+
+    @Test
+    void shouldRaiseInvalidOtpWithoutLockingWhenAttemptsRemain() {
+        RegistrationVerificationSession session = new RegistrationVerificationSession(
+                "reg-1", "+84987654321", "123456", 0, 5,
+                LocalDateTime.now(Clock.systemUTC()).plusSeconds(60),
+                LocalDateTime.now(Clock.systemUTC()).plusMinutes(5),
+                false, null, null);
+
+        assertThrows(IdentityException.class, () -> session.verify("000000"));
+        assertEquals(1, session.getAttemptCount());
+        assertTrue(!session.isLocked());
+    }
+
+    @Test
+    void shouldRejectVerificationWhenAlreadyLocked() {
+        RegistrationVerificationSession session = new RegistrationVerificationSession(
+                "reg-1", "+84987654321", "123456", 5, 5,
+                LocalDateTime.now(Clock.systemUTC()).plusSeconds(60),
+                LocalDateTime.now(Clock.systemUTC()).plusMinutes(5),
+                false, null, null);
+
+        assertThrows(IdentityException.class, () -> session.verify("123456"));
+    }
+
+    @Test
+    void shouldRejectResendWhenAlreadyVerified() {
+        RegistrationVerificationSession session = new RegistrationVerificationSession(
+                "reg-1", "+84987654321", "123456", 0, 5,
+                LocalDateTime.now(Clock.systemUTC()).minusSeconds(1),
+                LocalDateTime.now(Clock.systemUTC()).plusMinutes(5),
+                false, null, null);
+        session.verify("123456");
+
+        assertThrows(IdentityException.class, () -> session.resend(
+                "654321",
+                LocalDateTime.now(Clock.systemUTC()).plusSeconds(60),
+                LocalDateTime.now(Clock.systemUTC()).plusMinutes(5)));
+    }
+
+    @Test
+    void shouldRejectResendWhenSessionExpired() {
+        RegistrationVerificationSession session = new RegistrationVerificationSession(
+                "reg-1", "+84987654321", "123456", 0, 5,
+                LocalDateTime.now(Clock.systemUTC()).minusMinutes(2),
+                LocalDateTime.now(Clock.systemUTC()).minusMinutes(1),
+                false, null, null);
+
+        assertThrows(IdentityException.class, () -> session.resend(
+                "654321",
+                LocalDateTime.now(Clock.systemUTC()).plusSeconds(60),
+                LocalDateTime.now(Clock.systemUTC()).plusMinutes(5)));
+    }
+
+    @Test
+    void shouldRejectResendWhenCooldownNotElapsed() {
+        RegistrationVerificationSession session = new RegistrationVerificationSession(
+                "reg-1", "+84987654321", "123456", 0, 5,
+                LocalDateTime.now(Clock.systemUTC()).plusSeconds(60),
+                LocalDateTime.now(Clock.systemUTC()).plusMinutes(5),
+                false, null, null);
+
+        assertThrows(IdentityException.class, () -> session.resend(
+                "654321",
+                LocalDateTime.now(Clock.systemUTC()).plusSeconds(60),
+                LocalDateTime.now(Clock.systemUTC()).plusMinutes(5)));
+    }
 }

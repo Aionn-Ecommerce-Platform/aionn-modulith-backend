@@ -70,9 +70,6 @@ sonar {
         property 'sonar.projectKey', 'Aionn-Ecommerce-Platform_aionn-modulith-backend'
         property 'sonar.organization', 'aionn-ecommerce-platform'
         property 'sonar.host.url', 'https://sonarcloud.io'
-        // Treat main as the baseline so New Code = diff vs main. PRs get gated on
-        // their own changes; a push to main no longer re-counts the whole module.
-        property 'sonar.newCode.referenceBranch', 'main'
         property 'sonar.coverage.jacoco.xmlReportPaths',
                 subprojects.collect {
                     "${it.layout.buildDirectory.get().asFile.path}/reports/jacoco/test/jacocoTestReport.xml"

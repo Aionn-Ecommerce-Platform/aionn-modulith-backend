@@ -32,6 +32,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -281,6 +282,211 @@ class RegistrationServiceTest {
                 verify(authSessionPersistencePort, never()).save(any());
                 verify(refreshTokenStore, never()).store(anyString(), anyString(), any(Duration.class));
                 verify(registrationSessionStore, never()).deleteByRegId(anyString());
+        }
+
+        @Test
+        void initiateRejectsWhenPhoneAlreadyExists() {
+                when(captchaTokenValidator.isValid("captcha-ok")).thenReturn(true);
+                when(registrationPolicy.getDefaultCountryCallingCode()).thenReturn("VN");
+                when(userPersistencePort.existsByPhone("+84912345678")).thenReturn(true);
+
+                IdentityException ex = assertThrows(IdentityException.class,
+                                () -> registrationService.initiate(
+                                                new InitiateRegistrationCommand("0912345678", "captcha-ok",
+                                                                "203.0.113.10")));
+
+                assertEquals(IdentityErrorCode.PHONE_ALREADY_EXISTS.getCode(), ex.getErrorCode());
+                verify(registrationSessionStore, never()).save(any());
+        }
+
+        @Test
+        void initiateRejectsInvalidPhoneNumber() {
+                when(captchaTokenValidator.isValid("captcha-ok")).thenReturn(true);
+
+                IdentityException ex = assertThrows(IdentityException.class,
+                                () -> registrationService.initiate(
+                                                new InitiateRegistrationCommand("not-a-phone", "captcha-ok",
+                                                                "203.0.113.10")));
+
+                assertEquals(IdentityErrorCode.PHONE_INVALID.getCode(), ex.getErrorCode());
+        }
+
+        @Test
+        void initiateRejectsWhenRateLimitExceeded() {
+                when(captchaTokenValidator.isValid("captcha-ok")).thenReturn(true);
+                when(registrationPolicy.getDefaultCountryCallingCode()).thenReturn("VN");
+                when(userPersistencePort.existsByPhone("+84912345678")).thenReturn(false);
+                when(registrationPolicy.getIpRateLimitMaxAttempts()).thenReturn(5);
+                when(registrationPolicy.getIpRateLimitWindowSeconds()).thenReturn(60);
+                when(registrationPolicy.getPhoneRateLimitMaxAttempts()).thenReturn(3);
+                when(registrationPolicy.getPhoneRateLimitWindowSeconds()).thenReturn(300);
+                when(registrationRateLimiter.check("IP", "203.0.113.10", 5, 60)).thenReturn(false);
+
+                IdentityException ex = assertThrows(IdentityException.class,
+                                () -> registrationService.initiate(
+                                                new InitiateRegistrationCommand("0912345678", "captcha-ok",
+                                                                "203.0.113.10")));
+
+                assertEquals(IdentityErrorCode.RATE_LIMIT_EXCEEDED.getCode(), ex.getErrorCode());
+                verify(registrationSessionStore, never()).save(any());
+        }
+
+        @Test
+        void verifyOtpReturnsExistingTokenWhenAlreadyVerified() {
+                RegistrationVerificationSession session = new RegistrationVerificationSession(
+                                "reg-1", "+84912345678", null, 0, 5,
+                                LocalDateTime.now().minusSeconds(30),
+                                LocalDateTime.now().plusMinutes(10),
+                                true, "verify-token", LocalDateTime.now().minusMinutes(1));
+                when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
+                when(registrationResultMapper.toVerifyOtpResult("reg-1", "verify-token"))
+                                .thenReturn(new com.aionn.identity.application.dto.registration.result.VerifyRegistrationOtpResult(
+                                                "reg-1", "verify-token"));
+
+                var result = registrationService.verifyOtp(
+                                new com.aionn.identity.application.dto.registration.command.VerifyRegistrationOtpCommand(
+                                                "reg-1", "123456"));
+
+                assertEquals("verify-token", result.verificationToken());
+                verify(registrationSessionStore, never()).save(any());
+        }
+
+        @Test
+        void verifyOtpThrowsWhenSessionNotFound() {
+                when(registrationSessionStore.findByRegId("missing")).thenReturn(Optional.empty());
+
+                IdentityException ex = assertThrows(IdentityException.class,
+                                () -> registrationService.verifyOtp(
+                                                new com.aionn.identity.application.dto.registration.command.VerifyRegistrationOtpCommand(
+                                                                "missing", "123456")));
+
+                assertEquals(IdentityErrorCode.REGISTRATION_SESSION_NOT_FOUND.getCode(), ex.getErrorCode());
+        }
+
+        @Test
+        void verifyOtpMarksSessionVerifiedOnCorrectCode() {
+                RegistrationVerificationSession session = new RegistrationVerificationSession(
+                                "reg-1", "+84912345678", "123456", 0, 5,
+                                LocalDateTime.now().minusSeconds(30),
+                                LocalDateTime.now().plusMinutes(10),
+                                false, null, null);
+                when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
+                when(registrationResultMapper.toVerifyOtpResult(eq("reg-1"), anyString()))
+                                .thenAnswer(inv -> new com.aionn.identity.application.dto.registration.result.VerifyRegistrationOtpResult(
+                                                inv.getArgument(0), inv.getArgument(1)));
+
+                var result = registrationService.verifyOtp(
+                                new com.aionn.identity.application.dto.registration.command.VerifyRegistrationOtpCommand(
+                                                "reg-1", "123456"));
+
+                assertTrue(session.isVerified());
+                assertNotNull(result.verificationToken());
+                verify(registrationSessionStore).save(session);
+        }
+
+        @Test
+        void resendOtpThrowsWhenSessionNotFound() {
+                when(registrationSessionStore.findByRegId("missing")).thenReturn(Optional.empty());
+
+                assertThrows(IdentityException.class,
+                                () -> registrationService.resendOtp(
+                                                new com.aionn.identity.application.dto.registration.command.ResendRegistrationOtpCommand(
+                                                                "missing", "203.0.113.10")));
+        }
+
+        @Test
+        void resendOtpGeneratesNewCodeAndNotifies() {
+                when(registrationPolicy.getResendCooldownSeconds()).thenReturn(60);
+                when(registrationPolicy.getOtpExpirySeconds()).thenReturn(300);
+                when(registrationPolicy.isExposeOtpInResponse()).thenReturn(false);
+                RegistrationVerificationSession session = new RegistrationVerificationSession(
+                                "reg-1", "+84912345678", "123456", 0, 5,
+                                LocalDateTime.now(Clock.systemUTC()).minusMinutes(1),
+                                LocalDateTime.now(Clock.systemUTC()).plusMinutes(10),
+                                false, null, null);
+                when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
+                when(registrationResultMapper.toResendOtpResult(any(RegistrationVerificationSession.class), any()))
+                                .thenReturn(new com.aionn.identity.application.dto.registration.result.ResendRegistrationOtpResult(
+                                                "reg-1", session.getResendAvailableAt(), session.getExpiredAt(), null));
+
+                registrationService.resendOtp(
+                                new com.aionn.identity.application.dto.registration.command.ResendRegistrationOtpCommand(
+                                                "reg-1", "203.0.113.10"));
+
+                verify(registrationSessionStore).save(session);
+                verify(notificationPort).sendRegistrationOtp(eq("+84912345678"), anyString());
+        }
+
+        @Test
+        void completeThrowsWhenSessionNotFound() {
+                when(registrationSessionStore.findByRegId("missing")).thenReturn(Optional.empty());
+
+                assertThrows(IdentityException.class,
+                                () -> registrationService.complete(new CompleteRegistrationCommand(
+                                                "missing", "Password1!", "alice", "verify-token",
+                                                "198.51.100.20", "JUnit/1.0")));
+        }
+
+        @Test
+        void completeThrowsWhenLockCannotBeAcquired() {
+                RegistrationVerificationSession session = new RegistrationVerificationSession(
+                                "reg-1", "+84912345678", null, 0, 5,
+                                LocalDateTime.now().minusSeconds(30),
+                                LocalDateTime.now().plusMinutes(10),
+                                true, "verify-token", LocalDateTime.now().minusMinutes(1));
+                when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
+                when(registrationPolicy.getLockTimeoutSeconds()).thenReturn(30);
+                when(registrationLockManager.tryLock("+84912345678", 30)).thenReturn(Optional.empty());
+
+                IdentityException ex = assertThrows(IdentityException.class,
+                                () -> registrationService.complete(new CompleteRegistrationCommand(
+                                                "reg-1", "Password1!", "alice", "verify-token",
+                                                "198.51.100.20", "JUnit/1.0")));
+
+                assertEquals(IdentityErrorCode.REGISTRATION_IN_PROGRESS.getCode(), ex.getErrorCode());
+                verify(userPersistencePort, never()).save(any());
+        }
+
+        @Test
+        void completeThrowsWhenSessionExpired() {
+                RegistrationVerificationSession session = new RegistrationVerificationSession(
+                                "reg-1", "+84912345678", null, 0, 5,
+                                LocalDateTime.now(Clock.systemUTC()).minusMinutes(5),
+                                LocalDateTime.now(Clock.systemUTC()).minusMinutes(1),
+                                true, "verify-token", LocalDateTime.now(Clock.systemUTC()).minusMinutes(4));
+                when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
+                when(registrationPolicy.getLockTimeoutSeconds()).thenReturn(30);
+                when(registrationLockManager.tryLock("+84912345678", 30)).thenReturn(Optional.of("lock-1"));
+
+                IdentityException ex = assertThrows(IdentityException.class,
+                                () -> registrationService.complete(new CompleteRegistrationCommand(
+                                                "reg-1", "Password1!", "alice", "verify-token",
+                                                "198.51.100.20", "JUnit/1.0")));
+
+                assertEquals(IdentityErrorCode.REGISTRATION_SESSION_EXPIRED.getCode(), ex.getErrorCode());
+                verify(registrationLockManager).unlockAfterCompletion("+84912345678", "lock-1");
+        }
+
+        @Test
+        void completeThrowsWhenUsernameAlreadyExists() {
+                RegistrationVerificationSession session = new RegistrationVerificationSession(
+                                "reg-1", "+84912345678", null, 0, 5,
+                                LocalDateTime.now().minusSeconds(30),
+                                LocalDateTime.now().plusMinutes(10),
+                                true, "verify-token", LocalDateTime.now().minusMinutes(1));
+                when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
+                when(registrationPolicy.getLockTimeoutSeconds()).thenReturn(30);
+                when(registrationLockManager.tryLock("+84912345678", 30)).thenReturn(Optional.of("lock-1"));
+                when(userPersistencePort.existsByPhone("+84912345678")).thenReturn(false);
+                when(userPersistencePort.existsByUsername("alice")).thenReturn(true);
+
+                IdentityException ex = assertThrows(IdentityException.class,
+                                () -> registrationService.complete(new CompleteRegistrationCommand(
+                                                "reg-1", "Password1!", "alice", "verify-token",
+                                                "198.51.100.20", "JUnit/1.0")));
+
+                assertEquals(IdentityErrorCode.USERNAME_ALREADY_EXISTS.getCode(), ex.getErrorCode());
+                verify(userPersistencePort, never()).save(any());
         }
 
         private void stubCommonRegistrationPolicy() {
