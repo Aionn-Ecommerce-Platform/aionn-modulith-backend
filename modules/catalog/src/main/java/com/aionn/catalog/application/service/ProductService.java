@@ -313,6 +313,10 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public List<ProductResult> getPopularProducts(int limit) {
+        return popularProducts(limit);
+    }
+
+    private List<ProductResult> popularProducts(int limit) {
         return productRepository.findPopularProducts(limit).stream()
                 .map(productResultMapper::toResult)
                 .toList();
@@ -333,12 +337,12 @@ public class ProductService {
         }
 
         if (activeCategoryIds.isEmpty() && activeBrandIds.isEmpty()) {
-            return getPopularProducts(limit);
+            return popularProducts(limit);
         }
 
         List<Product> products = productRepository.findPersonalizedProducts(activeCategoryIds, activeBrandIds, limit);
         if (products.isEmpty()) {
-            return getPopularProducts(limit);
+            return popularProducts(limit);
         }
         return products.stream()
                 .map(productResultMapper::toResult)
@@ -420,24 +424,10 @@ public class ProductService {
     }
 
     private PageResult<ProductResult> jpaSearchFallback(ProductSearchCriteria criteria) {
-        List<Product> candidates;
-        boolean merchantFiltered = criteria.merchantId() != null && !criteria.merchantId().isBlank();
-        if (merchantFiltered) {
-            candidates = productRepository.listByMerchant(criteria.merchantId(), OffsetPagination.of(0, 10_000));
-        } else if (criteria.hasText()) {
-            candidates = productRepository.searchPublished(criteria.q(), 10_000, 0);
-        } else {
-            candidates = productRepository.findPublished(10_000, 0);
-        }
-
         ProductStatus requiredStatus = criteria.status() != null ? criteria.status() : ProductStatus.PUBLISHED;
-        List<Product> filtered = candidates.stream()
+        List<Product> filtered = fallbackCandidates(criteria).stream()
                 .filter(p -> p.getStatus() == requiredStatus)
-                .filter(p -> criteria.brandIds().isEmpty()
-                        || (p.getBrandId() != null && criteria.brandIds().contains(p.getBrandId())))
-                .filter(p -> criteria.categoryIds().isEmpty()
-                        || p.categoryIds().stream().anyMatch(criteria.categoryIds()::contains))
-                .filter(p -> matchesPrice(p, criteria.priceMin(), criteria.priceMax()))
+                .filter(p -> matchesFacets(p, criteria))
                 .toList();
 
         long totalElements = filtered.size();
@@ -447,6 +437,28 @@ public class ProductService {
                 .map(productResultMapper::toResult)
                 .toList();
         return new PageResult<>(results, criteria.page(), criteria.size(), totalElements);
+    }
+
+    private List<Product> fallbackCandidates(ProductSearchCriteria criteria) {
+        if (criteria.merchantId() != null && !criteria.merchantId().isBlank()) {
+            return productRepository.listByMerchant(criteria.merchantId(), OffsetPagination.of(0, 10_000));
+        }
+        if (criteria.hasText()) {
+            return productRepository.searchPublished(criteria.q(), 10_000, 0);
+        }
+        return productRepository.findPublished(10_000, 0);
+    }
+
+    private static boolean matchesFacets(Product product, ProductSearchCriteria criteria) {
+        if (!criteria.brandIds().isEmpty()
+                && (product.getBrandId() == null || !criteria.brandIds().contains(product.getBrandId()))) {
+            return false;
+        }
+        if (!criteria.categoryIds().isEmpty()
+                && product.categoryIds().stream().noneMatch(criteria.categoryIds()::contains)) {
+            return false;
+        }
+        return matchesPrice(product, criteria.priceMin(), criteria.priceMax());
     }
 
     private static boolean matchesPrice(Product product, BigDecimal min, BigDecimal max) {

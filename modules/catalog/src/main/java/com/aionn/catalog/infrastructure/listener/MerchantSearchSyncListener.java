@@ -6,6 +6,7 @@ import com.aionn.catalog.application.port.out.attribute.AttributeTemplatePersist
 import com.aionn.catalog.application.port.out.product.ProductPersistencePort;
 import com.aionn.catalog.application.port.out.search.ProductSearchIndex;
 import com.aionn.catalog.domain.event.MerchantEvents;
+import com.aionn.catalog.domain.model.AttributeTemplate;
 import com.aionn.catalog.domain.model.AttributeTemplate.AttributeDefinition;
 import com.aionn.catalog.domain.model.Product;
 import com.aionn.catalog.domain.valueobject.ProductStatus;
@@ -92,21 +93,30 @@ public class MerchantSearchSyncListener {
     }
 
     private ProductSearchDocument buildSearchDocument(Product product) {
+        return searchDocumentMapper.toSearchDocument(product, collectFilterableAttributes(product));
+    }
+
+    private Map<String, String> collectFilterableAttributes(Product product) {
         Map<String, String> filterable = new LinkedHashMap<>();
-        if (!product.attributes().isEmpty()) {
-            for (String categoryId : product.categoryIds()) {
-                attributeTemplateRepository.findByCategoryId(categoryId).ifPresent(template -> {
-                    for (Map.Entry<String, AttributeDefinition> def : template.snapshot().entrySet()) {
-                        if (def.getValue().filterable()) {
-                            String value = product.attributes().get(def.getKey());
-                            if (value != null) {
-                                filterable.put(def.getKey(), value);
-                            }
-                        }
-                    }
-                });
+        if (product.attributes().isEmpty()) {
+            return filterable;
+        }
+        for (String categoryId : product.categoryIds()) {
+            attributeTemplateRepository.findByCategoryId(categoryId)
+                    .ifPresent(template -> addFilterable(template, product, filterable));
+        }
+        return filterable;
+    }
+
+    private static void addFilterable(AttributeTemplate template, Product product, Map<String, String> filterable) {
+        for (Map.Entry<String, AttributeDefinition> def : template.snapshot().entrySet()) {
+            if (!def.getValue().filterable()) {
+                continue;
+            }
+            String value = product.attributes().get(def.getKey());
+            if (value != null) {
+                filterable.put(def.getKey(), value);
             }
         }
-        return searchDocumentMapper.toSearchDocument(product, filterable);
     }
 }

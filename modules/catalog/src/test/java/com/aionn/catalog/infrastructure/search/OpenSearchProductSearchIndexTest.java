@@ -16,8 +16,10 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -50,7 +52,7 @@ class OpenSearchProductSearchIndexTest {
     @Test
     void indexAllSkipsEmpty() throws IOException {
         index.indexAll(List.of());
-        verify(client, org.mockito.Mockito.never()).bulk(any(BulkRequest.class));
+        verify(client, never()).bulk(any(BulkRequest.class));
     }
 
     @Test
@@ -75,8 +77,9 @@ class OpenSearchProductSearchIndexTest {
         when(client
                 .index(org.mockito.ArgumentMatchers.<org.opensearch.client.opensearch.core.IndexRequest<Object>>any()))
                 .thenThrow(new IOException("down"));
+        ProductSearchDocument document = doc();
 
-        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () -> index.index(doc()));
+        assertThrows(IllegalStateException.class, () -> index.index(document));
     }
 
     @Test
