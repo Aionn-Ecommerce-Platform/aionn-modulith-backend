@@ -6,6 +6,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
@@ -25,7 +26,7 @@ public class RedisPasswordResetTokenStore {
         // Callers pass expiresAt in UTC (PasswordResetService uses ZoneOffset.UTC).
         // Compare and serialize consistently in UTC so non-UTC hosts do not
         // skew TTLs or persisted expiry timestamps.
-        Duration ttl = Duration.between(LocalDateTime.now(ZoneOffset.UTC), expiresAt);
+        Duration ttl = Duration.between(Instant.now(), expiresAt.toInstant(ZoneOffset.UTC));
         if (ttl.isNegative() || ttl.isZero()) {
             ttl = Duration.ofMinutes(1);
         }

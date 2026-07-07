@@ -16,8 +16,10 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -55,15 +57,15 @@ class ResilientProductSearchIndexTest {
 
         resilient.index(document);
 
-        verify(delegate, org.mockito.Mockito.atLeastOnce()).index(document);
+        verify(delegate, atLeastOnce()).index(document);
     }
 
     @Test
     void indexAllAndRemoveAllSkipEmpty() {
         resilient.indexAll(List.of());
         resilient.removeAll(List.of());
-        verify(delegate, org.mockito.Mockito.never()).indexAll(any());
-        verify(delegate, org.mockito.Mockito.never()).removeAll(any());
+        verify(delegate, never()).indexAll(any());
+        verify(delegate, never()).removeAll(any());
     }
 
     @Test

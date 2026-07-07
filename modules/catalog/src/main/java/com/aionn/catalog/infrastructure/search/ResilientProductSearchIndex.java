@@ -28,6 +28,8 @@ public class ResilientProductSearchIndex implements ProductSearchIndex {
 
     private static final String CIRCUIT_NAME = "catalog-search-index";
     private static final String RETRY_NAME = "catalog-search-index";
+    private static final String METRIC_NAME = "catalog.search.index";
+    private static final String OUTCOME_TAG = "outcome";
 
     private final ProductSearchIndex delegate;
     private final Retry retry;
@@ -48,9 +50,9 @@ public class ResilientProductSearchIndex implements ProductSearchIndex {
                         "No underlying ProductSearchIndex implementation found"));
         this.retry = retryRegistry.retry(RETRY_NAME);
         this.circuitBreaker = circuitBreakerRegistry.circuitBreaker(CIRCUIT_NAME);
-        this.successCounter = meterRegistry.counter("catalog.search.index", "outcome", "success");
-        this.failureCounter = meterRegistry.counter("catalog.search.index", "outcome", "failure");
-        this.fallbackCounter = meterRegistry.counter("catalog.search.index", "outcome", "fallback");
+        this.successCounter = meterRegistry.counter(METRIC_NAME, OUTCOME_TAG, "success");
+        this.failureCounter = meterRegistry.counter(METRIC_NAME, OUTCOME_TAG, "failure");
+        this.fallbackCounter = meterRegistry.counter(METRIC_NAME, OUTCOME_TAG, "fallback");
     }
 
     @Override

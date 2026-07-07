@@ -16,13 +16,15 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
-public class IdentityAnalyticsAdapter implements UserAnalyticsQueryPort, KycAnalyticsQueryPort, FeedbackAnalyticsQueryPort {
+public class IdentityAnalyticsAdapter
+        implements UserAnalyticsQueryPort, KycAnalyticsQueryPort, FeedbackAnalyticsQueryPort {
 
     private static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
@@ -86,7 +88,8 @@ public class IdentityAnalyticsAdapter implements UserAnalyticsQueryPort, KycAnal
                 case "APPROVED" -> approved = cnt;
                 case "REJECTED" -> rejected = cnt;
                 case "SUBMITTED" -> submitted = cnt;
-                default -> { }
+                default -> {
+                }
             }
         }
         double approvalRate = (approved + rejected) == 0
@@ -102,7 +105,9 @@ public class IdentityAnalyticsAdapter implements UserAnalyticsQueryPort, KycAnal
                 if (d.getSubmittedAt() == null || d.getApprovedAt() == null) {
                     continue;
                 }
-                totalMinutes += Duration.between(d.getSubmittedAt(), d.getApprovedAt()).toMinutes();
+                totalMinutes += Duration.between(
+                        d.getSubmittedAt().toInstant(ZoneOffset.UTC),
+                        d.getApprovedAt().toInstant(ZoneOffset.UTC)).toMinutes();
                 counted++;
             }
             if (counted > 0) {
@@ -146,7 +151,9 @@ public class IdentityAnalyticsAdapter implements UserAnalyticsQueryPort, KycAnal
                 if (r.getCreatedAt() == null || r.getHandledAt() == null) {
                     continue;
                 }
-                totalMinutes += Duration.between(r.getCreatedAt(), r.getHandledAt()).toMinutes();
+                totalMinutes += Duration.between(
+                        r.getCreatedAt().toInstant(ZoneOffset.UTC),
+                        r.getHandledAt().toInstant(ZoneOffset.UTC)).toMinutes();
                 counted++;
             }
             if (counted > 0) {

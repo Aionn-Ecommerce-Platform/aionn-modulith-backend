@@ -82,6 +82,8 @@ import java.util.List;
 @Tag(name = "Catalog - Product", description = "Product lifecycle, variants, pricing")
 public class ProductController {
 
+        private static final String MSG_PRODUCTS_FETCHED = "Products fetched";
+
         private final CreateProductInputPort createProductInputPort;
         private final CloneProductInputPort cloneProductInputPort;
         private final DefineVariantInputPort defineVariantInputPort;
@@ -274,7 +276,7 @@ public class ProductController {
         public ResponseEntity<ApiResponse<List<ProductResult>>> getBySkuIds(@RequestParam List<String> skuIds) {
                 return ResponseEntity.ok(ApiResponse.success(
                                 getProductsBySkuIdsInputPort.execute(new GetProductsBySkuIdsQuery(skuIds)),
-                                "Products fetched"));
+                                MSG_PRODUCTS_FETCHED));
         }
 
         @GetMapping
@@ -297,7 +299,7 @@ public class ProductController {
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
                                 result.content(),
                                 PageMetadata.of(result.page(), result.size(), result.totalElements()),
-                                "Products fetched"));
+                                MSG_PRODUCTS_FETCHED));
         }
 
         @org.springframework.web.bind.annotation.DeleteMapping("/{productId}/variants/{skuId}")
@@ -381,7 +383,7 @@ public class ProductController {
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
                                 result.content(),
                                 PageMetadata.of(result.page(), result.size(), result.totalElements()),
-                                "Products fetched"));
+                                MSG_PRODUCTS_FETCHED));
         }
 
         @GetMapping("/{productId}/recommendations")
