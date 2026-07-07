@@ -93,4 +93,17 @@ class ResilientProductSearchIndexTest {
 
         assertThat(resilient.search(criteria)).isEmpty();
     }
+
+    @Test
+    void indexAllDelegatesForNonEmpty() {
+        List<ProductSearchDocument> docs = List.of(doc());
+        resilient.indexAll(docs);
+        verify(delegate).indexAll(docs);
+    }
+
+    @Test
+    void removeAllDelegatesForNonEmpty() {
+        resilient.removeAll(List.of("p1", "p2"));
+        verify(delegate).removeAll(List.of("p1", "p2"));
+    }
 }

@@ -441,7 +441,8 @@ public class ProductService {
 
     private List<Product> fallbackCandidates(ProductSearchCriteria criteria) {
         if (criteria.merchantId() != null && !criteria.merchantId().isBlank()) {
-            return productRepository.listByMerchant(criteria.merchantId(), OffsetPagination.of(0, 10_000));
+            return productRepository.listByMerchant(criteria.merchantId(),
+                    OffsetPagination.of(0, OffsetPagination.MAX_SIZE));
         }
         if (criteria.hasText()) {
             return productRepository.searchPublished(criteria.q(), 10_000, 0);

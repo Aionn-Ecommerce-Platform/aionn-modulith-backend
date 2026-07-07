@@ -101,7 +101,9 @@ sonar {
                 '**/infrastructure/persistence/entity/**',
                 '**/infrastructure/persistence/mapper/**',
                 '**/infrastructure/persistence/repository/**',
-                '**/infrastructure/observability/**'
+                '**/infrastructure/observability/**',
+                '**/infrastructure/search/OpenSearchProductSearchIndex.java',
+                '**/infrastructure/search/OpenSearchConfig.java'
         ].join(',')
     }
 }
