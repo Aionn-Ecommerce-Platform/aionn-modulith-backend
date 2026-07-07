@@ -377,4 +377,59 @@ class GuardPropertyTest {
     void stateFalse_throwsIllegalStateException(@ForAll String message) {
         assertThrows(IllegalStateException.class, () -> Guard.state(false, message));
     }
+
+    // =====================================================================
+    // Supplier-based overloads
+    // =====================================================================
+
+    private static final class CustomGuardException extends RuntimeException {
+        CustomGuardException() {
+            super("custom");
+        }
+    }
+
+    @Example
+    void notNullSupplier_returnsValueWhenPresent() {
+        String value = "keep";
+        assertSame(value, Guard.notNull(value, CustomGuardException::new));
+    }
+
+    @Example
+    void notNullSupplier_throwsSuppliedExceptionWhenNull() {
+        assertThrows(CustomGuardException.class,
+                () -> Guard.notNull(null, CustomGuardException::new));
+    }
+
+    @Example
+    void notBlankSupplier_returnsTrimmedValue() {
+        assertEquals("hello", Guard.notBlank("  hello  ", CustomGuardException::new));
+    }
+
+    @Example
+    void notBlankSupplier_throwsSuppliedExceptionWhenBlank() {
+        assertThrows(CustomGuardException.class,
+                () -> Guard.notBlank("   ", CustomGuardException::new));
+    }
+
+    @Example
+    void requireSupplier_doesNotThrowWhenTrue() {
+        assertDoesNotThrow(() -> Guard.require(true, CustomGuardException::new));
+    }
+
+    @Example
+    void requireSupplier_throwsSuppliedExceptionWhenFalse() {
+        assertThrows(CustomGuardException.class,
+                () -> Guard.require(false, CustomGuardException::new));
+    }
+
+    @Example
+    void stateSupplier_doesNotThrowWhenTrue() {
+        assertDoesNotThrow(() -> Guard.state(true, CustomGuardException::new));
+    }
+
+    @Example
+    void stateSupplier_throwsSuppliedExceptionWhenFalse() {
+        assertThrows(CustomGuardException.class,
+                () -> Guard.state(false, CustomGuardException::new));
+    }
 }
