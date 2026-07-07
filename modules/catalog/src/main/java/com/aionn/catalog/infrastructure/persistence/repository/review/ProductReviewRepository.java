@@ -27,6 +27,12 @@ public interface ProductReviewRepository extends JpaRepository<ProductReviewEnti
     @Query("SELECT COALESCE(AVG(r.rating), 0.0) FROM ProductReviewEntity r WHERE r.productId = :productId AND r.status = 'VISIBLE'")
     double getAverageRating(String productId);
 
+    @Query("SELECT AVG(r.rating) FROM ProductReviewEntity r WHERE r.status = 'VISIBLE'")
+    Double getPlatformAverageRating();
+
+    @Query("SELECT COUNT(r) FROM ProductReviewEntity r WHERE r.status = 'VISIBLE'")
+    long countAllVisibleReviews();
+
     @Query("SELECT r.rating, COUNT(r) FROM ProductReviewEntity r WHERE r.productId = :productId AND r.status = 'VISIBLE' GROUP BY r.rating")
     List<Object[]> countRatingsGroupByRating(String productId);
 }

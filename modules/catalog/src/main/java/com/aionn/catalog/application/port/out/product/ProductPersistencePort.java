@@ -29,4 +29,20 @@ public interface ProductPersistencePort {
     boolean existsByBrandIdAndStatus(String brandId, ProductStatus status);
 
     boolean existsByCategoryId(String categoryId);
+
+    List<Product> findRelatedProducts(String productId, String brandId, List<String> categoryIds, int limit);
+
+    List<Product> findPopularProducts(int limit);
+
+    List<Product> findPersonalizedProducts(List<String> categoryIds, List<String> brandIds, int limit);
+
+    List<Product> findPublished(int limit, int offset);
+
+    long countPublished();
+
+    List<Product> searchPublished(String query, int limit, int offset);
+
+    long countSearchPublished(String query);
+
+    List<Product> findByIdsPreserveOrder(List<String> productIds);
 }

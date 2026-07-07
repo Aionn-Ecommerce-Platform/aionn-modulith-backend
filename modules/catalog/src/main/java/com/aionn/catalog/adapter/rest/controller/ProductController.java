@@ -32,8 +32,23 @@ import com.aionn.catalog.application.port.in.product.CreateProductInputPort;
 import com.aionn.catalog.application.port.in.product.DeactivateProductInputPort;
 import com.aionn.catalog.application.port.in.product.DefineAttributesInputPort;
 import com.aionn.catalog.application.port.in.product.DefineVariantInputPort;
+import com.aionn.catalog.application.dto.analytics.result.ProductAnalyticsResult;
+import com.aionn.catalog.application.dto.product.command.TrackProductViewCommand;
+import com.aionn.catalog.application.dto.search.ProductSearchCriteria;
+import com.aionn.catalog.application.dto.search.ProductSearchResult;
+import com.aionn.catalog.application.port.in.product.GetProductAnalyticsInputPort;
+import com.aionn.catalog.application.port.in.product.SearchProductCatalogInputPort;
+import com.aionn.catalog.application.dto.product.query.GetPersonalizedProductsQuery;
+import com.aionn.catalog.application.dto.product.query.GetPopularProductsQuery;
+import com.aionn.catalog.application.dto.product.query.GetRelatedProductsQuery;
+import com.aionn.catalog.application.port.in.product.GetPersonalizedProductsInputPort;
+import com.aionn.catalog.application.port.in.product.GetPopularProductsInputPort;
 import com.aionn.catalog.application.port.in.product.GetProductInputPort;
 import com.aionn.catalog.application.port.in.product.GetProductsBySkuIdsInputPort;
+import com.aionn.catalog.application.port.in.product.GetRelatedProductsInputPort;
+import com.aionn.catalog.application.port.in.product.TrackProductViewInputPort;
+import com.aionn.catalog.adapter.rest.support.session.CurrentOwnerId;
+import org.springframework.security.core.Authentication;
 import com.aionn.catalog.application.port.in.product.ListProductsByMerchantInputPort;
 import com.aionn.catalog.application.port.in.product.ListProductsByStatusInputPort;
 import com.aionn.catalog.application.port.in.product.PublishProductInputPort;
@@ -90,6 +105,12 @@ public class ProductController {
         private final com.aionn.catalog.application.port.in.product.AssignCollectionsInputPort assignCollectionsInputPort;
         private final com.aionn.catalog.application.port.in.product.EmergencyTakedownInputPort emergencyTakedownInputPort;
         private final com.aionn.catalog.application.port.in.product.SearchProductsInputPort searchProductsInputPort;
+        private final GetRelatedProductsInputPort getRelatedProductsInputPort;
+        private final GetPopularProductsInputPort getPopularProductsInputPort;
+        private final GetPersonalizedProductsInputPort getPersonalizedProductsInputPort;
+        private final TrackProductViewInputPort trackProductViewInputPort;
+        private final GetProductAnalyticsInputPort getProductAnalyticsInputPort;
+        private final SearchProductCatalogInputPort searchProductCatalogInputPort;
         private final ProductDtoMapper productDtoMapper;
 
         @PostMapping
@@ -361,5 +382,96 @@ public class ProductController {
                                 result.content(),
                                 PageMetadata.of(result.page(), result.size(), result.totalElements()),
                                 "Products fetched"));
+        }
+
+        @GetMapping("/{productId}/recommendations")
+        @Operation(summary = "Get related products", description = "Public read of related products based on category/brand")
+        public ResponseEntity<ApiResponse<List<ProductResult>>> getRelatedProducts(
+                        @PathVariable String productId,
+                        @RequestParam(defaultValue = "5") int limit) {
+                List<ProductResult> results = getRelatedProductsInputPort.execute(
+                                new GetRelatedProductsQuery(productId, limit));
+                return ResponseEntity.ok(ApiResponse.success(results, "Related products fetched"));
+        }
+
+        @GetMapping("/recommendations/popular")
+        @Operation(summary = "Get popular products", description = "Public read of popular products based on ratings")
+        public ResponseEntity<ApiResponse<List<ProductResult>>> getPopularProducts(
+                        @RequestParam(defaultValue = "5") int limit) {
+                List<ProductResult> results = getPopularProductsInputPort.execute(
+                                new GetPopularProductsQuery(limit));
+                return ResponseEntity.ok(ApiResponse.success(results, "Popular products fetched"));
+        }
+
+        @GetMapping("/recommendations/personalized")
+        @Operation(summary = "Get personalized products", description = "Public read of personalized products based on provided filters or browsing history")
+        public ResponseEntity<ApiResponse<List<ProductResult>>> getPersonalizedProducts(
+                        Authentication authentication,
+                        @RequestParam(required = false) List<String> categoryIds,
+                        @RequestParam(required = false) List<String> brandIds,
+                        @RequestParam(defaultValue = "5") int limit) {
+                String userId = authentication != null ? authentication.getName() : null;
+                List<ProductResult> results = getPersonalizedProductsInputPort.execute(
+                                new GetPersonalizedProductsQuery(userId, categoryIds, brandIds, limit));
+                return ResponseEntity.ok(ApiResponse.success(results, "Personalized products fetched"));
+        }
+
+        @PostMapping("/{productId}/view")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(summary = "Track product view", description = "Track a product view for personalized recommendations")
+        public ResponseEntity<ApiResponse<Void>> trackView(
+                        @CurrentOwnerId String ownerId,
+                        @PathVariable String productId) {
+                trackProductViewInputPort.execute(new TrackProductViewCommand(productId, ownerId));
+                return ResponseEntity.ok(ApiResponse.success(null, "Product view tracked"));
+        }
+
+        @GetMapping("/admin/analytics")
+        @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
+        @Operation(summary = "Product catalog analytics (sysadmin)")
+        public ResponseEntity<ApiResponse<ProductAnalyticsResult>> adminAnalytics() {
+                return ResponseEntity.ok(ApiResponse.success(
+                                getProductAnalyticsInputPort.execute(), "Product analytics fetched"));
+        }
+
+        @GetMapping("/search/catalog")
+        @Operation(summary = "Faceted catalog search", description = "Full-text + faceted product search with brand/category/attribute/price aggregations")
+        public ResponseEntity<ApiResponse<ProductSearchResult>> searchCatalog(
+                        @RequestParam(required = false) String q,
+                        @RequestParam(required = false) String merchantId,
+                        @RequestParam(required = false) List<String> categoryIds,
+                        @RequestParam(required = false) List<String> brandIds,
+                        @RequestParam(required = false) java.math.BigDecimal priceMin,
+                        @RequestParam(required = false) java.math.BigDecimal priceMax,
+                        @RequestParam(required = false) Double ratingMin,
+                        @RequestParam(required = false, defaultValue = "RELEVANCE") String sort,
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "20") int size,
+                        @RequestParam(required = false) java.util.Map<String, String> allParams) {
+                ProductSearchCriteria.Sort sortEnum;
+                try {
+                        sortEnum = ProductSearchCriteria.Sort.valueOf(sort.toUpperCase(java.util.Locale.ROOT));
+                } catch (IllegalArgumentException ex) {
+                        sortEnum = ProductSearchCriteria.Sort.RELEVANCE;
+                }
+                java.util.Map<String, List<String>> attributes = new java.util.LinkedHashMap<>();
+                if (allParams != null) {
+                        for (java.util.Map.Entry<String, String> e : allParams.entrySet()) {
+                                if (e.getKey().startsWith("attr.") && e.getValue() != null && !e.getValue().isBlank()) {
+                                        attributes.put(e.getKey().substring(5),
+                                                        java.util.Arrays.stream(e.getValue().split(","))
+                                                                        .map(String::trim)
+                                                                        .filter(s -> !s.isEmpty())
+                                                                        .toList());
+                                }
+                        }
+                }
+                ProductSearchCriteria criteria = new ProductSearchCriteria(
+                                q, merchantId, ProductStatus.PUBLISHED,
+                                categoryIds == null ? List.of() : categoryIds,
+                                brandIds == null ? List.of() : brandIds,
+                                priceMin, priceMax, attributes, sortEnum, page, size, ratingMin);
+                return ResponseEntity.ok(ApiResponse.success(
+                                searchProductCatalogInputPort.execute(criteria), "Search results"));
         }
 }

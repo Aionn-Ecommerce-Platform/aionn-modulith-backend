@@ -62,11 +62,9 @@ class RedisRefreshTokenStoreTest {
 
     @Test
     void revokeBySessionIdRunsAtomicLuaScript() {
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<RedisScript<Long>> scriptCaptor = ArgumentCaptor.forClass(RedisScript.class);
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<String>> keysCaptor = ArgumentCaptor.forClass(List.class);
-        ArgumentCaptor<Object> argCaptor = ArgumentCaptor.forClass(Object.class);
+        ArgumentCaptor<RedisScript<Long>> scriptCaptor = ArgumentCaptor.captor();
+        ArgumentCaptor<List<String>> keysCaptor = ArgumentCaptor.captor();
+        ArgumentCaptor<Object> argCaptor = ArgumentCaptor.captor();
 
         store.revokeBySessionId("session-1");
 

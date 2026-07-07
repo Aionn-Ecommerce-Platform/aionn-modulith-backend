@@ -132,6 +132,18 @@ class ProductControllerWebTest {
         private com.aionn.catalog.application.port.in.product.EmergencyTakedownInputPort emergencyTakedownInputPort;
         @Mock
         private com.aionn.catalog.application.port.in.product.SearchProductsInputPort searchProductsInputPort;
+        @Mock
+        private com.aionn.catalog.application.port.in.product.GetRelatedProductsInputPort getRelatedProductsInputPort;
+        @Mock
+        private com.aionn.catalog.application.port.in.product.GetPopularProductsInputPort getPopularProductsInputPort;
+        @Mock
+        private com.aionn.catalog.application.port.in.product.GetPersonalizedProductsInputPort getPersonalizedProductsInputPort;
+        @Mock
+        private com.aionn.catalog.application.port.in.product.TrackProductViewInputPort trackProductViewInputPort;
+        @Mock
+        private com.aionn.catalog.application.port.in.product.GetProductAnalyticsInputPort getProductAnalyticsInputPort;
+        @Mock
+        private com.aionn.catalog.application.port.in.product.SearchProductCatalogInputPort searchProductCatalogInputPort;
 
         private MockMvc mockMvc;
         private final ObjectMapper objectMapper = Jackson2ObjectMapperBuilder.json().build();
@@ -147,6 +159,9 @@ class ProductControllerWebTest {
                                 listProductsByMerchantInputPort, listProductsByStatusInputPort,
                                 removeVariantInputPort, updateMediaInputPort, updateAiMetadataInputPort,
                                 assignCollectionsInputPort, emergencyTakedownInputPort, searchProductsInputPort,
+                                getRelatedProductsInputPort, getPopularProductsInputPort,
+                                getPersonalizedProductsInputPort, trackProductViewInputPort,
+                                getProductAnalyticsInputPort, searchProductCatalogInputPort,
                                 new ProductDtoMapperImpl());
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new CatalogExceptionHandler())

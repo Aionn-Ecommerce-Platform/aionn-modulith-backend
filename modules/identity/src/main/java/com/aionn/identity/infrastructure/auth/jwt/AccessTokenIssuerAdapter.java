@@ -58,8 +58,8 @@ public class AccessTokenIssuerAdapter implements AccessTokenIssuerPort {
     }
 
     private AccessTokenClaims toAccessTokenClaims(Claims claims) {
-        @SuppressWarnings("unchecked")
-        List<String> roles = claims.get("roles", List.class);
+        List<?> rawRoles = claims.get("roles", List.class);
+        List<String> roles = rawRoles == null ? null : rawRoles.stream().map(String::valueOf).toList();
         return new AccessTokenClaims(
                 claims.getSubject(),
                 claims.get("sid", String.class),

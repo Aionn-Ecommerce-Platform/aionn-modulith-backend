@@ -92,4 +92,68 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
     public boolean existsByCategoryId(String categoryId) {
         return jpa.existsByCategoryId(categoryId);
     }
+
+    @Override
+    public List<Product> findRelatedProducts(String productId, String brandId, List<String> categoryIds, int limit) {
+        List<String> safeCategoryIds = (categoryIds == null || categoryIds.isEmpty()) ? List.of("") : categoryIds;
+        return jpa.findRelatedProducts(productId, brandId, safeCategoryIds, limit).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<Product> findPopularProducts(int limit) {
+        return jpa.findPopularProducts(limit).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<Product> findPersonalizedProducts(List<String> categoryIds, List<String> brandIds, int limit) {
+        List<String> safeCategoryIds = (categoryIds == null || categoryIds.isEmpty()) ? List.of("") : categoryIds;
+        List<String> safeBrandIds = (brandIds == null || brandIds.isEmpty()) ? List.of("") : brandIds;
+        return jpa.findPersonalizedProducts(safeCategoryIds, safeBrandIds, limit).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<Product> findPublished(int limit, int offset) {
+        return jpa.findPublished(Math.max(1, limit), Math.max(0, offset)).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countPublished() {
+        return jpa.countPublished();
+    }
+
+    @Override
+    public List<Product> searchPublished(String query, int limit, int offset) {
+        String q = (query == null || query.isBlank()) ? null : query.trim();
+        return jpa.searchPublished(q, Math.max(1, limit), Math.max(0, offset)).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countSearchPublished(String query) {
+        String q = (query == null || query.isBlank()) ? null : query.trim();
+        return jpa.countSearchPublished(q);
+    }
+
+    @Override
+    public List<Product> findByIdsPreserveOrder(List<String> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return List.of();
+        }
+        java.util.Map<String, Product> byId = jpa.findAllById(productIds).stream()
+                .map(mapper::toDomain)
+                .collect(java.util.stream.Collectors.toMap(Product::getProductId, p -> p, (a, b) -> a));
+        return productIds.stream()
+                .map(byId::get)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+    }
 }

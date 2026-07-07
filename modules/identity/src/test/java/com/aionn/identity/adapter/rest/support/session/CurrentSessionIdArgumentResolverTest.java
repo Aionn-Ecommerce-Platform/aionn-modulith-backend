@@ -32,10 +32,9 @@ class CurrentSessionIdArgumentResolverTest {
     }
 
     @Test
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     void supportsParameterWithCurrentSessionIdAndStringType() {
         when(methodParameter.hasParameterAnnotation(CurrentSessionId.class)).thenReturn(true);
-        when(methodParameter.getParameterType()).thenReturn((Class) String.class);
+        org.mockito.Mockito.<Class<?>>when(methodParameter.getParameterType()).thenReturn(String.class);
 
         assertTrue(resolver.supportsParameter(methodParameter));
     }

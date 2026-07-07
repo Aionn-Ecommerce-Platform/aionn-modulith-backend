@@ -138,8 +138,7 @@ class MfaServiceTest {
                 assertEquals(8, result.backupCodes().size());
                 verify(mfaPersistencePort).updateMfaStatus(USER_ID, true);
                 verify(mfaPersistencePort).deleteBackupCodes(USER_ID);
-                @SuppressWarnings("unchecked")
-                ArgumentCaptor<List<String>> captor = ArgumentCaptor.forClass(List.class);
+                ArgumentCaptor<List<String>> captor = ArgumentCaptor.captor();
                 verify(mfaPersistencePort).saveBackupCodes(eq(USER_ID), captor.capture());
                 assertEquals(8, captor.getValue().size());
                 verify(securityAuditPort).saveAuditLog(USER_ID,

@@ -45,6 +45,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,6 +62,8 @@ class ProductServiceTest {
     @Mock
     private ProductPersistencePort productRepository;
     @Mock
+    private com.aionn.catalog.application.port.out.product.UserBrowsingHistoryPersistencePort userBrowsingHistoryRepository;
+    @Mock
     private MerchantPersistencePort merchantRepository;
     @Mock
     private BrandPersistencePort brandRepository;
@@ -68,6 +71,12 @@ class ProductServiceTest {
     private CategoryPersistencePort categoryRepository;
     @Mock
     private ProductSearchIndexPort searchIndex;
+    @Mock
+    private com.aionn.catalog.application.port.out.search.ProductSearchIndex catalogSearchIndex;
+    @Mock
+    private com.aionn.catalog.application.mapper.ProductSearchDocumentMapper searchDocumentMapper;
+    @Mock
+    private com.aionn.catalog.application.port.out.attribute.AttributeTemplatePersistencePort attributeTemplateRepository;
     @Mock
     private ProductResultMapper productResultMapper;
     @Mock
@@ -443,5 +452,151 @@ class ProductServiceTest {
         PageResult<ProductResult> page = productService.search("nothing", OffsetPagination.of(0, 20));
 
         assertThat(page.content()).isEmpty();
+    }
+
+    @Test
+    void getRelatedProductsUsesProductBrandAndCategories() {
+        Product product = publishableProduct();
+        product.assignBrand(BRAND_ID);
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+        Product related = Product.create("01HZPRD0000000000000000002", MERCHANT_ID, "Other");
+        when(productRepository.findRelatedProducts(PRODUCT_ID, BRAND_ID, List.of(CATEGORY_ID), 5))
+                .thenReturn(List.of(related));
+        when(productResultMapper.toResult(related)).thenReturn(sampleResult);
+
+        List<ProductResult> results = productService.getRelatedProducts(PRODUCT_ID, 5);
+
+        assertThat(results).containsExactly(sampleResult);
+    }
+
+    @Test
+    void getPopularProductsDelegatesToRepository() {
+        Product product = publishableProduct();
+        when(productRepository.findPopularProducts(5)).thenReturn(List.of(product));
+        when(productResultMapper.toResult(product)).thenReturn(sampleResult);
+
+        assertThat(productService.getPopularProducts(5)).containsExactly(sampleResult);
+    }
+
+    @Test
+    void getPersonalizedProductsFallsBackToPopularWhenNoSignal() {
+        Product popular = publishableProduct();
+        when(productRepository.findPopularProducts(5)).thenReturn(List.of(popular));
+        when(productResultMapper.toResult(popular)).thenReturn(sampleResult);
+
+        List<ProductResult> results = productService.getPersonalizedProducts(
+                "anonymousUser", List.of(), List.of(), 5);
+
+        assertThat(results).containsExactly(sampleResult);
+        verify(productRepository, never()).findPersonalizedProducts(anyList(), anyList(),
+                org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    void getPersonalizedProductsUsesBrowsingHistoryForRealUser() {
+        com.aionn.catalog.domain.model.UserBrowsingHistory history = new com.aionn.catalog.domain.model.UserBrowsingHistory(
+                "user-1", List.of(CATEGORY_ID), List.of(BRAND_ID));
+        when(userBrowsingHistoryRepository.findByUserId("user-1")).thenReturn(Optional.of(history));
+        Product product = publishableProduct();
+        when(productRepository.findPersonalizedProducts(List.of(CATEGORY_ID), List.of(BRAND_ID), 5))
+                .thenReturn(List.of(product));
+        when(productResultMapper.toResult(product)).thenReturn(sampleResult);
+
+        List<ProductResult> results = productService.getPersonalizedProducts("user-1", null, null, 5);
+
+        assertThat(results).containsExactly(sampleResult);
+    }
+
+    @Test
+    void getPersonalizedProductsFallsBackToPopularWhenNoMatches() {
+        Product popular = publishableProduct();
+        when(productRepository.findPersonalizedProducts(List.of(CATEGORY_ID), List.of(), 5))
+                .thenReturn(List.of());
+        when(productRepository.findPopularProducts(5)).thenReturn(List.of(popular));
+        when(productResultMapper.toResult(popular)).thenReturn(sampleResult);
+
+        List<ProductResult> results = productService.getPersonalizedProducts(
+                null, List.of(CATEGORY_ID), List.of(), 5);
+
+        assertThat(results).containsExactly(sampleResult);
+    }
+
+    @Test
+    void trackProductViewIgnoresAnonymousUser() {
+        productService.trackProductView(PRODUCT_ID, "anonymousUser");
+
+        verify(productRepository, never()).findById(org.mockito.ArgumentMatchers.anyString());
+        verify(userBrowsingHistoryRepository, never()).save(any());
+    }
+
+    @Test
+    void trackProductViewCreatesHistoryWhenAbsent() {
+        Product product = publishableProduct();
+        product.assignBrand(BRAND_ID);
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+        when(userBrowsingHistoryRepository.findByUserId("user-1")).thenReturn(Optional.empty());
+
+        productService.trackProductView(PRODUCT_ID, "user-1");
+
+        verify(userBrowsingHistoryRepository).save(any(
+                com.aionn.catalog.domain.model.UserBrowsingHistory.class));
+    }
+
+    @Test
+    void searchCatalogMapsIndexHitsAndFacets() {
+        com.aionn.catalog.application.dto.search.ProductSearchCriteria criteria = new com.aionn.catalog.application.dto.search.ProductSearchCriteria(
+                "widget", null, ProductStatus.PUBLISHED, List.of(), List.of(),
+                null, null, Map.of(),
+                com.aionn.catalog.application.dto.search.ProductSearchCriteria.Sort.RELEVANCE, 0, 20);
+        com.aionn.catalog.application.port.out.search.ProductSearchIndex.SearchHits hits = new com.aionn.catalog.application.port.out.search.ProductSearchIndex.SearchHits(
+                List.of(PRODUCT_ID), 1L, Map.of(BRAND_ID, 1L), Map.of(CATEGORY_ID, 1L),
+                Map.of(), new java.math.BigDecimal("10"), new java.math.BigDecimal("20"));
+        when(catalogSearchIndex.search(criteria)).thenReturn(Optional.of(hits));
+        Product product = publishableProduct();
+        when(productRepository.findByIdsPreserveOrder(List.of(PRODUCT_ID))).thenReturn(List.of(product));
+        when(productResultMapper.toResult(product)).thenReturn(sampleResult);
+
+        com.aionn.catalog.application.dto.search.ProductSearchResult result = productService.searchCatalog(criteria);
+
+        assertThat(result.page().content()).containsExactly(sampleResult);
+        assertThat(result.page().totalElements()).isEqualTo(1L);
+        assertThat(result.facets().brands()).containsEntry(BRAND_ID, 1L);
+        assertThat(result.facets().priceRange().min()).isEqualByComparingTo("10");
+    }
+
+    @Test
+    void searchCatalogFallsBackToJpaWhenIndexUnavailable() {
+        com.aionn.catalog.application.dto.search.ProductSearchCriteria criteria = new com.aionn.catalog.application.dto.search.ProductSearchCriteria(
+                "widget", null, ProductStatus.PUBLISHED, List.of(), List.of(),
+                null, null, Map.of(),
+                com.aionn.catalog.application.dto.search.ProductSearchCriteria.Sort.RELEVANCE, 0, 20);
+        when(catalogSearchIndex.search(criteria)).thenReturn(Optional.empty());
+        Product product = publishableProduct();
+        product.publish(ADMIN_ID);
+        when(productRepository.searchPublished("widget", 10_000, 0)).thenReturn(List.of(product));
+        when(productResultMapper.toResult(product)).thenReturn(sampleResult);
+
+        com.aionn.catalog.application.dto.search.ProductSearchResult result = productService.searchCatalog(criteria);
+
+        assertThat(result.page().content()).containsExactly(sampleResult);
+        assertThat(result.facets().brands()).isEmpty();
+    }
+
+    @Test
+    void syncAllToSearchIndexPagesThroughPublishedProducts() {
+        Product product = publishableProduct();
+        product.publish(ADMIN_ID);
+        when(productRepository.findPublished(100, 0)).thenReturn(List.of(product));
+        when(productRepository.findPublished(100, 100)).thenReturn(List.of());
+        com.aionn.catalog.application.dto.search.ProductSearchDocument doc = new com.aionn.catalog.application.dto.search.ProductSearchDocument(
+                PRODUCT_ID, MERCHANT_ID, "Widget", null, null, List.of(CATEGORY_ID),
+                List.of(), List.of(), List.of(), Map.of(), null, null, null, "PUBLISHED",
+                java.time.Instant.now(), 0.0, 0L);
+        when(searchDocumentMapper.toSearchDocument(org.mockito.ArgumentMatchers.eq(product), any()))
+                .thenReturn(doc);
+
+        productService.syncAllToSearchIndex();
+
+        verify(catalogSearchIndex).indexAll(List.of(doc));
     }
 }

@@ -13,60 +13,59 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class CatalogIntegrationEventPublisherTest {
 
-    @Mock
-    private IntegrationEventPublisher integrationEventPublisher;
-    @Mock
-    private MerchantIntegrationEventMapper mapper;
+        @Mock
+        private IntegrationEventPublisher integrationEventPublisher;
+        @Mock
+        private MerchantIntegrationEventMapper mapper;
 
-    @InjectMocks
-    private CatalogIntegrationEventPublisher publisher;
+        @InjectMocks
+        private CatalogIntegrationEventPublisher publisher;
 
-    @Test
-    void publishesMerchantSuspendedIntegrationEvent() {
-        Instant now = Instant.now();
-        MerchantEvents.MerchantSuspended domain = new MerchantEvents.MerchantSuspended(
-                "m-1", "policy violation", "admin-1", now, now);
-        MerchantSuspendedIntegrationEvent integrationEvent = new MerchantSuspendedIntegrationEvent(
-                "evt-1", "m-1", "policy violation", now);
-        when(mapper.toIntegrationEvent(domain)).thenReturn(integrationEvent);
+        @Test
+        void publishesMerchantSuspendedIntegrationEvent() {
+                Instant now = Instant.now();
+                MerchantEvents.MerchantSuspended domain = new MerchantEvents.MerchantSuspended(
+                                "m-1", "policy violation", "admin-1", now, now);
+                MerchantSuspendedIntegrationEvent integrationEvent = new MerchantSuspendedIntegrationEvent(
+                                "evt-1", "m-1", "policy violation", now);
+                when(mapper.toIntegrationEvent(domain)).thenReturn(integrationEvent);
 
-        publisher.onMerchantSuspended(domain);
+                publisher.onMerchantSuspended(domain);
 
-        verify(integrationEventPublisher).publish(integrationEvent);
-    }
+                verify(integrationEventPublisher).publish(integrationEvent);
+        }
 
-    @Test
-    void publishesMerchantClosedIntegrationEvent() {
-        Instant now = Instant.now();
-        MerchantEvents.MerchantClosed domain = new MerchantEvents.MerchantClosed(
-                "m-1", "voluntary", now, now);
-        MerchantClosedIntegrationEvent integrationEvent = new MerchantClosedIntegrationEvent(
-                "evt-2", "m-1", "voluntary", now);
-        when(mapper.toIntegrationEvent(domain)).thenReturn(integrationEvent);
+        @Test
+        void publishesMerchantClosedIntegrationEvent() {
+                Instant now = Instant.now();
+                MerchantEvents.MerchantClosed domain = new MerchantEvents.MerchantClosed(
+                                "m-1", "voluntary", now, now);
+                MerchantClosedIntegrationEvent integrationEvent = new MerchantClosedIntegrationEvent(
+                                "evt-2", "m-1", "voluntary", now);
+                when(mapper.toIntegrationEvent(domain)).thenReturn(integrationEvent);
 
-        publisher.onMerchantClosed(domain);
+                publisher.onMerchantClosed(domain);
 
-        verify(integrationEventPublisher).publish(integrationEvent);
-    }
+                verify(integrationEventPublisher).publish(integrationEvent);
+        }
 
-    @Test
-    void publishesMerchantActivatedIntegrationEvent() {
-        Instant now = Instant.now();
-        MerchantEvents.MerchantActivated domain = new MerchantEvents.MerchantActivated(
-                "m-1", "admin-1", "reinstate", now, now);
-        MerchantActivatedIntegrationEvent integrationEvent = new MerchantActivatedIntegrationEvent(
-                "evt-3", "m-1", "admin-1", now);
-        when(mapper.toIntegrationEvent(domain)).thenReturn(integrationEvent);
+        @Test
+        void publishesMerchantActivatedIntegrationEvent() {
+                Instant now = Instant.now();
+                MerchantEvents.MerchantActivated domain = new MerchantEvents.MerchantActivated(
+                                "m-1", "admin-1", "reinstate", now, now);
+                MerchantActivatedIntegrationEvent integrationEvent = new MerchantActivatedIntegrationEvent(
+                                "evt-3", "m-1", "admin-1", now);
+                when(mapper.toIntegrationEvent(domain)).thenReturn(integrationEvent);
 
-        publisher.onMerchantActivated(domain);
+                publisher.onMerchantActivated(domain);
 
-        verify(integrationEventPublisher).publish(integrationEvent);
-    }
+                verify(integrationEventPublisher).publish(integrationEvent);
+        }
 }
