@@ -15,6 +15,7 @@ import com.aionn.catalog.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.catalog.adapter.rest.support.TestAuth;
 import com.aionn.catalog.adapter.rest.support.session.CurrentAdminIdArgumentResolver;
 import com.aionn.catalog.adapter.rest.support.session.CurrentMerchantIdArgumentResolver;
+import com.aionn.catalog.adapter.rest.support.session.CurrentOwnerIdArgumentResolver;
 import com.aionn.catalog.application.dto.common.PageResult;
 import com.aionn.catalog.application.dto.product.command.AssignBrandCommand;
 import com.aionn.catalog.application.dto.product.command.AssignCategoriesCommand;
@@ -168,7 +169,8 @@ class ProductControllerWebTest {
                                 .setCustomArgumentResolvers(
                                                 new CurrentMerchantIdArgumentResolver(
                                                                 new com.aionn.catalog.adapter.rest.support.MockOwnershipVerifier()),
-                                                new CurrentAdminIdArgumentResolver())
+                                                new CurrentAdminIdArgumentResolver(),
+                                                new CurrentOwnerIdArgumentResolver())
                                 .addInterceptors(new MockSecurityInterceptor())
                                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                                 .build();
@@ -458,5 +460,79 @@ class ProductControllerWebTest {
                 mockMvc.perform(get("/api/v1/catalog/products/search").param("keyword", "widget"))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.data[0].productId").value(PRODUCT_ID));
+        }
+
+        @Test
+        void getRelatedProductsReturnsOk() throws Exception {
+                when(getRelatedProductsInputPort.execute(
+                                any(com.aionn.catalog.application.dto.product.query.GetRelatedProductsQuery.class)))
+                                .thenReturn(List.of(sample()));
+
+                mockMvc.perform(get("/api/v1/catalog/products/" + PRODUCT_ID + "/recommendations").param("limit", "5"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data[0].productId").value(PRODUCT_ID));
+        }
+
+        @Test
+        void getPopularProductsReturnsOk() throws Exception {
+                when(getPopularProductsInputPort.execute(
+                                any(com.aionn.catalog.application.dto.product.query.GetPopularProductsQuery.class)))
+                                .thenReturn(List.of(sample()));
+
+                mockMvc.perform(get("/api/v1/catalog/products/recommendations/popular"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data[0].productId").value(PRODUCT_ID));
+        }
+
+        @Test
+        void getPersonalizedProductsReturnsOk() throws Exception {
+                when(getPersonalizedProductsInputPort.execute(
+                                any(com.aionn.catalog.application.dto.product.query.GetPersonalizedProductsQuery.class)))
+                                .thenReturn(List.of(sample()));
+
+                mockMvc.perform(get("/api/v1/catalog/products/recommendations/personalized")
+                                .param("categoryIds", "c1").param("limit", "5"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data[0].productId").value(PRODUCT_ID));
+        }
+
+        @Test
+        void trackViewReturnsOk() throws Exception {
+                mockMvc.perform(post("/api/v1/catalog/products/" + PRODUCT_ID + "/view")
+                                .with(TestAuth.authMerchant("owner-1", MERCHANT_ID)))
+                                .andExpect(status().isOk());
+
+                verify(trackProductViewInputPort).execute(
+                                any(com.aionn.catalog.application.dto.product.command.TrackProductViewCommand.class));
+        }
+
+        @Test
+        void adminAnalyticsReturnsOk() throws Exception {
+                when(getProductAnalyticsInputPort.execute()).thenReturn(
+                                new com.aionn.catalog.application.dto.analytics.result.ProductAnalyticsResult(
+                                                1, 2, 3, 4, 5, 4.5, List.of()));
+
+                mockMvc.perform(get("/api/v1/catalog/products/admin/analytics")
+                                .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN")))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.totalPublished").value(1));
+        }
+
+        @Test
+        void searchCatalogReturnsOk() throws Exception {
+                com.aionn.catalog.application.dto.search.ProductSearchResult result = com.aionn.catalog.application.dto.search.ProductSearchResult
+                                .of(
+                                                new PageResult<>(List.of(sample()), 0, 20, 1));
+                when(searchProductCatalogInputPort.execute(
+                                any(com.aionn.catalog.application.dto.search.ProductSearchCriteria.class)))
+                                .thenReturn(result);
+
+                mockMvc.perform(get("/api/v1/catalog/products/search/catalog")
+                                .param("q", "widget")
+                                .param("brandIds", "b1")
+                                .param("attr.color", "red")
+                                .param("sort", "PRICE_ASC"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.page.content[0].productId").value(PRODUCT_ID));
         }
 }

@@ -84,6 +84,35 @@ class MerchantSearchSyncListenerTest {
         verify(productRepository, never()).listByMerchant(any(), any());
     }
 
+    @Test
+    void onClosedRemovesMerchantProducts() {
+        when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
+                .thenReturn(List.of(publishedProduct()));
+
+        listener.onClosed(new MerchantEvents.MerchantClosed(
+                MERCHANT_ID, "shutdown", Instant.now(), Instant.now()));
+
+        verify(searchIndex).removeAll(anyList());
+    }
+
+    @Test
+    void onProfileUpdatedReindexesWhenProvinceChanged() {
+        Product product = publishedProduct();
+        product.defineAttributes(Map.of("color", "red"));
+        product.pullEvents();
+        com.aionn.catalog.domain.model.AttributeTemplate template = com.aionn.catalog.domain.model.AttributeTemplate
+                .create("t1", "c1", List.of("color"));
+        when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
+                .thenReturn(List.of(product));
+        when(attributeTemplateRepository.findByCategoryId("c1")).thenReturn(java.util.Optional.of(template));
+        when(searchDocumentMapper.toSearchDocument(any(), any())).thenReturn(mock());
+
+        listener.onProfileUpdated(new MerchantEvents.MerchantProfileUpdated(
+                MERCHANT_ID, "Name", null, null, "79", "HCM", true, Instant.now()));
+
+        verify(searchIndex).indexAll(anyList());
+    }
+
     private static ProductSearchDocument mock() {
         return new ProductSearchDocument("01HZPRD0000000000000000001", MERCHANT_ID, "Widget", null, null,
                 List.of("c1"), List.of(), List.of(), List.of(), Map.of(), null, null, null, "PUBLISHED",

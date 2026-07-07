@@ -95,4 +95,68 @@ class CatalogQueryAdapterTest {
         assertThat(result.products()).hasSize(1);
         assertThat(result.notFound()).containsExactly("missing");
     }
+
+    @Test
+    void searchWithoutPriceBoundsReturnsAll() {
+        when(productRepository.searchPublished("widget", 10, 0)).thenReturn(List.of(publishedProduct()));
+
+        List<CatalogQueryPort.ProductView> views = adapter.search(
+                new CatalogQueryPort.SearchCriteria("widget", 10, null, null));
+
+        assertThat(views).hasSize(1);
+        assertThat(views.get(0).variants().get(0).displayName()).contains("(");
+    }
+
+    @Test
+    void searchExcludesTakenDownProducts() {
+        Product takenDown = publishedProduct();
+        takenDown.emergencyTakedown(ADMIN_ID, "abuse");
+        takenDown.pullEvents();
+        when(productRepository.searchPublished("widget", 10, 0)).thenReturn(List.of(takenDown));
+
+        List<CatalogQueryPort.ProductView> views = adapter.search(
+                new CatalogQueryPort.SearchCriteria("widget", 10, null, null));
+
+        assertThat(views).isEmpty();
+    }
+
+    @Test
+    void lookupResolvesByProductIdWhenNotSku() {
+        Product product = publishedProduct();
+        when(productRepository.findAllBySkuIds(List.of(PRODUCT_ID))).thenReturn(List.of());
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+
+        CatalogQueryPort.LookupResult result = adapter.lookupByProductOrSkuIds(List.of(PRODUCT_ID));
+
+        assertThat(result.products()).hasSize(1);
+        assertThat(result.notFound()).isEmpty();
+    }
+
+    @Test
+    void findByProductOrSkuIdReturnsEmptyWhenUnknown() {
+        when(productRepository.findById("nope")).thenReturn(Optional.empty());
+        when(productRepository.findAllBySkuIds(List.of("nope"))).thenReturn(List.of());
+
+        assertThat(adapter.findByProductOrSkuId("nope")).isEmpty();
+    }
+
+    @Test
+    void searchIncludesWhenPriceMinOnlySatisfied() {
+        when(productRepository.searchPublished("widget", 10, 0)).thenReturn(List.of(publishedProduct()));
+
+        List<CatalogQueryPort.ProductView> views = adapter.search(
+                new CatalogQueryPort.SearchCriteria("widget", 10, new BigDecimal("50"), null));
+
+        assertThat(views).hasSize(1);
+    }
+
+    @Test
+    void searchExcludesWhenAboveMaxOnly() {
+        when(productRepository.searchPublished("widget", 10, 0)).thenReturn(List.of(publishedProduct()));
+
+        List<CatalogQueryPort.ProductView> views = adapter.search(
+                new CatalogQueryPort.SearchCriteria("widget", 10, null, new BigDecimal("80")));
+
+        assertThat(views).isEmpty();
+    }
 }

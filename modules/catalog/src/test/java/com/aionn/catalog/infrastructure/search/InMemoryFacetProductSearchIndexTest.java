@@ -135,4 +135,81 @@ class InMemoryFacetProductSearchIndexTest {
 
         assertThat(hits.get().totalHits()).isEqualTo(1L);
     }
+
+    @Test
+    void searchFiltersByMerchantId() {
+        index.index(doc("p9", "b1", List.of("c1"), new BigDecimal("100"), Map.of(), 0, 4.0, "PUBLISHED"));
+        ProductSearchCriteria c = new ProductSearchCriteria(null, "m-1", null, List.of(), List.of(),
+                null, null, Map.of(), ProductSearchCriteria.Sort.RELEVANCE, 0, 20);
+
+        Optional<ProductSearchIndex.SearchHits> hits = index.search(c);
+
+        assertThat(hits.get().productIds()).contains("p1", "p2", "p9");
+    }
+
+    @Test
+    void searchExcludesOtherMerchant() {
+        ProductSearchCriteria c = new ProductSearchCriteria(null, "other-merchant", null, List.of(), List.of(),
+                null, null, Map.of(), ProductSearchCriteria.Sort.RELEVANCE, 0, 20);
+
+        assertThat(index.search(c).get().productIds()).isEmpty();
+    }
+
+    @Test
+    void searchHonoursExplicitStatus() {
+        ProductSearchCriteria c = new ProductSearchCriteria(null, null,
+                com.aionn.catalog.domain.valueobject.ProductStatus.HIDDEN, List.of(), List.of(),
+                null, null, Map.of(), ProductSearchCriteria.Sort.RELEVANCE, 0, 20);
+
+        assertThat(index.search(c).get().productIds()).containsExactly("p3");
+    }
+
+    @Test
+    void searchExcludesDocWithoutPriceWhenPriceFilterSet() {
+        index.index(doc("noPrice", "b1", List.of("c1"), null, Map.of(), 0, 4.0, "PUBLISHED"));
+
+        Optional<ProductSearchIndex.SearchHits> hits = index.search(
+                criteria(List.of(), List.of(), new BigDecimal("1"), new BigDecimal("999"), Map.of(),
+                        ProductSearchCriteria.Sort.RELEVANCE));
+
+        assertThat(hits.get().productIds()).doesNotContain("noPrice");
+    }
+
+    @Test
+    void searchWithPriceMinOnlyAndMaxOnly() {
+        assertThat(index.search(criteria(List.of(), List.of(), new BigDecimal("150"), null, Map.of(),
+                ProductSearchCriteria.Sort.RELEVANCE)).get().productIds()).containsExactly("p2");
+        assertThat(index.search(criteria(List.of(), List.of(), null, new BigDecimal("150"), Map.of(),
+                ProductSearchCriteria.Sort.RELEVANCE)).get().productIds()).containsExactly("p1");
+    }
+
+    @Test
+    void searchSortsByNewestAndPriceDesc() {
+        assertThat(index.search(criteria(List.of(), List.of(), null, null, Map.of(),
+                ProductSearchCriteria.Sort.PRICE_DESC)).get().productIds()).containsExactly("p2", "p1");
+        assertThat(index.search(criteria(List.of(), List.of(), null, null, Map.of(),
+                ProductSearchCriteria.Sort.NEWEST)).get().productIds()).hasSize(2);
+    }
+
+    @Test
+    void countMatchesRespectsPagination() {
+        ProductSearchCriteria firstPageSizeOne = new ProductSearchCriteria(null, null, null, List.of(), List.of(),
+                null, null, Map.of(), ProductSearchCriteria.Sort.PRICE_ASC, 0, 1);
+
+        Optional<ProductSearchIndex.SearchHits> hits = index.search(firstPageSizeOne);
+
+        assertThat(hits.get().productIds()).containsExactly("p1");
+        assertThat(hits.get().totalHits()).isEqualTo(2L);
+    }
+
+    @Test
+    void searchIgnoresAttributeFilterWithEmptyValues() {
+        java.util.Map<String, List<String>> attrs = new java.util.HashMap<>();
+        attrs.put("color", List.of());
+
+        Optional<ProductSearchIndex.SearchHits> hits = index.search(
+                criteria(List.of(), List.of(), null, null, attrs, ProductSearchCriteria.Sort.RELEVANCE));
+
+        assertThat(hits.get().productIds()).contains("p1", "p2");
+    }
 }

@@ -95,4 +95,17 @@ class OpenSearchProductSearchIndexTest {
 
         assertThat(index.search(criteria)).isEmpty();
     }
+
+    @Test
+    void searchWithEachSortOptionRunsQueryBuilder() throws IOException {
+        when(client.search(any(org.opensearch.client.opensearch.core.SearchRequest.class),
+                org.mockito.ArgumentMatchers.eq(ProductSearchDocument.class)))
+                .thenThrow(new IOException("cluster down"));
+
+        for (ProductSearchCriteria.Sort sort : ProductSearchCriteria.Sort.values()) {
+            ProductSearchCriteria criteria = new ProductSearchCriteria(
+                    null, null, null, List.of(), List.of(), null, null, Map.of(), sort, 0, 20);
+            assertThat(index.search(criteria)).isEmpty();
+        }
+    }
 }
