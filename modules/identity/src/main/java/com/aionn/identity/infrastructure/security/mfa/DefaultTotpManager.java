@@ -65,7 +65,9 @@ public class DefaultTotpManager implements TotpManagerPort {
                 counter >>= 8;
             }
 
-            Mac mac = Mac.getInstance(HMAC_ALGORITHM);
+            // RFC 6238 mandates HMAC-SHA1 for TOTP; HMAC-SHA1 is not affected by SHA-1
+            // collision weaknesses and is required for authenticator-app compatibility.
+            Mac mac = Mac.getInstance(HMAC_ALGORITHM); // NOSONAR: HMAC-SHA1 is the RFC 6238 TOTP standard
             mac.init(new SecretKeySpec(secretBytes, HMAC_ALGORITHM));
             byte[] hash = mac.doFinal(counterBytes);
 
