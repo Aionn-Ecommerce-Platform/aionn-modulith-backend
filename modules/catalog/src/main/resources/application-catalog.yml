@@ -1,0 +1,41 @@
+spring:
+  flyway:
+    enabled: true
+    out-of-order: true
+
+catalog:
+  merchant-search-sync:
+    page-size: ${CATALOG_MERCHANT_SEARCH_SYNC_PAGE_SIZE:100}
+  ordering:
+    provider: ${CATALOG_ORDERING_PROVIDER:assume-empty}
+  product:
+    default-currency: ${CATALOG_PRODUCT_DEFAULT_CURRENCY:VND}
+    clone-name-suffix: "${CATALOG_PRODUCT_CLONE_NAME_SUFFIX: (Copy)}"
+    bulk-price-update-max-size: ${CATALOG_PRODUCT_BULK_PRICE_UPDATE_MAX_SIZE:100}
+    reindex-page-size: ${CATALOG_PRODUCT_REINDEX_PAGE_SIZE:200}
+  search:
+    provider: ${CATALOG_SEARCH_PROVIDER:opensearch}
+    opensearch:
+      host: ${CATALOG_SEARCH_OPENSEARCH_HOST:localhost}
+      port: ${CATALOG_SEARCH_OPENSEARCH_PORT:9200}
+      scheme: ${CATALOG_SEARCH_OPENSEARCH_SCHEME:http}
+      index-name: ${CATALOG_SEARCH_OPENSEARCH_INDEX_NAME:catalog-products}
+      username: ${CATALOG_SEARCH_OPENSEARCH_USERNAME:}
+      password: ${CATALOG_SEARCH_OPENSEARCH_PASSWORD:}
+      index-shards: ${CATALOG_SEARCH_OPENSEARCH_INDEX_SHARDS:1}
+      index-replicas: ${CATALOG_SEARCH_OPENSEARCH_INDEX_REPLICAS:0}
+      ngram-min: ${CATALOG_SEARCH_OPENSEARCH_NGRAM_MIN:2}
+      ngram-max: ${CATALOG_SEARCH_OPENSEARCH_NGRAM_MAX:15}
+      facet-brand-size: ${CATALOG_SEARCH_OPENSEARCH_FACET_BRAND_SIZE:50}
+      facet-category-size: ${CATALOG_SEARCH_OPENSEARCH_FACET_CATEGORY_SIZE:100}
+      facet-attribute-size: ${CATALOG_SEARCH_OPENSEARCH_FACET_ATTRIBUTE_SIZE:50}
+  media:
+    provider: ${CATALOG_MEDIA_PROVIDER:cloudinary}
+    cloudinary:
+      product-image-folder: ${CLOUDINARY_PRODUCT_IMAGE_FOLDER:aionn/catalog/products}
+      review-image-folder: ${CLOUDINARY_REVIEW_IMAGE_FOLDER:aionn/catalog/reviews}
+  cache:
+    category-tree:
+      l1-ttl-seconds: ${CATALOG_CACHE_CATEGORY_TREE_L1_TTL_SECONDS:60}
+      l1-max-size: ${CATALOG_CACHE_CATEGORY_TREE_L1_MAX_SIZE:10}
+      l2-ttl-seconds: ${CATALOG_CACHE_CATEGORY_TREE_L2_TTL_SECONDS:300}

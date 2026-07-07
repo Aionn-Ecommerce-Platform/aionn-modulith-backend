@@ -78,6 +78,7 @@ sonar {
                 '**/application/dto/**',
                 '**/application/mapper/**',
                 '**/application/port/**',
+                '**/application/usecase/**',
                 '**/application/policy/AccountManagementPolicy.java',
                 '**/application/policy/AddressPolicy.java',
                 '**/application/policy/AgentPolicy.java',
@@ -87,7 +88,17 @@ sonar {
                 '**/application/policy/MfaPolicy.java',
                 '**/application/policy/RegistrationPolicy.java',
                 '**/adapter/rest/dto/**',
-                '**/adapter/rest/mapper/**'
+                '**/adapter/rest/mapper/**',
+                '**/adapter/rest/support/**',
+                '**/adapter/rest/exception/**',
+                '**/adapter/rest/config/**',
+                '**/domain/event/**',
+                '**/domain/valueobject/**',
+                '**/infrastructure/config/**',
+                '**/infrastructure/persistence/entity/**',
+                '**/infrastructure/persistence/mapper/**',
+                '**/infrastructure/persistence/repository/**',
+                '**/infrastructure/observability/**'
         ].join(',')
     }
 }
