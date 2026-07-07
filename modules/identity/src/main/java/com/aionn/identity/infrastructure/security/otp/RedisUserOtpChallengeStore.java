@@ -10,6 +10,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -33,7 +34,8 @@ public class RedisUserOtpChallengeStore implements UserOtpChallengeStorePort {
         String key = key(challenge.userId(), challenge.purpose());
         String value = serialize(challenge);
 
-        Duration ttl = Duration.between(LocalDateTime.now(ZoneOffset.UTC), challenge.expiresAt()).plus(EXPIRY_BUFFER);
+        Duration ttl = Duration.between(Instant.now(), challenge.expiresAt().toInstant(ZoneOffset.UTC))
+                .plus(EXPIRY_BUFFER);
         if (ttl.isNegative() || ttl.isZero()) {
             ttl = Duration.ofMinutes(10);
         }
