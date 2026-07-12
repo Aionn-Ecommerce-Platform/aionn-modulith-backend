@@ -80,7 +80,7 @@ public class RegistrationService {
         String regId = IdGenerator.ulid();
         RegistrationOtp otp = RegistrationOtp.generate(
                 registrationPolicy.getResendCooldownSeconds(),
-                registrationPolicy.getOtpExpirySeconds());
+                registrationPolicy.getOtpExpirySeconds(), clock);
 
         var session = new RegistrationVerificationSession(
                 regId,
@@ -111,7 +111,7 @@ public class RegistrationService {
         }
 
         try {
-            session.verify(command.otpCode());
+            session.verify(command.otpCode(), clock);
         } finally {
             registrationSessionStore.save(session);
         }
@@ -125,9 +125,9 @@ public class RegistrationService {
 
         RegistrationOtp newOtp = RegistrationOtp.generate(
                 registrationPolicy.getResendCooldownSeconds(),
-                registrationPolicy.getOtpExpirySeconds());
+                registrationPolicy.getOtpExpirySeconds(), clock);
 
-        session.resend(newOtp.getCode(), newOtp.getResendAvailableAt(), newOtp.getExpiredAt());
+        session.resend(newOtp.getCode(), newOtp.getResendAvailableAt(), newOtp.getExpiredAt(), clock);
         registrationSessionStore.save(session);
         notificationPort.sendRegistrationOtp(session.getPhoneNumber(), newOtp.getCode());
 

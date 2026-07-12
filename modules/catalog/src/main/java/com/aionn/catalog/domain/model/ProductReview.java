@@ -101,7 +101,7 @@ public class ProductReview extends AggregateRoot {
                 draft.rating(), draft.title(), draft.content(), draft.imageUrls(),
                 ReviewStatus.VISIBLE, null, null, null, null, null, now, now);
         review.registerEvent(new ReviewEvents.ReviewCreated(
-                draft.reviewId(), draft.productId(), draft.userId(), draft.rating(), clock));
+                draft.reviewId(), draft.productId(), draft.userId(), draft.rating(), now));
         return review;
     }
 
@@ -125,7 +125,7 @@ public class ProductReview extends AggregateRoot {
             this.imageUrls.addAll(newImageUrls);
         }
         this.updatedAt = clock.instant();
-        registerEvent(new ReviewEvents.ReviewUpdated(reviewId, rating, clock));
+        registerEvent(new ReviewEvents.ReviewUpdated(reviewId, rating, this.updatedAt));
     }
 
     public void reply(String replyContent) {
@@ -140,7 +140,7 @@ public class ProductReview extends AggregateRoot {
         this.merchantReply = replyContent;
         this.merchantRepliedAt = now;
         this.updatedAt = now;
-        registerEvent(new ReviewEvents.MerchantReplied(reviewId, clock));
+        registerEvent(new ReviewEvents.MerchantReplied(reviewId, now));
     }
 
     public void hide() {
@@ -150,7 +150,7 @@ public class ProductReview extends AggregateRoot {
     public void hide(Clock clock) {
         this.status = ReviewStatus.HIDDEN;
         this.updatedAt = clock.instant();
-        registerEvent(new ReviewEvents.ReviewHidden(reviewId, clock));
+        registerEvent(new ReviewEvents.ReviewHidden(reviewId, this.updatedAt));
     }
 
     public void report(String merchantId, String reason) {
@@ -170,7 +170,7 @@ public class ProductReview extends AggregateRoot {
         this.reportReason = reason;
         this.reportedAt = now;
         this.updatedAt = now;
-        registerEvent(new ReviewEvents.ReviewReported(reviewId, merchantId, reason, clock));
+        registerEvent(new ReviewEvents.ReviewReported(reviewId, merchantId, reason, now));
     }
 
     public void adminDelete(String adminId) {
@@ -180,7 +180,7 @@ public class ProductReview extends AggregateRoot {
     public void adminDelete(String adminId, Clock clock) {
         this.status = ReviewStatus.DELETED;
         this.updatedAt = clock.instant();
-        registerEvent(new ReviewEvents.ReviewDeleted(reviewId, adminId, clock));
+        registerEvent(new ReviewEvents.ReviewDeleted(reviewId, adminId, this.updatedAt));
     }
 
     public void restore(String adminId) {
@@ -196,7 +196,7 @@ public class ProductReview extends AggregateRoot {
         this.reportReason = null;
         this.reportedAt = null;
         this.updatedAt = clock.instant();
-        registerEvent(new ReviewEvents.ReviewRestored(reviewId, adminId, clock));
+        registerEvent(new ReviewEvents.ReviewRestored(reviewId, adminId, this.updatedAt));
     }
 
     @Override

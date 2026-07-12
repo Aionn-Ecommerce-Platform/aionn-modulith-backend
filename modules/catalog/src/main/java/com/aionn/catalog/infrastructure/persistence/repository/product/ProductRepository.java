@@ -86,12 +86,23 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String> 
       @Param("brandIds") List<String> brandIds,
       @Param("limit") int limit);
 
+  @EntityGraph(attributePaths = { "variants", "translations" })
   @Query("""
       SELECT p FROM ProductEntity p
       WHERE p.status = 'PUBLISHED'
       ORDER BY p.updatedAt DESC
       """)
   List<ProductEntity> findPublished(Pageable pageable);
+
+  @Query(value = """
+      SELECT * FROM products
+      WHERE status = 'PUBLISHED'
+      ORDER BY updated_at DESC
+      LIMIT :limit OFFSET :offset
+      """, nativeQuery = true)
+  List<ProductEntity> findPublishedRaw(
+      @Param("limit") int limit,
+      @Param("offset") int offset);
 
   @Query(value = "SELECT COUNT(*) FROM products p WHERE p.status = 'PUBLISHED'", nativeQuery = true)
   long countPublished();

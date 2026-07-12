@@ -10,10 +10,11 @@ set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://127.0.0.1:8080}"
 
-# Force using Windows native curl.exe to avoid MSYS2 loopback connection blocks
-curl() {
-    curl.exe "$@"
-}
+# On MSYS2 / Git Bash on Windows, curl is wrapped and blocks loopback connections.
+# Override with the native curl.exe to bypass that restriction.
+if [[ "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]] || command -v curl.exe &>/dev/null; then
+    curl() { curl.exe "$@"; }
+fi
 
 # --- helpers ------------------------------------------------------------------
 COLOR_RESET=$'\033[0m'

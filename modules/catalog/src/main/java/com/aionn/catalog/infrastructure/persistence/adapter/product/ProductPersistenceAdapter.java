@@ -121,8 +121,7 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
     public List<Product> findPublished(int limit, int offset) {
         int safeLimit = Math.max(1, limit);
         int safeOffset = Math.max(0, offset);
-        int page = safeOffset / safeLimit;
-        return jpa.findPublished(PageRequest.of(page, safeLimit)).stream()
+        return jpa.findPublishedRaw(safeLimit, safeOffset).stream()
                 .map(mapper::toDomain)
                 .toList();
     }
