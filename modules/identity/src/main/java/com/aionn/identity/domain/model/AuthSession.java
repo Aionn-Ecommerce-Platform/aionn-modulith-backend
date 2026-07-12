@@ -4,7 +4,7 @@ import com.aionn.identity.domain.valueobject.AuthSessionStatus;
 import lombok.Getter;
 
 import java.time.Clock;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Getter
 public class AuthSession {
@@ -14,9 +14,9 @@ public class AuthSession {
     private final String ipAddress;
     private final String userAgent;
     private AuthSessionStatus status;
-    private final LocalDateTime createdAt;
-    private LocalDateTime lastActiveAt;
-    private LocalDateTime expiresAt;
+    private final Instant createdAt;
+    private Instant lastActiveAt;
+    private Instant expiresAt;
 
     public AuthSession(
             String sessionId,
@@ -24,9 +24,9 @@ public class AuthSession {
             String ipAddress,
             String userAgent,
             AuthSessionStatus status,
-            LocalDateTime createdAt,
-            LocalDateTime lastActiveAt,
-            LocalDateTime expiresAt) {
+            Instant createdAt,
+            Instant lastActiveAt,
+            Instant expiresAt) {
         this.sessionId = sessionId;
         this.userId = userId;
         this.ipAddress = ipAddress;
@@ -42,8 +42,18 @@ public class AuthSession {
             String userId,
             String ipAddress,
             String userAgent,
-            LocalDateTime expiresAt) {
-        LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
+            Instant expiresAt) {
+        return createNew(sessionId, userId, ipAddress, userAgent, expiresAt, Clock.systemUTC());
+    }
+
+    public static AuthSession createNew(
+            String sessionId,
+            String userId,
+            String ipAddress,
+            String userAgent,
+            Instant expiresAt,
+            Clock clock) {
+        Instant now = clock.instant();
         return new AuthSession(
                 sessionId,
                 userId,
@@ -56,28 +66,44 @@ public class AuthSession {
     }
 
     public void touch() {
-        this.lastActiveAt = LocalDateTime.now(Clock.systemUTC());
+        touch(Clock.systemUTC());
+    }
+
+    public void touch(Clock clock) {
+        this.lastActiveAt = clock.instant();
     }
 
     public void revoke() {
         this.status = AuthSessionStatus.REVOKED;
     }
 
-    public void extendExpiry(LocalDateTime newExpiresAt) {
-        if (newExpiresAt == null || !newExpiresAt.isAfter(LocalDateTime.now(Clock.systemUTC()))) {
+    public void extendExpiry(Instant newExpiresAt) {
+        extendExpiry(newExpiresAt, Clock.systemUTC());
+    }
+
+    public void extendExpiry(Instant newExpiresAt, Clock clock) {
+        if (newExpiresAt == null || !newExpiresAt.isAfter(clock.instant())) {
             throw new IllegalArgumentException("New expiry must be in the future");
         }
         this.expiresAt = newExpiresAt;
-        this.lastActiveAt = LocalDateTime.now(Clock.systemUTC());
+        this.lastActiveAt = clock.instant();
     }
 
     public boolean isActive() {
+        return isActive(Clock.systemUTC());
+    }
+
+    public boolean isActive(Clock clock) {
         return AuthSessionStatus.ACTIVE.equals(status)
                 && expiresAt != null
-                && expiresAt.isAfter(LocalDateTime.now(Clock.systemUTC()));
+                && expiresAt.isAfter(clock.instant());
     }
 
     public boolean isExpired() {
-        return expiresAt != null && !expiresAt.isAfter(LocalDateTime.now(Clock.systemUTC()));
+        return isExpired(Clock.systemUTC());
+    }
+
+    public boolean isExpired(Clock clock) {
+        return expiresAt != null && !expiresAt.isAfter(clock.instant());
     }
 }

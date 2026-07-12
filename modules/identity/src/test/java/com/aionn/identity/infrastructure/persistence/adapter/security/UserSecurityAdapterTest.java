@@ -11,7 +11,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -119,7 +120,7 @@ class UserSecurityAdapterTest {
     @Test
     void recordFailedLoginAttemptUpdatesUserWhenPresent() {
         UserEntity user = mock(UserEntity.class);
-        LocalDateTime lockedUntil = LocalDateTime.now().plusMinutes(15);
+        Instant lockedUntil = Instant.now().plus(Duration.ofMinutes(15));
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
 
         adapter.recordFailedLoginAttempt(USER_ID, 3, lockedUntil);
@@ -133,7 +134,7 @@ class UserSecurityAdapterTest {
     void recordFailedLoginAttemptDoesNothingWhenMissing() {
         when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
 
-        adapter.recordFailedLoginAttempt(USER_ID, 3, LocalDateTime.now());
+        adapter.recordFailedLoginAttempt(USER_ID, 3, Instant.now());
 
         verify(userRepository, never()).save(any());
     }

@@ -1,6 +1,6 @@
 package com.aionn.identity.application.dto.auth.result;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record AuthSessionResult(
         String sessionId,
@@ -8,8 +8,8 @@ public record AuthSessionResult(
         String status,
         String ipAddress,
         String userAgent,
-        LocalDateTime createdAt,
-        LocalDateTime lastActiveAt,
-        LocalDateTime expiresAt) {
+        Instant createdAt,
+        Instant lastActiveAt,
+        Instant expiresAt) {
 }
 

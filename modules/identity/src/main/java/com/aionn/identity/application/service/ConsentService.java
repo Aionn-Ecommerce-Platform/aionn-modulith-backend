@@ -14,8 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
+import java.time.Clock;
 import java.util.List;
 
 @Slf4j
@@ -29,6 +29,7 @@ public class ConsentService {
     private final UserPersistencePort userPersistencePort;
     private final ConsentPersistencePort consentPersistencePort;
 
+    private final Clock clock;
     public ConsentResult agreeTerms(String userId, String version, String ipAddress) {
         log.info("Recording terms consent for user: {}, version: {}", userId, version);
         return appendDecision(userId, ConsentType.TERMS, version, ipAddress, true);
@@ -67,7 +68,7 @@ public class ConsentService {
         userPersistencePort.findById(userId)
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.USER_NOT_FOUND));
 
-        LocalDateTime now = nowUtc();
+        Instant now = nowUtc();
         UserConsent consent = UserConsent.builder()
                 .id(IdGenerator.ulid())
                 .userId(userId)
@@ -83,8 +84,7 @@ public class ConsentService {
         log.info("Consent appended for user: {}, type: {}, granted: {}", userId, consentType, granted);
         return saved;
     }
-
-    private static LocalDateTime nowUtc() {
-        return LocalDateTime.now(ZoneOffset.UTC);
+    private Instant nowUtc() {
+        return clock.instant();
     }
 }

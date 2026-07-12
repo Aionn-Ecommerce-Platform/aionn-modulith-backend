@@ -18,9 +18,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
+import org.mockito.Spy;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -45,6 +47,9 @@ class BrandServiceTest {
     private BrandResultMapper brandResultMapper;
     @Mock
     private EventPublisher eventPublisher;
+
+    @Spy
+    private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
 
     @InjectMocks
     private BrandService brandService;

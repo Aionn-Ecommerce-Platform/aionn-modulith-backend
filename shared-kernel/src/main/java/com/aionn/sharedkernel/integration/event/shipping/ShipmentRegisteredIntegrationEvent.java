@@ -4,10 +4,6 @@ import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 
 import java.time.Instant;
 
-/**
- * Published when a shipment has been registered with the carrier (tracking
- * code assigned).
- */
 public record ShipmentRegisteredIntegrationEvent(
         String eventId,
         String shipmentId,

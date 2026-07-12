@@ -6,7 +6,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "agent_identities",
@@ -44,11 +44,11 @@ public class AgentIdentityEntity {
     private String status;
 
     @Column(name = "expiry_at")
-    private LocalDateTime expiryAt;
+    private Instant expiryAt;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 }
 
 

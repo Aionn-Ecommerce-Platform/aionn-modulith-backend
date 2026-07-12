@@ -1,5 +1,6 @@
 package com.aionn.identity.application.service;
 
+
 import com.aionn.identity.application.dto.geography.result.GeographyResult;
 import com.aionn.identity.application.dto.geography.result.ResolvedLocation;
 import com.aionn.identity.application.port.out.geography.GeographyPersistencePort;
@@ -14,10 +15,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class GeographyServiceTest {
@@ -39,7 +40,7 @@ class GeographyServiceTest {
 
         List<GeographyResult> result = geographyService.listCountries();
 
-        assertEquals(List.of(vn), result);
+        assertThat(result).isEqualTo(List.of(vn));
     }
 
     @Test
@@ -48,7 +49,7 @@ class GeographyServiceTest {
 
         var ex = assertThrows(IdentityException.class, () -> geographyService.getCountry("XX"));
 
-        assertEquals(IdentityErrorCode.INVALID_GEOGRAPHY_CODE.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.INVALID_GEOGRAPHY_CODE.getCode());
     }
 
     @Test
@@ -58,7 +59,7 @@ class GeographyServiceTest {
 
         List<GeographyResult> result = geographyService.listProvinces("VN");
 
-        assertEquals(List.of(hn), result);
+        assertThat(result).isEqualTo(List.of(hn));
         verify(geographyPersistencePort).findProvincesByCountryCode("VN");
     }
 
@@ -82,7 +83,7 @@ class GeographyServiceTest {
 
         ResolvedLocation result = geographyService.resolveLocation("VN-HN", "VN-HN-BA", "VN-HN-BA-PX");
 
-        assertEquals(resolved, result);
+        assertThat(result).isEqualTo(resolved);
     }
 
     @Test
@@ -91,7 +92,7 @@ class GeographyServiceTest {
 
         var ex = assertThrows(IdentityException.class, () -> geographyService.getProvince("VN-XX"));
 
-        assertEquals(IdentityErrorCode.INVALID_GEOGRAPHY_CODE.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.INVALID_GEOGRAPHY_CODE.getCode());
     }
 
     @Test

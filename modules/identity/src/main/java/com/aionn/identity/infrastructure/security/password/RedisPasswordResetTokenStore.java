@@ -6,31 +6,27 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
 public class RedisPasswordResetTokenStore {
 
-    public record PasswordResetTokenData(String userId, LocalDateTime expiresAt) {
+    public record PasswordResetTokenData(String userId, Instant expiresAt) {
     }
 
     private static final String KEY_PREFIX = "identity:auth:password-reset:";
 
     private final StringRedisTemplate redisTemplate;
 
-    public void save(String token, String userId, LocalDateTime expiresAt) {
-        // Callers pass expiresAt in UTC (PasswordResetService uses ZoneOffset.UTC).
-        // Compare and serialize consistently in UTC so non-UTC hosts do not
-        // skew TTLs or persisted expiry timestamps.
-        Duration ttl = Duration.between(Instant.now(), expiresAt.toInstant(ZoneOffset.UTC));
+    public void save(String token, String userId, Instant expiresAt) {
+        Duration ttl = Duration.between(Instant.now(Clock.systemUTC()), expiresAt);
         if (ttl.isNegative() || ttl.isZero()) {
             ttl = Duration.ofMinutes(1);
         }
-        long epochSecond = expiresAt.toEpochSecond(ZoneOffset.UTC);
+        long epochSecond = expiresAt.getEpochSecond();
         redisTemplate.opsForValue().set(key(token), userId + ":" + epochSecond, ttl);
     }
 
@@ -53,7 +49,7 @@ public class RedisPasswordResetTokenStore {
         try {
             long epoch = Long.parseLong(value.substring(sep + 1));
             String userId = value.substring(0, sep);
-            LocalDateTime expiresAt = LocalDateTime.ofEpochSecond(epoch, 0, ZoneOffset.UTC);
+            Instant expiresAt = Instant.ofEpochSecond(epoch);
             return Optional.of(new PasswordResetTokenData(userId, expiresAt));
         } catch (NumberFormatException ex) {
             return Optional.empty();

@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,6 +32,7 @@ public class CategoryService {
     private final CategoryPersistencePort categoryRepository;
     private final CategoryResultMapper categoryResultMapper;
     private final EventPublisher eventPublisher;
+    private final Clock clock;
 
     public CategoryResult create(CreateCategoryCommand command) {
         String normalizedName = command.name() != null ? command.name().trim() : null;
@@ -46,7 +48,7 @@ public class CategoryService {
         if (categoryRepository.existsBySlug(slug)) {
             throw new CatalogException(CatalogErrorCode.CATEGORY_SLUG_CONFLICT);
         }
-        Category category = Category.create(IdGenerator.ulid(), command.parentId(), normalizedName, slug);
+        Category category = Category.create(IdGenerator.ulid(), command.parentId(), normalizedName, slug, clock);
         Category saved = categoryRepository.save(category);
         eventPublisher.publish(category.pullEvents());
         return categoryResultMapper.toResult(saved);
@@ -60,7 +62,7 @@ public class CategoryService {
                 && categoryRepository.existsByParentAndName(category.getParentId(), normalizedName)) {
             throw new CatalogException(CatalogErrorCode.CATEGORY_NAME_CONFLICT);
         }
-        category.update(normalizedName, command.iconUrl(), command.active());
+        category.update(normalizedName, command.iconUrl(), command.active(), clock);
         Category saved = categoryRepository.save(category);
         eventPublisher.publish(category.pullEvents());
         return categoryResultMapper.toResult(saved);
@@ -83,7 +85,7 @@ public class CategoryService {
                 throw new CatalogException(CatalogErrorCode.CATEGORY_NAME_CONFLICT);
             }
         }
-        category.moveTo(command.newParentId());
+        category.moveTo(command.newParentId(), clock);
         Category saved = categoryRepository.save(category);
         eventPublisher.publish(category.pullEvents());
         return categoryResultMapper.toResult(saved);
@@ -94,7 +96,7 @@ public class CategoryService {
         if (categoryRepository.hasProducts(categoryId)) {
             throw new CatalogException(CatalogErrorCode.CATEGORY_HAS_PRODUCTS);
         }
-        category.markDeleted();
+        category.markDeleted(clock);
         categoryRepository.save(category);
         eventPublisher.publish(category.pullEvents());
     }

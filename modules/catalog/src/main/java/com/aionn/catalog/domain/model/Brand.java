@@ -8,6 +8,7 @@ import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.catalog.domain.valueobject.BrandStatus;
 import lombok.Getter;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -54,9 +55,13 @@ public class Brand extends AggregateRoot {
     }
 
     public static Brand create(String brandId, String name, String logoUrl, String description) {
+        return create(brandId, name, logoUrl, description, Clock.systemUTC());
+    }
+
+    public static Brand create(String brandId, String name, String logoUrl, String description, Clock clock) {
         Guard.require(name != null && !name.isBlank(),
                 () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT, "name must not be blank"));
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         String trimmedName = name.trim();
         Brand brand = new Brand(brandId, trimmedName, logoUrl, description, BrandStatus.ACTIVE, now, now, List.of());
         brand.registerEvent(new BrandEvents.BrandCreated(brandId, trimmedName, logoUrl, description, now));
@@ -64,6 +69,10 @@ public class Brand extends AggregateRoot {
     }
 
     public void update(String name, String logoUrl, String description) {
+        update(name, logoUrl, description, Clock.systemUTC());
+    }
+
+    public void update(String name, String logoUrl, String description, Clock clock) {
         Guard.require(status != BrandStatus.DELETED,
                 () -> new CatalogException(CatalogErrorCode.BRAND_NOT_FOUND, "Cannot update deleted brand"));
         if (name != null && !name.isBlank()) {
@@ -75,16 +84,20 @@ public class Brand extends AggregateRoot {
         if (description != null) {
             this.description = description;
         }
-        this.updatedAt = Instant.now();
+        this.updatedAt = clock.instant();
         registerEvent(new BrandEvents.BrandUpdated(brandId, this.name, this.logoUrl, this.description, updatedAt));
     }
 
     public void softDelete(String reason) {
+        softDelete(reason, Clock.systemUTC());
+    }
+
+    public void softDelete(String reason, Clock clock) {
         if (status == BrandStatus.DELETED) {
             return;
         }
         this.status = BrandStatus.DELETED;
-        this.updatedAt = Instant.now();
+        this.updatedAt = clock.instant();
         registerEvent(new BrandEvents.BrandDeleted(brandId, reason, updatedAt, updatedAt));
     }
 

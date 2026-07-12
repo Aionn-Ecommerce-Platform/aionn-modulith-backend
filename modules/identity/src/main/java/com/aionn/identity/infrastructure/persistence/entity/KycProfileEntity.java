@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "kyc_profiles", indexes = {
@@ -63,17 +63,17 @@ public class KycProfileEntity {
     private String rejectReason;
 
     @Column(name = "submitted_at")
-    private LocalDateTime submittedAt;
+    private Instant submittedAt;
 
     @Column(name = "approved_at")
-    private LocalDateTime approvedAt;
+    private Instant approvedAt;
 
     @Column(name = "expired_at")
-    private LocalDateTime expiredAt;
+    private Instant expiredAt;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Version
     @Column(name = "version", nullable = false)

@@ -41,7 +41,7 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
@@ -166,7 +166,7 @@ class AdminUserControllerWebTest {
 
         @Test
         void getUserByIdReturnsUserDetail() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 UserDetailResult result = new UserDetailResult(
                                 "user-1", "alice@example.com", "0912345678", "alice_smith",
                                 Set.of("BUYER"), "ACTIVE", now, now, now);

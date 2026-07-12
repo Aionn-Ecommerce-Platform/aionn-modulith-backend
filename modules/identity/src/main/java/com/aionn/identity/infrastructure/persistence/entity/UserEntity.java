@@ -14,7 +14,7 @@ import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -66,21 +66,21 @@ public class UserEntity {
     private UserStatus status;
 
     @Column(name = "email_verified_at")
-    private LocalDateTime emailVerifiedAt;
+    private Instant emailVerifiedAt;
 
     @Column(name = "phone_verified_at")
-    private LocalDateTime phoneVerifiedAt;
+    private Instant phoneVerifiedAt;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
+    private Instant deletedAt;
 
     @Column(name = "mfa_enabled", nullable = false)
     private boolean mfaEnabled;
@@ -91,7 +91,7 @@ public class UserEntity {
     private String mfaSecret;
 
     @Column(name = "locked_until")
-    private LocalDateTime lockedUntil;
+    private Instant lockedUntil;
 
     @Column(name = "failed_login_attempts", nullable = false)
     private int failedLoginAttempts;

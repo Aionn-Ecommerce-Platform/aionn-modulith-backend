@@ -1,12 +1,12 @@
 package com.aionn.identity.adapter.rest.dto.user.response;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record DeletionRequestResponse(
         String requestId,
         String status,
-        LocalDateTime requestedAt,
-        LocalDateTime scheduledDeletionAt) {
+        Instant requestedAt,
+        Instant scheduledDeletionAt) {
 }
 
 

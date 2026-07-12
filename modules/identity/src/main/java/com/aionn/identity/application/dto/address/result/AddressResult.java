@@ -2,7 +2,7 @@ package com.aionn.identity.application.dto.address.result;
 
 import com.aionn.identity.domain.valueobject.AddressType;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record AddressResult(
 		String addressId,
@@ -19,8 +19,8 @@ public record AddressResult(
 		String fullAddress,
 		AddressType type,
 		boolean isDefault,
-		LocalDateTime createdAt,
-		LocalDateTime updatedAt) {
+		Instant createdAt,
+		Instant updatedAt) {
 }
 
 

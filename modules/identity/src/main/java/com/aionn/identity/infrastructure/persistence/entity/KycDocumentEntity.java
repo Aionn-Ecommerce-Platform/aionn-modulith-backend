@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "kyc_documents", indexes = {
@@ -40,5 +40,5 @@ public class KycDocumentEntity {
 
     @CreationTimestamp
     @Column(name = "uploaded_at", nullable = false, updatable = false)
-    private LocalDateTime uploadedAt;
+    private Instant uploadedAt;
 }

@@ -1,11 +1,11 @@
 package com.aionn.identity.application.dto.user.view;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record DeletionRequestView(
                 String requestId,
                 String status,
-                LocalDateTime requestedAt,
-                LocalDateTime scheduledDeletionAt) {
+                Instant requestedAt,
+                Instant scheduledDeletionAt) {
 }
 

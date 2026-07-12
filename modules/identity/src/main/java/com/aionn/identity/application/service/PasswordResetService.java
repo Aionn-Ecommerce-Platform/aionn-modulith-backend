@@ -23,8 +23,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
+import java.time.Clock;
+import java.time.Duration;
 import java.util.Base64;
 
 @Service
@@ -46,6 +47,7 @@ public class PasswordResetService {
     private final IdentityMetricsPort identityMetrics;
     private final AuthPolicy authPolicy;
 
+    private final Clock clock;
     public void changePassword(String userId, String currentPassword, String newPassword, String ipAddress) {
         log.info("Processing password change for user: {}", userId);
         validateNewPassword(newPassword);
@@ -82,7 +84,7 @@ public class PasswordResetService {
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 
         passwordResetPort.savePasswordResetTokenHash(hashToken(token), user.get().userId(),
-                nowUtc().plusMinutes(authPolicy.getPasswordResetTokenTtlMinutes()));
+                nowUtc().plus(Duration.ofMinutes(authPolicy.getPasswordResetTokenTtlMinutes())));
         securityAuditPort.saveAuditLog(user.get().userId(), SecurityAuditEventType.PASSWORD_RESET_REQUESTED, ipAddress);
         identityMetrics.passwordResetLifecycle("requested");
         try {
@@ -147,8 +149,7 @@ public class PasswordResetService {
     private static String hashToken(String token) {
         return Sha256Hasher.hexDigest(token);
     }
-
-    private static LocalDateTime nowUtc() {
-        return LocalDateTime.now(ZoneOffset.UTC);
+    private Instant nowUtc() {
+        return clock.instant();
     }
 }

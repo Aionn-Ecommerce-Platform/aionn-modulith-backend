@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 public interface BackupCodeRepository extends JpaRepository<BackupCodeEntity, String> {
@@ -22,5 +22,5 @@ public interface BackupCodeRepository extends JpaRepository<BackupCodeEntity, St
     @Query("UPDATE BackupCodeEntity b SET b.usedAt = :usedAt "
             + "WHERE b.backupCodeId = :backupCodeId AND b.usedAt IS NULL")
     int markAsUsedIfUnused(@Param("backupCodeId") String backupCodeId,
-                           @Param("usedAt") LocalDateTime usedAt);
+                           @Param("usedAt") Instant usedAt);
 }

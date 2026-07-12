@@ -13,14 +13,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(MockitoExtension.class)
 class AuthTokenResponseHandlerTest {
@@ -46,12 +43,12 @@ class AuthTokenResponseHandlerTest {
         ResponseEntity<ApiResponse<AuthTokenResponse>> response = authTokenResponseHandler.success(authTokenResponse,
                 "mobile", "Login successful!");
 
-        assertEquals(200, response.getStatusCode().value());
-        assertNull(response.getHeaders().getFirst(HttpHeaders.SET_COOKIE));
-        assertEquals("no-cache", response.getHeaders().getFirst(HttpHeaders.PRAGMA));
-        assertNotNull(response.getBody());
-        assertEquals("refresh-1", response.getBody().data().refreshToken());
-        assertEquals("access-1", response.getBody().data().accessToken());
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getHeaders().getFirst(HttpHeaders.SET_COOKIE)).isNull();
+        assertThat(response.getHeaders().getFirst(HttpHeaders.PRAGMA)).isEqualTo("no-cache");
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().data().refreshToken()).isEqualTo("refresh-1");
+        assertThat(response.getBody().data().accessToken()).isEqualTo("access-1");
     }
 
     @Test
@@ -63,15 +60,15 @@ class AuthTokenResponseHandlerTest {
                 "web", "Login successful!");
 
         String setCookie = response.getHeaders().getFirst(HttpHeaders.SET_COOKIE);
-        assertNotNull(setCookie);
-        assertTrue(setCookie.contains("refresh_token=refresh-1"));
-        assertTrue(setCookie.contains("HttpOnly"));
-        assertTrue(setCookie.contains("Secure"));
-        assertTrue(setCookie.contains("SameSite=Strict"));
-        assertTrue(setCookie.contains("Path=/api/v1/auth"));
-        assertNotNull(response.getBody());
-        assertNull(response.getBody().data().refreshToken());
-        assertEquals("access-1", response.getBody().data().accessToken());
+        assertThat(setCookie).isNotNull();
+        assertThat(setCookie.contains("refresh_token=refresh-1")).isTrue();
+        assertThat(setCookie.contains("HttpOnly")).isTrue();
+        assertThat(setCookie.contains("Secure")).isTrue();
+        assertThat(setCookie.contains("SameSite=Strict")).isTrue();
+        assertThat(setCookie.contains("Path=/api/v1/auth")).isTrue();
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().data().refreshToken()).isNull();
+        assertThat(response.getBody().data().accessToken()).isEqualTo("access-1");
     }
 
     @Test
@@ -83,26 +80,26 @@ class AuthTokenResponseHandlerTest {
         String logoutCookie = logoutResponse.getHeaders().getFirst(HttpHeaders.SET_COOKIE);
         String logoutAllCookie = logoutAllResponse.getHeaders().getFirst(HttpHeaders.SET_COOKIE);
 
-        assertNotNull(logoutCookie);
-        assertTrue(logoutCookie.contains("refresh_token="));
-        assertTrue(logoutCookie.contains("Max-Age=0"));
-        assertEquals("Logout successful", logoutResponse.getBody().message());
+        assertThat(logoutCookie).isNotNull();
+        assertThat(logoutCookie.contains("refresh_token=")).isTrue();
+        assertThat(logoutCookie.contains("Max-Age=0")).isTrue();
+        assertThat(logoutResponse.getBody().message()).isEqualTo("Logout successful");
 
-        assertNotNull(logoutAllCookie);
-        assertTrue(logoutAllCookie.contains("refresh_token="));
-        assertTrue(logoutAllCookie.contains("Max-Age=0"));
-        assertEquals(3, logoutAllResponse.getBody().data().revokedSessions());
-        assertFalse(logoutAllResponse.getHeaders().getCacheControl().isBlank());
+        assertThat(logoutAllCookie).isNotNull();
+        assertThat(logoutAllCookie.contains("refresh_token=")).isTrue();
+        assertThat(logoutAllCookie.contains("Max-Age=0")).isTrue();
+        assertThat(logoutAllResponse.getBody().data().revokedSessions()).isEqualTo(3);
+        assertThat(logoutAllResponse.getHeaders().getCacheControl().isBlank()).isFalse();
     }
 
     private AuthTokenResponse sampleAuthTokenResponse() {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         return new AuthTokenResponse(
                 "user-1",
                 "session-1",
                 "refresh-1",
                 "access-1",
-                now.plusMinutes(15),
-                now.plusDays(7));
+                now.plus(Duration.ofMinutes(15)),
+                now.plus(Duration.ofDays(7)));
     }
 }

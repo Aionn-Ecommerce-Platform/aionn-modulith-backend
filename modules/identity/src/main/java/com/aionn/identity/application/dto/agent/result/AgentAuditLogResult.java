@@ -1,6 +1,6 @@
 package com.aionn.identity.application.dto.agent.result;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record AgentAuditLogResult(
                 String auditId,
@@ -8,7 +8,7 @@ public record AgentAuditLogResult(
                 String description,
                 String ipAddress,
                 String deviceId,
-                LocalDateTime timestamp) {
+                Instant timestamp) {
 }
 
 

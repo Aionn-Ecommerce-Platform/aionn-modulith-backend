@@ -1,5 +1,6 @@
 package com.aionn.identity.application.service;
 
+
 import com.aionn.identity.application.port.out.security.SecurityAuditPort;
 import com.aionn.identity.domain.model.SecurityAudit;
 import com.aionn.identity.domain.valueobject.SecurityAuditEventType;
@@ -11,8 +12,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(MockitoExtension.class)
 class SecurityAuditServiceTest {
@@ -38,6 +39,6 @@ class SecurityAuditServiceTest {
 
         List<SecurityAudit> result = securityAuditService.getAuditLogs("user-1");
 
-        assertEquals(List.of(audit), result);
+        assertThat(result).isEqualTo(List.of(audit));
     }
 }

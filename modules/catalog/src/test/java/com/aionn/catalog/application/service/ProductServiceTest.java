@@ -32,10 +32,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.Spy;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -84,7 +86,10 @@ class ProductServiceTest {
         @Mock
         private EventPublisher eventPublisher;
 
-        @InjectMocks
+        @Spy
+    private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
+
+    @InjectMocks
         private ProductService productService;
 
         private ProductResult sampleResult;

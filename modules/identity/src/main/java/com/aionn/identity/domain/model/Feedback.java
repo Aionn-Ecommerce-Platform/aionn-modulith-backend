@@ -3,7 +3,7 @@ package com.aionn.identity.domain.model;
 import com.aionn.identity.domain.valueobject.FeedbackCategory;
 import com.aionn.identity.domain.valueobject.FeedbackStatus;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public class Feedback {
 
@@ -17,10 +17,10 @@ public class Feedback {
     private final String contactPhone;
     private FeedbackStatus status;
     private String handledBy;
-    private LocalDateTime handledAt;
+    private Instant handledAt;
     private String adminReply;
-    private final LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private final Instant createdAt;
+    private Instant updatedAt;
 
     public Feedback(
             String feedbackId,
@@ -33,10 +33,10 @@ public class Feedback {
             String contactPhone,
             FeedbackStatus status,
             String handledBy,
-            LocalDateTime handledAt,
+            Instant handledAt,
             String adminReply,
-            LocalDateTime createdAt,
-            LocalDateTime updatedAt) {
+            Instant createdAt,
+            Instant updatedAt) {
         this.feedbackId = feedbackId;
         this.userId = userId;
         this.category = category;
@@ -79,7 +79,7 @@ public class Feedback {
                 null);
     }
 
-    public void reply(String adminId, String reply, FeedbackStatus newStatus, LocalDateTime handledAt) {
+    public void reply(String adminId, String reply, FeedbackStatus newStatus, Instant handledAt) {
         this.adminReply = reply;
         this.handledBy = adminId;
         this.handledAt = handledAt;
@@ -90,7 +90,7 @@ public class Feedback {
         }
     }
 
-    public void changeStatus(String adminId, FeedbackStatus newStatus, LocalDateTime handledAt) {
+    public void changeStatus(String adminId, FeedbackStatus newStatus, Instant handledAt) {
         this.status = newStatus;
         this.handledBy = adminId;
         this.handledAt = handledAt;
@@ -136,7 +136,7 @@ public class Feedback {
         return handledBy;
     }
 
-    public LocalDateTime getHandledAt() {
+    public Instant getHandledAt() {
         return handledAt;
     }
 
@@ -144,11 +144,11 @@ public class Feedback {
         return adminReply;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public LocalDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 }

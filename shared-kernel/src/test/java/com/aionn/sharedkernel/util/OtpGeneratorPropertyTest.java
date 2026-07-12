@@ -6,11 +6,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import net.jqwik.api.Arbitraries;
 import net.jqwik.api.Arbitrary;
+import net.jqwik.api.Example;
 import net.jqwik.api.ForAll;
 import net.jqwik.api.Property;
 import net.jqwik.api.Provide;
 
 class OtpGeneratorPropertyTest {
+
+    @Example
+    void convenienceFactoriesProduceExpectedLengths() {
+        assertEquals(6, OtpGenerator.generate6DigitOtp().length());
+        assertEquals(8, OtpGenerator.generate8DigitOtp().length());
+    }
 
     @Provide
     Arbitrary<Integer> validLengths() {

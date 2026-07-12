@@ -9,7 +9,7 @@ import com.aionn.identity.infrastructure.security.password.RedisPasswordResetTok
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 @Component
@@ -20,7 +20,7 @@ public class PasswordResetPersistenceAdapter implements PasswordResetPort {
     private final RedisPasswordResetTokenStore tokenStore;
 
     @Override
-    public void savePasswordResetTokenHash(String tokenHash, String userId, LocalDateTime expiresAt) {
+    public void savePasswordResetTokenHash(String tokenHash, String userId, Instant expiresAt) {
         tokenStore.save(tokenHash, userId, expiresAt);
     }
 

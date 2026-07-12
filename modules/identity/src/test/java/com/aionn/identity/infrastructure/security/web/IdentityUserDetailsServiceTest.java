@@ -12,7 +12,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -87,7 +88,7 @@ class IdentityUserDetailsServiceTest {
 
     @Test
     void marksAccountLockedWhenLockedUntilInFuture() {
-        UserEntity user = activeUser().lockedUntil(LocalDateTime.now().plusHours(1)).build();
+        UserEntity user = activeUser().lockedUntil(Instant.now().plus(Duration.ofHours(1))).build();
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
 
         UserDetails details = service.loadUserByUsername("user@example.com");
@@ -97,7 +98,7 @@ class IdentityUserDetailsServiceTest {
 
     @Test
     void marksAccountUnlockedWhenLockExpired() {
-        UserEntity user = activeUser().lockedUntil(LocalDateTime.now().minusHours(1)).build();
+        UserEntity user = activeUser().lockedUntil(Instant.now().minus(Duration.ofHours(1))).build();
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
 
         UserDetails details = service.loadUserByUsername("user@example.com");

@@ -12,7 +12,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,8 +38,8 @@ class AccountDeletionPersistenceAdapterTest {
 
     @Test
     void saveBuildsPendingRequestAndReturnsView() {
-        LocalDateTime scheduledAt = LocalDateTime.now().plusDays(30);
-        LocalDateTime requestedAt = LocalDateTime.now();
+        Instant scheduledAt = Instant.now().plus(Duration.ofDays(30));
+        Instant requestedAt = Instant.now();
         when(userRepository.getReferenceById(USER_ID)).thenReturn(UserEntity.builder().build());
         when(accountDeletionRequestRepository.save(any(AccountDeletionRequestEntity.class)))
                 .thenReturn(AccountDeletionRequestEntity.builder()
@@ -61,8 +62,8 @@ class AccountDeletionPersistenceAdapterTest {
         AccountDeletionRequestEntity entity = AccountDeletionRequestEntity.builder()
                 .deletionRequestId(REQUEST_ID)
                 .status(AccountDeletionStatus.PENDING)
-                .requestedAt(LocalDateTime.now())
-                .scheduledDeletionAt(LocalDateTime.now().plusDays(30))
+                .requestedAt(Instant.now())
+                .scheduledDeletionAt(Instant.now().plus(Duration.ofDays(30)))
                 .build();
         when(accountDeletionRequestRepository.findByUser_UserIdAndStatus(USER_ID, AccountDeletionStatus.PENDING))
                 .thenReturn(Optional.of(entity));
@@ -84,8 +85,8 @@ class AccountDeletionPersistenceAdapterTest {
         AccountDeletionRequestEntity entity = AccountDeletionRequestEntity.builder()
                 .deletionRequestId(REQUEST_ID)
                 .status(AccountDeletionStatus.PENDING)
-                .requestedAt(LocalDateTime.now())
-                .scheduledDeletionAt(LocalDateTime.now().plusDays(30))
+                .requestedAt(Instant.now())
+                .scheduledDeletionAt(Instant.now().plus(Duration.ofDays(30)))
                 .build();
         when(accountDeletionRequestRepository.findByUser_UserIdAndStatus(USER_ID, AccountDeletionStatus.PENDING))
                 .thenReturn(Optional.of(entity));

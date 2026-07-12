@@ -34,10 +34,8 @@ class CacheFactorySupportTest {
     @Test
     void cacheRegistryRegistersFindsAndRejectsDuplicateNamespaces() {
         TwoTierCacheRegistry registry = new TwoTierCacheRegistry();
-        @SuppressWarnings("unchecked")
-        TwoTierCache<String, String> cache = mock(TwoTierCache.class);
-        @SuppressWarnings("unchecked")
-        TwoTierCache<String, String> duplicate = mock(TwoTierCache.class);
+        TwoTierCache<String, String> cache = mock();
+        TwoTierCache<String, String> duplicate = mock();
 
         org.mockito.Mockito.when(cache.namespace()).thenReturn("catalog");
         org.mockito.Mockito.when(duplicate.namespace()).thenReturn("catalog");
@@ -62,8 +60,8 @@ class CacheFactorySupportTest {
                 cacheOrigin,
                 registry);
 
-        TwoTierCacheProperties properties =
-                new TwoTierCacheProperties("catalog", Duration.ofMinutes(5), 100, Duration.ofMinutes(10));
+        TwoTierCacheProperties properties = new TwoTierCacheProperties("catalog", Duration.ofMinutes(5), 100,
+                Duration.ofMinutes(10));
 
         TwoTierCache<String, Map<String, String>> cache = factory.create(properties, new TypeReference<>() {
         });

@@ -17,7 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,7 +45,7 @@ class ConsentPersistenceAdapterTest {
     @InjectMocks
     private ConsentPersistenceAdapter adapter;
 
-    private UserConsent consent(boolean granted, LocalDateTime revokedAt) {
+    private UserConsent consent(boolean granted, Instant revokedAt) {
         return UserConsent.builder()
                 .id(CONSENT_ID)
                 .userId(USER_ID)
@@ -59,12 +59,12 @@ class ConsentPersistenceAdapterTest {
 
     private ConsentResult result() {
         return new ConsentResult(CONSENT_ID, USER_ID, "MARKETING", "v1", true,
-                LocalDateTime.now(), null, "127.0.0.1");
+                Instant.now(), null, "127.0.0.1");
     }
 
     @Test
     void appendPersistsGrantedConsentWithoutRevokedAt() {
-        UserConsent consent = consent(true, LocalDateTime.now());
+        UserConsent consent = consent(true, Instant.now());
         ConsentResult result = result();
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(UserEntity.builder().build()));
         when(consentRepository.save(any(UserConsentEntity.class))).thenReturn(mock(UserConsentEntity.class));
@@ -81,7 +81,7 @@ class ConsentPersistenceAdapterTest {
 
     @Test
     void appendPersistsRevokedAtWhenNotGranted() {
-        LocalDateTime revokedAt = LocalDateTime.now();
+        Instant revokedAt = Instant.now();
         UserConsent consent = consent(false, revokedAt);
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(UserEntity.builder().build()));
         when(consentRepository.save(any(UserConsentEntity.class))).thenReturn(mock(UserConsentEntity.class));

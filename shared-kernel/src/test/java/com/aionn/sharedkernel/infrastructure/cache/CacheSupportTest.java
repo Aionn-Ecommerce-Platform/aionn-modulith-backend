@@ -71,8 +71,7 @@ class CacheSupportTest {
     @Test
     void caffeineRedisTwoTierCacheReadsFromL1L2AndLoader() {
         StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
-        @SuppressWarnings("unchecked")
-        ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
+        ValueOperations<String, String> valueOperations = valueOps();
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 
         ObjectMapper objectMapper = new ObjectMapper();
@@ -104,8 +103,7 @@ class CacheSupportTest {
     @Test
     void caffeineRedisTwoTierCacheHandlesInvalidationAndRedisFallbacks() {
         StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
-        @SuppressWarnings("unchecked")
-        ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
+        ValueOperations<String, String> valueOperations = valueOps();
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 
         ObjectMapper objectMapper = new ObjectMapper();
@@ -239,14 +237,14 @@ class CacheSupportTest {
     }
 
     private static ValueOperations<String, String> valueOps() {
-        return mock(ValueOperations.class);
+        return mock();
     }
 
     private static Cursor<byte[]> byteCursor() {
-        return mock(Cursor.class);
+        return mock();
     }
 
     private static RedisCallback<Object> anyRedisCallback() {
-        return any(RedisCallback.class);
+        return any();
     }
 }

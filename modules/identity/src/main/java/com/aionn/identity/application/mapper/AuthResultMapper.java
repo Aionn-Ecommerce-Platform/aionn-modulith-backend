@@ -11,7 +11,7 @@ import com.aionn.identity.domain.model.SocialLink;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Mapper(componentModel = "spring")
@@ -20,7 +20,7 @@ public interface AuthResultMapper {
     @Mapping(target = "userId", source = "session.userId")
     @Mapping(target = "sessionId", source = "session.sessionId")
     @Mapping(target = "sessionExpiresAt", source = "session.expiresAt")
-    LoginResult toLoginResult(AuthSession session, String accessToken, String refreshToken, LocalDateTime expiresAt);
+    LoginResult toLoginResult(AuthSession session, String accessToken, String refreshToken, Instant expiresAt);
 
     @Mapping(target = "userId", source = "session.userId")
     @Mapping(target = "sessionId", source = "session.sessionId")
@@ -29,7 +29,7 @@ public interface AuthResultMapper {
             AuthSession session,
             String accessToken,
             String refreshToken,
-            LocalDateTime expiresAt,
+            Instant expiresAt,
             boolean newUser);
 
     @Mapping(target = "userId", source = "session.userId")
@@ -39,7 +39,7 @@ public interface AuthResultMapper {
             AuthSession session,
             String accessToken,
             String refreshToken,
-            LocalDateTime expiresAt);
+            Instant expiresAt);
 
     default LogoutAllResult toLogoutAllResult(int revokedCount) {
         return new LogoutAllResult(revokedCount);

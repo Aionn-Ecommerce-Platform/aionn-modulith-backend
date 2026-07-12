@@ -9,7 +9,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,13 +28,13 @@ class AuthSessionCleanupSchedulerTest {
     @Test
     void purgesSessionsIdleBeyondRetentionWindow() {
         when(authSessionPersistence.deleteIdleBefore(any())).thenReturn(3);
-        LocalDateTime before = LocalDateTime.now().minusDays(90);
+        Instant before = Instant.now().minus(Duration.ofDays(90));
 
         scheduler.purgeIdleSessions();
 
-        ArgumentCaptor<LocalDateTime> cutoffCaptor = ArgumentCaptor.captor();
+        ArgumentCaptor<Instant> cutoffCaptor = ArgumentCaptor.captor();
         verify(authSessionPersistence).deleteIdleBefore(cutoffCaptor.capture());
-        LocalDateTime after = LocalDateTime.now().minusDays(90);
+        Instant after = Instant.now().minus(Duration.ofDays(90));
         assertThat(cutoffCaptor.getValue()).isBetween(before.minus(Duration.ofSeconds(5)),
                 after.plus(Duration.ofSeconds(5)));
     }

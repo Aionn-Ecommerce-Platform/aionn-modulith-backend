@@ -18,8 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
+import java.time.Clock;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -37,6 +37,7 @@ public class MfaService {
     private final MfaPolicy mfaPolicy;
     private final IdentityMetricsPort identityMetrics;
 
+    private final Clock clock;
     public MfaSetupResult initiateSetup(
             String userId,
             String password,
@@ -152,8 +153,7 @@ public class MfaService {
         mfaPersistencePort.saveBackupCodes(userId, codeHashes);
         return rawCodes;
     }
-
-    private static LocalDateTime nowUtc() {
-        return LocalDateTime.now(ZoneOffset.UTC);
+    private Instant nowUtc() {
+        return clock.instant();
     }
 }

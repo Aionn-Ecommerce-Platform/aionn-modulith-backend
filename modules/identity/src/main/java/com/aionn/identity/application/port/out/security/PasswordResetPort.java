@@ -1,11 +1,11 @@
 package com.aionn.identity.application.port.out.security;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 public interface PasswordResetPort {
 
-    void savePasswordResetTokenHash(String tokenHash, String userId, LocalDateTime expiresAt);
+    void savePasswordResetTokenHash(String tokenHash, String userId, Instant expiresAt);
 
     Optional<PasswordResetTokenData> findPasswordResetTokenHash(String tokenHash);
 
@@ -15,6 +15,6 @@ public interface PasswordResetPort {
 
     void updatePassword(String userId, String passwordHash);
 
-    record PasswordResetTokenData(String userId, LocalDateTime expiresAt) {
+    record PasswordResetTokenData(String userId, Instant expiresAt) {
     }
 }

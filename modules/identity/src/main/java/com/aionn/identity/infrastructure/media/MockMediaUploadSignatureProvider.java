@@ -5,6 +5,7 @@ import com.aionn.identity.application.port.out.media.MediaUploadSignatureProvide
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
 import java.time.Instant;
 
 @Component
@@ -24,7 +25,7 @@ public class MockMediaUploadSignatureProvider implements MediaUploadSignaturePro
     private UploadSignatureResult placeholder(String folder) {
         return new UploadSignatureResult(
                 "mock-signature",
-                String.valueOf(Instant.now().getEpochSecond()),
+                String.valueOf(Instant.now(Clock.systemUTC()).getEpochSecond()),
                 "mock-api-key",
                 "mock-cloud",
                 "https://example.invalid/mock-upload",

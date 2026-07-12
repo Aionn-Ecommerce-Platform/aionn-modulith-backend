@@ -11,11 +11,8 @@ import org.springframework.web.context.request.ServletWebRequest;
 
 import java.lang.reflect.Method;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(MockitoExtension.class)
 class AuthClientTypeArgumentResolverTest {
@@ -37,8 +34,8 @@ class AuthClientTypeArgumentResolverTest {
         var resolver = new AuthClientTypeArgumentResolver(authProperties);
         Method method = Sample.class.getMethod("handle", String.class, String.class);
 
-        assertTrue(resolver.supportsParameter(new MethodParameter(method, 0)));
-        assertFalse(resolver.supportsParameter(new MethodParameter(method, 1)));
+        assertThat(resolver.supportsParameter(new MethodParameter(method, 0))).isTrue();
+        assertThat(resolver.supportsParameter(new MethodParameter(method, 1))).isFalse();
     }
 
     @Test
@@ -54,7 +51,7 @@ class AuthClientTypeArgumentResolverTest {
                 new MethodParameter(Sample.class.getMethod("handle", String.class, String.class), 0),
                 null, webRequest, null);
 
-        assertEquals("mobile", result);
+        assertThat(result).isEqualTo("mobile");
     }
 
     @Test
@@ -69,7 +66,7 @@ class AuthClientTypeArgumentResolverTest {
                 new MethodParameter(Sample.class.getMethod("handle", String.class, String.class), 0),
                 null, webRequest, null);
 
-        assertNull(result);
+        assertThat(result).isNull();
     }
 
     @Test
@@ -83,6 +80,6 @@ class AuthClientTypeArgumentResolverTest {
                 new MethodParameter(Sample.class.getMethod("handle", String.class, String.class), 0),
                 null, webRequest, null);
 
-        assertNull(result);
+        assertThat(result).isNull();
     }
 }

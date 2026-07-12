@@ -6,9 +6,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 
-/**
- * Published when a payment has been successfully captured.
- */
 public record PaymentPaidIntegrationEvent(
         String eventId,
         String paymentId,

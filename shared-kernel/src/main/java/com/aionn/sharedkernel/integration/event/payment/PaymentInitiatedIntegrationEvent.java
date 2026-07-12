@@ -6,10 +6,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 
-/**
- * Published when a payment has been initiated (authorisation in progress or
- * pending settlement).
- */
 public record PaymentInitiatedIntegrationEvent(
         String eventId,
         String paymentId,

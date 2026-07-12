@@ -17,17 +17,16 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class ConsentServiceTest {
@@ -43,7 +42,7 @@ class ConsentServiceTest {
 
     @BeforeEach
     void setUp() {
-        consentService = new ConsentService(userPersistencePort, consentPersistencePort);
+        consentService = new ConsentService(userPersistencePort, consentPersistencePort, Clock.systemUTC());
     }
 
     @Test
@@ -61,12 +60,12 @@ class ConsentServiceTest {
         ArgumentCaptor<UserConsent> captor = ArgumentCaptor.forClass(UserConsent.class);
         verify(consentPersistencePort).append(captor.capture());
         UserConsent persisted = captor.getValue();
-        assertEquals(ConsentType.TERMS, persisted.getConsentType());
-        assertEquals("v1", persisted.getVersion());
-        assertEquals(USER_ID, persisted.getUserId());
-        assertNotNull(persisted.getAgreedAt());
-        assertNull(persisted.getRevokedAt());
-        assertNotNull(result);
+        assertThat(persisted.getConsentType()).isEqualTo(ConsentType.TERMS);
+        assertThat(persisted.getVersion()).isEqualTo("v1");
+        assertThat(persisted.getUserId()).isEqualTo(USER_ID);
+        assertThat(persisted.getAgreedAt()).isNotNull();
+        assertThat(persisted.getRevokedAt()).isNull();
+        assertThat(result).isNotNull();
     }
 
     @Test
@@ -84,9 +83,9 @@ class ConsentServiceTest {
         ArgumentCaptor<UserConsent> captor = ArgumentCaptor.forClass(UserConsent.class);
         verify(consentPersistencePort).append(captor.capture());
         UserConsent persisted = captor.getValue();
-        assertEquals(ConsentType.MARKETING, persisted.getConsentType());
-        assertEquals(ConsentService.DEFAULT_MARKETING_VERSION, persisted.getVersion());
-        assertNotNull(persisted.getRevokedAt());
+        assertThat(persisted.getConsentType()).isEqualTo(ConsentType.MARKETING);
+        assertThat(persisted.getVersion()).isEqualTo(ConsentService.DEFAULT_MARKETING_VERSION);
+        assertThat(persisted.getRevokedAt()).isNotNull();
     }
 
     @Test
@@ -94,7 +93,7 @@ class ConsentServiceTest {
         var ex = assertThrows(IdentityException.class,
                 () -> consentService.agreeTerms(USER_ID, "v1", "not-an-ip"));
 
-        assertEquals(IdentityErrorCode.INVALID_IP_ADDRESS.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.INVALID_IP_ADDRESS.getCode());
     }
 
     @Test
@@ -104,19 +103,19 @@ class ConsentServiceTest {
         var ex = assertThrows(IdentityException.class,
                 () -> consentService.agreePrivacy(USER_ID, "v1", "1.1.1.1"));
 
-        assertEquals(IdentityErrorCode.USER_NOT_FOUND.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.USER_NOT_FOUND.getCode());
     }
 
     @Test
     void listMyDelegatesToPort() {
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
         ConsentResult one = new ConsentResult("c1", USER_ID, "TERMS", "v1", true,
-                LocalDateTime.now(), null, "1.1.1.1");
+                Instant.now(), null, "1.1.1.1");
         when(consentPersistencePort.findHistory(USER_ID)).thenReturn(List.of(one));
 
         List<ConsentResult> result = consentService.listMy(USER_ID);
 
-        assertEquals(List.of(one), result);
+        assertThat(result).isEqualTo(List.of(one));
     }
 
     private static IdentityUser activeUser() {
@@ -124,7 +123,7 @@ class ConsentServiceTest {
                 USER_ID, "alice@example.com", "+84912345678", "alice",
                 "hash", "Alice", null,
                 Set.of(UserRole.BUYER), UserStatus.ACTIVE,
-                null, null, null, LocalDateTime.now());
+                null, null, null, Instant.now());
     }
 
     private static <T> T any() {

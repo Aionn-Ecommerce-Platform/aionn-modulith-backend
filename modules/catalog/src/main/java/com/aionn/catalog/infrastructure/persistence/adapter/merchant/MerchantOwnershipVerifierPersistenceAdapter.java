@@ -5,11 +5,6 @@ import com.aionn.sharedkernel.integration.port.catalog.MerchantOwnershipVerifier
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * In-memory adapter that verifies merchant ownership using the Catalog module's
- * MerchantRepository. When the Catalog module is split into a microservice,
- * replace this with a gRPC/HTTP client.
- */
 @Component
 @RequiredArgsConstructor
 public class MerchantOwnershipVerifierPersistenceAdapter implements MerchantOwnershipVerifierPort {

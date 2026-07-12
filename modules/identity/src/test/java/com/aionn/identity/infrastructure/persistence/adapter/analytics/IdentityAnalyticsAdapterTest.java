@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -60,8 +61,10 @@ class IdentityAnalyticsAdapterTest {
                 userStatusCount(null, null));
         List<UserRepository.RoleCount> roleRows = List.of(userRoleCount(UserRole.BUYER, 30L),
                 userRoleCount(null, null));
+        ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
         when(userRepository.findCreatedAtBetween(any(), any()))
-                .thenReturn(List.of(from.atTime(10, 0), to.atTime(9, 0)));
+                .thenReturn(List.of(from.atTime(10, 0).atZone(zone).toInstant(),
+                        to.atTime(9, 0).atZone(zone).toInstant()));
         when(userRepository.count()).thenReturn(42L);
         when(userRepository.countByStatus()).thenReturn(statusRows);
         when(userRepository.countByRole()).thenReturn(roleRows);
@@ -118,8 +121,9 @@ class IdentityAnalyticsAdapterTest {
                 kycStatusCount("SUBMITTED", 1L),
                 kycStatusCount("CANCELLED", 3L));
         KycProfileRepository.KycDecisionProjection decision = mock(KycProfileRepository.KycDecisionProjection.class);
-        when(decision.getSubmittedAt()).thenReturn(from.atTime(10, 0));
-        when(decision.getApprovedAt()).thenReturn(from.atTime(12, 0));
+        ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
+        when(decision.getSubmittedAt()).thenReturn(from.atTime(10, 0).atZone(zone).toInstant());
+        when(decision.getApprovedAt()).thenReturn(from.atTime(12, 0).atZone(zone).toInstant());
         when(kycRepository.countByStatus()).thenReturn(statusRows);
         when(kycRepository.findDecisionsBetween(any(), any())).thenReturn(List.of(decision));
 
@@ -158,8 +162,9 @@ class IdentityAnalyticsAdapterTest {
                 feedbackCategoryCount(null, null));
         UserFeedbackRepository.FeedbackResolutionProjection resolution = mock(
                 UserFeedbackRepository.FeedbackResolutionProjection.class);
-        when(resolution.getCreatedAt()).thenReturn(from.atTime(8, 0));
-        when(resolution.getHandledAt()).thenReturn(from.atTime(11, 0));
+        ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
+        when(resolution.getCreatedAt()).thenReturn(from.atTime(8, 0).atZone(zone).toInstant());
+        when(resolution.getHandledAt()).thenReturn(from.atTime(11, 0).atZone(zone).toInstant());
         when(feedbackRepository.countByStatus()).thenReturn(statusRows);
         when(feedbackRepository.countByCategory()).thenReturn(categoryRows);
         when(feedbackRepository.findResolutionsBetween(any(), any())).thenReturn(List.of(resolution));

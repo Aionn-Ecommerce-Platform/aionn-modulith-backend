@@ -3,7 +3,8 @@ package com.aionn.identity.domain.model;
 import com.aionn.identity.domain.valueobject.ConsentType;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -17,7 +18,7 @@ class UserConsentTest {
                 .consentType(ConsentType.TERMS)
                 .version("v1")
                 .granted(true)
-                .agreedAt(LocalDateTime.now())
+                .agreedAt(Instant.now())
                 .revokedAt(null)
                 .ipAddress("127.0.0.1")
                 .build();
@@ -34,8 +35,8 @@ class UserConsentTest {
                 .userId("u-1")
                 .consentType(ConsentType.MARKETING)
                 .granted(true)
-                .agreedAt(LocalDateTime.now().minusDays(2))
-                .revokedAt(LocalDateTime.now())
+                .agreedAt(Instant.now().minus(Duration.ofDays(2)))
+                .revokedAt(Instant.now())
                 .build();
 
         assertThat(consent.isActive()).isFalse();

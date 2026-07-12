@@ -7,9 +7,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Optional;
 
 @Component
@@ -45,12 +44,11 @@ public class RedisRegistrationSessionStore implements RegistrationSessionStorePo
         return REGISTRATION_SESSION_PREFIX + regId;
     }
 
-    private Duration calculateTtl(LocalDateTime expiredAt) {
+    private Duration calculateTtl(Instant expiredAt) {
         if (expiredAt == null) {
             return Duration.ofMinutes(5);
         }
-        long seconds = Duration.between(Instant.now(), expiredAt.atZone(ZoneId.systemDefault()).toInstant())
-                .getSeconds();
+        long seconds = Duration.between(Instant.now(Clock.systemUTC()), expiredAt).getSeconds();
         if (seconds <= 0) {
             return Duration.ofSeconds(1);
         }

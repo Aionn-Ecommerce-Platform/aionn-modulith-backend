@@ -21,8 +21,7 @@ class CacheInvalidationListenerTest {
     void cacheInvalidationListenerIgnoresOwnOriginAndHandlesEvictBranches() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
         TwoTierCacheRegistry registry = mock(TwoTierCacheRegistry.class);
-        @SuppressWarnings("unchecked")
-        TwoTierCache<String, Object> cache = mock(TwoTierCache.class);
+        TwoTierCache<String, Object> cache = mock();
         Message message = mock(Message.class);
 
         when(registry.find("catalog")).thenReturn(Optional.of(cache));
@@ -52,8 +51,9 @@ class CacheInvalidationListenerTest {
         when(message.getBody()).thenReturn("not-json".getBytes(StandardCharsets.UTF_8));
         new CacheInvalidationListener(objectMapper, registry, "node-a").onMessage(message, null);
 
-        when(message.getBody()).thenReturn("{\"namespace\":\"missing\",\"key\":\"sku-1\",\"origin\":\"node-b\",\"evictAll\":false}"
-                .getBytes(StandardCharsets.UTF_8));
+        when(message.getBody())
+                .thenReturn("{\"namespace\":\"missing\",\"key\":\"sku-1\",\"origin\":\"node-b\",\"evictAll\":false}"
+                        .getBytes(StandardCharsets.UTF_8));
         when(registry.find("missing")).thenReturn(Optional.empty());
         new CacheInvalidationListener(objectMapper, registry, "node-a").onMessage(message, null);
         verify(registry).find("missing");

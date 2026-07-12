@@ -1,6 +1,6 @@
 package com.aionn.identity.application.dto.kyc.result;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record KycDocumentResult(
         String documentId,
@@ -9,5 +9,5 @@ public record KycDocumentResult(
         String url,
         String publicId,
         String status,
-        LocalDateTime uploadedAt) {
+        Instant uploadedAt) {
 }

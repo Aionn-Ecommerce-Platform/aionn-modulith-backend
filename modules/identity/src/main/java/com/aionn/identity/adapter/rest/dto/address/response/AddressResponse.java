@@ -1,6 +1,6 @@
 package com.aionn.identity.adapter.rest.dto.address.response;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 // AddressType exposed as a String (enum name) rather than the domain enum type,
 // so the REST contract doesn't move if the domain enum is renamed / reordered.
@@ -18,6 +18,6 @@ public record AddressResponse(
 		String fullAddress, // Formatted string: "123 Street, Ward Y, District Z, City A"
 		String type,
 		boolean isDefault,
-		LocalDateTime createdAt,
-		LocalDateTime updatedAt) {
+		Instant createdAt,
+		Instant updatedAt) {
 }

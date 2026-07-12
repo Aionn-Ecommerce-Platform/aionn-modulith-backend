@@ -13,10 +13,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,16 +36,16 @@ public class IdentityAnalyticsAdapter
         LocalDate safeTo = to == null ? LocalDate.now(ZONE) : to;
         LocalDate safeFrom = from == null ? safeTo.minusDays(29) : from;
         validateRange(safeFrom, safeTo);
-        LocalDateTime start = safeFrom.atStartOfDay();
-        LocalDateTime end = safeTo.plusDays(1).atStartOfDay();
+        Instant start = safeFrom.atStartOfDay(ZONE).toInstant();
+        Instant end = safeTo.plusDays(1).atStartOfDay(ZONE).toInstant();
 
         Map<LocalDate, Long> signupByDate = new LinkedHashMap<>();
         for (LocalDate day = safeFrom; !day.isAfter(safeTo); day = day.plusDays(1)) {
             signupByDate.put(day, 0L);
         }
-        var createdAts = userRepository.findCreatedAtBetween(start, end);
-        for (LocalDateTime ts : createdAts) {
-            LocalDate day = ts.toLocalDate();
+        List<Instant> createdAts = userRepository.findCreatedAtBetween(start, end);
+        for (Instant ts : createdAts) {
+            LocalDate day = ts.atZone(ZONE).toLocalDate();
             signupByDate.computeIfPresent(day, (k, v) -> v + 1);
         }
 
@@ -77,8 +76,8 @@ public class IdentityAnalyticsAdapter
         LocalDate safeTo = to == null ? LocalDate.now(ZONE) : to;
         LocalDate safeFrom = from == null ? safeTo.minusDays(29) : from;
         validateRange(safeFrom, safeTo);
-        LocalDateTime start = safeFrom.atStartOfDay();
-        LocalDateTime end = safeTo.plusDays(1).atStartOfDay();
+        Instant start = safeFrom.atStartOfDay(ZONE).toInstant();
+        Instant end = safeTo.plusDays(1).atStartOfDay(ZONE).toInstant();
 
         long pending = 0, approved = 0, rejected = 0, submitted = 0;
         for (var row : kycRepository.countByStatus()) {
@@ -96,7 +95,8 @@ public class IdentityAnalyticsAdapter
                 ? 0.0
                 : (double) approved / (approved + rejected);
 
-        var decisions = kycRepository.findDecisionsBetween(start, end);
+        List<KycProfileRepository.KycDecisionProjection> decisions =
+                kycRepository.findDecisionsBetween(start, end);
         double avgHours = 0.0;
         if (!decisions.isEmpty()) {
             long totalMinutes = 0;
@@ -105,9 +105,7 @@ public class IdentityAnalyticsAdapter
                 if (d.getSubmittedAt() == null || d.getApprovedAt() == null) {
                     continue;
                 }
-                totalMinutes += Duration.between(
-                        d.getSubmittedAt().toInstant(ZoneOffset.UTC),
-                        d.getApprovedAt().toInstant(ZoneOffset.UTC)).toMinutes();
+                totalMinutes += Duration.between(d.getSubmittedAt(), d.getApprovedAt()).toMinutes();
                 counted++;
             }
             if (counted > 0) {
@@ -123,8 +121,8 @@ public class IdentityAnalyticsAdapter
         LocalDate safeTo = to == null ? LocalDate.now(ZONE) : to;
         LocalDate safeFrom = from == null ? safeTo.minusDays(29) : from;
         validateRange(safeFrom, safeTo);
-        LocalDateTime start = safeFrom.atStartOfDay();
-        LocalDateTime end = safeTo.plusDays(1).atStartOfDay();
+        Instant start = safeFrom.atStartOfDay(ZONE).toInstant();
+        Instant end = safeTo.plusDays(1).atStartOfDay(ZONE).toInstant();
 
         long open = 0, resolved = 0, inReview = 0, closed = 0;
         for (var row : feedbackRepository.countByStatus()) {
@@ -142,7 +140,8 @@ public class IdentityAnalyticsAdapter
                         r.getCnt() == null ? 0 : r.getCnt()))
                 .toList();
 
-        var resolutions = feedbackRepository.findResolutionsBetween(start, end);
+        List<UserFeedbackRepository.FeedbackResolutionProjection> resolutions =
+                feedbackRepository.findResolutionsBetween(start, end);
         double avgHours = 0.0;
         if (!resolutions.isEmpty()) {
             long totalMinutes = 0;
@@ -151,9 +150,7 @@ public class IdentityAnalyticsAdapter
                 if (r.getCreatedAt() == null || r.getHandledAt() == null) {
                     continue;
                 }
-                totalMinutes += Duration.between(
-                        r.getCreatedAt().toInstant(ZoneOffset.UTC),
-                        r.getHandledAt().toInstant(ZoneOffset.UTC)).toMinutes();
+                totalMinutes += Duration.between(r.getCreatedAt(), r.getHandledAt()).toMinutes();
                 counted++;
             }
             if (counted > 0) {
@@ -164,9 +161,6 @@ public class IdentityAnalyticsAdapter
                 avgHours, byCategory);
     }
 
-    // Guard against unbounded per-day iteration and memory growth on the
-    // caller-supplied range. 366 days covers a full year plus leap-day buffer,
-    // which matches the analytics UI's max period.
     private static final long MAX_RANGE_DAYS = 366;
 
     private static void validateRange(LocalDate from, LocalDate to) {

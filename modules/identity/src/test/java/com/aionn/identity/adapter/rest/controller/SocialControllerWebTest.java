@@ -23,7 +23,7 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -63,7 +63,7 @@ class SocialControllerWebTest {
 
         @Test
         void linkSocialSuccessfullyLinksAccountToUser() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 SocialLinkResult result = new SocialLinkResult("GOOGLE", "google-sub-id-456", now);
                 SocialLinkResponse response = new SocialLinkResponse("GOOGLE", "google-sub-id-456", now);
 

@@ -25,7 +25,7 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -73,7 +73,7 @@ class AddressControllerWebTest {
 
         @Test
         void listReturnsAllAddressesForUser() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 AddressResult addr1 = new AddressResult("addr-1", "user-123", "John Doe", "0912345678",
                                 "01", "Hanoi", "001", "Ba Dinh", "00001", "Cong Vi Ward",
                                 "123 Main St, Apt 4", "123 Main St, Apt 4, Cong Vi Ward, Ba Dinh, Hanoi",
@@ -108,7 +108,7 @@ class AddressControllerWebTest {
 
         @Test
         void createCreatesNewAddress() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 AddressResult result = new AddressResult("addr-new-789", "user-123", "Bob Johnson", "0901234567",
                                 "01", "Hanoi", "002", "Hoan Kiem", "00019", "Hang Bong Ward",
                                 "789 Elm St, Suite 10", "789 Elm St, Suite 10, Hang Bong Ward, Hoan Kiem, Hanoi",
@@ -148,7 +148,7 @@ class AddressControllerWebTest {
 
         @Test
         void updateUpdatesExistingAddress() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 AddressResult result = new AddressResult("addr-123", "user-123", "Alice Updated", "0998877665",
                                 "79", "Ho Chi Minh", "766", "District 7", "27127", "Tan Thuan Dong Ward",
                                 "999 Business Rd, Floor 5",
@@ -204,7 +204,7 @@ class AddressControllerWebTest {
 
         @Test
         void setDefaultMarksAddressAsDefault() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 AddressResult result = new AddressResult("addr-789", "user-123", "Mark Default", "0911223344",
                                 "01", "Hanoi", "005", "Cau Giay", "00169", "Dich Vong Ward",
                                 "321 Pine St", "321 Pine St, Dich Vong Ward, Cau Giay, Hanoi",

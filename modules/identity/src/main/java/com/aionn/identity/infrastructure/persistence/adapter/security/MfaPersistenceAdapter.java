@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Component
@@ -80,7 +80,7 @@ public class MfaPersistenceAdapter implements MfaPersistencePort {
 
     @Override
     @Transactional
-    public boolean markBackupCodeUsed(String backupCodeId, LocalDateTime usedAt) {
+    public boolean markBackupCodeUsed(String backupCodeId, Instant usedAt) {
         return backupCodeRepository.markAsUsedIfUnused(backupCodeId, usedAt) == 1;
     }
 }

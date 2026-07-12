@@ -5,9 +5,8 @@ import com.aionn.identity.domain.exception.IdentityErrorCode;
 import com.aionn.identity.domain.exception.IdentityException;
 import com.aionn.identity.infrastructure.auth.social.google.GoogleSocialTokenVerifier;
 import org.junit.jupiter.api.Test;
-
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class MockSocialTokenVerifierTest {
@@ -20,7 +19,7 @@ class MockSocialTokenVerifierTest {
     void googleVerifierRejectsBlankProviderToken() {
         IdentityException ex = assertThrows(IdentityException.class,
                 () -> MOCK_GOOGLE.requireNotBlank("   "));
-        assertEquals(IdentityErrorCode.PROVIDER_TOKEN_INVALID.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.PROVIDER_TOKEN_INVALID.getCode());
     }
 
     @Test
@@ -36,7 +35,7 @@ class MockSocialTokenVerifierTest {
     @Test
     void mockVerifierReturnsSocialProfile() {
         SocialUserProfile profile = MOCK_GOOGLE.verify("token-123");
-        assertEquals("google-uid-token-123", profile.providerUserId());
-        assertEquals("u@example.com", profile.email());
+        assertThat(profile.providerUserId()).isEqualTo("google-uid-token-123");
+        assertThat(profile.email()).isEqualTo("u@example.com");
     }
 }

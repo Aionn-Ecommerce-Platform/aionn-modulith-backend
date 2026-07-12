@@ -17,17 +17,17 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Clock;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class AgentServiceTest {
@@ -49,7 +49,8 @@ class AgentServiceTest {
     @BeforeEach
     void setUp() {
         agentService = new AgentService(
-                agentPersistencePort, agentAuditPort, agentPolicy, passwordHasher);
+                agentPersistencePort, agentAuditPort, agentPolicy, passwordHasher,
+Clock.systemUTC());
     }
 
     @Test
@@ -61,11 +62,12 @@ class AgentServiceTest {
 
         AgentIdentity result = agentService.create(OWNER_ID);
 
-        assertNotNull(result.getId());
-        assertEquals(OWNER_ID, result.getOwnerId());
-        assertEquals("hashed-key", result.getKeyHash());
-        assertEquals(AgentStatus.ACTIVE, result.getStatus());
-        assertTrue(result.getExpiresAt().isAfter(LocalDateTime.now().plusMonths(11)));
+        assertThat(result.getId()).isNotNull();
+        assertThat(result.getOwnerId()).isEqualTo(OWNER_ID);
+        assertThat(result.getKeyHash()).isEqualTo("hashed-key");
+        assertThat(result.getStatus()).isEqualTo(AgentStatus.ACTIVE);
+        Instant elevenMonthsFromNow = Instant.now().atZone(ZoneOffset.UTC).plusMonths(11).toInstant();
+        assertThat(result.getExpiresAt().isAfter(elevenMonthsFromNow)).isTrue();
     }
 
     @Test
@@ -75,7 +77,7 @@ class AgentServiceTest {
         var ex = assertThrows(IdentityException.class,
                 () -> agentService.updatePermissions(OWNER_ID, AGENT_ID, "{}"));
 
-        assertEquals(IdentityErrorCode.AGENT_NOT_FOUND.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.AGENT_NOT_FOUND.getCode());
     }
 
     @Test
@@ -87,7 +89,7 @@ class AgentServiceTest {
 
         AgentIdentity result = agentService.updatePermissions(OWNER_ID, AGENT_ID, "{\"scope\":\"full\"}");
 
-        assertEquals("{\"scope\":\"full\"}", result.getPermissions());
+        assertThat(result.getPermissions()).isEqualTo("{\"scope\":\"full\"}");
     }
 
     @Test
@@ -101,11 +103,11 @@ class AgentServiceTest {
 
         AgentIdentity result = agentService.suspend(OWNER_ID, AGENT_ID);
 
-        assertEquals(AgentStatus.SUSPENDED, result.getStatus());
+        assertThat(result.getStatus()).isEqualTo(AgentStatus.SUSPENDED);
         ArgumentCaptor<SecurityAudit> captor = ArgumentCaptor.forClass(SecurityAudit.class);
         verify(agentAuditPort).save(captor.capture());
-        assertEquals(SecurityAuditEventType.AGENT_SUSPENDED, captor.getValue().getEventType());
-        assertEquals(AGENT_ID, captor.getValue().getDeviceId());
+        assertThat(captor.getValue().getEventType()).isEqualTo(SecurityAuditEventType.AGENT_SUSPENDED);
+        assertThat(captor.getValue().getDeviceId()).isEqualTo(AGENT_ID);
     }
 
     @Test
@@ -124,7 +126,7 @@ class AgentServiceTest {
 
         List<AgentIdentity> result = agentService.listMy(OWNER_ID);
 
-        assertEquals(1, result.size());
+        assertThat(result.size()).isEqualTo(1);
     }
 
     @Test
@@ -134,7 +136,7 @@ class AgentServiceTest {
         var ex = assertThrows(IdentityException.class,
                 () -> agentService.getAgentAuditLogs(OWNER_ID, AGENT_ID));
 
-        assertEquals(IdentityErrorCode.AGENT_NOT_FOUND.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.AGENT_NOT_FOUND.getCode());
     }
 
     private AgentIdentity baseAgent() {
@@ -145,9 +147,9 @@ class AgentServiceTest {
                 .keyHash("hash")
                 .permissions("{}")
                 .status(AgentStatus.ACTIVE)
-                .expiresAt(LocalDateTime.now().plusYears(1))
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .expiresAt(Instant.now().atZone(ZoneOffset.UTC).plusYears(1).toInstant())
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
                 .build();
     }
 }

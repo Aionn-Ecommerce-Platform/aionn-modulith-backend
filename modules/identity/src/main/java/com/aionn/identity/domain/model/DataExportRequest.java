@@ -4,7 +4,7 @@ import com.aionn.identity.domain.valueobject.DataExportStatus;
 import lombok.Getter;
 
 import java.time.Clock;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Getter
 public class DataExportRequest {
@@ -12,17 +12,17 @@ public class DataExportRequest {
     private final String requestId;
     private final String userId;
     private DataExportStatus status;
-    private final LocalDateTime requestedAt;
+    private final Instant requestedAt;
     private String fileUrl;
-    private LocalDateTime completedAt;
+    private Instant completedAt;
 
     public DataExportRequest(
             String requestId,
             String userId,
             DataExportStatus status,
-            LocalDateTime requestedAt,
+            Instant requestedAt,
             String fileUrl,
-            LocalDateTime completedAt) {
+            Instant completedAt) {
         this.requestId = requestId;
         this.userId = userId;
         this.status = status;
@@ -32,6 +32,10 @@ public class DataExportRequest {
     }
 
     public static DataExportRequest createRequested(String requestId, String userId) {
+        return createRequested(requestId, userId, Clock.systemUTC());
+    }
+
+    public static DataExportRequest createRequested(String requestId, String userId, Clock clock) {
         if (requestId == null || requestId.isBlank()) {
             throw new IllegalArgumentException("requestId must not be blank");
         }
@@ -42,7 +46,7 @@ public class DataExportRequest {
                 requestId,
                 userId,
                 DataExportStatus.REQUESTED,
-                LocalDateTime.now(Clock.systemUTC()),
+                clock.instant(),
                 null,
                 null);
     }
@@ -52,17 +56,25 @@ public class DataExportRequest {
     }
 
     public void complete(String fileUrl) {
+        complete(fileUrl, Clock.systemUTC());
+    }
+
+    public void complete(String fileUrl, Clock clock) {
         if (fileUrl == null || fileUrl.isBlank()) {
             throw new IllegalArgumentException("fileUrl must not be blank");
         }
         transitionTo(DataExportStatus.COMPLETED);
         this.fileUrl = fileUrl;
-        this.completedAt = LocalDateTime.now(Clock.systemUTC());
+        this.completedAt = clock.instant();
     }
 
     public void fail() {
+        fail(Clock.systemUTC());
+    }
+
+    public void fail(Clock clock) {
         transitionTo(DataExportStatus.FAILED);
-        this.completedAt = LocalDateTime.now(Clock.systemUTC());
+        this.completedAt = clock.instant();
     }
 
     private void transitionTo(DataExportStatus newStatus) {

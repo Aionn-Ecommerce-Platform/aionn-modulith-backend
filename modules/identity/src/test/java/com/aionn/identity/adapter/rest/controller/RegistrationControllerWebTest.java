@@ -37,7 +37,8 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -93,16 +94,17 @@ class RegistrationControllerWebTest {
 
     @Test
     void initiateRegistrationResolvesClientIpAndReturnsCreatedPayload() throws Exception {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         InitiateRegistrationResult result = new InitiateRegistrationResult(
                 "reg-1",
                 now.plusSeconds(60),
-                now.plusMinutes(5),
+                now.plusSeconds(300),
                 "123456");
         RegistrationSessionResponse response = new RegistrationSessionResponse(
                 "reg-1",
                 result.resendAvailableAt(),
-                result.expiredAt());
+                result.expiredAt(),
+                null);
 
         when(registrationDtoMapper.toInitiateCommand(any(InitiateRegistrationRequest.class), eq("203.0.113.10")))
                 .thenReturn(new InitiateRegistrationCommand("0912345678", "captcha-ok", "203.0.113.10"));
@@ -131,14 +133,14 @@ class RegistrationControllerWebTest {
 
     @Test
     void completeRegistrationResolvesClientContextBeforeDelegating() throws Exception {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         CompleteRegistrationResult result = new CompleteRegistrationResult(
                 "user-1",
                 "session-1",
                 "refresh-1",
                 "access-1",
-                now.plusMinutes(15),
-                now.plusDays(7));
+                now.plus(Duration.ofMinutes(15)),
+                now.plus(Duration.ofDays(7)));
         AuthTokenResponse authTokenResponse = new AuthTokenResponse(
                 result.userId(),
                 result.sessionId(),
@@ -220,16 +222,17 @@ class RegistrationControllerWebTest {
 
     @Test
     void resendOtpResolvesClientIpAndReturnsSessionMetadata() throws Exception {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         ResendRegistrationOtpResult result = new ResendRegistrationOtpResult(
                 "reg-1",
                 now.plusSeconds(60),
-                now.plusMinutes(5),
+                now.plusSeconds(300),
                 "654321");
         RegistrationSessionResponse response = new RegistrationSessionResponse(
                 "reg-1",
                 result.resendAvailableAt(),
-                result.expiredAt());
+                result.expiredAt(),
+                null);
 
         when(registrationDtoMapper.toResendOtpCommand("reg-1", "198.51.100.20"))
                 .thenReturn(new ResendRegistrationOtpCommand("reg-1", "198.51.100.20"));

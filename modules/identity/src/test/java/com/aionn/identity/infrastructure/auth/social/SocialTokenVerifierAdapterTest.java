@@ -9,9 +9,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(MockitoExtension.class)
 class SocialTokenVerifierAdapterTest {
@@ -33,7 +33,7 @@ class SocialTokenVerifierAdapterTest {
 
         SocialUserProfile result = adapter.verifyAndExtract(AuthProvider.GOOGLE, "token");
 
-        assertEquals("google-user-1", result.providerUserId());
+        assertThat(result.providerUserId()).isEqualTo("google-user-1");
         verify(googleVerifier).verify("token");
     }
 }

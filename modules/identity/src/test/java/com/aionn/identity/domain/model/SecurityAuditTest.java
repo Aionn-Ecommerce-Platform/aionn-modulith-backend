@@ -4,7 +4,7 @@ import com.aionn.identity.domain.valueobject.SecurityAuditEventType;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -12,7 +12,7 @@ class SecurityAuditTest {
 
     @Test
     void builderUsesTypedAuditEvent() {
-        LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
+        Instant now = Instant.now(Clock.systemUTC());
 
         SecurityAudit audit = SecurityAudit.builder()
                 .id("audit-1")

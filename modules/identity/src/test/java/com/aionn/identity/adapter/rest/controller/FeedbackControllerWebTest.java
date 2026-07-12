@@ -20,7 +20,7 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -60,7 +60,7 @@ class FeedbackControllerWebTest {
 
     @Test
     void submitAcceptsAuthenticatedFeedback() throws Exception {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         FeedbackResult result = new FeedbackResult("fb-1", "user-1", "BUG", "sub", "content",
                 5, "a@b.com", null, "OPEN", null, null, null, now);
         FeedbackResponse response = new FeedbackResponse("fb-1", "user-1", "BUG", "sub", "content",
@@ -86,7 +86,7 @@ class FeedbackControllerWebTest {
 
     @Test
     void listMineReturnsCurrentUserFeedbacks() throws Exception {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         FeedbackResult r1 = new FeedbackResult("fb-a", "alice@example.com", "BUG", "s", "c",
                 4, null, null, "OPEN", null, null, null, now);
         FeedbackResponse resp1 = new FeedbackResponse("fb-a", "alice@example.com", "BUG", "s", "c",

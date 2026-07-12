@@ -16,7 +16,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -50,7 +50,7 @@ class AddressPersistenceAdapterTest {
                 ADDRESS_ID, USER_ID, "Alice", "+84912345678",
                 "VN-HN", "Ha Noi", "VN-HN-BA", "Ba Dinh", "VN-HN-BA-PX", "Phuc Xa",
                 "12 main st", "12 main st, Phuc Xa, Ba Dinh, Ha Noi",
-                AddressType.HOME, isDefault, LocalDateTime.now(), LocalDateTime.now());
+                AddressType.HOME, isDefault, Instant.now(), Instant.now());
     }
 
     @Test

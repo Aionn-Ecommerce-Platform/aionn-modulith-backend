@@ -3,7 +3,7 @@ package com.aionn.identity.application.port.out.user;
 import com.aionn.identity.domain.valueobject.OtpChannel;
 import com.aionn.identity.domain.valueobject.UserOtpPurpose;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 public interface UserOtpChallengeStorePort {
@@ -21,7 +21,7 @@ public interface UserOtpChallengeStorePort {
             String target,
             String otpCode,
             String pendingValue,
-            LocalDateTime expiresAt,
+            Instant expiresAt,
             int attempts) {
 
         public UserOtpChallenge withAttempts(int nextAttempts) {

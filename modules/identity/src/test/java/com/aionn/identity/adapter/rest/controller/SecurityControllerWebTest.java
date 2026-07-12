@@ -29,7 +29,8 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -281,12 +282,12 @@ class SecurityControllerWebTest {
 
   @Test
   void getAuditLogsReturnsSecurityAuditLogs() throws Exception {
-    LocalDateTime now = LocalDateTime.now();
+    Instant now = Instant.now();
     SecurityAuditLogResult log1 = new SecurityAuditLogResult("audit-1", "LOGIN", "Login successful",
         "192.168.1.1", "Chrome", now);
     SecurityAuditLogResult log2 = new SecurityAuditLogResult("audit-2", "PASSWORD_CHANGE",
         "Password changed successfully", "10.0.0.5", "Firefox",
-        now.minusDays(1));
+        now.minus(Duration.ofDays(1)));
     List<SecurityAuditLogResult> logs = List.of(log1, log2);
 
     SecurityAuditLogResponse resp1 = new SecurityAuditLogResponse("audit-1", "LOGIN", "Login successful",
@@ -295,7 +296,7 @@ class SecurityControllerWebTest {
         now);
     SecurityAuditLogResponse resp2 = new SecurityAuditLogResponse("audit-2", "PASSWORD_CHANGE",
         "Password changed successfully", "10.0.0.5",
-        "Firefox", now.minusDays(1));
+        "Firefox", now.minus(Duration.ofDays(1)));
 
     when(getSecurityAuditLogsQueryPort.execute("alice@example.com")).thenReturn(logs);
     when(securityDtoMapper.toAuditLogResponse(logs)).thenReturn(List.of(resp1, resp2));

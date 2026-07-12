@@ -28,7 +28,7 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -87,7 +87,7 @@ class UserPreferenceControllerWebTest {
                                 "dark",
                                 "{\"orders\":true,\"promotions\":false}",
                                 "{\"allowAiAnalysis\":false}",
-                                LocalDateTime.now());
+                                Instant.now());
         }
 
         private UserPreferenceResponse sampleResponse() {
@@ -99,7 +99,7 @@ class UserPreferenceControllerWebTest {
                                 "dark",
                                 "{\"orders\":true,\"promotions\":false}",
                                 "{\"allowAiAnalysis\":false}",
-                                LocalDateTime.now());
+                                Instant.now());
         }
 
         @Test

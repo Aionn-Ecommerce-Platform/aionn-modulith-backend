@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.util.List;
 
 @Slf4j
@@ -29,12 +30,13 @@ public class BrandService {
     private final BrandPersistencePort brandRepository;
     private final BrandResultMapper brandResultMapper;
     private final EventPublisher eventPublisher;
+    private final Clock clock;
 
     public BrandResult create(CreateBrandCommand command) {
         if (brandRepository.existsByName(command.name())) {
             throw new CatalogException(CatalogErrorCode.BRAND_NAME_CONFLICT);
         }
-        Brand brand = Brand.create(IdGenerator.ulid(), command.name(), command.logoUrl(), command.description());
+        Brand brand = Brand.create(IdGenerator.ulid(), command.name(), command.logoUrl(), command.description(), clock);
         Brand saved = brandRepository.save(brand);
         eventPublisher.publish(brand.pullEvents());
         return brandResultMapper.toResult(saved);
@@ -47,7 +49,7 @@ public class BrandService {
                 && brandRepository.existsByName(command.name())) {
             throw new CatalogException(CatalogErrorCode.BRAND_NAME_CONFLICT);
         }
-        brand.update(command.name(), command.logoUrl(), command.description());
+        brand.update(command.name(), command.logoUrl(), command.description(), clock);
         Brand saved = brandRepository.save(brand);
         eventPublisher.publish(brand.pullEvents());
         return brandResultMapper.toResult(saved);
@@ -58,7 +60,7 @@ public class BrandService {
         if (brandRepository.hasActiveProducts(command.brandId())) {
             throw new CatalogException(CatalogErrorCode.BRAND_HAS_ACTIVE_PRODUCTS);
         }
-        brand.softDelete(command.reason());
+        brand.softDelete(command.reason(), clock);
         brandRepository.save(brand);
         eventPublisher.publish(brand.pullEvents());
     }

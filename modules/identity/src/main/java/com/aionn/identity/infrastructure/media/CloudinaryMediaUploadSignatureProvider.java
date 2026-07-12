@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
 import java.util.TreeMap;
@@ -34,7 +35,7 @@ public class CloudinaryMediaUploadSignatureProvider implements MediaUploadSignat
     }
 
     private UploadSignatureResult sign(String folder, String resourceType) {
-        long timestamp = Instant.now().getEpochSecond();
+        long timestamp = Instant.now(Clock.systemUTC()).getEpochSecond();
         Map<String, String> params = new TreeMap<>();
         params.put("folder", folder);
         params.put("timestamp", String.valueOf(timestamp));

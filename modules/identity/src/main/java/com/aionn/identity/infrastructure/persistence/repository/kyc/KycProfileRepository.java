@@ -5,7 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,7 +30,7 @@ public interface KycProfileRepository extends JpaRepository<KycProfileEntity, St
            AND k.approvedAt >= :from
            AND k.approvedAt < :to
         """)
-    List<KycDecisionProjection> findDecisionsBetween(LocalDateTime from, LocalDateTime to);
+    List<KycDecisionProjection> findDecisionsBetween(Instant from, Instant to);
 
     interface KycStatusCount {
         String getStatus();
@@ -39,8 +39,8 @@ public interface KycProfileRepository extends JpaRepository<KycProfileEntity, St
     }
 
     interface KycDecisionProjection {
-        LocalDateTime getSubmittedAt();
+        Instant getSubmittedAt();
 
-        LocalDateTime getApprovedAt();
+        Instant getApprovedAt();
     }
 }

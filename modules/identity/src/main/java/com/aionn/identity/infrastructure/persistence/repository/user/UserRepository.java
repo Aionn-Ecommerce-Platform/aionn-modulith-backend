@@ -11,7 +11,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,8 +40,8 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
                         Pageable pageable);
 
         @Query("SELECT u.createdAt FROM UserEntity u WHERE u.createdAt >= :from AND u.createdAt < :to")
-        List<LocalDateTime> findCreatedAtBetween(@Param("from") LocalDateTime from,
-                        @Param("to") LocalDateTime to);
+        List<Instant> findCreatedAtBetween(@Param("from") Instant from,
+                        @Param("to") Instant to);
 
         @Query("SELECT u.status AS status, COUNT(u) AS cnt FROM UserEntity u GROUP BY u.status")
         List<StatusCount> countByStatus();

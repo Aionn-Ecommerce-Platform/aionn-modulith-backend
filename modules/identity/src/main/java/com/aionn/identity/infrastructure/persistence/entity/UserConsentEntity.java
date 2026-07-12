@@ -11,7 +11,7 @@ import jakarta.persistence.Table;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "user_consents", indexes = {
@@ -41,10 +41,10 @@ public class UserConsentEntity {
 
     @CreationTimestamp
     @Column(name = "agreed_at", updatable = false)
-    private LocalDateTime agreedAt;
+    private Instant agreedAt;
 
     @Column(name = "revoked_at")
-    private LocalDateTime revokedAt;
+    private Instant revokedAt;
 
     @Column(name = "ip_address", length = 50)
     private String ipAddress;

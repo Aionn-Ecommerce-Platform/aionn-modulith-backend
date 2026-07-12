@@ -1,6 +1,6 @@
 package com.aionn.identity.adapter.rest.dto.kyc.response;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record KycDocumentResponse(
         String documentId,
@@ -9,5 +9,5 @@ public record KycDocumentResponse(
         String url,
         String publicId,
         String status,
-        LocalDateTime uploadedAt) {
+        Instant uploadedAt) {
 }

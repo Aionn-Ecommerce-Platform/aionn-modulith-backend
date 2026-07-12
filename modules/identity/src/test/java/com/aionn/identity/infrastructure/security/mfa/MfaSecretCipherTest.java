@@ -2,10 +2,7 @@ package com.aionn.identity.infrastructure.security.mfa;
 
 import com.aionn.identity.infrastructure.config.properties.MfaProperties;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class MfaSecretCipherTest {
@@ -18,8 +15,8 @@ class MfaSecretCipherTest {
         String plain = "JBSWY3DPEHPK3PXP";
         String encrypted = cipher.encrypt(plain);
 
-        assertNotEquals(plain, encrypted);
-        assertEquals(plain, cipher.decrypt(encrypted));
+        assertThat(encrypted).isNotEqualTo(plain);
+        assertThat(cipher.decrypt(encrypted)).isEqualTo(plain);
     }
 
     @Test
@@ -28,16 +25,16 @@ class MfaSecretCipherTest {
         String first = cipher.encrypt(plain);
         String second = cipher.encrypt(plain);
 
-        assertNotEquals(first, second);
-        assertEquals(plain, cipher.decrypt(first));
-        assertEquals(plain, cipher.decrypt(second));
+        assertThat(second).isNotEqualTo(first);
+        assertThat(cipher.decrypt(first)).isEqualTo(plain);
+        assertThat(cipher.decrypt(second)).isEqualTo(plain);
     }
 
     @Test
     void encryptReturnsNullOrBlankUnchanged() {
-        assertNull(cipher.encrypt(null));
-        assertEquals("", cipher.encrypt(""));
-        assertEquals("   ", cipher.encrypt("   "));
+        assertThat(cipher.encrypt(null)).isNull();
+        assertThat(cipher.encrypt("")).isEqualTo("");
+        assertThat(cipher.encrypt("   ")).isEqualTo("   ");
     }
 
     @Test

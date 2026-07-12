@@ -1,6 +1,6 @@
 package com.aionn.identity.adapter.rest.dto.user.response;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Set;
 
 public record UserProfileResponse(
@@ -12,9 +12,9 @@ public record UserProfileResponse(
         String avatarUrl,
         Set<String> roles,
         String status,
-        LocalDateTime emailVerifiedAt,
-        LocalDateTime phoneVerifiedAt,
-        LocalDateTime createdAt) {
+        Instant emailVerifiedAt,
+        Instant phoneVerifiedAt,
+        Instant createdAt) {
 }
 
 

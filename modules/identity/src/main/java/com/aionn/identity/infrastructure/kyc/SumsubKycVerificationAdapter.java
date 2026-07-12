@@ -20,6 +20,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -150,7 +151,7 @@ public class SumsubKycVerificationAdapter implements ExternalKycVerificationPort
     private JsonNode executeSignedJson(String method, String pathWithQuery, Map<String, Object> body) {
         KycProperties.Sumsub config = requireConfig();
         String bodyJson = toJson(body);
-        String timestamp = String.valueOf(Instant.now().getEpochSecond());
+        String timestamp = String.valueOf(Instant.now(Clock.systemUTC()).getEpochSecond());
         String signature = sign(timestamp, method, pathWithQuery, bodyJson, config.secretKey());
 
         RestClient client = clientBuilder

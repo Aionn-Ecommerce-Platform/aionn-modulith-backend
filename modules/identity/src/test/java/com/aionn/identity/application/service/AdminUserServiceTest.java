@@ -18,18 +18,18 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class AdminUserServiceTest {
@@ -57,10 +57,10 @@ class AdminUserServiceTest {
 
         Set<String> result = adminUserService.updateRoles(USER_ID, Set.of(UserRole.SYSTEM_ADMIN));
 
-        assertEquals(Set.of("SYSTEM_ADMIN"), result);
+        assertThat(result).isEqualTo(Set.of("SYSTEM_ADMIN"));
         ArgumentCaptor<IdentityUser> captor = ArgumentCaptor.forClass(IdentityUser.class);
         verify(adminUserPersistencePort).save(captor.capture());
-        assertEquals(Set.of(UserRole.SYSTEM_ADMIN), captor.getValue().getRoles());
+        assertThat(captor.getValue().getRoles()).isEqualTo(Set.of(UserRole.SYSTEM_ADMIN));
     }
 
     @Test
@@ -71,7 +71,7 @@ class AdminUserServiceTest {
         var ex = assertThrows(IdentityException.class,
                 () -> adminUserService.updateRoles(USER_ID, Set.of()));
 
-        assertEquals(IdentityErrorCode.INVALID_USER_ROLE.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.INVALID_USER_ROLE.getCode());
     }
 
     @Test
@@ -83,7 +83,7 @@ class AdminUserServiceTest {
 
         Set<String> result = adminUserService.removeRoles(USER_ID, Set.of(UserRole.SYSTEM_ADMIN));
 
-        assertEquals(Set.of("BUYER"), result);
+        assertThat(result).isEqualTo(Set.of("BUYER"));
     }
 
     @Test
@@ -95,7 +95,7 @@ class AdminUserServiceTest {
 
         Set<String> result = adminUserService.removeRoles(USER_ID, Set.of(UserRole.SYSTEM_ADMIN));
 
-        assertEquals(Set.of("BUYER"), result);
+        assertThat(result).isEqualTo(Set.of("BUYER"));
     }
 
     @Test
@@ -107,7 +107,7 @@ class AdminUserServiceTest {
 
         String status = adminUserService.updateStatus(USER_ID, UserStatus.BANNED);
 
-        assertEquals("BANNED", status);
+        assertThat(status).isEqualTo("BANNED");
     }
 
     @Test
@@ -118,20 +118,20 @@ class AdminUserServiceTest {
         var ex = assertThrows(IdentityException.class,
                 () -> adminUserService.updateStatus(USER_ID, null));
 
-        assertEquals(IdentityErrorCode.INVALID_USER_STATUS.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.INVALID_USER_STATUS.getCode());
     }
 
     @Test
     void unlockAccountUnlocksLockedUser() {
         IdentityUser user = newUser(Set.of(UserRole.BUYER));
-        user.lockUntil(LocalDateTime.now().plusMinutes(10));
+        user.lockUntil(Instant.now().plus(Duration.ofMinutes(10)));
         when(adminUserPersistencePort.findById(USER_ID)).thenReturn(Optional.of(user));
 
         adminUserService.unlockAccount(USER_ID);
 
         ArgumentCaptor<IdentityUser> captor = ArgumentCaptor.forClass(IdentityUser.class);
         verify(adminUserPersistencePort).save(captor.capture());
-        assertNull(captor.getValue().getLockedUntil());
+        assertThat(captor.getValue().getLockedUntil()).isNull();
     }
 
     @Test
@@ -147,7 +147,7 @@ class AdminUserServiceTest {
 
         UserListResult result = adminUserService.listUsers(UserStatus.ACTIVE, UserRole.BUYER, 0, 10);
 
-        assertEquals(expected, result);
+        assertThat(result).isEqualTo(expected);
     }
 
     @Test
@@ -160,7 +160,7 @@ class AdminUserServiceTest {
 
         UserDetailResult result = adminUserService.getUserById(USER_ID);
 
-        assertEquals(expected, result);
+        assertThat(result).isEqualTo(expected);
     }
 
     @Test
@@ -169,7 +169,7 @@ class AdminUserServiceTest {
 
         var ex = assertThrows(IdentityException.class, () -> adminUserService.getUserById(USER_ID));
 
-        assertEquals(IdentityErrorCode.USER_NOT_FOUND.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.USER_NOT_FOUND.getCode());
     }
 
     private IdentityUser newUser(Set<UserRole> roles) {
@@ -186,6 +186,6 @@ class AdminUserServiceTest {
                 null,
                 null,
                 null,
-                LocalDateTime.now());
+                Instant.now());
     }
 }

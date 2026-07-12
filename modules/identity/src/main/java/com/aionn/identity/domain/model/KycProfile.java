@@ -6,7 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.time.Clock;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Getter
 @AllArgsConstructor
@@ -25,9 +25,9 @@ public class KycProfile {
     private String reviewNote;
     private String decisionAdminId;
     private String rejectReason;
-    private LocalDateTime submittedAt;
-    private LocalDateTime approvedAt;
-    private final LocalDateTime createdAt;
+    private Instant submittedAt;
+    private Instant approvedAt;
+    private final Instant createdAt;
 
     public void attachExternalProvider(
             String provider,
@@ -35,6 +35,17 @@ public class KycProfile {
             String providerLevelName,
             String providerReviewStatus,
             String providerCorrelationId) {
+        attachExternalProvider(provider, providerApplicantId, providerLevelName,
+                providerReviewStatus, providerCorrelationId, Clock.systemUTC());
+    }
+
+    public void attachExternalProvider(
+            String provider,
+            String providerApplicantId,
+            String providerLevelName,
+            String providerReviewStatus,
+            String providerCorrelationId,
+            Clock clock) {
         this.provider = provider;
         this.providerApplicantId = providerApplicantId;
         this.providerLevelName = providerLevelName;
@@ -42,7 +53,7 @@ public class KycProfile {
         this.providerCorrelationId = providerCorrelationId;
         transitionTo(KycStatus.SUBMITTED);
         if (this.submittedAt == null) {
-            this.submittedAt = LocalDateTime.now(Clock.systemUTC());
+            this.submittedAt = clock.instant();
         }
     }
 
@@ -52,6 +63,17 @@ public class KycProfile {
             KycReviewAnswer reviewAnswer,
             String moderationComment,
             String clientComment) {
+        syncExternalReview(providerReviewStatus, providerCorrelationId, reviewAnswer,
+                moderationComment, clientComment, Clock.systemUTC());
+    }
+
+    public void syncExternalReview(
+            String providerReviewStatus,
+            String providerCorrelationId,
+            KycReviewAnswer reviewAnswer,
+            String moderationComment,
+            String clientComment,
+            Clock clock) {
         this.providerReviewStatus = providerReviewStatus;
         this.providerCorrelationId = providerCorrelationId;
         this.reviewNote = moderationComment;
@@ -59,7 +81,7 @@ public class KycProfile {
         if (reviewAnswer == null) {
             if (this.status == KycStatus.DRAFT) {
                 transitionTo(KycStatus.SUBMITTED);
-                this.submittedAt = this.submittedAt == null ? LocalDateTime.now(Clock.systemUTC()) : this.submittedAt;
+                this.submittedAt = this.submittedAt == null ? clock.instant() : this.submittedAt;
             }
             return;
         }
@@ -69,7 +91,7 @@ public class KycProfile {
                 transitionTo(KycStatus.APPROVED);
                 this.decisionAdminId = providerDecisionSource();
                 this.rejectReason = null;
-                this.approvedAt = LocalDateTime.now(Clock.systemUTC());
+                this.approvedAt = clock.instant();
             }
             case RED -> {
                 transitionTo(KycStatus.REJECTED);
@@ -93,8 +115,12 @@ public class KycProfile {
     }
 
     public void submit() {
+        submit(Clock.systemUTC());
+    }
+
+    public void submit(Clock clock) {
         transitionTo(KycStatus.SUBMITTED);
-        this.submittedAt = LocalDateTime.now(Clock.systemUTC());
+        this.submittedAt = clock.instant();
         this.reviewerId = null;
         this.reviewNote = null;
         this.decisionAdminId = null;
@@ -103,12 +129,16 @@ public class KycProfile {
     }
 
     public void adminApprove(String adminId, String note) {
+        adminApprove(adminId, note, Clock.systemUTC());
+    }
+
+    public void adminApprove(String adminId, String note, Clock clock) {
         transitionTo(KycStatus.APPROVED);
         this.decisionAdminId = adminId;
         this.reviewerId = adminId;
         this.reviewNote = note;
         this.rejectReason = null;
-        this.approvedAt = LocalDateTime.now(Clock.systemUTC());
+        this.approvedAt = clock.instant();
     }
 
     public void adminReject(String adminId, String reason) {

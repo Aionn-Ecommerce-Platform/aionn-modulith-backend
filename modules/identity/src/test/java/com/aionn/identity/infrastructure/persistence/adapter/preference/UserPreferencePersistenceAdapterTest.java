@@ -14,7 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,7 +42,7 @@ class UserPreferencePersistenceAdapterTest {
 
     private UserPreferenceResult result() {
         return new UserPreferenceResult(USER_ID, "vi", "VND", "Asia/Ho_Chi_Minh", "dark",
-                "{}", "{}", LocalDateTime.now());
+                "{}", "{}", Instant.now());
     }
 
     @Test

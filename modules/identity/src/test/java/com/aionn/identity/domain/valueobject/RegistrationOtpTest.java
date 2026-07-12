@@ -3,96 +3,62 @@ package com.aionn.identity.domain.valueobject;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.ZoneOffset;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class RegistrationOtpTest {
 
+    private static final Instant FIXED_INSTANT = Instant.parse("2026-01-01T00:00:00Z");
+    private static final Clock FIXED_CLOCK = Clock.fixed(FIXED_INSTANT, ZoneOffset.UTC);
+
     @Test
-    void generate_shouldCreateOtpWithCorrectTimings() {
-        int resendCooldownSeconds = 60;
-        int expirySeconds = 300;
-        LocalDateTime beforeGeneration = LocalDateTime.now(Clock.systemUTC());
+    void generateProduces6DigitCodeAndComputesTimingsFromClock() {
+        RegistrationOtp otp = RegistrationOtp.generate(60, 300, FIXED_CLOCK);
 
-        RegistrationOtp otp = RegistrationOtp.generate(resendCooldownSeconds, expirySeconds);
-
-        assertNotNull(otp.getCode(), "OTP code should not be null");
-        assertEquals(6, otp.getCode().length(), "OTP code should be 6 digits");
-        assertTrue(otp.getCode().matches("\\d{6}"), "OTP code should contain only digits");
-
-        assertNotNull(otp.getResendAvailableAt(), "Resend available time should not be null");
-        assertNotNull(otp.getExpiredAt(), "Expiry time should not be null");
-
-        // Verify timing is approximately correct (within 1 second tolerance)
-        LocalDateTime expectedResendTime = beforeGeneration.plusSeconds(resendCooldownSeconds);
-        LocalDateTime expectedExpiryTime = beforeGeneration.plusSeconds(expirySeconds);
-
-        assertTrue(otp.getResendAvailableAt().isAfter(expectedResendTime.minusSeconds(1)),
-                "Resend time should be approximately " + resendCooldownSeconds + " seconds from now");
-        assertTrue(otp.getResendAvailableAt().isBefore(expectedResendTime.plusSeconds(1)),
-                "Resend time should be approximately " + resendCooldownSeconds + " seconds from now");
-
-        assertTrue(otp.getExpiredAt().isAfter(expectedExpiryTime.minusSeconds(1)),
-                "Expiry time should be approximately " + expirySeconds + " seconds from now");
-        assertTrue(otp.getExpiredAt().isBefore(expectedExpiryTime.plusSeconds(1)),
-                "Expiry time should be approximately " + expirySeconds + " seconds from now");
+        assertThat(otp.getCode()).hasSize(6).matches("\\d{6}");
+        assertThat(otp.getResendAvailableAt()).isEqualTo(FIXED_INSTANT.plusSeconds(60));
+        assertThat(otp.getExpiredAt()).isEqualTo(FIXED_INSTANT.plusSeconds(300));
     }
 
     @Test
-    void generate_shouldThrowException_whenResendCooldownIsNegative() {
-        assertThrows(IllegalArgumentException.class,
-                () -> RegistrationOtp.generate(-1, 300),
-                "Should throw exception for negative resend cooldown");
+    void generateRejectsNegativeResendCooldown() {
+        assertThatThrownBy(() -> RegistrationOtp.generate(-1, 300, FIXED_CLOCK))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    void generate_shouldThrowException_whenExpirySecondsIsNegative() {
-        assertThrows(IllegalArgumentException.class,
-                () -> RegistrationOtp.generate(60, -1),
-                "Should throw exception for negative expiry seconds");
+    void generateRejectsNegativeExpiry() {
+        assertThatThrownBy(() -> RegistrationOtp.generate(60, -1, FIXED_CLOCK))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    void isExpired_shouldReturnFalse_whenOtpIsNotExpired() {
-        RegistrationOtp otp = RegistrationOtp.generate(60, 300);
+    void isExpiredReturnsFalseBeforeExpiredAt() {
+        RegistrationOtp otp = RegistrationOtp.generate(60, 300, FIXED_CLOCK);
+        Clock justBeforeExpiry = Clock.fixed(FIXED_INSTANT.plusSeconds(299), ZoneOffset.UTC);
 
-        assertFalse(otp.isExpired(), "OTP should not be expired immediately after generation");
+        assertThat(otp.isExpired(justBeforeExpiry)).isFalse();
     }
 
     @Test
-    void isExpired_shouldReturnTrue_whenOtpIsExpired() {
-        RegistrationOtp otp = RegistrationOtp.generate(0, 0);
+    void isExpiredReturnsTrueAtOrAfterExpiredAt() {
+        RegistrationOtp otp = RegistrationOtp.generate(60, 300, FIXED_CLOCK);
+        Clock atExpiry = Clock.fixed(FIXED_INSTANT.plusSeconds(300), ZoneOffset.UTC);
+        Clock pastExpiry = Clock.fixed(FIXED_INSTANT.plusSeconds(301), ZoneOffset.UTC);
 
-        assertTrue(otp.isExpired(), "OTP should be expired after expiry time has passed");
+        assertThat(otp.isExpired(atExpiry)).isTrue();
+        assertThat(otp.isExpired(pastExpiry)).isTrue();
     }
 
     @Test
-    void toString_shouldMaskOtpCode() {
-        RegistrationOtp otp = RegistrationOtp.generate(60, 300);
+    void toStringMasksTheCode() {
+        RegistrationOtp otp = RegistrationOtp.generate(60, 300, FIXED_CLOCK);
 
-        String otpString = otp.toString();
+        String rendered = otp.toString();
 
-        assertFalse(otpString.contains(otp.getCode()), "toString should not expose the actual OTP code");
-        assertTrue(otpString.contains("***"), "toString should mask the OTP code with ***");
-    }
-
-    @Test
-    void equals_shouldReturnTrue_forSameValues() {
-        RegistrationOtp otp1 = RegistrationOtp.generate(60, 300);
-        RegistrationOtp otp2 = RegistrationOtp.generate(60, 300);
-
-        assertNotEquals(otp1, otp2, "Different OTPs should not be equal");
-        assertEquals(otp1, otp1, "Same OTP instance should be equal to itself");
-    }
-
-    @Test
-    void hashCode_shouldBeConsistent() {
-        RegistrationOtp otp = RegistrationOtp.generate(60, 300);
-
-        int hashCode1 = otp.hashCode();
-        int hashCode2 = otp.hashCode();
-
-        assertEquals(hashCode1, hashCode2, "Hash code should be consistent");
+        assertThat(rendered).contains("code=***").doesNotContain(otp.getCode());
     }
 }

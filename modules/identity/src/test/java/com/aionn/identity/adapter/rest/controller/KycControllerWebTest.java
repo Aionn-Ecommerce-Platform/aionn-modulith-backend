@@ -32,7 +32,8 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -84,13 +85,13 @@ class KycControllerWebTest {
 
         @Test
         void listMyKycReturnsAllKycProfilesForUser() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 KycResult kyc1 = new KycResult("kyc-1", "user-123", "PASSPORT", "https://blob.url/doc1.pdf",
                                 "PENDING", "SUMSUB", "applicant-123", "basic-kyc-level", "pending",
                                 null, null, null, null, now, null);
                 KycResult kyc2 = new KycResult("kyc-2", "user-123", "ID_CARD", "https://blob.url/doc2.pdf",
                                 "APPROVED", "SUMSUB", "applicant-456", "basic-kyc-level", "completed",
-                                "reviewer-789", "Approved", "admin-001", null, now.minusDays(5), now.minusDays(3));
+                                "reviewer-789", "Approved", "admin-001", null, now.minus(Duration.ofDays(5)), now.minus(Duration.ofDays(3)));
                 List<KycResult> results = List.of(kyc1, kyc2);
 
                 KycResponse resp1 = new KycResponse("kyc-1", "user-123", "PASSPORT", "https://blob.url/doc1.pdf",
@@ -98,7 +99,7 @@ class KycControllerWebTest {
                                 null, null, null, null, now, null);
                 KycResponse resp2 = new KycResponse("kyc-2", "user-123", "ID_CARD", "https://blob.url/doc2.pdf",
                                 "APPROVED", "SUMSUB", "applicant-456", "basic-kyc-level", "completed",
-                                "reviewer-789", "Approved", "admin-001", null, now.minusDays(5), now.minusDays(3));
+                                "reviewer-789", "Approved", "admin-001", null, now.minus(Duration.ofDays(5)), now.minus(Duration.ofDays(3)));
 
                 when(listMyKycQueryPort.execute("alice@example.com")).thenReturn(results);
                 when(kycDtoMapper.toResponses(results)).thenReturn(List.of(resp1, resp2));
@@ -115,7 +116,7 @@ class KycControllerWebTest {
 
         @Test
         void getKycReturnsSpecificKycProfile() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 KycResult result = new KycResult("kyc-123", "user-456", "PASSPORT", "https://blob.url/doc.pdf",
                                 "PENDING", "SUMSUB", "applicant-789", "basic-kyc-level", "pending",
                                 null, null, null, null, now, null);
@@ -139,7 +140,7 @@ class KycControllerWebTest {
 
         @Test
         void createKycCreatesNewKycProfile() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 KycResult result = new KycResult("kyc-new-789", "user-123", "ID_CARD", null,
                                 "PENDING", null, null, null, null,
                                 null, null, null, null, now, null);
@@ -169,7 +170,7 @@ class KycControllerWebTest {
 
         @Test
         void attachDocumentAddsUploadedKycDocument() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 KycDocumentResult result = new KycDocumentResult(
                                 "doc-1", "kyc-123", "ID_FRONT", "https://cdn.test/front.jpg",
                                 "identity/kyc/user/front", "UPLOADED", now);
@@ -199,7 +200,7 @@ class KycControllerWebTest {
 
         @Test
         void listDocumentsReturnsUploadedKycDocuments() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 KycDocumentResult result = new KycDocumentResult(
                                 "doc-1", "kyc-123", "ID_BACK", "https://cdn.test/back.jpg",
                                 null, "UPLOADED", now);
@@ -222,7 +223,7 @@ class KycControllerWebTest {
 
         @Test
         void submitKycMovesProfileToSubmitted() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 KycResult result = new KycResult("kyc-123", "user-123", "ID_CARD", "https://cdn.test/front.jpg",
                                 "SUBMITTED", null, null, null, null,
                                 null, null, null, null, now, null);

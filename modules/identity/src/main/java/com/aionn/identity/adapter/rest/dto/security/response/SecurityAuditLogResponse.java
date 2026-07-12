@@ -1,6 +1,6 @@
 package com.aionn.identity.adapter.rest.dto.security.response;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record SecurityAuditLogResponse(
         String auditId,
@@ -8,7 +8,7 @@ public record SecurityAuditLogResponse(
         String description,
         String ipAddress,
         String deviceId,
-        LocalDateTime timestamp
+        Instant timestamp
 ) {
 }
 

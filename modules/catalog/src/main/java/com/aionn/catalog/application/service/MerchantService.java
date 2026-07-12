@@ -20,6 +20,7 @@ import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import com.aionn.catalog.application.port.out.settings.CatalogSettingsPort;
 import com.aionn.catalog.application.dto.common.PageResult;
 import com.aionn.catalog.application.dto.merchant.command.UpdateMerchantCommissionRateCommand;
+import java.time.Clock;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,13 +40,14 @@ public class MerchantService {
     private final AddressLookupPort addressLookupPort;
     private final CatalogMetricsPort metricsPort;
     private final CatalogSettingsPort catalogSettingsPort;
+    private final Clock clock;
 
     public MerchantResult register(RegisterMerchantCommand command) {
         if (merchantRepository.existsByOwnerId(command.ownerId())) {
             throw new CatalogException(CatalogErrorCode.MERCHANT_ALREADY_EXISTS);
         }
         java.math.BigDecimal rate = catalogSettingsPort.getDefaultCommissionRate();
-        Merchant merchant = Merchant.register(IdGenerator.ulid(), command.ownerId(), command.name(), rate);
+        Merchant merchant = Merchant.register(IdGenerator.ulid(), command.ownerId(), command.name(), rate, clock);
         Merchant saved = merchantRepository.save(merchant);
         eventPublisher.publish(merchant.pullEvents());
         metricsPort.merchantLifecycle("registered");
@@ -68,7 +70,7 @@ public class MerchantService {
             provinceCode = null;
         }
         merchant.updateProfile(command.name(), command.logoUrl(), command.description(),
-                provinceCode, provinceName);
+                provinceCode, provinceName, clock);
         Merchant saved = merchantRepository.save(merchant);
         eventPublisher.publish(merchant.pullEvents());
         return merchantResultMapper.toResult(saved);
@@ -76,7 +78,7 @@ public class MerchantService {
 
     public MerchantResult suspend(SuspendMerchantCommand command) {
         Merchant merchant = required(command.merchantId());
-        merchant.suspend(command.adminId(), command.reason());
+        merchant.suspend(command.adminId(), command.reason(), clock);
         Merchant saved = merchantRepository.save(merchant);
         eventPublisher.publish(merchant.pullEvents());
         metricsPort.merchantLifecycle("suspended");
@@ -85,7 +87,7 @@ public class MerchantService {
 
     public MerchantResult activate(ActivateMerchantCommand command) {
         Merchant merchant = required(command.merchantId());
-        merchant.activate(command.adminId(), command.reason());
+        merchant.activate(command.adminId(), command.reason(), clock);
         Merchant saved = merchantRepository.save(merchant);
         eventPublisher.publish(merchant.pullEvents());
         metricsPort.merchantLifecycle("activated");
@@ -97,7 +99,7 @@ public class MerchantService {
         if (orderQueryPort.hasOpenOrdersForMerchant(merchant.getMerchantId())) {
             throw new CatalogException(CatalogErrorCode.MERCHANT_HAS_OPEN_ORDERS);
         }
-        merchant.close(command.reason());
+        merchant.close(command.reason(), clock);
         Merchant saved = merchantRepository.save(merchant);
         eventPublisher.publish(merchant.pullEvents());
         metricsPort.merchantLifecycle("closed");
@@ -127,7 +129,7 @@ public class MerchantService {
 
     public MerchantResult updateCommissionRate(UpdateMerchantCommissionRateCommand command) {
         Merchant merchant = required(command.merchantId());
-        merchant.updateCommissionRate(command.commissionRate());
+        merchant.updateCommissionRate(command.commissionRate(), clock);
         Merchant saved = merchantRepository.save(merchant);
         eventPublisher.publish(merchant.pullEvents());
         return merchantResultMapper.toResult(saved);

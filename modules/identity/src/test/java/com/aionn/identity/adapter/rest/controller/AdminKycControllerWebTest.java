@@ -27,7 +27,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.time.Month;
 import java.util.List;
 
@@ -70,13 +70,13 @@ class AdminKycControllerWebTest {
     }
 
     private static KycResult sampleResult(String status) {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         return new KycResult("kyc-1", "user-1", "ID_CARD", null, status,
                 "sumsub", null, "basic-kyc-level", null, null, null, null, null, now, null);
     }
 
     private static KycResponse sampleResponse(String status) {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         return new KycResponse("kyc-1", "user-1", "ID_CARD", null, status,
                 "sumsub", null, "basic-kyc-level", null, null, null, null, null, now, null);
     }

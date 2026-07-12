@@ -35,7 +35,8 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -92,24 +93,24 @@ class AgentIdentityControllerWebTest {
     }
 
     private AgentIdentityResult sampleResult(String agentId) {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         return new AgentIdentityResult(
                 agentId,
                 "hash-" + agentId,
                 "{\"scopes\":[\"orders:read\"]}",
                 "ACTIVE",
-                now.plusDays(30),
+                now.plus(Duration.ofDays(30)),
                 now);
     }
 
     private AgentIdentityResponse sampleResponse(String agentId) {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         return new AgentIdentityResponse(
                 agentId,
                 "hash-" + agentId,
                 "{\"scopes\":[\"orders:read\"]}",
                 "ACTIVE",
-                now.plusDays(30),
+                now.plus(Duration.ofDays(30)),
                 now);
     }
 
@@ -237,10 +238,10 @@ class AgentIdentityControllerWebTest {
     void suspendSuspendsAgent() throws Exception {
         AgentIdentityResult result = new AgentIdentityResult(
                 "agent-1", "hash-x", "{}", "SUSPENDED",
-                LocalDateTime.now().plusDays(30), LocalDateTime.now());
+                Instant.now().plus(Duration.ofDays(30)), Instant.now());
         AgentIdentityResponse response = new AgentIdentityResponse(
                 "agent-1", "hash-x", "{}", "SUSPENDED",
-                LocalDateTime.now().plusDays(30), LocalDateTime.now());
+                Instant.now().plus(Duration.ofDays(30)), Instant.now());
         SuspendAgentCommand command = new SuspendAgentCommand("alice@example.com", "agent-1");
 
         when(agentIdentityDtoMapper.toSuspendCommand("alice@example.com", "agent-1")).thenReturn(command);
@@ -258,17 +259,17 @@ class AgentIdentityControllerWebTest {
 
     @Test
     void auditLogsReturnsAgentAuditTrail() throws Exception {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         List<AgentAuditLogResult> results = List.of(
                 new AgentAuditLogResult("audit-1", "AGENT_CREATED",
-                        "Agent provisioned", "192.168.1.50", "device-abc", now.minusHours(2)),
+                        "Agent provisioned", "192.168.1.50", "device-abc", now.minus(Duration.ofHours(2))),
                 new AgentAuditLogResult("audit-2", "PERMISSIONS_UPDATED",
-                        "Scopes changed", "192.168.1.50", "device-abc", now.minusMinutes(10)));
+                        "Scopes changed", "192.168.1.50", "device-abc", now.minus(Duration.ofMinutes(10))));
         List<AgentAuditLogResponse> responses = List.of(
                 new AgentAuditLogResponse("audit-1", "AGENT_CREATED",
-                        "Agent provisioned", "192.168.1.50", "device-abc", now.minusHours(2)),
+                        "Agent provisioned", "192.168.1.50", "device-abc", now.minus(Duration.ofHours(2))),
                 new AgentAuditLogResponse("audit-2", "PERMISSIONS_UPDATED",
-                        "Scopes changed", "192.168.1.50", "device-abc", now.minusMinutes(10)));
+                        "Scopes changed", "192.168.1.50", "device-abc", now.minus(Duration.ofMinutes(10))));
         GetAgentAuditLogsQuery query = new GetAgentAuditLogsQuery("alice@example.com", "agent-1");
 
         when(agentIdentityDtoMapper.toGetAuditLogsQuery("alice@example.com", "agent-1")).thenReturn(query);

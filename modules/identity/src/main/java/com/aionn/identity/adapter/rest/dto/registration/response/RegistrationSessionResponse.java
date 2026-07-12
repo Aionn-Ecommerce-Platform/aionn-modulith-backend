@@ -1,12 +1,12 @@
 package com.aionn.identity.adapter.rest.dto.registration.response;
 
-import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import java.time.Instant;
 
-// OTP code is intentionally NOT exposed here — it is delivered out-of-band
-// (SMS/email). Application-layer results still carry it so the notification
-// adapter can dispatch, but the REST response only surfaces session metadata.
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record RegistrationSessionResponse(
         String regId,
-        LocalDateTime resendAvailableAt,
-        LocalDateTime expiredAt) {
+        Instant resendAvailableAt,
+        Instant expiredAt,
+        String otpCode) {
 }

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Set;
 
@@ -73,7 +74,7 @@ public class RemoteGoogleSocialTokenVerifier implements GoogleSocialTokenVerifie
                 throw new IdentityException(IdentityErrorCode.PROVIDER_TOKEN_INVALID,
                         "Google token subject is missing");
             }
-            if (response.exp() != null && response.exp() <= Instant.now().getEpochSecond()) {
+            if (response.exp() != null && response.exp() <= Instant.now(Clock.systemUTC()).getEpochSecond()) {
                 throw new IdentityException(IdentityErrorCode.PROVIDER_TOKEN_INVALID,
                         "Google token has expired");
             }

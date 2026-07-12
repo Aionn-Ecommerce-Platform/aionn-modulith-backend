@@ -11,7 +11,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,14 +36,14 @@ class RedisRegistrationSessionStoreTest {
         store = new RedisRegistrationSessionStore(redisTemplate);
     }
 
-    private RegistrationVerificationSession session(String regId, LocalDateTime expiredAt) {
+    private RegistrationVerificationSession session(String regId, Instant expiredAt) {
         return new RegistrationVerificationSession(
                 regId,
                 "+84123456789",
                 "123456",
                 0,
                 5,
-                LocalDateTime.now().plusSeconds(30),
+                Instant.now().plusSeconds(30),
                 expiredAt,
                 false,
                 null,
@@ -53,7 +53,7 @@ class RedisRegistrationSessionStoreTest {
     @Test
     void saveUsesTtlDerivedFromExpiry() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        RegistrationVerificationSession session = session("reg-1", LocalDateTime.now().plusMinutes(10));
+        RegistrationVerificationSession session = session("reg-1", Instant.now().plusSeconds(600));
 
         store.save(session);
 
@@ -77,7 +77,7 @@ class RedisRegistrationSessionStoreTest {
     @Test
     void saveUsesOneSecondTtlWhenAlreadyExpired() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        RegistrationVerificationSession session = session("reg-1", LocalDateTime.now().minusMinutes(10));
+        RegistrationVerificationSession session = session("reg-1", Instant.now().minusSeconds(600));
 
         store.save(session);
 
@@ -89,7 +89,7 @@ class RedisRegistrationSessionStoreTest {
     @Test
     void findReturnsSessionWhenPresent() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        RegistrationVerificationSession session = session("reg-1", LocalDateTime.now().plusMinutes(10));
+        RegistrationVerificationSession session = session("reg-1", Instant.now().plusSeconds(600));
         when(valueOperations.get(KEY)).thenReturn(session);
 
         Optional<RegistrationVerificationSession> found = store.findByRegId("reg-1");

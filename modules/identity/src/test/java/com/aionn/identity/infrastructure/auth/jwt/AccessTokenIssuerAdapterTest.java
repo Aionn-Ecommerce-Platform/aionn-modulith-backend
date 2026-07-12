@@ -8,12 +8,8 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AccessTokenIssuerAdapterTest {
 
@@ -32,13 +28,13 @@ class AccessTokenIssuerAdapterTest {
 
         Optional<AccessTokenClaims> parsed = adapter.parseClaims(token);
 
-        assertTrue(parsed.isPresent());
+        assertThat(parsed.isPresent()).isTrue();
         AccessTokenClaims claims = parsed.get();
-        assertEquals("user-1", claims.userId());
-        assertEquals("session-1", claims.sessionId());
-        assertNotNull(claims.jti());
-        assertTrue(claims.roles().contains("BUYER"));
-        assertTrue(claims.roles().contains("SYSTEM_ADMIN"));
+        assertThat(claims.userId()).isEqualTo("user-1");
+        assertThat(claims.sessionId()).isEqualTo("session-1");
+        assertThat(claims.jti()).isNotNull();
+        assertThat(claims.roles().contains("BUYER")).isTrue();
+        assertThat(claims.roles().contains("SYSTEM_ADMIN")).isTrue();
     }
 
     @Test
@@ -50,7 +46,7 @@ class AccessTokenIssuerAdapterTest {
 
         Optional<AccessTokenClaims> parsed = adapter.parseClaims(token);
 
-        assertTrue(parsed.isEmpty());
+        assertThat(parsed.isEmpty()).isTrue();
     }
 
     @Test
@@ -62,13 +58,13 @@ class AccessTokenIssuerAdapterTest {
 
         Optional<AccessTokenClaims> parsed = adapter.parseClaims(token);
 
-        assertTrue(parsed.isEmpty());
+        assertThat(parsed.isEmpty()).isTrue();
     }
 
     @Test
     void parseClaimsRejectsGarbageInput() {
-        assertTrue(adapter.parseClaims("garbage").isEmpty());
-        assertTrue(adapter.parseClaims("a.b.c").isEmpty());
+        assertThat(adapter.parseClaims("garbage").isEmpty()).isTrue();
+        assertThat(adapter.parseClaims("a.b.c").isEmpty()).isTrue();
     }
 
     @Test
@@ -77,7 +73,7 @@ class AccessTokenIssuerAdapterTest {
         String t1 = adapter.issueAccessToken("user-1", "session-1", expiresAt, Set.of());
         String t2 = adapter.issueAccessToken("user-1", "session-1", expiresAt, Set.of());
 
-        assertNotEquals(t1, t2);
+        assertThat(t2).isNotEqualTo(t1);
     }
 
     @Test
@@ -87,13 +83,13 @@ class AccessTokenIssuerAdapterTest {
 
         Optional<Instant> expiry = adapter.extractExpiry(token);
 
-        assertTrue(expiry.isPresent());
-        assertTrue(expiry.get().isAfter(Instant.now()));
+        assertThat(expiry.isPresent()).isTrue();
+        assertThat(expiry.get().isAfter(Instant.now())).isTrue();
     }
 
     @Test
     void extractExpiryReturnsEmptyForInvalidToken() {
-        assertTrue(adapter.extractExpiry("bad").isEmpty());
+        assertThat(adapter.extractExpiry("bad").isEmpty()).isTrue();
     }
 
     @Test
@@ -112,7 +108,7 @@ class AccessTokenIssuerAdapterTest {
 
         Optional<Instant> expiry = adapter.extractExpiry(token);
 
-        assertTrue(expiry.isPresent());
-        assertTrue(expiry.get().isBefore(Instant.now().plus(2, ChronoUnit.MINUTES)));
+        assertThat(expiry.isPresent()).isTrue();
+        assertThat(expiry.get().isBefore(Instant.now().plus(2, ChronoUnit.MINUTES))).isTrue();
     }
 }

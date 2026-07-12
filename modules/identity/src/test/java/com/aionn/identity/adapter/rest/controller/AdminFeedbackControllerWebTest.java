@@ -30,7 +30,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.time.Month;
 import java.util.List;
 
@@ -73,15 +73,15 @@ class AdminFeedbackControllerWebTest {
     }
 
     private static FeedbackResult sampleResult(String feedbackId, String status,
-            String handledBy, LocalDateTime handledAt, String adminReply) {
-        LocalDateTime now = LocalDateTime.now();
+            String handledBy, Instant handledAt, String adminReply) {
+        Instant now = Instant.now();
         return new FeedbackResult(feedbackId, "u-1", null, null, "c",
                 null, null, null, status, handledBy, handledAt, adminReply, now);
     }
 
     private static FeedbackResponse sampleResponse(String feedbackId, String status,
-            String handledBy, LocalDateTime handledAt, String adminReply) {
-        LocalDateTime now = LocalDateTime.now();
+            String handledBy, Instant handledAt, String adminReply) {
+        Instant now = Instant.now();
         return new FeedbackResponse(feedbackId, "u-1", null, null, "c",
                 null, null, null, status, handledBy, handledAt, adminReply, now);
     }
@@ -141,7 +141,7 @@ class AdminFeedbackControllerWebTest {
 
     @Test
     void replyPersistsAdminReply() throws Exception {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         FeedbackResult r = sampleResult("fb-1", "IN_REVIEW", "admin@example.com", now, "thanks");
         FeedbackResponse resp = sampleResponse("fb-1", "IN_REVIEW", "admin@example.com", now, "thanks");
 
@@ -164,7 +164,7 @@ class AdminFeedbackControllerWebTest {
 
     @Test
     void changeStatusUpdatesStatus() throws Exception {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         FeedbackResult r = sampleResult("fb-1", "RESOLVED", "admin@example.com", now, null);
         FeedbackResponse resp = sampleResponse("fb-1", "RESOLVED", "admin@example.com", now, null);
 

@@ -8,6 +8,7 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -45,7 +46,7 @@ public class RedisRegistrationRateLimiter implements RegistrationRateLimiterPort
         }
 
         String bucket = KEY_PREFIX + scope + ":" + key;
-        long now = Instant.now().getEpochSecond();
+        long now = Instant.now(Clock.systemUTC()).getEpochSecond();
         long windowStart = now - windowSeconds;
         // UUID guarantees uniqueness across threads/instances; the previous
         // "now:threadId" form collided when multiple requests landed in the same second

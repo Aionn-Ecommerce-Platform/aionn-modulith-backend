@@ -3,7 +3,7 @@ package com.aionn.identity.adapter.rest.dto.admin.response;
 import com.aionn.identity.domain.valueobject.UserRole;
 import com.aionn.identity.domain.valueobject.UserStatus;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Set;
 
 public record UserDetailResponse(
@@ -13,9 +13,9 @@ public record UserDetailResponse(
                 String displayName,
                 Set<UserRole> roles,
                 UserStatus status,
-                LocalDateTime createdAt,
-                LocalDateTime emailVerifiedAt,
-                LocalDateTime phoneVerifiedAt) {
+                Instant createdAt,
+                Instant emailVerifiedAt,
+                Instant phoneVerifiedAt) {
 }
 
 

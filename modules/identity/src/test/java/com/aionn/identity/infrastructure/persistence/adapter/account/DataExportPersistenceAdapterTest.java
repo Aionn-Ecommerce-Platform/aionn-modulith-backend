@@ -14,7 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,7 +42,7 @@ class DataExportPersistenceAdapterTest {
 
     @Test
     void saveCreatesRequestedExportWhenNoneActive() {
-        LocalDateTime requestedAt = LocalDateTime.now();
+        Instant requestedAt = Instant.now();
         when(userRepository.findByIdForUpdate(USER_ID)).thenReturn(Optional.of(UserEntity.builder().build()));
         when(dataExportRequestRepository.existsByUser_UserIdAndStatusIn(eq(USER_ID), anyList())).thenReturn(false);
         when(dataExportRequestRepository.save(any(DataExportRequestEntity.class)))

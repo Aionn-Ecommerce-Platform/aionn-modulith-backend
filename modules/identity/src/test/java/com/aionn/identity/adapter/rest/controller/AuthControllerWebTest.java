@@ -36,7 +36,8 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -108,14 +109,14 @@ class AuthControllerWebTest {
 
         @Test
         void loginSuccessfullyAuthenticatesAndResolvesClientContext() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 LoginResult result = new LoginResult(
                                 "user-123",
                                 "session-456",
                                 "access-xyz",
                                 "refresh-abc",
-                                now.plusMinutes(15),
-                                now.plusDays(7));
+                                now.plus(Duration.ofMinutes(15)),
+                                now.plus(Duration.ofDays(7)));
                 AuthTokenResponse response = new AuthTokenResponse(
                                 result.userId(),
                                 result.sessionId(),
@@ -158,9 +159,9 @@ class AuthControllerWebTest {
 
         @Test
         void loginWithMfaCodeIncludesItInCommand() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 LoginResult result = new LoginResult("user-123", "session-456", "access-xyz", "refresh-abc",
-                                now.plusMinutes(15), now.plusDays(7));
+                                now.plus(Duration.ofMinutes(15)), now.plus(Duration.ofDays(7)));
                 AuthTokenResponse response = new AuthTokenResponse(result.userId(), result.sessionId(),
                                 result.refreshToken(), result.accessToken(), result.expiresAt(),
                                 result.sessionExpiresAt());
@@ -223,9 +224,9 @@ class AuthControllerWebTest {
 
         @Test
         void socialLoginSuccessfullyAuthenticatesWithSocialToken() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 SocialLoginResult result = new SocialLoginResult("user-789", "session-999", "access-social",
-                                "refresh-social", now.plusMinutes(15), now.plusDays(7), false);
+                                "refresh-social", now.plus(Duration.ofMinutes(15)), now.plus(Duration.ofDays(7)), false);
                 AuthTokenResponse response = new AuthTokenResponse(result.userId(), result.sessionId(),
                                 result.refreshToken(), result.accessToken(), result.expiresAt(),
                                 result.sessionExpiresAt());
@@ -259,10 +260,10 @@ class AuthControllerWebTest {
 
         @Test
         void refreshTokenFromBodySuccessfullyRefreshesTokens() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 RefreshAccessTokenResult result = new RefreshAccessTokenResult("user-123", "session-456", "new-access",
                                 "new-refresh",
-                                now.plusMinutes(15), now.plusDays(7));
+                                now.plus(Duration.ofMinutes(15)), now.plus(Duration.ofDays(7)));
                 AuthTokenResponse response = new AuthTokenResponse(result.userId(), result.sessionId(),
                                 result.refreshToken(), result.accessToken(), result.expiresAt(),
                                 result.sessionExpiresAt());
@@ -291,10 +292,10 @@ class AuthControllerWebTest {
 
         @Test
         void refreshTokenFromCookieUsesItWhenBodyEmpty() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 RefreshAccessTokenResult result = new RefreshAccessTokenResult("user-123", "session-456", "new-access",
                                 "new-refresh",
-                                now.plusMinutes(15), now.plusDays(7));
+                                now.plus(Duration.ofMinutes(15)), now.plus(Duration.ofDays(7)));
                 AuthTokenResponse response = new AuthTokenResponse(result.userId(), result.sessionId(),
                                 result.refreshToken(), result.accessToken(), result.expiresAt(),
                                 result.sessionExpiresAt());
@@ -322,17 +323,17 @@ class AuthControllerWebTest {
 
         @Test
         void getSessionsReturnsActiveSessionsForAuthenticatedUser() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 AuthSessionResult session1 = new AuthSessionResult("session-1", "user-123", "ACTIVE", "192.168.1.1",
-                                "Web Browser", now.minusHours(2), now.minusHours(2), now.plusDays(7));
+                                "Web Browser", now.minus(Duration.ofHours(2)), now.minus(Duration.ofHours(2)), now.plus(Duration.ofDays(7)));
                 AuthSessionResult session2 = new AuthSessionResult("session-2", "user-123", "ACTIVE", "10.0.0.5",
-                                "Mobile App", now.minusDays(1), now.minusDays(1), now.plusDays(6));
+                                "Mobile App", now.minus(Duration.ofDays(1)), now.minus(Duration.ofDays(1)), now.plus(Duration.ofDays(6)));
                 List<AuthSessionResult> sessions = List.of(session1, session2);
 
                 AuthSessionResponse resp1 = new AuthSessionResponse("session-1", "user-123", "ACTIVE", "192.168.1.1",
-                                "Web Browser", now.minusHours(2), now.minusHours(2), now.plusDays(7));
+                                "Web Browser", now.minus(Duration.ofHours(2)), now.minus(Duration.ofHours(2)), now.plus(Duration.ofDays(7)));
                 AuthSessionResponse resp2 = new AuthSessionResponse("session-2", "user-123", "ACTIVE", "10.0.0.5",
-                                "Mobile App", now.minusDays(1), now.minusDays(1), now.plusDays(6));
+                                "Mobile App", now.minus(Duration.ofDays(1)), now.minus(Duration.ofDays(1)), now.plus(Duration.ofDays(6)));
 
                 when(authDtoMapper.toGetSessionsQuery("user@example.com"))
                                 .thenReturn(new GetAuthSessionsQuery("user-123"));

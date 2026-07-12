@@ -7,7 +7,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 
 @Slf4j
 @Component
@@ -21,7 +22,7 @@ public class AuthSessionCleanupScheduler {
     // Daily at 03:17 local time — off-peak, off the round hour mark.
     @Scheduled(cron = "0 17 3 * * *")
     public void purgeIdleSessions() {
-        LocalDateTime cutoff = LocalDateTime.now().minus(RETENTION);
+        Instant cutoff = Instant.now(Clock.systemUTC()).minus(RETENTION);
         int deleted = authSessionPersistence.deleteIdleBefore(cutoff);
         if (deleted > 0) {
             log.info("Purged {} auth sessions idle since before {}", deleted, cutoff);

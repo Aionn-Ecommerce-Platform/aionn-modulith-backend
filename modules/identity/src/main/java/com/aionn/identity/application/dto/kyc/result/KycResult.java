@@ -1,6 +1,6 @@
 package com.aionn.identity.application.dto.kyc.result;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record KycResult(
         String kycId,
@@ -16,6 +16,6 @@ public record KycResult(
         String reviewNote,
         String decisionAdminId,
         String rejectReason,
-        LocalDateTime submittedAt,
-        LocalDateTime approvedAt) {
+        Instant submittedAt,
+        Instant approvedAt) {
 }

@@ -4,7 +4,7 @@ import com.aionn.identity.domain.valueobject.FeedbackCategory;
 import com.aionn.identity.domain.valueobject.FeedbackStatus;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -42,7 +42,7 @@ class FeedbackTest {
     void replyOnOpenFeedbackDefaultsToInReview() {
         Feedback fb = Feedback.createNew("fb-1", "u", FeedbackCategory.BUG,
                 "s", "c", null, null, null);
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
 
         fb.reply("admin-1", "thanks", null, now);
 
@@ -56,7 +56,7 @@ class FeedbackTest {
     void replyWithExplicitStatusOverridesDefault() {
         Feedback fb = Feedback.createNew("fb-1", "u", FeedbackCategory.BUG,
                 "s", "c", null, null, null);
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
 
         fb.reply("admin-1", "resolved", FeedbackStatus.RESOLVED, now);
 
@@ -68,7 +68,7 @@ class FeedbackTest {
         Feedback fb = new Feedback("fb", "u", FeedbackCategory.BUG, "s", "c",
                 null, null, null, FeedbackStatus.IN_REVIEW, "prev", null, null, null, null);
 
-        fb.reply("admin-2", "note", null, LocalDateTime.now());
+        fb.reply("admin-2", "note", null, Instant.now());
 
         assertThat(fb.getStatus()).isEqualTo(FeedbackStatus.IN_REVIEW);
         assertThat(fb.getHandledBy()).isEqualTo("admin-2");
@@ -78,7 +78,7 @@ class FeedbackTest {
     void changeStatusUpdatesStatusAndHandler() {
         Feedback fb = Feedback.createNew("fb-1", "u", FeedbackCategory.BUG,
                 "s", "c", null, null, null);
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
 
         fb.changeStatus("admin-1", FeedbackStatus.CLOSED, now);
 

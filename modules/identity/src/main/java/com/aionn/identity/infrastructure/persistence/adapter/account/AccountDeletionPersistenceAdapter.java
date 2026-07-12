@@ -11,7 +11,8 @@ import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Optional;
 
 @Component
@@ -22,13 +23,13 @@ public class AccountDeletionPersistenceAdapter implements AccountDeletionPort {
     private final UserRepository userRepository;
 
     @Override
-    public DeletionRequestView save(String userId, LocalDateTime scheduledDeletionAt) {
+    public DeletionRequestView save(String userId, Instant scheduledDeletionAt) {
         UserEntity user = userRepository.getReferenceById(userId);
         AccountDeletionRequestEntity request = AccountDeletionRequestEntity.builder()
                 .deletionRequestId(IdGenerator.ulid())
                 .user(user)
                 .status(AccountDeletionStatus.PENDING)
-                .requestedAt(LocalDateTime.now())
+                .requestedAt(Instant.now(Clock.systemUTC()))
                 .scheduledDeletionAt(scheduledDeletionAt)
                 .build();
         AccountDeletionRequestEntity saved = accountDeletionRequestRepository.save(request);
@@ -46,7 +47,7 @@ public class AccountDeletionPersistenceAdapter implements AccountDeletionPort {
         accountDeletionRequestRepository.findByUser_UserIdAndStatus(userId, AccountDeletionStatus.PENDING)
                 .ifPresent(request -> {
                     request.setStatus(AccountDeletionStatus.CANCELLED);
-                    request.setCanceledAt(LocalDateTime.now());
+                    request.setCanceledAt(Instant.now(Clock.systemUTC()));
                     accountDeletionRequestRepository.save(request);
                 });
     }

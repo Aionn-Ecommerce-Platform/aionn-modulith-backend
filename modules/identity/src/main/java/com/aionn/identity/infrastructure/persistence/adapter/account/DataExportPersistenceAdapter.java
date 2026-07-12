@@ -14,7 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 
 @Component
@@ -41,7 +42,7 @@ public class DataExportPersistenceAdapter implements DataExportPort {
                 .exportRequestId(IdGenerator.ulid())
                 .user(user)
                 .status(DataExportStatus.REQUESTED)
-                .requestedAt(LocalDateTime.now())
+                .requestedAt(Instant.now(Clock.systemUTC()))
                 .build();
         DataExportRequestEntity saved = dataExportRequestRepository.save(request);
         return toView(saved);

@@ -16,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+
 @Slf4j
 @Service
 @Transactional
@@ -26,6 +28,7 @@ public class AttributeTemplateService {
     private final CategoryPersistencePort categoryRepository;
     private final AttributeTemplateResultMapper attributeTemplateResultMapper;
     private final EventPublisher eventPublisher;
+    private final Clock clock;
 
     public AttributeTemplateResult create(CreateAttributeTemplateCommand command) {
         categoryRepository.findById(command.categoryId())
@@ -35,7 +38,7 @@ public class AttributeTemplateService {
                     "Attribute template already exists for this category");
         }
         AttributeTemplate template = AttributeTemplate.create(IdGenerator.ulid(),
-                command.categoryId(), command.attributeKeys());
+                command.categoryId(), command.attributeKeys(), clock);
         AttributeTemplate saved = attributeTemplateRepository.save(template);
         eventPublisher.publish(template.pullEvents());
         return attributeTemplateResultMapper.toResult(saved);
@@ -44,7 +47,7 @@ public class AttributeTemplateService {
     public AttributeTemplateResult configureFilterable(ConfigureFilterableCommand command) {
         AttributeTemplate template = attributeTemplateRepository.findById(command.templateId())
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.ATTRIBUTE_TEMPLATE_NOT_FOUND));
-        template.configureFilterable(command.attributeKey(), command.filterable());
+        template.configureFilterable(command.attributeKey(), command.filterable(), clock);
         AttributeTemplate saved = attributeTemplateRepository.save(template);
         eventPublisher.publish(template.pullEvents());
         return attributeTemplateResultMapper.toResult(saved);

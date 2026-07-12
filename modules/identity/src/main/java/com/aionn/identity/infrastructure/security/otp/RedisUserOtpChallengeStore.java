@@ -10,9 +10,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
@@ -24,7 +23,7 @@ public class RedisUserOtpChallengeStore implements UserOtpChallengeStorePort {
 
     private static final String KEY_PREFIX = "identity:otp:";
     private static final String DELIMITER = "|";
-    private static final DateTimeFormatter DT_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    private static final DateTimeFormatter DT_FORMAT = DateTimeFormatter.ISO_INSTANT;
     private static final Duration EXPIRY_BUFFER = Duration.ofMinutes(2);
 
     private final StringRedisTemplate redisTemplate;
@@ -34,7 +33,7 @@ public class RedisUserOtpChallengeStore implements UserOtpChallengeStorePort {
         String key = key(challenge.userId(), challenge.purpose());
         String value = serialize(challenge);
 
-        Duration ttl = Duration.between(Instant.now(), challenge.expiresAt().toInstant(ZoneOffset.UTC))
+        Duration ttl = Duration.between(Instant.now(Clock.systemUTC()), challenge.expiresAt())
                 .plus(EXPIRY_BUFFER);
         if (ttl.isNegative() || ttl.isZero()) {
             ttl = Duration.ofMinutes(10);
@@ -74,7 +73,7 @@ public class RedisUserOtpChallengeStore implements UserOtpChallengeStorePort {
                 c.target() != null ? c.target() : "",
                 c.otpCode(),
                 c.pendingValue() != null ? c.pendingValue() : "",
-                c.expiresAt().format(DT_FORMAT),
+                DT_FORMAT.format(c.expiresAt()),
                 String.valueOf(c.attempts()));
     }
 
@@ -87,7 +86,7 @@ public class RedisUserOtpChallengeStore implements UserOtpChallengeStorePort {
                 parts[3].isEmpty() ? null : parts[3],
                 parts[4],
                 parts[5].isEmpty() ? null : parts[5],
-                LocalDateTime.parse(parts[6], DT_FORMAT),
+                Instant.from(DT_FORMAT.parse(parts[6])),
                 Integer.parseInt(parts[7]));
     }
 }

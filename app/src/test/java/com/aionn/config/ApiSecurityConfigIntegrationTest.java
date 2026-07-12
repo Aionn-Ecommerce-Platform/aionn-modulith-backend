@@ -29,6 +29,12 @@ class ApiSecurityConfigIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.aionn.identity.application.port.out.auth.AccessTokenIssuerPort tokenIssuer;
+
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.aionn.identity.application.port.out.auth.TokenBlacklistPort tokenBlacklist;
+
     @Test
     void requestStillReceivesSecurityHeadersWhenNoControllerMatches() throws Exception {
         mockMvc.perform(get("/test/ping"))
@@ -62,7 +68,7 @@ class ApiSecurityConfigIntegrationTest {
             FlywayAutoConfiguration.class,
             RedisAutoConfiguration.class
     })
-    @Import(ApiSecurityConfig.class)
+    @Import({ApiSecurityConfig.class, com.aionn.identity.infrastructure.security.web.BearerAuthenticationFilter.class})
     static class TestApplication {
     }
 }

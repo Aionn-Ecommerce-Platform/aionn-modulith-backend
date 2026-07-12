@@ -24,7 +24,8 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -82,7 +83,7 @@ class UserControllerWebTest {
 
         @Test
         void getMyProfileReturnsUserProfile() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 UserProfileView view = new UserProfileView("user-123", "alice@example.com", "0912345678",
                                 "alice_smith", "alice_smith", "https://cdn.example.com/avatar.jpg",
                                 Set.of("USER"), "ACTIVE", now, now, now);
@@ -137,7 +138,7 @@ class UserControllerWebTest {
 
         @Test
         void updateDisplayNameUpdatesAndReturnsProfile() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 UserProfileView view = new UserProfileView("user-123", "alice@example.com", "0912345678",
                                 "alice_jones", "alice_jones", null, Set.of("USER"), "ACTIVE", now, now, now);
                 UserProfileResponse response = new UserProfileResponse("user-123", "alice@example.com", "0912345678",
@@ -165,7 +166,7 @@ class UserControllerWebTest {
 
         @Test
         void updateAvatarUpdatesAndReturnsProfile() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 UserProfileView view = new UserProfileView("user-123", "alice@example.com", "0912345678",
                                 "alice_smith", "alice_smith", "https://cdn.example.com/new-avatar.jpg",
                                 Set.of("USER"), "ACTIVE", now, now, now);
@@ -214,7 +215,7 @@ class UserControllerWebTest {
 
         @Test
         void confirmEmailChangeUpdatesEmailAndReturnsProfile() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 UserProfileView view = new UserProfileView("user-123", "alice.new@example.com", "0912345678",
                                 "alice_smith", "alice_smith", null, Set.of("USER"), "ACTIVE", now, now, now);
                 UserProfileResponse response = new UserProfileResponse("user-123", "alice.new@example.com",
@@ -258,7 +259,7 @@ class UserControllerWebTest {
 
         @Test
         void confirmPhoneChangeUpdatesPhoneAndReturnsProfile() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 UserProfileView view = new UserProfileView("user-123", "alice@example.com", "0987654321",
                                 "alice_smith", "alice_smith", null, Set.of("USER"), "ACTIVE", now, now, now);
                 UserProfileResponse response = new UserProfileResponse("user-123", "alice@example.com", "0987654321",
@@ -283,8 +284,8 @@ class UserControllerWebTest {
 
         @Test
         void requestAccountDeletionCreatesDeleteRequest() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
-                LocalDateTime scheduledAt = now.plusDays(30);
+                Instant now = Instant.now();
+                Instant scheduledAt = now.plus(Duration.ofDays(30));
                 DeletionRequestView view = new DeletionRequestView("del-req-123", "PENDING", now, scheduledAt);
                 DeletionRequestResponse response = new DeletionRequestResponse("del-req-123", "PENDING", now,
                                 scheduledAt);
@@ -319,7 +320,7 @@ class UserControllerWebTest {
 
         @Test
         void requestDataExportCreatesExportRequest() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 DataExportRequestView view = new DataExportRequestView("export-123", "PENDING", now);
                 DataExportRequestResponse response = new DataExportRequestResponse("export-123", "PENDING", now);
 

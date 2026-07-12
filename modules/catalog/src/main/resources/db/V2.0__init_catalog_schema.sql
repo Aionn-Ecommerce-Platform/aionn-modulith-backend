@@ -3351,25 +3351,6 @@ CREATE TABLE catalog_settings (
 INSERT INTO catalog_settings (key, value) VALUES ('default_commission_rate', '0.0500');
 
 -- -----------------------------------------------------------------------------
--- Squashed from V2.2__product_sold_counters.sql
--- -----------------------------------------------------------------------------
--- Total units sold per product. Bumped by an ordering-side listener on
--- completed orders; seeded here so the storefront has "sold X" badges.
-CREATE TABLE product_sold_counters (
-    product_id  VARCHAR(50) PRIMARY KEY,
-    sold_count  BIGINT      NOT NULL DEFAULT 0,
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT chk_sold_count_nonneg CHECK (sold_count >= 0)
-);
-
-INSERT INTO product_sold_counters (product_id, sold_count, updated_at)
-SELECT p.product_id,
-       50 + (ABS(('x' || substring(md5(p.product_id), 1, 8))::bit(32)::int) % 4950),
-       NOW()
-FROM products p
-ON CONFLICT (product_id) DO NOTHING;
-
--- -----------------------------------------------------------------------------
 -- Squashed from V2.3__user_browsing_history.sql
 -- -----------------------------------------------------------------------------
 -- Per-user recent category/brand preferences, used for personalized feeds.
