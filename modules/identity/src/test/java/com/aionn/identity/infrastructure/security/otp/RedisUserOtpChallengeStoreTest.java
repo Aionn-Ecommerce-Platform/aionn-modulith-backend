@@ -36,7 +36,7 @@ class RedisUserOtpChallengeStoreTest {
 
     @BeforeEach
     void setUp() {
-        store = new RedisUserOtpChallengeStore(redisTemplate);
+        store = new RedisUserOtpChallengeStore(redisTemplate, java.time.Clock.systemUTC());
     }
 
     @Test

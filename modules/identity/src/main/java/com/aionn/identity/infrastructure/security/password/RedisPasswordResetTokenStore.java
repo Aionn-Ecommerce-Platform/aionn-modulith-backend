@@ -20,9 +20,10 @@ public class RedisPasswordResetTokenStore {
     private static final String KEY_PREFIX = "identity:auth:password-reset:";
 
     private final StringRedisTemplate redisTemplate;
+    private final Clock clock;
 
     public void save(String token, String userId, Instant expiresAt) {
-        Duration ttl = Duration.between(Instant.now(Clock.systemUTC()), expiresAt);
+        Duration ttl = Duration.between(Instant.now(clock), expiresAt);
         if (ttl.isNegative() || ttl.isZero()) {
             ttl = Duration.ofMinutes(1);
         }

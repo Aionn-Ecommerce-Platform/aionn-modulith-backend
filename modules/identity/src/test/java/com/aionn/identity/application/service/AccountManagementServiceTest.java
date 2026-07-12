@@ -72,6 +72,8 @@ class AccountManagementServiceTest {
         @Mock
         private UserResultMapper userResultMapper;
 
+        private static final Instant FIXED_NOW = Instant.parse("2026-07-12T10:00:00Z");
+
         private AccountManagementService service;
 
         @BeforeEach
@@ -81,7 +83,7 @@ class AccountManagementServiceTest {
                                 userOtpChallengeStore, accountDeletionPort, dataExportPort,
                                 authSessionPersistencePort, refreshTokenStore,
                                 accountManagementPolicy, userResultMapper,
-                                Clock.systemUTC());
+                                Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
         }
 
         private static IdentityUser activeUser() {
@@ -91,7 +93,7 @@ class AccountManagementServiceTest {
         @Test
         void requestAccountDeletionPersistsAndReturnsView() {
                 DeletionRequestView view = new DeletionRequestView(
-                                "req-1", "PENDING", Instant.now(), Instant.now().plus(Duration.ofDays(30)));
+                                "req-1", "PENDING", FIXED_NOW, FIXED_NOW.plus(Duration.ofDays(30)));
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
                 when(accountDeletionPort.findPendingByUserId(USER_ID)).thenReturn(Optional.empty());
                 when(accountManagementPolicy.getDeletionGraceDays()).thenReturn(30);
@@ -109,8 +111,8 @@ class AccountManagementServiceTest {
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
                 when(accountDeletionPort.findPendingByUserId(USER_ID))
                                 .thenReturn(Optional.of(new DeletionRequestView(
-                                                "req-old", "PENDING", Instant.now(),
-                                                Instant.now().plus(Duration.ofDays(10)))));
+                                                "req-old", "PENDING", FIXED_NOW,
+                                                FIXED_NOW.plus(Duration.ofDays(10)))));
 
                 assertThrows(IdentityException.class,
                                 () -> service.requestAccountDeletion(new RequestAccountDeletionCommand(USER_ID)));
@@ -122,7 +124,7 @@ class AccountManagementServiceTest {
         void cancelAccountDeletionDelegatesToPort() {
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
                 when(accountDeletionPort.findPendingByUserId(USER_ID)).thenReturn(Optional.of(
-                                new DeletionRequestView("r", "PENDING", Instant.now(), Instant.now())));
+                                new DeletionRequestView("r", "PENDING", FIXED_NOW, FIXED_NOW)));
 
                 service.cancelAccountDeletion(new CancelAccountDeletionCommand(USER_ID));
 
@@ -150,7 +152,7 @@ class AccountManagementServiceTest {
         @Test
         void requestDataExportPersistsAndReturnsView() {
                 DataExportRequestView view = new DataExportRequestView(
-                                "exp-1", "PENDING", Instant.now());
+                                "exp-1", "PENDING", FIXED_NOW);
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
                 when(dataExportPort.hasActiveRequest(USER_ID)).thenReturn(false);
                 when(dataExportPort.save(USER_ID)).thenReturn(view);
@@ -175,21 +177,21 @@ class AccountManagementServiceTest {
         }
 
         private static Instant future() {
-                return Instant.now(Clock.systemUTC()).plus(Duration.ofDays(1));
+                return FIXED_NOW.plus(Duration.ofDays(1));
         }
 
         private static Instant past() {
-                return Instant.now(Clock.systemUTC()).minus(Duration.ofDays(1));
+                return FIXED_NOW.minus(Duration.ofDays(1));
         }
 
         private static AuthSession activeSession() {
                 return AuthSession.createNew("session-1", USER_ID, "ip", "ua",
-                                Instant.now(Clock.systemUTC()).plus(Duration.ofDays(7)));
+                                FIXED_NOW.plus(Duration.ofDays(7)));
         }
 
         private static UserProfileView profileView() {
                 return new UserProfileView(USER_ID, "u@example.com", null, "user", null, null,
-                                Set.of("BUYER"), "ACTIVE", null, null, Instant.now());
+                                Set.of("BUYER"), "ACTIVE", null, null, FIXED_NOW);
         }
 
         private static void assertErrorCode(IdentityErrorCode expected, Executable executable) {

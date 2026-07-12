@@ -37,12 +37,17 @@ class DataExportPersistenceAdapterTest {
     @Mock
     private UserRepository userRepository;
 
-    @InjectMocks
     private DataExportPersistenceAdapter adapter;
+    private static final Instant FIXED_NOW = Instant.parse("2026-07-12T10:00:00Z");
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        adapter = new DataExportPersistenceAdapter(dataExportRequestRepository, userRepository, java.time.Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
+    }
 
     @Test
     void saveCreatesRequestedExportWhenNoneActive() {
-        Instant requestedAt = Instant.now();
+        Instant requestedAt = FIXED_NOW;
         when(userRepository.findByIdForUpdate(USER_ID)).thenReturn(Optional.of(UserEntity.builder().build()));
         when(dataExportRequestRepository.existsByUser_UserIdAndStatusIn(eq(USER_ID), anyList())).thenReturn(false);
         when(dataExportRequestRepository.save(any(DataExportRequestEntity.class)))

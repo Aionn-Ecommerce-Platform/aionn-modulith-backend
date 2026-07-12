@@ -33,13 +33,18 @@ class AccountDeletionPersistenceAdapterTest {
     @Mock
     private UserRepository userRepository;
 
-    @InjectMocks
     private AccountDeletionPersistenceAdapter adapter;
+    private static final Instant FIXED_NOW = Instant.parse("2026-07-12T10:00:00Z");
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        adapter = new AccountDeletionPersistenceAdapter(accountDeletionRequestRepository, userRepository, java.time.Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
+    }
 
     @Test
     void saveBuildsPendingRequestAndReturnsView() {
-        Instant scheduledAt = Instant.now().plus(Duration.ofDays(30));
-        Instant requestedAt = Instant.now();
+        Instant scheduledAt = FIXED_NOW.plus(Duration.ofDays(30));
+        Instant requestedAt = FIXED_NOW;
         when(userRepository.getReferenceById(USER_ID)).thenReturn(UserEntity.builder().build());
         when(accountDeletionRequestRepository.save(any(AccountDeletionRequestEntity.class)))
                 .thenReturn(AccountDeletionRequestEntity.builder()
@@ -62,8 +67,8 @@ class AccountDeletionPersistenceAdapterTest {
         AccountDeletionRequestEntity entity = AccountDeletionRequestEntity.builder()
                 .deletionRequestId(REQUEST_ID)
                 .status(AccountDeletionStatus.PENDING)
-                .requestedAt(Instant.now())
-                .scheduledDeletionAt(Instant.now().plus(Duration.ofDays(30)))
+                .requestedAt(FIXED_NOW)
+                .scheduledDeletionAt(FIXED_NOW.plus(Duration.ofDays(30)))
                 .build();
         when(accountDeletionRequestRepository.findByUser_UserIdAndStatus(USER_ID, AccountDeletionStatus.PENDING))
                 .thenReturn(Optional.of(entity));
@@ -85,8 +90,8 @@ class AccountDeletionPersistenceAdapterTest {
         AccountDeletionRequestEntity entity = AccountDeletionRequestEntity.builder()
                 .deletionRequestId(REQUEST_ID)
                 .status(AccountDeletionStatus.PENDING)
-                .requestedAt(Instant.now())
-                .scheduledDeletionAt(Instant.now().plus(Duration.ofDays(30)))
+                .requestedAt(FIXED_NOW)
+                .scheduledDeletionAt(FIXED_NOW.plus(Duration.ofDays(30)))
                 .build();
         when(accountDeletionRequestRepository.findByUser_UserIdAndStatus(USER_ID, AccountDeletionStatus.PENDING))
                 .thenReturn(Optional.of(entity));
@@ -94,7 +99,7 @@ class AccountDeletionPersistenceAdapterTest {
         adapter.cancel(USER_ID);
 
         assertThat(entity.getStatus()).isEqualTo(AccountDeletionStatus.CANCELLED);
-        assertThat(entity.getCanceledAt()).isNotNull();
+        assertThat(entity.getCanceledAt()).isEqualTo(FIXED_NOW);
         verify(accountDeletionRequestRepository).save(entity);
     }
 

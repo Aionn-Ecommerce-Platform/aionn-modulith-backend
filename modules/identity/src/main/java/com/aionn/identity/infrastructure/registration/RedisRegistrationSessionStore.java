@@ -18,6 +18,7 @@ public class RedisRegistrationSessionStore implements RegistrationSessionStorePo
     private static final String REGISTRATION_SESSION_PREFIX = "identity:registration:session:";
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final Clock clock;
 
     @Override
     public void save(RegistrationVerificationSession session) {
@@ -48,7 +49,7 @@ public class RedisRegistrationSessionStore implements RegistrationSessionStorePo
         if (expiredAt == null) {
             return Duration.ofMinutes(5);
         }
-        long seconds = Duration.between(Instant.now(Clock.systemUTC()), expiredAt).getSeconds();
+        long seconds = Duration.between(Instant.now(clock), expiredAt).getSeconds();
         if (seconds <= 0) {
             return Duration.ofSeconds(1);
         }

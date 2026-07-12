@@ -27,7 +27,7 @@ class CloudinaryMediaUploadSignatureProviderTest {
     void setUp() {
         credentials = new CloudinaryCredentialsProperties(CLOUD_NAME, API_KEY, API_SECRET, UPLOAD_BASE_URL);
         folders = new CloudinaryProperties("identity/avatars", "identity/kyc");
-        provider = new CloudinaryMediaUploadSignatureProvider(credentials, folders);
+        provider = new CloudinaryMediaUploadSignatureProvider(credentials, folders, java.time.Clock.systemUTC());
     }
 
     @Test

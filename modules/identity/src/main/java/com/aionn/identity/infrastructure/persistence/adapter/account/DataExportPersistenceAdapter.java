@@ -24,6 +24,7 @@ public class DataExportPersistenceAdapter implements DataExportPort {
 
     private final DataExportRequestRepository dataExportRequestRepository;
     private final UserRepository userRepository;
+    private final Clock clock;
 
     @Override
     @Transactional
@@ -42,7 +43,7 @@ public class DataExportPersistenceAdapter implements DataExportPort {
                 .exportRequestId(IdGenerator.ulid())
                 .user(user)
                 .status(DataExportStatus.REQUESTED)
-                .requestedAt(Instant.now(Clock.systemUTC()))
+                .requestedAt(Instant.now(clock))
                 .build();
         DataExportRequestEntity saved = dataExportRequestRepository.save(request);
         return toView(saved);

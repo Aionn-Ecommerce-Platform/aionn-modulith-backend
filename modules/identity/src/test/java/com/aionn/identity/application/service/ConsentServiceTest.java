@@ -40,9 +40,11 @@ class ConsentServiceTest {
 
     private ConsentService consentService;
 
+    private static final Instant FIXED_NOW = Instant.parse("2026-07-12T10:00:00Z");
+
     @BeforeEach
     void setUp() {
-        consentService = new ConsentService(userPersistencePort, consentPersistencePort, Clock.systemUTC());
+        consentService = new ConsentService(userPersistencePort, consentPersistencePort, Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
     }
 
     @Test
@@ -63,7 +65,7 @@ class ConsentServiceTest {
         assertThat(persisted.getConsentType()).isEqualTo(ConsentType.TERMS);
         assertThat(persisted.getVersion()).isEqualTo("v1");
         assertThat(persisted.getUserId()).isEqualTo(USER_ID);
-        assertThat(persisted.getAgreedAt()).isNotNull();
+        assertThat(persisted.getAgreedAt()).isEqualTo(FIXED_NOW);
         assertThat(persisted.getRevokedAt()).isNull();
         assertThat(result).isNotNull();
     }
@@ -85,7 +87,7 @@ class ConsentServiceTest {
         UserConsent persisted = captor.getValue();
         assertThat(persisted.getConsentType()).isEqualTo(ConsentType.MARKETING);
         assertThat(persisted.getVersion()).isEqualTo(ConsentService.DEFAULT_MARKETING_VERSION);
-        assertThat(persisted.getRevokedAt()).isNotNull();
+        assertThat(persisted.getRevokedAt()).isEqualTo(FIXED_NOW);
     }
 
     @Test

@@ -24,6 +24,7 @@ public class CloudinaryProductMediaUploadSignatureProvider
 
     private final CloudinaryCredentialsProperties credentials;
     private final CatalogCloudinaryProperties folders;
+    private final Clock clock;
 
     @Override
     public UploadSignatureResult generateProductImageUploadSignature(String merchantId) {
@@ -36,7 +37,7 @@ public class CloudinaryProductMediaUploadSignatureProvider
     }
 
     private UploadSignatureResult sign(String folder, String label) {
-        long timestamp = Instant.now(Clock.systemUTC()).getEpochSecond();
+        long timestamp = Instant.now(clock).getEpochSecond();
 
         Map<String, String> params = new TreeMap<>();
         params.put("folder", folder);

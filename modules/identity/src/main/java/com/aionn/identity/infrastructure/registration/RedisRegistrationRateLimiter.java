@@ -33,10 +33,12 @@ public class RedisRegistrationRateLimiter implements RegistrationRateLimiterPort
 
     private final StringRedisTemplate redisTemplate;
     private final RedisScript<Long> rateLimitScript;
+    private final Clock clock;
 
-    public RedisRegistrationRateLimiter(StringRedisTemplate redisTemplate) {
+    public RedisRegistrationRateLimiter(StringRedisTemplate redisTemplate, Clock clock) {
         this.redisTemplate = redisTemplate;
         this.rateLimitScript = new DefaultRedisScript<>(LUA_SCRIPT, Long.class);
+        this.clock = clock;
     }
 
     @Override
@@ -46,7 +48,7 @@ public class RedisRegistrationRateLimiter implements RegistrationRateLimiterPort
         }
 
         String bucket = KEY_PREFIX + scope + ":" + key;
-        long now = Instant.now(Clock.systemUTC()).getEpochSecond();
+        long now = Instant.now(clock).getEpochSecond();
         long windowStart = now - windowSeconds;
         // UUID guarantees uniqueness across threads/instances; the previous
         // "now:threadId" form collided when multiple requests landed in the same second

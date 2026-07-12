@@ -12,6 +12,12 @@ import java.time.Instant;
 @ConditionalOnProperty(prefix = "identity.media", name = "provider", havingValue = "mock")
 public class MockMediaUploadSignatureProvider implements MediaUploadSignatureProviderPort {
 
+    private final Clock clock;
+
+    public MockMediaUploadSignatureProvider(Clock clock) {
+        this.clock = clock;
+    }
+
     @Override
     public UploadSignatureResult generateAvatarUploadSignature(String userId) {
         return placeholder("identity/avatars/" + userId);
@@ -25,7 +31,7 @@ public class MockMediaUploadSignatureProvider implements MediaUploadSignaturePro
     private UploadSignatureResult placeholder(String folder) {
         return new UploadSignatureResult(
                 "mock-signature",
-                String.valueOf(Instant.now(Clock.systemUTC()).getEpochSecond()),
+                String.valueOf(Instant.now(clock).getEpochSecond()),
                 "mock-api-key",
                 "mock-cloud",
                 "https://example.invalid/mock-upload",

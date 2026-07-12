@@ -33,7 +33,7 @@ class RedisRegistrationSessionStoreTest {
 
     @BeforeEach
     void setUp() {
-        store = new RedisRegistrationSessionStore(redisTemplate);
+        store = new RedisRegistrationSessionStore(redisTemplate, java.time.Clock.systemUTC());
     }
 
     private RegistrationVerificationSession session(String regId, Instant expiredAt) {

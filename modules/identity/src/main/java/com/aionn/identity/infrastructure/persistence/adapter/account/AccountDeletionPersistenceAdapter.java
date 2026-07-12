@@ -21,6 +21,7 @@ public class AccountDeletionPersistenceAdapter implements AccountDeletionPort {
 
     private final AccountDeletionRequestRepository accountDeletionRequestRepository;
     private final UserRepository userRepository;
+    private final Clock clock;
 
     @Override
     public DeletionRequestView save(String userId, Instant scheduledDeletionAt) {
@@ -29,7 +30,7 @@ public class AccountDeletionPersistenceAdapter implements AccountDeletionPort {
                 .deletionRequestId(IdGenerator.ulid())
                 .user(user)
                 .status(AccountDeletionStatus.PENDING)
-                .requestedAt(Instant.now(Clock.systemUTC()))
+                .requestedAt(Instant.now(clock))
                 .scheduledDeletionAt(scheduledDeletionAt)
                 .build();
         AccountDeletionRequestEntity saved = accountDeletionRequestRepository.save(request);
@@ -47,7 +48,7 @@ public class AccountDeletionPersistenceAdapter implements AccountDeletionPort {
         accountDeletionRequestRepository.findByUser_UserIdAndStatus(userId, AccountDeletionStatus.PENDING)
                 .ifPresent(request -> {
                     request.setStatus(AccountDeletionStatus.CANCELLED);
-                    request.setCanceledAt(Instant.now(Clock.systemUTC()));
+                    request.setCanceledAt(Instant.now(clock));
                     accountDeletionRequestRepository.save(request);
                 });
     }

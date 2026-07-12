@@ -67,8 +67,8 @@ public class ProductReview extends AggregateRoot {
         this.reportedByMerchantId = reportedByMerchantId;
         this.reportReason = reportReason;
         this.reportedAt = reportedAt;
-        this.createdAt = createdAt != null ? createdAt : Clock.systemUTC().instant();
-        this.updatedAt = updatedAt != null ? updatedAt : Clock.systemUTC().instant();
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
 
     public record ReviewDraft(
@@ -79,7 +79,8 @@ public class ProductReview extends AggregateRoot {
             int rating,
             String title,
             String content,
-            List<String> imageUrls) {}
+            List<String> imageUrls) {
+    }
 
     public static ProductReview create(
             String reviewId,

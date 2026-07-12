@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 public class IdentityUserDetailsService implements UserDetailsService {
 
         private final UserRepository userRepository;
+        private final Clock clock;
 
         @Override
         public UserDetails loadUserByUsername(String identity) throws UsernameNotFoundException {
@@ -35,7 +36,7 @@ public class IdentityUserDetailsService implements UserDetailsService {
                                 .collect(Collectors.toSet());
 
                 boolean accountLocked = user.getLockedUntil() != null
-                                && user.getLockedUntil().isAfter(Instant.now(Clock.systemUTC()));
+                                && user.getLockedUntil().isAfter(Instant.now(clock));
                 boolean enabled = user.getStatus() == UserStatus.ACTIVE;
 
                 return User.builder()

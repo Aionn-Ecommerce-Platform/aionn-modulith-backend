@@ -17,7 +17,7 @@ class AccessTokenIssuerAdapterTest {
     private static final String ISSUER = "aionn-identity-test";
 
     private final AccessTokenIssuerAdapter adapter = new AccessTokenIssuerAdapter(
-            new JwtProperties(ISSUER, SECRET, 15));
+            new JwtProperties(ISSUER, SECRET, 15), java.time.Clock.systemUTC());
 
     @Test
     void issuedTokenIsParsable() {
@@ -40,7 +40,7 @@ class AccessTokenIssuerAdapterTest {
     @Test
     void parseClaimsRejectsTokenSignedByDifferentSecret() {
         var altAdapter = new AccessTokenIssuerAdapter(
-                new JwtProperties(ISSUER, "different-secret-also-32-bytes-long-12345678", 15));
+                new JwtProperties(ISSUER, "different-secret-also-32-bytes-long-12345678", 15), java.time.Clock.systemUTC());
         String token = altAdapter.issueAccessToken(
                 "user-1", "session-1", Instant.now().plus(1, ChronoUnit.HOURS), Set.of());
 
@@ -52,7 +52,7 @@ class AccessTokenIssuerAdapterTest {
     @Test
     void parseClaimsRejectsTokenWithDifferentIssuer() {
         var altAdapter = new AccessTokenIssuerAdapter(
-                new JwtProperties("other-issuer", SECRET, 15));
+                new JwtProperties("other-issuer", SECRET, 15), java.time.Clock.systemUTC());
         String token = altAdapter.issueAccessToken(
                 "user-1", "session-1", Instant.now().plus(1, ChronoUnit.HOURS), Set.of());
 
@@ -94,7 +94,7 @@ class AccessTokenIssuerAdapterTest {
 
     @Test
     void issuingFailsWithoutSecret() {
-        var badAdapter = new AccessTokenIssuerAdapter(new JwtProperties(ISSUER, "", 15));
+        var badAdapter = new AccessTokenIssuerAdapter(new JwtProperties(ISSUER, "", 15), java.time.Clock.systemUTC());
 
         assertThrows(IllegalStateException.class,
                 () -> badAdapter.issueAccessToken("user-1", "session-1",

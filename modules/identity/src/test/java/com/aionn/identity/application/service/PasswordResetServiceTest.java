@@ -52,13 +52,15 @@ class PasswordResetServiceTest {
 
     private PasswordResetService service;
 
+    private static final Instant FIXED_NOW = Instant.parse("2026-07-12T10:00:00Z");
+
     @BeforeEach
     void setUp() {
         service = new PasswordResetService(
                 userSecurityPort, passwordResetPort, securityAuditPort, passwordHasher,
                 authSessionPersistencePort, refreshTokenStore, notificationPort,
                 integrationEventPublisher, identityMetrics, authPolicy,
-                Clock.systemUTC());
+                Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
     }
 
     private static UserSecurityPort.UserSecurityData userSecurity() {
@@ -160,6 +162,6 @@ class PasswordResetServiceTest {
     }
 
     private static Instant nowUtc() {
-        return Instant.now();
+        return FIXED_NOW;
     }
 }

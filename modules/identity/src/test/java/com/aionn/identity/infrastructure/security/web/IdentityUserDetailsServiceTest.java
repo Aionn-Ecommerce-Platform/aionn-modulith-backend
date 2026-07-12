@@ -28,8 +28,13 @@ class IdentityUserDetailsServiceTest {
     @Mock
     private UserRepository userRepository;
 
-    @InjectMocks
     private IdentityUserDetailsService service;
+    private static final Instant FIXED_NOW = Instant.parse("2026-07-12T10:00:00Z");
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        service = new IdentityUserDetailsService(userRepository, java.time.Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
+    }
 
     private UserEntity.UserEntityBuilder activeUser() {
         return UserEntity.builder()
@@ -88,7 +93,7 @@ class IdentityUserDetailsServiceTest {
 
     @Test
     void marksAccountLockedWhenLockedUntilInFuture() {
-        UserEntity user = activeUser().lockedUntil(Instant.now().plus(Duration.ofHours(1))).build();
+        UserEntity user = activeUser().lockedUntil(FIXED_NOW.plus(Duration.ofHours(1))).build();
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
 
         UserDetails details = service.loadUserByUsername("user@example.com");
@@ -98,7 +103,7 @@ class IdentityUserDetailsServiceTest {
 
     @Test
     void marksAccountUnlockedWhenLockExpired() {
-        UserEntity user = activeUser().lockedUntil(Instant.now().minus(Duration.ofHours(1))).build();
+        UserEntity user = activeUser().lockedUntil(FIXED_NOW.minus(Duration.ofHours(1))).build();
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
 
         UserDetails details = service.loadUserByUsername("user@example.com");

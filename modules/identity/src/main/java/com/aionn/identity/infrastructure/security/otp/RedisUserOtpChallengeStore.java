@@ -27,13 +27,14 @@ public class RedisUserOtpChallengeStore implements UserOtpChallengeStorePort {
     private static final Duration EXPIRY_BUFFER = Duration.ofMinutes(2);
 
     private final StringRedisTemplate redisTemplate;
+    private final Clock clock;
 
     @Override
     public void save(UserOtpChallenge challenge) {
         String key = key(challenge.userId(), challenge.purpose());
         String value = serialize(challenge);
 
-        Duration ttl = Duration.between(Instant.now(Clock.systemUTC()), challenge.expiresAt())
+        Duration ttl = Duration.between(Instant.now(clock), challenge.expiresAt())
                 .plus(EXPIRY_BUFFER);
         if (ttl.isNegative() || ttl.isZero()) {
             ttl = Duration.ofMinutes(10);

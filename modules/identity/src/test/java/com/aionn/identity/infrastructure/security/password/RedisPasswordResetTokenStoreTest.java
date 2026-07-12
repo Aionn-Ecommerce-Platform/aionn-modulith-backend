@@ -36,7 +36,7 @@ class RedisPasswordResetTokenStoreTest {
 
     @BeforeEach
     void setUp() {
-        store = new RedisPasswordResetTokenStore(redisTemplate);
+        store = new RedisPasswordResetTokenStore(redisTemplate, java.time.Clock.systemUTC());
     }
 
     @Test

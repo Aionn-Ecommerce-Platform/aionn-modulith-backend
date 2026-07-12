@@ -18,11 +18,12 @@ public class AuthSessionCleanupScheduler {
     private static final Duration RETENTION = Duration.ofDays(90);
 
     private final AuthSessionPersistencePort authSessionPersistence;
+    private final Clock clock;
 
     // Daily at 03:17 local time — off-peak, off the round hour mark.
     @Scheduled(cron = "0 17 3 * * *")
     public void purgeIdleSessions() {
-        Instant cutoff = Instant.now(Clock.systemUTC()).minus(RETENTION);
+        Instant cutoff = Instant.now(clock).minus(RETENTION);
         int deleted = authSessionPersistence.deleteIdleBefore(cutoff);
         if (deleted > 0) {
             log.info("Purged {} auth sessions idle since before {}", deleted, cutoff);

@@ -79,6 +79,8 @@ class RegistrationServiceTest {
         @Mock
         private IdentityMetricsPort identityMetrics;
 
+        private static final Instant FIXED_NOW = Instant.parse("2026-07-12T10:00:00Z");
+
         private RegistrationService registrationService;
 
         @BeforeEach
@@ -97,7 +99,7 @@ class RegistrationServiceTest {
                                 registrationPolicy,
                                 registrationLockManager,
                                 identityMetrics,
-                                Clock.systemUTC());
+                                Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
         }
 
         @Test
@@ -164,7 +166,7 @@ class RegistrationServiceTest {
                                 .thenAnswer(invocation -> invocation.getArgument(0));
                 when(authSessionPersistencePort.save(any(AuthSession.class))).thenAnswer(invocation -> {
                         AuthSession session = invocation.getArgument(0);
-                        Instant now = Instant.now();
+                        Instant now = FIXED_NOW;
                         return new AuthSession(
                                         "session-1",
                                         session.getUserId(),
@@ -178,7 +180,7 @@ class RegistrationServiceTest {
                 when(accessTokenIssuer.issueAccessToken(anyString(), eq("session-1"), any(Instant.class),
                                 eq(Set.of("BUYER"))))
                                 .thenReturn("access-token");
-                Instant accessTokenExpiresAt = Instant.now().plus(Duration.ofMinutes(15));
+                Instant accessTokenExpiresAt = FIXED_NOW.plus(Duration.ofMinutes(15));
                 when(accessTokenIssuer.extractExpiry("access-token"))
                                 .thenReturn(Optional.of(accessTokenExpiresAt));
                 when(registrationResultMapper.toCompleteResult(any(AuthSession.class), eq("access-token"), anyString(),
@@ -201,11 +203,11 @@ class RegistrationServiceTest {
                                 null,
                                 0,
                                 5,
-                                Instant.now().minusSeconds(30),
-                                Instant.now().plusSeconds(600),
+                                FIXED_NOW.minusSeconds(30),
+                                FIXED_NOW.plusSeconds(600),
                                 true,
                                 "verify-token",
-                                Instant.now().minusSeconds(60));
+                                FIXED_NOW.minusSeconds(60));
                 when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
 
                 CompleteRegistrationResult result = registrationService.complete(new CompleteRegistrationCommand(
@@ -253,11 +255,11 @@ class RegistrationServiceTest {
                                 null,
                                 0,
                                 5,
-                                Instant.now().minusSeconds(30),
-                                Instant.now().plusSeconds(600),
+                                FIXED_NOW.minusSeconds(30),
+                                FIXED_NOW.plusSeconds(600),
                                 true,
                                 "expected-token",
-                                Instant.now().minusSeconds(60));
+                                FIXED_NOW.minusSeconds(60));
                 when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
                 when(registrationPolicy.getLockTimeoutSeconds()).thenReturn(30);
                 when(registrationLockManager.tryLock("+84912345678", 30)).thenReturn(Optional.of("lock-1"));
@@ -330,9 +332,9 @@ class RegistrationServiceTest {
         void verifyOtpReturnsExistingTokenWhenAlreadyVerified() {
                 RegistrationVerificationSession session = new RegistrationVerificationSession(
                                 "reg-1", "+84912345678", null, 0, 5,
-                                Instant.now().minusSeconds(30),
-                                Instant.now().plusSeconds(600),
-                                true, "verify-token", Instant.now().minusSeconds(60));
+                                FIXED_NOW.minusSeconds(30),
+                                FIXED_NOW.plusSeconds(600),
+                                true, "verify-token", FIXED_NOW.minusSeconds(60));
                 when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
                 when(registrationResultMapper.toVerifyOtpResult("reg-1", "verify-token"))
                                 .thenReturn(new com.aionn.identity.application.dto.registration.result.VerifyRegistrationOtpResult(
@@ -362,8 +364,8 @@ class RegistrationServiceTest {
         void verifyOtpMarksSessionVerifiedOnCorrectCode() {
                 RegistrationVerificationSession session = new RegistrationVerificationSession(
                                 "reg-1", "+84912345678", "123456", 0, 5,
-                                Instant.now().minusSeconds(30),
-                                Instant.now().plusSeconds(600),
+                                FIXED_NOW.minusSeconds(30),
+                                FIXED_NOW.plusSeconds(600),
                                 false, null, null);
                 when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
                 when(registrationResultMapper.toVerifyOtpResult(eq("reg-1"), anyString()))
@@ -396,8 +398,8 @@ class RegistrationServiceTest {
                 when(registrationPolicy.isExposeOtpInResponse()).thenReturn(false);
                 RegistrationVerificationSession session = new RegistrationVerificationSession(
                                 "reg-1", "+84912345678", "123456", 0, 5,
-                                Instant.now().minusSeconds(60),
-                                Instant.now().plusSeconds(600),
+                                FIXED_NOW.minusSeconds(60),
+                                FIXED_NOW.plusSeconds(600),
                                 false, null, null);
                 when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
                 when(registrationResultMapper.toResendOtpResult(any(RegistrationVerificationSession.class), any()))
@@ -426,9 +428,9 @@ class RegistrationServiceTest {
         void completeThrowsWhenLockCannotBeAcquired() {
                 RegistrationVerificationSession session = new RegistrationVerificationSession(
                                 "reg-1", "+84912345678", null, 0, 5,
-                                Instant.now().minusSeconds(30),
-                                Instant.now().plusSeconds(600),
-                                true, "verify-token", Instant.now().minusSeconds(60));
+                                FIXED_NOW.minusSeconds(30),
+                                FIXED_NOW.plusSeconds(600),
+                                true, "verify-token", FIXED_NOW.minusSeconds(60));
                 when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
                 when(registrationPolicy.getLockTimeoutSeconds()).thenReturn(30);
                 when(registrationLockManager.tryLock("+84912345678", 30)).thenReturn(Optional.empty());
@@ -446,9 +448,9 @@ class RegistrationServiceTest {
         void completeThrowsWhenSessionExpired() {
                 RegistrationVerificationSession session = new RegistrationVerificationSession(
                                 "reg-1", "+84912345678", null, 0, 5,
-                                Instant.now().minusSeconds(300),
-                                Instant.now().minusSeconds(60),
-                                true, "verify-token", Instant.now().minusSeconds(240));
+                                FIXED_NOW.minusSeconds(300),
+                                FIXED_NOW.minusSeconds(60),
+                                true, "verify-token", FIXED_NOW.minusSeconds(240));
                 when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
                 when(registrationPolicy.getLockTimeoutSeconds()).thenReturn(30);
                 when(registrationLockManager.tryLock("+84912345678", 30)).thenReturn(Optional.of("lock-1"));
@@ -466,9 +468,9 @@ class RegistrationServiceTest {
         void completeThrowsWhenUsernameAlreadyExists() {
                 RegistrationVerificationSession session = new RegistrationVerificationSession(
                                 "reg-1", "+84912345678", null, 0, 5,
-                                Instant.now().minusSeconds(30),
-                                Instant.now().plusSeconds(600),
-                                true, "verify-token", Instant.now().minusSeconds(60));
+                                FIXED_NOW.minusSeconds(30),
+                                FIXED_NOW.plusSeconds(600),
+                                true, "verify-token", FIXED_NOW.minusSeconds(60));
                 when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
                 when(registrationPolicy.getLockTimeoutSeconds()).thenReturn(30);
                 when(registrationLockManager.tryLock("+84912345678", 30)).thenReturn(Optional.of("lock-1"));

@@ -44,13 +44,15 @@ class AgentServiceTest {
     @Mock
     private PasswordHasherPort passwordHasher;
 
+    private static final Instant FIXED_NOW = Instant.parse("2026-07-12T10:00:00Z");
+
     private AgentService agentService;
 
     @BeforeEach
     void setUp() {
         agentService = new AgentService(
                 agentPersistencePort, agentAuditPort, agentPolicy, passwordHasher,
-Clock.systemUTC());
+                Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -66,8 +68,8 @@ Clock.systemUTC());
         assertThat(result.getOwnerId()).isEqualTo(OWNER_ID);
         assertThat(result.getKeyHash()).isEqualTo("hashed-key");
         assertThat(result.getStatus()).isEqualTo(AgentStatus.ACTIVE);
-        Instant elevenMonthsFromNow = Instant.now().atZone(ZoneOffset.UTC).plusMonths(11).toInstant();
-        assertThat(result.getExpiresAt().isAfter(elevenMonthsFromNow)).isTrue();
+        Instant expectedExpiry = FIXED_NOW.atZone(ZoneOffset.UTC).plusYears(1).toInstant();
+        assertThat(result.getExpiresAt()).isEqualTo(expectedExpiry);
     }
 
     @Test

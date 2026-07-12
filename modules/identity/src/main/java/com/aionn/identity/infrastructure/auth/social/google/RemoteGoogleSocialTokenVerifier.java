@@ -25,9 +25,11 @@ public class RemoteGoogleSocialTokenVerifier implements GoogleSocialTokenVerifie
 
     private final SocialAuthProperties socialAuthProperties;
     private final RestClient restClient;
+    private final Clock clock;
 
-    public RemoteGoogleSocialTokenVerifier(SocialAuthProperties socialAuthProperties) {
+    public RemoteGoogleSocialTokenVerifier(SocialAuthProperties socialAuthProperties, Clock clock) {
         this.socialAuthProperties = socialAuthProperties;
+        this.clock = clock;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout((int) CONNECT_TIMEOUT.toMillis());
         factory.setReadTimeout((int) READ_TIMEOUT.toMillis());
@@ -74,7 +76,7 @@ public class RemoteGoogleSocialTokenVerifier implements GoogleSocialTokenVerifie
                 throw new IdentityException(IdentityErrorCode.PROVIDER_TOKEN_INVALID,
                         "Google token subject is missing");
             }
-            if (response.exp() != null && response.exp() <= Instant.now(Clock.systemUTC()).getEpochSecond()) {
+            if (response.exp() != null && response.exp() <= Instant.now(clock).getEpochSecond()) {
                 throw new IdentityException(IdentityErrorCode.PROVIDER_TOKEN_INVALID,
                         "Google token has expired");
             }

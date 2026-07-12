@@ -28,7 +28,7 @@ class RedisRegistrationRateLimiterTest {
 
     @BeforeEach
     void setUp() {
-        rateLimiter = new RedisRegistrationRateLimiter(redisTemplate);
+        rateLimiter = new RedisRegistrationRateLimiter(redisTemplate, java.time.Clock.systemUTC());
     }
 
     private static RedisScript<Long> anyScript() {

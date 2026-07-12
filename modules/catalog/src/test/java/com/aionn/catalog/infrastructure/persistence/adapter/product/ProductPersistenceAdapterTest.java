@@ -202,7 +202,7 @@ class ProductPersistenceAdapterTest {
     void findPublishedClampsLimitAndOffset() {
         ProductEntity entity = new ProductEntity();
         Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
-        when(jpa.findPublished(PageRequest.of(0, 1))).thenReturn(List.of(entity));
+        when(jpa.findPublishedRaw(1, 0)).thenReturn(List.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
         assertThat(adapter.findPublished(0, -5)).containsExactly(domain);

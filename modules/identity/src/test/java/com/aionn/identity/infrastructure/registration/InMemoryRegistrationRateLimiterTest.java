@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class InMemoryRegistrationRateLimiterTest {
 
-    private final InMemoryRegistrationRateLimiter limiter = new InMemoryRegistrationRateLimiter();
+    private final InMemoryRegistrationRateLimiter limiter = new InMemoryRegistrationRateLimiter(java.time.Clock.systemUTC());
 
     @Test
     void allowsRequestsWithinLimit() {

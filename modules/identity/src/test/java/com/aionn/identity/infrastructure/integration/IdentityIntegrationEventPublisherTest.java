@@ -25,7 +25,7 @@ class IdentityIntegrationEventPublisherTest {
 
     @BeforeEach
     void setUp() {
-        publisher = new IdentityIntegrationEventPublisher(integrationEventPublisher);
+        publisher = new IdentityIntegrationEventPublisher(integrationEventPublisher, java.time.Clock.systemUTC());
     }
 
     @Test
