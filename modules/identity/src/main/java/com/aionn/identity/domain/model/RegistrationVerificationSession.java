@@ -8,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.Serializable;
 import java.time.Clock;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Objects;
 
 public class RegistrationVerificationSession implements Serializable {
@@ -19,12 +19,12 @@ public class RegistrationVerificationSession implements Serializable {
     private final String phoneNumber;
     private String otpCode;
     private final int maxVerifyAttempts;
-    private LocalDateTime resendAvailableAt;
-    private LocalDateTime expiredAt;
+    private Instant resendAvailableAt;
+    private Instant expiredAt;
     private int attemptCount;
     private boolean verified;
     private String verificationToken;
-    private LocalDateTime verifiedAt;
+    private Instant verifiedAt;
 
     @JsonCreator
     public RegistrationVerificationSession(
@@ -33,11 +33,11 @@ public class RegistrationVerificationSession implements Serializable {
             @JsonProperty("otpCode") String otpCode,
             @JsonProperty("attemptCount") int attemptCount,
             @JsonProperty("maxVerifyAttempts") int maxVerifyAttempts,
-            @JsonProperty("resendAvailableAt") LocalDateTime resendAvailableAt,
-            @JsonProperty("expiredAt") LocalDateTime expiredAt,
+            @JsonProperty("resendAvailableAt") Instant resendAvailableAt,
+            @JsonProperty("expiredAt") Instant expiredAt,
             @JsonProperty("verified") boolean verified,
             @JsonProperty("verificationToken") String verificationToken,
-            @JsonProperty("verifiedAt") LocalDateTime verifiedAt) {
+            @JsonProperty("verifiedAt") Instant verifiedAt) {
         this.regId = regId;
         this.phoneNumber = phoneNumber;
         this.otpCode = otpCode;
@@ -51,7 +51,11 @@ public class RegistrationVerificationSession implements Serializable {
     }
 
     public boolean isExpired() {
-        return expiredAt != null && !expiredAt.isAfter(LocalDateTime.now(Clock.systemUTC()));
+        return isExpired(Clock.systemUTC());
+    }
+
+    public boolean isExpired(Clock clock) {
+        return expiredAt != null && !expiredAt.isAfter(clock.instant());
     }
 
     public boolean isLocked() {
@@ -59,10 +63,14 @@ public class RegistrationVerificationSession implements Serializable {
     }
 
     public void verify(String inputOtpCode) {
+        verify(inputOtpCode, Clock.systemUTC());
+    }
+
+    public void verify(String inputOtpCode, Clock clock) {
         if (verified) {
             throw new IdentityException(IdentityErrorCode.REGISTRATION_ALREADY_VERIFIED);
         }
-        if (isExpired()) {
+        if (isExpired(clock)) {
             throw new IdentityException(IdentityErrorCode.OTP_EXPIRED);
         }
         if (isLocked()) {
@@ -79,20 +87,24 @@ public class RegistrationVerificationSession implements Serializable {
         verified = true;
         otpCode = null;
         verificationToken = IdGenerator.ulid();
-        verifiedAt = LocalDateTime.now(Clock.systemUTC());
+        verifiedAt = clock.instant();
     }
 
-    public void resend(String newOtpCode, LocalDateTime newResendAvailableAt, LocalDateTime newExpiredAt) {
+    public void resend(String newOtpCode, Instant newResendAvailableAt, Instant newExpiredAt) {
+        resend(newOtpCode, newResendAvailableAt, newExpiredAt, Clock.systemUTC());
+    }
+
+    public void resend(String newOtpCode, Instant newResendAvailableAt, Instant newExpiredAt, Clock clock) {
         if (verified) {
             throw new IdentityException(IdentityErrorCode.REGISTRATION_ALREADY_VERIFIED);
         }
-        if (isExpired()) {
+        if (isExpired(clock)) {
             throw new IdentityException(IdentityErrorCode.REGISTRATION_SESSION_EXPIRED);
         }
         if (isLocked()) {
             throw new IdentityException(IdentityErrorCode.OTP_ATTEMPTS_EXCEEDED);
         }
-        if (resendAvailableAt != null && LocalDateTime.now(Clock.systemUTC()).isBefore(resendAvailableAt)) {
+        if (resendAvailableAt != null && clock.instant().isBefore(resendAvailableAt)) {
             throw new IdentityException(IdentityErrorCode.OTP_RESEND_TOO_SOON);
         }
 
@@ -122,11 +134,11 @@ public class RegistrationVerificationSession implements Serializable {
         return maxVerifyAttempts;
     }
 
-    public LocalDateTime getResendAvailableAt() {
+    public Instant getResendAvailableAt() {
         return resendAvailableAt;
     }
 
-    public LocalDateTime getExpiredAt() {
+    public Instant getExpiredAt() {
         return expiredAt;
     }
 
@@ -138,7 +150,7 @@ public class RegistrationVerificationSession implements Serializable {
         return verificationToken;
     }
 
-    public LocalDateTime getVerifiedAt() {
+    public Instant getVerifiedAt() {
         return verifiedAt;
     }
 }

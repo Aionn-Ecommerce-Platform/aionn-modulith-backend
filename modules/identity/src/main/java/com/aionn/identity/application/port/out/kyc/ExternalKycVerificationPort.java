@@ -8,10 +8,6 @@ public interface ExternalKycVerificationPort {
 
     ExternalKycSession generateVerificationSession(IdentityUser user, String kycId, String providerApplicantId);
 
-    /**
-     * Verifies the webhook signature and throws {@link SecurityException} when
-     * the signature is missing, malformed, or does not match the payload.
-     */
     void verifyWebhookSignature(byte[] payload, String digest, String digestAlgorithm);
 
     record ExternalKycApplicant(

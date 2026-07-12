@@ -10,11 +10,8 @@ import org.springframework.core.MethodParameter;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.context.request.NativeWebRequest;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(MockitoExtension.class)
 class CurrentSessionIdArgumentResolverTest {
@@ -36,14 +33,14 @@ class CurrentSessionIdArgumentResolverTest {
         when(methodParameter.hasParameterAnnotation(CurrentSessionId.class)).thenReturn(true);
         org.mockito.Mockito.<Class<?>>when(methodParameter.getParameterType()).thenReturn(String.class);
 
-        assertTrue(resolver.supportsParameter(methodParameter));
+        assertThat(resolver.supportsParameter(methodParameter)).isTrue();
     }
 
     @Test
     void rejectsParameterWithoutAnnotation() {
         when(methodParameter.hasParameterAnnotation(CurrentSessionId.class)).thenReturn(false);
 
-        assertFalse(resolver.supportsParameter(methodParameter));
+        assertThat(resolver.supportsParameter(methodParameter)).isFalse();
     }
 
     @Test
@@ -55,7 +52,7 @@ class CurrentSessionIdArgumentResolverTest {
 
         Object resolved = resolver.resolveArgument(methodParameter, null, webRequest, null);
 
-        assertEquals("session-42", resolved);
+        assertThat(resolved).isEqualTo("session-42");
     }
 
     @Test
@@ -66,7 +63,7 @@ class CurrentSessionIdArgumentResolverTest {
 
         Object resolved = resolver.resolveArgument(methodParameter, null, webRequest, null);
 
-        assertNull(resolved);
+        assertThat(resolved).isNull();
     }
 
     @Test
@@ -76,6 +73,6 @@ class CurrentSessionIdArgumentResolverTest {
 
         Object resolved = resolver.resolveArgument(methodParameter, null, webRequest, null);
 
-        assertNull(resolved);
+        assertThat(resolved).isNull();
     }
 }

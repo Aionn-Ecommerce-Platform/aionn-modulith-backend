@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "backup_codes", indexes = {
@@ -30,10 +30,10 @@ public class BackupCodeEntity {
 
     @CreationTimestamp
     @Column(name = "generated_at", nullable = false, updatable = false)
-    private LocalDateTime generatedAt;
+    private Instant generatedAt;
 
     @Column(name = "used_at")
-    private LocalDateTime usedAt;
+    private Instant usedAt;
 }
 
 

@@ -30,8 +30,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
+import java.time.Clock;
+import java.time.Duration;
 
 @Slf4j
 @Service
@@ -50,6 +51,7 @@ public class AccountManagementService {
     private final AccountManagementPolicy accountManagementPolicy;
     private final UserResultMapper userResultMapper;
 
+    private final Clock clock;
     public DeletionRequestView requestAccountDeletion(RequestAccountDeletionCommand command) {
         return requestAccountDeletion(command.userId());
     }
@@ -88,7 +90,7 @@ public class AccountManagementService {
                 UserOtpPurpose.VERIFY_PRIMARY_EMAIL,
                 IdentityErrorCode.EMAIL_VERIFICATION_NOT_FOUND);
         validateOtp(challenge, otpCode);
-        user.verifyEmail();
+        user.verifyEmail(clock);
         userPersistencePort.save(user);
         userOtpChallengeStore.delete(userId, UserOtpPurpose.VERIFY_PRIMARY_EMAIL);
         log.info("Email verified for user: {}", userId);
@@ -192,8 +194,8 @@ public class AccountManagementService {
         if (accountDeletionPort.findPendingByUserId(userId).isPresent()) {
             throw new IdentityException(IdentityErrorCode.ACCOUNT_DELETION_ALREADY_REQUESTED);
         }
-        LocalDateTime scheduledDeletionAt = nowUtc()
-                .plusDays(accountManagementPolicy.getDeletionGraceDays());
+        Instant scheduledDeletionAt = nowUtc()
+                .plus(Duration.ofDays(accountManagementPolicy.getDeletionGraceDays()));
         DeletionRequestView result = accountDeletionPort.save(userId, scheduledDeletionAt);
         log.info("Account deletion requested for user: {}, scheduled at: {}", userId, scheduledDeletionAt);
         return result;
@@ -261,8 +263,7 @@ public class AccountManagementService {
         }
         return user;
     }
-
-    private static LocalDateTime nowUtc() {
-        return LocalDateTime.now(ZoneOffset.UTC);
+    private Instant nowUtc() {
+        return clock.instant();
     }
 }

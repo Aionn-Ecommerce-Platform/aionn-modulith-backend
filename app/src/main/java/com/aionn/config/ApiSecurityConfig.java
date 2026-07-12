@@ -19,6 +19,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.aionn.identity.infrastructure.security.web.BearerAuthenticationFilter;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
 @Configuration
 @Slf4j
 @EnableMethodSecurity
@@ -26,23 +29,20 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class ApiSecurityConfig {
 
     private final String allowedOrigins;
+    private final BearerAuthenticationFilter bearerAuthenticationFilter;
 
-    public ApiSecurityConfig(@Value("${SECURITY_CORS_ALLOWED_ORIGINS:}") String allowedOrigins) {
+    public ApiSecurityConfig(
+            @Value("${SECURITY_CORS_ALLOWED_ORIGINS:}") String allowedOrigins,
+            BearerAuthenticationFilter bearerAuthenticationFilter) {
         this.allowedOrigins = allowedOrigins;
+        this.bearerAuthenticationFilter = bearerAuthenticationFilter;
     }
 
     @Bean
-    @SuppressWarnings("java:S4502") // CSRF disabled by design — see rationale below.
+    @SuppressWarnings("java:S4502")
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                // Stateless bearer/JWT auth: browsers never receive a session
-                // cookie from us, so there is no ambient authority for a
-                // cross-site form to abuse — CSRF has nothing to protect.
-                // Disabling is also required so third-party provider webhooks
-                // (Sumsub KYC callbacks, etc.) can POST without a token.
-                // Every mutating endpoint requires an explicit Authorization
-                // bearer header, which browsers do not attach automatically.
                 .csrf(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers
                         .contentTypeOptions(opt -> {
@@ -62,6 +62,7 @@ public class ApiSecurityConfig {
                         .permitAll()
                         .requestMatchers("/actuator/**").denyAll()
                         .anyRequest().permitAll())
+                .addFilterBefore(bearerAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session

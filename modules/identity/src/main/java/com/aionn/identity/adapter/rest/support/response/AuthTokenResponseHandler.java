@@ -13,9 +13,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-
 @Component
 @RequiredArgsConstructor
 public class AuthTokenResponseHandler {
@@ -70,11 +67,11 @@ public class AuthTokenResponseHandler {
         return authProperties.mobileClientValue().equalsIgnoreCase(clientType.trim());
     }
 
-    private ResponseCookie buildRefreshCookie(String refreshToken, LocalDateTime expiresAt) {
+    private ResponseCookie buildRefreshCookie(String refreshToken, Instant expiresAt) {
         // Session timestamps are produced in UTC (see AuthService.nowUtc()).
         // Convert both sides to Instant so the arithmetic is explicitly
         // zone-anchored rather than depending on the JVM default zone.
-        Instant expires = expiresAt.toInstant(ZoneOffset.UTC);
+        Instant expires = expiresAt;
         long maxAgeSeconds = Duration.between(Instant.now(), expires).getSeconds();
         if (maxAgeSeconds < 0) {
             maxAgeSeconds = 0;

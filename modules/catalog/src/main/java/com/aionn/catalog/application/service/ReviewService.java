@@ -32,6 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.util.List;
 
 @Slf4j
@@ -46,6 +47,7 @@ public class ReviewService {
     private final OrderQueryPort orderQueryPort;
     private final ReviewResultMapper reviewResultMapper;
     private final EventPublisher eventPublisher;
+    private final Clock clock;
 
     public ReviewResult submit(SubmitReviewCommand command) {
         if (reviewRepository.existsByUserIdAndProductId(command.userId(), command.productId())) {
@@ -59,8 +61,10 @@ public class ReviewService {
             throw new CatalogException(CatalogErrorCode.REVIEW_NOT_PURCHASED);
         }
         ProductReview review = ProductReview.create(
-                IdGenerator.ulid(), command.productId(), command.userId(), orderId,
-                command.rating(), command.title(), command.content(), command.imageUrls());
+                new ProductReview.ReviewDraft(
+                        IdGenerator.ulid(), command.productId(), command.userId(), orderId,
+                        command.rating(), command.title(), command.content(), command.imageUrls()),
+                clock);
         ProductReview saved = reviewRepository.save(review);
         eventPublisher.publish(review.pullEvents());
         return reviewResultMapper.toResult(saved);
@@ -71,7 +75,7 @@ public class ReviewService {
         if (!review.getUserId().equals(command.userId())) {
             throw new CatalogException(CatalogErrorCode.REVIEW_FORBIDDEN, "User does not own this review");
         }
-        review.update(command.rating(), command.title(), command.content(), command.imageUrls());
+        review.update(command.rating(), command.title(), command.content(), command.imageUrls(), clock);
         ProductReview saved = reviewRepository.save(review);
         eventPublisher.publish(review.pullEvents());
         return reviewResultMapper.toResult(saved);
@@ -82,7 +86,7 @@ public class ReviewService {
         if (!review.getUserId().equals(command.userId())) {
             throw new CatalogException(CatalogErrorCode.REVIEW_FORBIDDEN, "User does not own this review");
         }
-        review.adminDelete(command.userId());
+        review.adminDelete(command.userId(), clock);
         reviewRepository.save(review);
         eventPublisher.publish(review.pullEvents());
     }
@@ -90,7 +94,7 @@ public class ReviewService {
     public ReviewResult merchantReply(MerchantReplyCommand command) {
         ProductReview review = required(command.reviewId());
         ensureMerchantOwnsProduct(command.ownerId(), review.getProductId());
-        review.reply(command.content());
+        review.reply(command.content(), clock);
         ProductReview saved = reviewRepository.save(review);
         eventPublisher.publish(review.pullEvents());
         return reviewResultMapper.toResult(saved);
@@ -99,7 +103,7 @@ public class ReviewService {
     public ReviewResult report(ReportReviewCommand command) {
         ProductReview review = required(command.reviewId());
         Merchant merchant = ensureMerchantOwnsProduct(command.ownerId(), review.getProductId());
-        review.report(merchant.getMerchantId(), command.reason());
+        review.report(merchant.getMerchantId(), command.reason(), clock);
         ProductReview saved = reviewRepository.save(review);
         eventPublisher.publish(review.pullEvents());
         return reviewResultMapper.toResult(saved);
@@ -107,7 +111,7 @@ public class ReviewService {
 
     public ReviewResult hide(HideReviewCommand command) {
         ProductReview review = required(command.reviewId());
-        review.hide();
+        review.hide(clock);
         ProductReview saved = reviewRepository.save(review);
         eventPublisher.publish(review.pullEvents());
         return reviewResultMapper.toResult(saved);
@@ -115,14 +119,14 @@ public class ReviewService {
 
     public void adminDelete(AdminDeleteReviewCommand command) {
         ProductReview review = required(command.reviewId());
-        review.adminDelete(command.adminId());
+        review.adminDelete(command.adminId(), clock);
         reviewRepository.save(review);
         eventPublisher.publish(review.pullEvents());
     }
 
     public ReviewResult restore(RestoreReviewCommand command) {
         ProductReview review = required(command.reviewId());
-        review.restore(command.adminId());
+        review.restore(command.adminId(), clock);
         ProductReview saved = reviewRepository.save(review);
         eventPublisher.publish(review.pullEvents());
         return reviewResultMapper.toResult(saved);

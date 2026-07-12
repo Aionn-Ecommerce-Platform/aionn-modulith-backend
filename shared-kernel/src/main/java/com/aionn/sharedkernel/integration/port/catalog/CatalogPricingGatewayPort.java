@@ -7,15 +7,9 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * Outbound port for resolving SKU pricing from the Catalog module.
- *
- * <p>
- * Used synchronously by the Ordering module during checkout. Must return
- * immediately so the order can be priced/validated within the same
- * transaction.
- * </p>
- */
+// Outbound port for resolving SKU pricing from the Catalog module.
+// Used synchronously by the Ordering module during checkout: must return
+// immediately so the order can be priced/validated within the same transaction.
 public interface CatalogPricingGatewayPort {
 
     PricingResult resolve(List<String> skuIds);

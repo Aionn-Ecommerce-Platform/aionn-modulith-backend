@@ -1,10 +1,17 @@
 include envs/common.env
 
+SHELL := bash
+
 CONTAINER ?= docker
 COMPOSE_FILE := docker/docker-compose.yml
 ENV_FILE := envs/common.env
 PROJECT := aionn-modulith-backend
 COMPOSE := $(CONTAINER) compose -p $(PROJECT) -f $(COMPOSE_FILE) --env-file $(ENV_FILE)
+
+# Export every key in the module env files before invoking Gradle so the
+# Spring Boot app sees them as OS env vars (identity/catalog YAML resolves
+# ${IDENTITY_JWT_SECRET:} etc. against the process environment).
+LOAD_ENV := set -a; . envs/common.env; . envs/identity.env; . envs/catalog.env; set +a
 
 .PHONY: build test smoke run clean infra-up infra-down infra-restart infra-logs infra-ps infra-config reset-db
 
@@ -18,7 +25,7 @@ smoke:
 	./gradlew :app:test
 
 run:
-	./gradlew :app:bootRun
+	$(LOAD_ENV); ./gradlew :app:bootRun
 
 clean:
 	./gradlew clean

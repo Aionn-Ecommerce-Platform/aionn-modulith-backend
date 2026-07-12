@@ -18,17 +18,17 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Clock;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class AddressServiceTest {
@@ -50,7 +50,8 @@ class AddressServiceTest {
     @BeforeEach
     void setUp() {
         addressService = new AddressService(
-                addressPersistencePort, userPersistencePort, addressPolicy, geographyService);
+                addressPersistencePort, userPersistencePort, addressPolicy, geographyService,
+Clock.systemUTC());
     }
 
     @Test
@@ -85,7 +86,7 @@ class AddressServiceTest {
                 USER_ID, "Alice", "+84912345678", "VN-HN", "VN-HN-BA", "VN-HN-BA-PX",
                 "12 main st", AddressType.HOME, false));
 
-        assertTrue(result.isDefault());
+        assertThat(result.isDefault()).isTrue();
         verify(addressPersistencePort).createAtomically(any(Address.class), eq(5L), eq(true));
     }
 
@@ -102,7 +103,7 @@ class AddressServiceTest {
                 USER_ID, "Alice", "+84912345678", "VN-HN", "VN-HN-BA", "VN-HN-BA-PX",
                 "12 main st", AddressType.HOME, true));
 
-        assertTrue(result.isDefault());
+        assertThat(result.isDefault()).isTrue();
         verify(addressPersistencePort).createAtomically(any(Address.class), eq(5L), eq(true));
     }
 
@@ -119,7 +120,7 @@ class AddressServiceTest {
                 USER_ID, "Alice", "+84912345678", "VN-HN", "VN-HN-BA", "VN-HN-BA-PX",
                 "12 main st", AddressType.HOME, false));
 
-        assertTrue(!result.isDefault());
+        assertThat(!result.isDefault()).isTrue();
         verify(addressPersistencePort).createAtomically(any(Address.class), eq(5L), eq(true));
     }
 
@@ -130,7 +131,7 @@ class AddressServiceTest {
                         USER_ID, "Alice", "abc", "VN-HN", "VN-HN-BA", "VN-HN-BA-PX",
                         "12 main st", AddressType.HOME, false)));
 
-        assertEquals(IdentityErrorCode.PHONE_INVALID.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.PHONE_INVALID.getCode());
     }
 
     @Test
@@ -147,7 +148,7 @@ class AddressServiceTest {
                         USER_ID, "Alice", "+84912345678", "VN-HN", "VN-HN-BA", "VN-HN-BA-PX",
                         "12 main st", AddressType.HOME, false)));
 
-        assertEquals(IdentityErrorCode.ADDRESS_NUMBER_EXCEEDED.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.ADDRESS_NUMBER_EXCEEDED.getCode());
     }
 
     @Test
@@ -159,7 +160,7 @@ class AddressServiceTest {
                         USER_ID, "Alice", "+84912345678", "VN-HN", "VN-HN-BA", "VN-HN-BA-PX",
                         "12 main st", AddressType.HOME, false)));
 
-        assertEquals(IdentityErrorCode.USER_NOT_FOUND.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.USER_NOT_FOUND.getCode());
     }
 
     @Test
@@ -171,7 +172,7 @@ class AddressServiceTest {
         var ex = assertThrows(IdentityException.class,
                 () -> addressService.deleteAddress(USER_ID, ADDRESS_ID));
 
-        assertEquals(IdentityErrorCode.DEFAULT_ADDRESS_CANNOT_BE_DELETED.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.DEFAULT_ADDRESS_CANNOT_BE_DELETED.getCode());
     }
 
     @Test
@@ -195,7 +196,7 @@ class AddressServiceTest {
 
         Address result = addressService.setDefaultAddress(USER_ID, ADDRESS_ID);
 
-        assertTrue(result.isDefault());
+        assertThat(result.isDefault()).isTrue();
         verify(addressPersistencePort).clearDefaultByUserId(USER_ID);
     }
 
@@ -215,7 +216,7 @@ class AddressServiceTest {
 
         verify(addressPersistencePort).save(captor.capture());
         verify(geographyService, never()).resolveLocation(any(), any(), any());
-        assertEquals("Bob", captor.getValue().contactName());
+        assertThat(captor.getValue().contactName()).isEqualTo("Bob");
     }
 
     private Address baseAddress(boolean isDefault) {
@@ -223,7 +224,7 @@ class AddressServiceTest {
                 ADDRESS_ID, USER_ID, "Alice", "+84912345678",
                 "VN-HN", "Ha Noi", "VN-HN-BA", "Ba Dinh", "VN-HN-BA-PX", "Phuc Xa",
                 "12 main st", "12 main st, Phuc Xa, Ba Dinh, Ha Noi",
-                AddressType.HOME, isDefault, LocalDateTime.now(), LocalDateTime.now());
+                AddressType.HOME, isDefault, Instant.now(), Instant.now());
     }
 
     private static ResolvedLocation resolved() {

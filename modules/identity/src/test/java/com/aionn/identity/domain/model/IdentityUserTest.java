@@ -6,7 +6,8 @@ import com.aionn.identity.domain.valueobject.UserStatus;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.*;
@@ -15,7 +16,7 @@ class IdentityUserTest {
 
     @Test
     void constructor_validInput_createsInstance() {
-        LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
+        Instant now = Instant.now(Clock.systemUTC());
         IdentityUser user = new IdentityUser(
                 "user-123",
                 "alice@example.com",
@@ -48,7 +49,7 @@ class IdentityUserTest {
 
     @Test
     void constructor_nullUserId_throwsException() {
-        LocalDateTime createdAt = LocalDateTime.now(Clock.systemUTC());
+        Instant createdAt = Instant.now(Clock.systemUTC());
 
         assertThatThrownBy(() -> new IdentityUser(
                 null,
@@ -83,7 +84,7 @@ class IdentityUserTest {
                 null,
                 null,
                 null,
-                LocalDateTime.now(Clock.systemUTC()));
+                Instant.now(Clock.systemUTC()));
 
         assertThat(user.getRoles()).containsExactly(UserRole.BUYER);
     }
@@ -104,7 +105,7 @@ class IdentityUserTest {
         assertThat(user.getEmailVerifiedAt()).isNull();
         assertThat(user.getPhoneVerifiedAt()).isNull();
         assertThat(user.getLockedUntil()).isNull();
-        assertThat(user.getCreatedAt()).isBeforeOrEqualTo(LocalDateTime.now(Clock.systemUTC()));
+        assertThat(user.getCreatedAt()).isBeforeOrEqualTo(Instant.now(Clock.systemUTC()));
     }
 
     @Test
@@ -158,12 +159,12 @@ class IdentityUserTest {
         user.verifyEmail();
 
         assertThat(user.getEmailVerifiedAt()).isNotNull();
-        assertThat(user.getEmailVerifiedAt()).isBeforeOrEqualTo(LocalDateTime.now(Clock.systemUTC()));
+        assertThat(user.getEmailVerifiedAt()).isBeforeOrEqualTo(Instant.now(Clock.systemUTC()));
     }
 
     @Test
     void verifyEmail_alreadyVerified_keepsOriginalTimestamp() {
-        LocalDateTime originalTimestamp = LocalDateTime.now(Clock.systemUTC()).minusDays(10);
+        Instant originalTimestamp = Instant.now(Clock.systemUTC()).minus(Duration.ofDays(10));
         IdentityUser user = new IdentityUser(
                 "user-123",
                 "alice@example.com",
@@ -177,7 +178,7 @@ class IdentityUserTest {
                 originalTimestamp,
                 null,
                 null,
-                LocalDateTime.now(Clock.systemUTC()));
+                Instant.now(Clock.systemUTC()));
 
         user.verifyEmail();
 
@@ -192,12 +193,12 @@ class IdentityUserTest {
         user.verifyPhone();
 
         assertThat(user.getPhoneVerifiedAt()).isNotNull();
-        assertThat(user.getPhoneVerifiedAt()).isBeforeOrEqualTo(LocalDateTime.now(Clock.systemUTC()));
+        assertThat(user.getPhoneVerifiedAt()).isBeforeOrEqualTo(Instant.now(Clock.systemUTC()));
     }
 
     @Test
     void verifyPhone_alreadyVerified_keepsOriginalTimestamp() {
-        LocalDateTime originalTimestamp = LocalDateTime.now(Clock.systemUTC()).minusDays(5);
+        Instant originalTimestamp = Instant.now(Clock.systemUTC()).minus(Duration.ofDays(5));
         IdentityUser user = new IdentityUser(
                 "user-123",
                 "alice@example.com",
@@ -211,7 +212,7 @@ class IdentityUserTest {
                 null,
                 originalTimestamp,
                 null,
-                LocalDateTime.now(Clock.systemUTC()));
+                Instant.now(Clock.systemUTC()));
 
         user.verifyPhone();
 
@@ -360,7 +361,7 @@ class IdentityUserTest {
     @Test
     void lockUntil_futureDate_locksUser() {
         IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
-        LocalDateTime lockTime = LocalDateTime.now(Clock.systemUTC()).plusHours(2);
+        Instant lockTime = Instant.now(Clock.systemUTC()).plus(Duration.ofHours(2));
 
         user.lockUntil(lockTime);
 
@@ -371,7 +372,7 @@ class IdentityUserTest {
     @Test
     void unlock_lockedUser_removesLock() {
         IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
-        user.lockUntil(LocalDateTime.now(Clock.systemUTC()).plusHours(1));
+        user.lockUntil(Instant.now(Clock.systemUTC()).plus(Duration.ofHours(1)));
         assertThat(user.isLocked()).isTrue();
 
         user.unlock();
@@ -394,8 +395,8 @@ class IdentityUserTest {
                 UserStatus.ACTIVE,
                 null,
                 null,
-                LocalDateTime.now(Clock.systemUTC()).minusHours(1),
-                LocalDateTime.now(Clock.systemUTC()));
+                Instant.now(Clock.systemUTC()).minus(Duration.ofHours(1)),
+                Instant.now(Clock.systemUTC()));
 
         assertThat(user.isLocked()).isFalse();
     }
@@ -414,8 +415,8 @@ class IdentityUserTest {
                 UserStatus.ACTIVE,
                 null,
                 null,
-                LocalDateTime.now(Clock.systemUTC()).plusHours(1),
-                LocalDateTime.now(Clock.systemUTC()));
+                Instant.now(Clock.systemUTC()).plus(Duration.ofHours(1)),
+                Instant.now(Clock.systemUTC()));
 
         assertThat(user.isLocked()).isTrue();
     }

@@ -3,15 +3,12 @@ package com.aionn.sharedkernel.integration.port.ordering;
 import java.math.BigDecimal;
 import java.util.List;
 
-/**
- * Cross-service order placement port. Used by callers that already know the
- * exact line items they want to commit (UCP agentic checkout, scheduled jobs,
- * imports). Cart-driven placement stays internal to ordering.
- *
- * <p>Address fields are flat — ordering's domain ShippingAddress value object
- * does not cross the boundary; the implementation is responsible for building
- * its own snapshot from the raw fields.
- */
+// Cross-service order placement port. Used by callers that already know the
+// exact line items they want to commit (UCP agentic checkout, scheduled jobs,
+// imports). Cart-driven placement stays internal to ordering.
+// Address fields are flat — ordering's domain ShippingAddress value object does
+// not cross the boundary; the implementation is responsible for building its own
+// snapshot from the raw fields.
 public interface OrderPlacementPort {
 
     PlacedOrder placeHeadless(PlaceCommand command);

@@ -2,7 +2,7 @@ package com.aionn.identity.application.port.out.security;
 
 import com.aionn.identity.domain.valueobject.UserStatus;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 public interface UserSecurityPort {
@@ -11,7 +11,7 @@ public interface UserSecurityPort {
 
     Optional<UserSecurityData> findByIdentity(String identity);
 
-    void recordFailedLoginAttempt(String userId, int failedAttempts, LocalDateTime lockedUntil);
+    void recordFailedLoginAttempt(String userId, int failedAttempts, Instant lockedUntil);
 
     void resetFailedLoginAttempts(String userId);
 
@@ -21,7 +21,7 @@ public interface UserSecurityPort {
             UserStatus status,
             boolean mfaEnabled,
             String mfaSecret,
-            LocalDateTime lockedUntil,
+            Instant lockedUntil,
             int failedLoginAttempts) {
         @Override
         public String toString() {

@@ -1,6 +1,5 @@
 dependencies {
     implementation project(':shared-kernel')
-    implementation project(':modules:identity')
 
     // Web / persistence
     implementation 'org.springframework.boot:spring-boot-starter-web'

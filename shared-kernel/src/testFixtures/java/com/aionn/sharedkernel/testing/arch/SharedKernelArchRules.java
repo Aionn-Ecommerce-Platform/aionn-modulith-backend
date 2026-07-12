@@ -51,9 +51,25 @@ public final class SharedKernelArchRules {
                                         + "types instead of re-declaring them (single source of truth, R9.1, R9.3)")
                         .allowEmptyShould(true);
 
+        public static final ArchRule NO_LOCAL_DATE_TIME = noClasses()
+                        .should().dependOnClassesThat().haveFullyQualifiedName("java.time.LocalDateTime")
+                        .as("LocalDateTime should not be used in the codebase; use java.time.Instant instead")
+                        .because("LocalDateTime carries no timezone and causes database skew issues (R9.1)")
+                        .allowEmptyShould(true);
+
+        public static final ArchRule NO_BARE_INSTANT_NOW_IN_DOMAIN = noClasses()
+                        .that().resideInAPackage("..domain..")
+                        .should().callMethod(java.time.Instant.class, "now")
+                        .orShould().callMethod(java.time.Instant.class, "now", java.time.Clock.class)
+                        .as("Domain classes should not call Instant.now() or Instant.now(Clock); inject java.time.Clock and use clock.instant() instead")
+                        .because("to ensure all time-dependent logic in the domain is fully testable and deterministic (R9.4)")
+                        .allowEmptyShould(true);
+
         public static void checkAll(JavaClasses classes) {
                 NO_DUPLICATE_MONEY.check(classes);
                 NO_DUPLICATE_PHONE_NUMBER.check(classes);
                 NO_DUPLICATE_ULID.check(classes);
+                NO_LOCAL_DATE_TIME.check(classes);
+                NO_BARE_INSTANT_NOW_IN_DOMAIN.check(classes);
         }
 }

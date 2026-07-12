@@ -9,6 +9,8 @@ import com.aionn.identity.domain.model.RegistrationVerificationSession;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import java.time.Instant;
+
 @Mapper(componentModel = "spring")
 public interface RegistrationResultMapper {
 
@@ -25,5 +27,5 @@ public interface RegistrationResultMapper {
             AuthSession session,
             String accessToken,
             String refreshToken,
-            java.time.LocalDateTime expiresAt);
+            Instant expiresAt);
 }

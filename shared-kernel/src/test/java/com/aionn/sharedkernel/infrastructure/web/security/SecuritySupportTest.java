@@ -41,8 +41,7 @@ class SecuritySupportTest {
     @Test
     void redisIpBlacklistStoreHandlesHappyPathAndFailures() {
         StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
-        @SuppressWarnings("unchecked")
-        SetOperations<String, String> setOperations = mock(SetOperations.class);
+        SetOperations<String, String> setOperations = mock();
         when(redisTemplate.opsForSet()).thenReturn(setOperations);
         when(setOperations.isMember(anyString(), anyString())).thenReturn(true);
 

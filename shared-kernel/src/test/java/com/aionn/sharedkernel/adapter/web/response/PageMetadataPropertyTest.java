@@ -2,12 +2,26 @@ package com.aionn.sharedkernel.adapter.web.response;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
+import net.jqwik.api.Example;
 import net.jqwik.api.ForAll;
 import net.jqwik.api.Property;
 import net.jqwik.api.constraints.IntRange;
 import net.jqwik.api.constraints.LongRange;
 
 class PageMetadataPropertyTest {
+
+        @Example
+        void fromPaginationAndEmptyFactories() {
+                PageMetadata fromPagination = PageMetadata.from(OffsetPagination.of(2, 20), 100);
+                assertEquals(2, fromPagination.page());
+                assertEquals(20, fromPagination.size());
+                assertEquals(5, fromPagination.totalPages());
+
+                PageMetadata empty = PageMetadata.empty(0, 20);
+                assertEquals(0L, empty.totalElements());
+                assertEquals(0, empty.totalPages());
+        }
 
         @Property(tries = 100)
         void property16_metadataConsistentForValidInputs(

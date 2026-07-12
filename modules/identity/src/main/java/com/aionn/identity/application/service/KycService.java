@@ -21,8 +21,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
+import java.time.Clock;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -40,6 +40,7 @@ public class KycService {
     private final KycPolicy kycPolicy;
     private final ExternalKycVerificationPort externalKycVerificationPort;
 
+    private final Clock clock;
     @Transactional(readOnly = true)
     public KycCreationPlan planKycCreation(String userId, String docType) {
         log.info("Creating KYC profile for user: {}, docType: {}", userId, docType);
@@ -119,7 +120,7 @@ public class KycService {
         KycProfile kyc = kycPersistencePort.findById(kycId)
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.KYC_NOT_FOUND));
         try {
-            kyc.adminApprove(adminId, note);
+            kyc.adminApprove(adminId, note, clock);
         } catch (IllegalStateException ex) {
             throw new IdentityException(IdentityErrorCode.KYC_INVALID_STATUS_TRANSITION, ex.getMessage());
         }
@@ -199,7 +200,7 @@ public class KycService {
                     "Required KYC documents have not been uploaded");
         }
         try {
-            kyc.submit();
+            kyc.submit(clock);
         } catch (IllegalStateException ex) {
             throw new IdentityException(IdentityErrorCode.KYC_INVALID_STATUS_TRANSITION, ex.getMessage());
         }
@@ -308,8 +309,7 @@ public class KycService {
             String docType,
             boolean managedProviderEnabled) {
     }
-
-    private static LocalDateTime nowUtc() {
-        return LocalDateTime.now(ZoneOffset.UTC);
+    private Instant nowUtc() {
+        return clock.instant();
     }
 }

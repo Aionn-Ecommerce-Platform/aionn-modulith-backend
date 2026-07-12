@@ -15,9 +15,11 @@ import com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.Spy;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 import java.math.BigDecimal;
@@ -48,7 +50,10 @@ class MerchantServiceTest {
         @Mock
         private com.aionn.catalog.application.port.out.observability.CatalogMetricsPort metricsPort;
 
-        @InjectMocks
+        @Spy
+    private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
+
+    @InjectMocks
         private MerchantService merchantService;
 
         @Test

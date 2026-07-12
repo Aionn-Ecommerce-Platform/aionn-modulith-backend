@@ -6,7 +6,8 @@ import com.aionn.identity.domain.valueobject.UserOtpPurpose;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -27,7 +28,7 @@ class InMemoryUserOtpChallengeStoreTest {
                 "target@example.com",
                 "123456",
                 null,
-                LocalDateTime.now().plusMinutes(5),
+                Instant.now().plus(Duration.ofMinutes(5)),
                 0);
     }
 

@@ -3,7 +3,6 @@ package com.aionn.catalog.infrastructure.search;
 import com.aionn.catalog.application.port.out.search.ProductSearchIndexPort;
 import com.aionn.catalog.domain.model.Product;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -13,7 +12,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
-@ConditionalOnMissingBean(name = "openSearchProductSearchIndex")
 public class InMemoryProductSearchIndex implements ProductSearchIndexPort {
 
     private final Map<String, IndexedProduct> byId = new ConcurrentHashMap<>();

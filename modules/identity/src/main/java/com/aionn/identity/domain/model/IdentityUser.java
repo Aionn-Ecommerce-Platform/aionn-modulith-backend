@@ -6,7 +6,7 @@ import com.aionn.identity.domain.valueobject.UserRole;
 import com.aionn.identity.domain.valueobject.UserStatus;
 
 import java.time.Clock;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -22,10 +22,10 @@ public class IdentityUser {
     private String avatarUrl;
     private final Set<UserRole> roles;
     private UserStatus status;
-    private LocalDateTime emailVerifiedAt;
-    private LocalDateTime phoneVerifiedAt;
-    private LocalDateTime lockedUntil;
-    private final LocalDateTime createdAt;
+    private Instant emailVerifiedAt;
+    private Instant phoneVerifiedAt;
+    private Instant lockedUntil;
+    private final Instant createdAt;
 
     public IdentityUser(
             String userId,
@@ -37,10 +37,10 @@ public class IdentityUser {
             String avatarUrl,
             Set<UserRole> roles,
             UserStatus status,
-            LocalDateTime emailVerifiedAt,
-            LocalDateTime phoneVerifiedAt,
-            LocalDateTime lockedUntil,
-            LocalDateTime createdAt) {
+            Instant emailVerifiedAt,
+            Instant phoneVerifiedAt,
+            Instant lockedUntil,
+            Instant createdAt) {
         this.userId = Objects.requireNonNull(userId, "userId must not be null");
         this.email = email;
         this.phone = phone;
@@ -59,6 +59,10 @@ public class IdentityUser {
     }
 
     public static IdentityUser createNew(String userId, String email, String phone, String username) {
+        return createNew(userId, email, phone, username, Clock.systemUTC());
+    }
+
+    public static IdentityUser createNew(String userId, String email, String phone, String username, Clock clock) {
         return new IdentityUser(
                 userId,
                 email,
@@ -72,7 +76,7 @@ public class IdentityUser {
                 null,
                 null,
                 null,
-                LocalDateTime.now(Clock.systemUTC()));
+                clock.instant());
     }
 
     public void updateDisplayName(String displayName) {
@@ -87,15 +91,23 @@ public class IdentityUser {
     }
 
     public void verifyEmail() {
+        verifyEmail(Clock.systemUTC());
+    }
+
+    public void verifyEmail(Clock clock) {
         if (this.emailVerifiedAt != null)
             return;
-        this.emailVerifiedAt = LocalDateTime.now(Clock.systemUTC());
+        this.emailVerifiedAt = clock.instant();
     }
 
     public void verifyPhone() {
+        verifyPhone(Clock.systemUTC());
+    }
+
+    public void verifyPhone(Clock clock) {
         if (this.phoneVerifiedAt != null)
             return;
-        this.phoneVerifiedAt = LocalDateTime.now(Clock.systemUTC());
+        this.phoneVerifiedAt = clock.instant();
     }
 
     public void updatePasswordHash(String passwordHash) {
@@ -129,7 +141,7 @@ public class IdentityUser {
         }
     }
 
-    public void lockUntil(LocalDateTime lockedUntil) {
+    public void lockUntil(Instant lockedUntil) {
         this.lockedUntil = lockedUntil;
     }
 
@@ -138,7 +150,11 @@ public class IdentityUser {
     }
 
     public boolean isLocked() {
-        return lockedUntil != null && lockedUntil.isAfter(LocalDateTime.now(Clock.systemUTC()));
+        return isLocked(Clock.systemUTC());
+    }
+
+    public boolean isLocked(Clock clock) {
+        return lockedUntil != null && lockedUntil.isAfter(clock.instant());
     }
 
     public boolean isActive() {
@@ -197,19 +213,19 @@ public class IdentityUser {
         return status;
     }
 
-    public LocalDateTime getEmailVerifiedAt() {
+    public Instant getEmailVerifiedAt() {
         return emailVerifiedAt;
     }
 
-    public LocalDateTime getPhoneVerifiedAt() {
+    public Instant getPhoneVerifiedAt() {
         return phoneVerifiedAt;
     }
 
-    public LocalDateTime getLockedUntil() {
+    public Instant getLockedUntil() {
         return lockedUntil;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 

@@ -12,7 +12,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 public class IdentityUserDetailsService implements UserDetailsService {
 
         private final UserRepository userRepository;
+        private final Clock clock;
 
         @Override
         public UserDetails loadUserByUsername(String identity) throws UsernameNotFoundException {
@@ -34,7 +36,7 @@ public class IdentityUserDetailsService implements UserDetailsService {
                                 .collect(Collectors.toSet());
 
                 boolean accountLocked = user.getLockedUntil() != null
-                                && user.getLockedUntil().isAfter(LocalDateTime.now());
+                                && user.getLockedUntil().isAfter(Instant.now(clock));
                 boolean enabled = user.getStatus() == UserStatus.ACTIVE;
 
                 return User.builder()

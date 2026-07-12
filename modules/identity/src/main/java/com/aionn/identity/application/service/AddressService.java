@@ -16,8 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
+import java.time.Clock;
 import java.util.List;
 
 @Slf4j
@@ -31,6 +31,7 @@ public class AddressService {
 	private final AddressPolicy addressPolicy;
 	private final GeographyService geographyService;
 
+	private final Clock clock;
 	@Transactional(readOnly = true)
 	public List<Address> listAddressesByUserId(String userId) {
 		return addressPersistencePort.findByUserId(userId);
@@ -49,7 +50,7 @@ public class AddressService {
 
 		String fullAddress = location.buildFullAddress(command.detailAddress());
 
-		LocalDateTime now = nowUtc();
+		Instant now = nowUtc();
 		Address address = new Address(
 				IdGenerator.ulid(),
 				command.userId(),
@@ -168,8 +169,7 @@ public class AddressService {
 		return addressPersistencePort.findByAddressIdAndUserId(addressId, userId)
 				.orElseThrow(() -> new IdentityException(IdentityErrorCode.ADDRESS_NOT_FOUND, "Address not found"));
 	}
-
-	private static LocalDateTime nowUtc() {
-		return LocalDateTime.now(ZoneOffset.UTC);
-	}
+    private Instant nowUtc() {
+        return clock.instant();
+    }
 }

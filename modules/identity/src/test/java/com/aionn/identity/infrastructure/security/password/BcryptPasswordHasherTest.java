@@ -1,10 +1,7 @@
 package com.aionn.identity.infrastructure.security.password;
 
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class BcryptPasswordHasherTest {
 
@@ -13,31 +10,35 @@ class BcryptPasswordHasherTest {
     @Test
     void hashProducesBcryptString() {
         String hashed = hasher.hash("password");
-        assertTrue(hashed.startsWith("$2a$") || hashed.startsWith("$2b$") || hashed.startsWith("$2y$"));
-        assertTrue(hashed.length() >= 60);
+        assertThat(hashed).satisfiesAnyOf(
+                h -> assertThat(h).startsWith("$2a$"),
+                h -> assertThat(h).startsWith("$2b$"),
+                h -> assertThat(h).startsWith("$2y$")
+        );
+        assertThat(hashed).hasSizeGreaterThanOrEqualTo(60);
     }
 
     @Test
     void hashIsSaltedProducingDifferentHashesEachTime() {
-        assertNotEquals(hasher.hash("password"), hasher.hash("password"));
+        assertThat(hasher.hash("password")).isNotEqualTo(hasher.hash("password"));
     }
 
     @Test
     void matchesAcceptsCorrectPassword() {
         String hashed = hasher.hash("Secret-123");
-        assertTrue(hasher.matches("Secret-123", hashed));
+        assertThat(hasher.matches("Secret-123", hashed)).isTrue();
     }
 
     @Test
     void matchesRejectsWrongPassword() {
         String hashed = hasher.hash("Secret-123");
-        assertFalse(hasher.matches("Secret-124", hashed));
+        assertThat(hasher.matches("Secret-124", hashed)).isFalse();
     }
 
     @Test
     void matchesRejectsTamperedHash() {
         String hashed = hasher.hash("password");
         String tampered = hashed.substring(0, hashed.length() - 1) + "X";
-        assertFalse(hasher.matches("password", tampered));
+        assertThat(hasher.matches("password", tampered)).isFalse();
     }
 }

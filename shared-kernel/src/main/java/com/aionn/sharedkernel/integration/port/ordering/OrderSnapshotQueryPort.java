@@ -3,11 +3,9 @@ package com.aionn.sharedkernel.integration.port.ordering;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Cross-service port for fetching a flat snapshot of an order. Ordering owns
- * the order aggregate, so consumers (UCP, agent flows, support tools) read
- * through this port instead of importing ordering's domain types.
- */
+// Cross-service port for fetching a flat snapshot of an order. Ordering owns
+// the order aggregate, so consumers (UCP, agent flows, support tools) read
+// through this port instead of importing ordering's domain types.
 public interface OrderSnapshotQueryPort {
 
     Optional<OrderSnapshot> findOrderById(String orderId);

@@ -3,14 +3,9 @@ package com.aionn.sharedkernel.integration.port.inventory;
 import java.math.BigDecimal;
 import java.util.List;
 
-/**
- * Outbound port for reserving and releasing stock during the checkout saga.
- *
- * <p>
- * Used synchronously by the Ordering module so an order can be rejected
- * immediately if any line cannot be reserved.
- * </p>
- */
+// Outbound port for reserving and releasing stock during the checkout saga.
+// Used synchronously by the Ordering module so an order can be rejected
+// immediately if any line cannot be reserved.
 public interface StockReservationGatewayPort {
 
     List<Reservation> reserveAll(String orderId, List<ReservationLine> lines, int ttlSeconds);

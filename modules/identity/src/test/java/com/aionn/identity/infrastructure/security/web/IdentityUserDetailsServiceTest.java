@@ -6,13 +6,13 @@ import com.aionn.identity.infrastructure.persistence.entity.UserEntity;
 import com.aionn.identity.infrastructure.persistence.repository.user.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -27,8 +27,13 @@ class IdentityUserDetailsServiceTest {
     @Mock
     private UserRepository userRepository;
 
-    @InjectMocks
     private IdentityUserDetailsService service;
+    private static final Instant FIXED_NOW = Instant.parse("2026-07-12T10:00:00Z");
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        service = new IdentityUserDetailsService(userRepository, java.time.Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
+    }
 
     private UserEntity.UserEntityBuilder activeUser() {
         return UserEntity.builder()
@@ -87,7 +92,7 @@ class IdentityUserDetailsServiceTest {
 
     @Test
     void marksAccountLockedWhenLockedUntilInFuture() {
-        UserEntity user = activeUser().lockedUntil(LocalDateTime.now().plusHours(1)).build();
+        UserEntity user = activeUser().lockedUntil(FIXED_NOW.plus(Duration.ofHours(1))).build();
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
 
         UserDetails details = service.loadUserByUsername("user@example.com");
@@ -97,7 +102,7 @@ class IdentityUserDetailsServiceTest {
 
     @Test
     void marksAccountUnlockedWhenLockExpired() {
-        UserEntity user = activeUser().lockedUntil(LocalDateTime.now().minusHours(1)).build();
+        UserEntity user = activeUser().lockedUntil(FIXED_NOW.minus(Duration.ofHours(1))).build();
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
 
         UserDetails details = service.loadUserByUsername("user@example.com");

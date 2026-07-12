@@ -33,4 +33,14 @@ class SharedKernelArchitectureTest {
     void noModuleRedefinesAnySharedValueObject() {
         SharedKernelArchRules.NO_DUPLICATE_SHARED_VALUE_OBJECTS.check(IMPORTED_CLASSES);
     }
+
+    @Test
+    void noClassUsesLocalDateTime() {
+        SharedKernelArchRules.NO_LOCAL_DATE_TIME.check(IMPORTED_CLASSES);
+    }
+
+    @Test
+    void noDomainClassCallsBareInstantNow() {
+        SharedKernelArchRules.NO_BARE_INSTANT_NOW_IN_DOMAIN.check(IMPORTED_CLASSES);
+    }
 }

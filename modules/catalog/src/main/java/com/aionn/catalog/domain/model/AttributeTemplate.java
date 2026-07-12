@@ -8,6 +8,7 @@ import com.aionn.catalog.domain.exception.CatalogException;
 import lombok.AccessLevel;
 import lombok.Getter;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,6 +38,10 @@ public class AttributeTemplate extends AggregateRoot {
         }
 
         public static AttributeTemplate create(String templateId, String categoryId, List<String> attributeKeys) {
+                return create(templateId, categoryId, attributeKeys, Clock.systemUTC());
+        }
+
+        public static AttributeTemplate create(String templateId, String categoryId, List<String> attributeKeys, Clock clock) {
                 Guard.require(templateId != null && !templateId.isBlank(),
                                 () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
                                                 "templateId must not be blank"));
@@ -59,7 +64,7 @@ public class AttributeTemplate extends AggregateRoot {
                         initial.put(trimmed, new AttributeDefinition(trimmed, true));
                         trimmedKeys.add(trimmed);
                 }
-                Instant now = Instant.now();
+                Instant now = clock.instant();
                 AttributeTemplate template = new AttributeTemplate(templateId, categoryId, initial, now, now);
                 template.registerEvent(new AttributeTemplateEvents.AttributeTemplateCreated(
                                 templateId, categoryId, List.copyOf(trimmedKeys), now));
@@ -67,6 +72,10 @@ public class AttributeTemplate extends AggregateRoot {
         }
 
         public void configureFilterable(String attributeKey, boolean filterable) {
+                configureFilterable(attributeKey, filterable, Clock.systemUTC());
+        }
+
+        public void configureFilterable(String attributeKey, boolean filterable, Clock clock) {
                 Guard.require(attributeKey != null && !attributeKey.isBlank(),
                                 () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
                                                 "attributeKey must not be blank"));
@@ -79,7 +88,7 @@ public class AttributeTemplate extends AggregateRoot {
                         return;
                 }
                 attributes.put(trimmed, new AttributeDefinition(trimmed, filterable));
-                this.updatedAt = Instant.now();
+                this.updatedAt = clock.instant();
                 registerEvent(new AttributeTemplateEvents.FilterableAttrConfigured(
                                 templateId, trimmed, filterable, updatedAt));
         }

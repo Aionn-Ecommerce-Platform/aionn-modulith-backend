@@ -7,7 +7,7 @@ import com.aionn.identity.infrastructure.security.mfa.MfaSecretCipher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 @Component
@@ -46,7 +46,7 @@ public class UserSecurityAdapter implements UserSecurityPort {
     }
 
     @Override
-    public void recordFailedLoginAttempt(String userId, int failedAttempts, LocalDateTime lockedUntil) {
+    public void recordFailedLoginAttempt(String userId, int failedAttempts, Instant lockedUntil) {
         userRepository.findById(userId).ifPresent(user -> {
             user.setFailedLoginAttempts(failedAttempts);
             user.setLockedUntil(lockedUntil);

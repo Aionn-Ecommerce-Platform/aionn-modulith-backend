@@ -17,16 +17,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class ProfileServiceTest {
@@ -54,7 +54,7 @@ class ProfileServiceTest {
 
         UserProfileView result = profileService.getMyProfile(new GetMyProfileQuery(USER_ID));
 
-        assertEquals(expected, result);
+        assertThat(result).isEqualTo(expected);
     }
 
     @Test
@@ -65,7 +65,7 @@ class ProfileServiceTest {
         var ex = assertThrows(IdentityException.class,
                 () -> profileService.getMyProfile(new GetMyProfileQuery(USER_ID)));
 
-        assertEquals(IdentityErrorCode.USER_INACTIVE.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.USER_INACTIVE.getCode());
     }
 
     @Test
@@ -79,7 +79,7 @@ class ProfileServiceTest {
 
         profileService.updateDisplayName(new UpdateDisplayNameCommand(USER_ID, "  Bob  "));
 
-        assertEquals("Bob", user.getDisplayName());
+        assertThat(user.getDisplayName()).isEqualTo("Bob");
     }
 
     @Test
@@ -89,7 +89,7 @@ class ProfileServiceTest {
         var ex = assertThrows(IdentityException.class,
                 () -> profileService.updateDisplayName(new UpdateDisplayNameCommand(USER_ID, longName)));
 
-        assertEquals(IdentityErrorCode.INVALID_DISPLAY_NAME.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.INVALID_DISPLAY_NAME.getCode());
         verify(userPersistencePort, never()).save(any());
     }
 
@@ -104,7 +104,7 @@ class ProfileServiceTest {
 
         profileService.updateAvatar(new UpdateAvatarCommand(USER_ID, "https://cdn.example/avatar.png"));
 
-        assertEquals("https://cdn.example/avatar.png", user.getAvatarUrl());
+        assertThat(user.getAvatarUrl()).isEqualTo("https://cdn.example/avatar.png");
     }
 
     @Test
@@ -112,7 +112,7 @@ class ProfileServiceTest {
         var ex = assertThrows(IdentityException.class,
                 () -> profileService.updateAvatar(new UpdateAvatarCommand(USER_ID, "ftp://x.com/a.png")));
 
-        assertEquals(IdentityErrorCode.AVATAR_URL_INVALID.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.AVATAR_URL_INVALID.getCode());
     }
 
     @Test
@@ -120,7 +120,7 @@ class ProfileServiceTest {
         var ex = assertThrows(IdentityException.class,
                 () -> profileService.updateAvatar(new UpdateAvatarCommand(USER_ID, "  ")));
 
-        assertEquals(IdentityErrorCode.AVATAR_URL_INVALID.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.AVATAR_URL_INVALID.getCode());
     }
 
     @Test
@@ -130,7 +130,7 @@ class ProfileServiceTest {
         var ex = assertThrows(IdentityException.class,
                 () -> profileService.updateAvatar(new UpdateAvatarCommand(USER_ID, longUrl)));
 
-        assertEquals(IdentityErrorCode.AVATAR_URL_INVALID.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.AVATAR_URL_INVALID.getCode());
     }
 
     private static IdentityUser activeUser() {
@@ -138,7 +138,7 @@ class ProfileServiceTest {
                 USER_ID, "alice@example.com", "+84912345678", "alice",
                 "hash", "Alice", null,
                 Set.of(UserRole.BUYER), UserStatus.ACTIVE,
-                null, null, null, LocalDateTime.now());
+                null, null, null, Instant.now());
     }
 
     private static IdentityUser bannedUser() {
@@ -146,7 +146,7 @@ class ProfileServiceTest {
                 USER_ID, "alice@example.com", "+84912345678", "alice",
                 "hash", "Alice", null,
                 Set.of(UserRole.BUYER), UserStatus.BANNED,
-                null, null, null, LocalDateTime.now());
+                null, null, null, Instant.now());
     }
 
     private static UserProfileView profileView(IdentityUser user) {

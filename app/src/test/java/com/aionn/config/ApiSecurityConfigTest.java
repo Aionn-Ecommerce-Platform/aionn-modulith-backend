@@ -13,7 +13,7 @@ class ApiSecurityConfigTest {
 
     @Test
     void corsConfigurationFallsBackToLocalhostWhenNoOriginsConfigured() {
-        ApiSecurityConfig apiSecurityConfig = new ApiSecurityConfig("");
+        ApiSecurityConfig apiSecurityConfig = new ApiSecurityConfig("", null);
 
         CorsConfigurationSource source = apiSecurityConfig.corsConfigurationSource();
         CorsConfiguration configuration = source.getCorsConfiguration(new MockHttpServletRequest());
@@ -25,7 +25,7 @@ class ApiSecurityConfigTest {
     @Test
     void corsConfigurationFiltersBlankOriginsAndExposesTracingHeaders() {
         ApiSecurityConfig apiSecurityConfig =
-                new ApiSecurityConfig(" https://frontend.example , , http://localhost:3000  ");
+                new ApiSecurityConfig(" https://frontend.example , , http://localhost:3000  ", null);
 
         CorsConfigurationSource source = apiSecurityConfig.corsConfigurationSource();
         CorsConfiguration configuration = source.getCorsConfiguration(new MockHttpServletRequest());

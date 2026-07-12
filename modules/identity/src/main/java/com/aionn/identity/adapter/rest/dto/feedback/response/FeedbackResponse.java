@@ -1,6 +1,6 @@
 package com.aionn.identity.adapter.rest.dto.feedback.response;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record FeedbackResponse(
         String feedbackId,
@@ -13,7 +13,7 @@ public record FeedbackResponse(
         String contactPhone,
         String status,
         String handledBy,
-        LocalDateTime handledAt,
+        Instant handledAt,
         String adminReply,
-        LocalDateTime createdAt) {
+        Instant createdAt) {
 }

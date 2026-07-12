@@ -1,6 +1,7 @@
 package com.aionn.sharedkernel.util;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.stream.Collectors;
@@ -64,5 +65,19 @@ class IpAddressValidatorPropertyTest {
         assertFalse(IpAddressValidator.isValid(""));
         assertFalse(IpAddressValidator.isValid("   "));
         assertFalse(IpAddressValidator.isValid("\t"));
+    }
+
+    @Example
+    void property21_literalPassingCharsetButUnparsableIsInvalid() {
+        // Only contains allowed characters (digits + colons) so it passes the
+        // character allow-list, but is not a valid IPv6 literal; InetAddress
+        // rejects it as a literal without any DNS lookup.
+        assertFalse(IpAddressValidator.isValid("1:2:3"));
+    }
+
+    @Example
+    void property21_validateAcceptsValidAndRejectsInvalid() {
+        IpAddressValidator.validate("203.0.113.5");
+        assertThrows(IllegalArgumentException.class, () -> IpAddressValidator.validate("not-an-ip"));
     }
 }

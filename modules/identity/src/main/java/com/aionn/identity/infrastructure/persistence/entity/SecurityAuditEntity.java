@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "security_audits", indexes = {
@@ -41,7 +41,7 @@ public class SecurityAuditEntity {
 
     @CreationTimestamp
     @Column(name = "timestamp", updatable = false, nullable = false)
-    private LocalDateTime timestamp;
+    private Instant timestamp;
 }
 
 

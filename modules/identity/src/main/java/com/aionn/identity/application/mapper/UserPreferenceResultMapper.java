@@ -6,7 +6,7 @@ import com.aionn.identity.application.dto.preference.command.UpdateNotificationP
 import com.aionn.identity.application.dto.preference.result.UserPreferenceResult;
 import org.mapstruct.Mapper;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Mapper(componentModel = "spring")
 public interface UserPreferenceResultMapper {
@@ -14,7 +14,7 @@ public interface UserPreferenceResultMapper {
     default UserPreferenceResult applyGeneral(
             UserPreferenceResult current,
             UpdateGeneralPreferenceCommand command,
-            LocalDateTime updatedAt) {
+            Instant updatedAt) {
         return new UserPreferenceResult(
                 current.userId(),
                 command.language(),
@@ -29,7 +29,7 @@ public interface UserPreferenceResultMapper {
     default UserPreferenceResult applyNotifications(
             UserPreferenceResult current,
             UpdateNotificationPreferenceCommand command,
-            LocalDateTime updatedAt) {
+            Instant updatedAt) {
         return new UserPreferenceResult(
                 current.userId(),
                 current.language(),
@@ -44,7 +44,7 @@ public interface UserPreferenceResultMapper {
     default UserPreferenceResult applyAiPrivacy(
             UserPreferenceResult current,
             UpdateAiPrivacyPreferenceCommand command,
-            LocalDateTime updatedAt) {
+            Instant updatedAt) {
         return new UserPreferenceResult(
                 current.userId(),
                 current.language(),

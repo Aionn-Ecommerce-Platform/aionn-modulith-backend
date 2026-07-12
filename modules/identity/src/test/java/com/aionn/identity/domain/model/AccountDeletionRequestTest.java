@@ -4,7 +4,8 @@ import com.aionn.identity.domain.valueobject.AccountDeletionStatus;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -12,8 +13,8 @@ class AccountDeletionRequestTest {
 
     @Test
     void constructor_validInput_createsInstance() {
-        LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
-        LocalDateTime scheduled = now.plusDays(30);
+        Instant now = Instant.now(Clock.systemUTC());
+        Instant scheduled = now.plus(Duration.ofDays(30));
 
         AccountDeletionRequest request = new AccountDeletionRequest(
                 "del-req-123",
@@ -39,11 +40,11 @@ class AccountDeletionRequestTest {
         assertThat(request.getUserId()).isEqualTo("user-123");
         assertThat(request.getStatus()).isEqualTo(AccountDeletionStatus.PENDING);
         assertThat(request.getRequestedAt()).isNotNull();
-        assertThat(request.getRequestedAt()).isBeforeOrEqualTo(LocalDateTime.now(Clock.systemUTC()));
+        assertThat(request.getRequestedAt()).isBeforeOrEqualTo(Instant.now(Clock.systemUTC()));
         assertThat(request.getScheduledDeletionAt()).isNotNull();
         assertThat(request.getScheduledDeletionAt())
-                .isAfterOrEqualTo(request.getRequestedAt().plusDays(29))
-                .isBeforeOrEqualTo(request.getRequestedAt().plusDays(31));
+                .isAfterOrEqualTo(request.getRequestedAt().plus(Duration.ofDays(29)))
+                .isBeforeOrEqualTo(request.getRequestedAt().plus(Duration.ofDays(31)));
         assertThat(request.getCanceledAt()).isNull();
     }
 
@@ -52,8 +53,8 @@ class AccountDeletionRequestTest {
         AccountDeletionRequest request = AccountDeletionRequest.createPending("del-req-999", "user-999", 7);
 
         assertThat(request.getScheduledDeletionAt())
-                .isAfterOrEqualTo(request.getRequestedAt().plusDays(6))
-                .isBeforeOrEqualTo(request.getRequestedAt().plusDays(8));
+                .isAfterOrEqualTo(request.getRequestedAt().plus(Duration.ofDays(6)))
+                .isBeforeOrEqualTo(request.getRequestedAt().plus(Duration.ofDays(8)));
     }
 
     @Test
@@ -66,14 +67,14 @@ class AccountDeletionRequestTest {
 
         assertThat(request.getStatus()).isEqualTo(AccountDeletionStatus.CANCELLED);
         assertThat(request.getCanceledAt()).isNotNull();
-        assertThat(request.getCanceledAt()).isBeforeOrEqualTo(LocalDateTime.now(Clock.systemUTC()));
+        assertThat(request.getCanceledAt()).isBeforeOrEqualTo(Instant.now(Clock.systemUTC()));
     }
 
     @Test
     void cancel_alreadyCanceled_updatesCanceledAt() {
         AccountDeletionRequest request = AccountDeletionRequest.createPending("del-req-777", "user-777", 30);
         request.cancel();
-        LocalDateTime firstCancellation = request.getCanceledAt();
+        Instant firstCancellation = request.getCanceledAt();
 
         request.cancel();
 

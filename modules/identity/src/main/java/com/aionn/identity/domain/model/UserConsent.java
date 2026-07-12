@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Getter
 @Builder
@@ -17,8 +17,8 @@ public class UserConsent {
     private final ConsentType consentType;
     private final String version;
     private final boolean granted;
-    private final LocalDateTime agreedAt;
-    private final LocalDateTime revokedAt;
+    private final Instant agreedAt;
+    private final Instant revokedAt;
     private final String ipAddress;
 
     public boolean isActive() {

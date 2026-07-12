@@ -13,7 +13,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Clock;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,12 +45,12 @@ class IdentityAccessTokenVerifierAdapterTest {
         adapter = new IdentityAccessTokenVerifierAdapter(tokenIssuer, authSessionPersistencePort, tokenBlacklist);
     }
 
-    private static LocalDateTime utcNow() {
-        return LocalDateTime.now(Clock.systemUTC());
+    private static Instant utcNow() {
+        return Instant.now(Clock.systemUTC());
     }
 
-    private AuthSession session(AuthSessionStatus status, String userId, LocalDateTime expiresAt) {
-        LocalDateTime now = utcNow();
+    private AuthSession session(AuthSessionStatus status, String userId, Instant expiresAt) {
+        Instant now = utcNow();
         return new AuthSession(SESSION_ID, userId, "127.0.0.1", "agent", status, now, now, expiresAt);
     }
 
@@ -112,7 +113,7 @@ class IdentityAccessTokenVerifierAdapterTest {
         when(tokenIssuer.parseClaims("tok")).thenReturn(Optional.of(claims(USER_ID, SESSION_ID, JTI)));
         when(tokenBlacklist.isBlacklisted(JTI)).thenReturn(false);
         when(authSessionPersistencePort.findById(SESSION_ID))
-                .thenReturn(Optional.of(session(AuthSessionStatus.REVOKED, USER_ID, utcNow().plusDays(1))));
+                .thenReturn(Optional.of(session(AuthSessionStatus.REVOKED, USER_ID, utcNow().plus(Duration.ofDays(1)))));
 
         assertThat(adapter.verifyAndExtractUserId("Bearer tok")).isEmpty();
     }
@@ -123,7 +124,7 @@ class IdentityAccessTokenVerifierAdapterTest {
         when(tokenBlacklist.isBlacklisted(JTI)).thenReturn(false);
         when(authSessionPersistencePort.findById(SESSION_ID))
                 .thenReturn(
-                        Optional.of(session(AuthSessionStatus.ACTIVE, USER_ID, utcNow().minusDays(1))));
+                        Optional.of(session(AuthSessionStatus.ACTIVE, USER_ID, utcNow().minus(Duration.ofDays(1)))));
 
         assertThat(adapter.verifyAndExtractUserId("Bearer tok")).isEmpty();
     }
@@ -134,7 +135,7 @@ class IdentityAccessTokenVerifierAdapterTest {
         when(tokenBlacklist.isBlacklisted(JTI)).thenReturn(false);
         when(authSessionPersistencePort.findById(SESSION_ID))
                 .thenReturn(
-                        Optional.of(session(AuthSessionStatus.ACTIVE, "other-user", utcNow().plusDays(1))));
+                        Optional.of(session(AuthSessionStatus.ACTIVE, "other-user", utcNow().plus(Duration.ofDays(1)))));
 
         assertThat(adapter.verifyAndExtractUserId("Bearer tok")).isEmpty();
     }
@@ -144,7 +145,7 @@ class IdentityAccessTokenVerifierAdapterTest {
         when(tokenIssuer.parseClaims("tok")).thenReturn(Optional.of(claims(USER_ID, SESSION_ID, JTI)));
         when(tokenBlacklist.isBlacklisted(JTI)).thenReturn(false);
         when(authSessionPersistencePort.findById(SESSION_ID))
-                .thenReturn(Optional.of(session(AuthSessionStatus.ACTIVE, USER_ID, utcNow().plusDays(1))));
+                .thenReturn(Optional.of(session(AuthSessionStatus.ACTIVE, USER_ID, utcNow().plus(Duration.ofDays(1)))));
 
         assertThat(adapter.verifyAndExtractUserId("Bearer tok")).contains(USER_ID);
     }
@@ -154,7 +155,7 @@ class IdentityAccessTokenVerifierAdapterTest {
         lenient().when(tokenBlacklist.isBlacklisted(org.mockito.ArgumentMatchers.any())).thenReturn(true);
         when(tokenIssuer.parseClaims("tok")).thenReturn(Optional.of(claims(USER_ID, SESSION_ID, null)));
         when(authSessionPersistencePort.findById(SESSION_ID))
-                .thenReturn(Optional.of(session(AuthSessionStatus.ACTIVE, USER_ID, utcNow().plusDays(1))));
+                .thenReturn(Optional.of(session(AuthSessionStatus.ACTIVE, USER_ID, utcNow().plus(Duration.ofDays(1)))));
 
         assertThat(adapter.verifyAndExtractUserId("Bearer tok")).contains(USER_ID);
         verify(tokenBlacklist, never()).isBlacklisted(org.mockito.ArgumentMatchers.anyString());

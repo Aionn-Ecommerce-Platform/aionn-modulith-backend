@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Getter
 @Builder
@@ -18,5 +18,5 @@ public class SecurityAudit {
     private final String description;
     private final String ipAddress;
     private final String deviceId;
-    private final LocalDateTime timestamp;
+    private final Instant timestamp;
 }

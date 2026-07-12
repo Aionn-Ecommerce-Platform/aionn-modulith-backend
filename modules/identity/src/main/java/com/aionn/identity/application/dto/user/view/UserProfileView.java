@@ -1,6 +1,6 @@
 package com.aionn.identity.application.dto.user.view;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Set;
 
 public record UserProfileView(
@@ -12,9 +12,9 @@ public record UserProfileView(
                 String avatarUrl,
                 Set<String> roles,
                 String status,
-                LocalDateTime emailVerifiedAt,
-                LocalDateTime phoneVerifiedAt,
-                LocalDateTime createdAt) {
+                Instant emailVerifiedAt,
+                Instant phoneVerifiedAt,
+                Instant createdAt) {
 }
 
 

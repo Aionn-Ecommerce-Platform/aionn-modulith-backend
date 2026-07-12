@@ -1,6 +1,6 @@
 package com.aionn.identity.application.dto.preference.result;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record UserPreferenceResult(
                 String userId,
@@ -10,6 +10,6 @@ public record UserPreferenceResult(
                 String theme,
                 String notificationSettings,
                 String aiPrivacySettings,
-                LocalDateTime updatedAt) {
+                Instant updatedAt) {
 }
 

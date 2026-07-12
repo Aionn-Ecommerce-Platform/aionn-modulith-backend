@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -84,7 +84,7 @@ public class AuthSessionPersistenceAdapter implements AuthSessionPersistencePort
 
     @Override
     @Transactional
-    public int deleteIdleBefore(LocalDateTime cutoff) {
+    public int deleteIdleBefore(Instant cutoff) {
         return authSessionRepository.deleteIdleBefore(cutoff);
     }
 }

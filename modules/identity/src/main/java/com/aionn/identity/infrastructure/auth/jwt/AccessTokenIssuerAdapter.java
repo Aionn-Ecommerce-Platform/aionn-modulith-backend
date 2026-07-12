@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
@@ -24,10 +25,11 @@ import java.util.UUID;
 public class AccessTokenIssuerAdapter implements AccessTokenIssuerPort {
 
     private final JwtProperties jwtProperties;
+    private final Clock clock;
 
     @Override
     public String issueAccessToken(String userId, String sessionId, Instant expiresAt, Set<String> roles) {
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         Instant accessExpiry = now.plusSeconds(jwtProperties.accessTokenExpiryMinutes() * 60L);
         if (accessExpiry.isAfter(expiresAt)) {
             accessExpiry = expiresAt;

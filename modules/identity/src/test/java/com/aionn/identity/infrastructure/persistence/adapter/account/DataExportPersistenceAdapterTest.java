@@ -10,11 +10,10 @@ import com.aionn.identity.infrastructure.persistence.repository.account.DataExpo
 import com.aionn.identity.infrastructure.persistence.repository.user.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,12 +36,17 @@ class DataExportPersistenceAdapterTest {
     @Mock
     private UserRepository userRepository;
 
-    @InjectMocks
     private DataExportPersistenceAdapter adapter;
+    private static final Instant FIXED_NOW = Instant.parse("2026-07-12T10:00:00Z");
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        adapter = new DataExportPersistenceAdapter(dataExportRequestRepository, userRepository, java.time.Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
+    }
 
     @Test
     void saveCreatesRequestedExportWhenNoneActive() {
-        LocalDateTime requestedAt = LocalDateTime.now();
+        Instant requestedAt = FIXED_NOW;
         when(userRepository.findByIdForUpdate(USER_ID)).thenReturn(Optional.of(UserEntity.builder().build()));
         when(dataExportRequestRepository.existsByUser_UserIdAndStatusIn(eq(USER_ID), anyList())).thenReturn(false);
         when(dataExportRequestRepository.save(any(DataExportRequestEntity.class)))

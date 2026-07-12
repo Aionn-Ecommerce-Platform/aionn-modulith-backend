@@ -19,8 +19,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
+import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,12 +52,15 @@ class PasswordResetServiceTest {
 
     private PasswordResetService service;
 
+    private static final Instant FIXED_NOW = Instant.parse("2026-07-12T10:00:00Z");
+
     @BeforeEach
     void setUp() {
         service = new PasswordResetService(
                 userSecurityPort, passwordResetPort, securityAuditPort, passwordHasher,
                 authSessionPersistencePort, refreshTokenStore, notificationPort,
-                integrationEventPublisher, identityMetrics, authPolicy);
+                integrationEventPublisher, identityMetrics, authPolicy,
+                Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
     }
 
     private static UserSecurityPort.UserSecurityData userSecurity() {
@@ -125,7 +129,7 @@ class PasswordResetServiceTest {
         service.requestPasswordReset("u@example.com", IP);
 
         verify(passwordResetPort).savePasswordResetTokenHash(anyString(), eq(USER_ID),
-                any(LocalDateTime.class));
+                any(Instant.class));
         verify(notificationPort).sendPasswordResetRequested(eq(USER_ID), anyString());
         verify(securityAuditPort).saveAuditLog(USER_ID,
                 SecurityAuditEventType.PASSWORD_RESET_REQUESTED, IP);
@@ -134,7 +138,7 @@ class PasswordResetServiceTest {
     @Test
     void completePasswordResetRejectsExpiredToken() {
         PasswordResetPort.PasswordResetTokenData expired =
-                new PasswordResetPort.PasswordResetTokenData(USER_ID, nowUtc().minusMinutes(1));
+                new PasswordResetPort.PasswordResetTokenData(USER_ID, nowUtc().minus(Duration.ofMinutes(1)));
         when(passwordResetPort.consumePasswordResetTokenHash(anyString()))
                 .thenReturn(Optional.of(expired));
 
@@ -145,7 +149,7 @@ class PasswordResetServiceTest {
     @Test
     void completePasswordResetUpdatesPasswordAndPublishesEvent() {
         PasswordResetPort.PasswordResetTokenData valid =
-                new PasswordResetPort.PasswordResetTokenData(USER_ID, nowUtc().plusMinutes(10));
+                new PasswordResetPort.PasswordResetTokenData(USER_ID, nowUtc().plus(Duration.ofMinutes(10)));
         when(passwordResetPort.consumePasswordResetTokenHash(anyString()))
                 .thenReturn(Optional.of(valid));
         when(passwordHasher.hash("NewPass2")).thenReturn("new-hash");
@@ -157,7 +161,7 @@ class PasswordResetServiceTest {
         verify(integrationEventPublisher).publishPasswordChanged(USER_ID, "password reset");
     }
 
-    private static LocalDateTime nowUtc() {
-        return LocalDateTime.now(ZoneOffset.UTC);
+    private static Instant nowUtc() {
+        return FIXED_NOW;
     }
 }

@@ -1,13 +1,13 @@
 package com.aionn.identity.application.dto.agent.result;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record AgentIdentityResult(
                 String agentId,
                 String keyHash,
                 String permissions,
                 String status,
-                LocalDateTime expiryAt,
-                LocalDateTime createdAt) {
+                Instant expiryAt,
+                Instant createdAt) {
 }
 

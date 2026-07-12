@@ -5,7 +5,7 @@ import com.aionn.identity.domain.valueobject.KycDocumentType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Getter
 @AllArgsConstructor
@@ -16,5 +16,5 @@ public class KycDocument {
     private final String url;
     private final String publicId;
     private final KycDocumentStatus status;
-    private final LocalDateTime uploadedAt;
+    private final Instant uploadedAt;
 }

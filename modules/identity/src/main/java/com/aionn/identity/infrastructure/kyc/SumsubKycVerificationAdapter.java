@@ -20,6 +20,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -38,10 +39,12 @@ public class SumsubKycVerificationAdapter implements ExternalKycVerificationPort
     // Shared client with explicit timeouts so a stalled Sumsub upstream can't
     // block identity threads indefinitely; baseUrl comes from config each call.
     private final RestClient.Builder clientBuilder;
+    private final Clock clock;
 
-    public SumsubKycVerificationAdapter(KycProperties kycProperties, ObjectMapper objectMapper) {
+    public SumsubKycVerificationAdapter(KycProperties kycProperties, ObjectMapper objectMapper, Clock clock) {
         this.kycProperties = kycProperties;
         this.objectMapper = objectMapper;
+        this.clock = clock;
         var settings = ClientHttpRequestFactorySettings.defaults()
                 .withConnectTimeout(CONNECT_TIMEOUT)
                 .withReadTimeout(READ_TIMEOUT);
@@ -150,7 +153,7 @@ public class SumsubKycVerificationAdapter implements ExternalKycVerificationPort
     private JsonNode executeSignedJson(String method, String pathWithQuery, Map<String, Object> body) {
         KycProperties.Sumsub config = requireConfig();
         String bodyJson = toJson(body);
-        String timestamp = String.valueOf(Instant.now().getEpochSecond());
+        String timestamp = String.valueOf(Instant.now(clock).getEpochSecond());
         String signature = sign(timestamp, method, pathWithQuery, bodyJson, config.secretKey());
 
         RestClient client = clientBuilder

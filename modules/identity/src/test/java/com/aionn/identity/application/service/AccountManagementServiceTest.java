@@ -31,20 +31,20 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Clock;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class AccountManagementServiceTest {
@@ -72,6 +72,8 @@ class AccountManagementServiceTest {
         @Mock
         private UserResultMapper userResultMapper;
 
+        private static final Instant FIXED_NOW = Instant.parse("2026-07-12T10:00:00Z");
+
         private AccountManagementService service;
 
         @BeforeEach
@@ -80,7 +82,8 @@ class AccountManagementServiceTest {
                                 userPersistencePort, notificationPort, integrationEventPublisher,
                                 userOtpChallengeStore, accountDeletionPort, dataExportPort,
                                 authSessionPersistencePort, refreshTokenStore,
-                                accountManagementPolicy, userResultMapper);
+                                accountManagementPolicy, userResultMapper,
+                                Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
         }
 
         private static IdentityUser activeUser() {
@@ -90,17 +93,17 @@ class AccountManagementServiceTest {
         @Test
         void requestAccountDeletionPersistsAndReturnsView() {
                 DeletionRequestView view = new DeletionRequestView(
-                                "req-1", "PENDING", LocalDateTime.now(), LocalDateTime.now().plusDays(30));
+                                "req-1", "PENDING", FIXED_NOW, FIXED_NOW.plus(Duration.ofDays(30)));
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
                 when(accountDeletionPort.findPendingByUserId(USER_ID)).thenReturn(Optional.empty());
                 when(accountManagementPolicy.getDeletionGraceDays()).thenReturn(30);
-                when(accountDeletionPort.save(eq(USER_ID), any(LocalDateTime.class))).thenReturn(view);
+                when(accountDeletionPort.save(eq(USER_ID), any(Instant.class))).thenReturn(view);
 
                 DeletionRequestView result = service.requestAccountDeletion(
                                 new RequestAccountDeletionCommand(USER_ID));
 
-                assertSame(view, result);
-                verify(accountDeletionPort).save(eq(USER_ID), any(LocalDateTime.class));
+                assertThat(result).isSameAs(view);
+                verify(accountDeletionPort).save(eq(USER_ID), any(Instant.class));
         }
 
         @Test
@@ -108,8 +111,8 @@ class AccountManagementServiceTest {
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
                 when(accountDeletionPort.findPendingByUserId(USER_ID))
                                 .thenReturn(Optional.of(new DeletionRequestView(
-                                                "req-old", "PENDING", LocalDateTime.now(),
-                                                LocalDateTime.now().plusDays(10))));
+                                                "req-old", "PENDING", FIXED_NOW,
+                                                FIXED_NOW.plus(Duration.ofDays(10)))));
 
                 assertThrows(IdentityException.class,
                                 () -> service.requestAccountDeletion(new RequestAccountDeletionCommand(USER_ID)));
@@ -121,7 +124,7 @@ class AccountManagementServiceTest {
         void cancelAccountDeletionDelegatesToPort() {
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
                 when(accountDeletionPort.findPendingByUserId(USER_ID)).thenReturn(Optional.of(
-                                new DeletionRequestView("r", "PENDING", LocalDateTime.now(), LocalDateTime.now())));
+                                new DeletionRequestView("r", "PENDING", FIXED_NOW, FIXED_NOW)));
 
                 service.cancelAccountDeletion(new CancelAccountDeletionCommand(USER_ID));
 
@@ -149,7 +152,7 @@ class AccountManagementServiceTest {
         @Test
         void requestDataExportPersistsAndReturnsView() {
                 DataExportRequestView view = new DataExportRequestView(
-                                "exp-1", "PENDING", LocalDateTime.now());
+                                "exp-1", "PENDING", FIXED_NOW);
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
                 when(dataExportPort.hasActiveRequest(USER_ID)).thenReturn(false);
                 when(dataExportPort.save(USER_ID)).thenReturn(view);
@@ -157,7 +160,7 @@ class AccountManagementServiceTest {
                 DataExportRequestView result = service.requestDataExport(
                                 new RequestDataExportCommand(USER_ID));
 
-                assertSame(view, result);
+                assertThat(result).isSameAs(view);
         }
 
         private static IdentityUser bannedUser() {
@@ -168,32 +171,32 @@ class AccountManagementServiceTest {
 
         private static UserOtpChallenge challenge(
                         UserOtpPurpose purpose, OtpChannel channel, String target,
-                        String otpCode, String pendingValue, LocalDateTime expiresAt, int attempts) {
+                        String otpCode, String pendingValue, Instant expiresAt, int attempts) {
                 return new UserOtpChallenge(USER_ID, purpose, channel, target, otpCode, pendingValue, expiresAt,
                                 attempts);
         }
 
-        private static LocalDateTime future() {
-                return LocalDateTime.now(Clock.systemUTC()).plusDays(1);
+        private static Instant future() {
+                return FIXED_NOW.plus(Duration.ofDays(1));
         }
 
-        private static LocalDateTime past() {
-                return LocalDateTime.now(Clock.systemUTC()).minusDays(1);
+        private static Instant past() {
+                return FIXED_NOW.minus(Duration.ofDays(1));
         }
 
         private static AuthSession activeSession() {
                 return AuthSession.createNew("session-1", USER_ID, "ip", "ua",
-                                LocalDateTime.now(Clock.systemUTC()).plusDays(7));
+                                FIXED_NOW.plus(Duration.ofDays(7)));
         }
 
         private static UserProfileView profileView() {
                 return new UserProfileView(USER_ID, "u@example.com", null, "user", null, null,
-                                Set.of("BUYER"), "ACTIVE", null, null, LocalDateTime.now());
+                                Set.of("BUYER"), "ACTIVE", null, null, FIXED_NOW);
         }
 
         private static void assertErrorCode(IdentityErrorCode expected, Executable executable) {
                 IdentityException ex = assertThrows(IdentityException.class, executable);
-                assertEquals(expected.getCode(), ex.getErrorCode());
+                assertThat(ex.getErrorCode()).isEqualTo(expected.getCode());
         }
 
         @Test
@@ -351,7 +354,7 @@ class AccountManagementServiceTest {
 
                 UserProfileView result = service.confirmEmailChange(USER_ID, "123456");
 
-                assertSame(expected, result);
+                assertThat(result).isSameAs(expected);
                 verify(refreshTokenStore).revokeBySessionId("session-1");
                 verify(userOtpChallengeStore).delete(USER_ID, UserOtpPurpose.CHANGE_EMAIL);
                 verify(integrationEventPublisher).publishEmailChanged(eq(USER_ID), eq("u@example.com"),

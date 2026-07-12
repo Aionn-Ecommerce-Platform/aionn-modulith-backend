@@ -6,7 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.time.Clock;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Getter
 @Builder
@@ -19,28 +19,44 @@ public class AgentIdentity {
     private final String keyHash;
     private String permissions;
     private AgentStatus status;
-    private final LocalDateTime expiresAt;
-    private final LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private final Instant expiresAt;
+    private final Instant createdAt;
+    private Instant updatedAt;
 
     public void updatePermissions(String permissions) {
+        updatePermissions(permissions, Clock.systemUTC());
+    }
+
+    public void updatePermissions(String permissions, Clock clock) {
         this.permissions = permissions;
-        this.updatedAt = LocalDateTime.now(Clock.systemUTC());
+        this.updatedAt = clock.instant();
     }
 
     public void suspend() {
+        suspend(Clock.systemUTC());
+    }
+
+    public void suspend(Clock clock) {
         this.status = AgentStatus.SUSPENDED;
-        this.updatedAt = LocalDateTime.now(Clock.systemUTC());
+        this.updatedAt = clock.instant();
     }
 
     public void revoke() {
+        revoke(Clock.systemUTC());
+    }
+
+    public void revoke(Clock clock) {
         this.status = AgentStatus.REVOKED;
-        this.updatedAt = LocalDateTime.now(Clock.systemUTC());
+        this.updatedAt = clock.instant();
     }
 
     public void activate() {
+        activate(Clock.systemUTC());
+    }
+
+    public void activate(Clock clock) {
         this.status = AgentStatus.ACTIVE;
-        this.updatedAt = LocalDateTime.now(Clock.systemUTC());
+        this.updatedAt = clock.instant();
     }
 
     public boolean isActive() {
@@ -48,6 +64,10 @@ public class AgentIdentity {
     }
 
     public boolean isExpired() {
-        return expiresAt != null && !expiresAt.isAfter(LocalDateTime.now(Clock.systemUTC()));
+        return isExpired(Clock.systemUTC());
+    }
+
+    public boolean isExpired(Clock clock) {
+        return expiresAt != null && !expiresAt.isAfter(clock.instant());
     }
 }

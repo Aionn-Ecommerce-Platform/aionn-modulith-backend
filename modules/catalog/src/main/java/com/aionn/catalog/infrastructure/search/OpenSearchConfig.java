@@ -1,6 +1,7 @@
 package com.aionn.catalog.infrastructure.search;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.hc.core5.http.HttpHost;
 import org.opensearch.client.json.jackson.JacksonJsonpMapper;
@@ -31,7 +32,8 @@ public class OpenSearchConfig {
     @Bean
     public OpenSearchClient openSearchClient() {
         ObjectMapper objectMapper = new ObjectMapper()
-                .registerModule(new JavaTimeModule());
+                .registerModule(new JavaTimeModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         OpenSearchTransport transport = ApacheHttpClient5TransportBuilder
                 .builder(new HttpHost(scheme, host, port))
                 .setMapper(new JacksonJsonpMapper(objectMapper))

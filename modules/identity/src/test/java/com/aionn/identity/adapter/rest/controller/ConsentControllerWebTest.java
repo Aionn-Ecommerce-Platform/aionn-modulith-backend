@@ -25,7 +25,8 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -75,17 +76,17 @@ class ConsentControllerWebTest {
 
         @Test
         void getMyConsentsReturnsAllConsentRecords() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 ConsentResult consent1 = new ConsentResult("consent-1", "user-123", "TERMS", "v1.0", true, now, null,
                                 "192.168.1.1");
                 ConsentResult consent2 = new ConsentResult("consent-2", "user-123", "PRIVACY", "v2.0", true,
-                                now.minusDays(5), null, "192.168.1.2");
+                                now.minus(Duration.ofDays(5)), null, "192.168.1.2");
                 ConsentResult consent3 = new ConsentResult("consent-3", "user-123", "MARKETING", null, false, null,
                                 null, null);
                 List<ConsentResult> results = List.of(consent1, consent2, consent3);
 
                 ConsentResponse resp1 = new ConsentResponse("consent-1", "TERMS", "v1.0", now, null, "192.168.1.1");
-                ConsentResponse resp2 = new ConsentResponse("consent-2", "PRIVACY", "v2.0", now.minusDays(5), null,
+                ConsentResponse resp2 = new ConsentResponse("consent-2", "PRIVACY", "v2.0", now.minus(Duration.ofDays(5)), null,
                                 "192.168.1.2");
                 ConsentResponse resp3 = new ConsentResponse("consent-3", "MARKETING", null, null, null, null);
 
@@ -105,7 +106,7 @@ class ConsentControllerWebTest {
 
         @Test
         void agreeTermsRecordsTermsConsent() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 ConsentResult result = new ConsentResult("consent-terms-123", "user-123", "TERMS", "v1.5", true, now,
                                 null, "192.168.1.1");
                 ConsentResponse response = new ConsentResponse("consent-terms-123", "TERMS", "v1.5", now, null,
@@ -134,7 +135,7 @@ class ConsentControllerWebTest {
 
         @Test
         void agreePrivacyRecordsPrivacyConsent() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 ConsentResult result = new ConsentResult("consent-privacy-456", "user-123", "PRIVACY", "v2.0", true,
                                 now, null, "10.0.0.5");
                 ConsentResponse response = new ConsentResponse("consent-privacy-456", "PRIVACY", "v2.0", now, null,
@@ -163,7 +164,7 @@ class ConsentControllerWebTest {
 
         @Test
         void updateMarketingUpdatesMarketingConsent() throws Exception {
-                LocalDateTime now = LocalDateTime.now();
+                Instant now = Instant.now();
                 ConsentResult result = new ConsentResult("consent-marketing-789", "user-123", "MARKETING", null, true,
                                 now, null, "192.168.1.100");
                 ConsentResponse response = new ConsentResponse("consent-marketing-789", "MARKETING", null, now, null,

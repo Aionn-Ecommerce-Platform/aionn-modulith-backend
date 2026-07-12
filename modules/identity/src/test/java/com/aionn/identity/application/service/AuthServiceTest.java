@@ -45,13 +45,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -59,6 +55,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
@@ -103,26 +101,27 @@ class AuthServiceTest {
                 userPersistencePort, userSecurityPort, authSessionPersistencePort,
                 socialLinkPersistencePort, mfaPersistencePort, passwordHasher,
                 totpManager, accessTokenIssuer, socialTokenVerifier, authPolicy,
-                refreshTokenStore, authResultMapper, tokenBlacklist, identityMetrics);
+                refreshTokenStore, authResultMapper, tokenBlacklist, identityMetrics,
+                Clock.systemUTC());
     }
 
     private static AuthSession activeSession() {
         return AuthSession.createNew(SESSION_ID, USER_ID, "127.0.0.1", "agent",
-                LocalDateTime.now().plusDays(7));
+                Instant.now().plus(Duration.ofDays(7)));
     }
 
     @Test
     void logoutAllRevokesActiveSessionsAndReturnsCount() {
         AuthSession a = activeSession();
         AuthSession b = AuthSession.createNew("s2", USER_ID, "ip", "ua",
-                LocalDateTime.now().plusDays(7));
+                Instant.now().plus(Duration.ofDays(7)));
         when(userPersistencePort.existsById(USER_ID)).thenReturn(true);
         when(authSessionPersistencePort.findByUserId(USER_ID)).thenReturn(List.of(a, b));
         when(authResultMapper.toLogoutAllResult(2)).thenReturn(new LogoutAllResult(2));
 
         LogoutAllResult result = authService.logoutAll(new LogoutAllCommand(USER_ID));
 
-        assertEquals(2, result.revokedSessions());
+        assertThat(result.revokedSessions()).isEqualTo(2);
         verify(refreshTokenStore).revokeBySessionId(SESSION_ID);
         verify(refreshTokenStore).revokeBySessionId("s2");
         verify(authSessionPersistencePort).saveAll(List.of(a, b));
@@ -171,13 +170,13 @@ class AuthServiceTest {
 
         authService.revokeSession(new RevokeSessionCommand(USER_ID, SESSION_ID));
 
-        assertEquals(AuthSessionStatus.REVOKED, session.getStatus());
+        assertThat(session.getStatus()).isEqualTo(AuthSessionStatus.REVOKED);
         verify(refreshTokenStore).revokeBySessionId(SESSION_ID);
     }
 
     private static AuthSession expiredSession() {
         return AuthSession.createNew(SESSION_ID, USER_ID, "127.0.0.1", "agent",
-                LocalDateTime.now(Clock.systemUTC()).minusDays(1));
+                Instant.now(Clock.systemUTC()).minus(Duration.ofDays(1)));
     }
 
     private static IdentityUser activeUser() {
@@ -191,7 +190,7 @@ class AuthServiceTest {
 
     private static void assertErrorCode(IdentityErrorCode expected, Executable executable) {
         IdentityException ex = assertThrows(IdentityException.class, executable);
-        assertEquals(expected.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(expected.getCode());
     }
 
     private void stubTokenIssuance() {
@@ -205,7 +204,7 @@ class AuthServiceTest {
     @Test
     void loginSucceedsWhenMfaDisabled() {
         LoginResult expected = new LoginResult(USER_ID, SESSION_ID, "access-token", "refresh",
-                LocalDateTime.now(), LocalDateTime.now().plusDays(7));
+                Instant.now(), Instant.now().plus(Duration.ofDays(7)));
         when(userSecurityPort.findByIdentity("u@example.com")).thenReturn(Optional.of(security(false, null)));
         when(passwordHasher.matches("pw", "hash")).thenReturn(true);
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
@@ -213,12 +212,12 @@ class AuthServiceTest {
         when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
         when(authResultMapper.toLoginResult(any(AuthSession.class), eq("access-token"), anyString(),
-                any(LocalDateTime.class))).thenReturn(expected);
+                any(Instant.class))).thenReturn(expected);
 
         LoginResult result = authService.login(
                 new LoginCommand("u@example.com", "pw", null, "127.0.0.1", "agent"));
 
-        assertSame(expected, result);
+        assertThat(result).isSameAs(expected);
         verify(userSecurityPort).resetFailedLoginAttempts(USER_ID);
         verify(identityMetrics).loginAttempt("success");
         verify(identityMetrics).sessionLifecycle("created");
@@ -248,7 +247,7 @@ class AuthServiceTest {
         when(userSecurityPort.findByIdentity("u@example.com")).thenReturn(Optional.of(
                 new UserSecurityPort.UserSecurityData(
                         USER_ID, "hash", UserStatus.ACTIVE, false, null,
-                        LocalDateTime.now(Clock.systemUTC()).plusDays(1), 0)));
+                        Instant.now(Clock.systemUTC()).plus(Duration.ofDays(1)), 0)));
 
         assertErrorCode(IdentityErrorCode.USER_INACTIVE,
                 () -> authService.login(new LoginCommand("u@example.com", "pw", null, "ip", "ua")));
@@ -292,7 +291,7 @@ class AuthServiceTest {
         assertErrorCode(IdentityErrorCode.INVALID_CREDENTIALS,
                 () -> authService.login(new LoginCommand("u@example.com", "bad", null, "ip", "ua")));
 
-        verify(userSecurityPort).recordFailedLoginAttempt(eq(USER_ID), eq(5), any(LocalDateTime.class));
+        verify(userSecurityPort).recordFailedLoginAttempt(eq(USER_ID), eq(5), any(Instant.class));
     }
 
     @Test
@@ -326,7 +325,7 @@ class AuthServiceTest {
     @Test
     void loginSucceedsWithValidTotpCode() {
         LoginResult expected = new LoginResult(USER_ID, SESSION_ID, "access-token", "refresh",
-                LocalDateTime.now(), LocalDateTime.now().plusDays(7));
+                Instant.now(), Instant.now().plus(Duration.ofDays(7)));
         when(userSecurityPort.findByIdentity("u@example.com")).thenReturn(Optional.of(security(true, "secret")));
         when(passwordHasher.matches("pw", "hash")).thenReturn(true);
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
@@ -336,19 +335,19 @@ class AuthServiceTest {
         when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
         when(authResultMapper.toLoginResult(any(AuthSession.class), eq("access-token"), anyString(),
-                any(LocalDateTime.class))).thenReturn(expected);
+                any(Instant.class))).thenReturn(expected);
 
         LoginResult result = authService.login(
                 new LoginCommand("u@example.com", "pw", "123456", "ip", "ua"));
 
-        assertSame(expected, result);
+        assertThat(result).isSameAs(expected);
         verify(userSecurityPort).resetFailedLoginAttempts(USER_ID);
     }
 
     @Test
     void loginSucceedsWithValidBackupCode() {
         LoginResult expected = new LoginResult(USER_ID, SESSION_ID, "access-token", "refresh",
-                LocalDateTime.now(), LocalDateTime.now().plusDays(7));
+                Instant.now(), Instant.now().plus(Duration.ofDays(7)));
         when(userSecurityPort.findByIdentity("u@example.com")).thenReturn(Optional.of(security(true, "secret")));
         when(passwordHasher.matches("pw", "hash")).thenReturn(true);
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
@@ -356,23 +355,23 @@ class AuthServiceTest {
         when(mfaPersistencePort.findActiveBackupCodes(USER_ID)).thenReturn(
                 List.of(new MfaPersistencePort.BackupCodeData("bc-1", "code-hash")));
         when(passwordHasher.matches("backup", "code-hash")).thenReturn(true);
-        when(mfaPersistencePort.markBackupCodeUsed(eq("bc-1"), any(LocalDateTime.class))).thenReturn(true);
+        when(mfaPersistencePort.markBackupCodeUsed(eq("bc-1"), any(Instant.class))).thenReturn(true);
         when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
         when(authResultMapper.toLoginResult(any(AuthSession.class), eq("access-token"), anyString(),
-                any(LocalDateTime.class))).thenReturn(expected);
+                any(Instant.class))).thenReturn(expected);
 
         LoginResult result = authService.login(
                 new LoginCommand("u@example.com", "pw", "backup", "ip", "ua"));
 
-        assertSame(expected, result);
-        verify(mfaPersistencePort).markBackupCodeUsed(eq("bc-1"), any(LocalDateTime.class));
+        assertThat(result).isSameAs(expected);
+        verify(mfaPersistencePort).markBackupCodeUsed(eq("bc-1"), any(Instant.class));
     }
 
     @Test
     void socialLoginWithExistingLinkLogsInUser() {
         SocialLoginResult expected = new SocialLoginResult(USER_ID, SESSION_ID, "access-token", "refresh",
-                LocalDateTime.now(), LocalDateTime.now().plusDays(7), false);
+                Instant.now(), Instant.now().plus(Duration.ofDays(7)), false);
         when(socialTokenVerifier.verifyAndExtract(AuthProvider.GOOGLE, "token"))
                 .thenReturn(new SocialUserProfile("puid", "s@example.com", "Social User"));
         when(socialLinkPersistencePort.findByProviderAndProviderUserId(AuthProvider.GOOGLE, "puid"))
@@ -381,19 +380,19 @@ class AuthServiceTest {
         when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
         when(authResultMapper.toSocialLoginResult(any(AuthSession.class), eq("access-token"), anyString(),
-                any(LocalDateTime.class), eq(false))).thenReturn(expected);
+                any(Instant.class), eq(false))).thenReturn(expected);
 
         SocialLoginResult result = authService.socialLogin(
                 new SocialLoginCommand("google", "token", "ip", "ua"));
 
-        assertSame(expected, result);
+        assertThat(result).isSameAs(expected);
         verify(identityMetrics).socialAuth("GOOGLE", "success");
     }
 
     @Test
     void socialLoginCreatesNewUserWhenNoLinkExists() {
         SocialLoginResult expected = new SocialLoginResult("new-id", SESSION_ID, "access-token", "refresh",
-                LocalDateTime.now(), LocalDateTime.now().plusDays(7), true);
+                Instant.now(), Instant.now().plus(Duration.ofDays(7)), true);
         when(socialTokenVerifier.verifyAndExtract(AuthProvider.GOOGLE, "token"))
                 .thenReturn(new SocialUserProfile("puid", "new@example.com", "New User"));
         when(socialLinkPersistencePort.findByProviderAndProviderUserId(AuthProvider.GOOGLE, "puid"))
@@ -405,12 +404,12 @@ class AuthServiceTest {
         when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
         when(authResultMapper.toSocialLoginResult(any(AuthSession.class), eq("access-token"), anyString(),
-                any(LocalDateTime.class), eq(true))).thenReturn(expected);
+                any(Instant.class), eq(true))).thenReturn(expected);
 
         SocialLoginResult result = authService.socialLogin(
                 new SocialLoginCommand("google", "token", "ip", "ua"));
 
-        assertSame(expected, result);
+        assertThat(result).isSameAs(expected);
         verify(userPersistencePort).save(any(IdentityUser.class));
         verify(socialLinkPersistencePort).save(any(SocialLink.class), anyString());
     }
@@ -455,7 +454,7 @@ class AuthServiceTest {
 
         List<AuthSession> sessions = authService.listSessions(USER_ID);
 
-        assertEquals(1, sessions.size());
+        assertThat(sessions).hasSize(1);
     }
 
     @Test
@@ -488,7 +487,7 @@ class AuthServiceTest {
 
         SocialLink result = authService.linkSocial(new LinkSocialCommand(USER_ID, "google", "token"));
 
-        assertSame(saved, result);
+        assertThat(result).isSameAs(saved);
     }
 
     @Test
@@ -549,7 +548,7 @@ class AuthServiceTest {
     @Test
     void revokeSessionThrowsWhenSessionBelongsToAnotherUser() {
         AuthSession other = AuthSession.createNew(SESSION_ID, "other-user", "ip", "ua",
-                LocalDateTime.now().plusDays(7));
+                Instant.now().plus(Duration.ofDays(7)));
         when(userPersistencePort.existsById(USER_ID)).thenReturn(true);
         when(authSessionPersistencePort.findById(SESSION_ID)).thenReturn(Optional.of(other));
 
@@ -573,38 +572,38 @@ class AuthServiceTest {
     @Test
     void refreshTokenIssuesNewTokensFromRequestToken() {
         RefreshAccessTokenResult expected = new RefreshAccessTokenResult(USER_ID, SESSION_ID, "access-token",
-                "refresh", LocalDateTime.now(), LocalDateTime.now().plusDays(7));
+                "refresh", Instant.now(), Instant.now().plus(Duration.ofDays(7)));
         when(refreshTokenStore.consumeSessionId("rt")).thenReturn(Optional.of(SESSION_ID));
         when(authSessionPersistencePort.findById(SESSION_ID)).thenReturn(Optional.of(activeSession()));
         when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
         when(authResultMapper.toRefreshResult(any(AuthSession.class), eq("access-token"), anyString(),
-                any(LocalDateTime.class))).thenReturn(expected);
+                any(Instant.class))).thenReturn(expected);
 
         RefreshAccessTokenResult result = authService.refreshToken(
                 new RefreshTokenCommand("rt", null, "ip", "ua"));
 
-        assertSame(expected, result);
+        assertThat(result).isSameAs(expected);
         verify(refreshTokenStore).store(anyString(), anyString(), any(Duration.class));
     }
 
     @Test
     void refreshTokenFallsBackToCookieToken() {
         RefreshAccessTokenResult expected = new RefreshAccessTokenResult(USER_ID, SESSION_ID, "access-token",
-                "refresh", LocalDateTime.now(), LocalDateTime.now().plusDays(7));
+                "refresh", Instant.now(), Instant.now().plus(Duration.ofDays(7)));
         when(refreshTokenStore.consumeSessionId("ct")).thenReturn(Optional.of(SESSION_ID));
         when(authSessionPersistencePort.findById(SESSION_ID)).thenReturn(Optional.of(activeSession()));
         when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
         when(authResultMapper.toRefreshResult(any(AuthSession.class), eq("access-token"), anyString(),
-                any(LocalDateTime.class))).thenReturn(expected);
+                any(Instant.class))).thenReturn(expected);
 
         RefreshAccessTokenResult result = authService.refreshToken(
                 new RefreshTokenCommand("", "ct", "ip", "ua"));
 
-        assertSame(expected, result);
+        assertThat(result).isSameAs(expected);
     }
 
     @Test

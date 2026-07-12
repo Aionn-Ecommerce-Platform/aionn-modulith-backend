@@ -20,19 +20,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class KycServiceTest {
@@ -54,7 +52,8 @@ class KycServiceTest {
     @BeforeEach
     void setUp() {
         kycService = new KycService(
-                kycPersistencePort, userPersistencePort, kycPolicy, externalKycVerificationPort);
+                kycPersistencePort, userPersistencePort, kycPolicy, externalKycVerificationPort,
+Clock.systemUTC());
     }
 
     private static IdentityUser activeUser() {
@@ -67,7 +66,7 @@ class KycServiceTest {
                 null, KycStatus.DRAFT,
                 null, null, null, null, null,
                 null, null, null, null,
-                null, null, LocalDateTime.now());
+                null, null, Instant.now());
     }
 
     private static KycProfile submittedProfile() {
@@ -83,9 +82,9 @@ class KycServiceTest {
 
         KycService.KycCreationPlan plan = kycService.planKycCreation(USER_ID, "cccd");
 
-        assertEquals(USER_ID, plan.user().getUserId());
-        assertEquals("CCCD", plan.docType());
-        assertEquals(false, plan.managedProviderEnabled());
+        assertThat(plan.user().getUserId()).isEqualTo(USER_ID);
+        assertThat(plan.docType()).isEqualTo("CCCD");
+        assertThat(plan.managedProviderEnabled()).isFalse();
     }
 
     @Test
@@ -100,7 +99,7 @@ class KycServiceTest {
 
         KycProfile created = kycService.createKyc(plan, null);
 
-        assertEquals(KycStatus.DRAFT, created.getStatus());
+        assertThat(created.getStatus()).isEqualTo(KycStatus.DRAFT);
         verify(externalKycVerificationPort, never()).createApplicant(any(), any(), any());
     }
 
@@ -111,7 +110,7 @@ class KycServiceTest {
         IdentityException ex = assertThrows(IdentityException.class,
                 () -> kycService.planKycCreation(USER_ID, "DRIVER_LICENSE"));
 
-        assertEquals(IdentityErrorCode.KYC_DOCUMENT_TYPE_INVALID.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.KYC_DOCUMENT_TYPE_INVALID.getCode());
         verify(kycPersistencePort, never()).save(any());
     }
 
@@ -129,9 +128,9 @@ class KycServiceTest {
 
         KycProfile created = kycService.createKyc(plan, applicant);
 
-        assertEquals(KycStatus.SUBMITTED, created.getStatus());
-        assertEquals("SUMSUB", created.getProvider());
-        assertEquals("applicant-9", created.getProviderApplicantId());
+        assertThat(created.getStatus()).isEqualTo(KycStatus.SUBMITTED);
+        assertThat(created.getProvider()).isEqualTo("SUMSUB");
+        assertThat(created.getProviderApplicantId()).isEqualTo("applicant-9");
     }
 
     @Test
@@ -144,7 +143,7 @@ class KycServiceTest {
                 "https://cdn.test/front.jpg",
                 "identity/kyc/front",
                 KycDocumentStatus.UPLOADED,
-                LocalDateTime.now());
+                Instant.now());
         when(kycPersistencePort.findByKycIdAndUserId(KYC_ID, USER_ID)).thenReturn(Optional.of(profile));
         when(kycPersistencePort.saveDocument(any(KycDocument.class))).thenReturn(savedDocument);
         when(kycPersistencePort.save(profile)).thenReturn(profile);
@@ -156,8 +155,8 @@ class KycServiceTest {
                 "https://cdn.test/front.jpg",
                 "identity/kyc/front");
 
-        assertSame(savedDocument, result);
-        assertEquals("https://cdn.test/front.jpg", profile.getBlobUrl());
+        assertThat(result).isSameAs(savedDocument);
+        assertThat(profile.getBlobUrl()).isEqualTo("https://cdn.test/front.jpg");
         verify(kycPersistencePort).save(profile);
     }
 
@@ -167,7 +166,7 @@ class KycServiceTest {
         when(kycPersistencePort.findByKycIdAndUserId(KYC_ID, USER_ID)).thenReturn(Optional.of(profile));
         when(kycPersistencePort.findDocumentsByKycId(KYC_ID)).thenReturn(List.of(
                 new KycDocument("doc-front", KYC_ID, KycDocumentType.ID_FRONT,
-                        "https://cdn.test/front.jpg", null, KycDocumentStatus.UPLOADED, LocalDateTime.now())));
+                        "https://cdn.test/front.jpg", null, KycDocumentStatus.UPLOADED, Instant.now())));
 
         assertThrows(IdentityException.class, () -> kycService.submit(USER_ID, KYC_ID));
     }
@@ -178,16 +177,16 @@ class KycServiceTest {
         when(kycPersistencePort.findByKycIdAndUserId(KYC_ID, USER_ID)).thenReturn(Optional.of(profile));
         when(kycPersistencePort.findDocumentsByKycId(KYC_ID)).thenReturn(List.of(
                 new KycDocument("doc-front", KYC_ID, KycDocumentType.ID_FRONT,
-                        "https://cdn.test/front.jpg", null, KycDocumentStatus.UPLOADED, LocalDateTime.now()),
+                        "https://cdn.test/front.jpg", null, KycDocumentStatus.UPLOADED, Instant.now()),
                 new KycDocument("doc-back", KYC_ID, KycDocumentType.ID_BACK,
-                        "https://cdn.test/back.jpg", null, KycDocumentStatus.UPLOADED, LocalDateTime.now())));
+                        "https://cdn.test/back.jpg", null, KycDocumentStatus.UPLOADED, Instant.now())));
         when(kycPersistencePort.save(profile)).thenReturn(profile);
 
         KycProfile result = kycService.submit(USER_ID, KYC_ID);
 
-        assertSame(profile, result);
-        assertEquals(KycStatus.SUBMITTED, result.getStatus());
-        assertNotNull(result.getSubmittedAt());
+        assertThat(result).isSameAs(profile);
+        assertThat(result.getStatus()).isEqualTo(KycStatus.SUBMITTED);
+        assertThat(result.getSubmittedAt()).isNotNull();
     }
 
     @Test
@@ -198,9 +197,9 @@ class KycServiceTest {
 
         KycProfile result = kycService.adminApprove(KYC_ID, "admin-1", "ok");
 
-        assertEquals(KycStatus.APPROVED, result.getStatus());
-        assertEquals("admin-1", result.getDecisionAdminId());
-        assertNotNull(result.getApprovedAt());
+        assertThat(result.getStatus()).isEqualTo(KycStatus.APPROVED);
+        assertThat(result.getDecisionAdminId()).isEqualTo("admin-1");
+        assertThat(result.getApprovedAt()).isNotNull();
     }
 
     @Test
@@ -220,8 +219,8 @@ class KycServiceTest {
 
         List<KycProfile> result = kycService.listMy(USER_ID);
 
-        assertEquals(1, result.size());
-        assertSame(p, result.get(0));
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0)).isSameAs(p);
     }
 
     @Test
@@ -240,7 +239,7 @@ class KycServiceTest {
         IdentityException ex = assertThrows(IdentityException.class,
                 () -> kycService.planKycCreation(USER_ID, "ID_CARD"));
 
-        assertEquals(IdentityErrorCode.USER_NOT_FOUND.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.USER_NOT_FOUND.getCode());
     }
 
     @Test
@@ -251,7 +250,7 @@ class KycServiceTest {
         IdentityException ex = assertThrows(IdentityException.class,
                 () -> kycService.createKyc(plan, null));
 
-        assertEquals(IdentityErrorCode.KYC_PROVIDER_ERROR.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.KYC_PROVIDER_ERROR.getCode());
         verify(kycPersistencePort, never()).save(any());
     }
 
@@ -261,7 +260,7 @@ class KycServiceTest {
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
         when(kycPersistencePort.findByKycIdAndUserId(KYC_ID, USER_ID)).thenReturn(Optional.of(profile));
 
-        assertSame(profile, kycService.get(USER_ID, KYC_ID));
+        assertThat(kycService.get(USER_ID, KYC_ID)).isSameAs(profile);
     }
 
     @Test
@@ -287,8 +286,8 @@ class KycServiceTest {
 
         List<KycProfile> result = kycService.adminListByStatus(KycStatus.SUBMITTED, 25);
 
-        assertEquals(1, result.size());
-        assertSame(p, result.get(0));
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0)).isSameAs(p);
     }
 
     @Test
@@ -296,7 +295,7 @@ class KycServiceTest {
         KycProfile p = submittedProfile();
         when(kycPersistencePort.findById(KYC_ID)).thenReturn(Optional.of(p));
 
-        assertSame(p, kycService.adminGet(KYC_ID));
+        assertThat(kycService.adminGet(KYC_ID)).isSameAs(p);
     }
 
     @Test
@@ -314,8 +313,8 @@ class KycServiceTest {
 
         KycProfile result = kycService.adminReject(KYC_ID, "admin-1", "blurry document");
 
-        assertEquals(KycStatus.REJECTED, result.getStatus());
-        assertEquals("blurry document", result.getRejectReason());
+        assertThat(result.getStatus()).isEqualTo(KycStatus.REJECTED);
+        assertThat(result.getRejectReason()).isEqualTo("blurry document");
     }
 
     @Test
@@ -326,8 +325,8 @@ class KycServiceTest {
 
         KycProfile result = kycService.adminMarkInReview(KYC_ID, "admin-1", "manual check");
 
-        assertEquals(KycStatus.IN_REVIEW, result.getStatus());
-        assertEquals("admin-1", result.getReviewerId());
+        assertThat(result.getStatus()).isEqualTo(KycStatus.IN_REVIEW);
+        assertThat(result.getReviewerId()).isEqualTo("admin-1");
     }
 
     @Test
@@ -346,7 +345,7 @@ class KycServiceTest {
         IdentityException ex = assertThrows(IdentityException.class, () -> kycService.attachDocument(
                 USER_ID, KYC_ID, "ID_FRONT", "https://cdn.test/front.jpg", null));
 
-        assertEquals(IdentityErrorCode.KYC_MANAGED_EXTERNALLY.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.KYC_MANAGED_EXTERNALLY.getCode());
         verify(kycPersistencePort, never()).saveDocument(any());
     }
 
@@ -359,7 +358,7 @@ class KycServiceTest {
         IdentityException ex = assertThrows(IdentityException.class, () -> kycService.attachDocument(
                 USER_ID, KYC_ID, "ID_FRONT", "https://cdn.test/front.jpg", null));
 
-        assertEquals(IdentityErrorCode.KYC_INVALID_STATUS_TRANSITION.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.KYC_INVALID_STATUS_TRANSITION.getCode());
     }
 
     @Test
@@ -370,21 +369,21 @@ class KycServiceTest {
         IdentityException ex = assertThrows(IdentityException.class, () -> kycService.attachDocument(
                 USER_ID, KYC_ID, "ID_FRONT", "  ", null));
 
-        assertEquals(IdentityErrorCode.KYC_DOCUMENT_REQUIRED.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.KYC_DOCUMENT_REQUIRED.getCode());
     }
 
     @Test
     void listDocumentsReturnsPersistedDocuments() {
         KycProfile profile = draftProfile();
         KycDocument document = new KycDocument("doc-1", KYC_ID, KycDocumentType.ID_FRONT,
-                "https://cdn.test/front.jpg", null, KycDocumentStatus.UPLOADED, LocalDateTime.now());
+                "https://cdn.test/front.jpg", null, KycDocumentStatus.UPLOADED, Instant.now());
         when(kycPersistencePort.findByKycIdAndUserId(KYC_ID, USER_ID)).thenReturn(Optional.of(profile));
         when(kycPersistencePort.findDocumentsByKycId(KYC_ID)).thenReturn(List.of(document));
 
         List<KycDocument> result = kycService.listDocuments(USER_ID, KYC_ID);
 
-        assertEquals(1, result.size());
-        assertSame(document, result.get(0));
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0)).isSameAs(document);
     }
 
     @Test
@@ -395,7 +394,7 @@ class KycServiceTest {
         IdentityException ex = assertThrows(IdentityException.class,
                 () -> kycService.submit(USER_ID, KYC_ID));
 
-        assertEquals(IdentityErrorCode.KYC_MANAGED_EXTERNALLY.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.KYC_MANAGED_EXTERNALLY.getCode());
     }
 
     @Test
@@ -405,16 +404,16 @@ class KycServiceTest {
                 null, KycStatus.DRAFT,
                 null, null, null, null, null,
                 null, null, null, null,
-                null, null, LocalDateTime.now());
+                null, null, Instant.now());
         when(kycPersistencePort.findByKycIdAndUserId(KYC_ID, USER_ID)).thenReturn(Optional.of(profile));
         when(kycPersistencePort.findDocumentsByKycId(KYC_ID)).thenReturn(List.of(
                 new KycDocument("doc-passport", KYC_ID, KycDocumentType.PASSPORT,
-                        "https://cdn.test/passport.jpg", null, KycDocumentStatus.UPLOADED, LocalDateTime.now())));
+                        "https://cdn.test/passport.jpg", null, KycDocumentStatus.UPLOADED, Instant.now())));
         when(kycPersistencePort.save(profile)).thenReturn(profile);
 
         KycProfile result = kycService.submit(USER_ID, KYC_ID);
 
-        assertEquals(KycStatus.SUBMITTED, result.getStatus());
+        assertThat(result.getStatus()).isEqualTo(KycStatus.SUBMITTED);
     }
 
     @Test
@@ -426,7 +425,7 @@ class KycServiceTest {
         IdentityException ex = assertThrows(IdentityException.class,
                 () -> kycService.submit(USER_ID, KYC_ID));
 
-        assertEquals(IdentityErrorCode.KYC_DOCUMENT_REQUIRED.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.KYC_DOCUMENT_REQUIRED.getCode());
     }
 
     @Test
@@ -436,7 +435,7 @@ class KycServiceTest {
         IdentityException ex = assertThrows(IdentityException.class,
                 () -> kycService.generateVerificationSession(USER_ID, KYC_ID));
 
-        assertEquals(IdentityErrorCode.KYC_MANAGED_EXTERNALLY.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.KYC_MANAGED_EXTERNALLY.getCode());
     }
 
     @Test
@@ -448,7 +447,7 @@ class KycServiceTest {
         IdentityException ex = assertThrows(IdentityException.class,
                 () -> kycService.generateVerificationSession(USER_ID, KYC_ID));
 
-        assertEquals(IdentityErrorCode.KYC_PROVIDER_NOT_CONFIGURED.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.KYC_PROVIDER_NOT_CONFIGURED.getCode());
     }
 
     @Test
@@ -463,11 +462,11 @@ class KycServiceTest {
 
         KycVerificationSessionResult result = kycService.generateVerificationSession(USER_ID, KYC_ID);
 
-        assertEquals(KYC_ID, result.kycId());
-        assertEquals("SUMSUB", result.provider());
-        assertEquals("token-xyz", result.sdkAccessToken());
-        assertEquals(600, result.expiresInSeconds());
-        assertTrue(result.sandbox());
+        assertThat(result.kycId()).isEqualTo(KYC_ID);
+        assertThat(result.provider()).isEqualTo("SUMSUB");
+        assertThat(result.sdkAccessToken()).isEqualTo("token-xyz");
+        assertThat(result.expiresInSeconds()).isEqualTo(600);
+        assertThat(result.sandbox()).isTrue();
     }
 
     @Test
@@ -487,7 +486,7 @@ class KycServiceTest {
         IdentityException ex = assertThrows(IdentityException.class,
                 () -> kycService.handleSumsubWebhook(webhookCommand("  ", "GREEN")));
 
-        assertEquals(IdentityErrorCode.KYC_PROVIDER_ERROR.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.KYC_PROVIDER_ERROR.getCode());
     }
 
     @Test
@@ -508,7 +507,7 @@ class KycServiceTest {
 
         kycService.handleSumsubWebhook(webhookCommand("applicant-1", "GREEN"));
 
-        assertEquals(KycStatus.APPROVED, profile.getStatus());
+        assertThat(profile.getStatus()).isEqualTo(KycStatus.APPROVED);
         verify(kycPersistencePort).save(profile);
     }
 

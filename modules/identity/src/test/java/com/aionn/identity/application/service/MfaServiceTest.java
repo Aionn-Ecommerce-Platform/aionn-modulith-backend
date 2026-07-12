@@ -1,5 +1,7 @@
 package com.aionn.identity.application.service;
 
+
+import java.time.Clock;
 import com.aionn.identity.application.dto.security.result.MfaResult;
 import com.aionn.identity.application.dto.security.result.MfaSetupResult;
 import com.aionn.identity.application.policy.MfaPolicy;
@@ -23,12 +25,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -36,6 +32,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class MfaServiceTest {
@@ -68,7 +66,8 @@ class MfaServiceTest {
                                 passwordHasher,
                                 totpManager,
                                 mfaPolicy,
-                                identityMetrics);
+                                identityMetrics,
+                                Clock.systemUTC());
         }
 
         @Test
@@ -83,10 +82,10 @@ class MfaServiceTest {
 
                 MfaSetupResult result = mfaService.initiateSetup(USER_ID, "pwd", "1.1.1.1");
 
-                assertEquals("SECRET", result.secret());
-                assertEquals("otpauth://uri", result.otpauthUri());
-                assertEquals("Aionn", result.issuer());
-                assertEquals(USER_ID, result.accountName());
+                assertThat(result.secret()).isEqualTo("SECRET");
+                assertThat(result.otpauthUri()).isEqualTo("otpauth://uri");
+                assertThat(result.issuer()).isEqualTo("Aionn");
+                assertThat(result.accountName()).isEqualTo(USER_ID);
                 verify(mfaPersistencePort).saveMfaSecret(USER_ID, "SECRET");
                 verify(mfaPersistencePort).updateMfaStatus(USER_ID, false);
                 verify(mfaPersistencePort).deleteBackupCodes(USER_ID);
@@ -104,7 +103,7 @@ class MfaServiceTest {
                 var ex = assertThrows(IdentityException.class,
                                 () -> mfaService.initiateSetup(USER_ID, "pwd", null));
 
-                assertEquals(IdentityErrorCode.MFA_ALREADY_ENABLED.getCode(), ex.getErrorCode());
+                assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.MFA_ALREADY_ENABLED.getCode());
                 verify(mfaPersistencePort, never()).saveMfaSecret(anyString(), anyString());
         }
 
@@ -118,7 +117,7 @@ class MfaServiceTest {
                 var ex = assertThrows(IdentityException.class,
                                 () -> mfaService.initiateSetup(USER_ID, "pwd", null));
 
-                assertEquals(IdentityErrorCode.INVALID_CREDENTIALS.getCode(), ex.getErrorCode());
+                assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.INVALID_CREDENTIALS.getCode());
         }
 
         @Test
@@ -133,14 +132,14 @@ class MfaServiceTest {
 
                 MfaResult result = mfaService.enableMfa(USER_ID, "pwd", "123456", "1.1.1.1");
 
-                assertTrue(result.mfaEnabled());
-                assertNotNull(result.backupCodes());
-                assertEquals(8, result.backupCodes().size());
+                assertThat(result.mfaEnabled()).isTrue();
+                assertThat(result.backupCodes()).isNotNull();
+                assertThat(result.backupCodes()).hasSize(8);
                 verify(mfaPersistencePort).updateMfaStatus(USER_ID, true);
                 verify(mfaPersistencePort).deleteBackupCodes(USER_ID);
                 ArgumentCaptor<List<String>> captor = ArgumentCaptor.captor();
                 verify(mfaPersistencePort).saveBackupCodes(eq(USER_ID), captor.capture());
-                assertEquals(8, captor.getValue().size());
+                assertThat(captor.getValue()).hasSize(8);
                 verify(securityAuditPort).saveAuditLog(USER_ID,
                                 SecurityAuditEventType.MFA_ENABLED, "1.1.1.1");
         }
@@ -155,7 +154,7 @@ class MfaServiceTest {
                 var ex = assertThrows(IdentityException.class,
                                 () -> mfaService.enableMfa(USER_ID, "pwd", "123456", null));
 
-                assertEquals(IdentityErrorCode.MFA_SETUP_NOT_INITIATED.getCode(), ex.getErrorCode());
+                assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.MFA_SETUP_NOT_INITIATED.getCode());
         }
 
         @Test
@@ -169,7 +168,7 @@ class MfaServiceTest {
                 var ex = assertThrows(IdentityException.class,
                                 () -> mfaService.enableMfa(USER_ID, "pwd", "000000", null));
 
-                assertEquals(IdentityErrorCode.OTP_INVALID.getCode(), ex.getErrorCode());
+                assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.OTP_INVALID.getCode());
                 verify(mfaPersistencePort, never()).updateMfaStatus(anyString(), eq(true));
         }
 
@@ -183,8 +182,8 @@ class MfaServiceTest {
 
                 MfaResult result = mfaService.disableMfa(USER_ID, "pwd", "123456", null);
 
-                assertFalse(result.mfaEnabled());
-                assertNull(result.backupCodes());
+                assertThat(result.mfaEnabled()).isFalse();
+                assertThat(result.backupCodes()).isNull();
                 verify(mfaPersistencePort).clearMfa(USER_ID);
                 verify(securityAuditPort).saveAuditLog(USER_ID,
                                 SecurityAuditEventType.MFA_DISABLED, null);
@@ -204,7 +203,7 @@ class MfaServiceTest {
 
                 MfaResult result = mfaService.disableMfa(USER_ID, "pwd", "00000000", null);
 
-                assertFalse(result.mfaEnabled());
+                assertThat(result.mfaEnabled()).isFalse();
                 verify(mfaPersistencePort).markBackupCodeUsed(eq("bc-1"), any());
                 verify(mfaPersistencePort).clearMfa(USER_ID);
         }
@@ -219,7 +218,7 @@ class MfaServiceTest {
                 var ex = assertThrows(IdentityException.class,
                                 () -> mfaService.disableMfa(USER_ID, "pwd", "123456", null));
 
-                assertEquals(IdentityErrorCode.MFA_NOT_ENABLED.getCode(), ex.getErrorCode());
+                assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.MFA_NOT_ENABLED.getCode());
         }
 
         @Test
@@ -234,7 +233,7 @@ class MfaServiceTest {
 
                 List<String> codes = mfaService.regenerateBackupCodes(USER_ID, "pwd", "123456", null);
 
-                assertEquals(8, codes.size());
+                assertThat(codes).hasSize(8);
                 verify(mfaPersistencePort).deleteBackupCodes(USER_ID);
                 verify(mfaPersistencePort).saveBackupCodes(eq(USER_ID), anyList());
                 verify(securityAuditPort).saveAuditLog(USER_ID,
@@ -248,6 +247,6 @@ class MfaServiceTest {
                 var ex = assertThrows(IdentityException.class,
                                 () -> mfaService.initiateSetup(USER_ID, "pwd", null));
 
-                assertEquals(IdentityErrorCode.USER_NOT_FOUND.getCode(), ex.getErrorCode());
+                assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.USER_NOT_FOUND.getCode());
         }
 }

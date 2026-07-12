@@ -1,6 +1,6 @@
 package com.aionn.identity.application.port.out.security;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 public interface MfaPersistencePort {
@@ -17,7 +17,7 @@ public interface MfaPersistencePort {
 
     List<BackupCodeData> findActiveBackupCodes(String userId);
 
-    boolean markBackupCodeUsed(String backupCodeId, LocalDateTime usedAt);
+    boolean markBackupCodeUsed(String backupCodeId, Instant usedAt);
 
     record BackupCodeData(String backupCodeId, String codeHash) {
     }

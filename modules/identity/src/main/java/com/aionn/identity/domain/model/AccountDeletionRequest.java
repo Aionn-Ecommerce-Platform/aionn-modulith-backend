@@ -4,7 +4,8 @@ import com.aionn.identity.domain.valueobject.AccountDeletionStatus;
 import lombok.Getter;
 
 import java.time.Clock;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 
 @Getter
 public class AccountDeletionRequest {
@@ -12,17 +13,17 @@ public class AccountDeletionRequest {
     private final String requestId;
     private final String userId;
     private AccountDeletionStatus status;
-    private final LocalDateTime requestedAt;
-    private final LocalDateTime scheduledDeletionAt;
-    private LocalDateTime canceledAt;
+    private final Instant requestedAt;
+    private final Instant scheduledDeletionAt;
+    private Instant canceledAt;
 
     public AccountDeletionRequest(
             String requestId,
             String userId,
             AccountDeletionStatus status,
-            LocalDateTime requestedAt,
-            LocalDateTime scheduledDeletionAt,
-            LocalDateTime canceledAt) {
+            Instant requestedAt,
+            Instant scheduledDeletionAt,
+            Instant canceledAt) {
         this.requestId = requestId;
         this.userId = userId;
         this.status = status;
@@ -32,19 +33,27 @@ public class AccountDeletionRequest {
     }
 
     public static AccountDeletionRequest createPending(String requestId, String userId, int graceDays) {
-        LocalDateTime now = LocalDateTime.now(Clock.systemUTC());
+        return createPending(requestId, userId, graceDays, Clock.systemUTC());
+    }
+
+    public static AccountDeletionRequest createPending(String requestId, String userId, int graceDays, Clock clock) {
+        Instant now = clock.instant();
         return new AccountDeletionRequest(
                 requestId,
                 userId,
                 AccountDeletionStatus.PENDING,
                 now,
-                now.plusDays(graceDays),
+                now.plus(Duration.ofDays(graceDays)),
                 null);
     }
 
     public void cancel() {
+        cancel(Clock.systemUTC());
+    }
+
+    public void cancel(Clock clock) {
         this.status = AccountDeletionStatus.CANCELLED;
-        this.canceledAt = LocalDateTime.now(Clock.systemUTC());
+        this.canceledAt = clock.instant();
     }
 }
 

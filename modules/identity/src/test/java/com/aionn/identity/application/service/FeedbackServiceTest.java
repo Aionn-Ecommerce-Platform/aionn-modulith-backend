@@ -1,5 +1,7 @@
 package com.aionn.identity.application.service;
 
+
+import java.time.Clock;
 import com.aionn.identity.application.dto.common.PageResult;
 import com.aionn.identity.application.port.out.feedback.FeedbackPersistencePort;
 import com.aionn.identity.domain.exception.IdentityErrorCode;
@@ -16,13 +18,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class FeedbackServiceTest {
@@ -37,7 +38,7 @@ class FeedbackServiceTest {
 
     @BeforeEach
     void setUp() {
-        feedbackService = new FeedbackService(feedbackPersistencePort);
+        feedbackService = new FeedbackService(feedbackPersistencePort, Clock.systemUTC());
     }
 
     @Test
@@ -51,12 +52,12 @@ class FeedbackServiceTest {
         ArgumentCaptor<Feedback> captor = ArgumentCaptor.captor();
         verify(feedbackPersistencePort).save(captor.capture());
         Feedback saved = captor.getValue();
-        assertEquals("subject", saved.getSubject());
-        assertEquals("something is broken", saved.getContent());
-        assertEquals("a@b.com", saved.getContactEmail());
-        assertEquals("0912345678", saved.getContactPhone());
-        assertEquals(FeedbackStatus.OPEN, saved.getStatus());
-        assertSame(saved, result);
+        assertThat(saved.getSubject()).isEqualTo("subject");
+        assertThat(saved.getContent()).isEqualTo("something is broken");
+        assertThat(saved.getContactEmail()).isEqualTo("a@b.com");
+        assertThat(saved.getContactPhone()).isEqualTo("0912345678");
+        assertThat(saved.getStatus()).isEqualTo(FeedbackStatus.OPEN);
+        assertThat(result).isSameAs(saved);
     }
 
     @Test
@@ -68,10 +69,10 @@ class FeedbackServiceTest {
         ArgumentCaptor<Feedback> captor = ArgumentCaptor.captor();
         verify(feedbackPersistencePort).save(captor.capture());
         Feedback saved = captor.getValue();
-        assertEquals(null, saved.getSubject());
-        assertEquals(null, saved.getContactEmail());
-        assertEquals(null, saved.getContactPhone());
-        assertEquals(null, saved.getRating());
+        assertThat(saved.getSubject()).isNull();
+        assertThat(saved.getContactEmail()).isNull();
+        assertThat(saved.getContactPhone()).isNull();
+        assertThat(saved.getRating()).isNull();
     }
 
     @Test
@@ -79,7 +80,7 @@ class FeedbackServiceTest {
         IdentityException ex = assertThrows(IdentityException.class,
                 () -> feedbackService.submit(USER_ID, "BUG", "s", "   ", 3, null, null));
 
-        assertEquals(IdentityErrorCode.FEEDBACK_CONTENT_REQUIRED.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.FEEDBACK_CONTENT_REQUIRED.getCode());
         verify(feedbackPersistencePort, never()).save(any());
     }
 
@@ -90,8 +91,8 @@ class FeedbackServiceTest {
 
         List<Feedback> result = feedbackService.listMine(USER_ID);
 
-        assertEquals(1, result.size());
-        assertSame(f, result.get(0));
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0)).isSameAs(f);
     }
 
     @Test
@@ -101,7 +102,7 @@ class FeedbackServiceTest {
 
         PageResult<Feedback> result = feedbackService.adminList(FeedbackStatus.OPEN, 0, 20);
 
-        assertSame(page, result);
+        assertThat(result).isSameAs(page);
     }
 
     @Test
@@ -109,7 +110,7 @@ class FeedbackServiceTest {
         Feedback f = sampleFeedback();
         when(feedbackPersistencePort.findById(FEEDBACK_ID)).thenReturn(Optional.of(f));
 
-        assertSame(f, feedbackService.adminGet(FEEDBACK_ID));
+        assertThat(feedbackService.adminGet(FEEDBACK_ID)).isSameAs(f);
     }
 
     @Test
@@ -119,7 +120,7 @@ class FeedbackServiceTest {
         IdentityException ex = assertThrows(IdentityException.class,
                 () -> feedbackService.adminGet(FEEDBACK_ID));
 
-        assertEquals(IdentityErrorCode.FEEDBACK_NOT_FOUND.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.FEEDBACK_NOT_FOUND.getCode());
     }
 
     @Test
@@ -130,9 +131,9 @@ class FeedbackServiceTest {
 
         Feedback result = feedbackService.adminReply(FEEDBACK_ID, "admin-1", "thanks", FeedbackStatus.RESOLVED);
 
-        assertEquals("thanks", result.getAdminReply());
-        assertEquals("admin-1", result.getHandledBy());
-        assertEquals(FeedbackStatus.RESOLVED, result.getStatus());
+        assertThat(result.getAdminReply()).isEqualTo("thanks");
+        assertThat(result.getHandledBy()).isEqualTo("admin-1");
+        assertThat(result.getStatus()).isEqualTo(FeedbackStatus.RESOLVED);
         verify(feedbackPersistencePort).save(f);
     }
 
@@ -144,8 +145,8 @@ class FeedbackServiceTest {
 
         Feedback result = feedbackService.adminChangeStatus(FEEDBACK_ID, "admin-1", FeedbackStatus.IN_REVIEW);
 
-        assertEquals(FeedbackStatus.IN_REVIEW, result.getStatus());
-        assertEquals("admin-1", result.getHandledBy());
+        assertThat(result.getStatus()).isEqualTo(FeedbackStatus.IN_REVIEW);
+        assertThat(result.getHandledBy()).isEqualTo("admin-1");
         verify(feedbackPersistencePort).save(f);
     }
 

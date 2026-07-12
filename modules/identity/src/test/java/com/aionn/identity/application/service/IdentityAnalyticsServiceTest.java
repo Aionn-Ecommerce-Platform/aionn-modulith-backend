@@ -15,8 +15,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(MockitoExtension.class)
 class IdentityAnalyticsServiceTest {
@@ -45,7 +45,7 @@ class IdentityAnalyticsServiceTest {
                 FROM, TO, 100, 10, List.of(), List.of(), List.of());
         when(userAnalyticsQueryPort.getUserAnalytics(FROM, TO)).thenReturn(expected);
 
-        assertSame(expected, service.getUserAnalytics(FROM, TO));
+        assertThat(service.getUserAnalytics(FROM, TO)).isSameAs(expected);
     }
 
     @Test
@@ -53,7 +53,7 @@ class IdentityAnalyticsServiceTest {
         KycAnalyticsResult expected = new KycAnalyticsResult(FROM, TO, 1, 2, 3, 6, 0.5, 12.0);
         when(kycAnalyticsQueryPort.getKycAnalytics(FROM, TO)).thenReturn(expected);
 
-        assertSame(expected, service.getKycAnalytics(FROM, TO));
+        assertThat(service.getKycAnalytics(FROM, TO)).isSameAs(expected);
     }
 
     @Test
@@ -62,6 +62,6 @@ class IdentityAnalyticsServiceTest {
                 FROM, TO, 4, 5, 1, 8.0, List.of());
         when(feedbackAnalyticsQueryPort.getFeedbackAnalytics(FROM, TO)).thenReturn(expected);
 
-        assertSame(expected, service.getFeedbackAnalytics(FROM, TO));
+        assertThat(service.getFeedbackAnalytics(FROM, TO)).isSameAs(expected);
     }
 }

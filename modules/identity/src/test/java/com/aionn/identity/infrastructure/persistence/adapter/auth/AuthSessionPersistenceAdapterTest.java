@@ -12,7 +12,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,7 +42,7 @@ class AuthSessionPersistenceAdapterTest {
     private AuthSessionPersistenceAdapter adapter;
 
     private AuthSession session(String sessionId) {
-        return AuthSession.createNew(sessionId, USER_ID, "127.0.0.1", "agent", LocalDateTime.now().plusHours(1));
+        return AuthSession.createNew(sessionId, USER_ID, "127.0.0.1", "agent", Instant.now().plus(Duration.ofHours(1)));
     }
 
     @Test
@@ -134,7 +135,7 @@ class AuthSessionPersistenceAdapterTest {
 
     @Test
     void deleteIdleBeforeDelegatesToRepository() {
-        LocalDateTime cutoff = LocalDateTime.now();
+        Instant cutoff = Instant.now();
         when(authSessionRepository.deleteIdleBefore(cutoff)).thenReturn(7);
 
         assertThat(adapter.deleteIdleBefore(cutoff)).isEqualTo(7);

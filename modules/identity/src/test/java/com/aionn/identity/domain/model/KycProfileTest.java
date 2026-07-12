@@ -5,13 +5,9 @@ import com.aionn.identity.domain.valueobject.KycStatus;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
-import java.time.LocalDateTime;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import java.time.Instant;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class KycProfileTest {
 
@@ -21,7 +17,7 @@ class KycProfileTest {
                 null, KycStatus.DRAFT,
                 null, null, null, null, null,
                 null, null, null, null,
-                null, null, LocalDateTime.now(Clock.systemUTC()));
+                null, null, Instant.now(Clock.systemUTC()));
     }
 
     private static KycProfile submitted() {
@@ -36,11 +32,11 @@ class KycProfileTest {
 
         kyc.attachExternalProvider("SUMSUB", "app-1", "basic-kyc", "init", "corr-1");
 
-        assertEquals(KycStatus.SUBMITTED, kyc.getStatus());
-        assertEquals("SUMSUB", kyc.getProvider());
-        assertEquals("app-1", kyc.getProviderApplicantId());
-        assertNotNull(kyc.getSubmittedAt());
-        assertTrue(kyc.isManagedExternally());
+        assertThat(kyc.getStatus()).isEqualTo(KycStatus.SUBMITTED);
+        assertThat(kyc.getProvider()).isEqualTo("SUMSUB");
+        assertThat(kyc.getProviderApplicantId()).isEqualTo("app-1");
+        assertThat(kyc.getSubmittedAt()).isNotNull();
+        assertThat(kyc.isManagedExternally()).isTrue();
     }
 
     @Test
@@ -49,11 +45,11 @@ class KycProfileTest {
 
         kyc.adminApprove("admin-1", "looks good");
 
-        assertEquals(KycStatus.APPROVED, kyc.getStatus());
-        assertEquals("admin-1", kyc.getDecisionAdminId());
-        assertEquals("admin-1", kyc.getReviewerId());
-        assertNotNull(kyc.getApprovedAt());
-        assertNull(kyc.getRejectReason());
+        assertThat(kyc.getStatus()).isEqualTo(KycStatus.APPROVED);
+        assertThat(kyc.getDecisionAdminId()).isEqualTo("admin-1");
+        assertThat(kyc.getReviewerId()).isEqualTo("admin-1");
+        assertThat(kyc.getApprovedAt()).isNotNull();
+        assertThat(kyc.getRejectReason()).isNull();
     }
 
     @Test
@@ -69,8 +65,8 @@ class KycProfileTest {
 
         kyc.submit();
 
-        assertEquals(KycStatus.SUBMITTED, kyc.getStatus());
-        assertNotNull(kyc.getSubmittedAt());
+        assertThat(kyc.getStatus()).isEqualTo(KycStatus.SUBMITTED);
+        assertThat(kyc.getSubmittedAt()).isNotNull();
     }
 
     @Test
@@ -80,9 +76,9 @@ class KycProfileTest {
 
         kyc.submit();
 
-        assertEquals(KycStatus.SUBMITTED, kyc.getStatus());
-        assertNull(kyc.getRejectReason());
-        assertNull(kyc.getApprovedAt());
+        assertThat(kyc.getStatus()).isEqualTo(KycStatus.SUBMITTED);
+        assertThat(kyc.getRejectReason()).isNull();
+        assertThat(kyc.getApprovedAt()).isNull();
     }
 
     @Test
@@ -92,7 +88,7 @@ class KycProfileTest {
         kyc.attachBlobUrlIfEmpty("https://cdn.test/front.jpg");
         kyc.attachBlobUrlIfEmpty("https://cdn.test/back.jpg");
 
-        assertEquals("https://cdn.test/front.jpg", kyc.getBlobUrl());
+        assertThat(kyc.getBlobUrl()).isEqualTo("https://cdn.test/front.jpg");
     }
 
     @Test
@@ -101,9 +97,9 @@ class KycProfileTest {
 
         kyc.adminReject("admin-1", "bad photo");
 
-        assertEquals(KycStatus.REJECTED, kyc.getStatus());
-        assertEquals("bad photo", kyc.getRejectReason());
-        assertNull(kyc.getApprovedAt());
+        assertThat(kyc.getStatus()).isEqualTo(KycStatus.REJECTED);
+        assertThat(kyc.getRejectReason()).isEqualTo("bad photo");
+        assertThat(kyc.getApprovedAt()).isNull();
     }
 
     @Test
@@ -112,9 +108,9 @@ class KycProfileTest {
 
         kyc.syncExternalReview("completed", "corr-2", KycReviewAnswer.GREEN, "ok", null);
 
-        assertEquals(KycStatus.APPROVED, kyc.getStatus());
-        assertEquals("SUMSUB", kyc.getDecisionAdminId());
-        assertNotNull(kyc.getApprovedAt());
+        assertThat(kyc.getStatus()).isEqualTo(KycStatus.APPROVED);
+        assertThat(kyc.getDecisionAdminId()).isEqualTo("SUMSUB");
+        assertThat(kyc.getApprovedAt()).isNotNull();
     }
 
     @Test
@@ -123,8 +119,8 @@ class KycProfileTest {
 
         kyc.syncExternalReview("completed", "corr-3", KycReviewAnswer.RED, "fraud", "user msg");
 
-        assertEquals(KycStatus.REJECTED, kyc.getStatus());
-        assertEquals("fraud", kyc.getRejectReason());
+        assertThat(kyc.getStatus()).isEqualTo(KycStatus.REJECTED);
+        assertThat(kyc.getRejectReason()).isEqualTo("fraud");
     }
 
     @Test

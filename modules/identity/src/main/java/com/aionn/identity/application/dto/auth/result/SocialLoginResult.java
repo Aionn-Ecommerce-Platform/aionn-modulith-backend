@@ -1,14 +1,14 @@
 package com.aionn.identity.application.dto.auth.result;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record SocialLoginResult(
         String userId,
         String sessionId,
         String accessToken,
         String refreshToken,
-        LocalDateTime expiresAt,
-        LocalDateTime sessionExpiresAt,
+        Instant expiresAt,
+        Instant sessionExpiresAt,
         boolean newUser) {
     @Override
     public String toString() {

@@ -13,15 +13,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.UUID;
 
-/**
- * Seeds an X-Request-Id header into SLF4J MDC so every log line in a request
- * carries a stable correlation id. Existing X-Request-Id headers from upstream
- * proxies are honored; otherwise a new ULID-style UUID v4 is generated.
- *
- * <p>
- * The filter must run before any auth/idempotency filter so audit logs from
- * those filters can be correlated. Hence Ordered.HIGHEST_PRECEDENCE.
- */
+// Seeds an X-Request-Id header into SLF4J MDC so every log line in a request
+// carries a stable correlation id. Existing X-Request-Id headers from upstream
+// proxies are honored; otherwise a new ULID-style UUID v4 is generated.
+// Must run before any auth/idempotency filter so audit logs from those filters
+// can be correlated. Hence Ordered.HIGHEST_PRECEDENCE.
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class RequestIdFilter extends OncePerRequestFilter {

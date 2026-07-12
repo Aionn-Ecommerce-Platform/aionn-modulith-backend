@@ -196,7 +196,7 @@ class GeographyPersistenceAdapterTest {
 
     @Test
     void resolveLocationWithValidationReturnsResolvedLocation() {
-        WardEntity ward = mockWard("VN-HN-BA-PX", "VN-HN-BA", "VN-HN");
+        mockWard("VN-HN-BA-PX", "VN-HN-BA", "VN-HN");
 
         ResolvedLocation resolved = adapter.resolveLocationWithValidation("VN-HN", "VN-HN-BA", "VN-HN-BA-PX");
 

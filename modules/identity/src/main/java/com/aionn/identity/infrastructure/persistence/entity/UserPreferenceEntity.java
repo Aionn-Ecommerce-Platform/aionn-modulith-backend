@@ -15,7 +15,7 @@ import lombok.*;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.data.domain.Persistable;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "user_preferences")
@@ -57,7 +57,7 @@ public class UserPreferenceEntity implements Persistable<String> {
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     @Transient
     @Builder.Default

@@ -4,12 +4,11 @@ import com.aionn.identity.application.port.out.auth.AuthSessionPersistencePort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -22,21 +21,24 @@ class AuthSessionCleanupSchedulerTest {
     @Mock
     private AuthSessionPersistencePort authSessionPersistence;
 
-    @InjectMocks
     private AuthSessionCleanupScheduler scheduler;
+    private static final Instant FIXED_NOW = Instant.parse("2026-07-12T10:00:00Z");
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        scheduler = new AuthSessionCleanupScheduler(authSessionPersistence, java.time.Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
+    }
 
     @Test
     void purgesSessionsIdleBeyondRetentionWindow() {
         when(authSessionPersistence.deleteIdleBefore(any())).thenReturn(3);
-        LocalDateTime before = LocalDateTime.now().minusDays(90);
+        Instant expectedCutoff = FIXED_NOW.minus(Duration.ofDays(90));
 
         scheduler.purgeIdleSessions();
 
-        ArgumentCaptor<LocalDateTime> cutoffCaptor = ArgumentCaptor.captor();
+        ArgumentCaptor<Instant> cutoffCaptor = ArgumentCaptor.captor();
         verify(authSessionPersistence).deleteIdleBefore(cutoffCaptor.capture());
-        LocalDateTime after = LocalDateTime.now().minusDays(90);
-        assertThat(cutoffCaptor.getValue()).isBetween(before.minus(Duration.ofSeconds(5)),
-                after.plus(Duration.ofSeconds(5)));
+        assertThat(cutoffCaptor.getValue()).isEqualTo(expectedCutoff);
     }
 
     @Test

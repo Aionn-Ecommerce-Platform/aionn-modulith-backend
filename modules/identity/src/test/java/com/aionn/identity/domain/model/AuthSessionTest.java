@@ -4,12 +4,11 @@ import com.aionn.identity.domain.valueobject.AuthSessionStatus;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
-import java.time.LocalDateTime;
-
+import java.time.Instant;
+import java.time.Duration;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AuthSessionTest {
 
@@ -21,14 +20,14 @@ class AuthSessionTest {
                 "1.1.1.1",
                 "ua",
                 AuthSessionStatus.ACTIVE,
-                LocalDateTime.now(Clock.systemUTC()).minusMinutes(1),
-                LocalDateTime.now(Clock.systemUTC()).minusMinutes(1),
-                LocalDateTime.now(Clock.systemUTC()).plusMinutes(10));
+                Instant.now(Clock.systemUTC()).minus(Duration.ofMinutes(1)),
+                Instant.now(Clock.systemUTC()).minus(Duration.ofMinutes(1)),
+                Instant.now(Clock.systemUTC()).plus(Duration.ofMinutes(10)));
 
-        LocalDateTime nonFutureExpiry = LocalDateTime.now(Clock.systemUTC());
+        Instant nonFutureExpiry = Instant.now(Clock.systemUTC());
 
         assertThrows(IllegalArgumentException.class, () -> session.extendExpiry(nonFutureExpiry));
-        assertDoesNotThrow(() -> session.extendExpiry(LocalDateTime.now(Clock.systemUTC()).plusMinutes(15)));
+        assertDoesNotThrow(() -> session.extendExpiry(Instant.now(Clock.systemUTC()).plus(Duration.ofMinutes(15))));
     }
 
     @Test
@@ -39,11 +38,11 @@ class AuthSessionTest {
                 "1.1.1.1",
                 "ua",
                 AuthSessionStatus.ACTIVE,
-                LocalDateTime.now(Clock.systemUTC()).minusMinutes(2),
-                LocalDateTime.now(Clock.systemUTC()).minusMinutes(2),
-                LocalDateTime.now(Clock.systemUTC()).minusNanos(1));
+                Instant.now(Clock.systemUTC()).minus(Duration.ofMinutes(2)),
+                Instant.now(Clock.systemUTC()).minus(Duration.ofMinutes(2)),
+                Instant.now(Clock.systemUTC()).minusNanos(1));
 
-        assertTrue(session.isExpired());
-        assertFalse(session.isActive());
+        assertThat(session.isExpired()).isTrue();
+        assertThat(session.isActive()).isFalse();
     }
 }

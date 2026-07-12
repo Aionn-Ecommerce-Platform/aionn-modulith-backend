@@ -13,8 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
+import java.time.Clock;
 import java.util.List;
 
 @Slf4j
@@ -25,6 +25,8 @@ public class FeedbackService {
 
     private final FeedbackPersistencePort feedbackPersistencePort;
 
+
+    private final Clock clock;
     public Feedback submit(String userId, String category, String subject, String content,
             Integer rating, String contactEmail, String contactPhone) {
         if (content == null || content.isBlank()) {
@@ -82,8 +84,7 @@ public class FeedbackService {
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
-
-    private static LocalDateTime nowUtc() {
-        return LocalDateTime.now(ZoneOffset.UTC);
+    private Instant nowUtc() {
+        return clock.instant();
     }
 }

@@ -28,7 +28,7 @@ class RemoteGoogleSocialTokenVerifierTest {
     private RemoteGoogleSocialTokenVerifier newVerifier(String clientId) {
         SocialAuthProperties props = new SocialAuthProperties(
                 new SocialAuthProperties.Google("remote", clientId, TOKEN_INFO_URL));
-        return new RemoteGoogleSocialTokenVerifier(props);
+        return new RemoteGoogleSocialTokenVerifier(props, java.time.Clock.systemUTC());
     }
 
     private MockRestServiceServer bindMockServer(RemoteGoogleSocialTokenVerifier verifier) {

@@ -48,6 +48,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -72,11 +73,12 @@ public class ProductService {
     private final ProductResultMapper productResultMapper;
     private final CatalogProductPolicy productPolicy;
     private final EventPublisher eventPublisher;
+    private final Clock clock;
 
     public ProductResult create(CreateProductCommand command) {
         merchantRepository.findById(command.merchantId())
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.MERCHANT_NOT_FOUND));
-        Product product = Product.create(IdGenerator.ulid(), command.merchantId(), command.name());
+        Product product = Product.create(IdGenerator.ulid(), command.merchantId(), command.name(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         return productResultMapper.toResult(saved);
@@ -84,7 +86,7 @@ public class ProductService {
 
     public ProductResult clone(CloneProductCommand command) {
         Product source = ownedBy(command.productId(), command.merchantId());
-        Product clone = Product.create(IdGenerator.ulid(), command.merchantId(), source.getName());
+        Product clone = Product.create(IdGenerator.ulid(), command.merchantId(), source.getName(), clock);
         Product saved = productRepository.save(clone);
         eventPublisher.publish(clone.pullEvents());
         return productResultMapper.toResult(saved);
@@ -93,7 +95,7 @@ public class ProductService {
     public ProductResult defineVariant(DefineVariantCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         Money price = Money.of(command.price(), command.currency());
-        product.defineVariant(command.skuId(), command.attributeValues(), price);
+        product.defineVariant(command.skuId(), command.attributeValues(), price, clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         return productResultMapper.toResult(saved);
@@ -101,7 +103,7 @@ public class ProductService {
 
     public ProductResult removeVariant(com.aionn.catalog.application.dto.product.command.RemoveVariantCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
-        product.removeVariant(command.skuId());
+        product.removeVariant(command.skuId(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         return productResultMapper.toResult(saved);
@@ -109,7 +111,7 @@ public class ProductService {
 
     public ProductResult updateMedia(com.aionn.catalog.application.dto.product.command.UpdateMediaCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
-        product.updateMedia(command.images());
+        product.updateMedia(command.images(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         return productResultMapper.toResult(saved);
@@ -118,7 +120,7 @@ public class ProductService {
     public ProductResult updateAiMetadata(
             com.aionn.catalog.application.dto.product.command.UpdateAiMetadataCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
-        product.updateAiMetadata(command.tags(), command.aiDescription());
+        product.updateAiMetadata(command.tags(), command.aiDescription(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         return productResultMapper.toResult(saved);
@@ -127,7 +129,7 @@ public class ProductService {
     public ProductResult assignCollections(
             com.aionn.catalog.application.dto.product.command.AssignCollectionsCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
-        product.assignToCollections(command.collectionIds());
+        product.assignToCollections(command.collectionIds(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         return productResultMapper.toResult(saved);
@@ -136,7 +138,7 @@ public class ProductService {
     public ProductResult emergencyTakedown(
             com.aionn.catalog.application.dto.product.command.EmergencyTakedownCommand command) {
         Product product = required(command.productId());
-        product.emergencyTakedown(command.adminId(), command.reason());
+        product.emergencyTakedown(command.adminId(), command.reason(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         searchIndex.delete(product.getProductId());
@@ -156,7 +158,7 @@ public class ProductService {
 
     public ProductResult changeVariantPrice(ChangeVariantPriceCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
-        product.changeVariantPrice(command.skuId(), Money.of(command.newPrice(), command.currency()));
+        product.changeVariantPrice(command.skuId(), Money.of(command.newPrice(), command.currency()), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         return productResultMapper.toResult(saved);
@@ -177,7 +179,7 @@ public class ProductService {
         for (BulkPriceUpdateCommand.Item item : command.items()) {
             try {
                 Product product = ownedBy(item.productId(), command.merchantId());
-                product.changeVariantPrice(item.skuId(), Money.of(item.newPrice(), item.currency()));
+                product.changeVariantPrice(item.skuId(), Money.of(item.newPrice(), item.currency()), clock);
                 productRepository.save(product);
                 eventPublisher.publish(product.pullEvents());
                 updated++;
@@ -196,7 +198,7 @@ public class ProductService {
         if (brand.getStatus() != BrandStatus.ACTIVE) {
             throw new CatalogException(CatalogErrorCode.PRODUCT_BRAND_NOT_APPROVED);
         }
-        product.assignBrand(command.brandId());
+        product.assignBrand(command.brandId(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         return productResultMapper.toResult(saved);
@@ -212,7 +214,7 @@ public class ProductService {
                     .orElseThrow(() -> new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND,
                             "Category not found: " + categoryId));
         }
-        product.categorize(command.categoryIds());
+        product.categorize(command.categoryIds(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         return productResultMapper.toResult(saved);
@@ -220,7 +222,7 @@ public class ProductService {
 
     public ProductResult defineAttributes(DefineAttributesCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
-        product.defineAttributes(command.attributes());
+        product.defineAttributes(command.attributes(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         return productResultMapper.toResult(saved);
@@ -228,7 +230,7 @@ public class ProductService {
 
     public ProductResult publish(PublishProductCommand command) {
         Product product = required(command.productId());
-        product.publish(command.adminId());
+        product.publish(command.adminId(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         searchIndex.index(saved);
@@ -237,7 +239,7 @@ public class ProductService {
 
     public ProductResult submitForReview(SubmitForReviewCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
-        product.submitForReview(command.merchantId());
+        product.submitForReview(command.merchantId(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         return productResultMapper.toResult(saved);
@@ -245,7 +247,7 @@ public class ProductService {
 
     public ProductResult reject(RejectProductCommand command) {
         Product product = required(command.productId());
-        product.reject(command.adminId(), command.reasonCode(), command.feedback());
+        product.reject(command.adminId(), command.reasonCode(), command.feedback(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         return productResultMapper.toResult(saved);
@@ -253,7 +255,7 @@ public class ProductService {
 
     public ProductResult deactivate(DeactivateProductCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
-        product.deactivate(command.reason());
+        product.deactivate(command.reason(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         searchIndex.delete(product.getProductId());
@@ -262,7 +264,7 @@ public class ProductService {
 
     public ProductResult restore(RestoreProductCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
-        product.restore();
+        product.restore(clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         searchIndex.index(saved);

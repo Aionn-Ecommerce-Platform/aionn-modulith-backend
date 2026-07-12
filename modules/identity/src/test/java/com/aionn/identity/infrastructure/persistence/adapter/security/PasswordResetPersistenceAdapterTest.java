@@ -12,7 +12,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,7 +38,7 @@ class PasswordResetPersistenceAdapterTest {
 
     @Test
     void savePasswordResetTokenHashDelegatesToStore() {
-        LocalDateTime expiresAt = LocalDateTime.now().plusHours(1);
+        Instant expiresAt = Instant.now().plus(Duration.ofHours(1));
 
         adapter.savePasswordResetTokenHash(TOKEN_HASH, USER_ID, expiresAt);
 
@@ -46,7 +47,7 @@ class PasswordResetPersistenceAdapterTest {
 
     @Test
     void findPasswordResetTokenHashReturnsDataWhenPresent() {
-        LocalDateTime expiresAt = LocalDateTime.now().plusHours(1);
+        Instant expiresAt = Instant.now().plus(Duration.ofHours(1));
         when(tokenStore.find(TOKEN_HASH))
                 .thenReturn(Optional.of(new RedisPasswordResetTokenStore.PasswordResetTokenData(USER_ID, expiresAt)));
 
@@ -63,7 +64,7 @@ class PasswordResetPersistenceAdapterTest {
 
     @Test
     void consumePasswordResetTokenHashReturnsDataWhenPresent() {
-        LocalDateTime expiresAt = LocalDateTime.now().plusHours(1);
+        Instant expiresAt = Instant.now().plus(Duration.ofHours(1));
         when(tokenStore.consume(TOKEN_HASH))
                 .thenReturn(Optional.of(new RedisPasswordResetTokenStore.PasswordResetTokenData(USER_ID, expiresAt)));
 

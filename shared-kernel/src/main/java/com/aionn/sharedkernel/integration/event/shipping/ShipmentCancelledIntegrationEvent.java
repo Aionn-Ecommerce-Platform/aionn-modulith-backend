@@ -4,9 +4,6 @@ import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 
 import java.time.Instant;
 
-/**
- * Published when a shipment has been cancelled.
- */
 public record ShipmentCancelledIntegrationEvent(
         String eventId,
         String shipmentId,

@@ -20,17 +20,18 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Clock;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class PreferenceServiceTest {
@@ -49,7 +50,8 @@ class PreferenceServiceTest {
         preferenceService = new PreferenceService(
                 userPersistencePort,
                 preferencePersistencePort,
-                Mappers.getMapper(UserPreferenceResultMapper.class));
+                Mappers.getMapper(UserPreferenceResultMapper.class),
+                Clock.systemUTC());
     }
 
     @Test
@@ -62,12 +64,12 @@ class PreferenceServiceTest {
         UserPreferenceResult result = preferenceService.updateGeneral(
                 new UpdateGeneralPreferenceCommand(USER_ID, "en", "USD", "UTC", "dark"));
 
-        assertEquals("en", result.language());
-        assertEquals("USD", result.currency());
-        assertEquals("UTC", result.timezone());
-        assertEquals("dark", result.theme());
-        assertEquals("{\"push\":true}", result.notificationSettings());
-        assertEquals("{}", result.aiPrivacySettings());
+        assertThat(result.language()).isEqualTo("en");
+        assertThat(result.currency()).isEqualTo("USD");
+        assertThat(result.timezone()).isEqualTo("UTC");
+        assertThat(result.theme()).isEqualTo("dark");
+        assertThat(result.notificationSettings()).isEqualTo("{\"push\":true}");
+        assertThat(result.aiPrivacySettings()).isEqualTo("{}");
     }
 
     @Test
@@ -80,9 +82,9 @@ class PreferenceServiceTest {
         UserPreferenceResult result = preferenceService.updateNotifications(
                 new UpdateNotificationPreferenceCommand(USER_ID, "{\"push\":false}"));
 
-        assertEquals("vi", result.language());
-        assertEquals("{\"push\":false}", result.notificationSettings());
-        assertEquals("{}", result.aiPrivacySettings());
+        assertThat(result.language()).isEqualTo("vi");
+        assertThat(result.notificationSettings()).isEqualTo("{\"push\":false}");
+        assertThat(result.aiPrivacySettings()).isEqualTo("{}");
     }
 
     @Test
@@ -95,8 +97,8 @@ class PreferenceServiceTest {
         UserPreferenceResult result = preferenceService.updateAiPrivacy(
                 new UpdateAiPrivacyPreferenceCommand(USER_ID, "{\"a\":2}"));
 
-        assertEquals("{\"a\":2}", result.aiPrivacySettings());
-        assertEquals("{}", result.notificationSettings());
+        assertThat(result.aiPrivacySettings()).isEqualTo("{\"a\":2}");
+        assertThat(result.notificationSettings()).isEqualTo("{}");
     }
 
     @Test
@@ -108,7 +110,7 @@ class PreferenceServiceTest {
 
         UserPreferenceResult result = preferenceService.get(USER_ID);
 
-        assertEquals(defaultPref, result);
+        assertThat(result).isEqualTo(defaultPref);
         verify(preferencePersistencePort).createDefault(USER_ID);
     }
 
@@ -118,7 +120,7 @@ class PreferenceServiceTest {
 
         var ex = assertThrows(IdentityException.class, () -> preferenceService.get(USER_ID));
 
-        assertEquals(IdentityErrorCode.USER_NOT_FOUND.getCode(), ex.getErrorCode());
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.USER_NOT_FOUND.getCode());
         verify(preferencePersistencePort, never()).findById(any());
     }
 
@@ -127,7 +129,7 @@ class PreferenceServiceTest {
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
         UserPreferenceResult before = new UserPreferenceResult(
                 USER_ID, "vi", "VND", "UTC", "light", "{}", "{}",
-                LocalDateTime.now().minusDays(1));
+                Instant.now().minus(Duration.ofDays(1)));
         when(preferencePersistencePort.findById(USER_ID)).thenReturn(Optional.of(before));
         when(preferencePersistencePort.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -135,7 +137,7 @@ class PreferenceServiceTest {
         preferenceService.updateNotifications(new UpdateNotificationPreferenceCommand(USER_ID, "{}"));
 
         verify(preferencePersistencePort).save(captor.capture());
-        assertTrue(captor.getValue().updatedAt().isAfter(before.updatedAt()));
+        assertThat(captor.getValue().updatedAt().isAfter(before.updatedAt())).isTrue();
     }
 
     private static IdentityUser activeUser() {
@@ -152,13 +154,13 @@ class PreferenceServiceTest {
                 null,
                 null,
                 null,
-                LocalDateTime.now());
+                Instant.now());
     }
 
     private static UserPreferenceResult existing(
             String language, String currency, String timezone, String theme,
             String notification, String aiPrivacy) {
         return new UserPreferenceResult(USER_ID, language, currency, timezone, theme,
-                notification, aiPrivacy, LocalDateTime.now());
+                notification, aiPrivacy, Instant.now());
     }
 }

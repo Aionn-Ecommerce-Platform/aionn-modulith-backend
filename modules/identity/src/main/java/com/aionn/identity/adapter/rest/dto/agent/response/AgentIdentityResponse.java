@@ -1,6 +1,6 @@
 package com.aionn.identity.adapter.rest.dto.agent.response;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record AgentIdentityResponse(
         String agentId,
@@ -9,8 +9,8 @@ public record AgentIdentityResponse(
         String keyHash,
         String permissions,
         String status,
-        LocalDateTime expiryAt,
-        LocalDateTime createdAt) {
+        Instant expiryAt,
+        Instant createdAt) {
 }
 
 

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -48,6 +49,10 @@ class RedisRegistrationLockManagerTest {
         }
     }
 
+    private static RedisScript<Long> anyScript() {
+        return ArgumentMatchers.any();
+    }
+
     @Test
     void tryLockReturnsTokenWhenAcquired() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -73,7 +78,7 @@ class RedisRegistrationLockManagerTest {
         lockManager.unlock("phone", "token-1");
 
         ArgumentCaptor<List<String>> keysCaptor = ArgumentCaptor.captor();
-        verify(redisTemplate).execute(any(RedisScript.class), keysCaptor.capture(), eq("token-1"));
+        verify(redisTemplate).execute(anyScript(), keysCaptor.capture(), eq("token-1"));
         assertThat(keysCaptor.getValue()).containsExactly(REDIS_KEY);
     }
 
@@ -82,14 +87,14 @@ class RedisRegistrationLockManagerTest {
         lockManager.unlock("phone", null);
         lockManager.unlock("phone", "");
 
-        verify(redisTemplate, never()).execute(any(RedisScript.class), anyList(), any());
+        verify(redisTemplate, never()).execute(anyScript(), anyList(), any());
     }
 
     @Test
     void unlockAfterCompletionRunsImmediatelyWithoutActiveTransaction() {
         lockManager.unlockAfterCompletion("phone", "token-1");
 
-        verify(redisTemplate).execute(any(RedisScript.class), anyList(), eq("token-1"));
+        verify(redisTemplate).execute(anyScript(), anyList(), eq("token-1"));
     }
 
     @Test
@@ -98,7 +103,7 @@ class RedisRegistrationLockManagerTest {
 
         lockManager.unlockAfterCompletion("phone", "token-1");
 
-        verify(redisTemplate, never()).execute(any(RedisScript.class), anyList(), any());
+        verify(redisTemplate, never()).execute(anyScript(), anyList(), any());
         assertThat(TransactionSynchronizationManager.getSynchronizations()).hasSize(1);
     }
 
@@ -106,6 +111,6 @@ class RedisRegistrationLockManagerTest {
     void unlockAfterCompletionIgnoresNullToken() {
         lockManager.unlockAfterCompletion("phone", null);
 
-        verify(redisTemplate, never()).execute(any(RedisScript.class), anyList(), any());
+        verify(redisTemplate, never()).execute(anyScript(), anyList(), any());
     }
 }

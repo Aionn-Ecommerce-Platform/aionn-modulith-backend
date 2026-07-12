@@ -18,7 +18,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "account_deletion_requests", indexes = {
@@ -45,13 +45,13 @@ public class AccountDeletionRequestEntity {
     private AccountDeletionStatus status;
 
     @Column(name = "requested_at", nullable = false)
-    private LocalDateTime requestedAt;
+    private Instant requestedAt;
 
     @Column(name = "scheduled_deletion_at", nullable = false)
-    private LocalDateTime scheduledDeletionAt;
+    private Instant scheduledDeletionAt;
 
     @Column(name = "canceled_at")
-    private LocalDateTime canceledAt;
+    private Instant canceledAt;
 }
 
 

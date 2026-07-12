@@ -7,15 +7,15 @@ CREATE TABLE users (
     display_name VARCHAR(100),
     avatar_url TEXT,
     status VARCHAR(20),
-    email_verified_at TIMESTAMP,
-    phone_verified_at TIMESTAMP,
+    email_verified_at TIMESTAMPTZ,
+    phone_verified_at TIMESTAMPTZ,
     mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     mfa_secret VARCHAR(64),
     failed_login_attempts INT NOT NULL DEFAULT 0,
-    locked_until TIMESTAMP,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP
+    locked_until TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE TABLE user_roles (
@@ -35,10 +35,10 @@ CREATE TABLE kyc_profiles (
     review_note TEXT,
     decision_admin_id VARCHAR(26),
     reject_reason TEXT,
-    submitted_at TIMESTAMP,
-    approved_at TIMESTAMP,
-    expired_at TIMESTAMP,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    submitted_at TIMESTAMPTZ,
+    approved_at TIMESTAMPTZ,
+    expired_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     provider VARCHAR(30),
     provider_applicant_id VARCHAR(64),
     provider_level_name VARCHAR(128),
@@ -54,7 +54,7 @@ CREATE TABLE kyc_documents (
     url TEXT NOT NULL,
     public_id VARCHAR(255),
     status VARCHAR(20) NOT NULL,
-    uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (kyc_id) REFERENCES kyc_profiles(kyc_id)
 );
 
@@ -62,8 +62,8 @@ CREATE TABLE backup_codes (
     backup_code_id VARCHAR(26) PRIMARY KEY,
     user_id VARCHAR(26) NOT NULL,
     code_hash VARCHAR(255) NOT NULL UNIQUE,
-    generated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    used_at TIMESTAMP,
+    generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    used_at TIMESTAMPTZ,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
@@ -74,7 +74,7 @@ CREATE TABLE security_audits (
     description TEXT,
     ip_address VARCHAR(50),
     device_id VARCHAR(100),
-    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
@@ -84,9 +84,9 @@ CREATE TABLE auth_sessions (
     ip_address VARCHAR(50),
     user_agent TEXT,
     status VARCHAR(20) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    last_active_at TIMESTAMP,
-    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_active_at TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
@@ -95,7 +95,7 @@ CREATE TABLE social_accounts (
     user_id VARCHAR(26) NOT NULL,
     provider VARCHAR(20) NOT NULL,
     provider_user_id VARCHAR(100) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uk_social_provider_id UNIQUE (provider, provider_user_id),
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
@@ -105,8 +105,8 @@ CREATE TABLE user_consents (
     user_id VARCHAR(26) NOT NULL,
     consent_type VARCHAR(50) NOT NULL,
     version VARCHAR(20) NOT NULL,
-    agreed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    revoked_at TIMESTAMP,
+    agreed_at TIMESTAMPTZ DEFAULT NOW(),
+    revoked_at TIMESTAMPTZ,
     ip_address VARCHAR(50),
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
@@ -117,8 +117,8 @@ CREATE TABLE agent_identities (
     key_hash VARCHAR(255) NOT NULL,
     permissions JSONB,
     status VARCHAR(20),
-    expiry_at TIMESTAMP,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expiry_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (owner_id) REFERENCES users(user_id)
 );
 
@@ -130,7 +130,7 @@ CREATE TABLE user_preferences (
     theme VARCHAR(20),
     notification_settings JSONB,
     ai_privacy_settings JSONB,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
@@ -138,9 +138,9 @@ CREATE TABLE account_deletion_requests (
     deletion_request_id VARCHAR(26) PRIMARY KEY,
     user_id VARCHAR(26) NOT NULL,
     status VARCHAR(20) NOT NULL,
-    requested_at TIMESTAMP NOT NULL,
-    scheduled_deletion_at TIMESTAMP NOT NULL,
-    canceled_at TIMESTAMP,
+    requested_at TIMESTAMPTZ NOT NULL,
+    scheduled_deletion_at TIMESTAMPTZ NOT NULL,
+    canceled_at TIMESTAMPTZ,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
@@ -148,9 +148,9 @@ CREATE TABLE data_export_requests (
     export_request_id VARCHAR(26) PRIMARY KEY,
     user_id VARCHAR(26) NOT NULL,
     status VARCHAR(20) NOT NULL,
-    requested_at TIMESTAMP NOT NULL,
+    requested_at TIMESTAMPTZ NOT NULL,
     file_url TEXT,
-    completed_at TIMESTAMP,
+    completed_at TIMESTAMPTZ,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
@@ -205,8 +205,8 @@ CREATE TABLE user_addresses (
     full_address TEXT NOT NULL,
     address_type VARCHAR(20) NOT NULL,
     is_default BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 

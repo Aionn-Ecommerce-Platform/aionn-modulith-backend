@@ -2,14 +2,9 @@ package com.aionn.sharedkernel.integration.port.payment;
 
 import java.math.BigDecimal;
 
-/**
- * Outbound port for authorising and refunding payments.
- *
- * <p>
- * Used synchronously by the Ordering module during checkout. Authorisation
- * must complete before the order can be placed.
- * </p>
- */
+// Outbound port for authorising and refunding payments.
+// Used synchronously by the Ordering module during checkout: authorisation
+// must complete before the order can be placed.
 public interface PaymentGatewayPort {
 
     PaymentAuthorization authorize(String orderId, String userId, String paymentMethodId,

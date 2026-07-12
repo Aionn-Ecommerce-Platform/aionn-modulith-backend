@@ -21,7 +21,7 @@ class CloudinaryProductMediaUploadSignatureProviderTest {
                 "demo-cloud", "api-key", "api-secret", "https://api.cloudinary.com/v1_1");
         CatalogCloudinaryProperties folders = new CatalogCloudinaryProperties(
                 "aionn/catalog/products", "aionn/catalog/reviews");
-        provider = new CloudinaryProductMediaUploadSignatureProvider(credentials, folders);
+        provider = new CloudinaryProductMediaUploadSignatureProvider(credentials, folders, java.time.Clock.systemUTC());
     }
 
     @Test

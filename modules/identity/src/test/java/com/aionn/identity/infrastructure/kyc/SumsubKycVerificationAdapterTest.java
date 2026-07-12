@@ -45,7 +45,7 @@ class SumsubKycVerificationAdapterTest {
     }
 
     private SumsubKycVerificationAdapter adapter(KycProperties properties) {
-        return new SumsubKycVerificationAdapter(properties, objectMapper);
+        return new SumsubKycVerificationAdapter(properties, objectMapper, java.time.Clock.systemUTC());
     }
 
     private MockRestServiceServer bindMockServer(SumsubKycVerificationAdapter adapter) {

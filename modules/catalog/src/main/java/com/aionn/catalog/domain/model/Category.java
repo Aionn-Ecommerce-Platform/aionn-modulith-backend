@@ -7,6 +7,7 @@ import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
 import lombok.Getter;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -59,11 +60,15 @@ public class Category extends AggregateRoot {
     }
 
     public static Category create(String categoryId, String parentId, String name, String slug) {
+        return create(categoryId, parentId, name, slug, Clock.systemUTC());
+    }
+
+    public static Category create(String categoryId, String parentId, String name, String slug, Clock clock) {
         Guard.require(name != null && !name.isBlank(),
                 () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT, "name must not be blank"));
         Guard.require(slug != null && !slug.isBlank(),
                 () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT, "slug must not be blank"));
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         String trimmedName = name.trim();
         String trimmedSlug = slug.trim();
         Category category = new Category(categoryId, parentId, trimmedName, trimmedSlug, null, true, now, now, null,
@@ -73,6 +78,10 @@ public class Category extends AggregateRoot {
     }
 
     public void update(String name, String iconUrl, Boolean active) {
+        update(name, iconUrl, active, Clock.systemUTC());
+    }
+
+    public void update(String name, String iconUrl, Boolean active, Clock clock) {
         Guard.require(deletedAt == null,
                 () -> new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND, "Cannot update deleted category"));
         boolean changed = false;
@@ -96,26 +105,34 @@ public class Category extends AggregateRoot {
         if (!changed) {
             return;
         }
-        this.updatedAt = Instant.now();
+        this.updatedAt = clock.instant();
         registerEvent(new CategoryEvents.CategoryUpdated(categoryId, this.name, this.iconUrl, this.active, updatedAt));
     }
 
     public void moveTo(String newParentId) {
+        moveTo(newParentId, Clock.systemUTC());
+    }
+
+    public void moveTo(String newParentId, Clock clock) {
         Guard.require(deletedAt == null,
                 () -> new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND, "Cannot move deleted category"));
         Guard.require(newParentId == null || !newParentId.equals(this.categoryId),
                 () -> new CatalogException(CatalogErrorCode.CATEGORY_CYCLE, "Category cannot be its own parent"));
         String oldParent = this.parentId;
         this.parentId = newParentId;
-        this.updatedAt = Instant.now();
+        this.updatedAt = clock.instant();
         registerEvent(new CategoryEvents.CategoryMoved(categoryId, oldParent, newParentId, updatedAt));
     }
 
     public void markDeleted() {
+        markDeleted(Clock.systemUTC());
+    }
+
+    public void markDeleted(Clock clock) {
         if (deletedAt != null) {
             return;
         }
-        this.deletedAt = Instant.now();
+        this.deletedAt = clock.instant();
         this.active = false;
         registerEvent(new CategoryEvents.CategoryDeleted(categoryId, deletedAt, deletedAt));
     }

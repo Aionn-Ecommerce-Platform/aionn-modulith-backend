@@ -44,8 +44,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Clock;
 import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -73,6 +72,7 @@ public class AuthService {
     private final TokenBlacklistPort tokenBlacklist;
     private final IdentityMetricsPort identityMetrics;
 
+    private final Clock clock;
     public LoginResult login(LoginCommand command) {
         log.debug("Login attempt for identity: {}", command.identity());
         IdentityUser user = validateCredentials(command.identity(), command.password());
@@ -83,7 +83,7 @@ public class AuthService {
         AuthSession savedSession = authSessionPersistencePort.save(session);
         String accessToken = issueAccessToken(savedSession);
         String refreshToken = issueRefreshToken(savedSession);
-        LocalDateTime accessTokenExpiresAt = extractAccessTokenExpiry(accessToken);
+        Instant accessTokenExpiresAt = extractAccessTokenExpiry(accessToken);
 
         log.info("User logged in: userId={}, sessionId={}", user.getUserId(), savedSession.getSessionId());
         identityMetrics.loginAttempt("success");
@@ -123,7 +123,7 @@ public class AuthService {
         AuthSession savedSession = authSessionPersistencePort.save(session);
         String accessToken = issueAccessToken(savedSession);
         String refreshToken = issueRefreshToken(savedSession);
-        LocalDateTime accessTokenExpiresAt = extractAccessTokenExpiry(accessToken);
+        Instant accessTokenExpiresAt = extractAccessTokenExpiry(accessToken);
 
         identityMetrics.socialAuth(provider.name(), "success");
         identityMetrics.sessionLifecycle("created");
@@ -217,19 +217,19 @@ public class AuthService {
 
         AuthSession session = authSessionPersistencePort.findById(sessionId)
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.SESSION_NOT_FOUND));
-        if (!AuthSessionStatus.ACTIVE.equals(session.getStatus()) || session.isExpired()) {
+        if (!AuthSessionStatus.ACTIVE.equals(session.getStatus()) || session.isExpired(clock)) {
             // Token already consumed above; revoke the whole session so any sibling tokens
             // issued from the same family are invalidated as well.
             refreshTokenStore.revokeBySessionId(sessionId);
             throw new IdentityException(IdentityErrorCode.VERIFICATION_TOKEN_INVALID);
         }
 
-        session.extendExpiry(nowUtc().plusDays(authPolicy.getSessionExpiresDays()));
+        session.extendExpiry(nowUtc().plus(Duration.ofDays(authPolicy.getSessionExpiresDays())), clock);
         AuthSession refreshed = authSessionPersistencePort.save(session);
 
         String accessToken = issueAccessToken(refreshed);
         String newRefreshToken = issueRefreshToken(refreshed);
-        LocalDateTime accessTokenExpiresAt = extractAccessTokenExpiry(accessToken);
+        Instant accessTokenExpiresAt = extractAccessTokenExpiry(accessToken);
         return authResultMapper.toRefreshResult(refreshed, accessToken, newRefreshToken, accessTokenExpiresAt);
     }
 
@@ -313,14 +313,14 @@ public class AuthService {
 
     private void recordFailedLoginAttempt(UserSecurityPort.UserSecurityData user) {
         int failedAttempts = user.failedLoginAttempts() + 1;
-        LocalDateTime lockedUntil = null;
+        Instant lockedUntil = null;
         if (failedAttempts >= authPolicy.getMaxFailedLoginAttempts()) {
-            lockedUntil = nowUtc().plusMinutes(authPolicy.getLockoutMinutes());
+            lockedUntil = nowUtc().plus(Duration.ofMinutes(authPolicy.getLockoutMinutes()));
         }
         userSecurityPort.recordFailedLoginAttempt(user.userId(), failedAttempts, lockedUntil);
     }
 
-    private boolean isLocked(LocalDateTime lockedUntil) {
+    private boolean isLocked(Instant lockedUntil) {
         return lockedUntil != null && lockedUntil.isAfter(nowUtc());
     }
 
@@ -349,9 +349,9 @@ public class AuthService {
             email = null;
         }
         String username = generateSocialUsername(provider, profile);
-        IdentityUser user = IdentityUser.createNew(IdGenerator.ulid(), email, null, username);
+        IdentityUser user = IdentityUser.createNew(IdGenerator.ulid(), email, null, username, clock);
         if (email != null) {
-            user.verifyEmail();
+            user.verifyEmail(clock);
         }
         if (profile.displayName() != null && !profile.displayName().isBlank()) {
             user.updateDisplayName(profile.displayName());
@@ -406,7 +406,8 @@ public class AuthService {
                 userId,
                 ipAddress,
                 userAgent,
-                nowUtc().plusDays(authPolicy.getSessionExpiresDays()));
+                nowUtc().plus(Duration.ofDays(authPolicy.getSessionExpiresDays())),
+                clock);
     }
 
     private String issueAccessToken(AuthSession session) {
@@ -417,26 +418,17 @@ public class AuthService {
         return accessTokenIssuer.issueAccessToken(
                 session.getUserId(),
                 session.getSessionId(),
-                toInstant(session.getExpiresAt()),
+                session.getExpiresAt(),
                 roles);
     }
 
-    private LocalDateTime extractAccessTokenExpiry(String accessToken) {
+    private Instant extractAccessTokenExpiry(String accessToken) {
         return accessTokenIssuer.extractExpiry(accessToken)
-                .map(AuthService::toLocalDateTime)
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.VERIFICATION_TOKEN_INVALID));
     }
 
-    private static Instant toInstant(LocalDateTime dateTime) {
-        return dateTime.toInstant(ZoneOffset.UTC);
-    }
-
-    private static LocalDateTime toLocalDateTime(Instant instant) {
-        return LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
-    }
-
-    private static LocalDateTime nowUtc() {
-        return LocalDateTime.now(ZoneOffset.UTC);
+    private Instant nowUtc() {
+        return clock.instant();
     }
 
     private String issueRefreshToken(AuthSession session) {
@@ -444,7 +436,7 @@ public class AuthService {
         SECURE_RANDOM.nextBytes(bytes);
         String tokenId = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 
-        Duration ttl = Duration.between(toInstant(nowUtc()), toInstant(session.getExpiresAt()));
+        Duration ttl = Duration.between(nowUtc(), session.getExpiresAt());
         if (ttl.isNegative() || ttl.isZero()) {
             ttl = Duration.ofDays(authPolicy.getSessionExpiresDays());
         }

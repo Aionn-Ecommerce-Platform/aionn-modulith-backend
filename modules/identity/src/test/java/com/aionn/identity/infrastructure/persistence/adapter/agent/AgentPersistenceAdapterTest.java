@@ -13,7 +13,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,9 +49,9 @@ class AgentPersistenceAdapterTest {
                 .keyHash("hash")
                 .permissions("read")
                 .status(AgentStatus.ACTIVE)
-                .expiresAt(LocalDateTime.now().plusDays(1))
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .expiresAt(Instant.now().plus(Duration.ofDays(1)))
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
                 .build();
     }
 

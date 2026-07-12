@@ -15,7 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -121,7 +121,7 @@ class MfaPersistenceAdapterTest {
 
         adapter.saveBackupCodes(USER_ID, List.of("h1", "h2", "h3"));
 
-        ArgumentCaptor<List<BackupCodeEntity>> captor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<BackupCodeEntity>> captor = ArgumentCaptor.captor();
         verify(backupCodeRepository).saveAll(captor.capture());
         assertThat(captor.getValue()).hasSize(3);
         assertThat(captor.getValue()).extracting(BackupCodeEntity::getCodeHash)
@@ -154,7 +154,7 @@ class MfaPersistenceAdapterTest {
 
     @Test
     void markBackupCodeUsedReturnsTrueWhenRowUpdated() {
-        LocalDateTime usedAt = LocalDateTime.now();
+        Instant usedAt = Instant.now();
         when(backupCodeRepository.markAsUsedIfUnused("code-1", usedAt)).thenReturn(1);
 
         assertThat(adapter.markBackupCodeUsed("code-1", usedAt)).isTrue();
@@ -162,7 +162,7 @@ class MfaPersistenceAdapterTest {
 
     @Test
     void markBackupCodeUsedReturnsFalseWhenNoRowUpdated() {
-        LocalDateTime usedAt = LocalDateTime.now();
+        Instant usedAt = Instant.now();
         when(backupCodeRepository.markAsUsedIfUnused("code-1", usedAt)).thenReturn(0);
 
         assertThat(adapter.markBackupCodeUsed("code-1", usedAt)).isFalse();

@@ -1,6 +1,6 @@
 package com.aionn.identity.application.dto.admin.result;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Set;
 
 public record UserDetailResult(
@@ -10,8 +10,8 @@ public record UserDetailResult(
         String displayName,
         Set<String> roles,
         String status,
-        LocalDateTime createdAt,
-        LocalDateTime emailVerifiedAt,
-        LocalDateTime phoneVerifiedAt) {
+        Instant createdAt,
+        Instant emailVerifiedAt,
+        Instant phoneVerifiedAt) {
 }
 

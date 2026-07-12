@@ -1,6 +1,7 @@
 package com.aionn.sharedkernel.util;
 
 import java.security.SecureRandom;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 
@@ -23,7 +24,7 @@ public final class IdGenerator {
     }
 
     public static String ulid() {
-        return ulid(Instant.now().toEpochMilli());
+        return ulid(Instant.now(Clock.systemUTC()).toEpochMilli());
     }
 
     public static String ulid(long timestampMs) {

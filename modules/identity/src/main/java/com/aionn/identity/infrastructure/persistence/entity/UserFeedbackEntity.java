@@ -7,7 +7,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "user_feedbacks", indexes = {
@@ -56,16 +56,16 @@ public class UserFeedbackEntity {
     private String handledBy;
 
     @Column(name = "handled_at")
-    private LocalDateTime handledAt;
+    private Instant handledAt;
 
     @Column(name = "admin_reply", columnDefinition = "TEXT")
     private String adminReply;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 }

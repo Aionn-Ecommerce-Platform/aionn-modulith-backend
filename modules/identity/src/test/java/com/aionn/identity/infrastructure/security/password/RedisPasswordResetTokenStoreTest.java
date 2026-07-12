@@ -12,8 +12,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,14 +36,14 @@ class RedisPasswordResetTokenStoreTest {
 
     @BeforeEach
     void setUp() {
-        store = new RedisPasswordResetTokenStore(redisTemplate);
+        store = new RedisPasswordResetTokenStore(redisTemplate, java.time.Clock.systemUTC());
     }
 
     @Test
     void saveHashesTokenAndPersistsUserIdWithEpoch() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        LocalDateTime expiresAt = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(15);
-        long epoch = expiresAt.toEpochSecond(ZoneOffset.UTC);
+        Instant expiresAt = Instant.now().plus(Duration.ofMinutes(15));
+        long epoch = expiresAt.getEpochSecond();
 
         store.save(TOKEN, "user-1", expiresAt);
 
@@ -56,7 +55,7 @@ class RedisPasswordResetTokenStoreTest {
     @Test
     void saveFallsBackToOneMinuteTtlWhenAlreadyExpired() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        LocalDateTime expiresAt = LocalDateTime.now(ZoneOffset.UTC).minusMinutes(5);
+        Instant expiresAt = Instant.now().minus(Duration.ofMinutes(5));
 
         store.save(TOKEN, "user-1", expiresAt);
 
@@ -75,7 +74,7 @@ class RedisPasswordResetTokenStoreTest {
 
         assertThat(data).isPresent();
         assertThat(data.get().userId()).isEqualTo("user-1");
-        assertThat(data.get().expiresAt()).isEqualTo(LocalDateTime.ofEpochSecond(epoch, 0, ZoneOffset.UTC));
+        assertThat(data.get().expiresAt()).isEqualTo(Instant.ofEpochSecond(epoch));
     }
 
     @Test

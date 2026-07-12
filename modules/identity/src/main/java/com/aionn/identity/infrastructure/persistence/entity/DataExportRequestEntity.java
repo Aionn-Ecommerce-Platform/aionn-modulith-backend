@@ -18,7 +18,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "data_export_requests", indexes = {
@@ -45,13 +45,13 @@ public class DataExportRequestEntity {
     private DataExportStatus status;
 
     @Column(name = "requested_at", nullable = false)
-    private LocalDateTime requestedAt;
+    private Instant requestedAt;
 
     @Column(name = "file_url", columnDefinition = "TEXT")
     private String fileUrl;
 
     @Column(name = "completed_at")
-    private LocalDateTime completedAt;
+    private Instant completedAt;
 }
 
 

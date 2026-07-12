@@ -15,8 +15,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
+import java.time.Clock;
 import java.util.Optional;
 
 @Slf4j
@@ -29,6 +29,7 @@ public class PreferenceService {
     private final UserPreferencePersistencePort preferencePersistencePort;
     private final UserPreferenceResultMapper userPreferenceResultMapper;
 
+    private final Clock clock;
     public UserPreferenceResult updateGeneral(UpdateGeneralPreferenceCommand command) {
         log.info("Updating general preferences for user: {}", command.userId());
         UserPreferenceResult preference = getOrCreate(command.userId());
@@ -74,8 +75,7 @@ public class PreferenceService {
                     .orElseThrow(() -> new IdentityException(IdentityErrorCode.USER_NOT_FOUND));
         }
     }
-
-    private static LocalDateTime nowUtc() {
-        return LocalDateTime.now(ZoneOffset.UTC);
+    private Instant nowUtc() {
+        return clock.instant();
     }
 }

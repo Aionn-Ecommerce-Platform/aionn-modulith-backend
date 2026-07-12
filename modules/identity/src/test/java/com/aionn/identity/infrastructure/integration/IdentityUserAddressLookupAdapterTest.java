@@ -10,7 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -54,7 +54,7 @@ class IdentityUserAddressLookupAdapterTest {
                 "p1", "Province", "d1", "District", "w1", "Ward",
                 "12 Some Street", "12 Some Street, Ward, District, Province",
                 AddressType.HOME, true,
-                LocalDateTime.now(), LocalDateTime.now());
+                Instant.now(), Instant.now());
         when(addressPersistencePort.findByAddressIdAndUserId("addr-1", "user-1"))
                 .thenReturn(Optional.of(address));
 

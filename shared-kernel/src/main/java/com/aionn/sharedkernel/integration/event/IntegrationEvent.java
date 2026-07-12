@@ -1,5 +1,6 @@
 package com.aionn.sharedkernel.integration.event;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -23,7 +24,7 @@ public interface IntegrationEvent {
     }
 
     static Instant defaultOccurredAt(Instant occurredAt) {
-        return occurredAt != null ? occurredAt : Instant.now();
+        return occurredAt != null ? occurredAt : Instant.now(Clock.systemUTC());
     }
 
     static <T> List<T> freezeList(List<T> items, String fieldName) {

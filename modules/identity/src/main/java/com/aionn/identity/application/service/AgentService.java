@@ -18,7 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.Clock;
 import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.List;
@@ -34,6 +35,7 @@ public class AgentService {
     private final AgentPolicy agentPolicy;
     private final PasswordHasherPort passwordHasher;
 
+    private final Clock clock;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     public AgentIdentity create(String ownerUserId) {
@@ -43,6 +45,7 @@ public class AgentService {
         String secureKey = Base64.getEncoder().encodeToString(keyBytes);
         String keyHash = passwordHasher.hash(secureKey);
 
+        Instant now = nowUtc();
         AgentIdentity agentIdentity = AgentIdentity.builder()
                 .id(IdGenerator.ulid())
                 .ownerId(ownerUserId)
@@ -50,9 +53,9 @@ public class AgentService {
                 .keyHash(keyHash)
                 .permissions("{\"scope\":\"basic\"}")
                 .status(AgentStatus.ACTIVE)
-                .expiresAt(nowUtc().plusYears(agentPolicy.getKeyExpiryYears()))
-                .createdAt(nowUtc())
-                .updatedAt(nowUtc())
+                .expiresAt(now.atZone(ZoneOffset.UTC).plusYears(agentPolicy.getKeyExpiryYears()).toInstant())
+                .createdAt(now)
+                .updatedAt(now)
                 .build();
 
         AgentIdentity saved = agentPersistencePort.save(agentIdentity);
@@ -63,7 +66,7 @@ public class AgentService {
     public AgentIdentity updatePermissions(String ownerUserId, String agentId, String permissionsJson) {
         log.info("Updating permissions for agent: {} owned by: {}", agentId, ownerUserId);
         AgentIdentity agentIdentity = getOwnedAgent(ownerUserId, agentId);
-        agentIdentity.updatePermissions(permissionsJson);
+        agentIdentity.updatePermissions(permissionsJson, clock);
         AgentIdentity updated = agentPersistencePort.update(agentIdentity);
         log.info("Agent permissions updated successfully: {}", agentId);
         return updated;
@@ -72,7 +75,7 @@ public class AgentService {
     public AgentIdentity suspend(String ownerUserId, String agentId) {
         log.info("Suspending agent: {} owned by: {}", agentId, ownerUserId);
         AgentIdentity agentIdentity = getOwnedAgent(ownerUserId, agentId);
-        agentIdentity.suspend();
+        agentIdentity.suspend(clock);
         AgentIdentity suspended = agentPersistencePort.update(agentIdentity);
         SecurityAudit audit = SecurityAudit.builder()
                 .id(IdGenerator.ulid())
@@ -118,8 +121,7 @@ public class AgentService {
         return agentPersistencePort.findByIdAndOwnerId(agentId, ownerUserId)
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.AGENT_NOT_FOUND, "Agent not found"));
     }
-
-    private static LocalDateTime nowUtc() {
-        return LocalDateTime.now(ZoneOffset.UTC);
+    private Instant nowUtc() {
+        return clock.instant();
     }
 }

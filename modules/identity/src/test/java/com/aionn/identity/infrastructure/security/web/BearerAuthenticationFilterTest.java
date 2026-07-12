@@ -20,13 +20,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(MockitoExtension.class)
 class BearerAuthenticationFilterTest {
@@ -59,7 +56,7 @@ class BearerAuthenticationFilterTest {
         filter.doFilter(request, response, chain);
 
         verify(chain).doFilter(request, response);
-        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     @Test
@@ -69,7 +66,7 @@ class BearerAuthenticationFilterTest {
         filter.doFilter(request, response, chain);
 
         verify(chain).doFilter(request, response);
-        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     @Test
@@ -80,7 +77,7 @@ class BearerAuthenticationFilterTest {
         filter.doFilter(request, response, chain);
 
         verify(chain).doFilter(request, response);
-        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     @Test
@@ -93,7 +90,7 @@ class BearerAuthenticationFilterTest {
         filter.doFilter(request, response, chain);
 
         verify(chain).doFilter(request, response);
-        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     @Test
@@ -104,7 +101,7 @@ class BearerAuthenticationFilterTest {
 
         filter.doFilter(request, response, chain);
 
-        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     @Test
@@ -115,7 +112,7 @@ class BearerAuthenticationFilterTest {
 
         filter.doFilter(request, response, chain);
 
-        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     @Test
@@ -129,14 +126,14 @@ class BearerAuthenticationFilterTest {
 
         verify(chain).doFilter(request, response);
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        assertNotNull(auth);
-        assertEquals("user-1", auth.getPrincipal());
+        assertThat(auth).isNotNull();
+        assertThat(auth.getPrincipal()).isEqualTo("user-1");
         Set<String> roles = auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(java.util.stream.Collectors.toSet());
-        assertTrue(roles.contains("ROLE_BUYER"));
-        assertTrue(roles.contains("ROLE_MERCHANT"));
-        assertEquals("session-1", request.getAttribute(SecurityRequestAttributeKeys.SESSION_ID));
+        assertThat(roles).contains("ROLE_BUYER");
+        assertThat(roles).contains("ROLE_MERCHANT");
+        assertThat(request.getAttribute(SecurityRequestAttributeKeys.SESSION_ID)).isEqualTo("session-1");
     }
 
     @Test
@@ -149,11 +146,11 @@ class BearerAuthenticationFilterTest {
         filter.doFilter(request, response, chain);
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        assertNotNull(auth);
+        assertThat(auth).isNotNull();
         Set<String> roles = auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(java.util.stream.Collectors.toSet());
-        assertEquals(Set.of("ROLE_USER"), roles);
+        assertThat(roles).isEqualTo(Set.of("ROLE_USER"));
     }
 
     @Test

@@ -37,8 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Clock;
 import java.util.Base64;
 
 @Slf4j
@@ -63,6 +62,7 @@ public class RegistrationService {
     private final RegistrationLockManagerPort registrationLockManager;
     private final IdentityMetricsPort identityMetrics;
 
+    private final Clock clock;
     public InitiateRegistrationResult initiate(InitiateRegistrationCommand command) {
         log.debug("Initiating registration for identity: {}", command.identity());
 
@@ -80,7 +80,7 @@ public class RegistrationService {
         String regId = IdGenerator.ulid();
         RegistrationOtp otp = RegistrationOtp.generate(
                 registrationPolicy.getResendCooldownSeconds(),
-                registrationPolicy.getOtpExpirySeconds());
+                registrationPolicy.getOtpExpirySeconds(), clock);
 
         var session = new RegistrationVerificationSession(
                 regId,
@@ -111,7 +111,7 @@ public class RegistrationService {
         }
 
         try {
-            session.verify(command.otpCode());
+            session.verify(command.otpCode(), clock);
         } finally {
             registrationSessionStore.save(session);
         }
@@ -125,9 +125,9 @@ public class RegistrationService {
 
         RegistrationOtp newOtp = RegistrationOtp.generate(
                 registrationPolicy.getResendCooldownSeconds(),
-                registrationPolicy.getOtpExpirySeconds());
+                registrationPolicy.getOtpExpirySeconds(), clock);
 
-        session.resend(newOtp.getCode(), newOtp.getResendAvailableAt(), newOtp.getExpiredAt());
+        session.resend(newOtp.getCode(), newOtp.getResendAvailableAt(), newOtp.getExpiredAt(), clock);
         registrationSessionStore.save(session);
         notificationPort.sendRegistrationOtp(session.getPhoneNumber(), newOtp.getCode());
 
@@ -145,7 +145,7 @@ public class RegistrationService {
                 registrationPolicy.getLockTimeoutSeconds())
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.REGISTRATION_IN_PROGRESS));
         registrationLockManager.unlockAfterCompletion(phoneNumber, lockToken);
-        if (session.isExpired()) {
+        if (session.isExpired(clock)) {
             throw new IdentityException(IdentityErrorCode.REGISTRATION_SESSION_EXPIRED);
         }
         if (!session.isVerified() || !command.verificationToken().equals(session.getVerificationToken())) {
@@ -166,10 +166,10 @@ public class RegistrationService {
         String accessToken = accessTokenIssuer.issueAccessToken(
                 savedUser.getUserId(),
                 savedSession.getSessionId(),
-                toInstant(savedSession.getExpiresAt()),
+                savedSession.getExpiresAt(),
                 savedUser.getRoles().stream().map(Enum::name).collect(java.util.stream.Collectors.toSet()));
         String refreshToken = issueRefreshToken(savedSession);
-        LocalDateTime accessTokenExpiresAt = extractAccessTokenExpiry(accessToken);
+        Instant accessTokenExpiresAt = extractAccessTokenExpiry(accessToken);
 
         registrationSessionStore.deleteByRegId(command.regId());
 
@@ -225,7 +225,7 @@ public class RegistrationService {
                 username);
         user.updatePasswordHash(passwordHasher.hash(password));
         user.updateDisplayName(username);
-        user.verifyPhone();
+        user.verifyPhone(clock);
         return user;
     }
 
@@ -235,7 +235,8 @@ public class RegistrationService {
                 userId,
                 ipAddress,
                 userAgent,
-                nowUtc().plusDays(registrationPolicy.getSessionExpiresDays()));
+                nowUtc().plus(Duration.ofDays(registrationPolicy.getSessionExpiresDays())),
+                clock);
     }
 
     private String issueRefreshToken(AuthSession session) {
@@ -243,7 +244,7 @@ public class RegistrationService {
         SECURE_RANDOM.nextBytes(bytes);
         String tokenId = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 
-        Duration ttl = Duration.between(toInstant(nowUtc()), toInstant(session.getExpiresAt()));
+        Duration ttl = Duration.between(nowUtc(), session.getExpiresAt());
         if (ttl.isNegative() || ttl.isZero()) {
             ttl = Duration.ofDays(registrationPolicy.getSessionExpiresDays());
         }
@@ -251,21 +252,12 @@ public class RegistrationService {
         return tokenId;
     }
 
-    private LocalDateTime extractAccessTokenExpiry(String accessToken) {
+    private Instant extractAccessTokenExpiry(String accessToken) {
         return accessTokenIssuer.extractExpiry(accessToken)
-                .map(RegistrationService::toLocalDateTime)
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.VERIFICATION_TOKEN_INVALID));
     }
 
-    private static Instant toInstant(LocalDateTime dateTime) {
-        return dateTime.toInstant(ZoneOffset.UTC);
-    }
-
-    private static LocalDateTime toLocalDateTime(Instant instant) {
-        return LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
-    }
-
-    private static LocalDateTime nowUtc() {
-        return LocalDateTime.now(ZoneOffset.UTC);
+    private Instant nowUtc() {
+        return clock.instant();
     }
 }

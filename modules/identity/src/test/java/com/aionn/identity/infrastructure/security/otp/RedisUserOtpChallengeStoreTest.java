@@ -13,7 +13,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,7 +36,7 @@ class RedisUserOtpChallengeStoreTest {
 
     @BeforeEach
     void setUp() {
-        store = new RedisUserOtpChallengeStore(redisTemplate);
+        store = new RedisUserOtpChallengeStore(redisTemplate, java.time.Clock.systemUTC());
     }
 
     @Test
@@ -49,7 +49,7 @@ class RedisUserOtpChallengeStoreTest {
                 "new@example.com",
                 "123456",
                 "pending",
-                LocalDateTime.now().plusMinutes(5),
+                Instant.now().plus(Duration.ofMinutes(5)),
                 2);
 
         store.save(challenge);
@@ -75,7 +75,7 @@ class RedisUserOtpChallengeStoreTest {
                 null,
                 "123456",
                 null,
-                LocalDateTime.now().plusMinutes(5),
+                Instant.now().plus(Duration.ofMinutes(5)),
                 0);
 
         store.save(challenge);
@@ -102,7 +102,7 @@ class RedisUserOtpChallengeStoreTest {
                 "+84123",
                 "999999",
                 null,
-                LocalDateTime.now().minusDays(2),
+                Instant.now().minus(Duration.ofDays(2)),
                 0);
 
         store.save(challenge);

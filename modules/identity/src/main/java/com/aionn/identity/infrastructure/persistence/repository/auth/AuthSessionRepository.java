@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 public interface AuthSessionRepository extends JpaRepository<AuthSessionEntity, String> {
@@ -22,5 +22,5 @@ public interface AuthSessionRepository extends JpaRepository<AuthSessionEntity, 
 
     @Modifying
     @Query("DELETE FROM AuthSessionEntity s WHERE COALESCE(s.lastActiveAt, s.createdAt) < :cutoff")
-    int deleteIdleBefore(@Param("cutoff") LocalDateTime cutoff);
+    int deleteIdleBefore(@Param("cutoff") Instant cutoff);
 }

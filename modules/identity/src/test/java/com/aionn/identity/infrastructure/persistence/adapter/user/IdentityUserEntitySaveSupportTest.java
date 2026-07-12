@@ -13,7 +13,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -40,7 +40,7 @@ class IdentityUserEntitySaveSupportTest {
         return new IdentityUser(
                 USER_ID, "new@b.com", "+84912345678", "alice", "hash", "Alice", "avatar",
                 Set.of(UserRole.MERCHANT), UserStatus.ACTIVE,
-                LocalDateTime.now(), null, null, LocalDateTime.now());
+                Instant.now(), null, null, Instant.now());
     }
 
     @Test

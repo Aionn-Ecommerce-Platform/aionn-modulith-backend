@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class MockMediaUploadSignatureProviderTest {
 
-    private final MockMediaUploadSignatureProvider provider = new MockMediaUploadSignatureProvider();
+    private final MockMediaUploadSignatureProvider provider = new MockMediaUploadSignatureProvider(java.time.Clock.systemUTC());
 
     @Test
     void avatarSignatureUsesAvatarFolderAndCannedValues() {
