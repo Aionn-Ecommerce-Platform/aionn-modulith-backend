@@ -126,7 +126,7 @@ Clock.systemUTC());
 
         List<AgentIdentity> result = agentService.listMy(OWNER_ID);
 
-        assertThat(result.size()).isEqualTo(1);
+        assertThat(result).hasSize(1);
     }
 
     @Test

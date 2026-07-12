@@ -28,13 +28,13 @@ class AccessTokenIssuerAdapterTest {
 
         Optional<AccessTokenClaims> parsed = adapter.parseClaims(token);
 
-        assertThat(parsed.isPresent()).isTrue();
+        assertThat(parsed).isPresent();
         AccessTokenClaims claims = parsed.get();
         assertThat(claims.userId()).isEqualTo("user-1");
         assertThat(claims.sessionId()).isEqualTo("session-1");
         assertThat(claims.jti()).isNotNull();
-        assertThat(claims.roles().contains("BUYER")).isTrue();
-        assertThat(claims.roles().contains("SYSTEM_ADMIN")).isTrue();
+        assertThat(claims.roles()).contains("BUYER");
+        assertThat(claims.roles()).contains("SYSTEM_ADMIN");
     }
 
     @Test
@@ -46,7 +46,7 @@ class AccessTokenIssuerAdapterTest {
 
         Optional<AccessTokenClaims> parsed = adapter.parseClaims(token);
 
-        assertThat(parsed.isEmpty()).isTrue();
+        assertThat(parsed).isEmpty();
     }
 
     @Test
@@ -58,13 +58,13 @@ class AccessTokenIssuerAdapterTest {
 
         Optional<AccessTokenClaims> parsed = adapter.parseClaims(token);
 
-        assertThat(parsed.isEmpty()).isTrue();
+        assertThat(parsed).isEmpty();
     }
 
     @Test
     void parseClaimsRejectsGarbageInput() {
-        assertThat(adapter.parseClaims("garbage").isEmpty()).isTrue();
-        assertThat(adapter.parseClaims("a.b.c").isEmpty()).isTrue();
+        assertThat(adapter.parseClaims("garbage")).isEmpty();
+        assertThat(adapter.parseClaims("a.b.c")).isEmpty();
     }
 
     @Test
@@ -83,13 +83,13 @@ class AccessTokenIssuerAdapterTest {
 
         Optional<Instant> expiry = adapter.extractExpiry(token);
 
-        assertThat(expiry.isPresent()).isTrue();
+        assertThat(expiry).isPresent();
         assertThat(expiry.get().isAfter(Instant.now())).isTrue();
     }
 
     @Test
     void extractExpiryReturnsEmptyForInvalidToken() {
-        assertThat(adapter.extractExpiry("bad").isEmpty()).isTrue();
+        assertThat(adapter.extractExpiry("bad")).isEmpty();
     }
 
     @Test
@@ -108,7 +108,7 @@ class AccessTokenIssuerAdapterTest {
 
         Optional<Instant> expiry = adapter.extractExpiry(token);
 
-        assertThat(expiry.isPresent()).isTrue();
+        assertThat(expiry).isPresent();
         assertThat(expiry.get().isBefore(Instant.now().plus(2, ChronoUnit.MINUTES))).isTrue();
     }
 }

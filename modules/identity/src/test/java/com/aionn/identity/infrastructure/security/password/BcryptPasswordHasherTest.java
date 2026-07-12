@@ -10,8 +10,12 @@ class BcryptPasswordHasherTest {
     @Test
     void hashProducesBcryptString() {
         String hashed = hasher.hash("password");
-        assertThat(hashed.startsWith("$2a$") || hashed.startsWith("$2b$") || hashed.startsWith("$2y$")).isTrue();
-        assertThat(hashed.length() >= 60).isTrue();
+        assertThat(hashed).satisfiesAnyOf(
+                h -> assertThat(h).startsWith("$2a$"),
+                h -> assertThat(h).startsWith("$2b$"),
+                h -> assertThat(h).startsWith("$2y$")
+        );
+        assertThat(hashed).hasSizeGreaterThanOrEqualTo(60);
     }
 
     @Test

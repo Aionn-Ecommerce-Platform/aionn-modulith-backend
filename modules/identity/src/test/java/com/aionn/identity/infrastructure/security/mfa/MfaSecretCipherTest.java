@@ -33,7 +33,7 @@ class MfaSecretCipherTest {
     @Test
     void encryptReturnsNullOrBlankUnchanged() {
         assertThat(cipher.encrypt(null)).isNull();
-        assertThat(cipher.encrypt("")).isEqualTo("");
+        assertThat(cipher.encrypt("")).isEmpty();
         assertThat(cipher.encrypt("   ")).isEqualTo("   ");
     }
 

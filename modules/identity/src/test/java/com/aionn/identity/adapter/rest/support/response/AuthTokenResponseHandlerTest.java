@@ -61,11 +61,11 @@ class AuthTokenResponseHandlerTest {
 
         String setCookie = response.getHeaders().getFirst(HttpHeaders.SET_COOKIE);
         assertThat(setCookie).isNotNull();
-        assertThat(setCookie.contains("refresh_token=refresh-1")).isTrue();
-        assertThat(setCookie.contains("HttpOnly")).isTrue();
-        assertThat(setCookie.contains("Secure")).isTrue();
-        assertThat(setCookie.contains("SameSite=Strict")).isTrue();
-        assertThat(setCookie.contains("Path=/api/v1/auth")).isTrue();
+        assertThat(setCookie).contains("refresh_token=refresh-1");
+        assertThat(setCookie).contains("HttpOnly");
+        assertThat(setCookie).contains("Secure");
+        assertThat(setCookie).contains("SameSite=Strict");
+        assertThat(setCookie).contains("Path=/api/v1/auth");
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().data().refreshToken()).isNull();
         assertThat(response.getBody().data().accessToken()).isEqualTo("access-1");
@@ -81,13 +81,13 @@ class AuthTokenResponseHandlerTest {
         String logoutAllCookie = logoutAllResponse.getHeaders().getFirst(HttpHeaders.SET_COOKIE);
 
         assertThat(logoutCookie).isNotNull();
-        assertThat(logoutCookie.contains("refresh_token=")).isTrue();
-        assertThat(logoutCookie.contains("Max-Age=0")).isTrue();
+        assertThat(logoutCookie).contains("refresh_token=");
+        assertThat(logoutCookie).contains("Max-Age=0");
         assertThat(logoutResponse.getBody().message()).isEqualTo("Logout successful");
 
         assertThat(logoutAllCookie).isNotNull();
-        assertThat(logoutAllCookie.contains("refresh_token=")).isTrue();
-        assertThat(logoutAllCookie.contains("Max-Age=0")).isTrue();
+        assertThat(logoutAllCookie).contains("refresh_token=");
+        assertThat(logoutAllCookie).contains("Max-Age=0");
         assertThat(logoutAllResponse.getBody().data().revokedSessions()).isEqualTo(3);
         assertThat(logoutAllResponse.getHeaders().getCacheControl().isBlank()).isFalse();
     }

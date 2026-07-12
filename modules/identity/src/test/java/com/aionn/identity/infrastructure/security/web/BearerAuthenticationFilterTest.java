@@ -131,8 +131,8 @@ class BearerAuthenticationFilterTest {
         Set<String> roles = auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(java.util.stream.Collectors.toSet());
-        assertThat(roles.contains("ROLE_BUYER")).isTrue();
-        assertThat(roles.contains("ROLE_MERCHANT")).isTrue();
+        assertThat(roles).contains("ROLE_BUYER");
+        assertThat(roles).contains("ROLE_MERCHANT");
         assertThat(request.getAttribute(SecurityRequestAttributeKeys.SESSION_ID)).isEqualTo("session-1");
     }
 

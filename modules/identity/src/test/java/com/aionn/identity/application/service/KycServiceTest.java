@@ -84,7 +84,7 @@ Clock.systemUTC());
 
         assertThat(plan.user().getUserId()).isEqualTo(USER_ID);
         assertThat(plan.docType()).isEqualTo("CCCD");
-        assertThat(plan.managedProviderEnabled()).isEqualTo(false);
+        assertThat(plan.managedProviderEnabled()).isFalse();
     }
 
     @Test
@@ -219,7 +219,7 @@ Clock.systemUTC());
 
         List<KycProfile> result = kycService.listMy(USER_ID);
 
-        assertThat(result.size()).isEqualTo(1);
+        assertThat(result).hasSize(1);
         assertThat(result.get(0)).isSameAs(p);
     }
 
@@ -286,7 +286,7 @@ Clock.systemUTC());
 
         List<KycProfile> result = kycService.adminListByStatus(KycStatus.SUBMITTED, 25);
 
-        assertThat(result.size()).isEqualTo(1);
+        assertThat(result).hasSize(1);
         assertThat(result.get(0)).isSameAs(p);
     }
 
@@ -382,7 +382,7 @@ Clock.systemUTC());
 
         List<KycDocument> result = kycService.listDocuments(USER_ID, KYC_ID);
 
-        assertThat(result.size()).isEqualTo(1);
+        assertThat(result).hasSize(1);
         assertThat(result.get(0)).isSameAs(document);
     }
 

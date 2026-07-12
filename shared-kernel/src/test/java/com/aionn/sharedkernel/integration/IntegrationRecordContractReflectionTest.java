@@ -1,5 +1,6 @@
 package com.aionn.sharedkernel.integration;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -35,15 +36,14 @@ class IntegrationRecordContractReflectionTest {
         Set<Class<?>> records = discoverRecords();
         assertFalse(records.isEmpty(), "expected to discover integration record contracts");
 
-        for (Class<?> record : records) {
-            Object instance = instantiate(record);
-            assertNotNull(instance, () -> "null instance for " + record.getName());
-            for (RecordComponent component : record.getRecordComponents()) {
-                try {
-                    component.getAccessor().invoke(instance);
-                } catch (ReflectiveOperationException ex) {
-                    fail("Failed to read component " + component.getName() + " of " + record.getName(), ex);
-                }
+        for (Class<?> recordType : records) {
+            Object instance = instantiate(recordType);
+            assertNotNull(instance, () -> "null instance for " + recordType.getName());
+            for (RecordComponent component : recordType.getRecordComponents()) {
+                assertDoesNotThrow(
+                        () -> component.getAccessor().invoke(instance),
+                        "Failed to read component " + component.getName() + " of " + recordType.getName()
+                );
             }
         }
     }
@@ -78,8 +78,8 @@ class IntegrationRecordContractReflectionTest {
         }
     }
 
-    private Object instantiate(Class<?> record) {
-        RecordComponent[] components = record.getRecordComponents();
+    private Object instantiate(Class<?> recordType) {
+        RecordComponent[] components = recordType.getRecordComponents();
         Class<?>[] paramTypes = new Class<?>[components.length];
         Object[] args = new Object[components.length];
         for (int i = 0; i < components.length; i++) {
@@ -87,11 +87,11 @@ class IntegrationRecordContractReflectionTest {
             args[i] = sampleValue(components[i].getType());
         }
         try {
-            Constructor<?> constructor = record.getDeclaredConstructor(paramTypes);
+            Constructor<?> constructor = recordType.getDeclaredConstructor(paramTypes);
             constructor.setAccessible(true);
             return constructor.newInstance(args);
         } catch (ReflectiveOperationException ex) {
-            fail("Failed to construct " + record.getName(), ex);
+            fail("Failed to construct " + recordType.getName(), ex);
             return null;
         }
     }

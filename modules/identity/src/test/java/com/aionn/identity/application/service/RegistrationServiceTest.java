@@ -224,7 +224,7 @@ class RegistrationServiceTest {
                 assertThat(savedUser.getPasswordHash()).isEqualTo("hashed-password");
                 assertThat(savedUser.getDisplayName()).isEqualTo("alice");
                 assertThat(savedUser.getPhoneVerifiedAt()).isNotNull();
-                assertThat(savedUser.getRoles().contains(UserRole.BUYER)).isTrue();
+                assertThat(savedUser.getRoles()).contains(UserRole.BUYER);
 
                 verify(accessTokenIssuer).issueAccessToken(
                                 eq(savedUser.getUserId()),
@@ -241,8 +241,7 @@ class RegistrationServiceTest {
                 assertThat(result.userId()).isEqualTo(savedUser.getUserId());
                 assertThat(result.sessionId()).isEqualTo("session-1");
                 assertThat(result.accessToken()).isEqualTo("access-token");
-                assertThat(result.refreshToken()).isNotNull();
-                assertThat(result.refreshToken().isBlank()).isFalse();
+                assertThat(result.refreshToken()).isNotBlank();
                 assertThat(result.expiresAt()).isEqualTo(accessTokenExpiresAt);
         }
 

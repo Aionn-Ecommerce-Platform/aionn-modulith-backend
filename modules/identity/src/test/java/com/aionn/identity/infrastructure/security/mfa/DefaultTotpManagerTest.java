@@ -11,8 +11,8 @@ class DefaultTotpManagerTest {
     void generateSecretReturnsBase32String() {
         String secret = manager.generateSecret();
         assertThat(secret).isNotNull();
-        assertThat(secret.matches("[A-Z2-7]+")).isTrue();
-        assertThat(secret.length() >= 16).isTrue();
+        assertThat(secret).matches("[A-Z2-7]+");
+        assertThat(secret).hasSizeGreaterThanOrEqualTo(16);
     }
 
     @Test
@@ -42,13 +42,13 @@ class DefaultTotpManagerTest {
     void buildOtpAuthUriUrlEncodesIssuerAndAccount() {
         String uri = manager.buildOtpAuthUri("Aionn Pro", "alice@example.com", "ABCDEFGH");
 
-        assertThat(uri.startsWith("otpauth://totp/")).isTrue();
-        assertThat(uri.contains("Aionn+Pro")).isTrue();
-        assertThat(uri.contains("alice%40example.com")).isTrue();
-        assertThat(uri.contains("secret=ABCDEFGH")).isTrue();
-        assertThat(uri.contains("algorithm=SHA1")).isTrue();
-        assertThat(uri.contains("digits=6")).isTrue();
-        assertThat(uri.contains("period=30")).isTrue();
+        assertThat(uri).startsWith("otpauth://totp/");
+        assertThat(uri).contains("Aionn+Pro");
+        assertThat(uri).contains("alice%40example.com");
+        assertThat(uri).contains("secret=ABCDEFGH");
+        assertThat(uri).contains("algorithm=SHA1");
+        assertThat(uri).contains("digits=6");
+        assertThat(uri).contains("period=30");
     }
 
     @Test

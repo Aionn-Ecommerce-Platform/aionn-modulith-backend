@@ -134,12 +134,12 @@ class MfaServiceTest {
 
                 assertThat(result.mfaEnabled()).isTrue();
                 assertThat(result.backupCodes()).isNotNull();
-                assertThat(result.backupCodes().size()).isEqualTo(8);
+                assertThat(result.backupCodes()).hasSize(8);
                 verify(mfaPersistencePort).updateMfaStatus(USER_ID, true);
                 verify(mfaPersistencePort).deleteBackupCodes(USER_ID);
                 ArgumentCaptor<List<String>> captor = ArgumentCaptor.captor();
                 verify(mfaPersistencePort).saveBackupCodes(eq(USER_ID), captor.capture());
-                assertThat(captor.getValue().size()).isEqualTo(8);
+                assertThat(captor.getValue()).hasSize(8);
                 verify(securityAuditPort).saveAuditLog(USER_ID,
                                 SecurityAuditEventType.MFA_ENABLED, "1.1.1.1");
         }
@@ -233,7 +233,7 @@ class MfaServiceTest {
 
                 List<String> codes = mfaService.regenerateBackupCodes(USER_ID, "pwd", "123456", null);
 
-                assertThat(codes.size()).isEqualTo(8);
+                assertThat(codes).hasSize(8);
                 verify(mfaPersistencePort).deleteBackupCodes(USER_ID);
                 verify(mfaPersistencePort).saveBackupCodes(eq(USER_ID), anyList());
                 verify(securityAuditPort).saveAuditLog(USER_ID,

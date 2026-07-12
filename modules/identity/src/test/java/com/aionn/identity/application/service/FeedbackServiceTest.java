@@ -69,10 +69,10 @@ class FeedbackServiceTest {
         ArgumentCaptor<Feedback> captor = ArgumentCaptor.captor();
         verify(feedbackPersistencePort).save(captor.capture());
         Feedback saved = captor.getValue();
-        assertThat(saved.getSubject()).isEqualTo(null);
-        assertThat(saved.getContactEmail()).isEqualTo(null);
-        assertThat(saved.getContactPhone()).isEqualTo(null);
-        assertThat(saved.getRating()).isEqualTo(null);
+        assertThat(saved.getSubject()).isNull();
+        assertThat(saved.getContactEmail()).isNull();
+        assertThat(saved.getContactPhone()).isNull();
+        assertThat(saved.getRating()).isNull();
     }
 
     @Test
@@ -91,7 +91,7 @@ class FeedbackServiceTest {
 
         List<Feedback> result = feedbackService.listMine(USER_ID);
 
-        assertThat(result.size()).isEqualTo(1);
+        assertThat(result).hasSize(1);
         assertThat(result.get(0)).isSameAs(f);
     }
 

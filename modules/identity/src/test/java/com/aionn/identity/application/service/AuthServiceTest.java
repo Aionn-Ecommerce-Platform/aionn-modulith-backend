@@ -454,7 +454,7 @@ class AuthServiceTest {
 
         List<AuthSession> sessions = authService.listSessions(USER_ID);
 
-        assertThat(sessions.size()).isEqualTo(1);
+        assertThat(sessions).hasSize(1);
     }
 
     @Test
