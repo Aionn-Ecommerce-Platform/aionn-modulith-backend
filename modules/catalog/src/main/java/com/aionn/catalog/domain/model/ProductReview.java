@@ -71,7 +71,7 @@ public class ProductReview extends AggregateRoot {
         this.updatedAt = updatedAt != null ? updatedAt : Clock.systemUTC().instant();
     }
 
-    public static ProductReview create(
+    public record ReviewDraft(
             String reviewId,
             String productId,
             String userId,
@@ -79,9 +79,7 @@ public class ProductReview extends AggregateRoot {
             int rating,
             String title,
             String content,
-            List<String> imageUrls) {
-        return create(reviewId, productId, userId, orderId, rating, title, content, imageUrls, Clock.systemUTC());
-    }
+            List<String> imageUrls) {}
 
     public static ProductReview create(
             String reviewId,
@@ -91,13 +89,19 @@ public class ProductReview extends AggregateRoot {
             int rating,
             String title,
             String content,
-            List<String> imageUrls,
-            Clock clock) {
+            List<String> imageUrls) {
+        return create(new ReviewDraft(reviewId, productId, userId, orderId, rating, title, content, imageUrls),
+                Clock.systemUTC());
+    }
+
+    public static ProductReview create(ReviewDraft draft, Clock clock) {
         Instant now = clock.instant();
         ProductReview review = new ProductReview(
-                reviewId, productId, userId, orderId, rating, title, content, imageUrls,
+                draft.reviewId(), draft.productId(), draft.userId(), draft.orderId(),
+                draft.rating(), draft.title(), draft.content(), draft.imageUrls(),
                 ReviewStatus.VISIBLE, null, null, null, null, null, now, now);
-        review.registerEvent(new ReviewEvents.ReviewCreated(reviewId, productId, userId, rating, clock));
+        review.registerEvent(new ReviewEvents.ReviewCreated(
+                draft.reviewId(), draft.productId(), draft.userId(), draft.rating(), clock));
         return review;
     }
 

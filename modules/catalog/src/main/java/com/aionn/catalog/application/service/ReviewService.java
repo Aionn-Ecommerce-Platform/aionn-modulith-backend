@@ -61,8 +61,10 @@ public class ReviewService {
             throw new CatalogException(CatalogErrorCode.REVIEW_NOT_PURCHASED);
         }
         ProductReview review = ProductReview.create(
-                IdGenerator.ulid(), command.productId(), command.userId(), orderId,
-                command.rating(), command.title(), command.content(), command.imageUrls(), clock);
+                new ProductReview.ReviewDraft(
+                        IdGenerator.ulid(), command.productId(), command.userId(), orderId,
+                        command.rating(), command.title(), command.content(), command.imageUrls()),
+                clock);
         ProductReview saved = reviewRepository.save(review);
         eventPublisher.publish(review.pullEvents());
         return reviewResultMapper.toResult(saved);
