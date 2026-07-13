@@ -4,6 +4,7 @@ import com.aionn.inventory.adapter.rest.dto.inventory.ConfigureSafetyStockReques
 import com.aionn.inventory.adapter.rest.dto.inventory.EmergencyLockRequest;
 import com.aionn.inventory.adapter.rest.dto.inventory.InitializeStockRequest;
 import com.aionn.inventory.adapter.rest.exception.InventoryExceptionHandler;
+import com.aionn.inventory.adapter.rest.mapper.inventory.InventoryItemDtoMapperImpl;
 import com.aionn.inventory.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.inventory.adapter.rest.support.TestAuth;
 import com.aionn.inventory.adapter.rest.support.session.CurrentAdminIdArgumentResolver;
@@ -11,8 +12,7 @@ import com.aionn.inventory.application.dto.inventory.command.ConfigureSafetyStoc
 import com.aionn.inventory.application.dto.inventory.command.EmergencyLockCommand;
 import com.aionn.inventory.application.dto.inventory.command.InitializeStockCommand;
 import com.aionn.inventory.application.dto.inventory.result.InventoryItemResult;
-import com.aionn.inventory.application.service.InventoryAnalyticsService;
-import com.aionn.inventory.application.service.InventoryItemService;
+import com.aionn.inventory.application.port.in.inventory.*;
 import com.aionn.inventory.domain.exception.InventoryErrorCode;
 import com.aionn.inventory.domain.exception.InventoryException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,17 +41,37 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class InventoryItemControllerWebTest {
 
-    @Mock
-    private InventoryItemService service;
-    @Mock
-    private InventoryAnalyticsService analyticsService;
+    @Mock private InitializeStockInputPort initializeStockInputPort;
+    @Mock private ConfigureSafetyStockInputPort configureSafetyStockInputPort;
+    @Mock private ManualAdjustmentInputPort manualAdjustmentInputPort;
+    @Mock private EmergencyLockInputPort emergencyLockInputPort;
+    @Mock private EmergencyUnlockInputPort emergencyUnlockInputPort;
+    @Mock private AuditInventoryInputPort auditInventoryInputPort;
+    @Mock private TrackBatchAndExpiryInputPort trackBatchAndExpiryInputPort;
+    @Mock private ListInventoryItemsBySkuInputPort listInventoryItemsBySkuInputPort;
+    @Mock private ListInventoryItemsByWarehouseInputPort listInventoryItemsByWarehouseInputPort;
+    @Mock private GetInventoryItemInputPort getInventoryItemInputPort;
+    @Mock private GetMerchantLowStockInputPort getMerchantLowStockInputPort;
 
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = Jackson2ObjectMapperBuilder.json().build();
 
     @BeforeEach
     void setUp() {
-        InventoryItemController controller = new InventoryItemController(service, analyticsService);
+        InventoryItemController controller = new InventoryItemController(
+                initializeStockInputPort,
+                configureSafetyStockInputPort,
+                manualAdjustmentInputPort,
+                emergencyLockInputPort,
+                emergencyUnlockInputPort,
+                auditInventoryInputPort,
+                trackBatchAndExpiryInputPort,
+                listInventoryItemsBySkuInputPort,
+                listInventoryItemsByWarehouseInputPort,
+                getInventoryItemInputPort,
+                getMerchantLowStockInputPort,
+                new InventoryItemDtoMapperImpl()
+        );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new InventoryExceptionHandler())
@@ -64,7 +84,7 @@ class InventoryItemControllerWebTest {
     @Test
     void initializeReturnsCreatedWithResult() throws Exception {
         InventoryItemResult result = sampleResult(10, 10);
-        when(service.initialize(any(InitializeStockCommand.class))).thenReturn(result);
+        when(initializeStockInputPort.execute(any(InitializeStockCommand.class))).thenReturn(result);
 
         mockMvc.perform(post("/api/v1/inventory/items")
                         .with(TestAuth.authUser("user-1", "ROLE_MERCHANT"))
@@ -76,24 +96,24 @@ class InventoryItemControllerWebTest {
                 .andExpect(jsonPath("$.data.warehouseId").value("WH_1"))
                 .andExpect(jsonPath("$.data.physicalQty").value(10));
 
-        verify(service).initialize(any(InitializeStockCommand.class));
+        verify(initializeStockInputPort).execute(any(InitializeStockCommand.class));
     }
 
     @Test
     void getReturnsInventoryItem() throws Exception {
-        when(service.get("SKU_1", "WH_1")).thenReturn(sampleResult(10, 7));
+        when(getInventoryItemInputPort.execute("SKU_1", "WH_1")).thenReturn(sampleResult(10, 7));
 
         mockMvc.perform(get("/api/v1/inventory/items/SKU_1/WH_1")
                         .with(TestAuth.authUser("user-1")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.availableQty").value(7));
 
-        verify(service).get("SKU_1", "WH_1");
+        verify(getInventoryItemInputPort).execute("SKU_1", "WH_1");
     }
 
     @Test
     void getReturnsNotFoundWhenItemMissing() throws Exception {
-        when(service.get("SKU_X", "WH_1"))
+        when(getInventoryItemInputPort.execute("SKU_X", "WH_1"))
                 .thenThrow(new InventoryException(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND));
 
         mockMvc.perform(get("/api/v1/inventory/items/SKU_X/WH_1")
@@ -104,7 +124,7 @@ class InventoryItemControllerWebTest {
     @Test
     void configureSafetyStockReturnsOk() throws Exception {
         InventoryItemResult result = sampleResult(10, 10);
-        when(service.configureSafetyStock(any(ConfigureSafetyStockCommand.class))).thenReturn(result);
+        when(configureSafetyStockInputPort.execute(any(ConfigureSafetyStockCommand.class))).thenReturn(result);
 
         mockMvc.perform(put("/api/v1/inventory/items/SKU_1/WH_1/safety-stock")
                         .with(TestAuth.authUser("user-1", "ROLE_MERCHANT"))
@@ -113,13 +133,13 @@ class InventoryItemControllerWebTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.skuId").value("SKU_1"));
 
-        verify(service).configureSafetyStock(any(ConfigureSafetyStockCommand.class));
+        verify(configureSafetyStockInputPort).execute(any(ConfigureSafetyStockCommand.class));
     }
 
     @Test
     void emergencyLockReturnsOk() throws Exception {
         InventoryItemResult result = sampleResult(10, 10);
-        when(service.emergencyLock(any(EmergencyLockCommand.class))).thenReturn(result);
+        when(emergencyLockInputPort.execute(any(EmergencyLockCommand.class))).thenReturn(result);
 
         mockMvc.perform(post("/api/v1/inventory/items/SKU_1/WH_1/lock")
                         .with(TestAuth.authAdmin("admin-1"))
@@ -127,7 +147,7 @@ class InventoryItemControllerWebTest {
                         .content(objectMapper.writeValueAsString(new EmergencyLockRequest("audit"))))
                 .andExpect(status().isOk());
 
-        verify(service).emergencyLock(any(EmergencyLockCommand.class));
+        verify(emergencyLockInputPort).execute(any(EmergencyLockCommand.class));
     }
 
     private InventoryItemResult sampleResult(int physical, int available) {

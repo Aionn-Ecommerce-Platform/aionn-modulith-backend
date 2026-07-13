@@ -4,13 +4,17 @@ import com.aionn.inventory.adapter.rest.dto.transfer.CancelTransferRequest;
 import com.aionn.inventory.adapter.rest.dto.transfer.CompleteTransferRequest;
 import com.aionn.inventory.adapter.rest.dto.transfer.InitiateTransferRequest;
 import com.aionn.inventory.adapter.rest.exception.InventoryExceptionHandler;
+import com.aionn.inventory.adapter.rest.mapper.transfer.StockTransferDtoMapperImpl;
 import com.aionn.inventory.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.inventory.adapter.rest.support.TestAuth;
 import com.aionn.inventory.application.dto.transfer.command.CancelTransferCommand;
 import com.aionn.inventory.application.dto.transfer.command.CompleteTransferCommand;
 import com.aionn.inventory.application.dto.transfer.command.InitiateTransferCommand;
 import com.aionn.inventory.application.dto.transfer.result.StockTransferResult;
-import com.aionn.inventory.application.service.StockTransferService;
+import com.aionn.inventory.application.port.in.transfer.CancelTransferInputPort;
+import com.aionn.inventory.application.port.in.transfer.CompleteTransferInputPort;
+import com.aionn.inventory.application.port.in.transfer.GetTransferInputPort;
+import com.aionn.inventory.application.port.in.transfer.InitiateTransferInputPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,15 +40,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class StockTransferControllerWebTest {
 
-    @Mock
-    private StockTransferService transferService;
+    @Mock private InitiateTransferInputPort initiateTransferInputPort;
+    @Mock private CompleteTransferInputPort completeTransferInputPort;
+    @Mock private CancelTransferInputPort cancelTransferInputPort;
+    @Mock private GetTransferInputPort getTransferInputPort;
 
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = Jackson2ObjectMapperBuilder.json().build();
 
     @BeforeEach
     void setUp() {
-        StockTransferController controller = new StockTransferController(transferService);
+        StockTransferController controller = new StockTransferController(
+                initiateTransferInputPort,
+                completeTransferInputPort,
+                cancelTransferInputPort,
+                getTransferInputPort,
+                new StockTransferDtoMapperImpl()
+        );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new InventoryExceptionHandler())
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
@@ -55,7 +67,7 @@ class StockTransferControllerWebTest {
     @Test
     void initiateReturnsCreatedWithTransferDetails() throws Exception {
         StockTransferResult result = sample("T_1", "INITIATED");
-        when(transferService.initiate(any(InitiateTransferCommand.class))).thenReturn(result);
+        when(initiateTransferInputPort.execute(any(InitiateTransferCommand.class))).thenReturn(result);
 
         mockMvc.perform(post("/api/v1/inventory/transfers")
                         .with(TestAuth.authUser("owner-1", "ROLE_MERCHANT"))
@@ -66,12 +78,12 @@ class StockTransferControllerWebTest {
                 .andExpect(jsonPath("$.data.transferId").value("T_1"))
                 .andExpect(jsonPath("$.data.status").value("INITIATED"));
 
-        verify(transferService).initiate(any(InitiateTransferCommand.class));
+        verify(initiateTransferInputPort).execute(any(InitiateTransferCommand.class));
     }
 
     @Test
     void completeReturnsOkWithCompletedStatus() throws Exception {
-        when(transferService.complete(any(CompleteTransferCommand.class)))
+        when(completeTransferInputPort.execute(any(CompleteTransferCommand.class)))
                 .thenReturn(sample("T_1", "COMPLETED"));
 
         mockMvc.perform(post("/api/v1/inventory/transfers/T_1/complete")
@@ -81,12 +93,12 @@ class StockTransferControllerWebTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("COMPLETED"));
 
-        verify(transferService).complete(any(CompleteTransferCommand.class));
+        verify(completeTransferInputPort).execute(any(CompleteTransferCommand.class));
     }
 
     @Test
     void cancelReturnsOkWithCancelledStatus() throws Exception {
-        when(transferService.cancel(any(CancelTransferCommand.class)))
+        when(cancelTransferInputPort.execute(any(CancelTransferCommand.class)))
                 .thenReturn(sample("T_1", "CANCELLED"));
 
         mockMvc.perform(post("/api/v1/inventory/transfers/T_1/cancel")
@@ -96,12 +108,12 @@ class StockTransferControllerWebTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("CANCELLED"));
 
-        verify(transferService).cancel(any(CancelTransferCommand.class));
+        verify(cancelTransferInputPort).execute(any(CancelTransferCommand.class));
     }
 
     @Test
     void getReturnsTransfer() throws Exception {
-        when(transferService.get("T_1")).thenReturn(sample("T_1", "INITIATED"));
+        when(getTransferInputPort.execute("T_1")).thenReturn(sample("T_1", "INITIATED"));
 
         mockMvc.perform(get("/api/v1/inventory/transfers/T_1"))
                 .andExpect(status().isOk())
