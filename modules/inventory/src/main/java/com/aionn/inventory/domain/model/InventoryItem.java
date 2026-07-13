@@ -182,7 +182,7 @@ public class InventoryItem extends AggregateRoot {
     }
 
     public void trackBatchAndExpiry(String batchNo, LocalDate expiryDate, Clock clock) {
-        Guard.require(expiryDate == null || !expiryDate.isBefore(LocalDate.now(clock)),
+        Guard.require(expiryDate == null || !expiryDate.isBefore(LocalDate.now(clock.withZone(java.time.ZoneOffset.UTC))),
                 () -> new InventoryException(InventoryErrorCode.INVENTORY_EXPIRY_INVALID,
                         "expiryDate must not be in the past"));
         this.batchNo = batchNo;
