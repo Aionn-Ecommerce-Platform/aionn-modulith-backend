@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: inventory
+
+  flyway:
+    enabled: true
+    locations: classpath:db
+
+inventory:
+  reservation:
+    auto-release:
+      enabled: ${INVENTORY_RESERVATION_AUTORELEASE_ENABLED:true}
+      delay-ms: ${INVENTORY_RESERVATION_AUTORELEASE_DELAY_MS:30000}
+      batch-size: ${INVENTORY_RESERVATION_AUTORELEASE_BATCH_SIZE:100}
