@@ -19,6 +19,6 @@ public class InventorySafetyStockNotifier implements SafetyStockNotifier {
     public void notifySafetyStockBreach(
             String merchantId, String skuId, String warehouseId, int availableQty, int safetyStockQty) {
         integrationEventPublisher.publish(new SafetyStockBreachedIntegrationEvent(
-                null, clock.instant(), merchantId, skuId, warehouseId, availableQty, safetyStockQty));
+                com.aionn.sharedkernel.util.IdGenerator.ulid(), clock.instant(), merchantId, skuId, warehouseId, availableQty, safetyStockQty));
     }
 }

@@ -59,9 +59,11 @@ class StockReservationServiceTest {
     @InjectMocks
     StockReservationService service;
 
+    private static final Instant FIXED_NOW = Instant.parse("2026-01-01T00:00:00Z");
+
     @BeforeEach
     void stubClock() {
-        org.mockito.Mockito.lenient().when(clock.instant()).thenReturn(java.time.Instant.now());
+        org.mockito.Mockito.lenient().when(clock.instant()).thenReturn(FIXED_NOW);
     }
 
     private static final InventoryItemKey KEY = new InventoryItemKey("SKU_1", "WH_1");

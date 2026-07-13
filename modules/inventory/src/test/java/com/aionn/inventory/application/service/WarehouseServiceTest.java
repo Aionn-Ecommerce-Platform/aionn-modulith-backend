@@ -19,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -46,9 +47,11 @@ class WarehouseServiceTest {
     @InjectMocks
     WarehouseService warehouseService;
 
+    private static final Instant FIXED_NOW = Instant.parse("2026-01-01T00:00:00Z");
+
     @BeforeEach
     void stubClock() {
-        org.mockito.Mockito.lenient().when(clock.instant()).thenReturn(java.time.Instant.now());
+        org.mockito.Mockito.lenient().when(clock.instant()).thenReturn(FIXED_NOW);
     }
 
     @Test
