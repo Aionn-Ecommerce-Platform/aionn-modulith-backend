@@ -10,7 +10,7 @@ Write-Host "Stopping any running gradle daemons..."
 .\gradlew --stop
 
 # 2. Load env files
-Get-Content envs/common.env, envs/identity.env, envs/catalog.env | ForEach-Object {
+Get-Content envs/common.env, envs/identity.env, envs/catalog.env, envs/inventory.env | ForEach-Object {
     $line = $_.Trim()
     if ($line -and -not $line.StartsWith("#")) {
         if ($line -match "^([^=]+)=(.*)$") {
