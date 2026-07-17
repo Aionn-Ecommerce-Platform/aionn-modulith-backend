@@ -7,6 +7,7 @@ import com.aionn.sharedkernel.integration.event.inventory.StockCommittedIntegrat
 import com.aionn.sharedkernel.integration.event.inventory.StockReleasedIntegrationEvent;
 import com.aionn.sharedkernel.integration.event.inventory.StockReservationFailedIntegrationEvent;
 import com.aionn.sharedkernel.integration.event.inventory.StockReservedIntegrationEvent;
+import com.aionn.sharedkernel.util.IdGenerator;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -14,7 +15,7 @@ public class InventoryIntegrationEventMapper {
 
     public StockReservedIntegrationEvent toIntegrationEvent(StockReservationEvents.StockReserved domainEvent) {
         return new StockReservedIntegrationEvent(
-                null,
+                IdGenerator.ulid(),
                 domainEvent.reservationId(),
                 domainEvent.skuId(),
                 domainEvent.warehouseId(),
@@ -27,7 +28,7 @@ public class InventoryIntegrationEventMapper {
     public StockReservationFailedIntegrationEvent toIntegrationEvent(
             StockReservationEvents.StockReservationFailed domainEvent) {
         return new StockReservationFailedIntegrationEvent(
-                null,
+                IdGenerator.ulid(),
                 domainEvent.skuId(),
                 domainEvent.warehouseId(),
                 null,
@@ -38,7 +39,7 @@ public class InventoryIntegrationEventMapper {
 
     public StockCommittedIntegrationEvent toIntegrationEvent(StockReservationEvents.StockCommitted domainEvent) {
         return new StockCommittedIntegrationEvent(
-                null,
+                IdGenerator.ulid(),
                 domainEvent.reservationId(),
                 domainEvent.skuId(),
                 domainEvent.warehouseId(),
@@ -49,7 +50,7 @@ public class InventoryIntegrationEventMapper {
 
     public StockReleasedIntegrationEvent toIntegrationEvent(StockReservationEvents.StockReleased domainEvent) {
         return new StockReleasedIntegrationEvent(
-                null,
+                IdGenerator.ulid(),
                 domainEvent.reservationId(),
                 domainEvent.skuId(),
                 domainEvent.warehouseId(),
@@ -62,7 +63,7 @@ public class InventoryIntegrationEventMapper {
     public SafetyStockBreachedIntegrationEvent toIntegrationEvent(
             String merchantId, InventoryItemEvents.SafetyStockBreached domainEvent) {
         return new SafetyStockBreachedIntegrationEvent(
-                null,
+                IdGenerator.ulid(),
                 domainEvent.occurredAt(),
                 merchantId,
                 domainEvent.skuId(),
