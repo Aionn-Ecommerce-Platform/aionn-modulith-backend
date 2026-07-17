@@ -1,8 +1,9 @@
 package com.aionn.inventory.adapter.rest.controller;
 
-import com.aionn.inventory.adapter.rest.dto.transfer.CancelTransferRequest;
-import com.aionn.inventory.adapter.rest.dto.transfer.CompleteTransferRequest;
-import com.aionn.inventory.adapter.rest.dto.transfer.InitiateTransferRequest;
+import com.aionn.inventory.adapter.rest.dto.transfer.request.CancelTransferRequest;
+import com.aionn.inventory.adapter.rest.dto.transfer.request.CompleteTransferRequest;
+import com.aionn.inventory.adapter.rest.dto.transfer.request.InitiateTransferRequest;
+import com.aionn.inventory.adapter.rest.dto.transfer.response.StockTransferResponse;
 import com.aionn.inventory.adapter.rest.mapper.transfer.StockTransferDtoMapper;
 import com.aionn.inventory.application.dto.transfer.result.StockTransferResult;
 import com.aionn.inventory.application.port.in.transfer.CancelTransferInputPort;
@@ -35,41 +36,43 @@ public class StockTransferController {
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Initiate transfer")
-    public ResponseEntity<ApiResponse<StockTransferResult>> initiate(
+    public ResponseEntity<ApiResponse<StockTransferResponse>> initiate(
             Authentication authentication,
             @Valid @RequestBody InitiateTransferRequest request) {
         StockTransferResult result = initiateTransferInputPort.execute(
                 dtoMapper.toInitiateTransferCommand(authentication.getName(), request));
-        return ApiResponse.createdResponse("Transfer initiated", result);
+        return ApiResponse.createdResponse("Transfer initiated", dtoMapper.toResponse(result));
     }
 
     @PostMapping("/{transferId}/complete")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Complete transfer")
-    public ResponseEntity<ApiResponse<StockTransferResult>> complete(
+    public ResponseEntity<ApiResponse<StockTransferResponse>> complete(
             Authentication authentication,
             @PathVariable String transferId,
             @Valid @RequestBody CompleteTransferRequest request) {
         StockTransferResult result = completeTransferInputPort.execute(
                 dtoMapper.toCompleteTransferCommand(authentication.getName(), transferId, request));
-        return ResponseEntity.ok(ApiResponse.success(result, "Transfer completed"));
+        return ResponseEntity.ok(ApiResponse.success(dtoMapper.toResponse(result), "Transfer completed"));
     }
 
     @PostMapping("/{transferId}/cancel")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Cancel transfer", description = "Cancel an in-flight transfer; refunds source")
-    public ResponseEntity<ApiResponse<StockTransferResult>> cancel(
+    public ResponseEntity<ApiResponse<StockTransferResponse>> cancel(
             Authentication authentication,
             @PathVariable String transferId,
             @Valid @RequestBody CancelTransferRequest request) {
         StockTransferResult result = cancelTransferInputPort.execute(
                 dtoMapper.toCancelTransferCommand(authentication.getName(), transferId, request));
-        return ResponseEntity.ok(ApiResponse.success(result, "Transfer cancelled"));
+        return ResponseEntity.ok(ApiResponse.success(dtoMapper.toResponse(result), "Transfer cancelled"));
     }
 
     @GetMapping("/{transferId}")
-    @Operation(summary = "Get transfer")
-    public ResponseEntity<ApiResponse<StockTransferResult>> get(@PathVariable String transferId) {
-        return ResponseEntity.ok(ApiResponse.success(getTransferInputPort.execute(transferId), "Transfer fetched"));
+    @Operation(summary = "Get transfer details")
+    public ResponseEntity<ApiResponse<StockTransferResponse>> get(@PathVariable String transferId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                dtoMapper.toResponse(getTransferInputPort.execute(transferId)),
+                "Transfer details fetched"));
     }
 }

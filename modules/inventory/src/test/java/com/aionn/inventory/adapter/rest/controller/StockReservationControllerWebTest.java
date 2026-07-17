@@ -1,7 +1,7 @@
 package com.aionn.inventory.adapter.rest.controller;
 
-import com.aionn.inventory.adapter.rest.dto.reservation.ReleaseReservationRequest;
-import com.aionn.inventory.adapter.rest.dto.reservation.ReserveStockRequest;
+import com.aionn.inventory.adapter.rest.dto.reservation.request.ReleaseReservationRequest;
+import com.aionn.inventory.adapter.rest.dto.reservation.request.ReserveStockRequest;
 import com.aionn.inventory.adapter.rest.exception.InventoryExceptionHandler;
 import com.aionn.inventory.adapter.rest.mapper.reservation.StockReservationDtoMapperImpl;
 import com.aionn.inventory.application.dto.reservation.command.CommitReservationCommand;

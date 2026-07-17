@@ -13,14 +13,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.Duration;
+import java.time.ZoneOffset;
 
 import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(MockitoExtension.class)
 class AuthTokenResponseHandlerTest {
+
+    private static final Clock FIXED_CLOCK = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
 
     @Mock
     private AuthProperties authProperties;
@@ -32,7 +36,7 @@ class AuthTokenResponseHandlerTest {
         AuthCookieProperties cookieProperties = new AuthCookieProperties(true, "Strict", "/api/v1/auth");
         NoStoreResponseFactory noStoreResponseFactory = new NoStoreResponseFactory();
         authTokenResponseHandler = new AuthTokenResponseHandler(
-                authProperties, cookieProperties, noStoreResponseFactory);
+                authProperties, cookieProperties, noStoreResponseFactory, FIXED_CLOCK);
     }
 
     @Test
@@ -93,7 +97,7 @@ class AuthTokenResponseHandlerTest {
     }
 
     private AuthTokenResponse sampleAuthTokenResponse() {
-        Instant now = Instant.now();
+        Instant now = FIXED_CLOCK.instant();
         return new AuthTokenResponse(
                 "user-1",
                 "session-1",

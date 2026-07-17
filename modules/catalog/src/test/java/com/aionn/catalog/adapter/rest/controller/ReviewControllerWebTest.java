@@ -1,9 +1,9 @@
 package com.aionn.catalog.adapter.rest.controller;
 
-import com.aionn.catalog.adapter.rest.dto.review.MerchantReplyRequest;
-import com.aionn.catalog.adapter.rest.dto.review.ReportReviewRequest;
-import com.aionn.catalog.adapter.rest.dto.review.SubmitReviewRequest;
-import com.aionn.catalog.adapter.rest.dto.review.UpdateReviewRequest;
+import com.aionn.catalog.adapter.rest.dto.review.request.MerchantReplyRequest;
+import com.aionn.catalog.adapter.rest.dto.review.request.ReportReviewRequest;
+import com.aionn.catalog.adapter.rest.dto.review.request.SubmitReviewRequest;
+import com.aionn.catalog.adapter.rest.dto.review.request.UpdateReviewRequest;
 import com.aionn.catalog.adapter.rest.exception.CatalogExceptionHandler;
 import com.aionn.catalog.adapter.rest.mapper.review.ReviewDtoMapperImpl;
 import com.aionn.catalog.adapter.rest.support.MockSecurityInterceptor;

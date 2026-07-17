@@ -1,7 +1,8 @@
 package com.aionn.catalog.adapter.rest.controller;
 
-import com.aionn.catalog.adapter.rest.dto.attribute.ConfigureFilterableRequest;
-import com.aionn.catalog.adapter.rest.dto.attribute.CreateAttributeTemplateRequest;
+import com.aionn.catalog.adapter.rest.dto.attribute.request.ConfigureFilterableRequest;
+import com.aionn.catalog.adapter.rest.dto.attribute.request.CreateAttributeTemplateRequest;
+import com.aionn.catalog.adapter.rest.dto.attribute.response.AttributeTemplateResponse;
 import com.aionn.catalog.application.dto.attribute.query.GetAttributeTemplateByCategoryQuery;
 import com.aionn.catalog.application.dto.attribute.query.GetAttributeTemplateQuery;
 import com.aionn.catalog.application.dto.attribute.result.AttributeTemplateResult;
@@ -41,39 +42,39 @@ public class AttributeTemplateController {
         @PostMapping
         @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
         @Operation(summary = "Create attribute template")
-        public ResponseEntity<ApiResponse<AttributeTemplateResult>> create(
+        public ResponseEntity<ApiResponse<AttributeTemplateResponse>> create(
                         @Valid @RequestBody CreateAttributeTemplateRequest request) {
                 AttributeTemplateResult result = createAttributeTemplateInputPort.execute(
                                 attributeDtoMapper.toCreateAttributeTemplateCommand(request));
-                return ApiResponse.createdResponse("Attribute template created", result);
+                return ApiResponse.createdResponse("Attribute template created", attributeDtoMapper.toResponse(result));
         }
 
         @PutMapping("/{templateId}/filterable")
         @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
         @Operation(summary = "Configure filterable", description = "Mark a key as filterable for the AI agent")
-        public ResponseEntity<ApiResponse<AttributeTemplateResult>> configureFilterable(
+        public ResponseEntity<ApiResponse<AttributeTemplateResponse>> configureFilterable(
                         @PathVariable String templateId,
                         @Valid @RequestBody ConfigureFilterableRequest request) {
                 AttributeTemplateResult result = configureFilterableInputPort.execute(
                                 attributeDtoMapper.toConfigureFilterableCommand(templateId, request));
-                return ResponseEntity.ok(ApiResponse.success(result, "Filterable updated"));
+                return ResponseEntity.ok(ApiResponse.success(attributeDtoMapper.toResponse(result), "Filterable updated"));
         }
 
         @GetMapping("/{templateId}")
         @Operation(summary = "Get attribute template", description = "Public read")
-        public ResponseEntity<ApiResponse<AttributeTemplateResult>> get(@PathVariable String templateId) {
+        public ResponseEntity<ApiResponse<AttributeTemplateResponse>> get(@PathVariable String templateId) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                getAttributeTemplateInputPort.execute(new GetAttributeTemplateQuery(templateId)),
+                                attributeDtoMapper.toResponse(getAttributeTemplateInputPort.execute(new GetAttributeTemplateQuery(templateId))),
                                 "Attribute template fetched"));
         }
 
         @GetMapping
         @Operation(summary = "Get attribute template by category", description = "Public read - used by product creation UI to render the attribute form")
-        public ResponseEntity<ApiResponse<AttributeTemplateResult>> getByCategory(
+        public ResponseEntity<ApiResponse<AttributeTemplateResponse>> getByCategory(
                         @RequestParam String categoryId) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                getAttributeTemplateByCategoryInputPort
-                                                .execute(new GetAttributeTemplateByCategoryQuery(categoryId)),
+                                attributeDtoMapper.toResponse(getAttributeTemplateByCategoryInputPort
+                                                 .execute(new GetAttributeTemplateByCategoryQuery(categoryId))),
                                 "Attribute template fetched"));
         }
 }

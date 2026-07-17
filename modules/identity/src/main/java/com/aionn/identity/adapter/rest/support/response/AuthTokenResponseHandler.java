@@ -11,6 +11,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 @Component
@@ -22,6 +23,7 @@ public class AuthTokenResponseHandler {
     private final AuthProperties authProperties;
     private final AuthCookieProperties cookieProperties;
     private final NoStoreResponseFactory noStoreResponseFactory;
+    private final Clock clock;
 
     public ResponseEntity<ApiResponse<AuthTokenResponse>> success(
             AuthTokenResponse response,
@@ -68,11 +70,7 @@ public class AuthTokenResponseHandler {
     }
 
     private ResponseCookie buildRefreshCookie(String refreshToken, Instant expiresAt) {
-        // Session timestamps are produced in UTC (see AuthService.nowUtc()).
-        // Convert both sides to Instant so the arithmetic is explicitly
-        // zone-anchored rather than depending on the JVM default zone.
-        Instant expires = expiresAt;
-        long maxAgeSeconds = Duration.between(Instant.now(), expires).getSeconds();
+        long maxAgeSeconds = Duration.between(Instant.now(clock), expiresAt).getSeconds();
         if (maxAgeSeconds < 0) {
             maxAgeSeconds = 0;
         }

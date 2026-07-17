@@ -13,12 +13,6 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Implements the cross-service reservation port by orchestrating inventory's
- * own {@link StockReservationService}. Compensation (releasing partial
- * reservations on failure) lives here because it is purely an inventory
- * concern — ordering should not need to know about per-line rollback.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -34,7 +28,8 @@ public class InventoryStockReservationAdapter implements InventoryStockReservati
                 ReservationResult result = reservationService.reserve(new ReserveStockCommand(
                         line.skuId(), line.warehouseId(), orderId, line.qty(), ttlSeconds));
                 if (!"RESERVED".equals(result.status())) {
-                    throw new ReservationException(line.skuId(), line.warehouseId(), "Reservation result: " + result.status());
+                    throw new ReservationException(line.skuId(), line.warehouseId(),
+                            "Reservation result: " + result.status());
                 }
                 created.add(new Reservation(result.reservationId(), line.skuId(), line.warehouseId(),
                         line.qty(), line.unitPrice(), line.currency()));

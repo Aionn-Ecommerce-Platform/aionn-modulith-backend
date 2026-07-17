@@ -27,6 +27,7 @@ import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -64,7 +65,7 @@ public class InventoryItemService {
         InventoryItem saved;
         try {
             saved = itemRepository.save(item);
-        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+        } catch (DataIntegrityViolationException ex) {
             throw new InventoryException(InventoryErrorCode.INVENTORY_ALREADY_INITIALIZED);
         }
         eventPublisher.publish(item.pullEvents());
@@ -146,7 +147,7 @@ public class InventoryItemService {
     }
 
     @Transactional(readOnly = true)
-    public java.util.List<InventoryItemResult> listBySku(String skuId) {
+    public List<InventoryItemResult> listBySku(String skuId) {
         return itemRepository.findBySku(skuId).stream()
                 .map(mapper::toResult)
                 .toList();

@@ -1,14 +1,14 @@
 package com.aionn.catalog.adapter.rest.controller;
 
-import com.aionn.catalog.adapter.rest.dto.product.AssignBrandRequest;
-import com.aionn.catalog.adapter.rest.dto.product.AssignCategoriesRequest;
-import com.aionn.catalog.adapter.rest.dto.product.BulkPriceUpdateRequest;
-import com.aionn.catalog.adapter.rest.dto.product.ChangeVariantPriceRequest;
-import com.aionn.catalog.adapter.rest.dto.product.CreateProductRequest;
-import com.aionn.catalog.adapter.rest.dto.product.DeactivateProductRequest;
-import com.aionn.catalog.adapter.rest.dto.product.DefineAttributesRequest;
-import com.aionn.catalog.adapter.rest.dto.product.DefineVariantRequest;
-import com.aionn.catalog.adapter.rest.dto.product.RejectProductRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.AssignBrandRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.AssignCategoriesRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.BulkPriceUpdateRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.ChangeVariantPriceRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.CreateProductRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.DeactivateProductRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.DefineAttributesRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.DefineVariantRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.RejectProductRequest;
 import com.aionn.catalog.adapter.rest.exception.CatalogExceptionHandler;
 import com.aionn.catalog.adapter.rest.mapper.product.ProductDtoMapperImpl;
 import com.aionn.catalog.adapter.rest.support.MockSecurityInterceptor;
@@ -232,12 +232,12 @@ class ProductControllerWebTest {
                 when(bulkPriceUpdateInputPort.execute(any(BulkPriceUpdateCommand.class)))
                                 .thenReturn(new BulkPriceUpdateResult(1, 0, List.of()));
 
-                mockMvc.perform(post("/api/v1/catalog/products/bulk-price")
+                mockMvc.perform(put("/api/v1/catalog/products/variants/prices")
                                 .with(TestAuth.authMerchant("owner-1", MERCHANT_ID))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(new BulkPriceUpdateRequest(List.of(
                                                 new BulkPriceUpdateRequest.Item(PRODUCT_ID, "sku-1",
-                                                                new BigDecimal("20"), "VND"))))))
+                                                                 new BigDecimal("20"), "VND"))))))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.data.updated").value(1));
         }
@@ -261,7 +261,7 @@ class ProductControllerWebTest {
                                 .with(TestAuth.authMerchant("owner-1", MERCHANT_ID))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(
-                                                new AssignCategoriesRequest(List.of("cat-1")))))
+                                                 new AssignCategoriesRequest(List.of("cat-1")))))
                                 .andExpect(status().isOk());
         }
 
@@ -273,7 +273,7 @@ class ProductControllerWebTest {
                                 .with(TestAuth.authMerchant("owner-1", MERCHANT_ID))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(
-                                                new DefineAttributesRequest(Map.of("material", "silk")))))
+                                                 new DefineAttributesRequest(Map.of("material", "silk")))))
                                 .andExpect(status().isOk());
         }
 
@@ -291,7 +291,7 @@ class ProductControllerWebTest {
                 when(publishProductInputPort.execute(any(PublishProductCommand.class))).thenReturn(sample());
 
                 mockMvc.perform(post("/api/v1/catalog/products/" + PRODUCT_ID + "/publish")
-                                .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN")))
+                                .with(TestAuth.authMerchant("owner-1", MERCHANT_ID)))
                                 .andExpect(status().isOk());
         }
 
@@ -303,7 +303,7 @@ class ProductControllerWebTest {
                                 .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper
-                                                .writeValueAsString(new RejectProductRequest("IMG_ISSUE", "note"))))
+                                                 .writeValueAsString(new RejectProductRequest("IMG_ISSUE", "note"))))
                                 .andExpect(status().isOk());
         }
 
@@ -323,7 +323,7 @@ class ProductControllerWebTest {
                 when(restoreProductInputPort.execute(any(RestoreProductCommand.class))).thenReturn(sample());
 
                 mockMvc.perform(post("/api/v1/catalog/products/" + PRODUCT_ID + "/restore")
-                                .with(TestAuth.authMerchant("owner-1", MERCHANT_ID)))
+                                .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN")))
                                 .andExpect(status().isOk());
         }
 
@@ -350,7 +350,7 @@ class ProductControllerWebTest {
                 when(getProductsBySkuIdsInputPort.execute(any(GetProductsBySkuIdsQuery.class)))
                                 .thenReturn(List.of(sample()));
 
-                mockMvc.perform(get("/api/v1/catalog/products/by-sku").param("skuIds", "sku-1"))
+                mockMvc.perform(get("/api/v1/catalog/products/by-skus").param("skuIds", "sku-1"))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.data[0].productId").value(PRODUCT_ID));
         }
@@ -360,7 +360,8 @@ class ProductControllerWebTest {
                 when(listProductsByMerchantInputPort.execute(any(ListProductsByMerchantQuery.class)))
                                 .thenReturn(new PageResult<>(List.of(sample()), 0, 20, 1));
 
-                mockMvc.perform(get("/api/v1/catalog/products").param("merchantId", MERCHANT_ID))
+                mockMvc.perform(get("/api/v1/catalog/products/merchant")
+                                .with(TestAuth.authMerchant("owner-1", MERCHANT_ID)))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.data[0].productId").value(PRODUCT_ID));
 
@@ -372,7 +373,8 @@ class ProductControllerWebTest {
                 when(listProductsByStatusInputPort.execute(any(ListProductsByStatusQuery.class)))
                                 .thenReturn(new PageResult<>(List.of(sample()), 0, 20, 1));
 
-                mockMvc.perform(get("/api/v1/catalog/products").param("status", "PUBLISHED"))
+                mockMvc.perform(get("/api/v1/catalog/products/admin/reviews")
+                                .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN")))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.data[0].productId").value(PRODUCT_ID));
 
@@ -382,11 +384,10 @@ class ProductControllerWebTest {
         @Test
         void removeVariantReturnsOk() throws Exception {
                 when(removeVariantInputPort.execute(
-                                any(com.aionn.catalog.application.dto.product.command.RemoveVariantCommand.class)))
+                                 any(com.aionn.catalog.application.dto.product.command.RemoveVariantCommand.class)))
                                 .thenReturn(sample());
 
-                mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                                .delete("/api/v1/catalog/products/" + PRODUCT_ID + "/variants/sku-1")
+                mockMvc.perform(post("/api/v1/catalog/products/" + PRODUCT_ID + "/variants/sku-1/remove")
                                 .with(TestAuth.authMerchant("owner-1", MERCHANT_ID)))
                                 .andExpect(status().isOk());
         }
@@ -401,7 +402,7 @@ class ProductControllerWebTest {
                                 .with(TestAuth.authMerchant("owner-1", MERCHANT_ID))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(
-                                                new com.aionn.catalog.adapter.rest.dto.product.UpdateMediaRequest(
+                                                new com.aionn.catalog.adapter.rest.dto.product.request.UpdateMediaRequest(
                                                                 java.util.List.of("img1", "img2")))))
                                 .andExpect(status().isOk());
         }
@@ -416,7 +417,7 @@ class ProductControllerWebTest {
                                 .with(TestAuth.authMerchant("owner-1", MERCHANT_ID))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(
-                                                new com.aionn.catalog.adapter.rest.dto.product.UpdateAiMetadataRequest(
+                                                new com.aionn.catalog.adapter.rest.dto.product.request.UpdateAiMetadataRequest(
                                                                 java.util.List.of("premium"), "handmade"))))
                                 .andExpect(status().isOk());
         }
@@ -431,7 +432,7 @@ class ProductControllerWebTest {
                                 .with(TestAuth.authMerchant("owner-1", MERCHANT_ID))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(
-                                                new com.aionn.catalog.adapter.rest.dto.product.AssignCollectionsRequest(
+                                                new com.aionn.catalog.adapter.rest.dto.product.request.AssignCollectionsRequest(
                                                                 java.util.List.of("coll-1")))))
                                 .andExpect(status().isOk());
         }
@@ -446,7 +447,7 @@ class ProductControllerWebTest {
                                 .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(
-                                                new com.aionn.catalog.adapter.rest.dto.product.EmergencyTakedownRequest(
+                                                new com.aionn.catalog.adapter.rest.dto.product.request.EmergencyTakedownRequest(
                                                                 "abuse"))))
                                 .andExpect(status().isOk());
         }

@@ -17,17 +17,6 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
 
-/**
- * Listens to merchant lifecycle integration events and updates warehouse status
- * accordingly.
- * 
- * <p>
- * This listener reacts to merchant state changes from the Catalog module by
- * listening
- * to integration events from shared-kernel, avoiding direct dependency on
- * Catalog's domain model.
- * </p>
- */
 @Slf4j
 @Component("inventoryMerchantLifecycleListener")
 @RequiredArgsConstructor

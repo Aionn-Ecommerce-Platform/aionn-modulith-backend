@@ -1,8 +1,8 @@
 package com.aionn.inventory.adapter.rest.controller;
 
-import com.aionn.inventory.adapter.rest.dto.inventory.ConfigureSafetyStockRequest;
-import com.aionn.inventory.adapter.rest.dto.inventory.EmergencyLockRequest;
-import com.aionn.inventory.adapter.rest.dto.inventory.InitializeStockRequest;
+import com.aionn.inventory.adapter.rest.dto.inventory.request.ConfigureSafetyStockRequest;
+import com.aionn.inventory.adapter.rest.dto.inventory.request.EmergencyLockRequest;
+import com.aionn.inventory.adapter.rest.dto.inventory.request.InitializeStockRequest;
 import com.aionn.inventory.adapter.rest.exception.InventoryExceptionHandler;
 import com.aionn.inventory.adapter.rest.mapper.inventory.InventoryItemDtoMapperImpl;
 import com.aionn.inventory.adapter.rest.support.MockSecurityInterceptor;

@@ -3,7 +3,6 @@ package com.aionn.inventory.infrastructure.scheduling;
 import com.aionn.inventory.application.port.out.StockReservationPersistencePort;
 import com.aionn.inventory.domain.model.StockReservation;
 import com.aionn.inventory.infrastructure.config.InventoryProperties;
-import com.aionn.inventory.infrastructure.config.properties.InventoryReservationProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

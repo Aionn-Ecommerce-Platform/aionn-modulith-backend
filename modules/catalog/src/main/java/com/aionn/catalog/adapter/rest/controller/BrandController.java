@@ -1,8 +1,9 @@
 package com.aionn.catalog.adapter.rest.controller;
 
-import com.aionn.catalog.adapter.rest.dto.brand.CreateBrandRequest;
-import com.aionn.catalog.adapter.rest.dto.brand.DeleteBrandRequest;
-import com.aionn.catalog.adapter.rest.dto.brand.UpdateBrandRequest;
+import com.aionn.catalog.adapter.rest.dto.brand.request.CreateBrandRequest;
+import com.aionn.catalog.adapter.rest.dto.brand.request.DeleteBrandRequest;
+import com.aionn.catalog.adapter.rest.dto.brand.request.UpdateBrandRequest;
+import com.aionn.catalog.adapter.rest.dto.brand.response.BrandResponse;
 import com.aionn.catalog.application.dto.brand.query.GetBrandQuery;
 import com.aionn.catalog.application.dto.brand.query.ListBrandsQuery;
 import com.aionn.catalog.application.dto.brand.result.BrandResult;
@@ -41,19 +42,19 @@ public class BrandController {
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
     @Operation(summary = "Create brand")
-    public ResponseEntity<ApiResponse<BrandResult>> create(@Valid @RequestBody CreateBrandRequest request) {
+    public ResponseEntity<ApiResponse<BrandResponse>> create(@Valid @RequestBody CreateBrandRequest request) {
         BrandResult result = createBrandInputPort.execute(brandDtoMapper.toCreateBrandCommand(request));
-        return ApiResponse.createdResponse("Brand created", result);
+        return ApiResponse.createdResponse("Brand created", brandDtoMapper.toResponse(result));
     }
 
     @PutMapping("/{brandId}")
     @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
     @Operation(summary = "Update brand", description = "Edit brand content (name, logo, description). CS agents may correct content; structural changes (create/delete) remain SYSTEM_ADMIN only.")
-    public ResponseEntity<ApiResponse<BrandResult>> update(
+    public ResponseEntity<ApiResponse<BrandResponse>> update(
             @PathVariable String brandId,
             @Valid @RequestBody UpdateBrandRequest request) {
         BrandResult result = updateBrandInputPort.execute(brandDtoMapper.toUpdateBrandCommand(brandId, request));
-        return ResponseEntity.ok(ApiResponse.success(result, "Brand updated"));
+        return ResponseEntity.ok(ApiResponse.success(brandDtoMapper.toResponse(result), "Brand updated"));
     }
 
     @PostMapping("/{brandId}/delete")
@@ -68,21 +69,21 @@ public class BrandController {
 
     @GetMapping
     @Operation(summary = "List brands", description = "Public paginated list of brands")
-    public ResponseEntity<ApiResponse<List<BrandResult>>> list(
+    public ResponseEntity<ApiResponse<List<BrandResponse>>> list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         PageResult<BrandResult> result = listBrandsInputPort.execute(
                 new ListBrandsQuery(OffsetPagination.of(page, size)));
         return ResponseEntity.ok(ApiResponse.successWithPaging(
-                result.content(),
+                brandDtoMapper.toResponses(result.content()),
                 PageMetadata.of(result.page(), result.size(), result.totalElements()),
-                "Brands fetched"));
+                "Page fetched"));
     }
 
     @GetMapping("/{brandId}")
     @Operation(summary = "Get brand", description = "Public read")
-    public ResponseEntity<ApiResponse<BrandResult>> get(@PathVariable String brandId) {
+    public ResponseEntity<ApiResponse<BrandResponse>> get(@PathVariable String brandId) {
         return ResponseEntity.ok(ApiResponse.success(
-                getBrandInputPort.execute(new GetBrandQuery(brandId)), "Brand fetched"));
+                brandDtoMapper.toResponse(getBrandInputPort.execute(new GetBrandQuery(brandId))), "Brand fetched"));
     }
 }

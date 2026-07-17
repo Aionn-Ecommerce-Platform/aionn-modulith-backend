@@ -1,9 +1,9 @@
 package com.aionn.inventory.adapter.rest.controller;
 
-import com.aionn.inventory.adapter.rest.dto.warehouse.AdjustPriorityRequest;
-import com.aionn.inventory.adapter.rest.dto.warehouse.AdminReasonRequest;
-import com.aionn.inventory.adapter.rest.dto.warehouse.ChangeWarehouseStatusRequest;
-import com.aionn.inventory.adapter.rest.dto.warehouse.CreateWarehouseRequest;
+import com.aionn.inventory.adapter.rest.dto.warehouse.request.AdjustPriorityRequest;
+import com.aionn.inventory.adapter.rest.dto.warehouse.request.AdminReasonRequest;
+import com.aionn.inventory.adapter.rest.dto.warehouse.request.ChangeWarehouseStatusRequest;
+import com.aionn.inventory.adapter.rest.dto.warehouse.request.CreateWarehouseRequest;
 import com.aionn.inventory.adapter.rest.exception.InventoryExceptionHandler;
 import com.aionn.inventory.adapter.rest.mapper.warehouse.WarehouseDtoMapperImpl;
 import com.aionn.inventory.adapter.rest.support.MockSecurityInterceptor;

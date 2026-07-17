@@ -1,8 +1,8 @@
 package com.aionn.inventory.adapter.rest.controller;
 
-import com.aionn.inventory.adapter.rest.dto.transfer.CancelTransferRequest;
-import com.aionn.inventory.adapter.rest.dto.transfer.CompleteTransferRequest;
-import com.aionn.inventory.adapter.rest.dto.transfer.InitiateTransferRequest;
+import com.aionn.inventory.adapter.rest.dto.transfer.request.CancelTransferRequest;
+import com.aionn.inventory.adapter.rest.dto.transfer.request.CompleteTransferRequest;
+import com.aionn.inventory.adapter.rest.dto.transfer.request.InitiateTransferRequest;
 import com.aionn.inventory.adapter.rest.exception.InventoryExceptionHandler;
 import com.aionn.inventory.adapter.rest.mapper.transfer.StockTransferDtoMapperImpl;
 import com.aionn.inventory.adapter.rest.support.MockSecurityInterceptor;

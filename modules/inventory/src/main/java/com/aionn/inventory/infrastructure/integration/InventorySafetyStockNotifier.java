@@ -3,6 +3,7 @@ package com.aionn.inventory.infrastructure.integration;
 import com.aionn.inventory.application.port.out.SafetyStockNotifier;
 import com.aionn.sharedkernel.integration.event.inventory.SafetyStockBreachedIntegrationEvent;
 import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -19,6 +20,6 @@ public class InventorySafetyStockNotifier implements SafetyStockNotifier {
     public void notifySafetyStockBreach(
             String merchantId, String skuId, String warehouseId, int availableQty, int safetyStockQty) {
         integrationEventPublisher.publish(new SafetyStockBreachedIntegrationEvent(
-                com.aionn.sharedkernel.util.IdGenerator.ulid(), clock.instant(), merchantId, skuId, warehouseId, availableQty, safetyStockQty));
+                IdGenerator.ulid(), clock.instant(), merchantId, skuId, warehouseId, availableQty, safetyStockQty));
     }
 }

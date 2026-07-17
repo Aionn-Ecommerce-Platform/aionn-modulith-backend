@@ -11,13 +11,6 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Implements the cross-service WarehouseSelectorPort by inspecting inventory's
- * own warehouse and stock tables. The pick rule mirrors what ordering used to
- * do inline: highest-priority warehouse with available stock; otherwise fall
- * back to the highest-priority warehouse so the caller still has a routing
- * target.
- */
 @Component
 @RequiredArgsConstructor
 public class InventoryWarehouseSelectorAdapter implements WarehouseSelectorPort {

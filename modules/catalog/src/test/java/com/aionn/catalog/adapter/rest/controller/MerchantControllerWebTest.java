@@ -1,7 +1,7 @@
 package com.aionn.catalog.adapter.rest.controller;
 
-import com.aionn.catalog.adapter.rest.dto.merchant.AdminReasonRequest;
-import com.aionn.catalog.adapter.rest.dto.merchant.RegisterMerchantRequest;
+import com.aionn.catalog.adapter.rest.dto.merchant.request.AdminReasonRequest;
+import com.aionn.catalog.adapter.rest.dto.merchant.request.RegisterMerchantRequest;
 import com.aionn.catalog.adapter.rest.exception.CatalogExceptionHandler;
 import com.aionn.catalog.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.catalog.adapter.rest.support.TestAuth;
@@ -212,7 +212,7 @@ class MerchantControllerWebTest {
                                 .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(
-                                                new com.aionn.catalog.adapter.rest.dto.merchant.UpdateCommissionRateRequest(
+                                                new com.aionn.catalog.adapter.rest.dto.merchant.request.UpdateCommissionRateRequest(
                                                                 new java.math.BigDecimal("0.0600")))))
                                 .andExpect(status().isOk());
 
@@ -231,7 +231,7 @@ class MerchantControllerWebTest {
                                 .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(
-                                                new com.aionn.catalog.adapter.rest.dto.merchant.UpdateCommissionRateRequest(
+                                                new com.aionn.catalog.adapter.rest.dto.merchant.request.UpdateCommissionRateRequest(
                                                                 new java.math.BigDecimal("0.0800")))))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.data.merchantId").value("m-1"));

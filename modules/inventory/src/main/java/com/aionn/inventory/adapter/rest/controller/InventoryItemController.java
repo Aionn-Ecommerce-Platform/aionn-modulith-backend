@@ -1,14 +1,14 @@
 package com.aionn.inventory.adapter.rest.controller;
 
-import com.aionn.inventory.adapter.rest.dto.inventory.AuditInventoryRequest;
-import com.aionn.inventory.adapter.rest.dto.inventory.ConfigureSafetyStockRequest;
-import com.aionn.inventory.adapter.rest.dto.inventory.EmergencyLockRequest;
-import com.aionn.inventory.adapter.rest.dto.inventory.InitializeStockRequest;
-import com.aionn.inventory.adapter.rest.dto.inventory.ManualAdjustmentRequest;
-import com.aionn.inventory.adapter.rest.dto.inventory.TrackBatchAndExpiryRequest;
+import com.aionn.inventory.adapter.rest.dto.inventory.request.AuditInventoryRequest;
+import com.aionn.inventory.adapter.rest.dto.inventory.request.ConfigureSafetyStockRequest;
+import com.aionn.inventory.adapter.rest.dto.inventory.request.EmergencyLockRequest;
+import com.aionn.inventory.adapter.rest.dto.inventory.request.InitializeStockRequest;
+import com.aionn.inventory.adapter.rest.dto.inventory.request.ManualAdjustmentRequest;
+import com.aionn.inventory.adapter.rest.dto.inventory.request.TrackBatchAndExpiryRequest;
+import com.aionn.inventory.adapter.rest.dto.inventory.response.LowStockAlertResponse;
 import com.aionn.inventory.adapter.rest.mapper.inventory.InventoryItemDtoMapper;
 import com.aionn.inventory.adapter.rest.support.session.CurrentAdminId;
-import com.aionn.inventory.application.dto.analytics.result.LowStockAlertResult;
 import com.aionn.inventory.application.dto.common.PageResult;
 import com.aionn.inventory.application.dto.inventory.command.EmergencyUnlockCommand;
 import com.aionn.inventory.application.dto.inventory.result.InventoryItemResult;
@@ -47,12 +47,12 @@ public class InventoryItemController {
     private final InventoryItemDtoMapper dtoMapper;
 
     @GetMapping("/merchant/low-stock")
-    @PreAuthorize("hasAuthority('ROLE_MERCHANT')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Low-stock alerts for the authenticated merchant")
-    public ResponseEntity<ApiResponse<List<LowStockAlertResult>>> merchantLowStock(
+    public ResponseEntity<ApiResponse<List<LowStockAlertResponse>>> merchantLowStock(
             Authentication authentication) {
         return ResponseEntity.ok(ApiResponse.success(
-                getMerchantLowStockInputPort.execute(authentication.getName()),
+                dtoMapper.toLowStockResponses(getMerchantLowStockInputPort.execute(authentication.getName())),
                 "Low-stock alerts fetched"));
     }
 
@@ -153,7 +153,7 @@ public class InventoryItemController {
     }
 
     @GetMapping("/by-warehouse/{warehouseId}")
-    @PreAuthorize("hasAuthority('ROLE_MERCHANT')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "List inventory items in a warehouse",
             description = "Paginated list of inventory rows for the given warehouse. "
                     + "Only the warehouse owner can read its stock.")
@@ -168,7 +168,7 @@ public class InventoryItemController {
     }
 
     @GetMapping("/{skuId}/{warehouseId}")
-    @PreAuthorize("hasAnyAuthority('ROLE_MERCHANT','ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get inventory item")
     public ResponseEntity<ApiResponse<InventoryItemResult>> get(
             @PathVariable String skuId,

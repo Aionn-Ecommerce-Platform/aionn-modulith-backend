@@ -1,7 +1,8 @@
 package com.aionn.inventory.adapter.rest.controller;
 
-import com.aionn.inventory.adapter.rest.dto.reservation.ReleaseReservationRequest;
-import com.aionn.inventory.adapter.rest.dto.reservation.ReserveStockRequest;
+import com.aionn.inventory.adapter.rest.dto.reservation.request.ReleaseReservationRequest;
+import com.aionn.inventory.adapter.rest.dto.reservation.request.ReserveStockRequest;
+import com.aionn.inventory.adapter.rest.dto.reservation.response.ReservationResponse;
 import com.aionn.inventory.adapter.rest.mapper.reservation.StockReservationDtoMapper;
 import com.aionn.inventory.application.dto.reservation.command.CommitReservationCommand;
 import com.aionn.inventory.application.dto.reservation.result.ReservationResult;
@@ -34,31 +35,31 @@ public class StockReservationController {
 
     @PostMapping
     @Operation(summary = "Reserve stock")
-    public ResponseEntity<ApiResponse<ReservationResult>> reserve(@Valid @RequestBody ReserveStockRequest request) {
+    public ResponseEntity<ApiResponse<ReservationResponse>> reserve(@Valid @RequestBody ReserveStockRequest request) {
         ReservationResult result = reserveStockInputPort.execute(dtoMapper.toReserveStockCommand(request));
-        return ApiResponse.createdResponse("Reservation processed", result);
+        return ApiResponse.createdResponse("Reservation processed", dtoMapper.toResponse(result));
     }
 
     @PostMapping("/{reservationId}/commit")
     @Operation(summary = "Commit reservation")
-    public ResponseEntity<ApiResponse<ReservationResult>> commit(@PathVariable String reservationId) {
+    public ResponseEntity<ApiResponse<ReservationResponse>> commit(@PathVariable String reservationId) {
         ReservationResult result = commitReservationInputPort.execute(new CommitReservationCommand(reservationId));
-        return ResponseEntity.ok(ApiResponse.success(result, "Reservation committed"));
+        return ResponseEntity.ok(ApiResponse.success(dtoMapper.toResponse(result), "Reservation committed"));
     }
 
     @PostMapping("/{reservationId}/release")
     @Operation(summary = "Release reservation")
-    public ResponseEntity<ApiResponse<ReservationResult>> release(
+    public ResponseEntity<ApiResponse<ReservationResponse>> release(
             @PathVariable String reservationId,
             @Valid @RequestBody ReleaseReservationRequest request) {
         ReservationResult result = releaseReservationInputPort.execute(
                 dtoMapper.toReleaseReservationCommand(reservationId, request));
-        return ResponseEntity.ok(ApiResponse.success(result, "Reservation released"));
+        return ResponseEntity.ok(ApiResponse.success(dtoMapper.toResponse(result), "Reservation released"));
     }
 
     @GetMapping("/{reservationId}")
     @Operation(summary = "Get reservation")
-    public ResponseEntity<ApiResponse<ReservationResult>> get(@PathVariable String reservationId) {
-        return ResponseEntity.ok(ApiResponse.success(getReservationInputPort.execute(reservationId), "Reservation fetched"));
+    public ResponseEntity<ApiResponse<ReservationResponse>> get(@PathVariable String reservationId) {
+        return ResponseEntity.ok(ApiResponse.success(dtoMapper.toResponse(getReservationInputPort.execute(reservationId)), "Reservation fetched"));
     }
 }
