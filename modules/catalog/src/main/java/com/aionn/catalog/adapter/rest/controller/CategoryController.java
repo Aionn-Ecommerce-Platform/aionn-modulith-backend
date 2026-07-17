@@ -1,13 +1,14 @@
 package com.aionn.catalog.adapter.rest.controller;
 
-import com.aionn.catalog.adapter.rest.dto.category.CreateCategoryRequest;
-import com.aionn.catalog.adapter.rest.dto.category.MoveCategoryRequest;
-import com.aionn.catalog.adapter.rest.dto.category.UpdateCategoryRequest;
+import com.aionn.catalog.adapter.rest.dto.category.request.CreateCategoryRequest;
+import com.aionn.catalog.adapter.rest.dto.category.request.MoveCategoryRequest;
+import com.aionn.catalog.adapter.rest.dto.category.request.UpdateCategoryRequest;
+import com.aionn.catalog.adapter.rest.dto.category.response.CategoryResponse;
+import com.aionn.catalog.adapter.rest.dto.category.response.CategoryTreeNodeResponse;
 import com.aionn.catalog.application.dto.category.command.DeleteCategoryCommand;
 import com.aionn.catalog.application.dto.category.query.GetCategoryQuery;
 import com.aionn.catalog.application.dto.category.query.ListCategoryChildrenQuery;
 import com.aionn.catalog.application.dto.category.result.CategoryResult;
-import com.aionn.catalog.application.dto.category.result.CategoryTreeNode;
 import com.aionn.catalog.application.port.in.category.CreateCategoryInputPort;
 import com.aionn.catalog.application.port.in.category.DeleteCategoryInputPort;
 import com.aionn.catalog.application.port.in.category.GetCategoryInputPort;
@@ -47,32 +48,32 @@ public class CategoryController {
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
     @Operation(summary = "Create category")
-    public ResponseEntity<ApiResponse<CategoryResult>> create(@Valid @RequestBody CreateCategoryRequest request) {
+    public ResponseEntity<ApiResponse<CategoryResponse>> create(@Valid @RequestBody CreateCategoryRequest request) {
         CategoryResult result = createCategoryInputPort.execute(
                 categoryDtoMapper.toCreateCategoryCommand(request));
-        return ApiResponse.createdResponse("Category created", result);
+        return ApiResponse.createdResponse("Category created", categoryDtoMapper.toResponse(result));
     }
 
     @PutMapping("/{categoryId}")
     @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
     @Operation(summary = "Update category", description = "Edit category content (name, icon, active flag). CS agents may correct content; structural changes (create/move/delete) remain SYSTEM_ADMIN only.")
-    public ResponseEntity<ApiResponse<CategoryResult>> update(
+    public ResponseEntity<ApiResponse<CategoryResponse>> update(
             @PathVariable String categoryId,
             @Valid @RequestBody UpdateCategoryRequest request) {
         CategoryResult result = updateCategoryInputPort.execute(
                 categoryDtoMapper.toUpdateCategoryCommand(categoryId, request));
-        return ResponseEntity.ok(ApiResponse.success(result, "Category updated"));
+        return ResponseEntity.ok(ApiResponse.success(categoryDtoMapper.toResponse(result), "Category updated"));
     }
 
     @PostMapping("/{categoryId}/move")
     @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
     @Operation(summary = "Move category", description = "Reparent the category in the tree")
-    public ResponseEntity<ApiResponse<CategoryResult>> move(
+    public ResponseEntity<ApiResponse<CategoryResponse>> move(
             @PathVariable String categoryId,
             @Valid @RequestBody MoveCategoryRequest request) {
         CategoryResult result = moveCategoryInputPort
                 .execute(categoryDtoMapper.toMoveCategoryCommand(categoryId, request));
-        return ResponseEntity.ok(ApiResponse.success(result, "Category moved"));
+        return ResponseEntity.ok(ApiResponse.success(categoryDtoMapper.toResponse(result), "Category moved"));
     }
 
     @DeleteMapping("/{categoryId}")
@@ -85,29 +86,29 @@ public class CategoryController {
 
     @GetMapping("/roots")
     @Operation(summary = "List root categories", description = "Public read - active root categories")
-    public ResponseEntity<ApiResponse<List<CategoryResult>>> listRoots() {
+    public ResponseEntity<ApiResponse<List<CategoryResponse>>> listRoots() {
         return ResponseEntity.ok(ApiResponse.success(
-                listCategoryRootsInputPort.execute(), "Root categories fetched"));
+                categoryDtoMapper.toResponses(listCategoryRootsInputPort.execute()), "Root categories fetched"));
     }
 
     @GetMapping("/{categoryId}/children")
     @Operation(summary = "List children of a category", description = "Public read")
-    public ResponseEntity<ApiResponse<List<CategoryResult>>> listChildren(@PathVariable String categoryId) {
+    public ResponseEntity<ApiResponse<List<CategoryResponse>>> listChildren(@PathVariable String categoryId) {
         return ResponseEntity.ok(ApiResponse.success(
-                listCategoryChildrenInputPort.execute(new ListCategoryChildrenQuery(categoryId)), "Children fetched"));
+                categoryDtoMapper.toResponses(listCategoryChildrenInputPort.execute(new ListCategoryChildrenQuery(categoryId))), "Children fetched"));
     }
 
     @GetMapping("/tree")
     @Operation(summary = "Full category tree", description = "Public read - nested tree of all active categories")
-    public ResponseEntity<ApiResponse<List<CategoryTreeNode>>> tree() {
+    public ResponseEntity<ApiResponse<List<CategoryTreeNodeResponse>>> tree() {
         return ResponseEntity.ok(ApiResponse.success(
-                getCategoryTreeInputPort.execute(), "Category tree fetched"));
+                categoryDtoMapper.toTreeNodeResponses(getCategoryTreeInputPort.execute()), "Category tree fetched"));
     }
 
     @GetMapping("/{categoryId}")
     @Operation(summary = "Get category", description = "Public read")
-    public ResponseEntity<ApiResponse<CategoryResult>> get(@PathVariable String categoryId) {
+    public ResponseEntity<ApiResponse<CategoryResponse>> get(@PathVariable String categoryId) {
         return ResponseEntity.ok(ApiResponse.success(
-                getCategoryInputPort.execute(new GetCategoryQuery(categoryId)), "Category fetched"));
+                categoryDtoMapper.toResponse(getCategoryInputPort.execute(new GetCategoryQuery(categoryId))), "Category fetched"));
     }
 }

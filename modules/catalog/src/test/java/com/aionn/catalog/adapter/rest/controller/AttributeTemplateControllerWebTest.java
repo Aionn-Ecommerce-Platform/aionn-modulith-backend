@@ -1,7 +1,7 @@
 package com.aionn.catalog.adapter.rest.controller;
 
-import com.aionn.catalog.adapter.rest.dto.attribute.ConfigureFilterableRequest;
-import com.aionn.catalog.adapter.rest.dto.attribute.CreateAttributeTemplateRequest;
+import com.aionn.catalog.adapter.rest.dto.attribute.request.ConfigureFilterableRequest;
+import com.aionn.catalog.adapter.rest.dto.attribute.request.CreateAttributeTemplateRequest;
 import com.aionn.catalog.adapter.rest.exception.CatalogExceptionHandler;
 import com.aionn.catalog.adapter.rest.mapper.attribute.AttributeDtoMapperImpl;
 import com.aionn.catalog.adapter.rest.support.MockSecurityInterceptor;

@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +25,7 @@ import java.util.Map;
 public class IdentityAnalyticsAdapter
         implements UserAnalyticsQueryPort, KycAnalyticsQueryPort, FeedbackAnalyticsQueryPort {
 
-    private static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+    private static final ZoneOffset ZONE = ZoneOffset.UTC;
 
     private final UserRepository userRepository;
     private final KycProfileRepository kycRepository;

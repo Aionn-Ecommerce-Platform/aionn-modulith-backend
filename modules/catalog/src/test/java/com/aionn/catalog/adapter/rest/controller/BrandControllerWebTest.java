@@ -1,8 +1,8 @@
 package com.aionn.catalog.adapter.rest.controller;
 
-import com.aionn.catalog.adapter.rest.dto.brand.CreateBrandRequest;
-import com.aionn.catalog.adapter.rest.dto.brand.DeleteBrandRequest;
-import com.aionn.catalog.adapter.rest.dto.brand.UpdateBrandRequest;
+import com.aionn.catalog.adapter.rest.dto.brand.request.CreateBrandRequest;
+import com.aionn.catalog.adapter.rest.dto.brand.request.DeleteBrandRequest;
+import com.aionn.catalog.adapter.rest.dto.brand.request.UpdateBrandRequest;
 import com.aionn.catalog.adapter.rest.exception.CatalogExceptionHandler;
 import com.aionn.catalog.adapter.rest.mapper.brand.BrandDtoMapperImpl;
 import com.aionn.catalog.adapter.rest.support.MockSecurityInterceptor;

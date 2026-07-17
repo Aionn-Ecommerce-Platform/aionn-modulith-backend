@@ -1,8 +1,8 @@
 package com.aionn.catalog.adapter.rest.controller;
 
-import com.aionn.catalog.adapter.rest.dto.category.CreateCategoryRequest;
-import com.aionn.catalog.adapter.rest.dto.category.MoveCategoryRequest;
-import com.aionn.catalog.adapter.rest.dto.category.UpdateCategoryRequest;
+import com.aionn.catalog.adapter.rest.dto.category.request.CreateCategoryRequest;
+import com.aionn.catalog.adapter.rest.dto.category.request.MoveCategoryRequest;
+import com.aionn.catalog.adapter.rest.dto.category.request.UpdateCategoryRequest;
 import com.aionn.catalog.adapter.rest.exception.CatalogExceptionHandler;
 import com.aionn.catalog.adapter.rest.mapper.category.CategoryDtoMapperImpl;
 import com.aionn.catalog.adapter.rest.support.MockSecurityInterceptor;

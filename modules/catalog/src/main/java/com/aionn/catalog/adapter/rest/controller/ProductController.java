@@ -1,14 +1,18 @@
 package com.aionn.catalog.adapter.rest.controller;
 
-import com.aionn.catalog.adapter.rest.dto.product.AssignBrandRequest;
-import com.aionn.catalog.adapter.rest.dto.product.AssignCategoriesRequest;
-import com.aionn.catalog.adapter.rest.dto.product.BulkPriceUpdateRequest;
-import com.aionn.catalog.adapter.rest.dto.product.ChangeVariantPriceRequest;
-import com.aionn.catalog.adapter.rest.dto.product.CreateProductRequest;
-import com.aionn.catalog.adapter.rest.dto.product.DeactivateProductRequest;
-import com.aionn.catalog.adapter.rest.dto.product.DefineAttributesRequest;
-import com.aionn.catalog.adapter.rest.dto.product.DefineVariantRequest;
-import com.aionn.catalog.adapter.rest.dto.product.RejectProductRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.AssignBrandRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.AssignCategoriesRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.BulkPriceUpdateRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.ChangeVariantPriceRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.CreateProductRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.DeactivateProductRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.DefineAttributesRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.DefineVariantRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.RejectProductRequest;
+import com.aionn.catalog.adapter.rest.dto.product.response.BulkPriceUpdateResponse;
+import com.aionn.catalog.adapter.rest.dto.product.response.ProductAnalyticsResponse;
+import com.aionn.catalog.adapter.rest.dto.product.response.ProductResponse;
+import com.aionn.catalog.adapter.rest.dto.product.response.ProductSearchResponse;
 import com.aionn.catalog.adapter.rest.mapper.product.ProductDtoMapper;
 import com.aionn.catalog.adapter.rest.support.session.CurrentAdminId;
 import com.aionn.catalog.adapter.rest.support.session.CurrentMerchantId;
@@ -118,309 +122,302 @@ public class ProductController {
         @PostMapping
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Create product")
-        public ResponseEntity<ApiResponse<ProductResult>> create(
+        public ResponseEntity<ApiResponse<ProductResponse>> create(
                         @CurrentMerchantId String merchantId,
                         @Valid @RequestBody CreateProductRequest request) {
                 ProductResult result = createProductInputPort.execute(
                                 productDtoMapper.toCreateProductCommand(merchantId, request));
-                return ApiResponse.createdResponse("Product created", result);
+                return ApiResponse.createdResponse("Product created", productDtoMapper.toResponse(result));
         }
 
         @PostMapping("/{productId}/clone")
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Clone product")
-        public ResponseEntity<ApiResponse<ProductResult>> clone(
+        public ResponseEntity<ApiResponse<ProductResponse>> clone(
                         @CurrentMerchantId String merchantId,
                         @PathVariable String productId) {
                 ProductResult result = cloneProductInputPort.execute(new CloneProductCommand(productId, merchantId));
-                return ApiResponse.createdResponse("Product cloned", result);
+                return ApiResponse.createdResponse("Product cloned", productDtoMapper.toResponse(result));
         }
 
         @PostMapping("/{productId}/variants")
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Define variant (SKU)")
-        public ResponseEntity<ApiResponse<ProductResult>> defineVariant(
+        public ResponseEntity<ApiResponse<ProductResponse>> defineVariant(
                         @CurrentMerchantId String merchantId,
                         @PathVariable String productId,
                         @Valid @RequestBody DefineVariantRequest request) {
                 ProductResult result = defineVariantInputPort.execute(
                                 productDtoMapper.toDefineVariantCommand(productId, merchantId, request));
-                return ResponseEntity.ok(ApiResponse.success(result, "Variant defined"));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Variant defined"));
         }
 
         @PutMapping("/{productId}/variants/{skuId}/price")
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Change variant price")
-        public ResponseEntity<ApiResponse<ProductResult>> changeVariantPrice(
+        public ResponseEntity<ApiResponse<ProductResponse>> changeVariantPrice(
                         @CurrentMerchantId String merchantId,
                         @PathVariable String productId,
                         @PathVariable String skuId,
                         @Valid @RequestBody ChangeVariantPriceRequest request) {
                 ProductResult result = changeVariantPriceInputPort.execute(
                                 productDtoMapper.toChangeVariantPriceCommand(productId, merchantId, skuId, request));
-                return ResponseEntity.ok(ApiResponse.success(result, "Variant price changed"));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Variant price updated"));
         }
 
-        @PostMapping("/bulk-price")
+        @PutMapping("/variants/prices")
         @PreAuthorize("isAuthenticated()")
-        @Operation(summary = "Bulk price update", description = "Update variant prices for many products at once")
-        public ResponseEntity<ApiResponse<BulkPriceUpdateResult>> bulkPriceUpdate(
+        @Operation(summary = "Bulk update prices")
+        public ResponseEntity<ApiResponse<BulkPriceUpdateResponse>> bulkUpdatePrices(
                         @CurrentMerchantId String merchantId,
                         @Valid @RequestBody BulkPriceUpdateRequest request) {
                 BulkPriceUpdateResult result = bulkPriceUpdateInputPort.execute(
                                 productDtoMapper.toBulkPriceUpdateCommand(merchantId, request));
-                return ResponseEntity.ok(ApiResponse.success(result, "Bulk price update completed"));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toBulkUpdateResponse(result), "Bulk prices updated"));
         }
 
         @PutMapping("/{productId}/brand")
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Assign brand")
-        public ResponseEntity<ApiResponse<ProductResult>> assignBrand(
+        public ResponseEntity<ApiResponse<ProductResponse>> assignBrand(
                         @CurrentMerchantId String merchantId,
                         @PathVariable String productId,
                         @Valid @RequestBody AssignBrandRequest request) {
                 ProductResult result = assignBrandInputPort.execute(
                                 productDtoMapper.toAssignBrandCommand(productId, merchantId, request));
-                return ResponseEntity.ok(ApiResponse.success(result, "Brand assigned"));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Brand assigned"));
         }
 
         @PutMapping("/{productId}/categories")
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Assign categories")
-        public ResponseEntity<ApiResponse<ProductResult>> assignCategories(
+        public ResponseEntity<ApiResponse<ProductResponse>> assignCategories(
                         @CurrentMerchantId String merchantId,
                         @PathVariable String productId,
                         @Valid @RequestBody AssignCategoriesRequest request) {
                 ProductResult result = assignCategoriesInputPort.execute(
                                 productDtoMapper.toAssignCategoriesCommand(productId, merchantId, request));
-                return ResponseEntity.ok(ApiResponse.success(result, "Categories assigned"));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Categories assigned"));
         }
 
         @PutMapping("/{productId}/attributes")
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Define attributes")
-        public ResponseEntity<ApiResponse<ProductResult>> defineAttributes(
+        public ResponseEntity<ApiResponse<ProductResponse>> defineAttributes(
                         @CurrentMerchantId String merchantId,
                         @PathVariable String productId,
                         @Valid @RequestBody DefineAttributesRequest request) {
                 ProductResult result = defineAttributesInputPort.execute(
                                 productDtoMapper.toDefineAttributesCommand(productId, merchantId, request));
-                return ResponseEntity.ok(ApiResponse.success(result, "Attributes defined"));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Attributes defined"));
+        }
+
+        @PostMapping("/{productId}/publish")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(summary = "Publish product")
+        public ResponseEntity<ApiResponse<ProductResponse>> publish(
+                        @CurrentMerchantId String merchantId,
+                        @PathVariable String productId) {
+                ProductResult result = publishProductInputPort.execute(new PublishProductCommand(productId, merchantId));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Product published"));
         }
 
         @PostMapping("/{productId}/submit-review")
         @PreAuthorize("isAuthenticated()")
-        @Operation(summary = "Submit for review")
-        public ResponseEntity<ApiResponse<ProductResult>> submitForReview(
+        @Operation(summary = "Submit product for review")
+        public ResponseEntity<ApiResponse<ProductResponse>> submitForReview(
                         @CurrentMerchantId String merchantId,
                         @PathVariable String productId) {
-                ProductResult result = submitForReviewInputPort
-                                .execute(new SubmitForReviewCommand(productId, merchantId));
-                return ResponseEntity.ok(ApiResponse.success(result, "Product submitted for review"));
-        }
-
-        @PostMapping("/{productId}/publish")
-        @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
-        @Operation(summary = "Publish product")
-        public ResponseEntity<ApiResponse<ProductResult>> publish(
-                        @CurrentAdminId String adminId,
-                        @PathVariable String productId) {
-                ProductResult result = publishProductInputPort.execute(new PublishProductCommand(productId, adminId));
-                return ResponseEntity.ok(ApiResponse.success(result, "Product published"));
+                ProductResult result = submitForReviewInputPort.execute(new SubmitForReviewCommand(productId, merchantId));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Product submitted for review"));
         }
 
         @PostMapping("/{productId}/reject")
         @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
-        @Operation(summary = "Reject product")
-        public ResponseEntity<ApiResponse<ProductResult>> reject(
+        @Operation(summary = "Reject product creation/update")
+        public ResponseEntity<ApiResponse<ProductResponse>> reject(
                         @CurrentAdminId String adminId,
                         @PathVariable String productId,
                         @Valid @RequestBody RejectProductRequest request) {
                 ProductResult result = rejectProductInputPort.execute(
                                 productDtoMapper.toRejectProductCommand(productId, adminId, request));
-                return ResponseEntity.ok(ApiResponse.success(result, "Product rejected"));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Product review rejected"));
         }
 
         @PostMapping("/{productId}/deactivate")
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Deactivate product")
-        public ResponseEntity<ApiResponse<ProductResult>> deactivate(
+        public ResponseEntity<ApiResponse<ProductResponse>> deactivate(
                         @CurrentMerchantId String merchantId,
                         @PathVariable String productId,
                         @Valid @RequestBody DeactivateProductRequest request) {
                 ProductResult result = deactivateProductInputPort.execute(
                                 productDtoMapper.toDeactivateProductCommand(productId, merchantId, request));
-                return ResponseEntity.ok(ApiResponse.success(result, "Product deactivated"));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Product deactivated"));
         }
 
         @PostMapping("/{productId}/restore")
-        @PreAuthorize("isAuthenticated()")
-        @Operation(summary = "Restore product")
-        public ResponseEntity<ApiResponse<ProductResult>> restore(
-                        @CurrentMerchantId String merchantId,
+        @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
+        @Operation(summary = "Restore archived/deleted product")
+        public ResponseEntity<ApiResponse<ProductResponse>> restore(
+                        @CurrentAdminId String adminId,
                         @PathVariable String productId) {
-                ProductResult result = restoreProductInputPort
-                                .execute(new RestoreProductCommand(productId, merchantId));
-                return ResponseEntity.ok(ApiResponse.success(result, "Product restored"));
+                ProductResult result = restoreProductInputPort.execute(new RestoreProductCommand(productId, adminId));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Product restored"));
         }
 
         @GetMapping("/{productId}")
         @Operation(summary = "Get product")
-        public ResponseEntity<ApiResponse<ProductResult>> get(@PathVariable String productId) {
+        public ResponseEntity<ApiResponse<ProductResponse>> get(@PathVariable String productId) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                getProductInputPort.execute(new GetProductQuery(productId)), "Product fetched"));
+                                productDtoMapper.toResponse(getProductInputPort.execute(new GetProductQuery(productId))), "Product fetched"));
         }
 
-        @GetMapping("/by-sku")
-        @Operation(summary = "Get products by SKU ids")
-        public ResponseEntity<ApiResponse<List<ProductResult>>> getBySkuIds(@RequestParam List<String> skuIds) {
-                return ResponseEntity.ok(ApiResponse.success(
-                                getProductsBySkuIdsInputPort.execute(new GetProductsBySkuIdsQuery(skuIds)),
-                                MSG_PRODUCTS_FETCHED));
-        }
-
-        @GetMapping
-        @Operation(summary = "List products by merchant or status")
-        public ResponseEntity<ApiResponse<List<ProductResult>>> list(
-                        @RequestParam(required = false) String merchantId,
-                        @RequestParam(required = false) ProductStatus status,
+        @GetMapping("/merchant")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(summary = "List merchant products")
+        public ResponseEntity<ApiResponse<List<ProductResponse>>> listMyProducts(
+                        @CurrentMerchantId String merchantId,
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "20") int size) {
-                PageResult<ProductResult> result;
-                if (merchantId != null) {
-                        result = listProductsByMerchantInputPort.execute(
-                                        new ListProductsByMerchantQuery(merchantId, OffsetPagination.of(page, size)));
-                } else if (status != null) {
-                        result = listProductsByStatusInputPort.execute(
-                                        new ListProductsByStatusQuery(status, OffsetPagination.of(page, size)));
-                } else {
-                        result = new PageResult<>(List.of(), page, size, 0);
-                }
+                PageResult<ProductResult> results = listProductsByMerchantInputPort.execute(
+                                new ListProductsByMerchantQuery(merchantId, OffsetPagination.of(page, size)));
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
-                                result.content(),
-                                PageMetadata.of(result.page(), result.size(), result.totalElements()),
+                                productDtoMapper.toResponses(results.content()),
+                                PageMetadata.of(results.page(), results.size(), results.totalElements()),
                                 MSG_PRODUCTS_FETCHED));
         }
 
-        @org.springframework.web.bind.annotation.DeleteMapping("/{productId}/variants/{skuId}")
+        @GetMapping("/admin/reviews")
+        @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
+        @Operation(summary = "List products pending review")
+        public ResponseEntity<ApiResponse<List<ProductResponse>>> listPendingReviews(
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "20") int size) {
+                PageResult<ProductResult> results = listProductsByStatusInputPort.execute(
+                                new ListProductsByStatusQuery(ProductStatus.PENDING_REVIEW, OffsetPagination.of(page, size)));
+                return ResponseEntity.ok(ApiResponse.successWithPaging(
+                                productDtoMapper.toResponses(results.content()),
+                                PageMetadata.of(results.page(), results.size(), results.totalElements()),
+                                MSG_PRODUCTS_FETCHED));
+        }
+
+        @PostMapping("/{productId}/variants/{skuId}/remove")
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Remove variant")
-        public ResponseEntity<ApiResponse<ProductResult>> removeVariant(
+        public ResponseEntity<ApiResponse<ProductResponse>> removeVariant(
                         @CurrentMerchantId String merchantId,
                         @PathVariable String productId,
                         @PathVariable String skuId) {
-                return ResponseEntity.ok(ApiResponse.success(
-                                removeVariantInputPort.execute(
-                                                new com.aionn.catalog.application.dto.product.command.RemoveVariantCommand(
-                                                                productId, merchantId, skuId)),
-                                "Variant removed"));
+                ProductResult result = removeVariantInputPort.execute(
+                                new com.aionn.catalog.application.dto.product.command.RemoveVariantCommand(productId, skuId, merchantId));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Variant removed"));
         }
 
         @PutMapping("/{productId}/media")
         @PreAuthorize("isAuthenticated()")
-        @Operation(summary = "Update product media (images)")
-        public ResponseEntity<ApiResponse<ProductResult>> updateMedia(
+        @Operation(summary = "Update product media")
+        public ResponseEntity<ApiResponse<ProductResponse>> updateMedia(
                         @CurrentMerchantId String merchantId,
                         @PathVariable String productId,
-                        @Valid @RequestBody com.aionn.catalog.adapter.rest.dto.product.UpdateMediaRequest request) {
-                return ResponseEntity.ok(ApiResponse.success(
-                                updateMediaInputPort.execute(
-                                                productDtoMapper.toUpdateMediaCommand(productId, merchantId, request)),
-                                "Media updated"));
+                        @Valid @RequestBody com.aionn.catalog.adapter.rest.dto.product.request.UpdateMediaRequest request) {
+                ProductResult result = updateMediaInputPort.execute(
+                                productDtoMapper.toUpdateMediaCommand(productId, merchantId, request));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Media updated"));
         }
 
         @PutMapping("/{productId}/ai-metadata")
         @PreAuthorize("isAuthenticated()")
-        @Operation(summary = "Update AI-generated tags and description")
-        public ResponseEntity<ApiResponse<ProductResult>> updateAiMetadata(
+        @Operation(summary = "Update product AI metadata")
+        public ResponseEntity<ApiResponse<ProductResponse>> updateAiMetadata(
                         @CurrentMerchantId String merchantId,
                         @PathVariable String productId,
-                        @Valid @RequestBody com.aionn.catalog.adapter.rest.dto.product.UpdateAiMetadataRequest request) {
-                return ResponseEntity.ok(ApiResponse.success(
-                                updateAiMetadataInputPort.execute(
-                                                productDtoMapper.toUpdateAiMetadataCommand(productId, merchantId,
-                                                                request)),
-                                "AI metadata updated"));
+                        @Valid @RequestBody com.aionn.catalog.adapter.rest.dto.product.request.UpdateAiMetadataRequest request) {
+                ProductResult result = updateAiMetadataInputPort.execute(
+                                productDtoMapper.toUpdateAiMetadataCommand(productId, merchantId, request));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "AI metadata updated"));
         }
 
         @PutMapping("/{productId}/collections")
         @PreAuthorize("isAuthenticated()")
-        @Operation(summary = "Assign product to collections")
-        public ResponseEntity<ApiResponse<ProductResult>> assignCollections(
+        @Operation(summary = "Assign product collections")
+        public ResponseEntity<ApiResponse<ProductResponse>> assignCollections(
                         @CurrentMerchantId String merchantId,
                         @PathVariable String productId,
-                        @Valid @RequestBody com.aionn.catalog.adapter.rest.dto.product.AssignCollectionsRequest request) {
-                return ResponseEntity.ok(ApiResponse.success(
-                                assignCollectionsInputPort.execute(
-                                                productDtoMapper.toAssignCollectionsCommand(productId, merchantId,
-                                                                request)),
-                                "Collections assigned"));
+                        @Valid @RequestBody com.aionn.catalog.adapter.rest.dto.product.request.AssignCollectionsRequest request) {
+                ProductResult result = assignCollectionsInputPort.execute(
+                                productDtoMapper.toAssignCollectionsCommand(productId, merchantId, request));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Collections assigned"));
         }
 
         @PostMapping("/{productId}/takedown")
         @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
-        @Operation(summary = "Admin emergency takedown")
-        public ResponseEntity<ApiResponse<ProductResult>> emergencyTakedown(
+        @Operation(summary = "Emergency product takedown")
+        public ResponseEntity<ApiResponse<ProductResponse>> emergencyTakedown(
                         @CurrentAdminId String adminId,
                         @PathVariable String productId,
-                        @Valid @RequestBody com.aionn.catalog.adapter.rest.dto.product.EmergencyTakedownRequest request) {
-                return ResponseEntity.ok(ApiResponse.success(
-                                emergencyTakedownInputPort.execute(
-                                                productDtoMapper.toEmergencyTakedownCommand(productId, adminId,
-                                                                request)),
-                                "Product taken down"));
+                        @Valid @RequestBody com.aionn.catalog.adapter.rest.dto.product.request.EmergencyTakedownRequest request) {
+                ProductResult result = emergencyTakedownInputPort.execute(
+                                productDtoMapper.toEmergencyTakedownCommand(productId, adminId, request));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Emergency takedown executed"));
         }
 
         @GetMapping("/search")
-        @Operation(summary = "Search products by keyword")
-        public ResponseEntity<ApiResponse<List<ProductResult>>> search(
+        @Operation(summary = "Search products")
+        public ResponseEntity<ApiResponse<List<ProductResponse>>> search(
                         @RequestParam(required = false, defaultValue = "") String keyword,
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "20") int size) {
-                PageResult<ProductResult> result = searchProductsInputPort.execute(
-                                new com.aionn.catalog.application.dto.product.query.SearchProductsQuery(
-                                                keyword, OffsetPagination.of(page, size)));
+                PageResult<ProductResult> results = searchProductsInputPort.execute(
+                                new com.aionn.catalog.application.dto.product.query.SearchProductsQuery(keyword, OffsetPagination.of(page, size)));
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
-                                result.content(),
-                                PageMetadata.of(result.page(), result.size(), result.totalElements()),
+                                productDtoMapper.toResponses(results.content()),
+                                PageMetadata.of(results.page(), results.size(), results.totalElements()),
+                                MSG_PRODUCTS_FETCHED));
+        }
+
+        @GetMapping("/by-skus")
+        @Operation(summary = "Get products by SKU IDs")
+        public ResponseEntity<ApiResponse<List<ProductResponse>>> getBySkuIds(@RequestParam List<String> skuIds) {
+                return ResponseEntity.ok(ApiResponse.success(
+                                productDtoMapper.toResponses(getProductsBySkuIdsInputPort.execute(new GetProductsBySkuIdsQuery(skuIds))),
                                 MSG_PRODUCTS_FETCHED));
         }
 
         @GetMapping("/{productId}/recommendations")
-        @Operation(summary = "Get related products", description = "Public read of related products based on category/brand")
-        public ResponseEntity<ApiResponse<List<ProductResult>>> getRelatedProducts(
+        @Operation(summary = "Get related products")
+        public ResponseEntity<ApiResponse<List<ProductResponse>>> getRelated(
                         @PathVariable String productId,
                         @RequestParam(defaultValue = "5") int limit) {
-                List<ProductResult> results = getRelatedProductsInputPort.execute(
-                                new GetRelatedProductsQuery(productId, limit));
-                return ResponseEntity.ok(ApiResponse.success(results, "Related products fetched"));
+                return ResponseEntity.ok(ApiResponse.success(
+                                productDtoMapper.toResponses(getRelatedProductsInputPort.execute(new GetRelatedProductsQuery(productId, limit))),
+                                MSG_PRODUCTS_FETCHED));
         }
 
         @GetMapping("/recommendations/popular")
-        @Operation(summary = "Get popular products", description = "Public read of popular products based on ratings")
-        public ResponseEntity<ApiResponse<List<ProductResult>>> getPopularProducts(
-                        @RequestParam(defaultValue = "5") int limit) {
-                List<ProductResult> results = getPopularProductsInputPort.execute(
-                                new GetPopularProductsQuery(limit));
-                return ResponseEntity.ok(ApiResponse.success(results, "Popular products fetched"));
+        @Operation(summary = "Get popular products")
+        public ResponseEntity<ApiResponse<List<ProductResponse>>> getPopular(@RequestParam(defaultValue = "5") int limit) {
+                return ResponseEntity.ok(ApiResponse.success(
+                                productDtoMapper.toResponses(getPopularProductsInputPort.execute(new GetPopularProductsQuery(limit))),
+                                MSG_PRODUCTS_FETCHED));
         }
 
         @GetMapping("/recommendations/personalized")
-        @Operation(summary = "Get personalized products", description = "Public read of personalized products based on provided filters or browsing history")
-        public ResponseEntity<ApiResponse<List<ProductResult>>> getPersonalizedProducts(
+        @Operation(summary = "Get personalized products")
+        public ResponseEntity<ApiResponse<List<ProductResponse>>> getPersonalized(
                         Authentication authentication,
                         @RequestParam(required = false) List<String> categoryIds,
                         @RequestParam(required = false) List<String> brandIds,
                         @RequestParam(defaultValue = "5") int limit) {
                 String userId = authentication != null ? authentication.getName() : null;
-                List<ProductResult> results = getPersonalizedProductsInputPort.execute(
-                                new GetPersonalizedProductsQuery(userId, categoryIds, brandIds, limit));
-                return ResponseEntity.ok(ApiResponse.success(results, "Personalized products fetched"));
+                return ResponseEntity.ok(ApiResponse.success(
+                                productDtoMapper.toResponses(getPersonalizedProductsInputPort.execute(new GetPersonalizedProductsQuery(userId, categoryIds, brandIds, limit))),
+                                MSG_PRODUCTS_FETCHED));
         }
 
         @PostMapping("/{productId}/view")
         @PreAuthorize("isAuthenticated()")
-        @Operation(summary = "Track product view", description = "Track a product view for personalized recommendations")
+        @Operation(summary = "Track product view")
         public ResponseEntity<ApiResponse<Void>> trackView(
                         @CurrentOwnerId String ownerId,
                         @PathVariable String productId) {
@@ -430,15 +427,15 @@ public class ProductController {
 
         @GetMapping("/admin/analytics")
         @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
-        @Operation(summary = "Product catalog analytics (sysadmin)")
-        public ResponseEntity<ApiResponse<ProductAnalyticsResult>> adminAnalytics() {
-                return ResponseEntity.ok(ApiResponse.success(
-                                getProductAnalyticsInputPort.execute(), "Product analytics fetched"));
+        @Operation(summary = "Get merchant product analytics")
+        public ResponseEntity<ApiResponse<ProductAnalyticsResponse>> getMerchantAnalytics() {
+                ProductAnalyticsResult result = getProductAnalyticsInputPort.execute();
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toAnalyticsResponse(result), "Analytics fetched"));
         }
 
         @GetMapping("/search/catalog")
-        @Operation(summary = "Faceted catalog search", description = "Full-text + faceted product search with brand/category/attribute/price aggregations")
-        public ResponseEntity<ApiResponse<ProductSearchResult>> searchCatalog(
+        @Operation(summary = "Search product catalog with facets")
+        public ResponseEntity<ApiResponse<ProductSearchResponse>> searchProductCatalog(
                         @RequestParam(required = false) String q,
                         @RequestParam(required = false) String merchantId,
                         @RequestParam(required = false) List<String> categoryIds,
@@ -473,7 +470,7 @@ public class ProductController {
                                 categoryIds == null ? List.of() : categoryIds,
                                 brandIds == null ? List.of() : brandIds,
                                 priceMin, priceMax, attributes, sortEnum, page, size, ratingMin);
-                return ResponseEntity.ok(ApiResponse.success(
-                                searchProductCatalogInputPort.execute(criteria), "Search results"));
+                ProductSearchResult result = searchProductCatalogInputPort.execute(criteria);
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toSearchResponse(result), MSG_PRODUCTS_FETCHED));
         }
 }

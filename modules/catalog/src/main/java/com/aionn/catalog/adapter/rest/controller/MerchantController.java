@@ -1,8 +1,9 @@
 package com.aionn.catalog.adapter.rest.controller;
 
-import com.aionn.catalog.adapter.rest.dto.merchant.AdminReasonRequest;
-import com.aionn.catalog.adapter.rest.dto.merchant.RegisterMerchantRequest;
-import com.aionn.catalog.adapter.rest.dto.merchant.UpdateMerchantProfileRequest;
+import com.aionn.catalog.adapter.rest.dto.merchant.request.AdminReasonRequest;
+import com.aionn.catalog.adapter.rest.dto.merchant.request.RegisterMerchantRequest;
+import com.aionn.catalog.adapter.rest.dto.merchant.request.UpdateMerchantProfileRequest;
+import com.aionn.catalog.adapter.rest.dto.merchant.response.MerchantResponse;
 import com.aionn.catalog.adapter.rest.support.session.CurrentAdminId;
 import com.aionn.catalog.adapter.rest.support.session.CurrentOwnerId;
 import com.aionn.catalog.application.dto.merchant.query.GetMerchantByOwnerQuery;
@@ -36,7 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.aionn.catalog.adapter.rest.mapper.merchant.MerchantDtoMapper;
 import com.aionn.catalog.application.port.in.merchant.UpdateGlobalCommissionRateInputPort;
 import com.aionn.catalog.application.port.in.merchant.UpdateMerchantCommissionRateInputPort;
-import com.aionn.catalog.adapter.rest.dto.merchant.UpdateCommissionRateRequest;
+import com.aionn.catalog.adapter.rest.dto.merchant.request.UpdateCommissionRateRequest;
 import com.aionn.catalog.application.dto.common.PageResult;
 import com.aionn.sharedkernel.adapter.web.response.PageMetadata;
 import java.util.List;
@@ -62,86 +63,86 @@ public class MerchantController {
         @PostMapping
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Register merchant", description = "Bootstrap a merchant storefront for the authenticated seller")
-        public ResponseEntity<ApiResponse<MerchantResult>> register(
+        public ResponseEntity<ApiResponse<MerchantResponse>> register(
                         @CurrentOwnerId String ownerId,
                         @Valid @RequestBody RegisterMerchantRequest request) {
                 MerchantResult result = registerMerchantInputPort.execute(
                                 merchantDtoMapper.toRegisterMerchantCommand(ownerId, request));
-                return ApiResponse.createdResponse("Merchant registered", result);
+                return ApiResponse.createdResponse("Merchant registered", merchantDtoMapper.toResponse(result));
         }
 
         @PutMapping("/{merchantId}")
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Update merchant profile", description = "Update merchant display name, logo, description")
-        public ResponseEntity<ApiResponse<MerchantResult>> updateProfile(
+        public ResponseEntity<ApiResponse<MerchantResponse>> updateProfile(
                         @CurrentOwnerId String ownerId,
                         @PathVariable String merchantId,
                         @Valid @RequestBody UpdateMerchantProfileRequest request) {
                 MerchantResult result = updateMerchantProfileInputPort.execute(
                                 merchantDtoMapper.toUpdateMerchantProfileCommand(merchantId, ownerId, request));
-                return ResponseEntity.ok(ApiResponse.success(result, "Merchant profile updated"));
+                return ResponseEntity.ok(ApiResponse.success(merchantDtoMapper.toResponse(result), "Merchant profile updated"));
         }
 
         @PostMapping("/{merchantId}/suspend")
         @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
         @Operation(summary = "Suspend merchant", description = "Admin temporarily disables a storefront")
-        public ResponseEntity<ApiResponse<MerchantResult>> suspend(
+        public ResponseEntity<ApiResponse<MerchantResponse>> suspend(
                         @CurrentAdminId String adminId,
                         @PathVariable String merchantId,
                         @Valid @RequestBody AdminReasonRequest request) {
                 MerchantResult result = suspendMerchantInputPort.execute(
                                 merchantDtoMapper.toSuspendMerchantCommand(merchantId, adminId, request));
-                return ResponseEntity.ok(ApiResponse.success(result, "Merchant suspended"));
+                return ResponseEntity.ok(ApiResponse.success(merchantDtoMapper.toResponse(result), "Merchant suspended"));
         }
 
         @PostMapping("/{merchantId}/activate")
         @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
         @Operation(summary = "Activate merchant", description = "Admin restores a previously suspended storefront")
-        public ResponseEntity<ApiResponse<MerchantResult>> activate(
+        public ResponseEntity<ApiResponse<MerchantResponse>> activate(
                         @CurrentAdminId String adminId,
                         @PathVariable String merchantId,
                         @Valid @RequestBody AdminReasonRequest request) {
                 MerchantResult result = activateMerchantInputPort.execute(
                                 merchantDtoMapper.toActivateMerchantCommand(merchantId, adminId, request));
-                return ResponseEntity.ok(ApiResponse.success(result, "Merchant activated"));
+                return ResponseEntity.ok(ApiResponse.success(merchantDtoMapper.toResponse(result), "Merchant activated"));
         }
 
         @PostMapping("/{merchantId}/close")
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Close merchant", description = "Permanently close the storefront once open orders are settled")
-        public ResponseEntity<ApiResponse<MerchantResult>> close(
+        public ResponseEntity<ApiResponse<MerchantResponse>> close(
                         @CurrentOwnerId String ownerId,
                         @PathVariable String merchantId,
                         @Valid @RequestBody AdminReasonRequest request) {
                 MerchantResult result = closeMerchantInputPort.execute(
                                 merchantDtoMapper.toCloseMerchantCommand(merchantId, ownerId, request));
-                return ResponseEntity.ok(ApiResponse.success(result, "Merchant closed"));
+                return ResponseEntity.ok(ApiResponse.success(merchantDtoMapper.toResponse(result), "Merchant closed"));
         }
 
         @GetMapping("/me")
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Get my merchant", description = "Resolve the merchant storefront owned by the authenticated user")
-        public ResponseEntity<ApiResponse<MerchantResult>> getMine(@CurrentOwnerId String ownerId) {
+        public ResponseEntity<ApiResponse<MerchantResponse>> getMine(@CurrentOwnerId String ownerId) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                getMerchantByOwnerInputPort.execute(new GetMerchantByOwnerQuery(ownerId)),
+                                merchantDtoMapper.toResponse(getMerchantByOwnerInputPort.execute(new GetMerchantByOwnerQuery(ownerId))),
                                 "Merchant fetched"));
         }
 
         @GetMapping("/{merchantId}")
         @Operation(summary = "Get merchant", description = "Public read of merchant storefront")
-        public ResponseEntity<ApiResponse<MerchantResult>> get(@PathVariable String merchantId) {
+        public ResponseEntity<ApiResponse<MerchantResponse>> get(@PathVariable String merchantId) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                getMerchantInputPort.execute(new GetMerchantQuery(merchantId)), "Merchant fetched"));
+                                merchantDtoMapper.toResponse(getMerchantInputPort.execute(new GetMerchantQuery(merchantId))), "Merchant fetched"));
         }
 
         @GetMapping
         @Operation(summary = "List merchants", description = "Public list of all merchants on the platform")
-        public ResponseEntity<ApiResponse<List<MerchantResult>>> list(
+        public ResponseEntity<ApiResponse<List<MerchantResponse>>> list(
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "20") int size) {
                 PageResult<MerchantResult> results = listMerchantsInputPort.execute(new ListMerchantsQuery(OffsetPagination.of(page, size)));
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
-                                results.content(),
+                                merchantDtoMapper.toResponses(results.content()),
                                 PageMetadata.of(results.page(), results.size(), results.totalElements()),
                                 "Merchants listed"));
         }
@@ -158,11 +159,11 @@ public class MerchantController {
         @PutMapping("/{merchantId}/commission-rate")
         @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
         @Operation(summary = "Update merchant commission rate")
-        public ResponseEntity<ApiResponse<MerchantResult>> updateMerchantCommissionRate(
+        public ResponseEntity<ApiResponse<MerchantResponse>> updateMerchantCommissionRate(
                         @PathVariable String merchantId,
                         @Valid @RequestBody UpdateCommissionRateRequest request) {
                 MerchantResult result = updateMerchantCommissionRateInputPort.execute(
                                 merchantDtoMapper.toUpdateMerchantCommissionRateCommand(merchantId, request));
-                return ResponseEntity.ok(ApiResponse.success(result, "Merchant commission rate updated"));
+                return ResponseEntity.ok(ApiResponse.success(merchantDtoMapper.toResponse(result), "Merchant commission rate updated"));
         }
 }
