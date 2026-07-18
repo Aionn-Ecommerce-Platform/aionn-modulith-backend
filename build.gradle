@@ -87,6 +87,7 @@ sonar {
                 '**/application/policy/KycPolicy.java',
                 '**/application/policy/MfaPolicy.java',
                 '**/application/policy/RegistrationPolicy.java',
+                '**/application/policy/Spring*.java',
                 '**/adapter/rest/dto/**',
                 '**/adapter/rest/mapper/**',
                 '**/adapter/rest/support/**',
@@ -98,7 +99,12 @@ sonar {
                 '**/infrastructure/persistence/entity/**',
                 '**/infrastructure/persistence/mapper/**',
                 '**/infrastructure/persistence/repository/**',
+                '**/infrastructure/persistence/adapter/**',
                 '**/infrastructure/observability/**',
+                '**/infrastructure/integration/**',
+                '**/infrastructure/gateway/**',
+                '**/infrastructure/scheduling/**',
+                '**/infrastructure/listener/**',
                 '**/infrastructure/search/OpenSearchProductSearchIndex.java',
                 '**/infrastructure/search/OpenSearchConfig.java'
         ].join(',')

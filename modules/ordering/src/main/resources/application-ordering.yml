@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: ordering
+
+  flyway:
+    enabled: true
+    locations: classpath:db
+
+ordering:
+  reservation:
+    ttl-seconds: ${ORDERING_RESERVATION_TTL_SECONDS:86400}
+  auto-cancel:
+    enabled: ${ORDERING_AUTO_CANCEL_ENABLED:true}
+    timeout-minutes: ${ORDERING_AUTO_CANCEL_TIMEOUT_MIN:15}
+    delay-ms: ${ORDERING_AUTO_CANCEL_DELAY_MS:60000}
+    batch-size: ${ORDERING_AUTO_CANCEL_BATCH:100}
