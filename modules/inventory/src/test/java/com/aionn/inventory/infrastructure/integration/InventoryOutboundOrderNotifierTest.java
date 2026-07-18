@@ -1,4 +1,5 @@
 package com.aionn.inventory.infrastructure.integration;
+import com.aionn.inventory.infrastructure.integration.order.InventoryOutboundOrderNotifier;
 
 import com.aionn.sharedkernel.integration.event.inventory.StockCommittedIntegrationEvent;
 import com.aionn.sharedkernel.integration.event.inventory.StockReservationFailedIntegrationEvent;

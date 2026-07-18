@@ -1,4 +1,5 @@
 package com.aionn.inventory.infrastructure.integration;
+import com.aionn.inventory.infrastructure.integration.inventory.InventoryIntegrationEventMapper;
 
 import com.aionn.inventory.domain.event.InventoryItemEvents;
 import com.aionn.inventory.domain.event.StockReservationEvents;

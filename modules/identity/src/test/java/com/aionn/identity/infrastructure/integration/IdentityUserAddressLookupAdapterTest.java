@@ -1,4 +1,5 @@
 package com.aionn.identity.infrastructure.integration;
+import com.aionn.identity.infrastructure.integration.address.IdentityUserAddressLookupAdapter;
 
 import com.aionn.identity.application.port.out.address.AddressPersistencePort;
 import com.aionn.identity.domain.model.Address;

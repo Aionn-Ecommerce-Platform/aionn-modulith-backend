@@ -1,4 +1,5 @@
 package com.aionn.inventory.infrastructure.integration;
+import com.aionn.inventory.infrastructure.integration.inventory.InventorySafetyStockNotifier;
 
 import com.aionn.sharedkernel.integration.event.inventory.SafetyStockBreachedIntegrationEvent;
 import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;

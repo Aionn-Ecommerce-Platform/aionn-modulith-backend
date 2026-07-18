@@ -1,4 +1,5 @@
 package com.aionn.identity.infrastructure.integration;
+import com.aionn.identity.infrastructure.integration.security.IdentityAccessTokenVerifierAdapter;
 
 import com.aionn.identity.application.port.out.auth.AccessTokenClaims;
 import com.aionn.identity.application.port.out.auth.AccessTokenIssuerPort;

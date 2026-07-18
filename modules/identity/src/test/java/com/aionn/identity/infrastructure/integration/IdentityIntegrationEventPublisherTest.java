@@ -1,4 +1,5 @@
 package com.aionn.identity.infrastructure.integration;
+import com.aionn.identity.infrastructure.integration.identity.IdentityIntegrationEventPublisher;
 
 import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 import com.aionn.sharedkernel.integration.event.identity.EmailChangedIntegrationEvent;
