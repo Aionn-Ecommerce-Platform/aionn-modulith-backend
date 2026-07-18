@@ -28,10 +28,11 @@ public class CartService {
     private final CartPersistencePort cartRepository;
     private final OrderingResultMapper mapper;
     private final EventPublisher eventPublisher;
+    private final java.time.Clock clock;
 
     public CartResult addItem(AddItemCommand command) {
         Cart cart = loadOrCreate(command.userId());
-        cart.addItem(command.skuId(), command.qty());
+        cart.addItem(command.skuId(), command.qty(), clock.instant());
         Cart saved = cartRepository.save(cart);
         eventPublisher.publish(cart.pullEvents());
         return mapper.toResult(saved);
@@ -39,7 +40,7 @@ public class CartService {
 
     public CartResult updateItemQty(UpdateItemQtyCommand command) {
         Cart cart = loadOwned(command.userId());
-        cart.updateItemQty(command.skuId(), command.newQty());
+        cart.updateItemQty(command.skuId(), command.newQty(), clock.instant());
         Cart saved = cartRepository.save(cart);
         eventPublisher.publish(cart.pullEvents());
         return mapper.toResult(saved);
@@ -47,7 +48,7 @@ public class CartService {
 
     public CartResult removeItem(RemoveItemCommand command) {
         Cart cart = loadOwned(command.userId());
-        cart.removeItem(command.skuId());
+        cart.removeItem(command.skuId(), clock.instant());
         Cart saved = cartRepository.save(cart);
         eventPublisher.publish(cart.pullEvents());
         return mapper.toResult(saved);
@@ -55,7 +56,7 @@ public class CartService {
 
     public CartResult clearCart(ClearCartCommand command) {
         Cart cart = loadOwned(command.userId());
-        cart.clear(command.reason());
+        cart.clear(command.reason(), clock.instant());
         Cart saved = cartRepository.save(cart);
         eventPublisher.publish(cart.pullEvents());
         return mapper.toResult(saved);
@@ -63,7 +64,7 @@ public class CartService {
 
     public CartResult applyVoucher(ApplyVoucherCommand command) {
         Cart cart = loadOwned(command.userId());
-        cart.applyVoucher(command.voucherCode());
+        cart.applyVoucher(command.voucherCode(), clock.instant());
         Cart saved = cartRepository.save(cart);
         eventPublisher.publish(cart.pullEvents());
         return mapper.toResult(saved);
@@ -71,7 +72,7 @@ public class CartService {
 
     public CartResult removeVoucher(RemoveVoucherCommand command) {
         Cart cart = loadOwned(command.userId());
-        cart.removeVoucher();
+        cart.removeVoucher(clock.instant());
         Cart saved = cartRepository.save(cart);
         eventPublisher.publish(cart.pullEvents());
         return mapper.toResult(saved);
@@ -91,7 +92,7 @@ public class CartService {
 
     private Cart loadOrCreate(String userId) {
         return cartRepository.findByUserId(userId).orElseGet(() -> {
-            Cart cart = Cart.create(IdGenerator.ulid(), userId);
+            Cart cart = Cart.create(IdGenerator.ulid(), userId, clock.instant());
             return cartRepository.save(cart);
         });
     }

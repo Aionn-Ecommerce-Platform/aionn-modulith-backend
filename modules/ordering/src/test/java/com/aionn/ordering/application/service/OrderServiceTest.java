@@ -60,6 +60,7 @@ class OrderServiceTest {
     @Mock private CartService cartService;
     @Mock private MerchantQueryPort merchantQueryPort;
     @Mock private OrderingIntegrationEventPublisherPort integrationEventPublisher;
+    @Mock private java.time.Clock clock;
     private final OrderingProperties orderingProperties = new OrderingProperties(
             new OrderingProperties.Reservation(86400),
             new OrderingProperties.AutoCancel(true, 15, 60_000L, 100));
@@ -68,11 +69,12 @@ class OrderServiceTest {
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(clock.instant()).thenReturn(java.time.Instant.parse("2026-07-18T12:00:00Z"));
         orderService = new OrderService(
                 cartRepository, orderRepository, mapper, eventPublisher,
                 stockReservationGateway, paymentGateway, shippingGateway,
                 catalogPricingGateway, voucherGateway, cartService, merchantQueryPort,
-                integrationEventPublisher, orderingProperties);
+                integrationEventPublisher, orderingProperties, clock);
     }
 
     private static ShippingAddress address() {
@@ -89,7 +91,7 @@ class OrderServiceTest {
         Money subtotal = Money.of(BigDecimal.valueOf(200), "VND");
         Money shipping = Money.of(BigDecimal.ZERO, "VND");
         return Order.place(ORDER_ID, USER_ID, MERCHANT_ID, "prop-1",
-                "COD", "VND", List.of(item()), address(), shipping, subtotal);
+                "COD", "VND", List.of(item()), address(), shipping, subtotal, java.time.Instant.parse("2026-07-18T12:00:00Z"));
     }
 
     private static OrderResult sampleResult(String status) {
@@ -143,10 +145,11 @@ class OrderServiceTest {
 
     @Test
     void completeOnShippedOrderPublishesCompletedEvent() {
+        java.time.Instant now = java.time.Instant.parse("2026-07-18T12:00:00Z");
         Order order = pendingOrder();
-        order.approve("p");
-        order.confirmPreparation();
-        order.markShipped("ship-1");
+        order.approve("p", now);
+        order.confirmPreparation(now);
+        order.markShipped("ship-1", now);
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
         when(orderRepository.save(order)).thenReturn(order);
         when(mapper.toResult(order)).thenReturn(sampleResult("COMPLETED"));
@@ -220,9 +223,10 @@ class OrderServiceTest {
 
     @Test
     void markShippedCommitsReservations() {
+        java.time.Instant now = java.time.Instant.parse("2026-07-18T12:00:00Z");
         Order order = pendingOrder();
-        order.approve("p");
-        order.confirmPreparation();
+        order.approve("p", now);
+        order.confirmPreparation(now);
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
         when(orderRepository.save(order)).thenReturn(order);
         when(mapper.toResult(order)).thenReturn(sampleResult("SHIPPED"));
@@ -256,7 +260,7 @@ class OrderServiceTest {
         Order order = pendingOrder();
         when(orderRepository.save(org.mockito.ArgumentMatchers.any(Order.class))).thenReturn(order);
         when(orderRepository.findById(order.getOrderId())).thenReturn(Optional.of(order));
-        when(cartService.loadOwned(USER_ID)).thenReturn(com.aionn.ordering.domain.model.Cart.create("cart-1", USER_ID));
+        when(cartService.loadOwned(USER_ID)).thenReturn(com.aionn.ordering.domain.model.Cart.create("cart-1", USER_ID, java.time.Instant.now()));
         when(mapper.toResult(org.mockito.ArgumentMatchers.any(Order.class))).thenReturn(sampleResult("APPROVED"));
 
         OrderResult result = orderService.placeOrderHeadless(command);
@@ -288,8 +292,9 @@ class OrderServiceTest {
                         USER_ID, "addr-1", "COD", "VND", BigDecimal.ZERO, address(), List.of("sku-1"), "COD"
                 );
 
-        com.aionn.ordering.domain.model.Cart cart = com.aionn.ordering.domain.model.Cart.create("cart-1", USER_ID);
-        cart.addItem("sku-1", 2);
+        java.time.Instant now = java.time.Instant.now();
+        com.aionn.ordering.domain.model.Cart cart = com.aionn.ordering.domain.model.Cart.create("cart-1", USER_ID, now);
+        cart.addItem("sku-1", 2, now);
         when(cartService.loadOwned(USER_ID)).thenReturn(cart);
 
         CatalogPricingGateway.SkuPricing skuPricing = new CatalogPricingGateway.SkuPricing(
@@ -318,7 +323,7 @@ class OrderServiceTest {
         Order order = pendingOrder();
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
         when(orderRepository.save(org.mockito.ArgumentMatchers.any(Order.class))).thenReturn(order);
-        when(cartService.loadOwned(USER_ID)).thenReturn(com.aionn.ordering.domain.model.Cart.create("cart-1", USER_ID));
+        when(cartService.loadOwned(USER_ID)).thenReturn(com.aionn.ordering.domain.model.Cart.create("cart-1", USER_ID, java.time.Instant.now()));
         when(mapper.toResult(org.mockito.ArgumentMatchers.any(Order.class))).thenReturn(sampleResult("APPROVED"));
 
         OrderResult result = orderService.approvePayment(ORDER_ID, "pay-1");

@@ -66,42 +66,42 @@ public class OrderReturn extends AggregateRoot {
             String userId,
             String merchantId,
             String reason,
-            String evidenceUrl) {
+            String evidenceUrl,
+            Instant now) {
         Guard.require(reason != null && !reason.isBlank(),
                 () -> new OrderingException(OrderingErrorCode.INVALID_ARGUMENT, "reason must not be blank"));
-        Instant now = Instant.now();
         OrderReturn r = new OrderReturn(returnId, orderId, userId, merchantId, reason, evidenceUrl,
                 null, null, null, null, ReturnStatus.REQUESTED, now, null, null);
         r.registerEvent(new ReturnEvents.ReturnRequested(returnId, orderId, reason, evidenceUrl, now));
         return r;
     }
 
-    public void approve(Money refundAmount, String returnWarehouseId) {
+    public void approve(Money refundAmount, String returnWarehouseId, Instant now) {
         ensureTransition(ReturnStatus.APPROVED);
         Guard.require(refundAmount != null,
                 () -> new OrderingException(OrderingErrorCode.INVALID_ARGUMENT, "refundAmount required"));
         this.refundAmount = refundAmount;
         this.returnWarehouseId = returnWarehouseId;
         this.status = ReturnStatus.APPROVED;
-        this.decidedAt = Instant.now();
+        this.decidedAt = now;
         registerEvent(new ReturnEvents.ReturnApproved(returnId, orderId, merchantId,
                 refundAmount.amount(), refundAmount.currency(), returnWarehouseId, decidedAt, decidedAt));
     }
 
-    public void confirmReceived(String itemCondition) {
+    public void confirmReceived(String itemCondition, Instant now) {
         ensureTransition(ReturnStatus.ITEM_RECEIVED);
         this.itemCondition = itemCondition;
         this.status = ReturnStatus.ITEM_RECEIVED;
-        this.receivedAt = Instant.now();
+        this.receivedAt = now;
         registerEvent(new ReturnEvents.ReturnItemReceived(
                 returnId, orderId, merchantId, itemCondition, receivedAt, receivedAt));
     }
 
-    public void reject(String rejectionReason) {
+    public void reject(String rejectionReason, Instant now) {
         ensureTransition(ReturnStatus.REJECTED);
         this.rejectionReason = rejectionReason;
         this.status = ReturnStatus.REJECTED;
-        this.decidedAt = Instant.now();
+        this.decidedAt = now;
         registerEvent(new ReturnEvents.ReturnRejected(returnId, orderId, merchantId, rejectionReason,
                 decidedAt, decidedAt));
     }

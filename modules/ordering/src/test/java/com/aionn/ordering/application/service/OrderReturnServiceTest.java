@@ -30,6 +30,8 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -48,14 +50,16 @@ class OrderReturnServiceTest {
     @Mock private EventPublisher eventPublisher;
     @Mock private MerchantQueryPort merchantQueryPort;
     @Mock private PaymentGateway paymentGateway;
+    @Mock private java.time.Clock clock;
 
     private OrderReturnService service;
 
     @BeforeEach
     void setUp() {
+        lenient().when(clock.instant()).thenReturn(java.time.Instant.parse("2026-07-18T12:00:00Z"));
         service = new OrderReturnService(
                 orderRepository, returnRepository, mapper, eventPublisher,
-                merchantQueryPort, paymentGateway);
+                merchantQueryPort, paymentGateway, clock);
     }
 
     private static ShippingAddress address() {
@@ -69,20 +73,21 @@ class OrderReturnServiceTest {
     }
 
     private static Order completedOrder() {
+        Instant now = Instant.parse("2026-07-18T12:00:00Z");
         Order order = Order.place(ORDER_ID, USER_ID, MERCHANT_ID, "prop-1",
                 "COD", "VND", List.of(item()), address(),
-                Money.zero("VND"), Money.of(BigDecimal.valueOf(150), "VND"));
-        order.approve("p");
-        order.confirmPreparation();
-        order.markShipped("ship-1");
-        order.complete();
+                Money.zero("VND"), Money.of(BigDecimal.valueOf(150), "VND"), now);
+        order.approve("p", now);
+        order.confirmPreparation(now);
+        order.markShipped("ship-1", now);
+        order.complete(now);
         return order;
     }
 
     private static OrderReturn requestedReturn() {
         return new OrderReturn(RETURN_ID, ORDER_ID, USER_ID, MERCHANT_ID,
                 "broken", null, null, null, null, null,
-                ReturnStatus.REQUESTED, Instant.now(), null, null);
+                ReturnStatus.REQUESTED, Instant.parse("2026-07-18T12:00:00Z"), null, null);
     }
 
     private static ReturnResult sampleResult(String status) {
@@ -95,7 +100,7 @@ class OrderReturnServiceTest {
     void requestReturnRejectsWhenOrderIsNotCompleted() {
         Order order = Order.place(ORDER_ID, USER_ID, MERCHANT_ID, "prop-1",
                 "COD", "VND", List.of(item()), address(),
-                Money.zero("VND"), Money.of(BigDecimal.valueOf(150), "VND"));
+                Money.zero("VND"), Money.of(BigDecimal.valueOf(150), "VND"), Instant.parse("2026-07-18T12:00:00Z"));
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
 
         assertThrows(OrderingException.class,

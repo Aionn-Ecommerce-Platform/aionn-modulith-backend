@@ -31,7 +31,7 @@ class OrderResultMapperTest {
         Money subtotal = Money.of(BigDecimal.valueOf(300), "VND");
         Money shipping = Money.of(BigDecimal.valueOf(20), "VND");
         return Order.place("order-1", "user-1", "merchant-1", "prop-1",
-                "COD", "VND", List.of(item()), address(), shipping, subtotal);
+                "COD", "VND", List.of(item()), address(), shipping, subtotal, java.time.Instant.now());
     }
 
     @Test
@@ -78,7 +78,7 @@ class OrderResultMapperTest {
     @Test
     void approvedOrderExposesPaymentId() {
         Order order = pendingOrder();
-        order.approve("payment-9");
+        order.approve("payment-9", java.time.Instant.now());
 
         OrderResult result = mapper.toResult(order);
 

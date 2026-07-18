@@ -7,6 +7,7 @@ import com.aionn.sharedkernel.domain.vo.Money;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -16,6 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OrderTest {
+
+    private final Instant now = Instant.now();
 
     private static ShippingAddress address() {
         return new ShippingAddress("addr-1", "User", "+84912345678",
@@ -27,11 +30,11 @@ class OrderTest {
                 "wh-1", "res-1");
     }
 
-    private static Order pendingOrder() {
+    private Order pendingOrder() {
         Money subtotal = Money.of(BigDecimal.valueOf(200), "VND");
         Money shipping = Money.of(BigDecimal.valueOf(20), "VND");
         return Order.place("order-1", "user-1", "merchant-1", "prop-1",
-                "COD", "VND", List.of(item(2)), address(), shipping, subtotal);
+                "COD", "VND", List.of(item(2)), address(), shipping, subtotal, now);
     }
 
     @Test
@@ -51,14 +54,14 @@ class OrderTest {
 
         assertThrows(OrderingException.class,
                 () -> Order.place("o", "u", "m", "p", "COD", "VND",
-                        List.of(), address(), zero, zero));
+                        List.of(), address(), zero, zero, now));
     }
 
     @Test
     void approveTransitionsPendingToApproved() {
         Order order = pendingOrder();
 
-        order.approve("payment-1");
+        order.approve("payment-1", now);
 
         assertEquals(OrderStatus.APPROVED, order.getStatus());
         assertEquals("payment-1", order.getPaymentId());
@@ -68,16 +71,16 @@ class OrderTest {
     void confirmPreparationRequiresApprovedStatus() {
         Order order = pendingOrder();
 
-        OrderingException ex = assertThrows(OrderingException.class, order::confirmPreparation);
+        OrderingException ex = assertThrows(OrderingException.class, () -> order.confirmPreparation(now));
         assertTrue(ex.getMessage().toLowerCase().contains("approved"));
     }
 
     @Test
     void approvedOrderCanBeConfirmedForPreparation() {
         Order order = pendingOrder();
-        order.approve("payment-1");
+        order.approve("payment-1", now);
 
-        order.confirmPreparation();
+        order.confirmPreparation(now);
 
         assertEquals(OrderStatus.PREPARING, order.getStatus());
     }
@@ -86,7 +89,7 @@ class OrderTest {
     void cancelPendingOrderRecordsReason() {
         Order order = pendingOrder();
 
-        order.cancel("USER_CANCELLED", "changed mind");
+        order.cancel("USER_CANCELLED", "changed mind", now);
 
         assertEquals(OrderStatus.CANCELLED, order.getStatus());
         assertEquals("USER_CANCELLED", order.getReasonCode());
@@ -96,13 +99,13 @@ class OrderTest {
     @Test
     void completedOrderCannotTransition() {
         Order order = pendingOrder();
-        order.approve("p");
-        order.confirmPreparation();
-        order.markShipped("ship-1");
-        order.complete();
+        order.approve("p", now);
+        order.confirmPreparation(now);
+        order.markShipped("ship-1", now);
+        order.complete(now);
 
         assertEquals(OrderStatus.COMPLETED, order.getStatus());
-        assertThrows(OrderingException.class, () -> order.cancel("X", "n"));
+        assertThrows(OrderingException.class, () -> order.cancel("X", "n", now));
     }
 
     @Test
@@ -110,9 +113,9 @@ class OrderTest {
         Order order = pendingOrder();
 
         assertThrows(OrderingException.class,
-                () -> order.rejectByMerchant("other-merchant", "no stock"));
+                () -> order.rejectByMerchant("other-merchant", "no stock", now));
 
-        order.rejectByMerchant("merchant-1", "no stock");
+        order.rejectByMerchant("merchant-1", "no stock", now);
         assertEquals(OrderStatus.REJECTED, order.getStatus());
         assertEquals("MERCHANT_REJECTED", order.getReasonCode());
     }
@@ -123,7 +126,7 @@ class OrderTest {
         Money newShipping = Money.of(BigDecimal.valueOf(50), "VND");
         ShippingAddress newAddr = address();
 
-        order.changeShippingInfo(newAddr, newShipping);
+        order.changeShippingInfo(newAddr, newShipping, now);
 
         // 200 (subtotal) + 50 (new shipping) = 250
         assertEquals(0, order.getTotalAmount().amount().compareTo(BigDecimal.valueOf(250)));

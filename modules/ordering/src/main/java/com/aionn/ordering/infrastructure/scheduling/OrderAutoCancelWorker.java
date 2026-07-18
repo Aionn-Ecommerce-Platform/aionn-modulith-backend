@@ -24,13 +24,14 @@ public class OrderAutoCancelWorker {
     private final StockReservationGateway stockReservationGateway;
     private final EventPublisher eventPublisher;
     private final OrderingIntegrationEventPublisherPort integrationEventPublisher;
+    private final java.time.Clock clock;
 
     /** REQUIRES_NEW so a single failure does not poison the batch (audit B6). */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void cancelOneExpired(String orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.ORDER_NOT_FOUND));
-        order.autoCancel("PAYMENT_TIMEOUT");
+        order.autoCancel("PAYMENT_TIMEOUT", clock.instant());
         for (OrderItem item : order.items()) {
             if (item.reservationId() == null) {
                 continue;

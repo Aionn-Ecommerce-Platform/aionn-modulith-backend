@@ -13,9 +13,10 @@ class CartResultMapperTest {
 
     @Test
     void mapsItemsAndVoucher() {
-        Cart cart = Cart.create("cart-1", "user-1");
-        cart.addItem("sku-1", 3);
-        cart.applyVoucher("WELCOME");
+        java.time.Instant now = java.time.Instant.now();
+        Cart cart = Cart.create("cart-1", "user-1", now);
+        cart.addItem("sku-1", 3, now);
+        cart.applyVoucher("WELCOME", now);
 
         CartResult result = mapper.toResult(cart);
 

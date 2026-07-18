@@ -16,8 +16,9 @@ class ReturnResultMapperTest {
 
     @Test
     void mapsRefundCurrencyFromMoney() {
-        OrderReturn r = OrderReturn.request("ret-1", "ord-1", "u", "m", "broken", "img://1");
-        r.approve(Money.of(new BigDecimal("50000"), "VND"), "wh-1");
+        java.time.Instant now = java.time.Instant.now();
+        OrderReturn r = OrderReturn.request("ret-1", "ord-1", "u", "m", "broken", "img://1", now);
+        r.approve(Money.of(new BigDecimal("50000"), "VND"), "wh-1", now);
 
         ReturnResult result = mapper.toResult(r);
 
@@ -29,7 +30,8 @@ class ReturnResultMapperTest {
 
     @Test
     void mapsNullRefundWhenNotPresent() {
-        OrderReturn r = OrderReturn.request("ret-1", "ord-1", "u", "m", "broken", null);
+        java.time.Instant now = java.time.Instant.now();
+        OrderReturn r = OrderReturn.request("ret-1", "ord-1", "u", "m", "broken", null, now);
 
         ReturnResult result = mapper.toResult(r);
 

@@ -66,6 +66,7 @@ public class OrderService {
     private final MerchantQueryPort merchantQueryPort;
     private final OrderingIntegrationEventPublisherPort integrationEventPublisher;
     private final OrderingProperties properties;
+    private final java.time.Clock clock;
 
     public OrderResult placeOrder(PlaceOrderCommand command) {
         Cart cart = cartService.loadOwned(command.userId());
@@ -220,7 +221,7 @@ public class OrderService {
                 : Money.of(shippingFeeAmount, currency);
         String proposalId = "prop-" + System.nanoTime();
         Order order = Order.place(orderId, userId, merchantId, proposalId,
-                paymentMethodId, currency, items, shippingAddress, shippingFee, lineSubtotal);
+                paymentMethodId, currency, items, shippingAddress, shippingFee, lineSubtotal, clock.instant());
         Order saved = orderRepository.save(order);
         eventPublisher.publish(order.pullEvents());
         integrationEventPublisher.publishOrderPlaced(saved);
@@ -236,7 +237,7 @@ public class OrderService {
         if (order.getStatus() == OrderStatus.APPROVED) {
             return mapper.toResult(order);
         }
-        order.approve(paymentId);
+        order.approve(paymentId, clock.instant());
         Order saved = orderRepository.save(order);
         eventPublisher.publish(saved.pullEvents());
         integrationEventPublisher.publishOrderApproved(saved.getOrderId(), paymentId);
@@ -251,12 +252,12 @@ public class OrderService {
     private void removePurchasedItemsFromCart(String userId, List<PlaceOrderHeadlessCommand.Line> lines) {
         Cart freshCart = cartService.loadOwned(userId);
         for (PlaceOrderHeadlessCommand.Line line : lines) {
-            freshCart.removeItemIfPresent(line.skuId());
+            freshCart.removeItemIfPresent(line.skuId(), clock.instant());
         }
         if (freshCart.isEmpty()) {
-            freshCart.clear("order-placed");
+            freshCart.clear("order-placed", clock.instant());
         } else if (freshCart.getVoucherCode() != null) {
-            freshCart.removeVoucher();
+            freshCart.removeVoucher(clock.instant());
         }
         cartRepository.save(freshCart);
         eventPublisher.publish(freshCart.pullEvents());
@@ -265,7 +266,7 @@ public class OrderService {
     public OrderResult confirmPreparation(ConfirmPreparationCommand command) {
         String merchantId = requireMerchantIdForOwner(command.ownerId());
         Order order = ownedByMerchant(command.orderId(), merchantId);
-        order.confirmPreparation();
+        order.confirmPreparation(clock.instant());
         Order saved = orderRepository.save(order);
         eventPublisher.publish(order.pullEvents());
         triggerShipmentRegistration(saved);
@@ -293,7 +294,7 @@ public class OrderService {
         if (order.getStatus().isPickedUpByCarrier()) {
             throw new OrderingException(OrderingErrorCode.ORDER_ALREADY_PICKED_UP);
         }
-        order.cancel("USER_CANCELLED", command.reason());
+        order.cancel("USER_CANCELLED", command.reason(), clock.instant());
         releaseReservationsBestEffort(order, "order-cancelled");
         releaseVoucherBestEffort(order, "order-cancelled");
         if (order.getPaymentId() != null) {
@@ -318,7 +319,7 @@ public class OrderService {
                     orderId, order.getStatus());
             return mapper.toResult(order);
         }
-        order.autoCancel("PAYMENT_FAILED");
+        order.autoCancel("PAYMENT_FAILED", clock.instant());
         releaseReservationsBestEffort(order, "payment-failed");
         releaseVoucherBestEffort(order, "payment-failed");
         Order saved = orderRepository.save(order);
@@ -332,7 +333,7 @@ public class OrderService {
     public OrderResult rejectByMerchant(RejectOrderCommand command) {
         String merchantId = requireMerchantIdForOwner(command.ownerId());
         Order order = ownedByMerchant(command.orderId(), merchantId);
-        order.rejectByMerchant(merchantId, command.reason());
+        order.rejectByMerchant(merchantId, command.reason(), clock.instant());
         releaseReservationsBestEffort(order, "merchant-rejected");
         releaseVoucherBestEffort(order, "merchant-rejected");
         if (order.getPaymentId() != null) {
@@ -380,7 +381,7 @@ public class OrderService {
         } else {
             newFee = Money.of(feeOverride, order.getCurrency());
         }
-        order.changeShippingInfo(command.newAddress(), newFee);
+        order.changeShippingInfo(command.newAddress(), newFee, clock.instant());
         Order saved = orderRepository.save(order);
         eventPublisher.publish(order.pullEvents());
         return mapper.toResult(saved);
@@ -388,7 +389,7 @@ public class OrderService {
 
     public OrderResult markShipped(ConfirmShippedCommand command) {
         Order order = required(command.orderId());
-        order.markShipped(command.shipmentId());
+        order.markShipped(command.shipmentId(), clock.instant());
         for (OrderItem item : order.items()) {
             if (item.reservationId() == null) {
                 continue;
@@ -403,7 +404,7 @@ public class OrderService {
 
     public OrderResult complete(ConfirmDeliveredCommand command) {
         Order order = required(command.orderId());
-        order.complete();
+        order.complete(clock.instant());
         Order saved = orderRepository.save(order);
         eventPublisher.publish(order.pullEvents());
         integrationEventPublisher.publishOrderCompleted(saved.getOrderId());

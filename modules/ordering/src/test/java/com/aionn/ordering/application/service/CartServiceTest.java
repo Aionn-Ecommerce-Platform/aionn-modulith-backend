@@ -7,6 +7,7 @@ import com.aionn.ordering.application.port.out.CartPersistencePort;
 import com.aionn.ordering.domain.exception.OrderingException;
 import com.aionn.ordering.domain.model.Cart;
 import com.aionn.sharedkernel.application.port.EventPublisher;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,7 +15,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,28 +37,37 @@ class CartServiceTest {
     @Mock private CartPersistencePort cartRepository;
     @Mock private OrderingResultMapper mapper;
     @Mock private EventPublisher eventPublisher;
+    @Mock private Clock clock;
 
     @InjectMocks
     private CartService cartService;
 
+    private final Instant fixedInstant = Instant.parse("2026-07-18T12:00:00Z");
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(clock.instant()).thenReturn(fixedInstant);
+        lenient().when(clock.getZone()).thenReturn(ZoneId.of("UTC"));
+    }
+
     private Cart emptyCart() {
-        return new Cart(CART_ID, USER_ID, new HashMap<>(), null, Instant.now(), Instant.now());
+        return new Cart(CART_ID, USER_ID, new HashMap<>(), null, fixedInstant, fixedInstant);
     }
 
     private Cart cartWithItem(String skuId, int qty) {
         Map<String, Integer> items = new HashMap<>();
         items.put(skuId, qty);
-        return new Cart(CART_ID, USER_ID, items, null, Instant.now(), Instant.now());
+        return new Cart(CART_ID, USER_ID, items, null, fixedInstant, fixedInstant);
     }
 
     private CartResult sampleCartResult() {
-        return new CartResult(CART_ID, USER_ID, List.of(), null, Instant.now(), Instant.now());
+        return new CartResult(CART_ID, USER_ID, List.of(), null, fixedInstant, fixedInstant);
     }
 
     @Test
     @DisplayName("removeVoucher() should clear voucher from cart and save changes")
     void removeVoucher_clearsVoucher_whenCartExists() {
-        Cart cart = new Cart(CART_ID, USER_ID, new HashMap<>(), "DISCOUNT50", Instant.now(), Instant.now());
+        Cart cart = new Cart(CART_ID, USER_ID, new HashMap<>(), "DISCOUNT50", fixedInstant, fixedInstant);
         when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(cart));
         when(cartRepository.save(any(Cart.class))).thenAnswer(inv -> inv.getArgument(0));
 

@@ -42,6 +42,7 @@ public class OrderReturnService {
     private final EventPublisher eventPublisher;
     private final MerchantQueryPort merchantQueryPort;
     private final PaymentGateway paymentGateway;
+    private final java.time.Clock clock;
 
     public ReturnResult requestReturn(RequestReturnCommand command) {
         Order order = orderRepository.findById(command.orderId())
@@ -55,11 +56,12 @@ public class OrderReturnService {
         }
         Instant completedAt = Objects.requireNonNull(order.getCompletedAt(),
                 "completed order must have a completedAt timestamp");
-        if (Instant.now().isAfter(completedAt.plus(RETURN_WINDOW))) {
+        Instant now = clock.instant();
+        if (now.isAfter(completedAt.plus(RETURN_WINDOW))) {
             throw new OrderingException(OrderingErrorCode.ORDER_RETURN_WINDOW_EXPIRED);
         }
         OrderReturn r = OrderReturn.request(IdGenerator.ulid(), order.getOrderId(),
-                order.getUserId(), order.getMerchantId(), command.reason(), command.evidenceUrl());
+                order.getUserId(), order.getMerchantId(), command.reason(), command.evidenceUrl(), now);
         OrderReturn saved = returnRepository.save(r);
         eventPublisher.publish(r.pullEvents());
         return mapper.toResult(saved);
@@ -70,7 +72,7 @@ public class OrderReturnService {
         Money refundAmount = command.refundAmount() == null
                 ? null
                 : Money.of(command.refundAmount(), command.currency() == null ? "VND" : command.currency());
-        r.approve(refundAmount, command.returnWarehouseId());
+        r.approve(refundAmount, command.returnWarehouseId(), clock.instant());
         OrderReturn saved = returnRepository.save(r);
         eventPublisher.publish(r.pullEvents());
         triggerRefundIfPaid(saved, "return approved");
@@ -79,7 +81,7 @@ public class OrderReturnService {
 
     public ReturnResult reject(RejectReturnCommand command) {
         OrderReturn r = ownedByOwner(command.returnId(), command.ownerId());
-        r.reject(command.reason());
+        r.reject(command.reason(), clock.instant());
         OrderReturn saved = returnRepository.save(r);
         eventPublisher.publish(r.pullEvents());
         return mapper.toResult(saved);
@@ -87,7 +89,7 @@ public class OrderReturnService {
 
     public ReturnResult confirmItemReceived(ConfirmItemReceivedCommand command) {
         OrderReturn r = ownedByOwner(command.returnId(), command.ownerId());
-        r.confirmReceived(command.itemCondition());
+        r.confirmReceived(command.itemCondition(), clock.instant());
         OrderReturn saved = returnRepository.save(r);
         eventPublisher.publish(r.pullEvents());
         return mapper.toResult(saved);
@@ -186,7 +188,7 @@ public class OrderReturnService {
         Money refund = refundAmount == null
                 ? null
                 : Money.of(refundAmount, currency == null ? "VND" : currency);
-        r.approve(refund, returnWarehouseId);
+        r.approve(refund, returnWarehouseId, clock.instant());
         OrderReturn saved = returnRepository.save(r);
         eventPublisher.publish(r.pullEvents());
         triggerRefundIfPaid(saved, "return approved (admin)");
@@ -213,7 +215,7 @@ public class OrderReturnService {
     public ReturnResult adminReject(String returnId, String reason) {
         OrderReturn r = returnRepository.findById(returnId)
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
-        r.reject(reason);
+        r.reject(reason, clock.instant());
         OrderReturn saved = returnRepository.save(r);
         eventPublisher.publish(r.pullEvents());
         return mapper.toResult(saved);
@@ -222,7 +224,7 @@ public class OrderReturnService {
     public ReturnResult adminConfirmItemReceived(String returnId, String itemCondition) {
         OrderReturn r = returnRepository.findById(returnId)
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
-        r.confirmReceived(itemCondition);
+        r.confirmReceived(itemCondition, clock.instant());
         OrderReturn saved = returnRepository.save(r);
         eventPublisher.publish(r.pullEvents());
         return mapper.toResult(saved);

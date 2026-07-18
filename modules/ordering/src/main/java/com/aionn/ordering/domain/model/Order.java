@@ -88,7 +88,8 @@ public class Order extends AggregateRoot {
             List<OrderItem> items,
             ShippingAddress address,
             Money shippingFee,
-            Money merchandiseSubtotal) {
+            Money merchandiseSubtotal,
+            Instant now) {
         Guard.require(items != null && !items.isEmpty(),
                 () -> new OrderingException(OrderingErrorCode.CART_EMPTY));
         Money originalLineSubtotal = items.stream()
@@ -97,7 +98,6 @@ public class Order extends AggregateRoot {
         Money lineSubtotal = merchandiseSubtotal == null ? originalLineSubtotal : merchandiseSubtotal;
         Money totalAmount = shippingFee == null ? lineSubtotal : lineSubtotal.add(shippingFee);
 
-        Instant now = Instant.now();
         Order order = new Order(orderId, null, userId, merchantId, proposalId, paymentMethodId, currency,
                 items, address, shippingFee, totalAmount,
                 OrderStatus.PENDING, null, null, now, now, null, null);
@@ -114,72 +114,72 @@ public class Order extends AggregateRoot {
         return order;
     }
 
-    public void approve(String paymentId) {
+    public void approve(String paymentId, Instant now) {
         ensureTransition(OrderStatus.APPROVED);
         this.status = OrderStatus.APPROVED;
         this.paymentId = paymentId;
-        touch();
+        touch(now);
         registerEvent(new OrderEvents.OrderApproved(orderId, paymentId, updatedAt, updatedAt));
     }
 
-    public void confirmPreparation() {
+    public void confirmPreparation(Instant now) {
         Guard.require(status == OrderStatus.APPROVED,
                 () -> new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
                         "Order must be APPROVED before merchant can prepare"));
         this.status = OrderStatus.PREPARING;
-        touch();
+        touch(now);
         registerEvent(new OrderEvents.OrderPreparationConfirmed(orderId, merchantId, updatedAt, updatedAt));
     }
 
-    public void markShipped(String shipmentId) {
+    public void markShipped(String shipmentId, Instant now) {
         Guard.require(status == OrderStatus.PREPARING,
                 () -> new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
                         "Order must be PREPARING to be shipped"));
         this.status = OrderStatus.SHIPPED;
-        touch();
+        touch(now);
         registerEvent(new OrderEvents.OrderShipped(orderId, shipmentId, updatedAt, updatedAt));
     }
 
-    public void complete() {
+    public void complete(Instant now) {
         Guard.require(status == OrderStatus.SHIPPED,
                 () -> new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
                         "Only SHIPPED orders can be completed"));
         this.status = OrderStatus.COMPLETED;
-        this.completedAt = Instant.now();
+        this.completedAt = now;
         this.updatedAt = completedAt;
         registerEvent(new OrderEvents.OrderCompleted(orderId, completedAt, completedAt));
     }
 
-    public void cancel(String reasonCode, String reason) {
+    public void cancel(String reasonCode, String reason, Instant now) {
         ensureTransition(OrderStatus.CANCELLED);
         this.status = OrderStatus.CANCELLED;
         this.reasonCode = reasonCode;
-        this.cancelledAt = Instant.now();
+        this.cancelledAt = now;
         this.updatedAt = cancelledAt;
         registerEvent(new OrderEvents.OrderCancelled(orderId, reasonCode, reason, cancelledAt, cancelledAt));
     }
 
-    public void autoCancel(String reasonCode) {
+    public void autoCancel(String reasonCode, Instant now) {
         ensureTransition(OrderStatus.CANCELLED);
         this.status = OrderStatus.CANCELLED;
         this.reasonCode = reasonCode;
-        this.cancelledAt = Instant.now();
+        this.cancelledAt = now;
         this.updatedAt = cancelledAt;
         registerEvent(new OrderEvents.OrderAutoCancelled(orderId, reasonCode, cancelledAt, cancelledAt));
     }
 
-    public void rejectByMerchant(String merchantId, String reason) {
+    public void rejectByMerchant(String merchantId, String reason, Instant now) {
         Guard.require(this.merchantId.equals(merchantId),
                 () -> new OrderingException(OrderingErrorCode.ORDER_NOT_OWNED_BY_MERCHANT));
         ensureTransition(OrderStatus.REJECTED);
         this.status = OrderStatus.REJECTED;
         this.reasonCode = "MERCHANT_REJECTED";
-        this.cancelledAt = Instant.now();
+        this.cancelledAt = now;
         this.updatedAt = cancelledAt;
         registerEvent(new OrderEvents.OrderRejectedByMerchant(orderId, merchantId, reason, cancelledAt, cancelledAt));
     }
 
-    public void changeShippingInfo(ShippingAddress newAddress, Money newShippingFee) {
+    public void changeShippingInfo(ShippingAddress newAddress, Money newShippingFee, Instant now) {
         Guard.require(!status.isPickedUpByCarrier() && !status.isTerminal(),
                 () -> new OrderingException(OrderingErrorCode.ORDER_ALREADY_PICKED_UP));
         BigDecimal feeAmount = newShippingFee == null ? null : newShippingFee.amount();
@@ -190,7 +190,7 @@ public class Order extends AggregateRoot {
         this.shippingAddress = newAddress;
         this.shippingFee = newShippingFee;
         this.totalAmount = newTotal;
-        touch();
+        touch(now);
         registerEvent(new OrderEvents.OrderShippingInfoChanged(
                 orderId, newAddress, feeAmount, currency, updatedAt, updatedAt));
     }
@@ -205,8 +205,8 @@ public class Order extends AggregateRoot {
                         "Cannot transition order from " + status + " to " + next));
     }
 
-    private void touch() {
-        this.updatedAt = Instant.now();
+    private void touch(Instant now) {
+        this.updatedAt = now;
     }
 
     @Override
