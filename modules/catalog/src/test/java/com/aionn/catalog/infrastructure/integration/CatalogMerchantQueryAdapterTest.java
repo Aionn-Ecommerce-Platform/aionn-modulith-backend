@@ -1,4 +1,5 @@
 package com.aionn.catalog.infrastructure.integration;
+import com.aionn.catalog.infrastructure.integration.merchant.CatalogMerchantQueryAdapter;
 
 import com.aionn.catalog.application.port.out.merchant.MerchantPersistencePort;
 import com.aionn.catalog.domain.model.Merchant;

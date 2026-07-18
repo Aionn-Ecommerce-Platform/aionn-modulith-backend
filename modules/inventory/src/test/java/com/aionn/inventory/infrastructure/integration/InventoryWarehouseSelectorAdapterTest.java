@@ -1,4 +1,5 @@
 package com.aionn.inventory.infrastructure.integration;
+import com.aionn.inventory.infrastructure.integration.warehouse.InventoryWarehouseSelectorAdapter;
 
 import com.aionn.inventory.application.port.out.InventoryItemPersistencePort;
 import com.aionn.inventory.application.port.out.WarehousePersistencePort;

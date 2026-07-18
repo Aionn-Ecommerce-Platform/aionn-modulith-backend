@@ -1,4 +1,5 @@
 package com.aionn.catalog.infrastructure.integration;
+import com.aionn.catalog.infrastructure.integration.merchant.MerchantIntegrationEventMapper;
 
 import com.aionn.catalog.domain.event.MerchantEvents;
 import com.aionn.sharedkernel.integration.event.catalog.MerchantActivatedIntegrationEvent;

@@ -1,4 +1,5 @@
 package com.aionn.inventory.infrastructure.integration;
+import com.aionn.inventory.infrastructure.integration.order.InventoryStockReservationAdapter;
 
 import com.aionn.inventory.application.dto.reservation.command.CommitReservationCommand;
 import com.aionn.inventory.application.dto.reservation.command.ReleaseReservationCommand;

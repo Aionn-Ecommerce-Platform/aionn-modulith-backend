@@ -1,4 +1,5 @@
 package com.aionn.identity.infrastructure.integration;
+import com.aionn.identity.infrastructure.integration.address.IdentityAddressLookupAdapter;
 
 import com.aionn.identity.application.dto.geography.result.GeographyResult;
 import com.aionn.identity.application.dto.geography.result.ResolvedLocation;

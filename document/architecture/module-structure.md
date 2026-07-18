@@ -48,6 +48,11 @@ com.aionn.identity
     │   ├── adapter/                # Implements persistence ports (e.g., AddressPersistenceAdapter)
     │   └── mapper/                 # MapStruct mappers (Domain Model <-> JPA Entity) (e.g., AddressDomainMapper)
     ├── integration/                # Cross-module communication (e.g., IdentityAccessTokenVerifierAdapter)
+    │   ├── catalog/                # Sub-package for Catalog integration
+    │   ├── inventory/              # Sub-package for Inventory integration
+    │   ├── payment/                # Sub-package for Payment integration
+    │   ├── shipping/               # Sub-package for Shipping integration
+    │   └── listener/               # Sub-package for Event Listeners
     ├── scheduling/                 # Background tasks, cron jobs, and cleanups (e.g., AuthSessionCleanupScheduler)
     ├── security/                   # Spring Security filters and configurations (e.g., BearerAuthenticationFilter)
     └── config/                     # Module-specific Spring configurations
@@ -94,6 +99,16 @@ Choose the eventing pattern based on requirements:
     *   The Service saves the aggregate, pulls events via `pullEvents()`, and publishes them internally using `EventPublisher`.
     *   Internal listeners (`@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)`) process the events.
     *   An integration event publisher in `infrastructure/integration` converts internal domain events to public integration events using an `IntegrationEventMapper` and publishes them to the message broker.
+
+### G. Integration Layer Package Subdivision
+To maintain clean modular boundaries and avoid cluttered directories, the `infrastructure/integration` layer in **all modules** must be structured into functional sub-packages matching target domains or patterns instead of keeping a flat directory. Common sub-packages include:
+*   `infrastructure/integration/catalog/`: Adapters for Catalog & Voucher services.
+*   `infrastructure/integration/inventory/`: Adapters for Stock reservation services.
+*   `infrastructure/integration/payment/`: Adapters for Payment gateways.
+*   `infrastructure/integration/shipping/`: Adapters for Shipping fulfillment.
+*   `infrastructure/integration/listener/`: Multi-module event listeners (e.g. `PaymentCapturedListener`, `ShipmentDeliveredListener`).
+
+This sub-packaging structure is mandatory for all modules to ensure consistent package organization and clear domain isolation across the entire project codebase.
 
 ---
 

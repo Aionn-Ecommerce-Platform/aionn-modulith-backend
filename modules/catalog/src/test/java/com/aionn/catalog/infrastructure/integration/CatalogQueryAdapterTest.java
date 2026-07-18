@@ -1,4 +1,5 @@
 package com.aionn.catalog.infrastructure.integration;
+import com.aionn.catalog.infrastructure.integration.catalog.CatalogQueryAdapter;
 
 import com.aionn.catalog.application.port.out.product.ProductPersistencePort;
 import com.aionn.catalog.domain.model.Product;
