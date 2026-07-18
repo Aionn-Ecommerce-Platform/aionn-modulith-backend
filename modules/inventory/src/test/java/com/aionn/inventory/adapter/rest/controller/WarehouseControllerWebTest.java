@@ -51,6 +51,7 @@ class WarehouseControllerWebTest {
     @Mock private LiftWarehouseSuspensionInputPort liftWarehouseSuspensionInputPort;
     @Mock private GetWarehouseInputPort getWarehouseInputPort;
     @Mock private ListWarehousesByOwnerInputPort listWarehousesByOwnerInputPort;
+    @Mock private com.aionn.sharedkernel.integration.port.catalog.MerchantOwnershipVerifierPort merchantOwnershipVerifierPort;
 
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = Jackson2ObjectMapperBuilder.json().build();
@@ -70,9 +71,11 @@ class WarehouseControllerWebTest {
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new InventoryExceptionHandler())
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
-                .setCustomArgumentResolvers(new CurrentAdminIdArgumentResolver())
+                .setCustomArgumentResolvers(new CurrentAdminIdArgumentResolver(),
+                        new com.aionn.inventory.adapter.rest.support.session.CurrentMerchantIdArgumentResolver(merchantOwnershipVerifierPort))
                 .addInterceptors(new MockSecurityInterceptor())
                 .build();
+        org.mockito.Mockito.lenient().when(merchantOwnershipVerifierPort.isOwnedBy(any(), any())).thenReturn(true);
     }
 
     @Test
@@ -82,6 +85,7 @@ class WarehouseControllerWebTest {
 
         mockMvc.perform(post("/api/v1/inventory/warehouses")
                         .with(TestAuth.authUser("owner-1", "ROLE_MERCHANT"))
+                        .header("X-Merchant-Id", "M_1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 new CreateWarehouseRequest("addr", 1))))
@@ -99,6 +103,7 @@ class WarehouseControllerWebTest {
 
         mockMvc.perform(put("/api/v1/inventory/warehouses/WH_1/status")
                         .with(TestAuth.authUser("owner-1", "ROLE_MERCHANT"))
+                        .header("X-Merchant-Id", "M_1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 new ChangeWarehouseStatusRequest("INACTIVE"))))
@@ -115,6 +120,7 @@ class WarehouseControllerWebTest {
 
         mockMvc.perform(put("/api/v1/inventory/warehouses/WH_1/priority")
                         .with(TestAuth.authUser("owner-1", "ROLE_MERCHANT"))
+                        .header("X-Merchant-Id", "M_1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new AdjustPriorityRequest(5))))
                 .andExpect(status().isOk())
@@ -148,11 +154,12 @@ class WarehouseControllerWebTest {
     @Test
     void listMineReturnsCallerOwnedWarehouses() throws Exception {
         when(listWarehousesByOwnerInputPort.execute(
-                new com.aionn.inventory.application.dto.warehouse.query.ListWarehousesByOwnerQuery("owner-1")))
+                new com.aionn.inventory.application.dto.warehouse.query.ListWarehousesByOwnerQuery("M_1")))
                 .thenReturn(List.of(sample("WH_1", "ACTIVE", 1), sample("WH_2", "ACTIVE", 2)));
 
         mockMvc.perform(get("/api/v1/inventory/warehouses")
-                        .with(TestAuth.authUser("owner-1", "ROLE_MERCHANT")))
+                        .with(TestAuth.authUser("owner-1", "ROLE_MERCHANT"))
+                        .header("X-Merchant-Id", "M_1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").isArray())
                 .andExpect(jsonPath("$.data[0].warehouseId").value("WH_1"))

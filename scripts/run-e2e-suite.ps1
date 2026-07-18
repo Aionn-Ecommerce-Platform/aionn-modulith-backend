@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("all", "identity", "catalog", "inventory")]
+    [ValidateSet("all", "identity", "catalog", "inventory", "ordering")]
     [string]$Module = "all"
 )
 
@@ -10,7 +10,7 @@ Write-Host "Stopping any running gradle daemons..."
 .\gradlew --stop
 
 # 2. Load env files
-Get-Content envs/common.env, envs/identity.env, envs/catalog.env, envs/inventory.env | ForEach-Object {
+Get-Content envs/common.env, envs/identity.env, envs/catalog.env, envs/inventory.env, envs/ordering.env | ForEach-Object {
     $line = $_.Trim()
     if ($line -and -not $line.StartsWith("#")) {
         if ($line -match "^([^=]+)=(.*)$") {
@@ -100,6 +100,11 @@ try {
     if ($Module -eq "inventory" -or $Module -eq "all") {
         Write-Host "Running E2E tests for Inventory module..."
         bash scripts/inventory/test-inventory-e2e.sh
+    }
+ 
+    if ($Module -eq "ordering" -or $Module -eq "all") {
+        Write-Host "Running E2E tests for Ordering module..."
+        bash scripts/ordering/test-ordering-e2e.sh
     }
 }
 finally {

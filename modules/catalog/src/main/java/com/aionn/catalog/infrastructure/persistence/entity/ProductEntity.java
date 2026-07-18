@@ -95,5 +95,5 @@ public class ProductEntity {
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
-    private List<ProductTranslationEntity> translations = new ArrayList<>();
+    private java.util.Set<ProductTranslationEntity> translations = new java.util.LinkedHashSet<>();
 }

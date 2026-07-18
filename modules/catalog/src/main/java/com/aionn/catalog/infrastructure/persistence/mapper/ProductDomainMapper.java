@@ -45,7 +45,7 @@ public interface ProductDomainMapper {
         }
         entity.setVariants(variantEntities);
 
-        List<ProductTranslationEntity> translationEntities = new ArrayList<>();
+        java.util.Set<ProductTranslationEntity> translationEntities = new java.util.LinkedHashSet<>();
         if (product.translations() != null) {
             for (Product.Translation trans : product.translations()) {
                 ProductTranslationEntity te = ProductTranslationEntity.builder()
