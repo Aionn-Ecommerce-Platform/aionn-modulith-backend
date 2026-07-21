@@ -7,6 +7,7 @@ import com.aionn.payment.infrastructure.persistence.repository.PaymentMethodRepo
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -24,12 +25,8 @@ class PaymentMethodPersistenceAdapterTest {
     @Mock
     private PaymentMethodDomainMapper mapper;
 
+    @InjectMocks
     private PaymentMethodPersistenceAdapter adapter;
-
-    @BeforeEach
-    void setUp() {
-        adapter = new PaymentMethodPersistenceAdapter(repository, mapper);
-    }
 
     @Test
     void shouldFindById() {

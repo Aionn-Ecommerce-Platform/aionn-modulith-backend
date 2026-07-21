@@ -10,6 +10,7 @@ import com.aionn.payment.infrastructure.persistence.repository.PaymentPreference
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -27,12 +28,8 @@ class PaymentPreferenceServiceTest {
     @Mock
     private PaymentMethodPersistencePort paymentMethodRepository;
 
+    @InjectMocks
     private PaymentPreferenceService preferenceService;
-
-    @BeforeEach
-    void setUp() {
-        preferenceService = new PaymentPreferenceService(preferenceRepository, paymentMethodRepository);
-    }
 
     @Test
     void shouldReturnCodWhenNoPreferenceFound() {

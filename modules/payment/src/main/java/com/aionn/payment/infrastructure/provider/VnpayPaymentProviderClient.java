@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -36,6 +37,11 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
     private static final String HMAC_SHA512 = "HmacSHA512";
     private static final DateTimeFormatter VNP_DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+
+    private static final String VNP_AMOUNT = "vnp_Amount";
+    private static final String VNP_TXN_REF = "vnp_TxnRef";
+    private static final String VNP_SECURE_HASH = "vnp_SecureHash";
+    private static final String DEFAULT_IP = "127.0.0.1";
 
     private final VnpayProperties properties;
     private final ObjectMapper objectMapper;
@@ -62,9 +68,9 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
         params.put("vnp_Version", properties.version());
         params.put("vnp_Command", properties.command());
         params.put("vnp_TmnCode", properties.tmnCode());
-        params.put("vnp_Amount", String.valueOf(vnpAmount));
+        params.put(VNP_AMOUNT, String.valueOf(vnpAmount));
         params.put("vnp_CurrCode", properties.currCode());
-        params.put("vnp_TxnRef", txnRef);
+        params.put(VNP_TXN_REF, txnRef);
         params.put("vnp_OrderInfo", "Payment for order " + request.orderId());
         params.put("vnp_OrderType", "other");
         String vnpLocale = properties.locale();
@@ -80,14 +86,14 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
         params.put("vnp_ReturnUrl", request.returnUrl() != null && !request.returnUrl().isBlank()
                 ? request.returnUrl()
                 : properties.returnUrl());
-        params.put("vnp_IpAddr", "127.0.0.1");
+        params.put("vnp_IpAddr", DEFAULT_IP);
         params.put("vnp_CreateDate", createDate);
         params.put("vnp_ExpireDate", expireDate);
 
         String hashData = buildQueryString(params);
         String secureHash = hmacSHA512(properties.hashSecret(), hashData);
         String paymentUrl = properties.payUrl() + "?" + hashData
-                + "&vnp_SecureHash=" + urlEncode(secureHash);
+                + "&" + VNP_SECURE_HASH + "=" + urlEncode(secureHash);
 
         log.info("VNPay authorize: txnRef={} amount={} payUrl={}",
                 txnRef, vnpAmount, properties.payUrl());
@@ -103,13 +109,13 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
 
         Map<String, String> params = parseQueryString(rawBody);
 
-        String receivedHash = params.get("vnp_SecureHash");
+        String receivedHash = params.get(VNP_SECURE_HASH);
         if (receivedHash == null || receivedHash.isBlank()) {
             return errorEvent("MISSING_SIGNATURE", "vnp_SecureHash is missing from callback");
         }
 
         SortedMap<String, String> sortedParams = new TreeMap<>(params);
-        sortedParams.remove("vnp_SecureHash");
+        sortedParams.remove(VNP_SECURE_HASH);
         sortedParams.remove("vnp_SecureHashType");
 
         String hashData = buildQueryString(sortedParams);
@@ -120,26 +126,25 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
             return errorEvent("SIGNATURE_INVALID", "HMAC-SHA512 signature mismatch");
         }
 
-        String responseCode = params.getOrDefault("vnp_ResponseCode", "99");
-        String transactionStatus = params.getOrDefault("vnp_TransactionStatus", "99");
+        String responseCode = params.get("vnp_ResponseCode");
+        String txnRef = params.get(VNP_TXN_REF);
         String transactionNo = params.get("vnp_TransactionNo");
-        String txnRef = params.get("vnp_TxnRef");
-        String amountStr = params.get("vnp_Amount");
+        String amountStr = params.get(VNP_AMOUNT);
 
         BigDecimal amount = null;
         if (amountStr != null) {
-            amount = new BigDecimal(amountStr).divide(BigDecimal.valueOf(100));
+            try {
+                amount = BigDecimal.valueOf(Long.parseLong(amountStr)).divide(BigDecimal.valueOf(100));
+            } catch (NumberFormatException ignored) {
+            }
         }
 
-        boolean success = "00".equals(responseCode) && "00".equals(transactionStatus);
+        boolean success = "00".equals(responseCode);
         String errorCode = success ? null : "VNPAY_" + responseCode;
-        String errorReason = success ? null : mapResponseCode(responseCode);
-
-        log.info("VNPay callback: txnRef={} responseCode={} status={} success={}",
-                txnRef, responseCode, transactionStatus, success);
+        String errorReason = success ? null : "VNPay error code " + responseCode;
 
         return new WebhookEvent(
-                "vnpay.payment_result",
+                "vnpay.ipn",
                 txnRef,
                 transactionNo,
                 amount,
@@ -154,47 +159,31 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
         ensureConfigured();
 
         long vnpAmount = request.amount().multiply(BigDecimal.valueOf(100)).longValueExact();
-        ZonedDateTime now = ZonedDateTime.now(VN_ZONE);
-        String createDate = now.format(VNP_DATE_FMT);
-        String transactionDate = now.format(VNP_DATE_FMT);
+        String createDate = ZonedDateTime.now(VN_ZONE).format(VNP_DATE_FMT);
+        String requestId = "RF" + System.currentTimeMillis();
 
-        String requestId = "RF" + request.paymentId().substring(0, Math.min(16, request.paymentId().length()))
-                + System.currentTimeMillis();
-        String txnType = "02";
-        String orderInfo = "Refund for payment " + request.paymentId()
-                + (request.reason() == null ? "" : ": " + request.reason());
-
-        String hashData = String.join("|",
-                requestId,
-                properties.version(),
-                "refund",
-                properties.tmnCode(),
-                txnType,
-                request.paymentId(),
-                String.valueOf(vnpAmount),
-                request.transactionNo() == null ? "" : request.transactionNo(),
-                transactionDate,
-                "system",
-                createDate,
-                "127.0.0.1",
-                orderInfo);
-        String secureHash = hmacSHA512(properties.hashSecret(), hashData);
-
-        Map<String, String> body = new TreeMap<>();
+        Map<String, String> body = new HashMap<>();
         body.put("vnp_RequestId", requestId);
         body.put("vnp_Version", properties.version());
         body.put("vnp_Command", "refund");
         body.put("vnp_TmnCode", properties.tmnCode());
-        body.put("vnp_TransactionType", txnType);
-        body.put("vnp_TxnRef", request.paymentId());
-        body.put("vnp_Amount", String.valueOf(vnpAmount));
-        body.put("vnp_OrderInfo", orderInfo);
-        body.put("vnp_TransactionNo", request.transactionNo() == null ? "" : request.transactionNo());
-        body.put("vnp_TransactionDate", transactionDate);
+        body.put("vnp_TransactionType", "02");
+        body.put(VNP_TXN_REF, request.paymentId());
+        body.put(VNP_AMOUNT, String.valueOf(vnpAmount));
+        body.put("vnp_OrderInfo", request.reason() != null ? request.reason() : "Refund for payment " + request.paymentId());
+        body.put("vnp_TransactionNo", request.transactionNo() != null ? request.transactionNo() : "0");
+        body.put("vnp_TransactionDate", createDate);
         body.put("vnp_CreateBy", "system");
         body.put("vnp_CreateDate", createDate);
-        body.put("vnp_IpAddr", "127.0.0.1");
-        body.put("vnp_SecureHash", secureHash);
+        body.put("vnp_IpAddr", DEFAULT_IP);
+
+        String signData = requestId + "|" + properties.version() + "|" + "refund" + "|" + properties.tmnCode()
+                + "|" + "02" + "|" + request.paymentId() + "|" + vnpAmount + "|"
+                + (request.transactionNo() != null ? request.transactionNo() : "0")
+                + "|" + createDate + "|" + "system" + "|" + createDate + "|" + DEFAULT_IP + "|"
+                + body.get("vnp_OrderInfo");
+        String secureHash = hmacSHA512(properties.hashSecret(), signData);
+        body.put(VNP_SECURE_HASH, secureHash);
 
         try {
             String json = objectMapper.writeValueAsString(body);
@@ -207,16 +196,23 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
             log.info("VNPay refund response status={} body={}", response.statusCode(), response.body());
 
             if (response.statusCode() != 200) {
-                return new Refund(false, null, "VNPay HTTP " + response.statusCode());
+                return new Refund(false, requestId, "VNPay HTTP " + response.statusCode());
             }
             @SuppressWarnings("unchecked")
             Map<String, Object> parsed = objectMapper.readValue(response.body(), Map.class);
             String responseCode = String.valueOf(parsed.get("vnp_ResponseCode"));
             boolean accepted = "00".equals(responseCode);
             String message = parsed.get("vnp_Message") == null ? null : String.valueOf(parsed.get("vnp_Message"));
-            String declineReason = accepted ? null
-                    : (message != null ? message : "VNPay error " + responseCode);
+            String declineReason = null;
+            if (!accepted) {
+                declineReason = message != null ? message : "VNPay error " + responseCode;
+            }
             return new Refund(accepted, requestId, declineReason);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.warn("VNPay refund interrupted: {}", ex.getMessage());
+            throw new PaymentException(PaymentErrorCode.PAYMENT_GATEWAY_ERROR,
+                    "Failed to call VNPay refund API: " + ex.getMessage());
         } catch (Exception ex) {
             log.warn("VNPay refund failed: {}", ex.getMessage());
             throw new PaymentException(PaymentErrorCode.PAYMENT_GATEWAY_ERROR,

@@ -16,6 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class PaymentPreferenceService {
 
+    private static final String SAVED_CARD_TYPE = "SAVED_CARD";
+    private static final String VNPAY_TYPE = "VNPAY";
+
     private final PaymentPreferenceRepository preferenceRepository;
     private final PaymentMethodPersistencePort paymentMethodRepository;
 
@@ -31,7 +34,7 @@ public class PaymentPreferenceService {
             preferenceRepository.save(preference);
             return cod();
         }
-        return new PaymentPreferenceResult("SAVED_CARD", preference.getPaymentMethodId());
+        return new PaymentPreferenceResult(SAVED_CARD_TYPE, preference.getPaymentMethodId());
     }
 
     public PaymentPreferenceResult update(String userId, String paymentType, String paymentMethodId) {
@@ -47,13 +50,13 @@ public class PaymentPreferenceService {
             preferenceRepository.save(preference);
             return cod();
         }
-        if ("VNPAY".equalsIgnoreCase(paymentType)) {
-            preference.setPaymentType("VNPAY");
+        if (VNPAY_TYPE.equalsIgnoreCase(paymentType)) {
+            preference.setPaymentType(VNPAY_TYPE);
             preference.setPaymentMethodId(null);
             preferenceRepository.save(preference);
-            return new PaymentPreferenceResult("VNPAY", null);
+            return new PaymentPreferenceResult(VNPAY_TYPE, null);
         }
-        if (!"SAVED_CARD".equalsIgnoreCase(paymentType) || !isUsableMethod(userId, paymentMethodId)) {
+        if (!SAVED_CARD_TYPE.equalsIgnoreCase(paymentType) || !isUsableMethod(userId, paymentMethodId)) {
             throw new PaymentException(PaymentErrorCode.INVALID_ARGUMENT,
                     "A verified saved card is required for this payment preference");
         }

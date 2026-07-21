@@ -36,10 +36,8 @@ public class AutoPayoutScheduler {
                     balanceQueryPort.findEligibleForAutoPayout(threshold, currency, batchSize);
             int created = 0;
             for (MerchantBalanceQueryPort.EligibleBalance c : candidates) {
-                try {
-                    if (worker.payoutOne(c)) created++;
-                } catch (RuntimeException ex) {
-                    log.warn("Auto-payout failed for {}: {}", c.merchantId(), ex.getMessage());
+                if (processSingleCandidate(c)) {
+                    created++;
                 }
             }
             if (created > 0) {
@@ -47,6 +45,15 @@ public class AutoPayoutScheduler {
             }
         } catch (Exception ex) {
             log.error("Auto-payout sweep failed", ex);
+        }
+    }
+
+    private boolean processSingleCandidate(MerchantBalanceQueryPort.EligibleBalance c) {
+        try {
+            return worker.payoutOne(c);
+        } catch (RuntimeException ex) {
+            log.warn("Auto-payout failed for {}: {}", c.merchantId(), ex.getMessage());
+            return false;
         }
     }
 }

@@ -34,8 +34,17 @@ public class StripePaymentProviderClient implements PaymentProviderClient {
             "BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG",
             "RWF", "UGX", "VND", "VUV", "XAF", "XOF", "XPF");
 
+    private static final String PAYMENT_ID_KEY = "paymentId";
+
     private final StripeProperties properties;
     private final MerchantQueryPort merchantQueryPort;
+
+    @PostConstruct
+    public static void configureStripeApiKey(String apiKey) {
+        if (apiKey != null && !apiKey.isBlank()) {
+            Stripe.apiKey = apiKey;
+        }
+    }
 
     @PostConstruct
     void init() {
@@ -43,7 +52,7 @@ public class StripePaymentProviderClient implements PaymentProviderClient {
             throw new IllegalStateException(
                     "Stripe API key is missing. Set STRIPE_API_KEY in the environment.");
         }
-        Stripe.apiKey = properties.apiKey();
+        configureStripeApiKey(properties.apiKey());
     }
 
     @Override
@@ -62,7 +71,7 @@ public class StripePaymentProviderClient implements PaymentProviderClient {
                     .setDescription("Aionn order " + request.orderId())
                     .putMetadata("orderId", request.orderId())
                     .putMetadata("userId", request.userId())
-                    .putMetadata("paymentId", request.paymentId());
+                    .putMetadata(PAYMENT_ID_KEY, request.paymentId());
 
             if (request.merchantId() != null) {
                 merchantQueryPort.findStripeConnectInfo(request.merchantId())

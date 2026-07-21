@@ -55,7 +55,7 @@ class ReconciliationServiceTest {
 
         Instant from = Instant.parse("2024-01-01T00:00:00Z");
         Instant to = Instant.parse("2024-01-02T00:00:00Z");
-        when(ledgerRepository.findByGatewayBetween(eq("STRIPE"), eq(from), eq(to)))
+        when(ledgerRepository.findByGatewayBetween("STRIPE", from, to))
                 .thenReturn(List.of(matched, mismatched, missing));
 
         Map<String, BigDecimal> report = Map.of(

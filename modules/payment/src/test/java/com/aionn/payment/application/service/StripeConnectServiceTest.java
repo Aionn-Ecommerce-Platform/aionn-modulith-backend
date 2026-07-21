@@ -5,6 +5,7 @@ import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -20,11 +21,11 @@ class StripeConnectServiceTest {
     @Mock
     private MerchantQueryPort merchantQueryPort;
 
+    @InjectMocks
     private StripeConnectService stripeConnectService;
 
     @BeforeEach
     void setUp() {
-        stripeConnectService = new StripeConnectService(merchantQueryPort);
         ReflectionTestUtils.setField(stripeConnectService, "refreshUrl", "http://refresh");
         ReflectionTestUtils.setField(stripeConnectService, "returnUrl", "http://return");
     }

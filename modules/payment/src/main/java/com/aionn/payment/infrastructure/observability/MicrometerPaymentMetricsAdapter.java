@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class MicrometerPaymentMetricsAdapter implements PaymentMetricsPort {
 
+    private static final String GATEWAY_TAG = "gateway";
+
     private final MeterRegistry registry;
 
     public MicrometerPaymentMetricsAdapter(MeterRegistry registry) {
@@ -31,12 +33,12 @@ public class MicrometerPaymentMetricsAdapter implements PaymentMetricsPort {
     @Override
     public void providerOutcome(String gateway, String operation, String outcome) {
         registry.counter("payment.provider.outcome",
-                "gateway", gateway, "operation", operation, "outcome", outcome).increment();
+                GATEWAY_TAG, gateway, "operation", operation, "outcome", outcome).increment();
     }
 
     @Override
     public void reconciliation(String gateway, int matched, int mismatched) {
-        registry.counter("payment.reconciliation.matched", "gateway", gateway).increment(matched);
-        registry.counter("payment.reconciliation.mismatched", "gateway", gateway).increment(mismatched);
+        registry.counter("payment.reconciliation.matched", GATEWAY_TAG, gateway).increment(matched);
+        registry.counter("payment.reconciliation.mismatched", GATEWAY_TAG, gateway).increment(mismatched);
     }
 }

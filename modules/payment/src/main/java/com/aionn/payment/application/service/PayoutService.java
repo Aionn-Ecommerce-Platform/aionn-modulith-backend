@@ -30,6 +30,8 @@ import java.util.List;
 @Transactional
 public class PayoutService {
 
+    private static final String NO_MERCHANT_ERROR_MSG = "No merchant for current user";
+
     private final MerchantBalancePersistencePort balanceRepo;
     private final MerchantPayoutPersistencePort payoutRepo;
     private final SettlementLedgerPersistencePort ledgerRepo;
@@ -40,7 +42,7 @@ public class PayoutService {
             String bankName, String bankAccountNo, String bankAccountName, String note) {
         String merchantId = merchantQueryPort.findMerchantIdByOwnerId(ownerId)
                 .orElseThrow(() -> new PaymentException(PaymentErrorCode.METHOD_FORBIDDEN,
-                        "No merchant for current user"));
+                        NO_MERCHANT_ERROR_MSG));
 
         Instant now = clock.instant();
         MerchantBalance balance = balanceRepo.lockForUpdate(merchantId, currency)

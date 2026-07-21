@@ -7,6 +7,8 @@ import com.aionn.payment.application.port.in.payment.FailPaymentInputPort;
 import com.aionn.payment.application.port.in.payment.GetPaymentInputPort;
 import com.aionn.payment.application.port.out.PaymentProviderClient;
 import com.aionn.payment.application.port.out.PaymentProviderRouter;
+import com.aionn.payment.domain.exception.PaymentErrorCode;
+import com.aionn.payment.domain.exception.PaymentException;
 import com.aionn.payment.domain.valueobject.PaymentGatewayKind;
 import com.aionn.payment.infrastructure.provider.config.VnpayProperties;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,8 +31,12 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/payments/vnpay")
 @RequiredArgsConstructor
-@Tag(name = "Payment - VNPay return", description = "VNPay redirect + IPN callback")
+@Tag(name = "Payment - VNPay", description = "VNPay gateway callback endpoints")
 public class VnpayReturnController {
+
+    private static final String PAYMENT_ID_KEY = "paymentId";
+    private static final String RSP_CODE_KEY = "RspCode";
+    private static final String MESSAGE_KEY = "Message";
 
     private final PaymentProviderRouter providerRouter;
     private final GetPaymentInputPort getPaymentInputPort;
@@ -41,13 +47,13 @@ public class VnpayReturnController {
 
     @GetMapping("/return")
     @Operation(summary = "VNPay redirect callback")
-    public ResponseEntity<?> handleReturn(HttpServletRequest request) {
+    public ResponseEntity<Object> handleReturn(HttpServletRequest request) {
         ResponseEntity<Map<String, Object>> result = finalisePayment(request.getQueryString());
         Map<String, Object> body = result.getBody();
-        if (body == null || body.get("paymentId") == null) {
-            return result;
+        if (body == null || body.get(PAYMENT_ID_KEY) == null) {
+            return ResponseEntity.status(result.getStatusCode()).body(body);
         }
-        String paymentId = String.valueOf(body.get("paymentId"));
+        String paymentId = String.valueOf(body.get(PAYMENT_ID_KEY));
         PaymentResult payment = getPaymentInputPort.execute(paymentId);
         String separator = vnpayProperties.frontendReturnUrl().contains("?") ? "&" : "?";
         URI redirect = URI.create(vnpayProperties.frontendReturnUrl() + separator
@@ -63,8 +69,8 @@ public class VnpayReturnController {
 
         Map<String, String> response = new LinkedHashMap<>();
         if (event.paymentId() == null) {
-            response.put("RspCode", "97");
-            response.put("Message", "Invalid Signature");
+            response.put(RSP_CODE_KEY, "97");
+            response.put(MESSAGE_KEY, "Invalid Signature");
             return ResponseEntity.ok(response);
         }
         try {
@@ -76,12 +82,16 @@ public class VnpayReturnController {
                     failPaymentInputPort.execute(paymentDtoMapper.toFailCommand(event, "VNPAY_ERROR"));
                 }
             }
-            response.put("RspCode", "00");
-            response.put("Message", "Confirm Success");
-        } catch (Exception ex) {
-            log.error("VNPay IPN finalisation failed for {}", event.paymentId(), ex);
-            response.put("RspCode", "99");
-            response.put("Message", "Unknown error");
+            response.put(RSP_CODE_KEY, "00");
+            response.put(MESSAGE_KEY, "Confirm Success");
+        } catch (PaymentException ex) {
+            if (PaymentErrorCode.PAYMENT_NOT_FOUND.getCode().equals(ex.getErrorCode())) {
+                response.put(RSP_CODE_KEY, "01");
+                response.put(MESSAGE_KEY, "Order not Found");
+            } else {
+                response.put(RSP_CODE_KEY, "99");
+                response.put(MESSAGE_KEY, "Unknown error");
+            }
         }
         return ResponseEntity.ok(response);
     }

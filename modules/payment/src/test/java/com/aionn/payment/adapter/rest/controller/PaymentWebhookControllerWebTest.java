@@ -7,10 +7,12 @@ import com.aionn.payment.application.port.in.payment.ConfirmPaymentInputPort;
 import com.aionn.payment.application.port.in.payment.FailPaymentInputPort;
 import com.aionn.payment.application.port.out.PaymentProviderClient;
 import com.aionn.payment.application.port.out.PaymentProviderRouter;
+import com.aionn.payment.domain.valueobject.PaymentGatewayKind;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -18,12 +20,15 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.math.BigDecimal;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@ExtendWith(MockitoExtension.class)
 class PaymentWebhookControllerWebTest {
 
         private PaymentProviderRouter providerRouter;
@@ -40,20 +45,19 @@ class PaymentWebhookControllerWebTest {
 
         @BeforeEach
         void setUp() {
-                MockitoAnnotations.openMocks(this);
-                providerRouter = org.mockito.Mockito.mock(PaymentProviderRouter.class);
-                providerClient = org.mockito.Mockito.mock(PaymentProviderClient.class);
+                providerRouter = mock(PaymentProviderRouter.class);
+                providerClient = mock(PaymentProviderClient.class);
 
-                org.mockito.Mockito.lenient().when(providerRouter.route(any())).thenReturn(providerClient);
+                lenient().when(providerRouter.route(any(PaymentGatewayKind.class))).thenReturn(providerClient);
 
                 // Mock mapper methods to return commands
-                org.mockito.Mockito.lenient().when(paymentDtoMapper.toConfirmCommand(any()))
+                lenient().when(paymentDtoMapper.toConfirmCommand(any(PaymentProviderClient.WebhookEvent.class)))
                                 .thenAnswer(inv -> {
                                         PaymentProviderClient.WebhookEvent event = inv.getArgument(0);
                                         return new ConfirmPaymentCommand(event.paymentId(), event.transactionNo());
                                 });
 
-                org.mockito.Mockito.lenient().when(paymentDtoMapper.toFailCommand(any(), any()))
+                lenient().when(paymentDtoMapper.toFailCommand(any(PaymentProviderClient.WebhookEvent.class), any(String.class)))
                                 .thenAnswer(inv -> {
                                         PaymentProviderClient.WebhookEvent event = inv.getArgument(0);
                                         String defaultCode = inv.getArgument(1);
@@ -104,7 +108,7 @@ class PaymentWebhookControllerWebTest {
 
         @Test
         void webhookWithoutPaymentIdReturnsBadRequest() throws Exception {
-                org.mockito.Mockito.lenient().when(providerClient.verifyAndParse(any(), any())).thenReturn(
+                lenient().when(providerClient.verifyAndParse(any(), any())).thenReturn(
                                 new PaymentProviderClient.WebhookEvent("ping", null, null, null, null, true, null,
                                                 null));
 
