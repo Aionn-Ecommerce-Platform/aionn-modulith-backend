@@ -1,5 +1,6 @@
 package com.aionn.payment.infrastructure.provider;
 
+import com.aionn.payment.application.port.out.PaymentProviderClient;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
 import com.aionn.payment.domain.valueobject.PaymentGatewayKind;
 import com.aionn.payment.infrastructure.provider.config.StripeProperties;
@@ -43,5 +44,19 @@ class StripePaymentProviderClientTest {
         String invoice = client.generateInvoice("pay-123", "order-456", BigDecimal.TEN, "USD");
         assertNotNull(invoice);
         assertTrue(invoice.contains("pay-123"));
+    }
+
+    @Test
+    void verifyAndParseShouldRejectMissingSignature() {
+        PaymentProviderClient.WebhookEvent event = client.verifyAndParse("{}", null);
+        assertNotNull(event);
+        assertEquals("MISSING_SIGNATURE", event.errorCode());
+    }
+
+    @Test
+    void refundWithoutTransactionNoShouldFail() {
+        PaymentProviderClient.Refund refund = client.refund(new PaymentProviderClient.RefundRequest("p-1", null, BigDecimal.TEN, "USD", "reason"));
+        assertNotNull(refund);
+        assertFalse(refund.accepted());
     }
 }
