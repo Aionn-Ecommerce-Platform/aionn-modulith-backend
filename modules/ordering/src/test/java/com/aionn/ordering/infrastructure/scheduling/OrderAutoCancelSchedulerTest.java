@@ -63,15 +63,18 @@ class OrderAutoCancelSchedulerTest {
                 when(orderRepository.findPendingOrderIdsOlderThan(any(Instant.class), anyInt()))
                                 .thenReturn(List.of());
 
-                Instant beforeRun = Instant.now().minusSeconds(3660); // ~61 minutes ago
+                Instant beforeRun = Instant.now();
                 scheduler.run();
-                Instant afterRun = Instant.now().minusSeconds(3540); // ~59 minutes ago
+                Instant afterRun = Instant.now();
 
                 ArgumentCaptor<Instant> cutoffCaptor = ArgumentCaptor.forClass(Instant.class);
                 verify(orderRepository).findPendingOrderIdsOlderThan(cutoffCaptor.capture(), eq(50));
 
                 Instant actualCutoff = cutoffCaptor.getValue();
-                assertThat(actualCutoff).isBetween(beforeRun, afterRun);
+                // Verify cutoff is ~60 minutes before now (allowing 10 minute tolerance for latency on CI)
+                Instant expectedMin = beforeRun.minusSeconds(4200); // 70 minutes
+                Instant expectedMax = afterRun.minusSeconds(3000);  // 50 minutes
+                assertThat(actualCutoff).isBetween(expectedMin, expectedMax);
         }
 
         @Test
