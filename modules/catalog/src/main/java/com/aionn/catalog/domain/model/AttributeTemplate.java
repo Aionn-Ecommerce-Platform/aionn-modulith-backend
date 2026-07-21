@@ -76,9 +76,10 @@ public class AttributeTemplate extends AggregateRoot {
         }
 
         public void configureFilterable(String attributeKey, boolean filterable, Clock clock) {
-                Guard.require(attributeKey != null && !attributeKey.isBlank(),
-                                () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
-                                                "attributeKey must not be blank"));
+                if (attributeKey == null || attributeKey.isBlank()) {
+                        throw new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
+                                        "attributeKey must not be blank");
+                }
                 String trimmed = attributeKey.trim();
                 Guard.require(attributes.containsKey(trimmed),
                                 () -> new CatalogException(CatalogErrorCode.ATTRIBUTE_KEY_NOT_FOUND,
