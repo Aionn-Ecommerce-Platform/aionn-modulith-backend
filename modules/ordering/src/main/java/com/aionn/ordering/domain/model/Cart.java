@@ -101,8 +101,9 @@ public class Cart extends AggregateRoot {
     }
 
     public void applyVoucher(String voucherCode, Instant now) {
-        Guard.require(voucherCode != null && !voucherCode.isBlank(),
-                () -> new OrderingException(OrderingErrorCode.INVALID_ARGUMENT, "voucherCode must not be blank"));
+        if (voucherCode == null || voucherCode.isBlank()) {
+            throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT, "voucherCode must not be blank");
+        }
         this.voucherCode = voucherCode.trim();
         touch(now);
         registerEvent(new CartEvents.VoucherApplied(cartId, this.voucherCode, updatedAt));

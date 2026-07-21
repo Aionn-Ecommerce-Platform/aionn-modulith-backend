@@ -116,8 +116,9 @@ public class Merchant extends AggregateRoot {
 
     public void updateProfile(String name, String logoUrl, String description,
             String provinceCode, String provinceName, Clock clock) {
-        Guard.require(name != null && !name.isBlank(),
-                () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT, "name must not be blank"));
+        if (name == null || name.isBlank()) {
+            throw new CatalogException(CatalogErrorCode.INVALID_ARGUMENT, "name must not be blank");
+        }
         this.name = name.trim();
         this.logoUrl = logoUrl;
         this.description = description;

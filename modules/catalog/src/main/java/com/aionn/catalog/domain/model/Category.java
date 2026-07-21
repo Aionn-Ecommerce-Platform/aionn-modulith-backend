@@ -64,10 +64,12 @@ public class Category extends AggregateRoot {
     }
 
     public static Category create(String categoryId, String parentId, String name, String slug, Clock clock) {
-        Guard.require(name != null && !name.isBlank(),
-                () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT, "name must not be blank"));
-        Guard.require(slug != null && !slug.isBlank(),
-                () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT, "slug must not be blank"));
+        if (name == null || name.isBlank()) {
+            throw new CatalogException(CatalogErrorCode.INVALID_ARGUMENT, "name must not be blank");
+        }
+        if (slug == null || slug.isBlank()) {
+            throw new CatalogException(CatalogErrorCode.INVALID_ARGUMENT, "slug must not be blank");
+        }
         Instant now = clock.instant();
         String trimmedName = name.trim();
         String trimmedSlug = slug.trim();
