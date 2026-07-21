@@ -349,12 +349,12 @@ class OrderReturnServiceTest {
     @Test
     void requestReturnThrowsExpiredWindow() {
         Order order = completedOrder();
-        // Force completedAt to be 10 days ago
+        // Force completedAt to be 10 days prior to clock.instant() (2026-07-18T12:00:00Z)
         java.lang.reflect.Field field;
         try {
             field = Order.class.getDeclaredField("completedAt");
             field.setAccessible(true);
-            field.set(order, Instant.now().minus(java.time.Duration.ofDays(10)));
+            field.set(order, Instant.parse("2026-07-08T12:00:00Z"));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

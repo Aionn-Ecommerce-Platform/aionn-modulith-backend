@@ -4,7 +4,6 @@ import com.aionn.sharedkernel.integration.port.notification.IdentityNotification
 import com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort;
 import com.aionn.sharedkernel.integration.port.promotion.FlashSaleQueryPort;
 import com.aionn.sharedkernel.integration.port.promotion.VoucherApplyPort;
-import com.aionn.sharedkernel.integration.port.payment.PaymentInitiatePort;
 import com.aionn.sharedkernel.integration.port.shipping.ShippingFulfillmentPort;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -22,23 +21,6 @@ import java.util.Optional;
 @Slf4j
 public class StubIntegrationConfig {
 
-    @Bean
-    @ConditionalOnMissingBean
-    PaymentInitiatePort paymentInitiatePortStub() {
-        log.warn("Using PaymentInitiatePort stub — payment module not yet migrated");
-        return new PaymentInitiatePort() {
-            @Override
-            public InitResult initPayment(String orderId, String userId, String paymentMethodId, BigDecimal amount, String currency, String gatewayKind, String idempotencyKey) {
-                log.info("[stub] initPayment orderId={} amount={} currency={}", orderId, amount, currency);
-                return new InitResult("STUB_PAY_" + System.currentTimeMillis(), "https://checkout.stripe.com/pay/stub", true);
-            }
-
-            @Override
-            public void refund(String paymentId, BigDecimal amount, String currency, String reason, String idempotencyKey) {
-                log.info("[stub] refund paymentId={} amount={} reason={}", paymentId, amount, reason);
-            }
-        };
-    }
 
     @Bean
     @ConditionalOnMissingBean
@@ -159,6 +141,38 @@ public class StubIntegrationConfig {
             @Override
             public void sendRegistrationOtp(String phoneNumber, String otpCode) {
                 log.info("[stub] sendRegistrationOtp phone={} otp={}", phoneNumber, otpCode);
+            }
+        };
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    com.aionn.payment.application.port.out.observability.PaymentMetricsPort paymentMetricsPortStub() {
+        log.warn("Using PaymentMetricsPort stub — observability metrics not configured");
+        return new com.aionn.payment.application.port.out.observability.PaymentMetricsPort() {
+            @Override
+            public void paymentLifecycle(String transition) {
+                log.info("[stub] paymentLifecycle transition={}", transition);
+            }
+
+            @Override
+            public void methodLifecycle(String transition) {
+                log.info("[stub] methodLifecycle transition={}", transition);
+            }
+
+            @Override
+            public void ledgerEntry(String type) {
+                log.info("[stub] ledgerEntry type={}", type);
+            }
+
+            @Override
+            public void providerOutcome(String gateway, String operation, String outcome) {
+                log.info("[stub] providerOutcome gateway={} operation={} outcome={}", gateway, operation, outcome);
+            }
+
+            @Override
+            public void reconciliation(String gateway, int matched, int mismatched) {
+                log.info("[stub] reconciliation gateway={} matched={} mismatched={}", gateway, matched, mismatched);
             }
         };
     }

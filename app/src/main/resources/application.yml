@@ -9,9 +9,10 @@ spring:
     import:
       - classpath:application-identity.yml
       - classpath:application-catalog.yml
+      - classpath:application-payment.yml
 
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_LOCAL_PORT:5432}/${POSTGRES_DB:aionn}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_LOCAL_PORT:5434}/${POSTGRES_DB:aionn}
     username: ${POSTGRES_USER:postgres}
     password: ${POSTGRES_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver

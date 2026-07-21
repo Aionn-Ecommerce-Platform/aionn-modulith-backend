@@ -22,29 +22,21 @@ import java.util.List;
 public interface AgentIdentityDtoMapper {
 
     @Mapping(target = "ownerUserId", source = "userId")
-    @Mapping(target = "agentName", source = "request.agentName")
     CreateAgentIdentityCommand toCreateCommand(String userId, CreateAgentIdentityRequest request);
 
     @Mapping(target = "ownerUserId", source = "userId")
-    @Mapping(target = "agentId", source = "agentId")
-    @Mapping(target = "permissionsJson", source = "request.permissionsJson")
     UpdateAgentPermissionsCommand toUpdatePermissionsCommand(String userId, String agentId,
             UpdateAgentPermissionsRequest request);
 
     @Mapping(target = "ownerUserId", source = "userId")
-    @Mapping(target = "agentId", source = "agentId")
     SuspendAgentCommand toSuspendCommand(String userId, String agentId);
 
     @Mapping(target = "ownerUserId", source = "userId")
-    @Mapping(target = "agentId", source = "agentId")
     GetAgentAuditLogsQuery toGetAuditLogsQuery(String userId, String agentId);
 
-    @Mapping(target = "userId", source = "userId")
-    @Mapping(target = "agentId", source = "agentId")
     GetAgentIdentityQuery toGetAgentQuery(String userId, String agentId);
 
     @Mapping(target = "ownerUserId", source = "userId")
-    @Mapping(target = "agentId", source = "agentId")
     RevokeAgentCommand toRevokeCommand(String userId, String agentId);
 
     AgentIdentityResponse toResponse(AgentIdentityResult entity);

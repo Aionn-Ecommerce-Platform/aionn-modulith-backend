@@ -423,6 +423,20 @@ class OrderServiceTest {
     }
 
     @Test
+    void listByMerchantOwnerThrowsWhenMerchantNotFound() {
+        when(merchantQueryPort.findMerchantIdByOwnerId("unknown-owner")).thenReturn(Optional.empty());
+
+        assertThrows(OrderingException.class, () -> orderService.listByMerchantOwner("unknown-owner", null, 10));
+    }
+
+    @Test
+    void getMerchantAnalyticsThrowsWhenMerchantNotFound() {
+        when(merchantQueryPort.findMerchantIdByOwnerId("unknown-owner")).thenReturn(Optional.empty());
+
+        assertThrows(OrderingException.class, () -> orderService.getMerchantAnalytics("unknown-owner", null, null));
+    }
+
+    @Test
     void getMerchantAnalyticsReturnsCorrectResults() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of(MERCHANT_ID));
         var start = java.time.LocalDate.now().minusDays(6);

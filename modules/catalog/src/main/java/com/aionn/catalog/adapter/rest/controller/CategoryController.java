@@ -5,7 +5,6 @@ import com.aionn.catalog.adapter.rest.dto.category.request.MoveCategoryRequest;
 import com.aionn.catalog.adapter.rest.dto.category.request.UpdateCategoryRequest;
 import com.aionn.catalog.adapter.rest.dto.category.response.CategoryResponse;
 import com.aionn.catalog.adapter.rest.dto.category.response.CategoryTreeNodeResponse;
-import com.aionn.catalog.application.dto.category.command.DeleteCategoryCommand;
 import com.aionn.catalog.application.dto.category.query.GetCategoryQuery;
 import com.aionn.catalog.application.dto.category.query.ListCategoryChildrenQuery;
 import com.aionn.catalog.application.dto.category.result.CategoryResult;
@@ -80,7 +79,7 @@ public class CategoryController {
     @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
     @Operation(summary = "Delete category", description = "Soft delete only")
     public ResponseEntity<Void> delete(@PathVariable String categoryId) {
-        deleteCategoryInputPort.execute(new DeleteCategoryCommand(categoryId));
+        deleteCategoryInputPort.execute(categoryDtoMapper.toDeleteCommand(categoryId));
         return ResponseEntity.noContent().build();
     }
 
@@ -95,7 +94,9 @@ public class CategoryController {
     @Operation(summary = "List children of a category", description = "Public read")
     public ResponseEntity<ApiResponse<List<CategoryResponse>>> listChildren(@PathVariable String categoryId) {
         return ResponseEntity.ok(ApiResponse.success(
-                categoryDtoMapper.toResponses(listCategoryChildrenInputPort.execute(new ListCategoryChildrenQuery(categoryId))), "Children fetched"));
+                categoryDtoMapper
+                        .toResponses(listCategoryChildrenInputPort.execute(new ListCategoryChildrenQuery(categoryId))),
+                "Children fetched"));
     }
 
     @GetMapping("/tree")
@@ -109,6 +110,7 @@ public class CategoryController {
     @Operation(summary = "Get category", description = "Public read")
     public ResponseEntity<ApiResponse<CategoryResponse>> get(@PathVariable String categoryId) {
         return ResponseEntity.ok(ApiResponse.success(
-                categoryDtoMapper.toResponse(getCategoryInputPort.execute(new GetCategoryQuery(categoryId))), "Category fetched"));
+                categoryDtoMapper.toResponse(getCategoryInputPort.execute(new GetCategoryQuery(categoryId))),
+                "Category fetched"));
     }
 }

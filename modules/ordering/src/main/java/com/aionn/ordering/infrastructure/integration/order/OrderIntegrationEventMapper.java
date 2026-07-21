@@ -30,7 +30,7 @@ public class OrderIntegrationEventMapper {
 
     public OrderPlacedIntegrationEvent toIntegrationEvent(OrderEvents.OrderPlaced domainEvent) {
         return new OrderPlacedIntegrationEvent(
-                null, // eventId will be auto-generated
+                java.util.UUID.randomUUID().toString(),
                 domainEvent.orderId(),
                 domainEvent.userId(),
                 domainEvent.merchantId(),
@@ -52,7 +52,7 @@ public class OrderIntegrationEventMapper {
 
     public OrderApprovedIntegrationEvent toIntegrationEvent(OrderEvents.OrderApproved domainEvent) {
         return new OrderApprovedIntegrationEvent(
-                null,
+                java.util.UUID.randomUUID().toString(),
                 domainEvent.orderId(),
                 domainEvent.paymentId(),
                 domainEvent.occurredAt());
@@ -60,7 +60,7 @@ public class OrderIntegrationEventMapper {
 
     public OrderShippedIntegrationEvent toIntegrationEvent(OrderEvents.OrderShipped domainEvent) {
         return new OrderShippedIntegrationEvent(
-                null,
+                java.util.UUID.randomUUID().toString(),
                 domainEvent.orderId(),
                 domainEvent.shipmentId(),
                 domainEvent.occurredAt());
@@ -68,14 +68,14 @@ public class OrderIntegrationEventMapper {
 
     public OrderCompletedIntegrationEvent toIntegrationEvent(OrderEvents.OrderCompleted domainEvent) {
         return new OrderCompletedIntegrationEvent(
-                null,
+                java.util.UUID.randomUUID().toString(),
                 domainEvent.orderId(),
                 domainEvent.occurredAt());
     }
 
     public OrderCancelledIntegrationEvent toIntegrationEvent(OrderEvents.OrderCancelled domainEvent) {
         return new OrderCancelledIntegrationEvent(
-                null,
+                java.util.UUID.randomUUID().toString(),
                 domainEvent.orderId(),
                 domainEvent.reasonCode(),
                 domainEvent.reason(),
@@ -85,7 +85,7 @@ public class OrderIntegrationEventMapper {
 
     public OrderCancelledIntegrationEvent toIntegrationEvent(OrderEvents.OrderAutoCancelled domainEvent) {
         return new OrderCancelledIntegrationEvent(
-                null,
+                java.util.UUID.randomUUID().toString(),
                 domainEvent.orderId(),
                 domainEvent.reasonCode(),
                 "Auto-cancelled by system",
@@ -95,7 +95,7 @@ public class OrderIntegrationEventMapper {
 
     public OrderCancelledIntegrationEvent toIntegrationEvent(OrderEvents.OrderRejectedByMerchant domainEvent) {
         return new OrderCancelledIntegrationEvent(
-                null,
+                java.util.UUID.randomUUID().toString(),
                 domainEvent.orderId(),
                 "MERCHANT_REJECTED",
                 domainEvent.reason(),

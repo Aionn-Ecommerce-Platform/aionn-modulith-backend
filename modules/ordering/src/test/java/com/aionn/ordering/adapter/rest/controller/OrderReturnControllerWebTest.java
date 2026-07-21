@@ -68,6 +68,10 @@ class OrderReturnControllerWebTest {
                 "user-1", "n/a", List.of(new SimpleGrantedAuthority("ROLE_USER")));
         SecurityContextHolder.getContext().setAuthentication(auth);
         org.mockito.Mockito.lenient().when(merchantOwnershipVerifierPort.isOwnedBy(any(), any())).thenReturn(true);
+
+        lenient().when(dtoMapper.toRequestReturnCommand(any(), any(), any())).thenReturn(new RequestReturnCommand("order-1", "user-1", "DEFECT", "url"));
+        lenient().when(dtoMapper.toApproveReturnCommand(any(), any(), any())).thenReturn(new ApproveReturnCommand("return-1", "merchant-1", BigDecimal.TEN, "VND", "wh-1"));
+        lenient().when(dtoMapper.toRejectReturnCommand(any(), any(), any())).thenReturn(new RejectReturnCommand("return-1", "merchant-1", "Reject note"));
     }
 
     @AfterEach

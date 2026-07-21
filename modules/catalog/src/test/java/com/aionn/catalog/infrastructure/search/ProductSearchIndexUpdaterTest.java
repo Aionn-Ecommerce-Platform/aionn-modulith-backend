@@ -21,6 +21,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -41,6 +43,10 @@ class ProductSearchIndexUpdaterTest {
         private ProductSearchDocumentMapper searchDocumentMapper;
         @Mock
         private AttributeTemplatePersistencePort attributeTemplateRepository;
+        @Mock
+        private com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort reviewRepository;
+        @Mock
+        private com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort soldCounterRepository;
 
         @InjectMocks
         private ProductSearchIndexUpdater updater;
@@ -64,7 +70,7 @@ class ProductSearchIndexUpdaterTest {
         void onProductPublishedReindexes() {
                 Product product = publishedProduct();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(searchDocumentMapper.toSearchDocument(any(), any())).thenReturn(doc());
+                when(searchDocumentMapper.toSearchDocument(any(), any(), anyDouble(), anyLong())).thenReturn(doc());
 
                 updater.onProductPublished(new ProductEvents.ProductPublished(
                                 PRODUCT_ID, ADMIN_ID, Instant.now(), Instant.now()));
@@ -93,7 +99,7 @@ class ProductSearchIndexUpdaterTest {
         void onProductVariantDefinedReindexesWhenSearchable() {
                 Product product = publishedProduct();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(searchDocumentMapper.toSearchDocument(any(), any())).thenReturn(doc());
+                when(searchDocumentMapper.toSearchDocument(any(), any(), anyDouble(), anyLong())).thenReturn(doc());
 
                 updater.onProductVariantDefined(new ProductEvents.ProductVariantDefined(
                                 PRODUCT_ID, "sku-1", Map.of(), Instant.now()));
@@ -116,7 +122,7 @@ class ProductSearchIndexUpdaterTest {
         void onProductRestoredReindexes() {
                 Product product = publishedProduct();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(searchDocumentMapper.toSearchDocument(any(), any())).thenReturn(doc());
+                when(searchDocumentMapper.toSearchDocument(any(), any(), anyDouble(), anyLong())).thenReturn(doc());
 
                 updater.onProductRestored(new ProductEvents.ProductRestored(PRODUCT_ID, Instant.now(), Instant.now()));
 
@@ -134,7 +140,7 @@ class ProductSearchIndexUpdaterTest {
         void searchableMutationsReindex() {
                 Product product = publishedProduct();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(searchDocumentMapper.toSearchDocument(any(), any())).thenReturn(doc());
+                when(searchDocumentMapper.toSearchDocument(any(), any(), anyDouble(), anyLong())).thenReturn(doc());
 
                 updater.onProductVariantRemoved(new ProductEvents.ProductVariantRemoved(
                                 PRODUCT_ID, "sku-1", MERCHANT_ID, Instant.now(), Instant.now()));
@@ -165,12 +171,12 @@ class ProductSearchIndexUpdaterTest {
                                 .create("t1", "c1", List.of("color"));
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(attributeTemplateRepository.findByCategoryId("c1")).thenReturn(Optional.of(template));
-                when(searchDocumentMapper.toSearchDocument(any(), any())).thenReturn(doc());
+                when(searchDocumentMapper.toSearchDocument(any(), any(), anyDouble(), anyLong())).thenReturn(doc());
 
                 updater.onProductAttributesDefined(new ProductEvents.ProductAttributesDefined(
                                 PRODUCT_ID, Map.of("color", "red"), Instant.now()));
 
                 verify(searchDocumentMapper).toSearchDocument(any(), org.mockito.ArgumentMatchers.argThat(
-                                m -> "red".equals(m.get("color"))));
+                                m -> "red".equals(m.get("color"))), anyDouble(), anyLong());
         }
 }

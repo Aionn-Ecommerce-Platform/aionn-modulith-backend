@@ -2,13 +2,17 @@ package com.aionn.catalog.adapter.rest.mapper.product;
 
 import com.aionn.catalog.adapter.rest.dto.product.request.AssignBrandRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.AssignCategoriesRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.AssignCollectionsRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.BulkPriceUpdateRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.ChangeVariantPriceRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.CreateProductRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.DeactivateProductRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.DefineAttributesRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.DefineVariantRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.EmergencyTakedownRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.RejectProductRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.UpdateAiMetadataRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.UpdateMediaRequest;
 import com.aionn.catalog.adapter.rest.dto.product.response.BulkPriceUpdateResponse;
 import com.aionn.catalog.adapter.rest.dto.product.response.ProductAnalyticsResponse;
 import com.aionn.catalog.adapter.rest.dto.product.response.ProductResponse;
@@ -17,13 +21,23 @@ import com.aionn.catalog.application.dto.analytics.result.ProductAnalyticsResult
 import com.aionn.catalog.application.dto.common.PageResult;
 import com.aionn.catalog.application.dto.product.command.AssignBrandCommand;
 import com.aionn.catalog.application.dto.product.command.AssignCategoriesCommand;
+import com.aionn.catalog.application.dto.product.command.AssignCollectionsCommand;
 import com.aionn.catalog.application.dto.product.command.BulkPriceUpdateCommand;
 import com.aionn.catalog.application.dto.product.command.ChangeVariantPriceCommand;
+import com.aionn.catalog.application.dto.product.command.CloneProductCommand;
 import com.aionn.catalog.application.dto.product.command.CreateProductCommand;
 import com.aionn.catalog.application.dto.product.command.DeactivateProductCommand;
 import com.aionn.catalog.application.dto.product.command.DefineAttributesCommand;
 import com.aionn.catalog.application.dto.product.command.DefineVariantCommand;
+import com.aionn.catalog.application.dto.product.command.EmergencyTakedownCommand;
+import com.aionn.catalog.application.dto.product.command.PublishProductCommand;
 import com.aionn.catalog.application.dto.product.command.RejectProductCommand;
+import com.aionn.catalog.application.dto.product.command.RemoveVariantCommand;
+import com.aionn.catalog.application.dto.product.command.RestoreProductCommand;
+import com.aionn.catalog.application.dto.product.command.SubmitForReviewCommand;
+import com.aionn.catalog.application.dto.product.command.TrackProductViewCommand;
+import com.aionn.catalog.application.dto.product.command.UpdateAiMetadataCommand;
+import com.aionn.catalog.application.dto.product.command.UpdateMediaCommand;
 import com.aionn.catalog.application.dto.product.result.BulkPriceUpdateResult;
 import com.aionn.catalog.application.dto.product.result.ProductResult;
 import com.aionn.catalog.application.dto.search.ProductSearchResult;
@@ -62,21 +76,40 @@ public interface ProductDtoMapper {
         DeactivateProductCommand toDeactivateProductCommand(String productId, String merchantId,
                         DeactivateProductRequest request);
 
-        com.aionn.catalog.application.dto.product.command.UpdateMediaCommand toUpdateMediaCommand(
-                        String productId, String merchantId,
-                        com.aionn.catalog.adapter.rest.dto.product.request.UpdateMediaRequest request);
+        UpdateMediaCommand toUpdateMediaCommand(String productId, String merchantId, UpdateMediaRequest request);
 
-        com.aionn.catalog.application.dto.product.command.UpdateAiMetadataCommand toUpdateAiMetadataCommand(
-                        String productId, String merchantId,
-                        com.aionn.catalog.adapter.rest.dto.product.request.UpdateAiMetadataRequest request);
+        UpdateAiMetadataCommand toUpdateAiMetadataCommand(String productId, String merchantId,
+                        UpdateAiMetadataRequest request);
 
-        com.aionn.catalog.application.dto.product.command.AssignCollectionsCommand toAssignCollectionsCommand(
-                        String productId, String merchantId,
-                        com.aionn.catalog.adapter.rest.dto.product.request.AssignCollectionsRequest request);
+        AssignCollectionsCommand toAssignCollectionsCommand(String productId, String merchantId,
+                        AssignCollectionsRequest request);
 
-        com.aionn.catalog.application.dto.product.command.EmergencyTakedownCommand toEmergencyTakedownCommand(
-                        String productId, String adminId,
-                        com.aionn.catalog.adapter.rest.dto.product.request.EmergencyTakedownRequest request);
+        EmergencyTakedownCommand toEmergencyTakedownCommand(String productId, String adminId,
+                        EmergencyTakedownRequest request);
+
+        default CloneProductCommand toCloneProductCommand(String productId, String merchantId) {
+                return new CloneProductCommand(productId, merchantId);
+        }
+
+        default PublishProductCommand toPublishProductCommand(String productId, String merchantId) {
+                return new PublishProductCommand(productId, merchantId);
+        }
+
+        default SubmitForReviewCommand toSubmitForReviewCommand(String productId, String merchantId) {
+                return new SubmitForReviewCommand(productId, merchantId);
+        }
+
+        default RestoreProductCommand toRestoreProductCommand(String productId, String adminId) {
+                return new RestoreProductCommand(productId, adminId);
+        }
+
+        default TrackProductViewCommand toTrackProductViewCommand(String productId, String ownerId) {
+                return new TrackProductViewCommand(productId, ownerId);
+        }
+
+        default RemoveVariantCommand toRemoveVariantCommand(String productId, String skuId, String merchantId) {
+                return new RemoveVariantCommand(productId, skuId, merchantId);
+        }
 
         ProductResponse toResponse(ProductResult result);
 
@@ -98,14 +131,14 @@ public interface ProductDtoMapper {
                 if (result.facets() != null) {
                         ProductSearchResponse.PriceRange priceRange = null;
                         if (result.facets().priceRange() != null) {
-                                priceRange = new ProductSearchResponse.PriceRange(result.facets().priceRange().min(), result.facets().priceRange().max());
+                                priceRange = new ProductSearchResponse.PriceRange(result.facets().priceRange().min(),
+                                                result.facets().priceRange().max());
                         }
                         facets = new ProductSearchResponse.Facets(
-                                result.facets().brands(),
-                                result.facets().categories(),
-                                result.facets().attributes(),
-                                priceRange
-                        );
+                                        result.facets().brands(),
+                                        result.facets().categories(),
+                                        result.facets().attributes(),
+                                        priceRange);
                 }
                 return new ProductSearchResponse(toResponsePage(result.page()), facets);
         }

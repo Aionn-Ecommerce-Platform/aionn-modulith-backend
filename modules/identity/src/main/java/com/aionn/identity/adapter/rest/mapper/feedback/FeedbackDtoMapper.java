@@ -12,46 +12,37 @@ import com.aionn.identity.application.dto.feedback.command.SubmitFeedbackCommand
 import com.aionn.identity.application.dto.feedback.result.FeedbackResult;
 import com.aionn.sharedkernel.adapter.web.response.PageMetadata;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 
 import java.util.List;
 
 @Mapper(componentModel = "spring")
 public interface FeedbackDtoMapper {
 
-    @Mapping(target = "userId", source = "userId")
-    SubmitFeedbackCommand toSubmitCommand(String userId, SubmitFeedbackRequest request);
+        SubmitFeedbackCommand toSubmitCommand(String userId, SubmitFeedbackRequest request);
 
-    @Mapping(target = "feedbackId", source = "feedbackId")
-    @Mapping(target = "adminId", source = "adminId")
-    @Mapping(target = "reply", source = "request.reply")
-    @Mapping(target = "newStatus", source = "request.newStatus")
-    AdminFeedbackCommands.ReplyFeedback toReplyCommand(
-            String feedbackId,
-            String adminId,
-            AdminReplyFeedbackRequest request);
+        AdminFeedbackCommands.ReplyFeedback toReplyCommand(
+                        String feedbackId,
+                        String adminId,
+                        AdminReplyFeedbackRequest request);
 
-    @Mapping(target = "feedbackId", source = "feedbackId")
-    @Mapping(target = "adminId", source = "adminId")
-    @Mapping(target = "status", source = "request.status")
-    AdminFeedbackCommands.ChangeFeedbackStatus toChangeStatusCommand(
-            String feedbackId,
-            String adminId,
-            AdminChangeFeedbackStatusRequest request);
+        AdminFeedbackCommands.ChangeFeedbackStatus toChangeStatusCommand(
+                        String feedbackId,
+                        String adminId,
+                        AdminChangeFeedbackStatusRequest request);
 
-    FeedbackResponse toResponse(FeedbackResult result);
+        FeedbackResponse toResponse(FeedbackResult result);
 
-    List<FeedbackResponse> toResponses(List<FeedbackResult> results);
+        List<FeedbackResponse> toResponses(List<FeedbackResult> results);
 
-    FeedbackAnalyticsResponse.CategoryCount toCategoryCount(FeedbackAnalyticsResult.CategoryCount src);
+        FeedbackAnalyticsResponse.CategoryCount toCategoryCount(FeedbackAnalyticsResult.CategoryCount src);
 
-    FeedbackAnalyticsResponse toAnalyticsResponse(FeedbackAnalyticsResult result);
+        FeedbackAnalyticsResponse toAnalyticsResponse(FeedbackAnalyticsResult result);
 
-    default PageMetadata toPageMetadata(PageResult<?> result) {
-        return new PageMetadata(
-                result.page(),
-                result.size(),
-                result.totalElements(),
-                result.totalPages());
-    }
+        default PageMetadata toPageMetadata(PageResult<?> result) {
+                return new PageMetadata(
+                                result.page(),
+                                result.size(),
+                                result.totalElements(),
+                                result.totalPages());
+        }
 }

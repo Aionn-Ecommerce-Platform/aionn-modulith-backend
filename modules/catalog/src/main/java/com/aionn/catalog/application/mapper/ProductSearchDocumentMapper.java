@@ -1,12 +1,9 @@
 package com.aionn.catalog.application.mapper;
 
 import com.aionn.catalog.application.dto.search.ProductSearchDocument;
-import com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort;
-import com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort;
 import com.aionn.catalog.domain.model.Product;
 import com.aionn.catalog.domain.model.ProductVariant;
 import com.aionn.sharedkernel.domain.vo.Money;
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 
@@ -15,14 +12,36 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+/**
+ * Pure mapper for converting Product domain model to ProductSearchDocument.
+ * 
+ * <p>
+ * This mapper performs only data transformation without any business logic,
+ * database queries, or side effects. Rating and sold count data must be
+ * provided
+ * by the caller.
+ * </p>
+ */
 @Component
-@RequiredArgsConstructor
 public class ProductSearchDocumentMapper {
 
-    private final ProductReviewPersistencePort reviewRepository;
-    private final ProductSoldCounterPersistencePort soldCounterRepository;
+    /**
+     * Converts a Product domain model to a search document for indexing.
+     * 
+     * @param product              The product domain model
+     * @param filterableAttributes Map of filterable attributes for faceted search
+     * @param rating               The average rating score (must be pre-calculated
+     *                             by caller)
+     * @param soldCount            The total sold count (must be pre-calculated by
+     *                             caller)
+     * @return ProductSearchDocument ready for search indexing
+     */
+    public ProductSearchDocument toSearchDocument(
+            Product product,
+            Map<String, String> filterableAttributes,
+            double rating,
+            long soldCount) {
 
-    public ProductSearchDocument toSearchDocument(Product product, Map<String, String> filterableAttributes) {
         List<BigDecimal> prices = product.variants().stream()
                 .map(ProductVariant::price)
                 .filter(java.util.Objects::nonNull)
@@ -50,9 +69,6 @@ public class ProductSearchDocumentMapper {
                 aiDescription = trans.aiDescription();
             }
         }
-
-        double rating = reviewRepository.getAverageRating(product.getProductId());
-        long soldCount = soldCounterRepository.getSoldCount(product.getProductId());
 
         return new ProductSearchDocument(
                 product.getProductId(),
