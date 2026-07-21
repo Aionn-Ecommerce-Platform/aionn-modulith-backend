@@ -25,8 +25,29 @@ class StripeConnectWebhookAdapterTest {
     }
 
     @Test
-    void parseAndVerifyShouldReturnNullWhenSignatureOrSecretIsMissing() {
+    void parseAndVerifyShouldReturnNullWhenSignatureIsMissing() {
         StripeConnectWebhookPort.WebhookEvent result = adapter.parseAndVerify("{}", null);
+        assertNull(result);
+    }
+
+    @Test
+    void parseAndVerifyShouldReturnNullWhenWebhookSecretIsNull() {
+        when(stripeProperties.webhookSecret()).thenReturn(null);
+        StripeConnectWebhookPort.WebhookEvent result = adapter.parseAndVerify("{}", "sig_abc");
+        assertNull(result);
+    }
+
+    @Test
+    void parseAndVerifyShouldReturnNullWhenWebhookSecretIsBlank() {
+        when(stripeProperties.webhookSecret()).thenReturn("  ");
+        StripeConnectWebhookPort.WebhookEvent result = adapter.parseAndVerify("{}", "sig_abc");
+        assertNull(result);
+    }
+
+    @Test
+    void parseAndVerifyShouldReturnNullOnSignatureMismatch() {
+        when(stripeProperties.webhookSecret()).thenReturn("whsec_test");
+        StripeConnectWebhookPort.WebhookEvent result = adapter.parseAndVerify("{}", "invalid_sig");
         assertNull(result);
     }
 }

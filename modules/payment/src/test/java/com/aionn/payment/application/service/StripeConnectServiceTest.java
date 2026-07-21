@@ -68,4 +68,25 @@ class StripeConnectServiceTest {
 
         verifyNoInteractions(merchantQueryPort);
     }
+
+    @Test
+    void createOnboardingLinkThrowsWhenMerchantHasStripeAccountButStripeApiFails() {
+        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(java.util.Optional.of("m-1"));
+
+        MerchantQueryPort.StripeConnectInfo info = mock(MerchantQueryPort.StripeConnectInfo.class);
+        when(info.stripeAccountId()).thenReturn("acct_existing");
+        when(merchantQueryPort.findStripeConnectInfo("m-1")).thenReturn(java.util.Optional.of(info));
+
+        assertThrows(com.aionn.payment.domain.exception.PaymentException.class,
+                () -> stripeConnectService.createOnboardingLink("owner-1"));
+    }
+
+    @Test
+    void createOnboardingLinkThrowsWhenMerchantHasNoStripeAccountAndStripeApiFails() {
+        when(merchantQueryPort.findMerchantIdByOwnerId("owner-2")).thenReturn(java.util.Optional.of("m-2"));
+        when(merchantQueryPort.findStripeConnectInfo("m-2")).thenReturn(java.util.Optional.empty());
+
+        assertThrows(com.aionn.payment.domain.exception.PaymentException.class,
+                () -> stripeConnectService.createOnboardingLink("owner-2"));
+    }
 }

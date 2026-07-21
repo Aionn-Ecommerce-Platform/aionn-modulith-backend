@@ -74,4 +74,18 @@ class StripeConnectWebhookControllerWebTest {
                         .content("{\"invalid\": true}"))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void shouldReturnBadRequestWhenAccountUpdatedButStripeAccountIdIsNull() throws Exception {
+        StripeConnectWebhookPort.WebhookEvent event = new StripeConnectWebhookPort.WebhookEvent("account.updated", null, false, false);
+        when(stripeConnectWebhookPort.parseAndVerify(any(), any())).thenReturn(event);
+
+        mockMvc.perform(post("/api/v1/payments/webhooks/stripe-connect")
+                        .header("Stripe-Signature", "sig")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"event\": \"account.updated\"}"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(syncStripeConnectAccountInputPort);
+    }
 }

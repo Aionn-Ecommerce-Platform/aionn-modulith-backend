@@ -2,7 +2,6 @@ package com.aionn.payment.infrastructure.persistence.adapter.settlement;
 
 import com.aionn.payment.domain.model.MerchantPayout;
 import com.aionn.payment.domain.model.SettlementLedgerEntry;
-import com.aionn.payment.domain.valueobject.PayoutStatus;
 import com.aionn.payment.infrastructure.persistence.entity.MerchantPayoutEntity;
 import com.aionn.payment.infrastructure.persistence.entity.SettlementLedgerEntity;
 import com.aionn.payment.infrastructure.persistence.repository.MerchantPayoutRepository;

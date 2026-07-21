@@ -1,6 +1,5 @@
 package com.aionn.payment.infrastructure.observability;
 
-import com.aionn.payment.infrastructure.observability.MicrometerPaymentMetricsAdapter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;

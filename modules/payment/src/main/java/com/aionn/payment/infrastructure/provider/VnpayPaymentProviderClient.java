@@ -141,7 +141,7 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
 
         boolean success = "00".equals(responseCode);
         String errorCode = success ? null : "VNPAY_" + responseCode;
-        String errorReason = success ? null : "VNPay error code " + responseCode;
+        String errorReason = success ? null : mapResponseCode(responseCode);
 
         return new WebhookEvent(
                 "vnpay.ipn",

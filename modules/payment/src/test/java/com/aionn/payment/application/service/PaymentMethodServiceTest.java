@@ -44,12 +44,16 @@ class PaymentMethodServiceTest {
 
     private PaymentResultMapper mapper;
     private PaymentMethodService service;
+    private PaymentMethodService serviceWithKey;
 
     @BeforeEach
     void setUp() {
         mapper = new PaymentResultMapper();
         StripeProperties stripeProperties = new StripeProperties("", "");
         service = new PaymentMethodService(repository, mapper, eventPublisher, stripeProperties, clock);
+
+        StripeProperties keyedProperties = new StripeProperties("sk_test_fake_key_for_test", "");
+        serviceWithKey = new PaymentMethodService(repository, mapper, eventPublisher, keyedProperties, clock);
     }
 
     @Test
@@ -160,6 +164,64 @@ class PaymentMethodServiceTest {
     @Test
     void completeStripeSetupIntentMissingApiKeyThrows() {
         assertThatThrownBy(() -> service.completeStripeSetupIntent("u1", "si_123"))
+                .isInstanceOf(PaymentException.class)
+                .extracting("errorCode")
+                .isEqualTo(PaymentErrorCode.PAYMENT_GATEWAY_ERROR.getCode());
+    }
+
+    @Test
+    void listForUserCallsListMine() {
+        PaymentMethod m1 = PaymentMethod.link("m1", "u1", "stripe", "4242", "tok-1", fixedInstant);
+        when(repository.findActiveByUserId("u1")).thenReturn(List.of(m1));
+
+        List<PaymentMethodResult> result = service.listMine("u1");
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).methodId()).isEqualTo("m1");
+    }
+
+    @Test
+    void removeOtherUserMethodThrowsForbidden() {
+        PaymentMethod existing = PaymentMethod.link("m1", "u1", "stripe", "4242", "tok-abc", fixedInstant);
+        when(repository.findById("m1")).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> service.remove(new RemoveMethodCommand("OTHER", "m1")))
+                .isInstanceOf(PaymentException.class)
+                .extracting("errorCode")
+                .isEqualTo(PaymentErrorCode.METHOD_FORBIDDEN.getCode());
+    }
+
+    @Test
+    void removeMissingMethodThrowsNotFound() {
+        when(repository.findById("m-missing")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.remove(new RemoveMethodCommand("u1", "m-missing")))
+                .isInstanceOf(PaymentException.class)
+                .extracting("errorCode")
+                .isEqualTo(PaymentErrorCode.METHOD_NOT_FOUND.getCode());
+    }
+
+    @Test
+    void getMissingMethodThrowsNotFound() {
+        when(repository.findById("m-missing")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.get("u1", "m-missing"))
+                .isInstanceOf(PaymentException.class)
+                .extracting("errorCode")
+                .isEqualTo(PaymentErrorCode.METHOD_NOT_FOUND.getCode());
+    }
+
+    @Test
+    void createStripeSetupIntentWithValidKeyThrowsGatewayErrorOnStripeFailure() {
+        assertThatThrownBy(() -> serviceWithKey.createStripeSetupIntent("u1"))
+                .isInstanceOf(PaymentException.class)
+                .extracting("errorCode")
+                .isEqualTo(PaymentErrorCode.PAYMENT_GATEWAY_ERROR.getCode());
+    }
+
+    @Test
+    void completeStripeSetupIntentWithValidKeyThrowsGatewayErrorOnStripeFailure() {
+        assertThatThrownBy(() -> serviceWithKey.completeStripeSetupIntent("u1", "si_test"))
                 .isInstanceOf(PaymentException.class)
                 .extracting("errorCode")
                 .isEqualTo(PaymentErrorCode.PAYMENT_GATEWAY_ERROR.getCode());

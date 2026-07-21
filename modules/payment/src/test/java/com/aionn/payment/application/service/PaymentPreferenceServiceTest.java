@@ -7,7 +7,6 @@ import com.aionn.payment.domain.model.PaymentMethod;
 import com.aionn.payment.domain.valueobject.PaymentMethodStatus;
 import com.aionn.payment.infrastructure.persistence.entity.PaymentPreferenceEntity;
 import com.aionn.payment.infrastructure.persistence.repository.PaymentPreferenceRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

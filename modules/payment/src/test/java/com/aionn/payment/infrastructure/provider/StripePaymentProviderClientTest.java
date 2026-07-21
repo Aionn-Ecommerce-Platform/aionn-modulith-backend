@@ -40,6 +40,16 @@ class StripePaymentProviderClientTest {
     }
 
     @Test
+    void configureStripeApiKeyShouldIgnoreNullKey() {
+        assertDoesNotThrow(() -> StripePaymentProviderClient.configureStripeApiKey(null));
+    }
+
+    @Test
+    void configureStripeApiKeyShouldIgnoreBlankKey() {
+        assertDoesNotThrow(() -> StripePaymentProviderClient.configureStripeApiKey("  "));
+    }
+
+    @Test
     void generateInvoiceShouldReturnFormattedUrl() {
         String invoice = client.generateInvoice("pay-123", "order-456", BigDecimal.TEN, "USD");
         assertNotNull(invoice);
@@ -54,9 +64,50 @@ class StripePaymentProviderClientTest {
     }
 
     @Test
+    void verifyAndParseShouldRejectBlankSignature() {
+        PaymentProviderClient.WebhookEvent event = client.verifyAndParse("{}", "  ");
+        assertNotNull(event);
+        assertEquals("MISSING_SIGNATURE", event.errorCode());
+    }
+
+    @Test
+    void verifyAndParseShouldReturnParseFailedForBadPayload() {
+        PaymentProviderClient.WebhookEvent event = client.verifyAndParse("not-json", "sig_bad");
+        assertNotNull(event);
+        assertFalse(event.success());
+    }
+
+    @Test
     void refundWithoutTransactionNoShouldFail() {
-        PaymentProviderClient.Refund refund = client.refund(new PaymentProviderClient.RefundRequest("p-1", null, BigDecimal.TEN, "USD", "reason"));
+        PaymentProviderClient.Refund refund = client.refund(
+                new PaymentProviderClient.RefundRequest("p-1", null, BigDecimal.TEN, "USD", "reason"));
+        assertNotNull(refund);
+        assertFalse(refund.accepted());
+    }
+
+    @Test
+    void refundWithBlankTransactionNoShouldFail() {
+        PaymentProviderClient.Refund refund = client.refund(
+                new PaymentProviderClient.RefundRequest("p-1", "  ", BigDecimal.TEN, "USD", "reason"));
+        assertNotNull(refund);
+        assertFalse(refund.accepted());
+    }
+
+    @Test
+    void refundWithValidTransactionNoShouldAttemptStripeCall() {
+        PaymentProviderClient.Refund refund = client.refund(
+                new PaymentProviderClient.RefundRequest("p-1", "pi_test_abc", BigDecimal.TEN, "USD", "reason"));
+        assertNotNull(refund);
+        assertFalse(refund.accepted());
+    }
+
+    @Test
+    void refundWithVndCurrencyZeroDecimalShouldAttemptStripeCall() {
+        PaymentProviderClient.Refund refund = client.refund(
+                new PaymentProviderClient.RefundRequest("p-1", "pi_test_abc",
+                        BigDecimal.valueOf(100000), "VND", null));
         assertNotNull(refund);
         assertFalse(refund.accepted());
     }
 }
+

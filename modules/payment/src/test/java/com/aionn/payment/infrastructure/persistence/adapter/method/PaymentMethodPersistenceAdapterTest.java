@@ -4,7 +4,6 @@ import com.aionn.payment.domain.model.PaymentMethod;
 import com.aionn.payment.infrastructure.persistence.entity.PaymentMethodEntity;
 import com.aionn.payment.infrastructure.persistence.mapper.PaymentMethodDomainMapper;
 import com.aionn.payment.infrastructure.persistence.repository.PaymentMethodRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
