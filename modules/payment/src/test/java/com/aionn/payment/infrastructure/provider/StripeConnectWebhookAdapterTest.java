@@ -4,7 +4,6 @@ import com.aionn.payment.application.port.out.stripeconnect.StripeConnectWebhook
 import com.aionn.payment.infrastructure.provider.config.StripeProperties;
 import com.stripe.model.Account;
 import com.stripe.model.Event;
-import com.stripe.model.HasId;
 import com.stripe.model.StripeObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
