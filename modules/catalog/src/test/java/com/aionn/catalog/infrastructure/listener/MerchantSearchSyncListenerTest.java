@@ -21,7 +21,9 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -29,93 +31,97 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class MerchantSearchSyncListenerTest {
 
-    private static final String MERCHANT_ID = "01HZMER0000000000000000001";
-    private static final String ADMIN_ID = "01HZADM0000000000000000001";
+        private static final String MERCHANT_ID = "01HZMER0000000000000000001";
+        private static final String ADMIN_ID = "01HZADM0000000000000000001";
 
-    @Mock
-    private ProductPersistencePort productRepository;
-    @Mock
-    private ProductSearchIndex searchIndex;
-    @Mock
-    private ProductSearchDocumentMapper searchDocumentMapper;
-    @Mock
-    private AttributeTemplatePersistencePort attributeTemplateRepository;
+        @Mock
+        private ProductPersistencePort productRepository;
+        @Mock
+        private ProductSearchIndex searchIndex;
+        @Mock
+        private ProductSearchDocumentMapper searchDocumentMapper;
+        @Mock
+        private AttributeTemplatePersistencePort attributeTemplateRepository;
+        @Mock
+        private com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort reviewRepository;
+        @Mock
+        private com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort soldCounterRepository;
 
-    @InjectMocks
-    private MerchantSearchSyncListener listener;
+        @InjectMocks
+        private MerchantSearchSyncListener listener;
 
-    private Product publishedProduct() {
-        Product product = Product.create("01HZPRD0000000000000000001", MERCHANT_ID, "Widget");
-        product.categorize(List.of("c1"));
-        product.defineVariant("sku-1", Map.of("color", "red"), Money.of(new BigDecimal("100"), "VND"));
-        product.publish(ADMIN_ID);
-        product.pullEvents();
-        return product;
-    }
+        private Product publishedProduct() {
+                Product product = Product.create("01HZPRD0000000000000000001", MERCHANT_ID, "Widget");
+                product.categorize(List.of("c1"));
+                product.defineVariant("sku-1", Map.of("color", "red"), Money.of(new BigDecimal("100"), "VND"));
+                product.publish(ADMIN_ID);
+                product.pullEvents();
+                return product;
+        }
 
-    @Test
-    void onSuspendedRemovesMerchantProducts() {
-        when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
-                .thenReturn(List.of(publishedProduct()));
+        @Test
+        void onSuspendedRemovesMerchantProducts() {
+                when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
+                                .thenReturn(List.of(publishedProduct()));
 
-        listener.onSuspended(new MerchantEvents.MerchantSuspended(
-                MERCHANT_ID, "fraud", ADMIN_ID, Instant.now(), Instant.now()));
+                listener.onSuspended(new MerchantEvents.MerchantSuspended(
+                                MERCHANT_ID, "fraud", ADMIN_ID, Instant.now(), Instant.now()));
 
-        verify(searchIndex).removeAll(anyList());
-    }
+                verify(searchIndex).removeAll(anyList());
+        }
 
-    @Test
-    void onActivatedReindexesPublishedProducts() {
-        when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
-                .thenReturn(List.of(publishedProduct()));
-        when(searchDocumentMapper.toSearchDocument(any(), any())).thenReturn(mock());
+        @Test
+        void onActivatedReindexesPublishedProducts() {
+                when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
+                                .thenReturn(List.of(publishedProduct()));
+                when(searchDocumentMapper.toSearchDocument(any(), any(), anyDouble(), anyLong())).thenReturn(mock());
 
-        listener.onActivated(new MerchantEvents.MerchantActivated(
-                MERCHANT_ID, ADMIN_ID, "ok", Instant.now(), Instant.now()));
+                listener.onActivated(new MerchantEvents.MerchantActivated(
+                                MERCHANT_ID, ADMIN_ID, "ok", Instant.now(), Instant.now()));
 
-        verify(searchIndex).indexAll(anyList());
-    }
+                verify(searchIndex).indexAll(anyList());
+        }
 
-    @Test
-    void onProfileUpdatedSkipsWhenProvinceUnchanged() {
-        listener.onProfileUpdated(new MerchantEvents.MerchantProfileUpdated(
-                MERCHANT_ID, "Name", null, null, "01", "Ha Noi", false, Instant.now()));
+        @Test
+        void onProfileUpdatedSkipsWhenProvinceUnchanged() {
+                listener.onProfileUpdated(new MerchantEvents.MerchantProfileUpdated(
+                                MERCHANT_ID, "Name", null, null, "01", "Ha Noi", false, Instant.now()));
 
-        verify(productRepository, never()).listByMerchant(any(), any());
-    }
+                verify(productRepository, never()).listByMerchant(any(), any());
+        }
 
-    @Test
-    void onClosedRemovesMerchantProducts() {
-        when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
-                .thenReturn(List.of(publishedProduct()));
+        @Test
+        void onClosedRemovesMerchantProducts() {
+                when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
+                                .thenReturn(List.of(publishedProduct()));
 
-        listener.onClosed(new MerchantEvents.MerchantClosed(
-                MERCHANT_ID, "shutdown", Instant.now(), Instant.now()));
+                listener.onClosed(new MerchantEvents.MerchantClosed(
+                                MERCHANT_ID, "shutdown", Instant.now(), Instant.now()));
 
-        verify(searchIndex).removeAll(anyList());
-    }
+                verify(searchIndex).removeAll(anyList());
+        }
 
-    @Test
-    void onProfileUpdatedReindexesWhenProvinceChanged() {
-        Product product = publishedProduct();
-        product.defineAttributes(Map.of("color", "red"));
-        product.pullEvents();
-        com.aionn.catalog.domain.model.AttributeTemplate template = com.aionn.catalog.domain.model.AttributeTemplate
-                .create("t1", "c1", List.of("color"));
-        when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
-                .thenReturn(List.of(product));
-        when(attributeTemplateRepository.findByCategoryId("c1")).thenReturn(java.util.Optional.of(template));
-        when(searchDocumentMapper.toSearchDocument(any(), any())).thenReturn(mock());
+        @Test
+        void onProfileUpdatedReindexesWhenProvinceChanged() {
+                Product product = publishedProduct();
+                product.defineAttributes(Map.of("color", "red"));
+                product.pullEvents();
+                com.aionn.catalog.domain.model.AttributeTemplate template = com.aionn.catalog.domain.model.AttributeTemplate
+                                .create("t1", "c1", List.of("color"));
+                when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
+                                .thenReturn(List.of(product));
+                when(attributeTemplateRepository.findByCategoryId("c1")).thenReturn(java.util.Optional.of(template));
+                when(searchDocumentMapper.toSearchDocument(any(), any(), anyDouble(), anyLong())).thenReturn(mock());
 
-        listener.onProfileUpdated(new MerchantEvents.MerchantProfileUpdated(
-                MERCHANT_ID, "Name", null, null, "79", "HCM", true, Instant.now()));
+                listener.onProfileUpdated(new MerchantEvents.MerchantProfileUpdated(
+                                MERCHANT_ID, "Name", null, null, "79", "HCM", true, Instant.now()));
 
-        verify(searchIndex).indexAll(anyList());
-    }
+                verify(searchIndex).indexAll(anyList());
+        }
 
-    private static ProductSearchDocument mock() {
-        return new ProductSearchDocument("01HZPRD0000000000000000001", MERCHANT_ID, "Widget", null, null,
-                List.of("c1"), List.of(), List.of(), List.of(), Map.of(), null, null, null, "PUBLISHED",
-                Instant.now(), 0.0, 0L);
-    }
+        private static ProductSearchDocument mock() {
+                return new ProductSearchDocument("01HZPRD0000000000000000001", MERCHANT_ID, "Widget", null, null,
+                                List.of("c1"), List.of(), List.of(), List.of(), Map.of(), null, null, null, "PUBLISHED",
+                                Instant.now(), 0.0, 0L);
+        }
 }

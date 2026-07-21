@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: payment
+
+  flyway:
+    enabled: true
+    locations: classpath:db
+
+payment:
+  auto-payout:
+    enabled: ${PAYMENT_AUTO_PAYOUT_ENABLED:false}
+    threshold: ${PAYMENT_AUTO_PAYOUT_THRESHOLD:100000}
+    currency: ${PAYMENT_AUTO_PAYOUT_CURRENCY:VND}
+    batch-size: ${PAYMENT_AUTO_PAYOUT_BATCH:50}
+    cron: ${PAYMENT_AUTO_PAYOUT_CRON:0 0 2 * * *}
+  invoice:
+    base-url: ${PAYMENT_INVOICE_BASE_URL:http://localhost:8080/invoices/}
+  provider:
+    stripe:
+      enabled: ${STRIPE_ENABLED:true}
+      api-key: ${STRIPE_API_KEY}
+      webhook-secret: ${STRIPE_WEBHOOK_SECRET}
+    vnpay:
+      enabled: ${VNPAY_ENABLED:true}
+      tmn-code: ${VNPAY_TMN_CODE}
+      hash-secret: ${VNPAY_HASH_SECRET}
+      pay-url: ${VNPAY_PAY_URL:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+      return-url: ${VNPAY_RETURN_URL}
+      frontend-return-url: ${VNPAY_FRONTEND_RETURN_URL:http://localhost:3000/payments/return}
+      api-url: ${VNPAY_API_URL:https://sandbox.vnpayment.vn/merchant_webapi/api/transaction}
+      version: ${VNPAY_VERSION:2.1.0}
+      command: ${VNPAY_COMMAND:pay}
+      curr-code: ${VNPAY_CURR_CODE:VND}
+      locale: ${VNPAY_LOCALE:vn}

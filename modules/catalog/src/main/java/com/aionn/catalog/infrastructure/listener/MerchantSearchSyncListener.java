@@ -4,6 +4,8 @@ import com.aionn.catalog.application.dto.search.ProductSearchDocument;
 import com.aionn.catalog.application.mapper.ProductSearchDocumentMapper;
 import com.aionn.catalog.application.port.out.attribute.AttributeTemplatePersistencePort;
 import com.aionn.catalog.application.port.out.product.ProductPersistencePort;
+import com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort;
+import com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort;
 import com.aionn.catalog.application.port.out.search.ProductSearchIndex;
 import com.aionn.catalog.domain.event.MerchantEvents;
 import com.aionn.catalog.domain.model.AttributeTemplate;
@@ -34,6 +36,8 @@ public class MerchantSearchSyncListener {
     private final ProductSearchIndex searchIndex;
     private final ProductSearchDocumentMapper searchDocumentMapper;
     private final AttributeTemplatePersistencePort attributeTemplateRepository;
+    private final ProductReviewPersistencePort reviewRepository;
+    private final ProductSoldCounterPersistencePort soldCounterRepository;
 
     @EventListener
     public void onSuspended(MerchantEvents.MerchantSuspended event) {
@@ -93,7 +97,9 @@ public class MerchantSearchSyncListener {
     }
 
     private ProductSearchDocument buildSearchDocument(Product product) {
-        return searchDocumentMapper.toSearchDocument(product, collectFilterableAttributes(product));
+        double rating = reviewRepository.getAverageRating(product.getProductId());
+        long soldCount = soldCounterRepository.getSoldCount(product.getProductId());
+        return searchDocumentMapper.toSearchDocument(product, collectFilterableAttributes(product), rating, soldCount);
     }
 
     private Map<String, String> collectFilterableAttributes(Product product) {

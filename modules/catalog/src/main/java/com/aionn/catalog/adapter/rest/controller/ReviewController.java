@@ -9,10 +9,6 @@ import com.aionn.catalog.adapter.rest.mapper.review.ReviewDtoMapper;
 import com.aionn.catalog.adapter.rest.support.session.CurrentAdminId;
 import com.aionn.catalog.adapter.rest.support.session.CurrentOwnerId;
 import com.aionn.catalog.application.dto.common.PageResult;
-import com.aionn.catalog.application.dto.review.command.AdminDeleteReviewCommand;
-import com.aionn.catalog.application.dto.review.command.DeleteReviewCommand;
-import com.aionn.catalog.application.dto.review.command.HideReviewCommand;
-import com.aionn.catalog.application.dto.review.command.RestoreReviewCommand;
 import com.aionn.catalog.application.dto.review.query.CheckReviewEligibilityQuery;
 import com.aionn.catalog.application.dto.review.query.GetMyReviewsQuery;
 import com.aionn.catalog.application.dto.review.query.GetProductRatingSummaryQuery;
@@ -61,168 +57,170 @@ import java.util.List;
 @Tag(name = "Catalog - Review", description = "Product review submit, update, reply, report, moderation")
 public class ReviewController {
 
-    private final SubmitReviewInputPort submitReviewInputPort;
-    private final UpdateReviewInputPort updateReviewInputPort;
-    private final DeleteReviewInputPort deleteReviewInputPort;
-    private final MerchantReplyReviewInputPort merchantReplyReviewInputPort;
-    private final ReportReviewInputPort reportReviewInputPort;
-    private final HideReviewInputPort hideReviewInputPort;
-    private final AdminDeleteReviewInputPort adminDeleteReviewInputPort;
-    private final RestoreReviewInputPort restoreReviewInputPort;
-    private final GetReviewsByProductInputPort getReviewsByProductInputPort;
-    private final GetMyReviewsInputPort getMyReviewsInputPort;
-    private final GetReportedReviewsInputPort getReportedReviewsInputPort;
-    private final GetProductRatingSummaryInputPort getProductRatingSummaryInputPort;
-    private final CheckReviewEligibilityInputPort checkReviewEligibilityInputPort;
-    private final ReviewDtoMapper reviewDtoMapper;
+        private final SubmitReviewInputPort submitReviewInputPort;
+        private final UpdateReviewInputPort updateReviewInputPort;
+        private final DeleteReviewInputPort deleteReviewInputPort;
+        private final MerchantReplyReviewInputPort merchantReplyReviewInputPort;
+        private final ReportReviewInputPort reportReviewInputPort;
+        private final HideReviewInputPort hideReviewInputPort;
+        private final AdminDeleteReviewInputPort adminDeleteReviewInputPort;
+        private final RestoreReviewInputPort restoreReviewInputPort;
+        private final GetReviewsByProductInputPort getReviewsByProductInputPort;
+        private final GetMyReviewsInputPort getMyReviewsInputPort;
+        private final GetReportedReviewsInputPort getReportedReviewsInputPort;
+        private final GetProductRatingSummaryInputPort getProductRatingSummaryInputPort;
+        private final CheckReviewEligibilityInputPort checkReviewEligibilityInputPort;
+        private final ReviewDtoMapper reviewDtoMapper;
 
-    @PostMapping("/products/{productId}/reviews")
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Submit review")
-    public ResponseEntity<ApiResponse<ReviewResponse>> submit(
-            @CurrentOwnerId String userId,
-            @PathVariable String productId,
-            @Valid @RequestBody SubmitReviewRequest request) {
-        ReviewResult result = submitReviewInputPort.execute(
-                reviewDtoMapper.toSubmitReviewCommand(userId, productId, request));
-        return ApiResponse.createdResponse("Review submitted", reviewDtoMapper.toResponse(result));
-    }
+        @PostMapping("/products/{productId}/reviews")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(summary = "Submit review")
+        public ResponseEntity<ApiResponse<ReviewResponse>> submit(
+                        @CurrentOwnerId String userId,
+                        @PathVariable String productId,
+                        @Valid @RequestBody SubmitReviewRequest request) {
+                ReviewResult result = submitReviewInputPort.execute(
+                                reviewDtoMapper.toSubmitReviewCommand(userId, productId, request));
+                return ApiResponse.createdResponse("Review submitted", reviewDtoMapper.toResponse(result));
+        }
 
-    @PutMapping("/reviews/{reviewId}")
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Update own review")
-    public ResponseEntity<ApiResponse<ReviewResponse>> update(
-            @CurrentOwnerId String userId,
-            @PathVariable String reviewId,
-            @Valid @RequestBody UpdateReviewRequest request) {
-        ReviewResult result = updateReviewInputPort.execute(
-                reviewDtoMapper.toUpdateReviewCommand(userId, reviewId, request));
-        return ResponseEntity.ok(ApiResponse.success(reviewDtoMapper.toResponse(result), "Review updated"));
-    }
+        @PutMapping("/reviews/{reviewId}")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(summary = "Update own review")
+        public ResponseEntity<ApiResponse<ReviewResponse>> update(
+                        @CurrentOwnerId String userId,
+                        @PathVariable String reviewId,
+                        @Valid @RequestBody UpdateReviewRequest request) {
+                ReviewResult result = updateReviewInputPort.execute(
+                                reviewDtoMapper.toUpdateReviewCommand(userId, reviewId, request));
+                return ResponseEntity.ok(ApiResponse.success(reviewDtoMapper.toResponse(result), "Review updated"));
+        }
 
-    @DeleteMapping("/reviews/{reviewId}")
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Delete own review")
-    public ResponseEntity<Void> delete(
-            @CurrentOwnerId String userId,
-            @PathVariable String reviewId) {
-        deleteReviewInputPort.execute(new DeleteReviewCommand(userId, reviewId));
-        return ResponseEntity.noContent().build();
-    }
+        @DeleteMapping("/reviews/{reviewId}")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(summary = "Delete own review")
+        public ResponseEntity<Void> delete(
+                        @CurrentOwnerId String userId,
+                        @PathVariable String reviewId) {
+                deleteReviewInputPort.execute(reviewDtoMapper.toDeleteCommand(userId, reviewId));
+                return ResponseEntity.noContent().build();
+        }
 
-    @PostMapping("/reviews/{reviewId}/reply")
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Merchant replies to review")
-    public ResponseEntity<ApiResponse<ReviewResponse>> reply(
-            @CurrentOwnerId String ownerId,
-            @PathVariable String reviewId,
-            @Valid @RequestBody MerchantReplyRequest request) {
-        ReviewResult result = merchantReplyReviewInputPort.execute(
-                reviewDtoMapper.toMerchantReplyCommand(ownerId, reviewId, request));
-        return ResponseEntity.ok(ApiResponse.success(reviewDtoMapper.toResponse(result), "Reply saved"));
-    }
+        @PostMapping("/reviews/{reviewId}/reply")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(summary = "Merchant replies to review")
+        public ResponseEntity<ApiResponse<ReviewResponse>> reply(
+                        @CurrentOwnerId String ownerId,
+                        @PathVariable String reviewId,
+                        @Valid @RequestBody MerchantReplyRequest request) {
+                ReviewResult result = merchantReplyReviewInputPort.execute(
+                                reviewDtoMapper.toMerchantReplyCommand(ownerId, reviewId, request));
+                return ResponseEntity.ok(ApiResponse.success(reviewDtoMapper.toResponse(result), "Reply saved"));
+        }
 
-    @PostMapping("/reviews/{reviewId}/report")
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Merchant reports abusive review")
-    public ResponseEntity<ApiResponse<ReviewResponse>> report(
-            @CurrentOwnerId String ownerId,
-            @PathVariable String reviewId,
-            @Valid @RequestBody ReportReviewRequest request) {
-        ReviewResult result = reportReviewInputPort.execute(
-                reviewDtoMapper.toReportReviewCommand(ownerId, reviewId, request));
-        return ResponseEntity.ok(ApiResponse.success(reviewDtoMapper.toResponse(result), "Review reported"));
-    }
+        @PostMapping("/reviews/{reviewId}/report")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(summary = "Merchant reports abusive review")
+        public ResponseEntity<ApiResponse<ReviewResponse>> report(
+                        @CurrentOwnerId String ownerId,
+                        @PathVariable String reviewId,
+                        @Valid @RequestBody ReportReviewRequest request) {
+                ReviewResult result = reportReviewInputPort.execute(
+                                reviewDtoMapper.toReportReviewCommand(ownerId, reviewId, request));
+                return ResponseEntity.ok(ApiResponse.success(reviewDtoMapper.toResponse(result), "Review reported"));
+        }
 
-    @PostMapping("/admin/reviews/{reviewId}/hide")
-    @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
-    @Operation(summary = "Admin hides a review")
-    public ResponseEntity<ApiResponse<ReviewResponse>> adminHide(
-            @CurrentAdminId String adminId,
-            @PathVariable String reviewId) {
-        ReviewResult result = hideReviewInputPort.execute(new HideReviewCommand(adminId, reviewId));
-        return ResponseEntity.ok(ApiResponse.success(reviewDtoMapper.toResponse(result), "Review hidden"));
-    }
+        @PostMapping("/admin/reviews/{reviewId}/hide")
+        @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
+        @Operation(summary = "Admin hides a review")
+        public ResponseEntity<ApiResponse<ReviewResponse>> adminHide(
+                        @CurrentAdminId String adminId,
+                        @PathVariable String reviewId) {
+                ReviewResult result = hideReviewInputPort.execute(reviewDtoMapper.toHideCommand(adminId, reviewId));
+                return ResponseEntity.ok(ApiResponse.success(reviewDtoMapper.toResponse(result), "Review hidden"));
+        }
 
-    @DeleteMapping("/admin/reviews/{reviewId}")
-    @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
-    @Operation(summary = "Admin soft-deletes a review")
-    public ResponseEntity<Void> adminDelete(
-            @CurrentAdminId String adminId,
-            @PathVariable String reviewId) {
-        adminDeleteReviewInputPort.execute(new AdminDeleteReviewCommand(adminId, reviewId));
-        return ResponseEntity.noContent().build();
-    }
+        @DeleteMapping("/admin/reviews/{reviewId}")
+        @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
+        @Operation(summary = "Admin soft-deletes a review")
+        public ResponseEntity<Void> adminDelete(
+                        @CurrentAdminId String adminId,
+                        @PathVariable String reviewId) {
+                adminDeleteReviewInputPort.execute(reviewDtoMapper.toAdminDeleteCommand(adminId, reviewId));
+                return ResponseEntity.noContent().build();
+        }
 
-    @PostMapping("/admin/reviews/{reviewId}/restore")
-    @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
-    @Operation(summary = "Admin restores a reported review")
-    public ResponseEntity<ApiResponse<ReviewResponse>> adminRestore(
-            @CurrentAdminId String adminId,
-            @PathVariable String reviewId) {
-        ReviewResult result = restoreReviewInputPort.execute(new RestoreReviewCommand(adminId, reviewId));
-        return ResponseEntity.ok(ApiResponse.success(reviewDtoMapper.toResponse(result), "Review restored"));
-    }
+        @PostMapping("/admin/reviews/{reviewId}/restore")
+        @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
+        @Operation(summary = "Admin restores a reported review")
+        public ResponseEntity<ApiResponse<ReviewResponse>> adminRestore(
+                        @CurrentAdminId String adminId,
+                        @PathVariable String reviewId) {
+                ReviewResult result = restoreReviewInputPort
+                                .execute(reviewDtoMapper.toRestoreCommand(adminId, reviewId));
+                return ResponseEntity.ok(ApiResponse.success(reviewDtoMapper.toResponse(result), "Review restored"));
+        }
 
-    @GetMapping("/products/{productId}/reviews")
-    @Operation(summary = "List visible reviews of a product")
-    public ResponseEntity<ApiResponse<List<ReviewResponse>>> listByProduct(
-            @PathVariable String productId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        PageResult<ReviewResult> result = getReviewsByProductInputPort.execute(
-                new GetReviewsByProductQuery(productId, OffsetPagination.of(page, size)));
-        return ResponseEntity.ok(ApiResponse.successWithPaging(
-                reviewDtoMapper.toResponses(result.content()),
-                PageMetadata.of(result.page(), result.size(), result.totalElements()),
-                "Reviews fetched"));
-    }
+        @GetMapping("/products/{productId}/reviews")
+        @Operation(summary = "List visible reviews of a product")
+        public ResponseEntity<ApiResponse<List<ReviewResponse>>> listByProduct(
+                        @PathVariable String productId,
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "20") int size) {
+                PageResult<ReviewResult> result = getReviewsByProductInputPort.execute(
+                                new GetReviewsByProductQuery(productId, OffsetPagination.of(page, size)));
+                return ResponseEntity.ok(ApiResponse.successWithPaging(
+                                reviewDtoMapper.toResponses(result.content()),
+                                PageMetadata.of(result.page(), result.size(), result.totalElements()),
+                                "Reviews fetched"));
+        }
 
-    @GetMapping("/products/{productId}/rating-summary")
-    @Operation(summary = "Rating summary for a product")
-    public ResponseEntity<ApiResponse<RatingSummary>> ratingSummary(@PathVariable String productId) {
-        return ResponseEntity.ok(ApiResponse.success(
-                getProductRatingSummaryInputPort.execute(new GetProductRatingSummaryQuery(productId)),
-                "Rating summary fetched"));
-    }
+        @GetMapping("/products/{productId}/rating-summary")
+        @Operation(summary = "Rating summary for a product")
+        public ResponseEntity<ApiResponse<RatingSummary>> ratingSummary(@PathVariable String productId) {
+                return ResponseEntity.ok(ApiResponse.success(
+                                getProductRatingSummaryInputPort.execute(new GetProductRatingSummaryQuery(productId)),
+                                "Rating summary fetched"));
+        }
 
-    @GetMapping("/reviews/mine")
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "List my reviews")
-    public ResponseEntity<ApiResponse<List<ReviewResponse>>> myReviews(
-            @CurrentOwnerId String userId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        PageResult<ReviewResult> result = getMyReviewsInputPort.execute(
-                new GetMyReviewsQuery(userId, OffsetPagination.of(page, size)));
-        return ResponseEntity.ok(ApiResponse.successWithPaging(
-                reviewDtoMapper.toResponses(result.content()),
-                PageMetadata.of(result.page(), result.size(), result.totalElements()),
-                "My reviews fetched"));
-    }
+        @GetMapping("/reviews/mine")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(summary = "List my reviews")
+        public ResponseEntity<ApiResponse<List<ReviewResponse>>> myReviews(
+                        @CurrentOwnerId String userId,
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "20") int size) {
+                PageResult<ReviewResult> result = getMyReviewsInputPort.execute(
+                                new GetMyReviewsQuery(userId, OffsetPagination.of(page, size)));
+                return ResponseEntity.ok(ApiResponse.successWithPaging(
+                                reviewDtoMapper.toResponses(result.content()),
+                                PageMetadata.of(result.page(), result.size(), result.totalElements()),
+                                "My reviews fetched"));
+        }
 
-    @GetMapping("/admin/reviews/reported")
-    @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
-    @Operation(summary = "List reported reviews")
-    public ResponseEntity<ApiResponse<List<ReviewResponse>>> listReported(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        PageResult<ReviewResult> result = getReportedReviewsInputPort.execute(
-                new GetReportedReviewsQuery(OffsetPagination.of(page, size)));
-        return ResponseEntity.ok(ApiResponse.successWithPaging(
-                reviewDtoMapper.toResponses(result.content()),
-                PageMetadata.of(result.page(), result.size(), result.totalElements()),
-                "Reported reviews fetched"));
-    }
+        @GetMapping("/admin/reviews/reported")
+        @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
+        @Operation(summary = "List reported reviews")
+        public ResponseEntity<ApiResponse<List<ReviewResponse>>> listReported(
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "20") int size) {
+                PageResult<ReviewResult> result = getReportedReviewsInputPort.execute(
+                                new GetReportedReviewsQuery(OffsetPagination.of(page, size)));
+                return ResponseEntity.ok(ApiResponse.successWithPaging(
+                                reviewDtoMapper.toResponses(result.content()),
+                                PageMetadata.of(result.page(), result.size(), result.totalElements()),
+                                "Reported reviews fetched"));
+        }
 
-    @GetMapping("/products/{productId}/reviews/eligibility")
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Check if authenticated user can review this product")
-    public ResponseEntity<ApiResponse<ReviewEligibilityResult>> checkEligibility(
-            @CurrentOwnerId String userId,
-            @PathVariable String productId) {
-        return ResponseEntity.ok(ApiResponse.success(
-                checkReviewEligibilityInputPort.execute(new CheckReviewEligibilityQuery(userId, productId)),
-                "Eligibility checked"));
-    }
+        @GetMapping("/products/{productId}/reviews/eligibility")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(summary = "Check if authenticated user can review this product")
+        public ResponseEntity<ApiResponse<ReviewEligibilityResult>> checkEligibility(
+                        @CurrentOwnerId String userId,
+                        @PathVariable String productId) {
+                return ResponseEntity.ok(ApiResponse.success(
+                                checkReviewEligibilityInputPort
+                                                .execute(new CheckReviewEligibilityQuery(userId, productId)),
+                                "Eligibility checked"));
+        }
 }

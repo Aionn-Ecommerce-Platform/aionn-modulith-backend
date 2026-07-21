@@ -47,7 +47,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -80,6 +82,10 @@ class ProductServiceTest {
         @Mock
         private com.aionn.catalog.application.port.out.attribute.AttributeTemplatePersistencePort attributeTemplateRepository;
         @Mock
+        private com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort reviewRepository;
+        @Mock
+        private com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort soldCounterRepository;
+        @Mock
         private ProductResultMapper productResultMapper;
         @Mock
         private CatalogProductPolicy productPolicy;
@@ -87,9 +93,9 @@ class ProductServiceTest {
         private EventPublisher eventPublisher;
 
         @Spy
-    private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
+        private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
 
-    @InjectMocks
+        @InjectMocks
         private ProductService productService;
 
         private ProductResult sampleResult;
@@ -791,7 +797,8 @@ class ProductServiceTest {
                                 PRODUCT_ID, MERCHANT_ID, "Widget", null, null, List.of(CATEGORY_ID),
                                 List.of(), List.of(), List.of(), Map.of(), null, null, null, "PUBLISHED",
                                 java.time.Instant.now(), 0.0, 0L);
-                when(searchDocumentMapper.toSearchDocument(org.mockito.ArgumentMatchers.eq(product), any()))
+                when(searchDocumentMapper.toSearchDocument(org.mockito.ArgumentMatchers.eq(product), any(), anyDouble(),
+                                anyLong()))
                                 .thenReturn(doc);
 
                 productService.syncAllToSearchIndex();

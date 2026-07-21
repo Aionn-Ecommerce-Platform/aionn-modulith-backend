@@ -6,6 +6,7 @@ import com.aionn.catalog.adapter.rest.dto.category.request.UpdateCategoryRequest
 import com.aionn.catalog.adapter.rest.dto.category.response.CategoryResponse;
 import com.aionn.catalog.adapter.rest.dto.category.response.CategoryTreeNodeResponse;
 import com.aionn.catalog.application.dto.category.command.CreateCategoryCommand;
+import com.aionn.catalog.application.dto.category.command.DeleteCategoryCommand;
 import com.aionn.catalog.application.dto.category.command.MoveCategoryCommand;
 import com.aionn.catalog.application.dto.category.command.UpdateCategoryCommand;
 import com.aionn.catalog.application.dto.category.result.CategoryResult;
@@ -22,6 +23,10 @@ public interface CategoryDtoMapper {
     UpdateCategoryCommand toUpdateCategoryCommand(String categoryId, UpdateCategoryRequest request);
 
     MoveCategoryCommand toMoveCategoryCommand(String categoryId, MoveCategoryRequest request);
+
+    default DeleteCategoryCommand toDeleteCommand(String categoryId) {
+        return new DeleteCategoryCommand(categoryId);
+    }
 
     CategoryResponse toResponse(CategoryResult result);
 

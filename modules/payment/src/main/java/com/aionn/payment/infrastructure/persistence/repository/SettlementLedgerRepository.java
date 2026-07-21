@@ -1,0 +1,14 @@
+package com.aionn.payment.infrastructure.persistence.repository;
+
+import com.aionn.payment.infrastructure.persistence.entity.SettlementLedgerEntity;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface SettlementLedgerRepository extends JpaRepository<SettlementLedgerEntity, String> {
+
+    List<SettlementLedgerEntity> findByMerchantIdOrderByCreatedAtDesc(String merchantId, Pageable pageable);
+
+    List<SettlementLedgerEntity> findByOrderId(String orderId);
+}

@@ -21,23 +21,16 @@ import com.aionn.identity.domain.valueobject.UserRole;
 import com.aionn.identity.domain.valueobject.UserStatus;
 import com.aionn.sharedkernel.adapter.web.response.PageMetadata;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 
 import java.util.List;
 
 @Mapper(componentModel = "spring")
 public interface AdminUserDtoMapper {
 
-    @Mapping(target = "userId", source = "userId")
-    @Mapping(target = "roles", source = "request.roles")
     UpdateUserRolesCommand toUpdateRolesCommand(String userId, UpdateRolesRequest request);
 
-    @Mapping(target = "userId", source = "userId")
-    @Mapping(target = "roles", source = "request.roles")
     RemoveUserRolesCommand toRemoveRolesCommand(String userId, UpdateRolesRequest request);
 
-    @Mapping(target = "userId", source = "userId")
-    @Mapping(target = "status", source = "request.status")
     UpdateUserStatusCommand toUpdateStatusCommand(String userId, UpdateUserStatusRequest request);
 
     ListUsersQuery toListUsersQuery(UserStatus status, UserRole role, int page, int size);

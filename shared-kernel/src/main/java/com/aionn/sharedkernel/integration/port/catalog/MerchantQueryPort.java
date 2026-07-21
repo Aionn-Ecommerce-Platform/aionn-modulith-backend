@@ -13,6 +13,10 @@ public interface MerchantQueryPort {
 
     Optional<StripeConnectInfo> findStripeConnectInfo(String merchantId);
 
+    void saveStripeAccountId(String merchantId, String stripeAccountId);
+
+    void updateStripeCapabilities(String merchantId, boolean chargesEnabled, boolean payoutsEnabled);
+
     record StripeConnectInfo(String stripeAccountId, boolean chargesEnabled, boolean payoutsEnabled) {
     }
 }

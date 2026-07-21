@@ -17,10 +17,6 @@ import com.aionn.catalog.adapter.rest.mapper.product.ProductDtoMapper;
 import com.aionn.catalog.adapter.rest.support.session.CurrentAdminId;
 import com.aionn.catalog.adapter.rest.support.session.CurrentMerchantId;
 import com.aionn.catalog.application.dto.common.PageResult;
-import com.aionn.catalog.application.dto.product.command.CloneProductCommand;
-import com.aionn.catalog.application.dto.product.command.PublishProductCommand;
-import com.aionn.catalog.application.dto.product.command.RestoreProductCommand;
-import com.aionn.catalog.application.dto.product.command.SubmitForReviewCommand;
 import com.aionn.catalog.application.dto.product.query.GetProductQuery;
 import com.aionn.catalog.application.dto.product.query.GetProductsBySkuIdsQuery;
 import com.aionn.catalog.application.dto.product.query.ListProductsByMerchantQuery;
@@ -37,7 +33,6 @@ import com.aionn.catalog.application.port.in.product.DeactivateProductInputPort;
 import com.aionn.catalog.application.port.in.product.DefineAttributesInputPort;
 import com.aionn.catalog.application.port.in.product.DefineVariantInputPort;
 import com.aionn.catalog.application.dto.analytics.result.ProductAnalyticsResult;
-import com.aionn.catalog.application.dto.product.command.TrackProductViewCommand;
 import com.aionn.catalog.application.dto.search.ProductSearchCriteria;
 import com.aionn.catalog.application.dto.search.ProductSearchResult;
 import com.aionn.catalog.application.port.in.product.GetProductAnalyticsInputPort;
@@ -136,7 +131,8 @@ public class ProductController {
         public ResponseEntity<ApiResponse<ProductResponse>> clone(
                         @CurrentMerchantId String merchantId,
                         @PathVariable String productId) {
-                ProductResult result = cloneProductInputPort.execute(new CloneProductCommand(productId, merchantId));
+                ProductResult result = cloneProductInputPort.execute(
+                                productDtoMapper.toCloneProductCommand(productId, merchantId));
                 return ApiResponse.createdResponse("Product cloned", productDtoMapper.toResponse(result));
         }
 
@@ -162,7 +158,8 @@ public class ProductController {
                         @Valid @RequestBody ChangeVariantPriceRequest request) {
                 ProductResult result = changeVariantPriceInputPort.execute(
                                 productDtoMapper.toChangeVariantPriceCommand(productId, merchantId, skuId, request));
-                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Variant price updated"));
+                return ResponseEntity
+                                .ok(ApiResponse.success(productDtoMapper.toResponse(result), "Variant price updated"));
         }
 
         @PutMapping("/variants/prices")
@@ -173,7 +170,8 @@ public class ProductController {
                         @Valid @RequestBody BulkPriceUpdateRequest request) {
                 BulkPriceUpdateResult result = bulkPriceUpdateInputPort.execute(
                                 productDtoMapper.toBulkPriceUpdateCommand(merchantId, request));
-                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toBulkUpdateResponse(result), "Bulk prices updated"));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toBulkUpdateResponse(result),
+                                "Bulk prices updated"));
         }
 
         @PutMapping("/{productId}/brand")
@@ -197,7 +195,8 @@ public class ProductController {
                         @Valid @RequestBody AssignCategoriesRequest request) {
                 ProductResult result = assignCategoriesInputPort.execute(
                                 productDtoMapper.toAssignCategoriesCommand(productId, merchantId, request));
-                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Categories assigned"));
+                return ResponseEntity
+                                .ok(ApiResponse.success(productDtoMapper.toResponse(result), "Categories assigned"));
         }
 
         @PutMapping("/{productId}/attributes")
@@ -209,7 +208,8 @@ public class ProductController {
                         @Valid @RequestBody DefineAttributesRequest request) {
                 ProductResult result = defineAttributesInputPort.execute(
                                 productDtoMapper.toDefineAttributesCommand(productId, merchantId, request));
-                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Attributes defined"));
+                return ResponseEntity
+                                .ok(ApiResponse.success(productDtoMapper.toResponse(result), "Attributes defined"));
         }
 
         @PostMapping("/{productId}/publish")
@@ -218,7 +218,8 @@ public class ProductController {
         public ResponseEntity<ApiResponse<ProductResponse>> publish(
                         @CurrentMerchantId String merchantId,
                         @PathVariable String productId) {
-                ProductResult result = publishProductInputPort.execute(new PublishProductCommand(productId, merchantId));
+                ProductResult result = publishProductInputPort
+                                .execute(productDtoMapper.toPublishProductCommand(productId, merchantId));
                 return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Product published"));
         }
 
@@ -228,8 +229,10 @@ public class ProductController {
         public ResponseEntity<ApiResponse<ProductResponse>> submitForReview(
                         @CurrentMerchantId String merchantId,
                         @PathVariable String productId) {
-                ProductResult result = submitForReviewInputPort.execute(new SubmitForReviewCommand(productId, merchantId));
-                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Product submitted for review"));
+                ProductResult result = submitForReviewInputPort
+                                .execute(productDtoMapper.toSubmitForReviewCommand(productId, merchantId));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result),
+                                "Product submitted for review"));
         }
 
         @PostMapping("/{productId}/reject")
@@ -241,7 +244,8 @@ public class ProductController {
                         @Valid @RequestBody RejectProductRequest request) {
                 ProductResult result = rejectProductInputPort.execute(
                                 productDtoMapper.toRejectProductCommand(productId, adminId, request));
-                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Product review rejected"));
+                return ResponseEntity.ok(
+                                ApiResponse.success(productDtoMapper.toResponse(result), "Product review rejected"));
         }
 
         @PostMapping("/{productId}/deactivate")
@@ -253,7 +257,8 @@ public class ProductController {
                         @Valid @RequestBody DeactivateProductRequest request) {
                 ProductResult result = deactivateProductInputPort.execute(
                                 productDtoMapper.toDeactivateProductCommand(productId, merchantId, request));
-                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Product deactivated"));
+                return ResponseEntity
+                                .ok(ApiResponse.success(productDtoMapper.toResponse(result), "Product deactivated"));
         }
 
         @PostMapping("/{productId}/restore")
@@ -262,7 +267,8 @@ public class ProductController {
         public ResponseEntity<ApiResponse<ProductResponse>> restore(
                         @CurrentAdminId String adminId,
                         @PathVariable String productId) {
-                ProductResult result = restoreProductInputPort.execute(new RestoreProductCommand(productId, adminId));
+                ProductResult result = restoreProductInputPort.execute(
+                                productDtoMapper.toRestoreProductCommand(productId, adminId));
                 return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Product restored"));
         }
 
@@ -270,7 +276,9 @@ public class ProductController {
         @Operation(summary = "Get product")
         public ResponseEntity<ApiResponse<ProductResponse>> get(@PathVariable String productId) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                productDtoMapper.toResponse(getProductInputPort.execute(new GetProductQuery(productId))), "Product fetched"));
+                                productDtoMapper.toResponse(
+                                                getProductInputPort.execute(new GetProductQuery(productId))),
+                                "Product fetched"));
         }
 
         @GetMapping("/merchant")
@@ -295,7 +303,8 @@ public class ProductController {
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "20") int size) {
                 PageResult<ProductResult> results = listProductsByStatusInputPort.execute(
-                                new ListProductsByStatusQuery(ProductStatus.PENDING_REVIEW, OffsetPagination.of(page, size)));
+                                new ListProductsByStatusQuery(ProductStatus.PENDING_REVIEW,
+                                                OffsetPagination.of(page, size)));
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
                                 productDtoMapper.toResponses(results.content()),
                                 PageMetadata.of(results.page(), results.size(), results.totalElements()),
@@ -310,7 +319,7 @@ public class ProductController {
                         @PathVariable String productId,
                         @PathVariable String skuId) {
                 ProductResult result = removeVariantInputPort.execute(
-                                new com.aionn.catalog.application.dto.product.command.RemoveVariantCommand(productId, skuId, merchantId));
+                                productDtoMapper.toRemoveVariantCommand(productId, skuId, merchantId));
                 return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Variant removed"));
         }
 
@@ -335,7 +344,8 @@ public class ProductController {
                         @Valid @RequestBody com.aionn.catalog.adapter.rest.dto.product.request.UpdateAiMetadataRequest request) {
                 ProductResult result = updateAiMetadataInputPort.execute(
                                 productDtoMapper.toUpdateAiMetadataCommand(productId, merchantId, request));
-                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "AI metadata updated"));
+                return ResponseEntity
+                                .ok(ApiResponse.success(productDtoMapper.toResponse(result), "AI metadata updated"));
         }
 
         @PutMapping("/{productId}/collections")
@@ -347,7 +357,8 @@ public class ProductController {
                         @Valid @RequestBody com.aionn.catalog.adapter.rest.dto.product.request.AssignCollectionsRequest request) {
                 ProductResult result = assignCollectionsInputPort.execute(
                                 productDtoMapper.toAssignCollectionsCommand(productId, merchantId, request));
-                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Collections assigned"));
+                return ResponseEntity
+                                .ok(ApiResponse.success(productDtoMapper.toResponse(result), "Collections assigned"));
         }
 
         @PostMapping("/{productId}/takedown")
@@ -359,7 +370,8 @@ public class ProductController {
                         @Valid @RequestBody com.aionn.catalog.adapter.rest.dto.product.request.EmergencyTakedownRequest request) {
                 ProductResult result = emergencyTakedownInputPort.execute(
                                 productDtoMapper.toEmergencyTakedownCommand(productId, adminId, request));
-                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Emergency takedown executed"));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result),
+                                "Emergency takedown executed"));
         }
 
         @GetMapping("/search")
@@ -369,7 +381,8 @@ public class ProductController {
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "20") int size) {
                 PageResult<ProductResult> results = searchProductsInputPort.execute(
-                                new com.aionn.catalog.application.dto.product.query.SearchProductsQuery(keyword, OffsetPagination.of(page, size)));
+                                new com.aionn.catalog.application.dto.product.query.SearchProductsQuery(keyword,
+                                                OffsetPagination.of(page, size)));
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
                                 productDtoMapper.toResponses(results.content()),
                                 PageMetadata.of(results.page(), results.size(), results.totalElements()),
@@ -380,7 +393,8 @@ public class ProductController {
         @Operation(summary = "Get products by SKU IDs")
         public ResponseEntity<ApiResponse<List<ProductResponse>>> getBySkuIds(@RequestParam List<String> skuIds) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                productDtoMapper.toResponses(getProductsBySkuIdsInputPort.execute(new GetProductsBySkuIdsQuery(skuIds))),
+                                productDtoMapper.toResponses(getProductsBySkuIdsInputPort
+                                                .execute(new GetProductsBySkuIdsQuery(skuIds))),
                                 MSG_PRODUCTS_FETCHED));
         }
 
@@ -390,15 +404,18 @@ public class ProductController {
                         @PathVariable String productId,
                         @RequestParam(defaultValue = "5") int limit) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                productDtoMapper.toResponses(getRelatedProductsInputPort.execute(new GetRelatedProductsQuery(productId, limit))),
+                                productDtoMapper.toResponses(getRelatedProductsInputPort
+                                                .execute(new GetRelatedProductsQuery(productId, limit))),
                                 MSG_PRODUCTS_FETCHED));
         }
 
         @GetMapping("/recommendations/popular")
         @Operation(summary = "Get popular products")
-        public ResponseEntity<ApiResponse<List<ProductResponse>>> getPopular(@RequestParam(defaultValue = "5") int limit) {
+        public ResponseEntity<ApiResponse<List<ProductResponse>>> getPopular(
+                        @RequestParam(defaultValue = "5") int limit) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                productDtoMapper.toResponses(getPopularProductsInputPort.execute(new GetPopularProductsQuery(limit))),
+                                productDtoMapper.toResponses(getPopularProductsInputPort
+                                                .execute(new GetPopularProductsQuery(limit))),
                                 MSG_PRODUCTS_FETCHED));
         }
 
@@ -411,7 +428,9 @@ public class ProductController {
                         @RequestParam(defaultValue = "5") int limit) {
                 String userId = authentication != null ? authentication.getName() : null;
                 return ResponseEntity.ok(ApiResponse.success(
-                                productDtoMapper.toResponses(getPersonalizedProductsInputPort.execute(new GetPersonalizedProductsQuery(userId, categoryIds, brandIds, limit))),
+                                productDtoMapper.toResponses(getPersonalizedProductsInputPort
+                                                .execute(new GetPersonalizedProductsQuery(userId, categoryIds, brandIds,
+                                                                limit))),
                                 MSG_PRODUCTS_FETCHED));
         }
 
@@ -421,7 +440,7 @@ public class ProductController {
         public ResponseEntity<ApiResponse<Void>> trackView(
                         @CurrentOwnerId String ownerId,
                         @PathVariable String productId) {
-                trackProductViewInputPort.execute(new TrackProductViewCommand(productId, ownerId));
+                trackProductViewInputPort.execute(productDtoMapper.toTrackProductViewCommand(productId, ownerId));
                 return ResponseEntity.ok(ApiResponse.success(null, "Product view tracked"));
         }
 
@@ -430,7 +449,8 @@ public class ProductController {
         @Operation(summary = "Get merchant product analytics")
         public ResponseEntity<ApiResponse<ProductAnalyticsResponse>> getMerchantAnalytics() {
                 ProductAnalyticsResult result = getProductAnalyticsInputPort.execute();
-                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toAnalyticsResponse(result), "Analytics fetched"));
+                return ResponseEntity.ok(
+                                ApiResponse.success(productDtoMapper.toAnalyticsResponse(result), "Analytics fetched"));
         }
 
         @GetMapping("/search/catalog")
@@ -471,6 +491,7 @@ public class ProductController {
                                 brandIds == null ? List.of() : brandIds,
                                 priceMin, priceMax, attributes, sortEnum, page, size, ratingMin);
                 ProductSearchResult result = searchProductCatalogInputPort.execute(criteria);
-                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toSearchResponse(result), MSG_PRODUCTS_FETCHED));
+                return ResponseEntity.ok(
+                                ApiResponse.success(productDtoMapper.toSearchResponse(result), MSG_PRODUCTS_FETCHED));
         }
 }

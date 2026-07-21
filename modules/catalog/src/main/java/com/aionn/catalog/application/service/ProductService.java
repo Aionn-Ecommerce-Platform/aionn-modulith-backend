@@ -24,6 +24,8 @@ import com.aionn.catalog.application.mapper.ProductSearchDocumentMapper;
 import com.aionn.catalog.application.policy.CatalogProductPolicy;
 import com.aionn.catalog.application.port.out.attribute.AttributeTemplatePersistencePort;
 import com.aionn.catalog.application.port.out.search.ProductSearchIndex;
+import com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort;
+import com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort;
 import com.aionn.catalog.domain.model.AttributeTemplate;
 import com.aionn.catalog.application.port.out.brand.BrandPersistencePort;
 import com.aionn.catalog.application.port.out.category.CategoryPersistencePort;
@@ -70,6 +72,8 @@ public class ProductService {
     private final ProductSearchIndex catalogSearchIndex;
     private final ProductSearchDocumentMapper searchDocumentMapper;
     private final AttributeTemplatePersistencePort attributeTemplateRepository;
+    private final ProductReviewPersistencePort reviewRepository;
+    private final ProductSoldCounterPersistencePort soldCounterRepository;
     private final ProductResultMapper productResultMapper;
     private final CatalogProductPolicy productPolicy;
     private final EventPublisher eventPublisher;
@@ -422,7 +426,9 @@ public class ProductService {
                 });
             }
         }
-        return searchDocumentMapper.toSearchDocument(product, filterable);
+        double rating = reviewRepository.getAverageRating(product.getProductId());
+        long soldCount = soldCounterRepository.getSoldCount(product.getProductId());
+        return searchDocumentMapper.toSearchDocument(product, filterable, rating, soldCount);
     }
 
     private PageResult<ProductResult> jpaSearchFallback(ProductSearchCriteria criteria) {
