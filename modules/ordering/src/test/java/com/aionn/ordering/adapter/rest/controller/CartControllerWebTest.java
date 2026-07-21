@@ -62,6 +62,13 @@ class CartControllerWebTest {
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                 "user-1", "n/a", List.of(new SimpleGrantedAuthority("ROLE_USER")));
         SecurityContextHolder.getContext().setAuthentication(auth);
+
+        lenient().when(dtoMapper.toAddItemCommand(any(), any())).thenReturn(new AddItemCommand("user-1", "sku-1", 1));
+        lenient().when(dtoMapper.toUpdateItemQtyCommand(any(), any(), any())).thenReturn(new UpdateItemQtyCommand("user-1", "sku-1", 5));
+        lenient().when(dtoMapper.toRemoveItemCommand(any(), any())).thenReturn(new RemoveItemCommand("user-1", "sku-1"));
+        lenient().when(dtoMapper.toClearCartCommand(any(), any())).thenReturn(new ClearCartCommand("user-1", "CLEAR"));
+        lenient().when(dtoMapper.toApplyVoucherCommand(any(), any())).thenReturn(new ApplyVoucherCommand("user-1", "SAVE10"));
+        lenient().when(dtoMapper.toRemoveVoucherCommand(any())).thenReturn(new RemoveVoucherCommand("user-1"));
     }
 
     @AfterEach
