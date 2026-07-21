@@ -443,7 +443,8 @@ class OrderServiceTest {
         var to = java.time.LocalDate.now();
         var analyticsRows = List.of(
                 new com.aionn.ordering.application.port.out.OrderPersistencePort.OrderAnalyticsRow(
-                        "COMPLETED", java.math.BigDecimal.valueOf(100), "VND", java.time.Instant.now())
+                        "COMPLETED", java.math.BigDecimal.valueOf(100), "VND", 
+                        to.atStartOfDay(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).toInstant())
         );
         when(orderRepository.findMerchantAnalyticsRows(eq(MERCHANT_ID), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(analyticsRows);
 
@@ -460,7 +461,8 @@ class OrderServiceTest {
         var to = java.time.LocalDate.now();
         var platformRows = List.of(
                 new com.aionn.ordering.application.port.out.OrderPersistencePort.PlatformAnalyticsRow(
-                        MERCHANT_ID, "COMPLETED", java.math.BigDecimal.valueOf(200), "VND", java.time.Instant.now())
+                        MERCHANT_ID, "COMPLETED", java.math.BigDecimal.valueOf(200), "VND", 
+                        to.atStartOfDay(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).toInstant())
         );
         when(orderRepository.findPlatformAnalyticsRows(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(platformRows);
 
