@@ -90,8 +90,9 @@ public class Order extends AggregateRoot {
             Money shippingFee,
             Money merchandiseSubtotal,
             Instant now) {
-        Guard.require(items != null && !items.isEmpty(),
-                () -> new OrderingException(OrderingErrorCode.CART_EMPTY));
+        if (items == null || items.isEmpty()) {
+            throw new OrderingException(OrderingErrorCode.CART_EMPTY);
+        }
         Money originalLineSubtotal = items.stream()
                 .map(OrderItem::lineTotal)
                 .reduce(Money.zero(currency), Money::add);

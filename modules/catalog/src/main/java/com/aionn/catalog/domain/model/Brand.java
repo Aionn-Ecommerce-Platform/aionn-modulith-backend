@@ -59,8 +59,9 @@ public class Brand extends AggregateRoot {
     }
 
     public static Brand create(String brandId, String name, String logoUrl, String description, Clock clock) {
-        Guard.require(name != null && !name.isBlank(),
-                () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT, "name must not be blank"));
+        if (name == null || name.isBlank()) {
+            throw new CatalogException(CatalogErrorCode.INVALID_ARGUMENT, "name must not be blank");
+        }
         Instant now = clock.instant();
         String trimmedName = name.trim();
         Brand brand = new Brand(brandId, trimmedName, logoUrl, description, BrandStatus.ACTIVE, now, now, List.of());
