@@ -1,11 +1,12 @@
 package com.aionn.inventory.infrastructure.integration;
+
 import com.aionn.inventory.infrastructure.integration.order.InventoryStockReservationAdapter;
 
 import com.aionn.inventory.application.dto.reservation.command.CommitReservationCommand;
 import com.aionn.inventory.application.dto.reservation.command.ReleaseReservationCommand;
 import com.aionn.inventory.application.dto.reservation.command.ReserveStockCommand;
-import com.aionn.inventory.application.dto.reservation.result.ReservationResult;
 import com.aionn.inventory.application.service.StockReservationService;
+import com.aionn.inventory.domain.model.StockReservation;
 import com.aionn.sharedkernel.integration.port.inventory.InventoryStockReservationPort.Reservation;
 import com.aionn.sharedkernel.integration.port.inventory.InventoryStockReservationPort.ReservationException;
 import com.aionn.sharedkernel.integration.port.inventory.InventoryStockReservationPort.ReservationLine;
@@ -37,14 +38,21 @@ class InventoryStockReservationAdapterTest {
         adapter = new InventoryStockReservationAdapter(reservationService);
     }
 
+    private static StockReservation reserved(String reservationId, String skuId) {
+        StockReservation reservation = StockReservation.reserve(
+                reservationId, skuId, "WH_1", "ORDER_1", 2, Instant.now().plusSeconds(300));
+        reservation.pullEvents();
+        return reservation;
+    }
+
     @Test
     void reserveAllSucceeds() {
         ReservationLine line1 = new ReservationLine("SKU_1", "WH_1", 2, new BigDecimal("10.0"), "USD");
         ReservationLine line2 = new ReservationLine("SKU_2", "WH_1", 3, new BigDecimal("15.0"), "USD");
 
         when(reservationService.reserve(any(ReserveStockCommand.class)))
-                .thenReturn(new ReservationResult("RES_1", "SKU_1", "WH_1", "ORDER_1", 2, "RESERVED", Instant.now(), Instant.now(), null))
-                .thenReturn(new ReservationResult("RES_2", "SKU_2", "WH_1", "ORDER_1", 3, "RESERVED", Instant.now(), Instant.now(), null));
+                .thenReturn(reserved("RES_1", "SKU_1"))
+                .thenReturn(reserved("RES_2", "SKU_2"));
 
         List<Reservation> results = adapter.reserveAll("ORDER_1", List.of(line1, line2), 300);
 
@@ -59,7 +67,7 @@ class InventoryStockReservationAdapterTest {
         ReservationLine line2 = new ReservationLine("SKU_2", "WH_1", 3, new BigDecimal("15.0"), "USD");
 
         when(reservationService.reserve(any(ReserveStockCommand.class)))
-                .thenReturn(new ReservationResult("RES_1", "SKU_1", "WH_1", "ORDER_1", 2, "RESERVED", Instant.now(), Instant.now(), null))
+                .thenReturn(reserved("RES_1", "SKU_1"))
                 .thenThrow(new RuntimeException("Stock low"));
 
         assertThatThrownBy(() -> adapter.reserveAll("ORDER_1", List.of(line1, line2), 300))

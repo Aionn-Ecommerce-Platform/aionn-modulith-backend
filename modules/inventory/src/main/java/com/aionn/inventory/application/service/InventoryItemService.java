@@ -7,8 +7,6 @@ import com.aionn.inventory.application.dto.inventory.command.EmergencyUnlockComm
 import com.aionn.inventory.application.dto.inventory.command.InitializeStockCommand;
 import com.aionn.inventory.application.dto.inventory.command.ManualAdjustmentCommand;
 import com.aionn.inventory.application.dto.inventory.command.TrackBatchAndExpiryCommand;
-import com.aionn.inventory.application.dto.inventory.result.InventoryItemResult;
-import com.aionn.inventory.application.mapper.InventoryResultMapper;
 import com.aionn.inventory.application.port.out.InventoryItemPersistencePort;
 import com.aionn.inventory.application.port.out.SafetyStockNotifier;
 import com.aionn.inventory.application.port.out.StockAdjustmentPersistencePort;
@@ -45,13 +43,12 @@ public class InventoryItemService {
     private final InventoryItemPersistencePort itemRepository;
     private final WarehousePersistencePort warehouseRepository;
     private final StockAdjustmentPersistencePort adjustmentRepository;
-    private final InventoryResultMapper mapper;
     private final EventPublisher eventPublisher;
     private final SafetyStockNotifier safetyStockNotifier;
     private final MerchantQueryPort merchantQueryPort;
     private final Clock clock;
 
-    public InventoryItemResult initialize(InitializeStockCommand command) {
+    public InventoryItem initialize(InitializeStockCommand command) {
         OwnerContext ctx = ownerContext(command.ownerId(), command.warehouseId());
         if (!ctx.warehouse().getStatus().canFulfill()) {
             throw new InventoryException(InventoryErrorCode.WAREHOUSE_INVALID_TRANSITION,
@@ -69,28 +66,28 @@ public class InventoryItemService {
             throw new InventoryException(InventoryErrorCode.INVENTORY_ALREADY_INITIALIZED);
         }
         eventPublisher.publish(item.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public InventoryItemResult configureSafetyStock(ConfigureSafetyStockCommand command) {
+    public InventoryItem configureSafetyStock(ConfigureSafetyStockCommand command) {
         OwnerContext ctx = ownerContext(command.ownerId(), command.warehouseId());
         InventoryItem item = lockedItem(command.skuId(), command.warehouseId());
         item.configureSafetyStock(command.safetyStockQty(), clock);
         InventoryItem saved = itemRepository.save(item);
         publishWithSafetyHook(item.pullEvents(), ctx.merchantId());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public InventoryItemResult trackBatchAndExpiry(TrackBatchAndExpiryCommand command) {
+    public InventoryItem trackBatchAndExpiry(TrackBatchAndExpiryCommand command) {
         ownerContext(command.ownerId(), command.warehouseId());
         InventoryItem item = lockedItem(command.skuId(), command.warehouseId());
         item.trackBatchAndExpiry(command.batchNo(), command.expiryDate(), clock);
         InventoryItem saved = itemRepository.save(item);
         eventPublisher.publish(item.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public InventoryItemResult manualAdjustment(ManualAdjustmentCommand command) {
+    public InventoryItem manualAdjustment(ManualAdjustmentCommand command) {
         OwnerContext ctx = ownerContext(command.ownerId(), command.warehouseId());
         InventoryItem item = lockedItem(command.skuId(), command.warehouseId());
 
@@ -110,58 +107,55 @@ public class InventoryItemService {
         eventPublisher.publish(adjustment.pullEvents());
 
         publishWithSafetyHook(item.pullEvents(), ctx.merchantId());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public InventoryItemResult emergencyLock(EmergencyLockCommand command) {
+    public InventoryItem emergencyLock(EmergencyLockCommand command) {
         InventoryItem item = lockedItem(command.skuId(), command.warehouseId());
         item.emergencyLock(command.adminId(), command.reason(), clock);
         InventoryItem saved = itemRepository.save(item);
         eventPublisher.publish(item.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public InventoryItemResult emergencyUnlock(EmergencyUnlockCommand command) {
+    public InventoryItem emergencyUnlock(EmergencyUnlockCommand command) {
         InventoryItem item = lockedItem(command.skuId(), command.warehouseId());
         item.emergencyUnlock(command.adminId(), clock);
         InventoryItem saved = itemRepository.save(item);
         eventPublisher.publish(item.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public InventoryItemResult auditInventory(AuditInventoryCommand command) {
+    public InventoryItem auditInventory(AuditInventoryCommand command) {
         OwnerContext ctx = ownerContext(command.ownerId(), command.warehouseId());
         InventoryItem item = lockedItem(command.skuId(), command.warehouseId());
         item.recordAudit(IdGenerator.ulid(), command.actualQty(), clock);
         item.emitBreachIfApplicable(clock);
         InventoryItem saved = itemRepository.save(item);
         publishWithSafetyHook(item.pullEvents(), ctx.merchantId());
-        return mapper.toResult(saved);
+        return saved;
     }
 
     @Transactional(readOnly = true)
-    public InventoryItemResult get(String skuId, String warehouseId) {
+    public InventoryItem get(String skuId, String warehouseId) {
         return itemRepository.findByKey(new InventoryItemKey(skuId, warehouseId))
-                .map(mapper::toResult)
                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND));
     }
 
     @Transactional(readOnly = true)
-    public List<InventoryItemResult> listBySku(String skuId) {
-        return itemRepository.findBySku(skuId).stream()
-                .map(mapper::toResult)
-                .toList();
+    public List<InventoryItem> listBySku(String skuId) {
+        return itemRepository.findBySku(skuId);
     }
 
     @Transactional(readOnly = true)
-    public PageResult<InventoryItemResult> listByWarehouse(String ownerId, String warehouseId, Pageable pageable) {
+    public PageResult<InventoryItem> listByWarehouse(String ownerId, String warehouseId, Pageable pageable) {
         Warehouse warehouse = warehouseRepository.findById(warehouseId)
                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.WAREHOUSE_NOT_FOUND));
         String merchantId = merchantQueryPort.findMerchantIdByOwnerId(ownerId)
                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.WAREHOUSE_FORBIDDEN,
                         "No merchant registered for the authenticated user"));
         warehouse.ensureOwnedBy(merchantId);
-        Page<InventoryItemResult> page = itemRepository.findByWarehouse(warehouseId, pageable).map(mapper::toResult);
+        Page<InventoryItem> page = itemRepository.findByWarehouse(warehouseId, pageable);
         return new PageResult<>(
                 page.getContent(),
                 page.getNumber(),

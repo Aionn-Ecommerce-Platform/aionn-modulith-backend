@@ -5,6 +5,7 @@ import com.aionn.ordering.application.port.in.order.GetTopProductsInputPort;
 import com.aionn.ordering.application.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -16,6 +17,7 @@ public class GetTopProductsUseCase implements GetTopProductsInputPort {
     private final OrderService orderService;
 
     @Override
+    @Transactional(readOnly = true)
     public List<TopProductResult> execute(String ownerId, LocalDate from, LocalDate to, int limit) {
         return orderService.getMerchantTopProducts(ownerId, from, to, limit);
     }

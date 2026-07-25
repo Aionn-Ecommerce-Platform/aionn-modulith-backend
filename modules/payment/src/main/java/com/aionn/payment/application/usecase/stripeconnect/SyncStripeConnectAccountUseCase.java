@@ -5,6 +5,7 @@ import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -14,6 +15,7 @@ public class SyncStripeConnectAccountUseCase implements SyncStripeConnectAccount
     private final MerchantQueryPort merchantQueryPort;
 
     @Override
+    @Transactional
     public void execute(String stripeAccountId, boolean chargesEnabled, boolean payoutsEnabled) {
         if (stripeAccountId == null || stripeAccountId.isBlank()) {
             log.warn("SyncStripeConnectAccount: stripeAccountId is null, skipping sync");

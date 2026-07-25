@@ -3,15 +3,11 @@ package com.aionn.catalog.application.service;
 import com.aionn.catalog.application.dto.category.command.CreateCategoryCommand;
 import com.aionn.catalog.application.dto.category.command.MoveCategoryCommand;
 import com.aionn.catalog.application.dto.category.command.UpdateCategoryCommand;
-import com.aionn.catalog.application.dto.category.result.CategoryResult;
-import com.aionn.catalog.application.dto.category.result.CategoryTreeNode;
-import com.aionn.catalog.application.mapper.CategoryResultMapper;
 import com.aionn.catalog.application.port.out.category.CategoryPersistencePort;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.catalog.domain.model.Category;
 import com.aionn.sharedkernel.application.port.EventPublisher;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -42,36 +38,24 @@ class CategoryServiceTest {
         @Mock
         private CategoryPersistencePort categoryRepository;
         @Mock
-        private CategoryResultMapper categoryResultMapper;
-        @Mock
         private EventPublisher eventPublisher;
 
         @Spy
-    private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
+        private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
 
-    @InjectMocks
+        @InjectMocks
         private CategoryService categoryService;
-
-        private CategoryResult sampleResult;
-
-        @BeforeEach
-        void setUp() {
-                sampleResult = new CategoryResult(
-                                CATEGORY_ID, null, "Electronics", "electronics",
-                                null, true, Instant.now(), Instant.now());
-        }
 
         @Test
         void createPersistsCategoryWhenNameAndSlugAreFree() {
                 when(categoryRepository.existsByParentAndName(null, "Electronics")).thenReturn(false);
                 when(categoryRepository.existsBySlug("electronics")).thenReturn(false);
                 when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(categoryResultMapper.toResult(any(Category.class))).thenReturn(sampleResult);
 
-                CategoryResult result = categoryService.create(
+                Category result = categoryService.create(
                                 new CreateCategoryCommand(null, "Electronics", "electronics"));
 
-                assertThat(result).isEqualTo(sampleResult);
+                assertThat(result.getName()).isEqualTo("Electronics");
                 ArgumentCaptor<Category> captor = ArgumentCaptor.forClass(Category.class);
                 verify(categoryRepository).save(captor.capture());
                 assertThat(captor.getValue().getName()).isEqualTo("Electronics");
@@ -83,7 +67,6 @@ class CategoryServiceTest {
                 when(categoryRepository.existsByParentAndName(null, "Electronics")).thenReturn(false);
                 when(categoryRepository.existsBySlug(anyString())).thenReturn(false);
                 when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(categoryResultMapper.toResult(any(Category.class))).thenReturn(sampleResult);
 
                 categoryService.create(new CreateCategoryCommand(null, "  Electronics  ", null));
 
@@ -97,7 +80,6 @@ class CategoryServiceTest {
                 when(categoryRepository.existsByParentAndName(null, "Home Appliances")).thenReturn(false);
                 when(categoryRepository.existsBySlug(anyString())).thenReturn(false);
                 when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(categoryResultMapper.toResult(any(Category.class))).thenReturn(sampleResult);
 
                 categoryService.create(new CreateCategoryCommand(null, "Home Appliances", null));
 
@@ -150,7 +132,6 @@ class CategoryServiceTest {
                 category.pullEvents();
                 when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
                 when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(categoryResultMapper.toResult(any(Category.class))).thenReturn(sampleResult);
 
                 categoryService.update(
                                 new UpdateCategoryCommand(CATEGORY_ID, "Consumer Electronics", "https://icon", false));
@@ -257,7 +238,6 @@ class CategoryServiceTest {
                 when(categoryRepository.findDescendantIds(CATEGORY_ID)).thenReturn(List.of());
                 when(categoryRepository.existsByParentAndName("new-parent", "A")).thenReturn(false);
                 when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(categoryResultMapper.toResult(any(Category.class))).thenReturn(sampleResult);
 
                 categoryService.move(new MoveCategoryCommand(CATEGORY_ID, "new-parent"));
 
@@ -292,29 +272,33 @@ class CategoryServiceTest {
         void getReturnsResultWhenFound() {
                 Category category = Category.create(CATEGORY_ID, null, "A", "a");
                 when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
-                when(categoryResultMapper.toResult(category)).thenReturn(sampleResult);
 
-                assertThat(categoryService.get(CATEGORY_ID)).isEqualTo(sampleResult);
+                Category result = categoryService.get(CATEGORY_ID);
+
+                assertThat(result.getCategoryId()).isEqualTo(CATEGORY_ID);
+                assertThat(result.getName()).isEqualTo("A");
         }
 
         @Test
         void listRootsMapsResults() {
                 Category category = Category.create(CATEGORY_ID, null, "A", "a");
                 when(categoryRepository.findActiveRoots()).thenReturn(List.of(category));
-                when(categoryResultMapper.toResult(category)).thenReturn(sampleResult);
 
-                List<CategoryResult> roots = categoryService.listRoots();
+                List<Category> roots = categoryService.listRoots();
 
-                assertThat(roots).containsExactly(sampleResult);
+                assertThat(roots).hasSize(1);
+                assertThat(roots.get(0).getName()).isEqualTo("A");
         }
 
         @Test
         void listChildrenMapsResults() {
                 Category category = Category.create(CATEGORY_ID, "parent", "A", "a");
                 when(categoryRepository.findActiveChildren("parent")).thenReturn(List.of(category));
-                when(categoryResultMapper.toResult(category)).thenReturn(sampleResult);
 
-                assertThat(categoryService.listChildren("parent")).containsExactly(sampleResult);
+                List<Category> children = categoryService.listChildren("parent");
+
+                assertThat(children).hasSize(1);
+                assertThat(children.get(0).getName()).isEqualTo("A");
         }
 
         @Test
@@ -323,19 +307,11 @@ class CategoryServiceTest {
                 Category child = Category.create("child", "root", "Child", "child");
                 when(categoryRepository.findAllActive()).thenReturn(List.of(root, child));
 
-                CategoryResult rootResult = new CategoryResult(
-                                "root", null, "Root", "root", null, true, Instant.now(), Instant.now());
-                CategoryResult childResult = new CategoryResult(
-                                "child", "root", "Child", "child", null, true, Instant.now(), Instant.now());
-                when(categoryResultMapper.toResult(root)).thenReturn(rootResult);
-                when(categoryResultMapper.toResult(child)).thenReturn(childResult);
+                List<Category> tree = categoryService.getTree();
 
-                List<CategoryTreeNode> tree = categoryService.getTree();
-
-                assertThat(tree).hasSize(1);
-                assertThat(tree.get(0).category().categoryId()).isEqualTo("root");
-                assertThat(tree.get(0).children()).hasSize(1);
-                assertThat(tree.get(0).children().get(0).category().categoryId()).isEqualTo("child");
+                assertThat(tree).hasSize(2);
+                assertThat(tree.get(0).getCategoryId()).isEqualTo("root");
+                assertThat(tree.get(1).getCategoryId()).isEqualTo("child");
         }
 
         @Test

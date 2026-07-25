@@ -5,8 +5,6 @@ import com.aionn.ordering.application.dto.returns.command.ConfirmItemReceivedCom
 import com.aionn.ordering.application.dto.returns.command.RejectReturnCommand;
 import com.aionn.ordering.application.dto.returns.command.RequestReturnCommand;
 import com.aionn.ordering.application.dto.returns.result.ReturnAnalyticsResult;
-import com.aionn.ordering.application.dto.returns.result.ReturnResult;
-import com.aionn.ordering.application.mapper.OrderingResultMapper;
 import com.aionn.ordering.application.port.out.OrderPersistencePort;
 import com.aionn.ordering.application.port.out.OrderReturnPersistencePort;
 import com.aionn.ordering.application.port.out.PaymentGateway;
@@ -38,13 +36,12 @@ public class OrderReturnService {
 
     private final OrderPersistencePort orderRepository;
     private final OrderReturnPersistencePort returnRepository;
-    private final OrderingResultMapper mapper;
     private final EventPublisher eventPublisher;
     private final MerchantQueryPort merchantQueryPort;
     private final PaymentGateway paymentGateway;
     private final java.time.Clock clock;
 
-    public ReturnResult requestReturn(RequestReturnCommand command) {
+    public OrderReturn requestReturn(RequestReturnCommand command) {
         Order order = orderRepository.findById(command.orderId())
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.ORDER_NOT_FOUND));
         if (!order.getUserId().equals(command.userId())) {
@@ -64,10 +61,10 @@ public class OrderReturnService {
                 order.getUserId(), order.getMerchantId(), command.reason(), command.evidenceUrl(), now);
         OrderReturn saved = returnRepository.save(r);
         eventPublisher.publish(r.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public ReturnResult approve(ApproveReturnCommand command) {
+    public OrderReturn approve(ApproveReturnCommand command) {
         OrderReturn r = ownedByOwner(command.returnId(), command.ownerId());
         Money refundAmount = command.refundAmount() == null
                 ? null
@@ -76,68 +73,62 @@ public class OrderReturnService {
         OrderReturn saved = returnRepository.save(r);
         eventPublisher.publish(r.pullEvents());
         triggerRefundIfPaid(saved, "return approved");
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public ReturnResult reject(RejectReturnCommand command) {
+    public OrderReturn reject(RejectReturnCommand command) {
         OrderReturn r = ownedByOwner(command.returnId(), command.ownerId());
         r.reject(command.reason(), clock.instant());
         OrderReturn saved = returnRepository.save(r);
         eventPublisher.publish(r.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public ReturnResult confirmItemReceived(ConfirmItemReceivedCommand command) {
+    public OrderReturn confirmItemReceived(ConfirmItemReceivedCommand command) {
         OrderReturn r = ownedByOwner(command.returnId(), command.ownerId());
         r.confirmReceived(command.itemCondition(), clock.instant());
         OrderReturn saved = returnRepository.save(r);
         eventPublisher.publish(r.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
     @Transactional(readOnly = true)
-    public ReturnResult getForRequester(String returnId, String requesterUserId) {
+    public OrderReturn getForRequester(String returnId, String requesterUserId) {
         OrderReturn r = returnRepository.findById(returnId)
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
         if (r.getUserId().equals(requesterUserId)) {
-            return mapper.toResult(r);
+            return r;
         }
         String requesterMerchantId = merchantQueryPort.findMerchantIdByOwnerId(requesterUserId).orElse(null);
         if (requesterMerchantId != null && requesterMerchantId.equals(r.getMerchantId())) {
-            return mapper.toResult(r);
+            return r;
         }
         throw new OrderingException(OrderingErrorCode.ORDER_FORBIDDEN);
     }
 
     @Transactional(readOnly = true)
-    public java.util.List<ReturnResult> listMine(String userId, int limit) {
-        return returnRepository.findByUserId(userId, limit).stream()
-                .map(mapper::toResult)
-                .toList();
+    public java.util.List<OrderReturn> listMine(String userId, int limit) {
+        return returnRepository.findByUserId(userId, limit);
     }
 
     @Transactional(readOnly = true)
-    public java.util.List<ReturnResult> listMerchant(String userId, int limit) {
+    public java.util.List<OrderReturn> listMerchant(String userId, int limit) {
         String merchantId = merchantQueryPort.findMerchantIdByOwnerId(userId)
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.ORDER_NOT_OWNED_BY_MERCHANT,
                         "No merchant registered for the authenticated user"));
-        return returnRepository.findByMerchantId(merchantId, limit).stream()
-                .map(mapper::toResult)
-                .toList();
+        return returnRepository.findByMerchantId(merchantId, limit);
     }
 
     @Transactional(readOnly = true)
-    public java.util.List<ReturnResult> adminListByStatus(
+    public java.util.List<OrderReturn> adminListByStatus(
             com.aionn.ordering.domain.valueobject.ReturnStatus status, int limit) {
-        return returnRepository.findByStatus(status, limit).stream()
-                .map(mapper::toResult)
-                .toList();
+        return returnRepository.findByStatus(status, limit);
     }
 
     @Transactional(readOnly = true)
-    public ReturnResult adminGet(String returnId) {
-        return mapper.toResult(returnRepository.findById(returnId)
-                .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND)));
+    public OrderReturn adminGet(String returnId) {
+        return returnRepository.findById(returnId)
+                .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
     }
 
     @Transactional(readOnly = true)
@@ -181,7 +172,7 @@ public class OrderReturnService {
                 returnRate, refundTotal, currency, statusList, reasonList);
     }
 
-    public ReturnResult adminApprove(String returnId, java.math.BigDecimal refundAmount,
+    public OrderReturn adminApprove(String returnId, java.math.BigDecimal refundAmount,
             String currency, String returnWarehouseId) {
         OrderReturn r = returnRepository.findById(returnId)
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
@@ -192,7 +183,7 @@ public class OrderReturnService {
         OrderReturn saved = returnRepository.save(r);
         eventPublisher.publish(r.pullEvents());
         triggerRefundIfPaid(saved, "return approved (admin)");
-        return mapper.toResult(saved);
+        return saved;
     }
 
     private void triggerRefundIfPaid(OrderReturn r, String reason) {
@@ -212,22 +203,22 @@ public class OrderReturnService {
         }
     }
 
-    public ReturnResult adminReject(String returnId, String reason) {
+    public OrderReturn adminReject(String returnId, String reason) {
         OrderReturn r = returnRepository.findById(returnId)
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
         r.reject(reason, clock.instant());
         OrderReturn saved = returnRepository.save(r);
         eventPublisher.publish(r.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public ReturnResult adminConfirmItemReceived(String returnId, String itemCondition) {
+    public OrderReturn adminConfirmItemReceived(String returnId, String itemCondition) {
         OrderReturn r = returnRepository.findById(returnId)
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
         r.confirmReceived(itemCondition, clock.instant());
         OrderReturn saved = returnRepository.save(r);
         eventPublisher.publish(r.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
     private OrderReturn ownedByOwner(String returnId, String ownerId) {

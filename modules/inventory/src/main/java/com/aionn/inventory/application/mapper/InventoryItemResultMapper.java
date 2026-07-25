@@ -5,6 +5,8 @@ import com.aionn.inventory.domain.model.InventoryItem;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import java.util.List;
+
 @Mapper(componentModel = "spring")
 public interface InventoryItemResultMapper {
 
@@ -12,4 +14,6 @@ public interface InventoryItemResultMapper {
     @Mapping(target = "warehouseId", expression = "java(item.getKey().warehouseId())")
     @Mapping(target = "reservedQty", expression = "java(item.reservedQty())")
     InventoryItemResult toResult(InventoryItem item);
+
+    List<InventoryItemResult> toResults(List<InventoryItem> items);
 }

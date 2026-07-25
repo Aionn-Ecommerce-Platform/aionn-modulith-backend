@@ -135,11 +135,10 @@ class ProductServiceTest {
                 Merchant merchant = Merchant.register(MERCHANT_ID, "owner-1", "Acme", new BigDecimal("0.05"));
                 when(merchantRepository.findById(MERCHANT_ID)).thenReturn(Optional.of(merchant));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
 
-                ProductResult result = productService.create(new CreateProductCommand(MERCHANT_ID, "Widget"));
+                Product result = productService.create(new CreateProductCommand(MERCHANT_ID, "Widget"));
 
-                assertThat(result).isEqualTo(sampleResult);
+                assertThat(result.getName()).isEqualTo("Widget");
                 verify(eventPublisher).publish(anyCollection());
         }
 
@@ -149,7 +148,6 @@ class ProductServiceTest {
                 product.pullEvents();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
 
                 productService.defineVariant(new DefineVariantCommand(PRODUCT_ID, MERCHANT_ID, "sku-1",
                                 Map.of("color", "red"), new BigDecimal("10.00"), "VND"));
@@ -177,7 +175,6 @@ class ProductServiceTest {
                 Product product = publishableProduct();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
 
                 productService.changeVariantPrice(new ChangeVariantPriceCommand(
                                 PRODUCT_ID, MERCHANT_ID, "sku-1", new BigDecimal("20.00"), "VND"));
@@ -253,7 +250,6 @@ class ProductServiceTest {
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(brandRepository.findById(BRAND_ID)).thenReturn(Optional.of(brand));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
 
                 productService.assignBrand(new AssignBrandCommand(PRODUCT_ID, MERCHANT_ID, BRAND_ID));
 
@@ -295,7 +291,6 @@ class ProductServiceTest {
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
 
                 productService.categorize(new AssignCategoriesCommand(
                                 PRODUCT_ID, MERCHANT_ID, List.of(CATEGORY_ID)));
@@ -308,7 +303,6 @@ class ProductServiceTest {
                 Product product = publishableProduct();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
 
                 productService.publish(new PublishProductCommand(PRODUCT_ID, ADMIN_ID));
 
@@ -323,7 +317,6 @@ class ProductServiceTest {
                 product.pullEvents();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
 
                 productService.deactivate(new DeactivateProductCommand(PRODUCT_ID, MERCHANT_ID, "policy"));
 
@@ -347,11 +340,11 @@ class ProductServiceTest {
                 when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 20)))
                                 .thenReturn(List.of(product));
                 when(productRepository.countByMerchant(MERCHANT_ID)).thenReturn(1L);
-                when(productResultMapper.toResult(product)).thenReturn(sampleResult);
 
-                PageResult<ProductResult> page = productService.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 20));
+                PageResult<Product> page = productService.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 20));
 
-                assertThat(page.content()).containsExactly(sampleResult);
+                assertThat(page.content()).hasSize(1);
+                assertThat(page.content().get(0).getName()).isEqualTo("Widget");
                 assertThat(page.totalElements()).isEqualTo(1L);
         }
 
@@ -362,12 +355,12 @@ class ProductServiceTest {
                 when(productRepository.listByStatus(ProductStatus.PUBLISHED, OffsetPagination.of(0, 20)))
                                 .thenReturn(List.of(product));
                 when(productRepository.countByStatus(ProductStatus.PUBLISHED)).thenReturn(1L);
-                when(productResultMapper.toResult(product)).thenReturn(sampleResult);
 
-                PageResult<ProductResult> page = productService.listByStatus(ProductStatus.PUBLISHED,
+                PageResult<Product> page = productService.listByStatus(ProductStatus.PUBLISHED,
                                 OffsetPagination.of(0, 20));
 
-                assertThat(page.content()).containsExactly(sampleResult);
+                assertThat(page.content()).hasSize(1);
+                assertThat(page.content().get(0).getStatus()).isEqualTo(ProductStatus.PUBLISHED);
         }
 
         @Test
@@ -375,7 +368,6 @@ class ProductServiceTest {
                 Product product = publishableProduct();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
 
                 productService.removeVariant(new com.aionn.catalog.application.dto.product.command.RemoveVariantCommand(
                                 PRODUCT_ID, MERCHANT_ID, "sku-1"));
@@ -388,7 +380,6 @@ class ProductServiceTest {
                 Product product = publishableProduct();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
 
                 productService.updateMedia(new com.aionn.catalog.application.dto.product.command.UpdateMediaCommand(
                                 PRODUCT_ID, MERCHANT_ID, List.of("img1", "img2")));
@@ -401,7 +392,6 @@ class ProductServiceTest {
                 Product product = publishableProduct();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
 
                 productService.updateAiMetadata(
                                 new com.aionn.catalog.application.dto.product.command.UpdateAiMetadataCommand(
@@ -416,7 +406,6 @@ class ProductServiceTest {
                 Product product = publishableProduct();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
 
                 productService.assignCollections(
                                 new com.aionn.catalog.application.dto.product.command.AssignCollectionsCommand(
@@ -432,7 +421,6 @@ class ProductServiceTest {
                 product.pullEvents();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
 
                 productService.emergencyTakedown(
                                 new com.aionn.catalog.application.dto.product.command.EmergencyTakedownCommand(
@@ -448,11 +436,11 @@ class ProductServiceTest {
                 Product product = publishableProduct();
                 when(productRepository.findAllByIds(List.of(PRODUCT_ID))).thenReturn(List.of(product));
                 when(searchIndex.countMatches("keyword")).thenReturn(1L);
-                when(productResultMapper.toResult(product)).thenReturn(sampleResult);
 
-                PageResult<ProductResult> page = productService.search("keyword", OffsetPagination.of(0, 20));
+                PageResult<Product> page = productService.search("keyword", OffsetPagination.of(0, 20));
 
-                assertThat(page.content()).containsExactly(sampleResult);
+                assertThat(page.content()).hasSize(1);
+                assertThat(page.content().get(0).getName()).isEqualTo("Widget");
                 assertThat(page.totalElements()).isEqualTo(1L);
         }
 
@@ -462,7 +450,7 @@ class ProductServiceTest {
                 when(productRepository.findAllByIds(List.of())).thenReturn(List.of());
                 when(searchIndex.countMatches("nothing")).thenReturn(0L);
 
-                PageResult<ProductResult> page = productService.search("nothing", OffsetPagination.of(0, 20));
+                PageResult<Product> page = productService.search("nothing", OffsetPagination.of(0, 20));
 
                 assertThat(page.content()).isEmpty();
         }
@@ -475,32 +463,34 @@ class ProductServiceTest {
                 Product related = Product.create("01HZPRD0000000000000000002", MERCHANT_ID, "Other");
                 when(productRepository.findRelatedProducts(PRODUCT_ID, BRAND_ID, List.of(CATEGORY_ID), 5))
                                 .thenReturn(List.of(related));
-                when(productResultMapper.toResult(related)).thenReturn(sampleResult);
 
-                List<ProductResult> results = productService.getRelatedProducts(PRODUCT_ID, 5);
+                List<Product> results = productService.getRelatedProducts(PRODUCT_ID, 5);
 
-                assertThat(results).containsExactly(sampleResult);
+                assertThat(results).hasSize(1);
+                assertThat(results.get(0).getName()).isEqualTo("Other");
         }
 
         @Test
         void getPopularProductsDelegatesToRepository() {
                 Product product = publishableProduct();
                 when(productRepository.findPopularProducts(5)).thenReturn(List.of(product));
-                when(productResultMapper.toResult(product)).thenReturn(sampleResult);
 
-                assertThat(productService.getPopularProducts(5)).containsExactly(sampleResult);
+                List<Product> results = productService.getPopularProducts(5);
+
+                assertThat(results).hasSize(1);
+                assertThat(results.get(0).getName()).isEqualTo("Widget");
         }
 
         @Test
         void getPersonalizedProductsFallsBackToPopularWhenNoSignal() {
                 Product popular = publishableProduct();
                 when(productRepository.findPopularProducts(5)).thenReturn(List.of(popular));
-                when(productResultMapper.toResult(popular)).thenReturn(sampleResult);
 
-                List<ProductResult> results = productService.getPersonalizedProducts(
+                List<Product> results = productService.getPersonalizedProducts(
                                 "anonymousUser", List.of(), List.of(), 5);
 
-                assertThat(results).containsExactly(sampleResult);
+                assertThat(results).hasSize(1);
+                assertThat(results.get(0).getName()).isEqualTo("Widget");
                 verify(productRepository, never()).findPersonalizedProducts(anyList(), anyList(),
                                 org.mockito.ArgumentMatchers.anyInt());
         }
@@ -513,11 +503,11 @@ class ProductServiceTest {
                 Product product = publishableProduct();
                 when(productRepository.findPersonalizedProducts(List.of(CATEGORY_ID), List.of(BRAND_ID), 5))
                                 .thenReturn(List.of(product));
-                when(productResultMapper.toResult(product)).thenReturn(sampleResult);
 
-                List<ProductResult> results = productService.getPersonalizedProducts("user-1", null, null, 5);
+                List<Product> results = productService.getPersonalizedProducts("user-1", null, null, 5);
 
-                assertThat(results).containsExactly(sampleResult);
+                assertThat(results).hasSize(1);
+                assertThat(results.get(0).getName()).isEqualTo("Widget");
         }
 
         @Test
@@ -526,12 +516,12 @@ class ProductServiceTest {
                 when(productRepository.findPersonalizedProducts(List.of(CATEGORY_ID), List.of(), 5))
                                 .thenReturn(List.of());
                 when(productRepository.findPopularProducts(5)).thenReturn(List.of(popular));
-                when(productResultMapper.toResult(popular)).thenReturn(sampleResult);
 
-                List<ProductResult> results = productService.getPersonalizedProducts(
+                List<Product> results = productService.getPersonalizedProducts(
                                 null, List.of(CATEGORY_ID), List.of(), 5);
 
-                assertThat(results).containsExactly(sampleResult);
+                assertThat(results).hasSize(1);
+                assertThat(results.get(0).getName()).isEqualTo("Widget");
         }
 
         @Test
@@ -672,12 +662,12 @@ class ProductServiceTest {
                 Product product = publishableProduct();
                 when(productRepository.findPersonalizedProducts(List.of(CATEGORY_ID), List.of(), 5))
                                 .thenReturn(List.of(product));
-                when(productResultMapper.toResult(product)).thenReturn(sampleResult);
 
-                List<ProductResult> results = productService.getPersonalizedProducts(
+                List<Product> results = productService.getPersonalizedProducts(
                                 "anonymousUser", List.of(CATEGORY_ID), List.of(), 5);
 
-                assertThat(results).containsExactly(sampleResult);
+                assertThat(results).hasSize(1);
+                assertThat(results.get(0).getName()).isEqualTo("Widget");
         }
 
         @Test
@@ -711,7 +701,6 @@ class ProductServiceTest {
                 Product source = publishableProduct();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(source));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
 
                 productService.clone(new com.aionn.catalog.application.dto.product.command.CloneProductCommand(
                                 PRODUCT_ID, MERCHANT_ID));
@@ -724,7 +713,6 @@ class ProductServiceTest {
                 Product product = publishableProduct();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
 
                 productService.submitForReview(
                                 new com.aionn.catalog.application.dto.product.command.SubmitForReviewCommand(
@@ -738,7 +726,6 @@ class ProductServiceTest {
                 Product product = publishableProduct();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
 
                 productService.reject(new com.aionn.catalog.application.dto.product.command.RejectProductCommand(
                                 PRODUCT_ID, ADMIN_ID, "SPAM", "bad"));
@@ -754,7 +741,6 @@ class ProductServiceTest {
                 product.pullEvents();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
 
                 productService.restore(
                                 new com.aionn.catalog.application.dto.product.command.RestoreProductCommand(
@@ -769,7 +755,6 @@ class ProductServiceTest {
                 Product product = publishableProduct();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-                when(productResultMapper.toResult(any(Product.class))).thenReturn(sampleResult);
 
                 productService.defineAttributes(
                                 new com.aionn.catalog.application.dto.product.command.DefineAttributesCommand(
@@ -782,9 +767,8 @@ class ProductServiceTest {
         void getBySkuIdsMapsResults() {
                 Product product = publishableProduct();
                 when(productRepository.findAllBySkuIds(List.of("sku-1"))).thenReturn(List.of(product));
-                when(productResultMapper.toResult(product)).thenReturn(sampleResult);
 
-                assertThat(productService.getBySkuIds(List.of("sku-1"))).containsExactly(sampleResult);
+                assertThat(productService.getBySkuIds(List.of("sku-1"))).containsExactly(product);
         }
 
         @Test

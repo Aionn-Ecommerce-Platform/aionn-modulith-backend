@@ -5,6 +5,7 @@ import com.aionn.payment.application.port.in.method.RemovePaymentMethodInputPort
 import com.aionn.payment.application.service.PaymentMethodService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -13,6 +14,7 @@ public class RemovePaymentMethodUseCase implements RemovePaymentMethodInputPort 
     private final PaymentMethodService paymentMethodService;
 
     @Override
+    @Transactional
     public void execute(RemoveMethodCommand command) {
         paymentMethodService.remove(command);
     }

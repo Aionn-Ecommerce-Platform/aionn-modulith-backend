@@ -3,9 +3,6 @@ package com.aionn.catalog.application.service;
 import com.aionn.catalog.application.dto.category.command.CreateCategoryCommand;
 import com.aionn.catalog.application.dto.category.command.MoveCategoryCommand;
 import com.aionn.catalog.application.dto.category.command.UpdateCategoryCommand;
-import com.aionn.catalog.application.dto.category.result.CategoryResult;
-import com.aionn.catalog.application.dto.category.result.CategoryTreeNode;
-import com.aionn.catalog.application.mapper.CategoryResultMapper;
 import com.aionn.catalog.application.port.out.category.CategoryPersistencePort;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
@@ -20,8 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -30,11 +25,10 @@ import java.util.stream.Collectors;
 public class CategoryService {
 
     private final CategoryPersistencePort categoryRepository;
-    private final CategoryResultMapper categoryResultMapper;
     private final EventPublisher eventPublisher;
     private final Clock clock;
 
-    public CategoryResult create(CreateCategoryCommand command) {
+    public Category create(CreateCategoryCommand command) {
         String normalizedName = command.name() != null ? command.name().trim() : null;
         if (command.parentId() != null && categoryRepository.findById(command.parentId()).isEmpty()) {
             throw new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND, "Parent category not found");
@@ -51,10 +45,10 @@ public class CategoryService {
         Category category = Category.create(IdGenerator.ulid(), command.parentId(), normalizedName, slug, clock);
         Category saved = categoryRepository.save(category);
         eventPublisher.publish(category.pullEvents());
-        return categoryResultMapper.toResult(saved);
+        return saved;
     }
 
-    public CategoryResult update(UpdateCategoryCommand command) {
+    public Category update(UpdateCategoryCommand command) {
         Category category = required(command.categoryId());
         String normalizedName = command.name() != null ? command.name().trim() : null;
         if (normalizedName != null
@@ -65,10 +59,10 @@ public class CategoryService {
         category.update(normalizedName, command.iconUrl(), command.active(), clock);
         Category saved = categoryRepository.save(category);
         eventPublisher.publish(category.pullEvents());
-        return categoryResultMapper.toResult(saved);
+        return saved;
     }
 
-    public CategoryResult move(MoveCategoryCommand command) {
+    public Category move(MoveCategoryCommand command) {
         Category category = required(command.categoryId());
         if (command.newParentId() != null) {
             if (command.newParentId().equals(category.getCategoryId())) {
@@ -88,7 +82,7 @@ public class CategoryService {
         category.moveTo(command.newParentId(), clock);
         Category saved = categoryRepository.save(category);
         eventPublisher.publish(category.pullEvents());
-        return categoryResultMapper.toResult(saved);
+        return saved;
     }
 
     public void delete(String categoryId) {
@@ -102,50 +96,23 @@ public class CategoryService {
     }
 
     @Transactional(readOnly = true)
-    public CategoryResult get(String categoryId) {
-        return categoryResultMapper.toResult(required(categoryId));
+    public Category get(String categoryId) {
+        return required(categoryId);
     }
 
     @Transactional(readOnly = true)
-    public List<CategoryResult> listRoots() {
-        return categoryRepository.findActiveRoots().stream()
-                .map(categoryResultMapper::toResult)
-                .toList();
+    public List<Category> listRoots() {
+        return categoryRepository.findActiveRoots();
     }
 
     @Transactional(readOnly = true)
-    public List<CategoryResult> listChildren(String parentId) {
-        return categoryRepository.findActiveChildren(parentId).stream()
-                .map(categoryResultMapper::toResult)
-                .toList();
+    public List<Category> listChildren(String parentId) {
+        return categoryRepository.findActiveChildren(parentId);
     }
 
     @Transactional(readOnly = true)
-    public List<CategoryTreeNode> getTree() {
-        List<Category> allActive = categoryRepository.findAllActive();
-        List<CategoryResult> results = allActive.stream()
-                .map(categoryResultMapper::toResult)
-                .toList();
-
-        Map<String, List<CategoryResult>> byParent = results.stream()
-                .filter(c -> c.parentId() != null)
-                .collect(Collectors.groupingBy(CategoryResult::parentId));
-
-        List<CategoryResult> roots = results.stream()
-                .filter(c -> c.parentId() == null)
-                .toList();
-
-        return roots.stream()
-                .map(root -> buildNode(root, byParent))
-                .toList();
-    }
-
-    private CategoryTreeNode buildNode(CategoryResult category, Map<String, List<CategoryResult>> byParent) {
-        List<CategoryResult> children = byParent.getOrDefault(category.categoryId(), List.of());
-        List<CategoryTreeNode> childNodes = children.stream()
-                .map(child -> buildNode(child, byParent))
-                .toList();
-        return new CategoryTreeNode(category, childNodes);
+    public List<Category> getTree() {
+        return categoryRepository.findAllActive();
     }
 
     private Category required(String categoryId) {

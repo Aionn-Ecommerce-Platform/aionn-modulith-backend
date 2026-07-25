@@ -3,9 +3,7 @@ package com.aionn.catalog.application.service;
 import com.aionn.catalog.application.dto.brand.command.CreateBrandCommand;
 import com.aionn.catalog.application.dto.brand.command.DeleteBrandCommand;
 import com.aionn.catalog.application.dto.brand.command.UpdateBrandCommand;
-import com.aionn.catalog.application.dto.brand.result.BrandResult;
 import com.aionn.catalog.application.dto.common.PageResult;
-import com.aionn.catalog.application.mapper.BrandResultMapper;
 import com.aionn.catalog.application.port.out.brand.BrandPersistencePort;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
@@ -13,7 +11,6 @@ import com.aionn.catalog.domain.model.Brand;
 import com.aionn.catalog.domain.valueobject.BrandStatus;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -44,8 +41,6 @@ class BrandServiceTest {
     @Mock
     private BrandPersistencePort brandRepository;
     @Mock
-    private BrandResultMapper brandResultMapper;
-    @Mock
     private EventPublisher eventPublisher;
 
     @Spy
@@ -54,24 +49,15 @@ class BrandServiceTest {
     @InjectMocks
     private BrandService brandService;
 
-    private BrandResult sampleResult;
-
-    @BeforeEach
-    void setUp() {
-        sampleResult = new BrandResult(
-                BRAND_ID, "Acme", null, "desc",
-                BrandStatus.ACTIVE.name(), Instant.now(), Instant.now());
-    }
-
     @Test
     void createPersistsAndPublishesEvents() {
         when(brandRepository.existsByName("Acme")).thenReturn(false);
         when(brandRepository.save(any(Brand.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(brandResultMapper.toResult(any(Brand.class))).thenReturn(sampleResult);
 
-        BrandResult result = brandService.create(new CreateBrandCommand("Acme", null, "desc"));
+        Brand result = brandService.create(new CreateBrandCommand("Acme", null, "desc"));
 
-        assertThat(result).isEqualTo(sampleResult);
+        assertThat(result.getName()).isEqualTo("Acme");
+        assertThat(result.getDescription()).isEqualTo("desc");
         ArgumentCaptor<Brand> captor = ArgumentCaptor.forClass(Brand.class);
         verify(brandRepository).save(captor.capture());
         assertThat(captor.getValue().getName()).isEqualTo("Acme");
@@ -97,14 +83,12 @@ class BrandServiceTest {
         when(brandRepository.findById(BRAND_ID)).thenReturn(Optional.of(brand));
         when(brandRepository.existsByName("Acme New")).thenReturn(false);
         when(brandRepository.save(any(Brand.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(brandResultMapper.toResult(any(Brand.class))).thenReturn(sampleResult);
 
-        BrandResult result = brandService.update(new UpdateBrandCommand(BRAND_ID, "Acme New", "logo", "new desc"));
+        Brand result = brandService.update(new UpdateBrandCommand(BRAND_ID, "Acme New", "logo", "new desc"));
 
-        assertThat(result).isEqualTo(sampleResult);
-        assertThat(brand.getName()).isEqualTo("Acme New");
-        assertThat(brand.getLogoUrl()).isEqualTo("logo");
-        assertThat(brand.getDescription()).isEqualTo("new desc");
+        assertThat(result.getName()).isEqualTo("Acme New");
+        assertThat(result.getLogoUrl()).isEqualTo("logo");
+        assertThat(result.getDescription()).isEqualTo("new desc");
     }
 
     @Test
@@ -128,7 +112,6 @@ class BrandServiceTest {
         brand.pullEvents();
         when(brandRepository.findById(BRAND_ID)).thenReturn(Optional.of(brand));
         when(brandRepository.save(any(Brand.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(brandResultMapper.toResult(any(Brand.class))).thenReturn(sampleResult);
 
         brandService.update(new UpdateBrandCommand(BRAND_ID, "acme", null, null));
 
@@ -172,11 +155,11 @@ class BrandServiceTest {
     void getReturnsResultWhenBrandFound() {
         Brand brand = Brand.create(BRAND_ID, "Acme", null, null);
         when(brandRepository.findById(BRAND_ID)).thenReturn(Optional.of(brand));
-        when(brandResultMapper.toResult(brand)).thenReturn(sampleResult);
 
-        BrandResult result = brandService.get(BRAND_ID);
+        Brand result = brandService.get(BRAND_ID);
 
-        assertThat(result).isEqualTo(sampleResult);
+        assertThat(result.getBrandId()).isEqualTo(BRAND_ID);
+        assertThat(result.getName()).isEqualTo("Acme");
     }
 
     @Test
@@ -194,11 +177,11 @@ class BrandServiceTest {
         Brand brand = Brand.create(BRAND_ID, "Acme", null, null);
         when(brandRepository.list(any(OffsetPagination.class))).thenReturn(List.of(brand));
         when(brandRepository.count()).thenReturn(1L);
-        when(brandResultMapper.toResult(brand)).thenReturn(sampleResult);
 
-        PageResult<BrandResult> page = brandService.list(OffsetPagination.of(0, 20));
+        PageResult<Brand> page = brandService.list(OffsetPagination.of(0, 20));
 
-        assertThat(page.content()).containsExactly(sampleResult);
+        assertThat(page.content()).hasSize(1);
+        assertThat(page.content().get(0).getName()).isEqualTo("Acme");
         assertThat(page.totalElements()).isEqualTo(1L);
         assertThat(page.page()).isZero();
         assertThat(page.size()).isEqualTo(20);

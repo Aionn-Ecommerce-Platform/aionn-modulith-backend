@@ -3,7 +3,6 @@ package com.aionn.inventory.application.service;
 import com.aionn.inventory.application.dto.reservation.command.CommitReservationCommand;
 import com.aionn.inventory.application.dto.reservation.command.ReleaseReservationCommand;
 import com.aionn.inventory.application.dto.reservation.command.ReserveStockCommand;
-import com.aionn.inventory.application.mapper.InventoryResultMapper;
 import com.aionn.inventory.application.port.out.InventoryItemPersistencePort;
 import com.aionn.inventory.application.port.out.OutboundOrderNotifier;
 import com.aionn.inventory.application.port.out.StockAdjustmentPersistencePort;
@@ -47,8 +46,6 @@ class StockReservationServiceTest {
     StockReservationPersistencePort reservationRepository;
     @Mock
     StockAdjustmentPersistencePort adjustmentRepository;
-    @Mock
-    InventoryResultMapper mapper;
     @Mock
     EventPublisher eventPublisher;
     @Mock

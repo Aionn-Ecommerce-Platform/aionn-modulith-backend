@@ -11,8 +11,6 @@ import com.aionn.catalog.application.dto.review.command.SubmitReviewCommand;
 import com.aionn.catalog.application.dto.review.command.UpdateReviewCommand;
 import com.aionn.catalog.application.dto.review.result.RatingSummary;
 import com.aionn.catalog.application.dto.review.result.ReviewEligibilityResult;
-import com.aionn.catalog.application.dto.review.result.ReviewResult;
-import com.aionn.catalog.application.mapper.ReviewResultMapper;
 import com.aionn.catalog.application.port.out.merchant.MerchantPersistencePort;
 import com.aionn.catalog.application.port.out.product.ProductPersistencePort;
 import com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort;
@@ -26,7 +24,6 @@ import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.Money;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -68,8 +65,6 @@ class ReviewServiceTest {
     @Mock
     private OrderQueryPort orderQueryPort;
     @Mock
-    private ReviewResultMapper reviewResultMapper;
-    @Mock
     private EventPublisher eventPublisher;
 
     @Spy
@@ -77,15 +72,6 @@ class ReviewServiceTest {
 
     @InjectMocks
     private ReviewService reviewService;
-
-    private ReviewResult sampleResult;
-
-    @BeforeEach
-    void setUp() {
-        sampleResult = new ReviewResult(REVIEW_ID, PRODUCT_ID, USER_ID, ORDER_ID,
-                5, "t", "c", List.of(), "VISIBLE",
-                null, null, null, null, null, null, null);
-    }
 
     private Product productWithSku(String skuId) {
         Product p = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
@@ -144,7 +130,6 @@ class ReviewServiceTest {
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
         when(orderQueryPort.findCompletedOrderIdForSkus(USER_ID, List.of("sku-1"))).thenReturn(ORDER_ID);
         when(reviewRepository.save(any(ProductReview.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(reviewResultMapper.toResult(any(ProductReview.class))).thenReturn(sampleResult);
 
         reviewService.submit(new SubmitReviewCommand(USER_ID, PRODUCT_ID, 5, "t", "c", List.of()));
 
@@ -200,7 +185,6 @@ class ReviewServiceTest {
         Merchant merchant = Merchant.register(MERCHANT_ID, OWNER_ID, "Acme", new BigDecimal("0.05"));
         when(merchantRepository.findByOwnerId(OWNER_ID)).thenReturn(Optional.of(merchant));
         when(reviewRepository.save(review)).thenReturn(review);
-        when(reviewResultMapper.toResult(review)).thenReturn(sampleResult);
 
         reviewService.report(new ReportReviewCommand(OWNER_ID, REVIEW_ID, "abuse"));
 
@@ -212,7 +196,6 @@ class ReviewServiceTest {
         ProductReview review = makeReview();
         when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(review));
         when(reviewRepository.save(review)).thenReturn(review);
-        when(reviewResultMapper.toResult(review)).thenReturn(sampleResult);
 
         reviewService.hide(new HideReviewCommand(ADMIN_ID, REVIEW_ID));
 
@@ -248,7 +231,6 @@ class ReviewServiceTest {
         review.pullEvents();
         when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(review));
         when(reviewRepository.save(review)).thenReturn(review);
-        when(reviewResultMapper.toResult(review)).thenReturn(sampleResult);
 
         reviewService.restore(new RestoreReviewCommand(ADMIN_ID, REVIEW_ID));
 
@@ -261,11 +243,11 @@ class ReviewServiceTest {
         when(reviewRepository.findByProductIdAndStatus(PRODUCT_ID, ReviewStatus.VISIBLE, OffsetPagination.of(0, 20)))
                 .thenReturn(List.of(review));
         when(reviewRepository.countByProductIdAndStatus(PRODUCT_ID, ReviewStatus.VISIBLE)).thenReturn(1L);
-        when(reviewResultMapper.toResult(review)).thenReturn(sampleResult);
 
-        PageResult<ReviewResult> page = reviewService.getByProduct(PRODUCT_ID, OffsetPagination.of(0, 20));
+        PageResult<ProductReview> page = reviewService.getByProduct(PRODUCT_ID, OffsetPagination.of(0, 20));
 
-        assertThat(page.content()).containsExactly(sampleResult);
+        assertThat(page.content()).hasSize(1);
+        assertThat(page.content().get(0).getUserId()).isEqualTo(USER_ID);
         assertThat(page.totalElements()).isEqualTo(1L);
     }
 
@@ -275,11 +257,11 @@ class ReviewServiceTest {
         when(reviewRepository.findByUserId(USER_ID, OffsetPagination.of(0, 20)))
                 .thenReturn(List.of(review));
         when(reviewRepository.countByUserId(USER_ID)).thenReturn(1L);
-        when(reviewResultMapper.toResult(review)).thenReturn(sampleResult);
 
-        PageResult<ReviewResult> page = reviewService.getMyReviews(USER_ID, OffsetPagination.of(0, 20));
+        PageResult<ProductReview> page = reviewService.getMyReviews(USER_ID, OffsetPagination.of(0, 20));
 
-        assertThat(page.content()).containsExactly(sampleResult);
+        assertThat(page.content()).hasSize(1);
+        assertThat(page.content().get(0).getUserId()).isEqualTo(USER_ID);
     }
 
     @Test
@@ -290,11 +272,11 @@ class ReviewServiceTest {
         when(reviewRepository.findByStatus(ReviewStatus.REPORTED, OffsetPagination.of(0, 20)))
                 .thenReturn(List.of(review));
         when(reviewRepository.countByStatus(ReviewStatus.REPORTED)).thenReturn(1L);
-        when(reviewResultMapper.toResult(review)).thenReturn(sampleResult);
 
-        PageResult<ReviewResult> page = reviewService.getReportedReviews(OffsetPagination.of(0, 20));
+        PageResult<ProductReview> page = reviewService.getReportedReviews(OffsetPagination.of(0, 20));
 
-        assertThat(page.content()).containsExactly(sampleResult);
+        assertThat(page.content()).hasSize(1);
+        assertThat(page.content().get(0).getStatus()).isEqualTo(ReviewStatus.REPORTED);
     }
 
     @Test

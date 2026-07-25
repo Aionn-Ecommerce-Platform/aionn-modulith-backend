@@ -1,7 +1,5 @@
 package com.aionn.payment.application.service;
 
-import com.aionn.payment.application.dto.payout.result.MerchantBalanceResult;
-import com.aionn.payment.application.dto.payout.result.MerchantPayoutResult;
 import com.aionn.payment.application.port.out.MerchantBalancePersistencePort;
 import com.aionn.payment.application.port.out.MerchantPayoutPersistencePort;
 import com.aionn.payment.application.port.out.SettlementLedgerPersistencePort;
@@ -56,18 +54,20 @@ class PayoutServiceTest {
         String currency = "VND";
 
         when(merchantQueryPort.findMerchantIdByOwnerId(ownerId)).thenReturn(Optional.of(merchantId));
-        
-        MerchantBalance balance = new MerchantBalance(merchantId, currency, BigDecimal.ZERO, new BigDecimal("200.00"), 0L, clock.instant(), clock.instant());
+
+        MerchantBalance balance = new MerchantBalance(merchantId, currency, BigDecimal.ZERO, new BigDecimal("200.00"),
+                0L, clock.instant(), clock.instant());
         when(balanceRepo.lockForUpdate(merchantId, currency)).thenReturn(Optional.of(balance));
         when(payoutRepo.save(any(MerchantPayout.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        MerchantPayoutResult result = payoutService.requestPayout(ownerId, amount, currency, "VCB", "123", "Account Name", "Request payout");
+        MerchantPayout result = payoutService.requestPayout(ownerId, amount, currency, "VCB", "123",
+                "Account Name", "Request payout");
 
         assertNotNull(result);
-        assertEquals(merchantId, result.merchantId());
-        assertEquals(amount, result.amount());
-        assertEquals("PENDING", result.status());
-        
+        assertEquals(merchantId, result.getMerchantId());
+        assertEquals(amount, result.getAmount());
+        assertEquals(PayoutStatus.PENDING, result.getStatus());
+
         verify(balanceRepo).save(balance);
         verify(ledgerRepo).save(any());
     }
@@ -76,9 +76,8 @@ class PayoutServiceTest {
     void shouldFailRequestPayoutWhenNoMerchant() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-invalid")).thenReturn(Optional.empty());
 
-        assertThrows(PaymentException.class, () -> 
-            payoutService.requestPayout("owner-invalid", new BigDecimal("10.00"), "VND", "VCB", "123", "Name", "Note")
-        );
+        assertThrows(PaymentException.class, () -> payoutService.requestPayout("owner-invalid", new BigDecimal("10.00"),
+                "VND", "VCB", "123", "Name", "Note"));
     }
 
     @Test
@@ -86,37 +85,39 @@ class PayoutServiceTest {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("m-1"));
         when(balanceRepo.lockForUpdate("m-1", "VND")).thenReturn(Optional.empty());
 
-        assertThrows(PaymentException.class, () -> 
-            payoutService.requestPayout("owner-1", new BigDecimal("10.00"), "VND", "VCB", "123", "Name", "Note")
-        );
+        assertThrows(PaymentException.class, () -> payoutService.requestPayout("owner-1", new BigDecimal("10.00"),
+                "VND", "VCB", "123", "Name", "Note"));
     }
 
     @Test
     void shouldMarkCompleted() {
-        MerchantPayout payout = new MerchantPayout("p-1", "m-1", new BigDecimal("100.00"), "VND", PayoutStatus.PENDING, "VCB", "123", "Name", null, null, clock.instant(), null, null, null, 0L);
+        MerchantPayout payout = new MerchantPayout("p-1", "m-1", new BigDecimal("100.00"), "VND", PayoutStatus.PENDING,
+                "VCB", "123", "Name", null, null, clock.instant(), null, null, null, 0L);
         when(payoutRepo.findById("p-1")).thenReturn(Optional.of(payout));
         when(payoutRepo.save(payout)).thenReturn(payout);
 
-        MerchantPayoutResult result = payoutService.markCompleted("p-1", "external-123");
+        MerchantPayout result = payoutService.markCompleted("p-1", "external-123");
 
-        assertEquals("COMPLETED", result.status());
-        assertEquals("external-123", result.externalRef());
-        assertNotNull(result.completedAt());
+        assertEquals(PayoutStatus.COMPLETED, result.getStatus());
+        assertEquals("external-123", result.getExternalRef());
+        assertNotNull(result.getCompletedAt());
     }
 
     @Test
     void shouldMarkFailedAndReverseBalance() {
-        MerchantPayout payout = new MerchantPayout("p-1", "m-1", new BigDecimal("100.00"), "VND", PayoutStatus.PENDING, "VCB", "123", "Name", null, null, clock.instant(), null, null, null, 0L);
+        MerchantPayout payout = new MerchantPayout("p-1", "m-1", new BigDecimal("100.00"), "VND", PayoutStatus.PENDING,
+                "VCB", "123", "Name", null, null, clock.instant(), null, null, null, 0L);
         when(payoutRepo.findById("p-1")).thenReturn(Optional.of(payout));
         when(payoutRepo.save(payout)).thenReturn(payout);
 
-        MerchantBalance balance = new MerchantBalance("m-1", "VND", BigDecimal.ZERO, BigDecimal.ZERO, 0L, clock.instant(), clock.instant());
+        MerchantBalance balance = new MerchantBalance("m-1", "VND", BigDecimal.ZERO, BigDecimal.ZERO, 0L,
+                clock.instant(), clock.instant());
         when(balanceRepo.lockForUpdate("m-1", "VND")).thenReturn(Optional.of(balance));
 
-        MerchantPayoutResult result = payoutService.markFailed("p-1", "Bank rejected");
+        MerchantPayout result = payoutService.markFailed("p-1", "Bank rejected");
 
-        assertEquals("FAILED", result.status());
-        assertEquals("Bank rejected", result.failureReason());
+        assertEquals(PayoutStatus.FAILED, result.getStatus());
+        assertEquals("Bank rejected", result.getFailureReason());
         assertEquals(new BigDecimal("100.00"), balance.getAvailable());
         verify(ledgerRepo).save(any());
     }
@@ -124,35 +125,38 @@ class PayoutServiceTest {
     @Test
     void shouldGetBalanceForOwner() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("m-1"));
-        MerchantBalance balance = new MerchantBalance("m-1", "VND", BigDecimal.ZERO, new BigDecimal("500.00"), 0L, clock.instant(), clock.instant());
+        MerchantBalance balance = new MerchantBalance("m-1", "VND", BigDecimal.ZERO, new BigDecimal("500.00"), 0L,
+                clock.instant(), clock.instant());
         when(balanceRepo.find("m-1", "VND")).thenReturn(Optional.of(balance));
 
-        MerchantBalanceResult result = payoutService.getBalanceForOwner("owner-1", "VND");
+        MerchantBalance result = payoutService.getBalanceForOwner("owner-1", "VND");
 
-        assertEquals("m-1", result.merchantId());
-        assertEquals(new BigDecimal("500.00"), result.available());
+        assertEquals("m-1", result.getMerchantId());
+        assertEquals(new BigDecimal("500.00"), result.getAvailable());
     }
 
     @Test
     void shouldListForOwner() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("m-1"));
-        MerchantPayout payout = new MerchantPayout("p-1", "m-1", new BigDecimal("100.00"), "VND", PayoutStatus.PENDING, "VCB", "123", "Name", null, null, clock.instant(), null, null, null, 0L);
+        MerchantPayout payout = new MerchantPayout("p-1", "m-1", new BigDecimal("100.00"), "VND", PayoutStatus.PENDING,
+                "VCB", "123", "Name", null, null, clock.instant(), null, null, null, 0L);
         when(payoutRepo.findByMerchant("m-1", 10)).thenReturn(List.of(payout));
 
-        List<MerchantPayoutResult> results = payoutService.listForOwner("owner-1", 10);
+        List<MerchantPayout> results = payoutService.listForOwner("owner-1", 10);
 
         assertEquals(1, results.size());
-        assertEquals("p-1", results.get(0).payoutId());
+        assertEquals("p-1", results.get(0).getPayoutId());
     }
 
     @Test
     void shouldListByStatus() {
-        MerchantPayout payout = new MerchantPayout("p-1", "m-1", new BigDecimal("100.00"), "VND", PayoutStatus.PENDING, "VCB", "123", "Name", null, null, clock.instant(), null, null, null, 0L);
+        MerchantPayout payout = new MerchantPayout("p-1", "m-1", new BigDecimal("100.00"), "VND", PayoutStatus.PENDING,
+                "VCB", "123", "Name", null, null, clock.instant(), null, null, null, 0L);
         when(payoutRepo.findByStatus(PayoutStatus.PENDING, 5)).thenReturn(List.of(payout));
 
-        List<MerchantPayoutResult> results = payoutService.listByStatus(PayoutStatus.PENDING, 5);
+        List<MerchantPayout> results = payoutService.listByStatus(PayoutStatus.PENDING, 5);
 
         assertEquals(1, results.size());
-        assertEquals("PENDING", results.get(0).status());
+        assertEquals(PayoutStatus.PENDING, results.get(0).getStatus());
     }
 }

@@ -3,8 +3,9 @@ package com.aionn.inventory.infrastructure.integration.order;
 import com.aionn.inventory.application.dto.reservation.command.CommitReservationCommand;
 import com.aionn.inventory.application.dto.reservation.command.ReleaseReservationCommand;
 import com.aionn.inventory.application.dto.reservation.command.ReserveStockCommand;
-import com.aionn.inventory.application.dto.reservation.result.ReservationResult;
 import com.aionn.inventory.application.service.StockReservationService;
+import com.aionn.inventory.domain.model.StockReservation;
+import com.aionn.inventory.domain.valueobject.ReservationStatus;
 import com.aionn.sharedkernel.integration.port.inventory.InventoryStockReservationPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,13 +26,13 @@ public class InventoryStockReservationAdapter implements InventoryStockReservati
         List<Reservation> created = new ArrayList<>();
         try {
             for (ReservationLine line : lines) {
-                ReservationResult result = reservationService.reserve(new ReserveStockCommand(
+                StockReservation reservation = reservationService.reserve(new ReserveStockCommand(
                         line.skuId(), line.warehouseId(), orderId, line.qty(), ttlSeconds));
-                if (!"RESERVED".equals(result.status())) {
+                if (reservation.getStatus() != ReservationStatus.RESERVED) {
                     throw new ReservationException(line.skuId(), line.warehouseId(),
-                            "Reservation result: " + result.status());
+                            "Reservation result: " + reservation.getStatus().name());
                 }
-                created.add(new Reservation(result.reservationId(), line.skuId(), line.warehouseId(),
+                created.add(new Reservation(reservation.getReservationId(), line.skuId(), line.warehouseId(),
                         line.qty(), line.unitPrice(), line.currency()));
             }
             return created;

@@ -1,11 +1,10 @@
 package com.aionn.payment.application.service;
 
+import com.aionn.payment.application.dto.payment.PaymentInitiation;
 import com.aionn.payment.application.dto.payment.command.ConfirmPaymentCommand;
 import com.aionn.payment.application.dto.payment.command.FailPaymentCommand;
 import com.aionn.payment.application.dto.payment.command.InitiatePaymentCommand;
 import com.aionn.payment.application.dto.payment.command.RefundPaymentCommand;
-import com.aionn.payment.application.dto.payment.result.PaymentResult;
-import com.aionn.payment.application.mapper.PaymentResultMapper;
 import com.aionn.payment.application.port.out.InvoiceStorage;
 import com.aionn.payment.application.port.out.PaymentMethodPersistencePort;
 import com.aionn.payment.application.port.out.PaymentProviderClient;
@@ -27,6 +26,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 
@@ -41,16 +42,15 @@ public class PaymentService {
     private final TransactionLedgerPersistencePort ledgerRepository;
     private final PaymentProviderRouter providerRouter;
     private final InvoiceStorage invoiceStorage;
-    private final PaymentResultMapper mapper;
     private final EventPublisher eventPublisher;
     private final PaymentIntegrationEventPublisherPort integrationEventPublisher;
     private final com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort orderQueryPort;
-    private final java.time.Clock clock;
+    private final Clock clock;
 
-    public PaymentResult initiate(InitiatePaymentCommand command) {
+    public PaymentInitiation initiate(InitiatePaymentCommand command) {
         var existing = paymentRepository.findByIdempotencyKey(command.idempotencyKey());
         if (existing.isPresent()) {
-            return mapper.toResult(existing.get());
+            return new PaymentInitiation(existing.get(), null);
         }
 
         PaymentMethod method = null;
@@ -81,20 +81,20 @@ public class PaymentService {
                         command.amount(), command.currency(), command.idempotencyKey(), null));
 
         if (auth.captured()) {
-            return confirm(new ConfirmPaymentCommand(saved.getPaymentId(), auth.transactionNo()));
+            Payment confirmed = confirm(new ConfirmPaymentCommand(saved.getPaymentId(), auth.transactionNo()));
+            return new PaymentInitiation(confirmed, null);
         } else if (auth.declineCode() != null) {
-            return fail(new FailPaymentCommand(saved.getPaymentId(),
+            Payment failed = fail(new FailPaymentCommand(saved.getPaymentId(),
                     auth.declineCode(), auth.declineReason()));
+            return new PaymentInitiation(failed, null);
         }
-        // Async path: return INITIATED and propagate the redirect URL for client
-        // hand-off.
-        return mapper.toResult(saved).withRedirectUrl(auth.authUrl());
+        return new PaymentInitiation(saved, auth.authUrl());
     }
 
-    public PaymentResult confirm(ConfirmPaymentCommand command) {
+    public Payment confirm(ConfirmPaymentCommand command) {
         Payment payment = required(command.paymentId());
         if (payment.getStatus().name().equals("PAID")) {
-            return mapper.toResult(payment);
+            return payment;
         }
         Instant now = clock.instant();
         payment.markPaid(command.transactionNo(), now);
@@ -120,14 +120,14 @@ public class PaymentService {
 
         integrationEventPublisher.publishPaymentCaptured(current.getPaymentId(), current.getOrderId(),
                 command.transactionNo(), current.getAmount().amount(), current.getAmount().currency());
-        return mapper.toResult(current);
+        return current;
     }
 
-    public PaymentResult fail(FailPaymentCommand command) {
+    public Payment fail(FailPaymentCommand command) {
         Payment payment = required(command.paymentId());
         if (payment.getStatus().name().equals("FAILED") || payment.getStatus().name().equals("PAID")
                 || payment.getStatus().name().equals("REFUNDED")) {
-            return mapper.toResult(payment);
+            return payment;
         }
         Instant now = clock.instant();
         payment.markFailed(command.errorCode(), command.reason(), now);
@@ -135,10 +135,10 @@ public class PaymentService {
         eventPublisher.publish(payment.pullEvents());
         integrationEventPublisher.publishPaymentFailed(saved.getPaymentId(), saved.getOrderId(),
                 command.errorCode(), command.reason());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public PaymentResult refund(RefundPaymentCommand command) {
+    public Payment refund(RefundPaymentCommand command) {
         Payment payment = required(command.paymentId());
         Money refund = Money.of(command.amount(), command.currency());
 
@@ -167,28 +167,26 @@ public class PaymentService {
 
         integrationEventPublisher.publishPaymentRefunded(saved.getPaymentId(), saved.getOrderId(),
                 refundId, command.amount(), command.currency(), command.reason());
-        return mapper.toResult(saved);
+        return saved;
     }
 
     @Transactional(readOnly = true)
-    public PaymentResult get(String paymentId) {
-        return mapper.toResult(required(paymentId));
+    public Payment get(String paymentId) {
+        return required(paymentId);
     }
 
     @Transactional(readOnly = true)
-    public PaymentResult getForUser(String paymentId, String userId) {
+    public Payment getForUser(String paymentId, String userId) {
         Payment payment = required(paymentId);
         if (!payment.getUserId().equals(userId)) {
             throw new PaymentException(PaymentErrorCode.PAYMENT_NOT_FOUND);
         }
-        return mapper.toResult(payment);
+        return payment;
     }
 
     @Transactional(readOnly = true)
-    public List<PaymentResult> listByOrderId(String orderId) {
-        return paymentRepository.findByOrderId(orderId).stream()
-                .map(mapper::toResult)
-                .toList();
+    public List<Payment> listByOrderId(String orderId) {
+        return paymentRepository.findByOrderId(orderId);
     }
 
     Payment required(String paymentId) {

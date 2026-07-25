@@ -1,6 +1,7 @@
 package com.aionn.inventory.application.usecase.inventory;
 
 import com.aionn.inventory.application.dto.inventory.result.InventoryItemResult;
+import com.aionn.inventory.application.mapper.InventoryItemResultMapper;
 import com.aionn.inventory.application.port.in.inventory.ListInventoryItemsBySkuInputPort;
 import com.aionn.inventory.application.service.InventoryItemService;
 import lombok.RequiredArgsConstructor;
@@ -14,10 +15,11 @@ import java.util.List;
 public class ListInventoryItemsBySkuUseCase implements ListInventoryItemsBySkuInputPort {
 
     private final InventoryItemService inventoryItemService;
+    private final InventoryItemResultMapper inventoryItemResultMapper;
 
     @Override
     @Transactional(readOnly = true)
     public List<InventoryItemResult> execute(String skuId) {
-        return inventoryItemService.listBySku(skuId);
+        return inventoryItemResultMapper.toResults(inventoryItemService.listBySku(skuId));
     }
 }

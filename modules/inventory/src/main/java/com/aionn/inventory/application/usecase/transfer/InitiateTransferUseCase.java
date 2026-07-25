@@ -2,6 +2,7 @@ package com.aionn.inventory.application.usecase.transfer;
 
 import com.aionn.inventory.application.dto.transfer.command.InitiateTransferCommand;
 import com.aionn.inventory.application.dto.transfer.result.StockTransferResult;
+import com.aionn.inventory.application.mapper.StockTransferResultMapper;
 import com.aionn.inventory.application.port.in.transfer.InitiateTransferInputPort;
 import com.aionn.inventory.application.service.StockTransferService;
 import lombok.RequiredArgsConstructor;
@@ -13,10 +14,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class InitiateTransferUseCase implements InitiateTransferInputPort {
 
     private final StockTransferService stockTransferService;
+    private final StockTransferResultMapper stockTransferResultMapper;
 
     @Override
     @Transactional
     public StockTransferResult execute(InitiateTransferCommand command) {
-        return stockTransferService.initiate(command);
+        return stockTransferResultMapper.toResult(stockTransferService.initiate(command));
     }
 }

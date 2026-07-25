@@ -4,6 +4,7 @@ import com.aionn.catalog.application.dto.category.result.CategoryResult;
 import com.aionn.catalog.domain.model.Category;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
+import java.util.List;
 import java.util.Locale;
 
 @Component
@@ -39,5 +40,14 @@ public class CategoryResultMapper {
                 category.isActive(),
                 category.getCreatedAt(),
                 category.getUpdatedAt());
+    }
+
+    public List<CategoryResult> toResults(List<Category> categories) {
+        if (categories == null) {
+            return List.of();
+        }
+        return categories.stream()
+                .map(this::toResult)
+                .toList();
     }
 }

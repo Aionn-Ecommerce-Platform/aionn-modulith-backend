@@ -6,8 +6,6 @@ import com.aionn.ordering.application.dto.cart.command.ClearCartCommand;
 import com.aionn.ordering.application.dto.cart.command.RemoveItemCommand;
 import com.aionn.ordering.application.dto.cart.command.RemoveVoucherCommand;
 import com.aionn.ordering.application.dto.cart.command.UpdateItemQtyCommand;
-import com.aionn.ordering.application.dto.cart.result.CartResult;
-import com.aionn.ordering.application.mapper.OrderingResultMapper;
 import com.aionn.ordering.application.port.out.CartPersistencePort;
 import com.aionn.ordering.domain.exception.OrderingErrorCode;
 import com.aionn.ordering.domain.exception.OrderingException;
@@ -26,61 +24,60 @@ import org.springframework.transaction.annotation.Transactional;
 public class CartService {
 
     private final CartPersistencePort cartRepository;
-    private final OrderingResultMapper mapper;
     private final EventPublisher eventPublisher;
     private final java.time.Clock clock;
 
-    public CartResult addItem(AddItemCommand command) {
+    public Cart addItem(AddItemCommand command) {
         Cart cart = loadOrCreate(command.userId());
         cart.addItem(command.skuId(), command.qty(), clock.instant());
         Cart saved = cartRepository.save(cart);
         eventPublisher.publish(cart.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public CartResult updateItemQty(UpdateItemQtyCommand command) {
+    public Cart updateItemQty(UpdateItemQtyCommand command) {
         Cart cart = loadOwned(command.userId());
         cart.updateItemQty(command.skuId(), command.newQty(), clock.instant());
         Cart saved = cartRepository.save(cart);
         eventPublisher.publish(cart.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public CartResult removeItem(RemoveItemCommand command) {
+    public Cart removeItem(RemoveItemCommand command) {
         Cart cart = loadOwned(command.userId());
         cart.removeItem(command.skuId(), clock.instant());
         Cart saved = cartRepository.save(cart);
         eventPublisher.publish(cart.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public CartResult clearCart(ClearCartCommand command) {
+    public Cart clearCart(ClearCartCommand command) {
         Cart cart = loadOwned(command.userId());
         cart.clear(command.reason(), clock.instant());
         Cart saved = cartRepository.save(cart);
         eventPublisher.publish(cart.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public CartResult applyVoucher(ApplyVoucherCommand command) {
+    public Cart applyVoucher(ApplyVoucherCommand command) {
         Cart cart = loadOwned(command.userId());
         cart.applyVoucher(command.voucherCode(), clock.instant());
         Cart saved = cartRepository.save(cart);
         eventPublisher.publish(cart.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public CartResult removeVoucher(RemoveVoucherCommand command) {
+    public Cart removeVoucher(RemoveVoucherCommand command) {
         Cart cart = loadOwned(command.userId());
         cart.removeVoucher(clock.instant());
         Cart saved = cartRepository.save(cart);
         eventPublisher.publish(cart.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
     @Transactional(readOnly = true)
-    public CartResult getMyCart(String userId) {
-        return mapper.toResult(loadOrCreate(userId));
+    public Cart getMyCart(String userId) {
+        return loadOrCreate(userId);
     }
 
     Cart loadOwned(String userId) {

@@ -5,8 +5,6 @@ import com.aionn.inventory.application.dto.warehouse.command.ChangeStatusCommand
 import com.aionn.inventory.application.dto.warehouse.command.CreateWarehouseCommand;
 import com.aionn.inventory.application.dto.warehouse.command.LiftSuspensionCommand;
 import com.aionn.inventory.application.dto.warehouse.command.SuspendWarehouseCommand;
-import com.aionn.inventory.application.dto.warehouse.result.WarehouseResult;
-import com.aionn.inventory.application.mapper.InventoryResultMapper;
 import com.aionn.inventory.application.port.out.WarehousePersistencePort;
 import com.aionn.inventory.domain.exception.InventoryErrorCode;
 import com.aionn.inventory.domain.exception.InventoryException;
@@ -30,21 +28,20 @@ import java.util.List;
 public class WarehouseService {
 
     private final WarehousePersistencePort warehouseRepository;
-    private final InventoryResultMapper mapper;
     private final EventPublisher eventPublisher;
     private final MerchantQueryPort merchantQueryPort;
     private final Clock clock;
 
-    public WarehouseResult create(CreateWarehouseCommand command) {
+    public Warehouse create(CreateWarehouseCommand command) {
         String merchantId = requireMerchantIdForOwner(command.ownerId());
         Warehouse warehouse = Warehouse.create(IdGenerator.ulid(),
                 merchantId, command.address(), command.priorityLevel(), clock);
         Warehouse saved = warehouseRepository.save(warehouse);
         eventPublisher.publish(warehouse.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public WarehouseResult changeStatus(ChangeStatusCommand command) {
+    public Warehouse changeStatus(ChangeStatusCommand command) {
         Warehouse warehouse = ownedByOwner(command.warehouseId(), command.ownerId());
         WarehouseStatus next;
         try {
@@ -56,44 +53,42 @@ public class WarehouseService {
         warehouse.changeStatus(next, clock);
         Warehouse saved = warehouseRepository.save(warehouse);
         eventPublisher.publish(warehouse.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public WarehouseResult adjustPriority(AdjustPriorityCommand command) {
+    public Warehouse adjustPriority(AdjustPriorityCommand command) {
         Warehouse warehouse = ownedByOwner(command.warehouseId(), command.ownerId());
         warehouse.adjustPriority(command.priorityLevel(), clock);
         Warehouse saved = warehouseRepository.save(warehouse);
         eventPublisher.publish(warehouse.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public WarehouseResult suspend(SuspendWarehouseCommand command) {
+    public Warehouse suspend(SuspendWarehouseCommand command) {
         Warehouse warehouse = required(command.warehouseId());
         warehouse.suspend(command.adminId(), command.reason(), clock);
         Warehouse saved = warehouseRepository.save(warehouse);
         eventPublisher.publish(warehouse.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public WarehouseResult liftSuspension(LiftSuspensionCommand command) {
+    public Warehouse liftSuspension(LiftSuspensionCommand command) {
         Warehouse warehouse = required(command.warehouseId());
         warehouse.liftSuspension(clock);
         Warehouse saved = warehouseRepository.save(warehouse);
         eventPublisher.publish(warehouse.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
     @Transactional(readOnly = true)
-    public WarehouseResult get(String warehouseId) {
-        return mapper.toResult(required(warehouseId));
+    public Warehouse get(String warehouseId) {
+        return required(warehouseId);
     }
 
     @Transactional(readOnly = true)
-    public List<WarehouseResult> listByOwner(String ownerId) {
+    public List<Warehouse> listByOwner(String ownerId) {
         String merchantId = requireMerchantIdForOwner(ownerId);
-        return warehouseRepository.findByMerchantOrderByPriority(merchantId).stream()
-                .map(mapper::toResult)
-                .toList();
+        return warehouseRepository.findByMerchantOrderByPriority(merchantId);
     }
 
     private Warehouse required(String warehouseId) {

@@ -3,8 +3,6 @@ package com.aionn.inventory.application.service;
 import com.aionn.inventory.application.dto.transfer.command.CancelTransferCommand;
 import com.aionn.inventory.application.dto.transfer.command.CompleteTransferCommand;
 import com.aionn.inventory.application.dto.transfer.command.InitiateTransferCommand;
-import com.aionn.inventory.application.dto.transfer.result.StockTransferResult;
-import com.aionn.inventory.application.mapper.InventoryResultMapper;
 import com.aionn.inventory.application.port.out.InventoryItemPersistencePort;
 import com.aionn.inventory.application.port.out.StockAdjustmentPersistencePort;
 import com.aionn.inventory.application.port.out.StockTransferPersistencePort;
@@ -37,12 +35,11 @@ public class StockTransferService {
         private final InventoryItemPersistencePort itemRepository;
         private final StockTransferPersistencePort transferRepository;
         private final StockAdjustmentPersistencePort adjustmentRepository;
-        private final InventoryResultMapper mapper;
         private final EventPublisher eventPublisher;
         private final MerchantQueryPort merchantQueryPort;
         private final Clock clock;
 
-        public StockTransferResult initiate(InitiateTransferCommand command) {
+        public StockTransfer initiate(InitiateTransferCommand command) {
                 String merchantId = requireMerchantIdForOwner(command.ownerId());
                 Warehouse from = warehouseRepository.findById(command.fromWarehouseId())
                                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.WAREHOUSE_NOT_FOUND));
@@ -75,10 +72,10 @@ public class StockTransferService {
 
                 eventPublisher.publish(transfer.pullEvents());
                 eventPublisher.publish(outAdj.pullEvents());
-                return mapper.toResult(saved);
+                return saved;
         }
 
-        public StockTransferResult complete(CompleteTransferCommand command) {
+        public StockTransfer complete(CompleteTransferCommand command) {
                 StockTransfer transfer = ownedByOwner(command.transferId(), command.ownerId());
                 transfer.complete(command.receivedQty(), clock);
 
@@ -98,10 +95,10 @@ public class StockTransferService {
 
                 eventPublisher.publish(transfer.pullEvents());
                 eventPublisher.publish(inAdj.pullEvents());
-                return mapper.toResult(saved);
+                return saved;
         }
 
-        public StockTransferResult cancel(CancelTransferCommand command) {
+        public StockTransfer cancel(CancelTransferCommand command) {
                 StockTransfer transfer = ownedByOwner(command.transferId(), command.ownerId());
                 transfer.cancel(command.reason(), clock);
 
@@ -114,14 +111,14 @@ public class StockTransferService {
                 StockTransfer saved = transferRepository.save(transfer);
                 eventPublisher.publish(transfer.pullEvents());
                 eventPublisher.publish(source.pullEvents());
-                return mapper.toResult(saved);
+                return saved;
         }
 
         @Transactional(readOnly = true)
-        public StockTransferResult get(String transferId) {
-                return mapper.toResult(transferRepository.findById(transferId)
+        public StockTransfer get(String transferId) {
+                return transferRepository.findById(transferId)
                                 .orElseThrow(() -> new InventoryException(
-                                                InventoryErrorCode.STOCK_TRANSFER_NOT_FOUND)));
+                                                InventoryErrorCode.STOCK_TRANSFER_NOT_FOUND));
         }
 
         private StockTransfer ownedByOwner(String transferId, String ownerId) {
