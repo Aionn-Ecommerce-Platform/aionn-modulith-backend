@@ -5,6 +5,7 @@ import com.aionn.ordering.application.port.in.order.GetMerchantOrderAnalyticsInp
 import com.aionn.ordering.application.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 
@@ -15,6 +16,7 @@ public class GetMerchantOrderAnalyticsUseCase implements GetMerchantOrderAnalyti
     private final OrderService orderService;
 
     @Override
+    @Transactional(readOnly = true)
     public MerchantOrderAnalyticsResult execute(String ownerId, LocalDate from, LocalDate to) {
         return orderService.getMerchantAnalytics(ownerId, from, to);
     }

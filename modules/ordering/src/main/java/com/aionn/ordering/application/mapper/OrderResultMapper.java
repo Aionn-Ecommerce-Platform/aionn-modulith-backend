@@ -9,6 +9,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Mapper(componentModel = "spring")
 public interface OrderResultMapper {
@@ -26,6 +27,8 @@ public interface OrderResultMapper {
     @Mapping(target = "items", source = "items")
     @Mapping(target = "status", expression = "java(order.getStatus().name())")
     OrderResult toResult(Order order);
+
+    List<OrderResult> toResults(List<Order> orders);
 
     OrderResult.OrderItemResult toItemResult(OrderItem item);
 

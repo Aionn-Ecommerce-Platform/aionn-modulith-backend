@@ -2,6 +2,7 @@ package com.aionn.inventory.application.usecase.warehouse;
 
 import com.aionn.inventory.application.dto.warehouse.command.SuspendWarehouseCommand;
 import com.aionn.inventory.application.dto.warehouse.result.WarehouseResult;
+import com.aionn.inventory.application.mapper.WarehouseResultMapper;
 import com.aionn.inventory.application.port.in.warehouse.SuspendWarehouseInputPort;
 import com.aionn.inventory.application.service.WarehouseService;
 import lombok.RequiredArgsConstructor;
@@ -13,10 +14,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class SuspendWarehouseUseCase implements SuspendWarehouseInputPort {
 
     private final WarehouseService warehouseService;
+    private final WarehouseResultMapper warehouseResultMapper;
 
     @Override
     @Transactional
     public WarehouseResult execute(SuspendWarehouseCommand command) {
-        return warehouseService.suspend(command);
+        return warehouseResultMapper.toResult(warehouseService.suspend(command));
     }
 }

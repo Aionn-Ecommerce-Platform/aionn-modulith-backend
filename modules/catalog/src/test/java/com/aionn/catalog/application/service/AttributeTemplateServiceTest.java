@@ -2,8 +2,6 @@ package com.aionn.catalog.application.service;
 
 import com.aionn.catalog.application.dto.attribute.command.ConfigureFilterableCommand;
 import com.aionn.catalog.application.dto.attribute.command.CreateAttributeTemplateCommand;
-import com.aionn.catalog.application.dto.attribute.result.AttributeTemplateResult;
-import com.aionn.catalog.application.mapper.AttributeTemplateResultMapper;
 import com.aionn.catalog.application.port.out.attribute.AttributeTemplatePersistencePort;
 import com.aionn.catalog.application.port.out.category.CategoryPersistencePort;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
@@ -21,7 +19,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,22 +40,13 @@ class AttributeTemplateServiceTest {
         @Mock
         private CategoryPersistencePort categoryRepository;
         @Mock
-        private AttributeTemplateResultMapper attributeTemplateResultMapper;
-        @Mock
         private EventPublisher eventPublisher;
 
         @Spy
-    private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
+        private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
 
-    @InjectMocks
+        @InjectMocks
         private AttributeTemplateService attributeTemplateService;
-
-        private AttributeTemplateResult sampleResult() {
-                return new AttributeTemplateResult(
-                                TEMPLATE_ID, CATEGORY_ID,
-                                Map.of("color", true, "size", true),
-                                Instant.now(), Instant.now());
-        }
 
         @Test
         void createPersistsTemplateAndPublishesEvent() {
@@ -67,12 +55,12 @@ class AttributeTemplateServiceTest {
                 when(attributeTemplateRepository.findByCategoryId(CATEGORY_ID)).thenReturn(Optional.empty());
                 when(attributeTemplateRepository.save(any(AttributeTemplate.class)))
                                 .thenAnswer(inv -> inv.getArgument(0));
-                when(attributeTemplateResultMapper.toResult(any(AttributeTemplate.class))).thenReturn(sampleResult());
 
-                AttributeTemplateResult result = attributeTemplateService.create(
+                AttributeTemplate result = attributeTemplateService.create(
                                 new CreateAttributeTemplateCommand(CATEGORY_ID, List.of("color", "size")));
 
                 assertThat(result).isNotNull();
+                assertThat(result.getCategoryId()).isEqualTo(CATEGORY_ID);
                 verify(attributeTemplateRepository).save(any(AttributeTemplate.class));
                 verify(eventPublisher).publish(anyCollection());
         }
@@ -114,7 +102,6 @@ class AttributeTemplateServiceTest {
                 template.pullEvents();
                 when(attributeTemplateRepository.findById(TEMPLATE_ID)).thenReturn(Optional.of(template));
                 when(attributeTemplateRepository.save(template)).thenReturn(template);
-                when(attributeTemplateResultMapper.toResult(template)).thenReturn(sampleResult());
 
                 attributeTemplateService.configureFilterable(
                                 new ConfigureFilterableCommand(TEMPLATE_ID, "color", false));
@@ -137,11 +124,12 @@ class AttributeTemplateServiceTest {
         @Test
         void getReturnsResultWhenTemplateFound() {
                 AttributeTemplate template = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"));
-                AttributeTemplateResult result = sampleResult();
                 when(attributeTemplateRepository.findById(TEMPLATE_ID)).thenReturn(Optional.of(template));
-                when(attributeTemplateResultMapper.toResult(template)).thenReturn(result);
 
-                assertThat(attributeTemplateService.get(TEMPLATE_ID)).isEqualTo(result);
+                AttributeTemplate result = attributeTemplateService.get(TEMPLATE_ID);
+
+                assertThat(result.getTemplateId()).isEqualTo(TEMPLATE_ID);
+                assertThat(result.getCategoryId()).isEqualTo(CATEGORY_ID);
         }
 
         @Test
@@ -157,11 +145,12 @@ class AttributeTemplateServiceTest {
         @Test
         void getByCategoryReturnsResultWhenTemplateFound() {
                 AttributeTemplate template = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"));
-                AttributeTemplateResult result = sampleResult();
                 when(attributeTemplateRepository.findByCategoryId(CATEGORY_ID)).thenReturn(Optional.of(template));
-                when(attributeTemplateResultMapper.toResult(template)).thenReturn(result);
 
-                assertThat(attributeTemplateService.getByCategory(CATEGORY_ID)).isEqualTo(result);
+                AttributeTemplate result = attributeTemplateService.getByCategory(CATEGORY_ID);
+
+                assertThat(result.getTemplateId()).isEqualTo(TEMPLATE_ID);
+                assertThat(result.getCategoryId()).isEqualTo(CATEGORY_ID);
         }
 
         @Test

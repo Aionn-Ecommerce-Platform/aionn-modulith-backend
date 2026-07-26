@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: shipping
+
+  flyway:
+    enabled: true
+    locations: classpath:db
+
+shipping:
+  carrier:
+    ghn:
+      base-url: ${GHN_BASE_URL:https://online-gateway.ghn.vn}
+      token: ${GHN_API_TOKEN:}
+      shop-id: ${GHN_SHOP_ID:}
+      from-district-id: ${GHN_FROM_DISTRICT_ID:}
+      from-ward-code: ${GHN_FROM_WARD_CODE:}
+      service-id: ${GHN_SERVICE_ID:}
+      service-type-id: ${GHN_SERVICE_TYPE_ID:2}
+      payment-type-id: ${GHN_PAYMENT_TYPE_ID:2}
+      required-note: ${GHN_REQUIRED_NOTE:KHONGCHOXEMHANG}
+      label-print-url: ${GHN_LABEL_PRINT_URL:https://dev-online-gateway.ghn.vn/a5/public-api/printA5}
+      webhook-secret: ${GHN_WEBHOOK_SECRET:}
+
+  status-poller:
+    enabled: ${SHIPPING_STATUS_POLLER_ENABLED:true}
+    delay-ms: ${SHIPPING_STATUS_POLLER_DELAY_MS:60000}
+    batch-size: ${SHIPPING_STATUS_POLLER_BATCH:100}
+
+  default-dimensions:
+    weight-gram: ${SHIPPING_DEFAULT_DIM_WEIGHT_GRAM:500}
+    length-cm: ${SHIPPING_DEFAULT_DIM_LENGTH_CM:20}
+    width-cm: ${SHIPPING_DEFAULT_DIM_WIDTH_CM:15}
+    height-cm: ${SHIPPING_DEFAULT_DIM_HEIGHT_CM:10}

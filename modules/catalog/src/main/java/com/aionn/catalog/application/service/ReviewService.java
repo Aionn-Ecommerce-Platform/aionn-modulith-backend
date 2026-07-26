@@ -11,8 +11,6 @@ import com.aionn.catalog.application.dto.review.command.SubmitReviewCommand;
 import com.aionn.catalog.application.dto.review.command.UpdateReviewCommand;
 import com.aionn.catalog.application.dto.review.result.RatingSummary;
 import com.aionn.catalog.application.dto.review.result.ReviewEligibilityResult;
-import com.aionn.catalog.application.dto.review.result.ReviewResult;
-import com.aionn.catalog.application.mapper.ReviewResultMapper;
 import com.aionn.catalog.application.port.out.merchant.MerchantPersistencePort;
 import com.aionn.catalog.application.port.out.product.ProductPersistencePort;
 import com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort;
@@ -45,11 +43,10 @@ public class ReviewService {
     private final ProductPersistencePort productRepository;
     private final MerchantPersistencePort merchantRepository;
     private final OrderQueryPort orderQueryPort;
-    private final ReviewResultMapper reviewResultMapper;
     private final EventPublisher eventPublisher;
     private final Clock clock;
 
-    public ReviewResult submit(SubmitReviewCommand command) {
+    public ProductReview submit(SubmitReviewCommand command) {
         if (reviewRepository.existsByUserIdAndProductId(command.userId(), command.productId())) {
             throw new CatalogException(CatalogErrorCode.REVIEW_ALREADY_EXISTS);
         }
@@ -67,10 +64,10 @@ public class ReviewService {
                 clock);
         ProductReview saved = reviewRepository.save(review);
         eventPublisher.publish(review.pullEvents());
-        return reviewResultMapper.toResult(saved);
+        return saved;
     }
 
-    public ReviewResult update(UpdateReviewCommand command) {
+    public ProductReview update(UpdateReviewCommand command) {
         ProductReview review = required(command.reviewId());
         if (!review.getUserId().equals(command.userId())) {
             throw new CatalogException(CatalogErrorCode.REVIEW_FORBIDDEN, "User does not own this review");
@@ -78,7 +75,7 @@ public class ReviewService {
         review.update(command.rating(), command.title(), command.content(), command.imageUrls(), clock);
         ProductReview saved = reviewRepository.save(review);
         eventPublisher.publish(review.pullEvents());
-        return reviewResultMapper.toResult(saved);
+        return saved;
     }
 
     public void delete(DeleteReviewCommand command) {
@@ -91,30 +88,30 @@ public class ReviewService {
         eventPublisher.publish(review.pullEvents());
     }
 
-    public ReviewResult merchantReply(MerchantReplyCommand command) {
+    public ProductReview merchantReply(MerchantReplyCommand command) {
         ProductReview review = required(command.reviewId());
         ensureMerchantOwnsProduct(command.ownerId(), review.getProductId());
         review.reply(command.content(), clock);
         ProductReview saved = reviewRepository.save(review);
         eventPublisher.publish(review.pullEvents());
-        return reviewResultMapper.toResult(saved);
+        return saved;
     }
 
-    public ReviewResult report(ReportReviewCommand command) {
+    public ProductReview report(ReportReviewCommand command) {
         ProductReview review = required(command.reviewId());
         Merchant merchant = ensureMerchantOwnsProduct(command.ownerId(), review.getProductId());
         review.report(merchant.getMerchantId(), command.reason(), clock);
         ProductReview saved = reviewRepository.save(review);
         eventPublisher.publish(review.pullEvents());
-        return reviewResultMapper.toResult(saved);
+        return saved;
     }
 
-    public ReviewResult hide(HideReviewCommand command) {
+    public ProductReview hide(HideReviewCommand command) {
         ProductReview review = required(command.reviewId());
         review.hide(clock);
         ProductReview saved = reviewRepository.save(review);
         eventPublisher.publish(review.pullEvents());
-        return reviewResultMapper.toResult(saved);
+        return saved;
     }
 
     public void adminDelete(AdminDeleteReviewCommand command) {
@@ -124,39 +121,32 @@ public class ReviewService {
         eventPublisher.publish(review.pullEvents());
     }
 
-    public ReviewResult restore(RestoreReviewCommand command) {
+    public ProductReview restore(RestoreReviewCommand command) {
         ProductReview review = required(command.reviewId());
         review.restore(command.adminId(), clock);
         ProductReview saved = reviewRepository.save(review);
         eventPublisher.publish(review.pullEvents());
-        return reviewResultMapper.toResult(saved);
+        return saved;
     }
 
     @Transactional(readOnly = true)
-    public PageResult<ReviewResult> getByProduct(String productId, OffsetPagination pagination) {
-        List<ReviewResult> content = reviewRepository
-                .findByProductIdAndStatus(productId, ReviewStatus.VISIBLE, pagination).stream()
-                .map(reviewResultMapper::toResult)
-                .toList();
+    public PageResult<ProductReview> getByProduct(String productId, OffsetPagination pagination) {
+        List<ProductReview> content = reviewRepository
+                .findByProductIdAndStatus(productId, ReviewStatus.VISIBLE, pagination);
         long total = reviewRepository.countByProductIdAndStatus(productId, ReviewStatus.VISIBLE);
         return new PageResult<>(content, pagination.page(), pagination.size(), total);
     }
 
     @Transactional(readOnly = true)
-    public PageResult<ReviewResult> getMyReviews(String userId, OffsetPagination pagination) {
-        List<ReviewResult> content = reviewRepository.findByUserId(userId, pagination).stream()
-                .map(reviewResultMapper::toResult)
-                .toList();
+    public PageResult<ProductReview> getMyReviews(String userId, OffsetPagination pagination) {
+        List<ProductReview> content = reviewRepository.findByUserId(userId, pagination);
         long total = reviewRepository.countByUserId(userId);
         return new PageResult<>(content, pagination.page(), pagination.size(), total);
     }
 
     @Transactional(readOnly = true)
-    public PageResult<ReviewResult> getReportedReviews(OffsetPagination pagination) {
-        List<ReviewResult> content = reviewRepository
-                .findByStatus(ReviewStatus.REPORTED, pagination).stream()
-                .map(reviewResultMapper::toResult)
-                .toList();
+    public PageResult<ProductReview> getReportedReviews(OffsetPagination pagination) {
+        List<ProductReview> content = reviewRepository.findByStatus(ReviewStatus.REPORTED, pagination);
         long total = reviewRepository.countByStatus(ReviewStatus.REPORTED);
         return new PageResult<>(content, pagination.page(), pagination.size(), total);
     }

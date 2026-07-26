@@ -10,6 +10,7 @@ spring:
       - classpath:application-identity.yml
       - classpath:application-catalog.yml
       - classpath:application-payment.yml
+      - classpath:application-shipping.yml
 
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_LOCAL_PORT:5434}/${POSTGRES_DB:aionn}

@@ -3,8 +3,6 @@ package com.aionn.payment.application.service;
 import com.aionn.payment.application.dto.method.command.LinkMethodCommand;
 import com.aionn.payment.application.dto.method.command.RemoveMethodCommand;
 import com.aionn.payment.application.dto.method.command.VerifyMethodCommand;
-import com.aionn.payment.application.dto.method.result.PaymentMethodResult;
-import com.aionn.payment.application.mapper.PaymentResultMapper;
 import com.aionn.payment.application.port.out.PaymentMethodPersistencePort;
 import com.aionn.payment.domain.exception.PaymentErrorCode;
 import com.aionn.payment.domain.exception.PaymentException;
@@ -42,31 +40,29 @@ class PaymentMethodServiceTest {
     private final Instant fixedInstant = Instant.parse("2026-01-01T00:00:00Z");
     private final Clock clock = Clock.fixed(fixedInstant, java.time.ZoneOffset.UTC);
 
-    private PaymentResultMapper mapper;
     private PaymentMethodService service;
     private PaymentMethodService serviceWithKey;
 
     @BeforeEach
     void setUp() {
-        mapper = new PaymentResultMapper();
         StripeProperties stripeProperties = new StripeProperties("", "");
-        service = new PaymentMethodService(repository, mapper, eventPublisher, stripeProperties, clock);
+        service = new PaymentMethodService(repository, eventPublisher, stripeProperties, clock);
 
         StripeProperties keyedProperties = new StripeProperties("sk_test_fake_key_for_test", "");
-        serviceWithKey = new PaymentMethodService(repository, mapper, eventPublisher, keyedProperties, clock);
+        serviceWithKey = new PaymentMethodService(repository, eventPublisher, keyedProperties, clock);
     }
 
     @Test
-    void linkPersistsMethodAndReturnsResult() {
+    void linkPersistsMethodAndReturnsEntity() {
         when(repository.save(any(PaymentMethod.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        PaymentMethodResult result = service.link(
+        PaymentMethod result = service.link(
                 new LinkMethodCommand("u1", "stripe", "4242", "tok-abc"));
 
-        assertThat(result.userId()).isEqualTo("u1");
-        assertThat(result.provider()).isEqualTo("stripe");
-        assertThat(result.status()).isEqualTo("LINKED");
-        assertThat(result.last4Digits()).isEqualTo("4242");
+        assertThat(result.getUserId()).isEqualTo("u1");
+        assertThat(result.getProvider()).isEqualTo("stripe");
+        assertThat(result.getStatus()).isEqualTo(PaymentMethodStatus.LINKED);
+        assertThat(result.getLast4Digits()).isEqualTo("4242");
         verify(repository).save(any(PaymentMethod.class));
         verify(eventPublisher).publish(anyCollection());
     }
@@ -77,9 +73,9 @@ class PaymentMethodServiceTest {
         when(repository.findById("m1")).thenReturn(Optional.of(existing));
         when(repository.save(any(PaymentMethod.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        PaymentMethodResult result = service.verify(new VerifyMethodCommand("u1", "m1"));
+        PaymentMethod result = service.verify(new VerifyMethodCommand("u1", "m1"));
 
-        assertThat(result.status()).isEqualTo("VERIFIED");
+        assertThat(result.getStatus()).isEqualTo(PaymentMethodStatus.VERIFIED);
         ArgumentCaptor<PaymentMethod> captor = ArgumentCaptor.forClass(PaymentMethod.class);
         verify(repository).save(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(PaymentMethodStatus.VERIFIED);
@@ -125,10 +121,10 @@ class PaymentMethodServiceTest {
         PaymentMethod m2 = PaymentMethod.link("m2", "u1", "stripe", "1111", "tok-2", fixedInstant);
         when(repository.findActiveByUserId("u1")).thenReturn(List.of(m1, m2));
 
-        List<PaymentMethodResult> result = service.listMine("u1");
+        List<PaymentMethod> result = service.listMine("u1");
 
         assertThat(result).hasSize(2);
-        assertThat(result).extracting(PaymentMethodResult::methodId).containsExactly("m1", "m2");
+        assertThat(result).extracting(PaymentMethod::getMethodId).containsExactly("m1", "m2");
     }
 
     @Test
@@ -140,14 +136,14 @@ class PaymentMethodServiceTest {
     }
 
     @Test
-    void getMethodReturnsCorrectResult() {
+    void getMethodReturnsCorrectEntity() {
         PaymentMethod existing = PaymentMethod.link("m1", "u1", "stripe", "4242", "tok-abc", fixedInstant);
         when(repository.findById("m1")).thenReturn(Optional.of(existing));
 
-        PaymentMethodResult result = service.get("u1", "m1");
+        PaymentMethod result = service.get("u1", "m1");
 
-        assertThat(result.methodId()).isEqualTo("m1");
-        assertThat(result.userId()).isEqualTo("u1");
+        assertThat(result.getMethodId()).isEqualTo("m1");
+        assertThat(result.getUserId()).isEqualTo("u1");
     }
 
     @Test
@@ -174,10 +170,10 @@ class PaymentMethodServiceTest {
         PaymentMethod m1 = PaymentMethod.link("m1", "u1", "stripe", "4242", "tok-1", fixedInstant);
         when(repository.findActiveByUserId("u1")).thenReturn(List.of(m1));
 
-        List<PaymentMethodResult> result = service.listMine("u1");
+        List<PaymentMethod> result = service.listMine("u1");
 
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).methodId()).isEqualTo("m1");
+        assertThat(result.get(0).getMethodId()).isEqualTo("m1");
     }
 
     @Test

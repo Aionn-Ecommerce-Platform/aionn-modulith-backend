@@ -1,6 +1,7 @@
 package com.aionn.inventory.application.usecase.warehouse;
 
 import com.aionn.inventory.application.dto.warehouse.result.WarehouseResult;
+import com.aionn.inventory.application.mapper.WarehouseResultMapper;
 import com.aionn.inventory.application.port.in.warehouse.GetWarehouseInputPort;
 import com.aionn.inventory.application.service.WarehouseService;
 import lombok.RequiredArgsConstructor;
@@ -12,10 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class GetWarehouseUseCase implements GetWarehouseInputPort {
 
     private final WarehouseService warehouseService;
+    private final WarehouseResultMapper warehouseResultMapper;
 
     @Override
     @Transactional(readOnly = true)
     public WarehouseResult execute(String warehouseId) {
-        return warehouseService.get(warehouseId);
+        return warehouseResultMapper.toResult(warehouseService.get(warehouseId));
     }
 }

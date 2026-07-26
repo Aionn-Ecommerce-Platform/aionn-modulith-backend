@@ -4,8 +4,6 @@ import com.aionn.ordering.application.dto.order.command.CancelOrderCommand;
 import com.aionn.ordering.application.dto.order.command.ConfirmDeliveredCommand;
 import com.aionn.ordering.application.dto.order.command.ConfirmShippedCommand;
 import com.aionn.ordering.application.dto.order.command.RejectOrderCommand;
-import com.aionn.ordering.application.dto.order.result.OrderResult;
-import com.aionn.ordering.application.mapper.OrderingResultMapper;
 import com.aionn.ordering.application.port.out.CartPersistencePort;
 import com.aionn.ordering.application.port.out.CatalogPricingGateway;
 import com.aionn.ordering.application.port.out.OrderPersistencePort;
@@ -50,7 +48,6 @@ class OrderServiceTest {
 
     @Mock private CartPersistencePort cartRepository;
     @Mock private OrderPersistencePort orderRepository;
-    @Mock private OrderingResultMapper mapper;
     @Mock private EventPublisher eventPublisher;
     @Mock private StockReservationGateway stockReservationGateway;
     @Mock private PaymentGateway paymentGateway;
@@ -71,7 +68,7 @@ class OrderServiceTest {
     void setUp() {
         org.mockito.Mockito.lenient().when(clock.instant()).thenReturn(java.time.Instant.parse("2026-07-18T12:00:00Z"));
         orderService = new OrderService(
-                cartRepository, orderRepository, mapper, eventPublisher,
+                cartRepository, orderRepository, eventPublisher,
                 stockReservationGateway, paymentGateway, shippingGateway,
                 catalogPricingGateway, voucherGateway, cartService, merchantQueryPort,
                 integrationEventPublisher, orderingProperties, clock);
@@ -94,24 +91,15 @@ class OrderServiceTest {
                 "COD", "VND", List.of(item()), address(), shipping, subtotal, java.time.Instant.parse("2026-07-18T12:00:00Z"));
     }
 
-    private static OrderResult sampleResult(String status) {
-        return new OrderResult(ORDER_ID, null, USER_ID, MERCHANT_ID, "prop-1",
-                "COD", null, "VND", BigDecimal.valueOf(200),
-                BigDecimal.ZERO, "addr-1", "John", "12345", "line1",
-                "ward", "dist", "prov", "VN", List.of(), status, null,
-                java.time.Instant.now(), java.time.Instant.now(), null, null);
-    }
-
     @Test
     void cancelMovesOrderToCancelledAndReleasesNothingWhenNoReservations() {
         Order order = pendingOrder();
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
         when(orderRepository.save(order)).thenReturn(order);
-        when(mapper.toResult(order)).thenReturn(sampleResult("CANCELLED"));
 
-        OrderResult result = orderService.cancel(new CancelOrderCommand(ORDER_ID, USER_ID, "changed"));
+        Order result = orderService.cancel(new CancelOrderCommand(ORDER_ID, USER_ID, "changed"));
 
-        assertEquals("CANCELLED", result.status());
+        assertEquals(OrderStatus.CANCELLED, result.getStatus());
         verify(integrationEventPublisher).publishOrderCancelled(eq(ORDER_ID),
                 eq("USER_CANCELLED"), eq("changed"),
                 eq(OrderingIntegrationEventPublisherPort.CancellationKind.USER_CANCELLED));
@@ -152,11 +140,10 @@ class OrderServiceTest {
         order.markShipped("ship-1", now);
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
         when(orderRepository.save(order)).thenReturn(order);
-        when(mapper.toResult(order)).thenReturn(sampleResult("COMPLETED"));
 
-        OrderResult result = orderService.complete(new ConfirmDeliveredCommand(ORDER_ID));
+        Order result = orderService.complete(new ConfirmDeliveredCommand(ORDER_ID));
 
-        assertEquals("COMPLETED", result.status());
+        assertEquals(OrderStatus.COMPLETED, result.getStatus());
         assertEquals(OrderStatus.COMPLETED, order.getStatus());
         verify(integrationEventPublisher).publishOrderCompleted(ORDER_ID);
     }
@@ -176,12 +163,11 @@ class OrderServiceTest {
                 .thenReturn(Optional.of(MERCHANT_ID));
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
         when(orderRepository.save(order)).thenReturn(order);
-        when(mapper.toResult(order)).thenReturn(sampleResult("REJECTED"));
 
-        OrderResult result = orderService.rejectByMerchant(
+        Order result = orderService.rejectByMerchant(
                 new RejectOrderCommand(ORDER_ID, "owner-1", "no stock"));
 
-        assertEquals("REJECTED", result.status());
+        assertEquals(OrderStatus.REJECTED, result.getStatus());
         verify(integrationEventPublisher).publishOrderCancelled(eq(ORDER_ID),
                 eq("MERCHANT_REJECTED"), eq("no stock"),
                 eq(OrderingIntegrationEventPublisherPort.CancellationKind.MERCHANT_REJECTED));
@@ -191,11 +177,10 @@ class OrderServiceTest {
     void getForRequesterReturnsResultWhenUserOwnsOrder() {
         Order order = pendingOrder();
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        when(mapper.toResult(order)).thenReturn(sampleResult("PENDING"));
 
-        OrderResult result = orderService.getForRequester(ORDER_ID, USER_ID);
+        Order result = orderService.getForRequester(ORDER_ID, USER_ID);
 
-        assertEquals("PENDING", result.status());
+        assertEquals(OrderStatus.PENDING, result.getStatus());
     }
 
     @Test
@@ -213,12 +198,11 @@ class OrderServiceTest {
     void listByUserMapsOrdersToResults() {
         Order order = pendingOrder();
         when(orderRepository.findByUser(USER_ID, 20)).thenReturn(List.of(order));
-        when(mapper.toResult(order)).thenReturn(sampleResult("PENDING"));
 
-        List<OrderResult> results = orderService.listByUser(USER_ID, 20);
+        List<Order> results = orderService.listByUser(USER_ID, 20);
 
         assertEquals(1, results.size());
-        assertEquals("PENDING", results.get(0).status());
+        assertEquals(OrderStatus.PENDING, results.get(0).getStatus());
     }
 
     @Test
@@ -229,11 +213,10 @@ class OrderServiceTest {
         order.confirmPreparation(now);
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
         when(orderRepository.save(order)).thenReturn(order);
-        when(mapper.toResult(order)).thenReturn(sampleResult("SHIPPED"));
 
-        OrderResult result = orderService.markShipped(new ConfirmShippedCommand(ORDER_ID, "ship-1"));
+        Order result = orderService.markShipped(new ConfirmShippedCommand(ORDER_ID, "ship-1"));
 
-        assertEquals("SHIPPED", result.status());
+        assertEquals(OrderStatus.SHIPPED, result.getStatus());
         verify(integrationEventPublisher).publishOrderShipped(ORDER_ID, "ship-1");
     }
 
@@ -261,11 +244,10 @@ class OrderServiceTest {
         when(orderRepository.save(org.mockito.ArgumentMatchers.any(Order.class))).thenReturn(order);
         when(orderRepository.findById(order.getOrderId())).thenReturn(Optional.of(order));
         when(cartService.loadOwned(USER_ID)).thenReturn(com.aionn.ordering.domain.model.Cart.create("cart-1", USER_ID, java.time.Instant.now()));
-        when(mapper.toResult(org.mockito.ArgumentMatchers.any(Order.class))).thenReturn(sampleResult("APPROVED"));
 
-        OrderResult result = orderService.placeOrderHeadless(command);
+        Order result = orderService.placeOrderHeadless(command);
 
-        assertEquals("APPROVED", result.status());
+        assertEquals(OrderStatus.APPROVED, result.getStatus());
     }
 
     @Test
@@ -311,11 +293,10 @@ class OrderServiceTest {
         Order order = pendingOrder();
         when(orderRepository.save(org.mockito.ArgumentMatchers.any(Order.class))).thenReturn(order);
         when(orderRepository.findById(order.getOrderId())).thenReturn(Optional.of(order));
-        when(mapper.toResult(org.mockito.ArgumentMatchers.any(Order.class))).thenReturn(sampleResult("APPROVED"));
 
-        OrderResult result = orderService.placeOrder(command);
+        Order result = orderService.placeOrder(command);
 
-        assertEquals("APPROVED", result.status());
+        assertEquals(OrderStatus.APPROVED, result.getStatus());
     }
 
     @Test
@@ -324,11 +305,10 @@ class OrderServiceTest {
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
         when(orderRepository.save(org.mockito.ArgumentMatchers.any(Order.class))).thenReturn(order);
         when(cartService.loadOwned(USER_ID)).thenReturn(com.aionn.ordering.domain.model.Cart.create("cart-1", USER_ID, java.time.Instant.now()));
-        when(mapper.toResult(org.mockito.ArgumentMatchers.any(Order.class))).thenReturn(sampleResult("APPROVED"));
 
-        OrderResult result = orderService.approvePayment(ORDER_ID, "pay-1");
+        Order result = orderService.approvePayment(ORDER_ID, "pay-1");
 
-        assertEquals("APPROVED", result.status());
+        assertEquals(OrderStatus.APPROVED, result.getStatus());
         verify(integrationEventPublisher).publishOrderApproved(ORDER_ID, "pay-1");
     }
 
@@ -336,11 +316,10 @@ class OrderServiceTest {
     void getForRequesterReturnsOrderForOwner() {
         Order order = pendingOrder();
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        when(mapper.toResult(order)).thenReturn(sampleResult("PENDING"));
 
-        OrderResult result = orderService.getForRequester(ORDER_ID, USER_ID);
+        Order result = orderService.getForRequester(ORDER_ID, USER_ID);
 
-        assertEquals("PENDING", result.status());
+        assertEquals(OrderStatus.PENDING, result.getStatus());
     }
 
     @Test
@@ -348,11 +327,10 @@ class OrderServiceTest {
         Order order = pendingOrder();
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of(MERCHANT_ID));
-        when(mapper.toResult(order)).thenReturn(sampleResult("PENDING"));
 
-        OrderResult result = orderService.getForRequester(ORDER_ID, "owner-1");
+        Order result = orderService.getForRequester(ORDER_ID, "owner-1");
 
-        assertEquals("PENDING", result.status());
+        assertEquals(OrderStatus.PENDING, result.getStatus());
     }
 
     @Test
@@ -369,9 +347,8 @@ class OrderServiceTest {
     void listByUserReturnsOrderList() {
         Order order = pendingOrder();
         when(orderRepository.findByUser(USER_ID, 20)).thenReturn(List.of(order));
-        when(mapper.toResult(order)).thenReturn(sampleResult("PENDING"));
 
-        List<OrderResult> results = orderService.listByUser(USER_ID, 20);
+        List<Order> results = orderService.listByUser(USER_ID, 20);
 
         assertEquals(1, results.size());
     }
@@ -381,9 +358,8 @@ class OrderServiceTest {
         Order order = pendingOrder();
         when(orderRepository.findByUserAndStatuses(eq(USER_ID), org.mockito.ArgumentMatchers.anyList(), eq(20)))
                 .thenReturn(List.of(order));
-        when(mapper.toResult(order)).thenReturn(sampleResult("PENDING"));
 
-        List<OrderResult> results = orderService.listByUser(USER_ID, "PENDING", 20);
+        List<Order> results = orderService.listByUser(USER_ID, "PENDING", 20);
 
         assertEquals(1, results.size());
     }
@@ -393,9 +369,8 @@ class OrderServiceTest {
         Order order = pendingOrder();
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of(MERCHANT_ID));
         when(orderRepository.findByMerchant(MERCHANT_ID, 20)).thenReturn(List.of(order));
-        when(mapper.toResult(order)).thenReturn(sampleResult("PENDING"));
 
-        List<OrderResult> results = orderService.listByMerchantOwner("owner-1", null, 20);
+        List<Order> results = orderService.listByMerchantOwner("owner-1", null, 20);
 
         assertEquals(1, results.size());
     }
@@ -405,11 +380,10 @@ class OrderServiceTest {
         Order order = pendingOrder();
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
         when(orderRepository.save(org.mockito.ArgumentMatchers.any())).thenReturn(order);
-        when(mapper.toResult(order)).thenReturn(sampleResult("CANCELLED"));
 
-        OrderResult result = orderService.cancelOnPaymentFailure(ORDER_ID, "ERR_001", "payment gateway error");
+        Order result = orderService.cancelOnPaymentFailure(ORDER_ID, "ERR_001", "payment gateway error");
 
-        assertEquals("CANCELLED", result.status());
+        assertEquals(OrderStatus.CANCELLED, result.getStatus());
     }
 
     @Test

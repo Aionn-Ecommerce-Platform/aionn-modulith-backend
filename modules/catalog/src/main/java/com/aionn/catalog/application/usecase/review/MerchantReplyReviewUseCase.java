@@ -2,18 +2,24 @@ package com.aionn.catalog.application.usecase.review;
 
 import com.aionn.catalog.application.dto.review.command.MerchantReplyCommand;
 import com.aionn.catalog.application.dto.review.result.ReviewResult;
+import com.aionn.catalog.application.mapper.ReviewResultMapper;
 import com.aionn.catalog.application.port.in.review.MerchantReplyReviewInputPort;
 import com.aionn.catalog.application.service.ReviewService;
+import com.aionn.catalog.domain.model.ProductReview;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class MerchantReplyReviewUseCase implements MerchantReplyReviewInputPort {
     private final ReviewService reviewService;
+    private final ReviewResultMapper reviewResultMapper;
 
     @Override
+    @Transactional
     public ReviewResult execute(MerchantReplyCommand command) {
-        return reviewService.merchantReply(command);
+        ProductReview review = reviewService.merchantReply(command);
+        return reviewResultMapper.toResult(review);
     }
 }

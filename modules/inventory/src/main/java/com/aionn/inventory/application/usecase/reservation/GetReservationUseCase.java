@@ -1,6 +1,7 @@
 package com.aionn.inventory.application.usecase.reservation;
 
 import com.aionn.inventory.application.dto.reservation.result.ReservationResult;
+import com.aionn.inventory.application.mapper.ReservationResultMapper;
 import com.aionn.inventory.application.port.in.reservation.GetReservationInputPort;
 import com.aionn.inventory.application.service.StockReservationService;
 import lombok.RequiredArgsConstructor;
@@ -12,10 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class GetReservationUseCase implements GetReservationInputPort {
 
     private final StockReservationService stockReservationService;
+    private final ReservationResultMapper reservationResultMapper;
 
     @Override
     @Transactional(readOnly = true)
     public ReservationResult execute(String reservationId) {
-        return stockReservationService.get(reservationId);
+        return reservationResultMapper.toResult(stockReservationService.get(reservationId));
     }
 }

@@ -1,8 +1,6 @@
 package com.aionn.ordering.application.service;
 
 import com.aionn.ordering.application.dto.cart.command.*;
-import com.aionn.ordering.application.dto.cart.result.CartResult;
-import com.aionn.ordering.application.mapper.OrderingResultMapper;
 import com.aionn.ordering.application.port.out.CartPersistencePort;
 import com.aionn.ordering.domain.exception.OrderingException;
 import com.aionn.ordering.domain.model.Cart;
@@ -19,7 +17,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -35,7 +32,6 @@ class CartServiceTest {
     private static final String CART_ID = "cart-1";
 
     @Mock private CartPersistencePort cartRepository;
-    @Mock private OrderingResultMapper mapper;
     @Mock private EventPublisher eventPublisher;
     @Mock private Clock clock;
 
@@ -60,10 +56,6 @@ class CartServiceTest {
         return new Cart(CART_ID, USER_ID, items, null, fixedInstant, fixedInstant);
     }
 
-    private CartResult sampleCartResult() {
-        return new CartResult(CART_ID, USER_ID, List.of(), null, fixedInstant, fixedInstant);
-    }
-
     @Test
     @DisplayName("removeVoucher() should clear voucher from cart and save changes")
     void removeVoucher_clearsVoucher_whenCartExists() {
@@ -85,9 +77,8 @@ class CartServiceTest {
         Cart saved = cartWithItem("sku-1", 2);
         when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(cart));
         when(cartRepository.save(any(Cart.class))).thenReturn(saved);
-        when(mapper.toResult(saved)).thenReturn(sampleCartResult());
 
-        CartResult result = cartService.addItem(new AddItemCommand(USER_ID, "sku-1", 2));
+        Cart result = cartService.addItem(new AddItemCommand(USER_ID, "sku-1", 2));
 
         assertNotNull(result);
         verify(cartRepository).save(any());
@@ -100,9 +91,8 @@ class CartServiceTest {
         Cart newCart = emptyCart();
         when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
         when(cartRepository.save(any(Cart.class))).thenReturn(newCart);
-        when(mapper.toResult(newCart)).thenReturn(sampleCartResult());
 
-        CartResult result = cartService.addItem(new AddItemCommand(USER_ID, "sku-1", 1));
+        Cart result = cartService.addItem(new AddItemCommand(USER_ID, "sku-1", 1));
 
         assertNotNull(result);
         verify(cartRepository, times(2)).save(any());
@@ -114,9 +104,8 @@ class CartServiceTest {
         Cart cart = cartWithItem("sku-1", 1);
         when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(cart));
         when(cartRepository.save(any(Cart.class))).thenReturn(cart);
-        when(mapper.toResult(cart)).thenReturn(sampleCartResult());
 
-        CartResult result = cartService.updateItemQty(new UpdateItemQtyCommand(USER_ID, "sku-1", 5));
+        Cart result = cartService.updateItemQty(new UpdateItemQtyCommand(USER_ID, "sku-1", 5));
 
         assertNotNull(result);
     }
@@ -135,9 +124,8 @@ class CartServiceTest {
         Cart cart = cartWithItem("sku-1", 3);
         when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(cart));
         when(cartRepository.save(any(Cart.class))).thenReturn(cart);
-        when(mapper.toResult(cart)).thenReturn(sampleCartResult());
 
-        CartResult result = cartService.removeItem(new RemoveItemCommand(USER_ID, "sku-1"));
+        Cart result = cartService.removeItem(new RemoveItemCommand(USER_ID, "sku-1"));
 
         assertNotNull(result);
     }
@@ -148,9 +136,8 @@ class CartServiceTest {
         Cart cart = cartWithItem("sku-1", 2);
         when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(cart));
         when(cartRepository.save(any(Cart.class))).thenReturn(cart);
-        when(mapper.toResult(cart)).thenReturn(sampleCartResult());
 
-        CartResult result = cartService.clearCart(new ClearCartCommand(USER_ID, "reason"));
+        Cart result = cartService.clearCart(new ClearCartCommand(USER_ID, "reason"));
 
         assertNotNull(result);
         verify(eventPublisher).publish(anyCollection());
@@ -162,9 +149,8 @@ class CartServiceTest {
         Cart cart = emptyCart();
         when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(cart));
         when(cartRepository.save(any(Cart.class))).thenReturn(cart);
-        when(mapper.toResult(cart)).thenReturn(sampleCartResult());
 
-        CartResult result = cartService.applyVoucher(new ApplyVoucherCommand(USER_ID, "PROMO10"));
+        Cart result = cartService.applyVoucher(new ApplyVoucherCommand(USER_ID, "PROMO10"));
 
         assertNotNull(result);
         assertEquals("PROMO10", cart.getVoucherCode());
@@ -175,9 +161,8 @@ class CartServiceTest {
     void getMyCart_returnsExistingCart() {
         Cart cart = emptyCart();
         when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(cart));
-        when(mapper.toResult(cart)).thenReturn(sampleCartResult());
 
-        CartResult result = cartService.getMyCart(USER_ID);
+        Cart result = cartService.getMyCart(USER_ID);
 
         assertNotNull(result);
     }
@@ -188,9 +173,8 @@ class CartServiceTest {
         Cart newCart = emptyCart();
         when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
         when(cartRepository.save(any(Cart.class))).thenReturn(newCart);
-        when(mapper.toResult(newCart)).thenReturn(sampleCartResult());
 
-        CartResult result = cartService.getMyCart(USER_ID);
+        Cart result = cartService.getMyCart(USER_ID);
 
         assertNotNull(result);
         verify(cartRepository).save(any());

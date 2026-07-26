@@ -2,19 +2,25 @@ package com.aionn.catalog.application.usecase.product;
 
 import com.aionn.catalog.application.dto.product.command.DeactivateProductCommand;
 import com.aionn.catalog.application.dto.product.result.ProductResult;
+import com.aionn.catalog.application.mapper.ProductResultMapper;
 import com.aionn.catalog.application.port.in.product.DeactivateProductInputPort;
 import com.aionn.catalog.application.service.ProductService;
+import com.aionn.catalog.domain.model.Product;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class DeactivateProductUseCase implements DeactivateProductInputPort {
 
     private final ProductService productService;
+    private final ProductResultMapper productResultMapper;
 
     @Override
+    @Transactional
     public ProductResult execute(DeactivateProductCommand command) {
-        return productService.deactivate(command);
+        Product product = productService.deactivate(command);
+        return productResultMapper.toResult(product);
     }
 }

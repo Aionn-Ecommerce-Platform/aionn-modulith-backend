@@ -1,8 +1,6 @@
 package com.aionn.inventory.application.service;
 
 import com.aionn.inventory.application.dto.inventory.command.*;
-import com.aionn.inventory.application.dto.inventory.result.InventoryItemResult;
-import com.aionn.inventory.application.mapper.InventoryResultMapper;
 import com.aionn.inventory.application.port.out.InventoryItemPersistencePort;
 import com.aionn.inventory.application.port.out.SafetyStockNotifier;
 import com.aionn.inventory.application.port.out.StockAdjustmentPersistencePort;
@@ -42,8 +40,6 @@ class InventoryItemServiceTest {
         WarehousePersistencePort warehouseRepository;
         @Mock
         StockAdjustmentPersistencePort adjustmentRepository;
-        @Mock
-        InventoryResultMapper mapper;
         @Mock
         EventPublisher eventPublisher;
         @Mock
@@ -151,135 +147,137 @@ class InventoryItemServiceTest {
                 verify(safetyStockNotifier).notifySafetyStockBreach(
                                 "M_1", "SKU_1", "WH_1", 5, 10);
         }
-    @Test
-    void initializeRejectsWhenWarehouseInactive() {
-        Warehouse warehouse = mock(Warehouse.class);
-        when(warehouse.getStatus()).thenReturn(com.aionn.inventory.domain.valueobject.WarehouseStatus.SUSPENDED);
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
-        when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
 
-        assertThatThrownBy(() -> service.initialize(new InitializeStockCommand(
-                "owner-1", "SKU_1", "WH_1", 10)))
-                .isInstanceOf(InventoryException.class)
-                .extracting("errorCode")
-                .isEqualTo(InventoryErrorCode.WAREHOUSE_INVALID_TRANSITION.getCode());
-    }
+        @Test
+        void initializeRejectsWhenWarehouseInactive() {
+                Warehouse warehouse = mock(Warehouse.class);
+                when(warehouse.getStatus())
+                                .thenReturn(com.aionn.inventory.domain.valueobject.WarehouseStatus.SUSPENDED);
+                when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
+                when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
 
-    @Test
-    void initializeHandlesDataIntegrityViolationException() {
-        Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1);
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
-        when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
-        when(itemRepository.findByKey(any())).thenReturn(Optional.empty());
-        when(itemRepository.save(any())).thenThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate"));
+                assertThatThrownBy(() -> service.initialize(new InitializeStockCommand(
+                                "owner-1", "SKU_1", "WH_1", 10)))
+                                .isInstanceOf(InventoryException.class)
+                                .extracting("errorCode")
+                                .isEqualTo(InventoryErrorCode.WAREHOUSE_INVALID_TRANSITION.getCode());
+        }
 
-        assertThatThrownBy(() -> service.initialize(new InitializeStockCommand(
-                "owner-1", "SKU_1", "WH_1", 10)))
-                .isInstanceOf(InventoryException.class)
-                .extracting("errorCode")
-                .isEqualTo(InventoryErrorCode.INVENTORY_ALREADY_INITIALIZED.getCode());
-    }
+        @Test
+        void initializeHandlesDataIntegrityViolationException() {
+                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1);
+                when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
+                when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
+                when(itemRepository.findByKey(any())).thenReturn(Optional.empty());
+                when(itemRepository.save(any()))
+                                .thenThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate"));
 
-    @Test
-    void trackBatchAndExpiryUpdatesSuccessfully() {
-        Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1);
-        InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10);
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
-        when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
-        when(itemRepository.lockByKey(any())).thenReturn(Optional.of(item));
-        when(itemRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+                assertThatThrownBy(() -> service.initialize(new InitializeStockCommand(
+                                "owner-1", "SKU_1", "WH_1", 10)))
+                                .isInstanceOf(InventoryException.class)
+                                .extracting("errorCode")
+                                .isEqualTo(InventoryErrorCode.INVENTORY_ALREADY_INITIALIZED.getCode());
+        }
 
-        service.trackBatchAndExpiry(new TrackBatchAndExpiryCommand(
-                "owner-1", "SKU_1", "WH_1", "BATCH_1", java.time.LocalDate.parse("2027-01-01")));
+        @Test
+        void trackBatchAndExpiryUpdatesSuccessfully() {
+                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1);
+                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10);
+                when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
+                when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
+                when(itemRepository.lockByKey(any())).thenReturn(Optional.of(item));
+                when(itemRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        verify(itemRepository).save(item);
-    }
+                service.trackBatchAndExpiry(new TrackBatchAndExpiryCommand(
+                                "owner-1", "SKU_1", "WH_1", "BATCH_1", java.time.LocalDate.parse("2027-01-01")));
 
-    @Test
-    void manualAdjustmentAppliesDecreaseAndSaves() {
-        Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1);
-        InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 20);
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
-        when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
-        when(itemRepository.lockByKey(any())).thenReturn(Optional.of(item));
-        when(itemRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+                verify(itemRepository).save(item);
+        }
 
-        service.manualAdjustment(new ManualAdjustmentCommand(
-                "owner-1", "SKU_1", "WH_1", 5, AdjustmentType.MANUAL_DECREASE, "loss"));
+        @Test
+        void manualAdjustmentAppliesDecreaseAndSaves() {
+                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1);
+                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 20);
+                when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
+                when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
+                when(itemRepository.lockByKey(any())).thenReturn(Optional.of(item));
+                when(itemRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        verify(itemRepository).save(item);
-        verify(adjustmentRepository).save(any());
-    }
+                service.manualAdjustment(new ManualAdjustmentCommand(
+                                "owner-1", "SKU_1", "WH_1", 5, AdjustmentType.MANUAL_DECREASE, "loss"));
 
-    @Test
-    void emergencyUnlockUnlocksItemSuccessfully() {
-        InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10);
-        item.emergencyLock("admin-1", "audit", clock);
-        when(itemRepository.lockByKey(any())).thenReturn(Optional.of(item));
-        when(itemRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+                verify(itemRepository).save(item);
+                verify(adjustmentRepository).save(any());
+        }
 
-        service.emergencyUnlock(new EmergencyUnlockCommand("admin-1", "SKU_1", "WH_1"));
+        @Test
+        void emergencyUnlockUnlocksItemSuccessfully() {
+                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10);
+                item.emergencyLock("admin-1", "audit", clock);
+                when(itemRepository.lockByKey(any())).thenReturn(Optional.of(item));
+                when(itemRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        verify(itemRepository).save(item);
-    }
+                service.emergencyUnlock(new EmergencyUnlockCommand("admin-1", "SKU_1", "WH_1"));
 
-    @Test
-    void auditInventoryReconcilesStockLevel() {
-        Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1);
-        InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10);
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
-        when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
-        when(itemRepository.lockByKey(any())).thenReturn(Optional.of(item));
-        when(itemRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+                verify(itemRepository).save(item);
+        }
 
-        service.auditInventory(new AuditInventoryCommand("owner-1", "SKU_1", "WH_1", 15));
+        @Test
+        void auditInventoryReconcilesStockLevel() {
+                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1);
+                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10);
+                when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
+                when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
+                when(itemRepository.lockByKey(any())).thenReturn(Optional.of(item));
+                when(itemRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        verify(itemRepository).save(item);
-    }
+                service.auditInventory(new AuditInventoryCommand("owner-1", "SKU_1", "WH_1", 15));
 
-    @Test
-    void getReturnsInventoryItemWhenFound() {
-        InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10);
-        when(itemRepository.findByKey(any())).thenReturn(Optional.of(item));
-        InventoryItemResult expected = mock(InventoryItemResult.class);
-        when(mapper.toResult(item)).thenReturn(expected);
+                verify(itemRepository).save(item);
+        }
 
-        InventoryItemResult result = service.get("SKU_1", "WH_1");
+        @Test
+        void getReturnsInventoryItemWhenFound() {
+                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10);
+                when(itemRepository.findByKey(any())).thenReturn(Optional.of(item));
 
-        assertEquals(expected, result);
-    }
+                InventoryItem result = service.get("SKU_1", "WH_1");
 
-    @Test
-    void getThrowsNotFoundWhenItemMissing() {
-        when(itemRepository.findByKey(any())).thenReturn(Optional.empty());
+                assertEquals(item, result);
+        }
 
-        assertThatThrownBy(() -> service.get("SKU_1", "WH_1"))
-                .isInstanceOf(InventoryException.class)
-                .extracting("errorCode")
-                .isEqualTo(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND.getCode());
-    }
+        @Test
+        void getThrowsNotFoundWhenItemMissing() {
+                when(itemRepository.findByKey(any())).thenReturn(Optional.empty());
 
-    @Test
-    void listBySkuReturnsItems() {
-        InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10);
-        when(itemRepository.findBySku("SKU_1")).thenReturn(java.util.List.of(item));
+                assertThatThrownBy(() -> service.get("SKU_1", "WH_1"))
+                                .isInstanceOf(InventoryException.class)
+                                .extracting("errorCode")
+                                .isEqualTo(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND.getCode());
+        }
 
-        service.listBySku("SKU_1");
+        @Test
+        void listBySkuReturnsItems() {
+                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10);
+                when(itemRepository.findBySku("SKU_1")).thenReturn(java.util.List.of(item));
 
-        verify(itemRepository).findBySku("SKU_1");
-    }
+                service.listBySku("SKU_1");
 
-    @Test
-    void listByWarehouseReturnsPaginatedPageResult() {
-        Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1);
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
-        when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
+                verify(itemRepository).findBySku("SKU_1");
+        }
 
-        org.springframework.data.domain.Page<InventoryItem> page = new org.springframework.data.domain.PageImpl<>(java.util.Collections.emptyList());
-        when(itemRepository.findByWarehouse(eq("WH_1"), any())).thenReturn(page);
+        @Test
+        void listByWarehouseReturnsPaginatedPageResult() {
+                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1);
+                when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
+                when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
 
-        service.listByWarehouse("owner-1", "WH_1", org.springframework.data.domain.PageRequest.of(0, 10));
+                org.springframework.data.domain.Page<InventoryItem> page = new org.springframework.data.domain.PageImpl<>(
+                                java.util.Collections.emptyList());
+                when(itemRepository.findByWarehouse(eq("WH_1"), any())).thenReturn(page);
 
-        verify(itemRepository).findByWarehouse(eq("WH_1"), any());
-    }
+                service.listByWarehouse("owner-1", "WH_1", org.springframework.data.domain.PageRequest.of(0, 10));
+
+                verify(itemRepository).findByWarehouse(eq("WH_1"), any());
+        }
 }

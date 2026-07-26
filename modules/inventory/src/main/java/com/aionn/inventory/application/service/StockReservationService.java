@@ -3,8 +3,6 @@ package com.aionn.inventory.application.service;
 import com.aionn.inventory.application.dto.reservation.command.CommitReservationCommand;
 import com.aionn.inventory.application.dto.reservation.command.ReleaseReservationCommand;
 import com.aionn.inventory.application.dto.reservation.command.ReserveStockCommand;
-import com.aionn.inventory.application.dto.reservation.result.ReservationResult;
-import com.aionn.inventory.application.mapper.InventoryResultMapper;
 import com.aionn.inventory.application.port.out.InventoryItemPersistencePort;
 import com.aionn.inventory.application.port.out.OutboundOrderNotifier;
 import com.aionn.inventory.application.port.out.StockAdjustmentPersistencePort;
@@ -36,12 +34,11 @@ public class StockReservationService {
         private final InventoryItemPersistencePort itemRepository;
         private final StockReservationPersistencePort reservationRepository;
         private final StockAdjustmentPersistencePort adjustmentRepository;
-        private final InventoryResultMapper mapper;
         private final EventPublisher eventPublisher;
         private final OutboundOrderNotifier outboundOrderNotifier;
         private final Clock clock;
 
-        public ReservationResult reserve(ReserveStockCommand command) {
+        public StockReservation reserve(ReserveStockCommand command) {
                 InventoryItemKey key = new InventoryItemKey(command.skuId(), command.warehouseId());
                 InventoryItem item = itemRepository.lockByKey(key)
                                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND));
@@ -54,7 +51,7 @@ public class StockReservationService {
                         eventPublisher.publish(failed.pullEvents());
                         outboundOrderNotifier.notifyReservationFailed(command.orderId(),
                                         command.skuId(), command.warehouseId(), command.qty(), reason);
-                        return mapper.toResult(saved);
+                        return saved;
                 }
 
                 item.reserve(command.qty(), clock);
@@ -62,14 +59,15 @@ public class StockReservationService {
 
                 Instant expiresAt = clock.instant().plus(Duration.ofSeconds(command.ttlSeconds()));
                 StockReservation reservation = StockReservation.reserve(IdGenerator.ulid(),
-                                command.skuId(), command.warehouseId(), command.orderId(), command.qty(), expiresAt, clock);
+                                command.skuId(), command.warehouseId(), command.orderId(), command.qty(), expiresAt,
+                                clock);
                 StockReservation saved = reservationRepository.save(reservation);
                 eventPublisher.publish(reservation.pullEvents());
                 eventPublisher.publish(item.pullEvents());
-                return mapper.toResult(saved);
+                return saved;
         }
 
-        public ReservationResult commit(CommitReservationCommand command) {
+        public StockReservation commit(CommitReservationCommand command) {
                 StockReservation reservation = reservationRepository.findById(command.reservationId())
                                 .orElseThrow(() -> new InventoryException(
                                                 InventoryErrorCode.STOCK_RESERVATION_NOT_FOUND));
@@ -96,10 +94,10 @@ public class StockReservationService {
                 eventPublisher.publish(outbound.pullEvents());
                 outboundOrderNotifier.notifyOutbound(reservation.getOrderId(), reservation.getReservationId(),
                                 reservation.getSkuId(), reservation.getWarehouseId(), reservation.getQty());
-                return mapper.toResult(saved);
+                return saved;
         }
 
-        public ReservationResult release(ReleaseReservationCommand command) {
+        public StockReservation release(ReleaseReservationCommand command) {
                 StockReservation reservation = reservationRepository.findById(command.reservationId())
                                 .orElseThrow(() -> new InventoryException(
                                                 InventoryErrorCode.STOCK_RESERVATION_NOT_FOUND));
@@ -118,13 +116,13 @@ public class StockReservationService {
 
                 eventPublisher.publish(reservation.pullEvents());
                 eventPublisher.publish(item.pullEvents());
-                return mapper.toResult(saved);
+                return saved;
         }
 
         @Transactional(readOnly = true)
-        public ReservationResult get(String reservationId) {
-                return mapper.toResult(reservationRepository.findById(reservationId)
+        public StockReservation get(String reservationId) {
+                return reservationRepository.findById(reservationId)
                                 .orElseThrow(() -> new InventoryException(
-                                                InventoryErrorCode.STOCK_RESERVATION_NOT_FOUND)));
+                                                InventoryErrorCode.STOCK_RESERVATION_NOT_FOUND));
         }
 }

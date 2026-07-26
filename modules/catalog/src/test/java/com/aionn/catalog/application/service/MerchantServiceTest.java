@@ -3,8 +3,6 @@ package com.aionn.catalog.application.service;
 import com.aionn.catalog.application.dto.merchant.command.CloseMerchantCommand;
 import com.aionn.catalog.application.dto.merchant.command.RegisterMerchantCommand;
 import com.aionn.catalog.application.dto.merchant.command.UpdateMerchantProfileCommand;
-import com.aionn.catalog.application.dto.merchant.result.MerchantResult;
-import com.aionn.catalog.application.mapper.MerchantResultMapper;
 import com.aionn.catalog.application.port.out.merchant.MerchantPersistencePort;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
@@ -38,8 +36,6 @@ class MerchantServiceTest {
         @Mock
         private MerchantPersistencePort merchantRepository;
         @Mock
-        private MerchantResultMapper merchantResultMapper;
-        @Mock
         private EventPublisher eventPublisher;
         @Mock
         private OrderQueryPort orderQueryPort;
@@ -51,9 +47,9 @@ class MerchantServiceTest {
         private com.aionn.catalog.application.port.out.observability.CatalogMetricsPort metricsPort;
 
         @Spy
-    private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
+        private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
 
-    @InjectMocks
+        @InjectMocks
         private MerchantService merchantService;
 
         @Test
@@ -61,14 +57,10 @@ class MerchantServiceTest {
                 when(catalogSettingsPort.getDefaultCommissionRate()).thenReturn(new BigDecimal("0.0500"));
                 when(merchantRepository.existsByOwnerId("owner-1")).thenReturn(false);
                 when(merchantRepository.save(any(Merchant.class))).thenAnswer(inv -> inv.getArgument(0));
-                MerchantResult dto = new MerchantResult(
-                                "m-1", "owner-1", "Acme", null, null, null, null, "PENDING",
-                                Instant.now(), Instant.now());
-                when(merchantResultMapper.toResult(any(Merchant.class))).thenReturn(dto);
 
-                MerchantResult result = merchantService.register(new RegisterMerchantCommand("owner-1", "Acme"));
+                Merchant result = merchantService.register(new RegisterMerchantCommand("owner-1", "Acme"));
 
-                assertThat(result).isEqualTo(dto);
+                assertThat(result.getName()).isEqualTo("Acme");
                 verify(merchantRepository).save(any(Merchant.class));
                 verify(eventPublisher).publish(anyCollection());
         }
@@ -93,15 +85,11 @@ class MerchantServiceTest {
                 when(addressLookupPort.resolveProvince("01"))
                                 .thenReturn(Optional.of(new AddressLookupPort.ResolvedProvince("01", "Ha Noi")));
                 when(merchantRepository.save(merchant)).thenReturn(merchant);
-                MerchantResult dto = new MerchantResult(
-                                "m-1", "owner-1", "Acme Pro", null, null, "01", "Ha Noi", "ACTIVE",
-                                Instant.now(), Instant.now());
-                when(merchantResultMapper.toResult(merchant)).thenReturn(dto);
 
-                MerchantResult result = merchantService.updateProfile(new UpdateMerchantProfileCommand(
+                Merchant result = merchantService.updateProfile(new UpdateMerchantProfileCommand(
                                 "m-1", "owner-1", "Acme Pro", null, null, "01"));
 
-                assertThat(result).isEqualTo(dto);
+                assertThat(result.getName()).isEqualTo("Acme Pro");
                 assertThat(merchant.getProvinceCode()).isEqualTo("01");
                 assertThat(merchant.getProvinceName()).isEqualTo("Ha Noi");
                 verify(eventPublisher).publish(anyCollection());
@@ -150,16 +138,12 @@ class MerchantServiceTest {
                 merchant.pullEvents();
                 when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
                 when(merchantRepository.save(merchant)).thenReturn(merchant);
-                MerchantResult dto = new MerchantResult(
-                                "m-1", "owner-1", "Acme", null, null, null, null, "SUSPENDED",
-                                Instant.now(), Instant.now());
-                when(merchantResultMapper.toResult(merchant)).thenReturn(dto);
 
-                MerchantResult result = merchantService.suspend(
+                Merchant result = merchantService.suspend(
                                 new com.aionn.catalog.application.dto.merchant.command.SuspendMerchantCommand(
                                                 "m-1", "admin-1", "violation"));
 
-                assertThat(result).isEqualTo(dto);
+                assertThat(result.getName()).isEqualTo("Acme");
                 verify(eventPublisher).publish(anyCollection());
         }
 
@@ -171,16 +155,12 @@ class MerchantServiceTest {
                 merchant.pullEvents();
                 when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
                 when(merchantRepository.save(merchant)).thenReturn(merchant);
-                MerchantResult dto = new MerchantResult(
-                                "m-1", "owner-1", "Acme", null, null, null, null, "ACTIVE",
-                                Instant.now(), Instant.now());
-                when(merchantResultMapper.toResult(merchant)).thenReturn(dto);
 
-                MerchantResult result = merchantService.activate(
+                Merchant result = merchantService.activate(
                                 new com.aionn.catalog.application.dto.merchant.command.ActivateMerchantCommand(
                                                 "m-1", "admin-1", "reinstate"));
 
-                assertThat(result).isEqualTo(dto);
+                assertThat(result.getName()).isEqualTo("Acme");
                 verify(eventPublisher).publish(anyCollection());
         }
 
@@ -192,14 +172,10 @@ class MerchantServiceTest {
                 when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
                 when(orderQueryPort.hasOpenOrdersForMerchant("m-1")).thenReturn(false);
                 when(merchantRepository.save(merchant)).thenReturn(merchant);
-                MerchantResult dto = new MerchantResult(
-                                "m-1", "owner-1", "Acme", null, null, null, null, "CLOSED",
-                                Instant.now(), Instant.now());
-                when(merchantResultMapper.toResult(merchant)).thenReturn(dto);
 
-                MerchantResult result = merchantService.close(new CloseMerchantCommand("m-1", "owner-1", "stop"));
+                Merchant result = merchantService.close(new CloseMerchantCommand("m-1", "owner-1", "stop"));
 
-                assertThat(result).isEqualTo(dto);
+                assertThat(result.getName()).isEqualTo("Acme");
                 verify(eventPublisher).publish(anyCollection());
         }
 
@@ -207,12 +183,11 @@ class MerchantServiceTest {
         void getByOwnerReturnsResult() {
                 Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"));
                 when(merchantRepository.findByOwnerId("owner-1")).thenReturn(Optional.of(merchant));
-                MerchantResult dto = new MerchantResult(
-                                "m-1", "owner-1", "Acme", null, null, null, null, "PENDING",
-                                Instant.now(), Instant.now());
-                when(merchantResultMapper.toResult(merchant)).thenReturn(dto);
 
-                assertThat(merchantService.getByOwner("owner-1")).isEqualTo(dto);
+                Merchant result = merchantService.getByOwner("owner-1");
+
+                assertThat(result.getMerchantId()).isEqualTo("m-1");
+                assertThat(result.getName()).isEqualTo("Acme");
         }
 
         @Test
@@ -231,16 +206,12 @@ class MerchantServiceTest {
                 merchant.pullEvents();
                 when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
                 when(merchantRepository.save(merchant)).thenReturn(merchant);
-                MerchantResult dto = new MerchantResult(
-                                "m-1", "owner-1", "Acme", null, null, null, null, "PENDING",
-                                Instant.now(), Instant.now());
-                when(merchantResultMapper.toResult(merchant)).thenReturn(dto);
 
-                MerchantResult result = merchantService.updateCommissionRate(
+                Merchant result = merchantService.updateCommissionRate(
                                 new com.aionn.catalog.application.dto.merchant.command.UpdateMerchantCommissionRateCommand(
                                                 "m-1", new BigDecimal("0.0800")));
 
-                assertThat(result).isEqualTo(dto);
+                assertThat(result.getName()).isEqualTo("Acme");
                 assertThat(merchant.getCommissionRate()).isEqualByComparingTo("0.0800");
         }
 }

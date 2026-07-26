@@ -1,5 +1,6 @@
 package com.aionn.catalog.application.mapper;
 
+import com.aionn.catalog.application.dto.common.PageResult;
 import com.aionn.catalog.application.dto.review.result.ReviewResult;
 import com.aionn.catalog.domain.model.ProductReview;
 import org.springframework.stereotype.Component;
@@ -30,5 +31,22 @@ public class ReviewResultMapper {
                 review.getReportedAt(),
                 review.getCreatedAt(),
                 review.getUpdatedAt());
+    }
+
+    public List<ReviewResult> toResults(List<ProductReview> reviews) {
+        if (reviews == null) {
+            return List.of();
+        }
+        return reviews.stream()
+                .map(this::toResult)
+                .toList();
+    }
+
+    public PageResult<ReviewResult> toPageResult(PageResult<ProductReview> page) {
+        return new PageResult<>(
+                toResults(page.content()),
+                page.page(),
+                page.size(),
+                page.totalElements());
     }
 }

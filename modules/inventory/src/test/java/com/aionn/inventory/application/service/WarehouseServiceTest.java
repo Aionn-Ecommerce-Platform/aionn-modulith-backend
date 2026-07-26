@@ -1,8 +1,6 @@
 package com.aionn.inventory.application.service;
 
 import com.aionn.inventory.application.dto.warehouse.command.*;
-import com.aionn.inventory.application.dto.warehouse.result.WarehouseResult;
-import com.aionn.inventory.application.mapper.InventoryResultMapper;
 import com.aionn.inventory.application.port.out.WarehousePersistencePort;
 import com.aionn.inventory.domain.exception.InventoryErrorCode;
 import com.aionn.inventory.domain.exception.InventoryException;
@@ -34,8 +32,6 @@ class WarehouseServiceTest {
 
     @Mock
     WarehousePersistencePort warehouseRepository;
-    @Mock
-    InventoryResultMapper mapper;
     @Mock
     EventPublisher eventPublisher;
     @Mock
@@ -151,12 +147,10 @@ class WarehouseServiceTest {
     void get_returnsWarehouseResult() {
         Warehouse warehouse = Warehouse.create("W_1", "M_1", "addr", 1);
         when(warehouseRepository.findById("W_1")).thenReturn(Optional.of(warehouse));
-        WarehouseResult expectedResult = mock(WarehouseResult.class);
-        when(mapper.toResult(warehouse)).thenReturn(expectedResult);
 
-        WarehouseResult result = warehouseService.get("W_1");
+        Warehouse result = warehouseService.get("W_1");
 
-        assertEquals(expectedResult, result);
+        assertEquals(warehouse, result);
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.aionn.catalog.application.mapper;
 
+import com.aionn.catalog.application.dto.common.PageResult;
 import com.aionn.catalog.application.dto.product.result.ProductResult;
 import com.aionn.catalog.domain.model.Product;
 import com.aionn.catalog.domain.model.ProductVariant;
@@ -56,6 +57,23 @@ public class ProductResultMapper {
                 product.getStatus() != null ? product.getStatus().name() : null,
                 product.getCreatedAt(),
                 product.getUpdatedAt());
+    }
+
+    public List<ProductResult> toResults(List<Product> products) {
+        if (products == null) {
+            return List.of();
+        }
+        return products.stream()
+                .map(this::toResult)
+                .toList();
+    }
+
+    public PageResult<ProductResult> toPageResult(PageResult<Product> page) {
+        return new PageResult<>(
+                toResults(page.content()),
+                page.page(),
+                page.size(),
+                page.totalElements());
     }
 
     private static ProductResult.Variant toVariantResult(ProductVariant variant) {

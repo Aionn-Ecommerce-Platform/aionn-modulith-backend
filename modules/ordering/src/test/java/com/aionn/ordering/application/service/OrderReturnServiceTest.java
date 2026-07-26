@@ -2,8 +2,6 @@ package com.aionn.ordering.application.service;
 
 import com.aionn.ordering.application.dto.returns.command.RejectReturnCommand;
 import com.aionn.ordering.application.dto.returns.command.RequestReturnCommand;
-import com.aionn.ordering.application.dto.returns.result.ReturnResult;
-import com.aionn.ordering.application.mapper.OrderingResultMapper;
 import com.aionn.ordering.application.port.out.OrderPersistencePort;
 import com.aionn.ordering.application.port.out.OrderReturnPersistencePort;
 import com.aionn.ordering.application.port.out.PaymentGateway;
@@ -45,7 +43,6 @@ class OrderReturnServiceTest {
 
     @Mock private OrderPersistencePort orderRepository;
     @Mock private OrderReturnPersistencePort returnRepository;
-    @Mock private OrderingResultMapper mapper;
     @Mock private EventPublisher eventPublisher;
     @Mock private MerchantQueryPort merchantQueryPort;
     @Mock private PaymentGateway paymentGateway;
@@ -57,7 +54,7 @@ class OrderReturnServiceTest {
     void setUp() {
         lenient().when(clock.instant()).thenReturn(java.time.Instant.parse("2026-07-18T12:00:00Z"));
         service = new OrderReturnService(
-                orderRepository, returnRepository, mapper, eventPublisher,
+                orderRepository, returnRepository, eventPublisher,
                 merchantQueryPort, paymentGateway, clock);
     }
 
@@ -89,12 +86,6 @@ class OrderReturnServiceTest {
                 ReturnStatus.REQUESTED, Instant.parse("2026-07-18T12:00:00Z"), null, null);
     }
 
-    private static ReturnResult sampleResult(String status) {
-        return new ReturnResult(RETURN_ID, ORDER_ID, USER_ID, MERCHANT_ID,
-                "broken", null, null, null, null, null, null,
-                status, Instant.now(), null, null);
-    }
-
     @Test
     void requestReturnRejectsWhenOrderIsNotCompleted() {
         Order order = Order.place(ORDER_ID, USER_ID, MERCHANT_ID, "prop-1",
@@ -123,12 +114,11 @@ class OrderReturnServiceTest {
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
         when(returnRepository.save(any(OrderReturn.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
-        when(mapper.toResult(any(OrderReturn.class))).thenReturn(sampleResult("REQUESTED"));
 
-        ReturnResult result = service.requestReturn(
+        OrderReturn result = service.requestReturn(
                 new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null));
 
-        assertEquals("REQUESTED", result.status());
+        assertEquals(ReturnStatus.REQUESTED, result.getStatus());
         verify(returnRepository).save(any(OrderReturn.class));
     }
 
@@ -139,12 +129,11 @@ class OrderReturnServiceTest {
                 .thenReturn(Optional.of(MERCHANT_ID));
         when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
         when(returnRepository.save(r)).thenReturn(r);
-        when(mapper.toResult(r)).thenReturn(sampleResult("REJECTED"));
 
-        ReturnResult result = service.reject(new RejectReturnCommand(
+        OrderReturn result = service.reject(new RejectReturnCommand(
                 RETURN_ID, "owner-1", "no proof"));
 
-        assertEquals("REJECTED", result.status());
+        assertEquals(ReturnStatus.REJECTED, result.getStatus());
         assertEquals(ReturnStatus.REJECTED, r.getStatus());
     }
 
@@ -161,11 +150,10 @@ class OrderReturnServiceTest {
     void getForRequesterReturnsResultForOwningUser() {
         OrderReturn r = requestedReturn();
         when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
-        when(mapper.toResult(r)).thenReturn(sampleResult("REQUESTED"));
 
-        ReturnResult result = service.getForRequester(RETURN_ID, USER_ID);
+        OrderReturn result = service.getForRequester(RETURN_ID, USER_ID);
 
-        assertEquals("REQUESTED", result.status());
+        assertEquals(ReturnStatus.REQUESTED, result.getStatus());
     }
 
     @Test
@@ -182,12 +170,11 @@ class OrderReturnServiceTest {
     void listMineMapsResultsFromRepository() {
         OrderReturn r = requestedReturn();
         when(returnRepository.findByUserId(USER_ID, 50)).thenReturn(List.of(r));
-        when(mapper.toResult(r)).thenReturn(sampleResult("REQUESTED"));
 
-        List<ReturnResult> results = service.listMine(USER_ID, 50);
+        List<OrderReturn> results = service.listMine(USER_ID, 50);
 
         assertEquals(1, results.size());
-        assertEquals("REQUESTED", results.get(0).status());
+        assertEquals(ReturnStatus.REQUESTED, results.get(0).getStatus());
     }
 
     @Test
@@ -204,7 +191,6 @@ class OrderReturnServiceTest {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of(MERCHANT_ID));
         when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
         when(returnRepository.save(r)).thenReturn(r);
-        when(mapper.toResult(r)).thenReturn(sampleResult("APPROVED"));
         // refundAmount required by domain model; order has no paymentId so refund is skipped
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
         com.aionn.ordering.application.dto.returns.command.ApproveReturnCommand cmd =
@@ -213,7 +199,7 @@ class OrderReturnServiceTest {
 
         var result = service.approve(cmd);
 
-        assertEquals("APPROVED", result.status());
+        assertEquals(ReturnStatus.APPROVED, result.getStatus());
         verify(returnRepository).save(r);
     }
 
@@ -225,13 +211,12 @@ class OrderReturnServiceTest {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of(MERCHANT_ID));
         when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
         when(returnRepository.save(r)).thenReturn(r);
-        when(mapper.toResult(r)).thenReturn(sampleResult("ITEM_RECEIVED"));
 
         var result = service.confirmItemReceived(
                 new com.aionn.ordering.application.dto.returns.command.ConfirmItemReceivedCommand(
                         RETURN_ID, "owner-1", "GOOD"));
 
-        assertEquals("ITEM_RECEIVED", result.status());
+        assertEquals(ReturnStatus.ITEM_RECEIVED, result.getStatus());
     }
 
     @Test
@@ -239,7 +224,6 @@ class OrderReturnServiceTest {
         OrderReturn r = requestedReturn();
         when(merchantQueryPort.findMerchantIdByOwnerId(USER_ID)).thenReturn(Optional.of(MERCHANT_ID));
         when(returnRepository.findByMerchantId(MERCHANT_ID, 50)).thenReturn(java.util.List.of(r));
-        when(mapper.toResult(r)).thenReturn(sampleResult("REQUESTED"));
 
         var results = service.listMerchant(USER_ID, 50);
 
@@ -257,11 +241,10 @@ class OrderReturnServiceTest {
     void adminGetReturnsFetchedReturn() {
         OrderReturn r = requestedReturn();
         when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
-        when(mapper.toResult(r)).thenReturn(sampleResult("REQUESTED"));
 
         var result = service.adminGet(RETURN_ID);
 
-        assertEquals("REQUESTED", result.status());
+        assertEquals(ReturnStatus.REQUESTED, result.getStatus());
     }
 
     @Test
@@ -276,11 +259,10 @@ class OrderReturnServiceTest {
         OrderReturn r = requestedReturn();
         when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
         when(returnRepository.save(r)).thenReturn(r);
-        when(mapper.toResult(r)).thenReturn(sampleResult("REJECTED"));
 
         var result = service.adminReject(RETURN_ID, "invalid claim");
 
-        assertEquals("REJECTED", result.status());
+        assertEquals(ReturnStatus.REJECTED, result.getStatus());
     }
 
     @Test
@@ -288,13 +270,12 @@ class OrderReturnServiceTest {
         OrderReturn r = requestedReturn();
         when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
         when(returnRepository.save(r)).thenReturn(r);
-        when(mapper.toResult(r)).thenReturn(sampleResult("APPROVED"));
         // refundAmount required; order has no paymentId so refund call is skipped
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
 
         var result = service.adminApprove(RETURN_ID, java.math.BigDecimal.valueOf(150), "VND", "wh-1");
 
-        assertEquals("APPROVED", result.status());
+        assertEquals(ReturnStatus.APPROVED, result.getStatus());
     }
 
     @Test
@@ -304,11 +285,10 @@ class OrderReturnServiceTest {
                 ReturnStatus.APPROVED, Instant.now(), null, null);
         when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
         when(returnRepository.save(r)).thenReturn(r);
-        when(mapper.toResult(r)).thenReturn(sampleResult("ITEM_RECEIVED"));
 
         var result = service.adminConfirmItemReceived(RETURN_ID, "GOOD");
 
-        assertEquals("ITEM_RECEIVED", result.status());
+        assertEquals(ReturnStatus.ITEM_RECEIVED, result.getStatus());
     }
 
     @Test
@@ -317,11 +297,10 @@ class OrderReturnServiceTest {
         when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
         when(merchantQueryPort.findMerchantIdByOwnerId("merchant-owner"))
                 .thenReturn(Optional.of(MERCHANT_ID));
-        when(mapper.toResult(r)).thenReturn(sampleResult("REQUESTED"));
 
         var result = service.getForRequester(RETURN_ID, "merchant-owner");
 
-        assertEquals("REQUESTED", result.status());
+        assertEquals(ReturnStatus.REQUESTED, result.getStatus());
     }
 
     @Test
@@ -369,7 +348,6 @@ class OrderReturnServiceTest {
         OrderReturn r = requestedReturn();
         when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
         when(returnRepository.save(r)).thenReturn(r);
-        when(mapper.toResult(r)).thenReturn(sampleResult("APPROVED"));
         
         Order order = completedOrder();
         // set paymentId on order using reflection

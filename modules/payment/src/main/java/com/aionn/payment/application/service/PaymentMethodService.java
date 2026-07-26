@@ -3,9 +3,7 @@ package com.aionn.payment.application.service;
 import com.aionn.payment.application.dto.method.command.LinkMethodCommand;
 import com.aionn.payment.application.dto.method.command.RemoveMethodCommand;
 import com.aionn.payment.application.dto.method.command.VerifyMethodCommand;
-import com.aionn.payment.application.dto.method.result.PaymentMethodResult;
 import com.aionn.payment.application.dto.method.result.StripeSetupIntentResult;
-import com.aionn.payment.application.mapper.PaymentResultMapper;
 import com.aionn.payment.application.port.out.PaymentMethodPersistencePort;
 import com.aionn.payment.domain.exception.PaymentErrorCode;
 import com.aionn.payment.domain.exception.PaymentException;
@@ -34,27 +32,26 @@ import java.util.Locale;
 public class PaymentMethodService {
 
     private final PaymentMethodPersistencePort repository;
-    private final PaymentResultMapper mapper;
     private final EventPublisher eventPublisher;
     private final StripeProperties stripeProperties;
     private final Clock clock;
 
-    public PaymentMethodResult link(LinkMethodCommand command) {
+    public PaymentMethod link(LinkMethodCommand command) {
         Instant now = clock.instant();
         PaymentMethod method = PaymentMethod.link(IdGenerator.ulid(),
                 command.userId(), command.provider(), command.last4Digits(), command.gatewayToken(), now);
         PaymentMethod saved = repository.save(method);
         eventPublisher.publish(method.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public PaymentMethodResult verify(VerifyMethodCommand command) {
+    public PaymentMethod verify(VerifyMethodCommand command) {
         PaymentMethod method = ownedBy(command.methodId(), command.userId());
         Instant now = clock.instant();
         method.verify(now);
         PaymentMethod saved = repository.save(method);
         eventPublisher.publish(method.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
     public StripeSetupIntentResult createStripeSetupIntent(String userId) {
@@ -74,7 +71,7 @@ public class PaymentMethodService {
         }
     }
 
-    public PaymentMethodResult completeStripeSetupIntent(String userId, String setupIntentId) {
+    public PaymentMethod completeStripeSetupIntent(String userId, String setupIntentId) {
         ensureStripeConfigured();
         try {
             SetupIntent intent = SetupIntent.retrieve(setupIntentId, stripeRequestOptions());
@@ -107,7 +104,7 @@ public class PaymentMethodService {
             method.verify(now);
             PaymentMethod saved = repository.save(method);
             eventPublisher.publish(method.pullEvents());
-            return mapper.toResult(saved);
+            return saved;
         } catch (StripeException ex) {
             log.warn("Stripe setup-intent completion failed: {}", ex.getMessage());
             throw new PaymentException(PaymentErrorCode.PAYMENT_GATEWAY_ERROR, ex.getMessage());
@@ -123,13 +120,13 @@ public class PaymentMethodService {
     }
 
     @Transactional(readOnly = true)
-    public List<PaymentMethodResult> listMine(String userId) {
-        return repository.findActiveByUserId(userId).stream().map(mapper::toResult).toList();
+    public List<PaymentMethod> listMine(String userId) {
+        return repository.findActiveByUserId(userId);
     }
 
     @Transactional(readOnly = true)
-    public PaymentMethodResult get(String userId, String methodId) {
-        return mapper.toResult(ownedBy(methodId, userId));
+    public PaymentMethod get(String userId, String methodId) {
+        return ownedBy(methodId, userId);
     }
 
     private PaymentMethod ownedBy(String methodId, String userId) {

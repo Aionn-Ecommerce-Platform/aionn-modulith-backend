@@ -79,93 +79,90 @@ public class ProductService {
     private final EventPublisher eventPublisher;
     private final Clock clock;
 
-    public ProductResult create(CreateProductCommand command) {
+    public Product create(CreateProductCommand command) {
         merchantRepository.findById(command.merchantId())
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.MERCHANT_NOT_FOUND));
         Product product = Product.create(IdGenerator.ulid(), command.merchantId(), command.name(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
-        return productResultMapper.toResult(saved);
+        return saved;
     }
 
-    public ProductResult clone(CloneProductCommand command) {
+    public Product clone(CloneProductCommand command) {
         Product source = ownedBy(command.productId(), command.merchantId());
         Product clone = Product.create(IdGenerator.ulid(), command.merchantId(), source.getName(), clock);
         Product saved = productRepository.save(clone);
         eventPublisher.publish(clone.pullEvents());
-        return productResultMapper.toResult(saved);
+        return saved;
     }
 
-    public ProductResult defineVariant(DefineVariantCommand command) {
+    public Product defineVariant(DefineVariantCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         Money price = Money.of(command.price(), command.currency());
         product.defineVariant(command.skuId(), command.attributeValues(), price, clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
-        return productResultMapper.toResult(saved);
+        return saved;
     }
 
-    public ProductResult removeVariant(com.aionn.catalog.application.dto.product.command.RemoveVariantCommand command) {
+    public Product removeVariant(com.aionn.catalog.application.dto.product.command.RemoveVariantCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         product.removeVariant(command.skuId(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
-        return productResultMapper.toResult(saved);
+        return saved;
     }
 
-    public ProductResult updateMedia(com.aionn.catalog.application.dto.product.command.UpdateMediaCommand command) {
+    public Product updateMedia(com.aionn.catalog.application.dto.product.command.UpdateMediaCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         product.updateMedia(command.images(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
-        return productResultMapper.toResult(saved);
+        return saved;
     }
 
-    public ProductResult updateAiMetadata(
+    public Product updateAiMetadata(
             com.aionn.catalog.application.dto.product.command.UpdateAiMetadataCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         product.updateAiMetadata(command.tags(), command.aiDescription(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
-        return productResultMapper.toResult(saved);
+        return saved;
     }
 
-    public ProductResult assignCollections(
+    public Product assignCollections(
             com.aionn.catalog.application.dto.product.command.AssignCollectionsCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         product.assignToCollections(command.collectionIds(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
-        return productResultMapper.toResult(saved);
+        return saved;
     }
 
-    public ProductResult emergencyTakedown(
+    public Product emergencyTakedown(
             com.aionn.catalog.application.dto.product.command.EmergencyTakedownCommand command) {
         Product product = required(command.productId());
         product.emergencyTakedown(command.adminId(), command.reason(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         searchIndex.delete(product.getProductId());
-        return productResultMapper.toResult(saved);
+        return saved;
     }
 
     @Transactional(readOnly = true)
-    public PageResult<ProductResult> search(String keyword, OffsetPagination pagination) {
+    public PageResult<Product> search(String keyword, OffsetPagination pagination) {
         List<String> ids = searchIndex.searchIds(keyword, pagination);
         List<Product> products = productRepository.findAllByIds(ids);
-        List<ProductResult> content = products.stream()
-                .map(productResultMapper::toResult)
-                .toList();
         long total = searchIndex.countMatches(keyword);
-        return new PageResult<>(content, pagination.page(), pagination.size(), total);
+        return new PageResult<>(products, pagination.page(), pagination.size(), total);
     }
 
-    public ProductResult changeVariantPrice(ChangeVariantPriceCommand command) {
+    public Product changeVariantPrice(ChangeVariantPriceCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         product.changeVariantPrice(command.skuId(), Money.of(command.newPrice(), command.currency()), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
-        return productResultMapper.toResult(saved);
+        return saved;
     }
 
     public BulkPriceUpdateResult bulkPriceUpdate(BulkPriceUpdateCommand command) {
@@ -195,7 +192,7 @@ public class ProductService {
         return new BulkPriceUpdateResult(updated, skipped, failed);
     }
 
-    public ProductResult assignBrand(AssignBrandCommand command) {
+    public Product assignBrand(AssignBrandCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         Brand brand = brandRepository.findById(command.brandId())
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.BRAND_NOT_FOUND));
@@ -205,10 +202,10 @@ public class ProductService {
         product.assignBrand(command.brandId(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
-        return productResultMapper.toResult(saved);
+        return saved;
     }
 
-    public ProductResult categorize(AssignCategoriesCommand command) {
+    public Product categorize(AssignCategoriesCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         if (command.categoryIds() == null || command.categoryIds().isEmpty()) {
             throw new CatalogException(CatalogErrorCode.PRODUCT_CATEGORY_REQUIRED);
@@ -221,115 +218,105 @@ public class ProductService {
         product.categorize(command.categoryIds(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
-        return productResultMapper.toResult(saved);
+        return saved;
     }
 
-    public ProductResult defineAttributes(DefineAttributesCommand command) {
+    public Product defineAttributes(DefineAttributesCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         product.defineAttributes(command.attributes(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
-        return productResultMapper.toResult(saved);
+        return saved;
     }
 
-    public ProductResult publish(PublishProductCommand command) {
+    public Product publish(PublishProductCommand command) {
         Product product = required(command.productId());
         product.publish(command.adminId(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         searchIndex.index(saved);
-        return productResultMapper.toResult(saved);
+        return saved;
     }
 
-    public ProductResult submitForReview(SubmitForReviewCommand command) {
+    public Product submitForReview(SubmitForReviewCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         product.submitForReview(command.merchantId(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
-        return productResultMapper.toResult(saved);
+        return saved;
     }
 
-    public ProductResult reject(RejectProductCommand command) {
+    public Product reject(RejectProductCommand command) {
         Product product = required(command.productId());
         product.reject(command.adminId(), command.reasonCode(), command.feedback(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
-        return productResultMapper.toResult(saved);
+        return saved;
     }
 
-    public ProductResult deactivate(DeactivateProductCommand command) {
+    public Product deactivate(DeactivateProductCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         product.deactivate(command.reason(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         searchIndex.delete(product.getProductId());
-        return productResultMapper.toResult(saved);
+        return saved;
     }
 
-    public ProductResult restore(RestoreProductCommand command) {
+    public Product restore(RestoreProductCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         product.restore(clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         searchIndex.index(saved);
-        return productResultMapper.toResult(saved);
+        return saved;
     }
 
     @Transactional(readOnly = true)
-    public ProductResult get(String productId) {
-        return productResultMapper.toResult(required(productId));
+    public Product get(String productId) {
+        return required(productId);
     }
 
     @Transactional(readOnly = true)
-    public List<ProductResult> getBySkuIds(List<String> skuIds) {
-        return productRepository.findAllBySkuIds(skuIds).stream()
-                .map(productResultMapper::toResult)
-                .toList();
+    public List<Product> getBySkuIds(List<String> skuIds) {
+        return productRepository.findAllBySkuIds(skuIds);
     }
 
     @Transactional(readOnly = true)
-    public PageResult<ProductResult> listByMerchant(String merchantId, OffsetPagination pagination) {
-        List<ProductResult> content = productRepository.listByMerchant(merchantId, pagination).stream()
-                .map(productResultMapper::toResult)
-                .toList();
+    public PageResult<Product> listByMerchant(String merchantId, OffsetPagination pagination) {
+        List<Product> content = productRepository.listByMerchant(merchantId, pagination);
         long total = productRepository.countByMerchant(merchantId);
         return new PageResult<>(content, pagination.page(), pagination.size(), total);
     }
 
     @Transactional(readOnly = true)
-    public PageResult<ProductResult> listByStatus(ProductStatus status, OffsetPagination pagination) {
-        List<ProductResult> content = productRepository.listByStatus(status, pagination).stream()
-                .map(productResultMapper::toResult)
-                .toList();
+    public PageResult<Product> listByStatus(ProductStatus status, OffsetPagination pagination) {
+        List<Product> content = productRepository.listByStatus(status, pagination);
         long total = productRepository.countByStatus(status);
         return new PageResult<>(content, pagination.page(), pagination.size(), total);
     }
 
     @Transactional(readOnly = true)
-    public List<ProductResult> getRelatedProducts(String productId, int limit) {
+    public List<Product> getRelatedProducts(String productId, int limit) {
         Product product = required(productId);
         return productRepository.findRelatedProducts(
                 product.getProductId(),
                 product.getBrandId(),
                 product.categoryIds(),
-                limit).stream()
-                .map(productResultMapper::toResult)
-                .toList();
+                limit);
     }
 
     @Transactional(readOnly = true)
-    public List<ProductResult> getPopularProducts(int limit) {
+    public List<Product> getPopularProducts(int limit) {
         return popularProducts(limit);
     }
 
-    private List<ProductResult> popularProducts(int limit) {
-        return productRepository.findPopularProducts(limit).stream()
-                .map(productResultMapper::toResult)
-                .toList();
+    private List<Product> popularProducts(int limit) {
+        return productRepository.findPopularProducts(limit);
     }
 
     @Transactional(readOnly = true)
-    public List<ProductResult> getPersonalizedProducts(String userId, List<String> categoryIds, List<String> brandIds,
+    public List<Product> getPersonalizedProducts(String userId, List<String> categoryIds, List<String> brandIds,
             int limit) {
         List<String> activeCategoryIds = categoryIds != null ? categoryIds : List.of();
         List<String> activeBrandIds = brandIds != null ? brandIds : List.of();
@@ -350,9 +337,7 @@ public class ProductService {
         if (products.isEmpty()) {
             return popularProducts(limit);
         }
-        return products.stream()
-                .map(productResultMapper::toResult)
-                .toList();
+        return products;
     }
 
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)

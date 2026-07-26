@@ -9,10 +9,8 @@ import com.aionn.ordering.application.dto.order.command.PlaceOrderCommand;
 import com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand;
 import com.aionn.ordering.application.dto.order.command.RejectOrderCommand;
 import com.aionn.ordering.application.dto.order.result.MerchantOrderAnalyticsResult;
-import com.aionn.ordering.application.dto.order.result.OrderResult;
 import com.aionn.ordering.application.dto.order.result.PlatformOrderAnalyticsResult;
 import com.aionn.ordering.application.dto.order.result.TopProductResult;
-import com.aionn.ordering.application.mapper.OrderingResultMapper;
 import com.aionn.ordering.application.port.out.CartPersistencePort;
 import com.aionn.ordering.application.port.out.CatalogPricingGateway;
 import com.aionn.ordering.application.port.out.OrderPersistencePort;
@@ -55,7 +53,6 @@ public class OrderService {
 
     private final CartPersistencePort cartRepository;
     private final OrderPersistencePort orderRepository;
-    private final OrderingResultMapper mapper;
     private final EventPublisher eventPublisher;
     private final StockReservationGateway stockReservationGateway;
     private final PaymentGateway paymentGateway;
@@ -68,7 +65,7 @@ public class OrderService {
     private final OrderingProperties properties;
     private final java.time.Clock clock;
 
-    public OrderResult placeOrder(PlaceOrderCommand command) {
+    public Order placeOrder(PlaceOrderCommand command) {
         Cart cart = cartService.loadOwned(command.userId());
         if (cart.isEmpty()) {
             throw new OrderingException(OrderingErrorCode.CART_EMPTY);
@@ -96,7 +93,7 @@ public class OrderService {
             throw new OrderingException(OrderingErrorCode.CART_EMPTY);
         }
 
-        OrderResult result = placeFromLines(
+        Order result = placeFromLines(
                 command.userId(),
                 lines,
                 cart.getVoucherCode(),
@@ -107,7 +104,7 @@ public class OrderService {
 
         // Online payments stay pending until the gateway confirms them; keep
         // cart lines in that case so a failed payment can be retried.
-        if (OrderStatus.APPROVED.name().equals(result.status())) {
+        if (result.getStatus() == OrderStatus.APPROVED) {
             removePurchasedItemsFromCart(command.userId(), lines);
         }
 
@@ -118,7 +115,7 @@ public class OrderService {
      * Headless placement: no cart involvement. Used by UCP agentic checkout
      * where the agent commits a snapshot of line items directly.
      */
-    public OrderResult placeOrderHeadless(PlaceOrderHeadlessCommand command) {
+    public Order placeOrderHeadless(PlaceOrderHeadlessCommand command) {
         if (command.lines() == null || command.lines().isEmpty()) {
             throw new OrderingException(OrderingErrorCode.CART_EMPTY,
                     "Headless placement requires at least one line");
@@ -137,7 +134,7 @@ public class OrderService {
      * Core placement flow shared by cart-driven and headless paths:
      * pricing → reservation → voucher → payment → order create.
      */
-    private OrderResult placeFromLines(
+    private Order placeFromLines(
             String userId,
             List<PlaceOrderHeadlessCommand.Line> lines,
             String voucherCode,
@@ -228,14 +225,14 @@ public class OrderService {
         if (paymentMethodId == null || "COD".equalsIgnoreCase(paymentMethodId)) {
             return approvePayment(saved.getOrderId(), null);
         }
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public OrderResult approvePayment(String orderId, String paymentId) {
+    public Order approvePayment(String orderId, String paymentId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.ORDER_NOT_FOUND));
         if (order.getStatus() == OrderStatus.APPROVED) {
-            return mapper.toResult(order);
+            return order;
         }
         order.approve(paymentId, clock.instant());
         Order saved = orderRepository.save(order);
@@ -246,7 +243,7 @@ public class OrderService {
                 .map(item -> new PlaceOrderHeadlessCommand.Line(item.skuId(), item.qty()))
                 .toList();
         removePurchasedItemsFromCart(saved.getUserId(), lines);
-        return mapper.toResult(saved);
+        return saved;
     }
 
     private void removePurchasedItemsFromCart(String userId, List<PlaceOrderHeadlessCommand.Line> lines) {
@@ -263,14 +260,14 @@ public class OrderService {
         eventPublisher.publish(freshCart.pullEvents());
     }
 
-    public OrderResult confirmPreparation(ConfirmPreparationCommand command) {
+    public Order confirmPreparation(ConfirmPreparationCommand command) {
         String merchantId = requireMerchantIdForOwner(command.ownerId());
         Order order = ownedByMerchant(command.orderId(), merchantId);
         order.confirmPreparation(clock.instant());
         Order saved = orderRepository.save(order);
         eventPublisher.publish(order.pullEvents());
         triggerShipmentRegistration(saved);
-        return mapper.toResult(saved);
+        return saved;
     }
 
     /**
@@ -289,7 +286,7 @@ public class OrderService {
         }
     }
 
-    public OrderResult cancel(CancelOrderCommand command) {
+    public Order cancel(CancelOrderCommand command) {
         Order order = ownedByUser(command.orderId(), command.userId());
         if (order.getStatus().isPickedUpByCarrier()) {
             throw new OrderingException(OrderingErrorCode.ORDER_ALREADY_PICKED_UP);
@@ -305,19 +302,19 @@ public class OrderService {
         eventPublisher.publish(order.pullEvents());
         integrationEventPublisher.publishOrderCancelled(saved.getOrderId(), "USER_CANCELLED",
                 command.reason(), OrderingIntegrationEventPublisherPort.CancellationKind.USER_CANCELLED);
-        return mapper.toResult(saved);
+        return saved;
     }
 
     /**
      * Cancel a PENDING order whose online payment failed. Idempotent: if the
      * order is already cancelled or approved (race with capture event), no-op.
      */
-    public OrderResult cancelOnPaymentFailure(String orderId, String errorCode, String reason) {
+    public Order cancelOnPaymentFailure(String orderId, String errorCode, String reason) {
         Order order = required(orderId);
         if (order.getStatus() != OrderStatus.PENDING) {
             log.info("Skipping payment-failure cancel for order {}: status is {}",
                     orderId, order.getStatus());
-            return mapper.toResult(order);
+            return order;
         }
         order.autoCancel("PAYMENT_FAILED", clock.instant());
         releaseReservationsBestEffort(order, "payment-failed");
@@ -327,10 +324,10 @@ public class OrderService {
         integrationEventPublisher.publishOrderCancelled(saved.getOrderId(), "PAYMENT_FAILED",
                 reason == null ? errorCode : reason,
                 OrderingIntegrationEventPublisherPort.CancellationKind.AUTO_CANCELLED);
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public OrderResult rejectByMerchant(RejectOrderCommand command) {
+    public Order rejectByMerchant(RejectOrderCommand command) {
         String merchantId = requireMerchantIdForOwner(command.ownerId());
         Order order = ownedByMerchant(command.orderId(), merchantId);
         order.rejectByMerchant(merchantId, command.reason(), clock.instant());
@@ -344,7 +341,7 @@ public class OrderService {
         eventPublisher.publish(order.pullEvents());
         integrationEventPublisher.publishOrderCancelled(saved.getOrderId(), "MERCHANT_REJECTED",
                 command.reason(), OrderingIntegrationEventPublisherPort.CancellationKind.MERCHANT_REJECTED);
-        return mapper.toResult(saved);
+        return saved;
     }
 
     private void releaseVoucherBestEffort(Order order, String reason) {
@@ -370,7 +367,7 @@ public class OrderService {
         }
     }
 
-    public OrderResult changeShippingInfo(ChangeShippingInfoCommand command) {
+    public Order changeShippingInfo(ChangeShippingInfoCommand command) {
         Order order = ownedByUser(command.orderId(), command.userId());
         BigDecimal feeOverride = command.newShippingFee();
         Money newFee;
@@ -384,10 +381,10 @@ public class OrderService {
         order.changeShippingInfo(command.newAddress(), newFee, clock.instant());
         Order saved = orderRepository.save(order);
         eventPublisher.publish(order.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public OrderResult markShipped(ConfirmShippedCommand command) {
+    public Order markShipped(ConfirmShippedCommand command) {
         Order order = required(command.orderId());
         order.markShipped(command.shipmentId(), clock.instant());
         for (OrderItem item : order.items()) {
@@ -399,59 +396,53 @@ public class OrderService {
         Order saved = orderRepository.save(order);
         eventPublisher.publish(order.pullEvents());
         integrationEventPublisher.publishOrderShipped(saved.getOrderId(), command.shipmentId());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public OrderResult complete(ConfirmDeliveredCommand command) {
+    public Order complete(ConfirmDeliveredCommand command) {
         Order order = required(command.orderId());
         order.complete(clock.instant());
         Order saved = orderRepository.save(order);
         eventPublisher.publish(order.pullEvents());
         integrationEventPublisher.publishOrderCompleted(saved.getOrderId());
-        return mapper.toResult(saved);
+        return saved;
     }
 
     @Transactional(readOnly = true)
-    public OrderResult getForRequester(String orderId, String requesterUserId) {
+    public Order getForRequester(String orderId, String requesterUserId) {
         Order order = required(orderId);
         if (order.getUserId().equals(requesterUserId)) {
-            return mapper.toResult(order);
+            return order;
         }
         String requesterMerchantId = merchantQueryPort.findMerchantIdByOwnerId(requesterUserId).orElse(null);
         if (requesterMerchantId != null && requesterMerchantId.equals(order.getMerchantId())) {
-            return mapper.toResult(order);
+            return order;
         }
         throw new OrderingException(OrderingErrorCode.ORDER_FORBIDDEN);
     }
 
     @Transactional(readOnly = true)
-    public List<OrderResult> listByUser(String userId, int limit) {
-        return orderRepository.findByUser(userId, limit).stream().map(mapper::toResult).toList();
+    public List<Order> listByUser(String userId, int limit) {
+        return orderRepository.findByUser(userId, limit);
     }
 
     @Transactional(readOnly = true)
-    public List<OrderResult> listByUser(String userId, String statusFilter, int limit) {
+    public List<Order> listByUser(String userId, String statusFilter, int limit) {
         List<String> statuses = parseStatusFilter(statusFilter);
         if (statuses.isEmpty()) {
             return listByUser(userId, limit);
         }
-        return orderRepository.findByUserAndStatuses(userId, statuses, limit).stream()
-                .map(mapper::toResult)
-                .toList();
+        return orderRepository.findByUserAndStatuses(userId, statuses, limit);
     }
 
     @Transactional(readOnly = true)
-    public List<OrderResult> listByMerchantOwner(String ownerId, String statusFilter, int limit) {
+    public List<Order> listByMerchantOwner(String ownerId, String statusFilter, int limit) {
         String merchantId = requireMerchantIdForOwner(ownerId);
         List<String> statuses = parseStatusFilter(statusFilter);
         if (statuses.isEmpty()) {
-            return orderRepository.findByMerchant(merchantId, limit).stream()
-                    .map(mapper::toResult)
-                    .toList();
+            return orderRepository.findByMerchant(merchantId, limit);
         }
-        return orderRepository.findByMerchantAndStatuses(merchantId, statuses, limit).stream()
-                .map(mapper::toResult)
-                .toList();
+        return orderRepository.findByMerchantAndStatuses(merchantId, statuses, limit);
     }
 
     @Transactional(readOnly = true)
@@ -466,8 +457,8 @@ public class OrderService {
 
         var start = safeFrom.atStartOfDay(zone).toInstant();
         var endExclusive = safeTo.plusDays(1).atStartOfDay(zone).toInstant();
-        List<OrderPersistencePort.OrderAnalyticsRow> rows =
-                orderRepository.findMerchantAnalyticsRows(merchantId, start, endExclusive);
+        List<OrderPersistencePort.OrderAnalyticsRow> rows = orderRepository.findMerchantAnalyticsRows(merchantId, start,
+                endExclusive);
 
         Map<LocalDate, DailyRevenueAccumulator> revenueByDate = new LinkedHashMap<>();
         for (LocalDate day = safeFrom; !day.isAfter(safeTo); day = day.plusDays(1)) {
@@ -537,8 +528,8 @@ public class OrderService {
 
         var start = safeFrom.atStartOfDay(zone).toInstant();
         var endExclusive = safeTo.plusDays(1).atStartOfDay(zone).toInstant();
-        List<OrderPersistencePort.PlatformAnalyticsRow> rows =
-                orderRepository.findPlatformAnalyticsRows(start, endExclusive);
+        List<OrderPersistencePort.PlatformAnalyticsRow> rows = orderRepository.findPlatformAnalyticsRows(start,
+                endExclusive);
 
         Map<LocalDate, DailyRevenueAccumulator> revenueByDate = new LinkedHashMap<>();
         for (LocalDate day = safeFrom; !day.isAfter(safeTo); day = day.plusDays(1)) {
@@ -618,8 +609,8 @@ public class OrderService {
 
         var start = safeFrom.atStartOfDay(zone).toInstant();
         var endExclusive = safeTo.plusDays(1).atStartOfDay(zone).toInstant();
-        List<OrderPersistencePort.TopProductRow> rows =
-                orderRepository.findMerchantTopProductRows(merchantId, start, endExclusive);
+        List<OrderPersistencePort.TopProductRow> rows = orderRepository.findMerchantTopProductRows(merchantId, start,
+                endExclusive);
 
         return rows.stream()
                 .limit(safeLimit)

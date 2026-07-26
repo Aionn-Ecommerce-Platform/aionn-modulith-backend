@@ -2,6 +2,7 @@ package com.aionn.inventory.application.usecase.transfer;
 
 import com.aionn.inventory.application.dto.transfer.command.CancelTransferCommand;
 import com.aionn.inventory.application.dto.transfer.result.StockTransferResult;
+import com.aionn.inventory.application.mapper.StockTransferResultMapper;
 import com.aionn.inventory.application.port.in.transfer.CancelTransferInputPort;
 import com.aionn.inventory.application.service.StockTransferService;
 import lombok.RequiredArgsConstructor;
@@ -13,10 +14,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class CancelTransferUseCase implements CancelTransferInputPort {
 
     private final StockTransferService stockTransferService;
+    private final StockTransferResultMapper stockTransferResultMapper;
 
     @Override
     @Transactional
     public StockTransferResult execute(CancelTransferCommand command) {
-        return stockTransferService.cancel(command);
+        return stockTransferResultMapper.toResult(stockTransferService.cancel(command));
     }
 }

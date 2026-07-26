@@ -5,6 +5,7 @@ import com.aionn.payment.application.port.in.preference.UpdatePaymentPreferenceI
 import com.aionn.payment.application.service.PaymentPreferenceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -13,6 +14,7 @@ public class UpdatePaymentPreferenceUseCase implements UpdatePaymentPreferenceIn
     private final PaymentPreferenceService paymentPreferenceService;
 
     @Override
+    @Transactional
     public PaymentPreferenceResult execute(String userId, String paymentType, String paymentMethodId) {
         return paymentPreferenceService.update(userId, paymentType, paymentMethodId);
     }

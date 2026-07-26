@@ -1,8 +1,8 @@
 package com.aionn.ordering.infrastructure.integration.order;
 
 import com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand;
-import com.aionn.ordering.application.dto.order.result.OrderResult;
 import com.aionn.ordering.application.service.OrderService;
+import com.aionn.ordering.domain.model.Order;
 import com.aionn.ordering.domain.valueobject.ShippingAddress;
 import com.aionn.sharedkernel.integration.port.ordering.OrderPlacementPort;
 import lombok.RequiredArgsConstructor;
@@ -20,31 +20,32 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderingOrderPlacementAdapter implements OrderPlacementPort {
 
-    private final OrderService orderService;
+        private final OrderService orderService;
 
-    @Override
-    public PlacedOrder placeHeadless(PlaceCommand command) {
-        List<PlaceOrderHeadlessCommand.Line> lines = command.lines().stream()
-                .map(l -> new PlaceOrderHeadlessCommand.Line(l.skuId(), l.qty()))
-                .toList();
-        ShippingAddress addr = command.shippingAddress() == null ? null : new ShippingAddress(
-                command.shippingAddress().addressId(),
-                command.shippingAddress().contactName(),
-                command.shippingAddress().phone(),
-                command.shippingAddress().detailAddress(),
-                command.shippingAddress().wardCode(),
-                command.shippingAddress().districtCode(),
-                command.shippingAddress().provinceCode(),
-                command.shippingAddress().countryCode());
-        OrderResult result = orderService.placeOrderHeadless(new PlaceOrderHeadlessCommand(
-                command.userId(),
-                lines,
-                command.voucherCode(),
-                command.paymentMethodId(),
-                command.currency(),
-                command.shippingFee(),
-                addr));
-        long total = result.totalAmount() == null ? 0L : result.totalAmount().longValue();
-        return new PlacedOrder(result.orderId(), total, result.currency(), result.status());
-    }
+        @Override
+        public PlacedOrder placeHeadless(PlaceCommand command) {
+                List<PlaceOrderHeadlessCommand.Line> lines = command.lines().stream()
+                                .map(l -> new PlaceOrderHeadlessCommand.Line(l.skuId(), l.qty()))
+                                .toList();
+                ShippingAddress addr = command.shippingAddress() == null ? null
+                                : new ShippingAddress(
+                                                command.shippingAddress().addressId(),
+                                                command.shippingAddress().contactName(),
+                                                command.shippingAddress().phone(),
+                                                command.shippingAddress().detailAddress(),
+                                                command.shippingAddress().wardCode(),
+                                                command.shippingAddress().districtCode(),
+                                                command.shippingAddress().provinceCode(),
+                                                command.shippingAddress().countryCode());
+                Order order = orderService.placeOrderHeadless(new PlaceOrderHeadlessCommand(
+                                command.userId(),
+                                lines,
+                                command.voucherCode(),
+                                command.paymentMethodId(),
+                                command.currency(),
+                                command.shippingFee(),
+                                addr));
+                long total = order.getTotalAmount() == null ? 0L : order.getTotalAmount().amount().longValue();
+                return new PlacedOrder(order.getOrderId(), total, order.getCurrency(), order.getStatus().name());
+        }
 }

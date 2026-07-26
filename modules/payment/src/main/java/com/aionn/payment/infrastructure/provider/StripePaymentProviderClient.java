@@ -39,7 +39,6 @@ public class StripePaymentProviderClient implements PaymentProviderClient {
     private final StripeProperties properties;
     private final MerchantQueryPort merchantQueryPort;
 
-    @PostConstruct
     public static void configureStripeApiKey(String apiKey) {
         if (apiKey != null && !apiKey.isBlank()) {
             Stripe.apiKey = apiKey;

@@ -3,7 +3,6 @@ package com.aionn.inventory.application.service;
 import com.aionn.inventory.application.dto.transfer.command.CancelTransferCommand;
 import com.aionn.inventory.application.dto.transfer.command.CompleteTransferCommand;
 import com.aionn.inventory.application.dto.transfer.command.InitiateTransferCommand;
-import com.aionn.inventory.application.mapper.InventoryResultMapper;
 import com.aionn.inventory.application.port.out.InventoryItemPersistencePort;
 import com.aionn.inventory.application.port.out.StockAdjustmentPersistencePort;
 import com.aionn.inventory.application.port.out.StockTransferPersistencePort;
@@ -45,8 +44,6 @@ class StockTransferServiceTest {
     StockTransferPersistencePort transferRepository;
     @Mock
     StockAdjustmentPersistencePort adjustmentRepository;
-    @Mock
-    InventoryResultMapper mapper;
     @Mock
     EventPublisher eventPublisher;
     @Mock
