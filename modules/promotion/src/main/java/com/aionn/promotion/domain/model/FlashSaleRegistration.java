@@ -96,8 +96,9 @@ public class FlashSaleRegistration extends AggregateRoot {
         Guard.notBlank(productId, "productId");
         Guard.notBlank(skuId, "skuId");
         Guard.positive(saleStock, "saleStock");
-        Guard.require(salePrice != null && salePrice.isPositive(),
-                () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT, "salePrice must be positive"));
+        if (salePrice == null || !salePrice.isPositive()) {
+            throw new PromotionException(PromotionErrorCode.INVALID_ARGUMENT, "salePrice must be positive");
+        }
         Instant now = clock.instant();
         FlashSaleRegistration reg = new FlashSaleRegistration(
                 registrationId, campaignId, merchantId, productId, skuId,

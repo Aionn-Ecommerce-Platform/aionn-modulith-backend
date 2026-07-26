@@ -82,6 +82,14 @@ class PromotionCampaignTest {
     }
 
     @Test
+    void createRejectsNullBudget() {
+        assertThatThrownBy(() -> PromotionCampaign.create(CAMPAIGN_ID, NAME, CampaignType.DISCOUNT,
+                null, START, END, USER, CLOCK))
+                .isInstanceOf(PromotionException.class)
+                .hasMessageContaining("budget");
+    }
+
+    @Test
     void createRejectsStartDateInThePast() {
         Money budget = Money.of(new BigDecimal("1000"), CCY);
 

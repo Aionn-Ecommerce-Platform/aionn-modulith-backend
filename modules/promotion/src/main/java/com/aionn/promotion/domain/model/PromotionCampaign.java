@@ -65,13 +65,19 @@ public class PromotionCampaign extends AggregateRoot {
 
     public static PromotionCampaign create(String campaignId, String name, CampaignType type,
             Money budget, Instant startDate, Instant endDate, String createdBy, Clock clock) {
-        Guard.require(startDate != null && endDate != null && startDate.isBefore(endDate),
-                () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
-                        "startDate must be before endDate"));
+        if (startDate == null || endDate == null || !startDate.isBefore(endDate)) {
+            throw new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
+                    "startDate must be before endDate");
+        }
+        if (budget == null) {
+            throw new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
+                    "budget must not be null");
+        }
         Instant now = clock.instant();
-        Guard.require(!startDate.isBefore(now.minusSeconds(60)),
-                () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
-                        "startDate must not be in the past"));
+        if (startDate.isBefore(now.minusSeconds(60))) {
+            throw new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
+                    "startDate must not be in the past");
+        }
         // New campaigns are SCHEDULED; the periodic worker (or an explicit
         // activate call) flips them to RUNNING when startDate is reached.
         PromotionCampaign c = new PromotionCampaign(campaignId, name, type, budget, budget,
