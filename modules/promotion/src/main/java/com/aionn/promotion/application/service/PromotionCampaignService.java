@@ -1,9 +1,6 @@
 package com.aionn.promotion.application.service;
 
 import com.aionn.promotion.application.dto.campaign.command.CampaignCommands;
-import com.aionn.promotion.application.dto.campaign.result.CampaignResult;
-import com.aionn.promotion.application.dto.voucher.result.VoucherResult;
-import com.aionn.promotion.application.mapper.PromotionResultMapper;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.promotion.application.port.out.PromotionCampaignPersistencePort;
 import com.aionn.promotion.application.port.out.VoucherPersistencePort;
@@ -19,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 
@@ -30,57 +28,57 @@ public class PromotionCampaignService {
 
     private final PromotionCampaignPersistencePort campaignRepository;
     private final VoucherPersistencePort voucherRepository;
-    private final PromotionResultMapper mapper;
     private final EventPublisher eventPublisher;
+    private final Clock clock;
 
-    public CampaignResult create(CampaignCommands.CreateCampaign command) {
+    public PromotionCampaign create(CampaignCommands.CreateCampaign command) {
         Money budget = Money.of(command.budget(), command.currency() == null ? "VND" : command.currency());
         PromotionCampaign c = PromotionCampaign.create(IdGenerator.ulid(),
                 command.name(), command.type(), budget,
-                command.startDate(), command.endDate(), command.createdBy());
+                command.startDate(), command.endDate(), command.createdBy(), clock);
         PromotionCampaign saved = campaignRepository.save(c);
         eventPublisher.publish(c.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public CampaignResult activate(CampaignCommands.ActivateCampaign command) {
+    public PromotionCampaign activate(CampaignCommands.ActivateCampaign command) {
         PromotionCampaign c = required(command.campaignId());
-        c.activate();
+        c.activate(clock);
         PromotionCampaign saved = campaignRepository.save(c);
         eventPublisher.publish(c.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public CampaignResult end(CampaignCommands.EndCampaign command) {
+    public PromotionCampaign end(CampaignCommands.EndCampaign command) {
         PromotionCampaign c = required(command.campaignId());
-        c.end();
+        c.end(clock);
         PromotionCampaign saved = campaignRepository.save(c);
         eventPublisher.publish(c.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public CampaignResult cancel(CampaignCommands.CancelCampaign command) {
+    public PromotionCampaign cancel(CampaignCommands.CancelCampaign command) {
         PromotionCampaign c = required(command.campaignId());
-        c.cancel(command.reason());
+        c.cancel(command.reason(), clock);
         PromotionCampaign saved = campaignRepository.save(c);
         eventPublisher.publish(c.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public CampaignResult configureCondition(CampaignCommands.ConfigureCondition command) {
+    public PromotionCampaign configureCondition(CampaignCommands.ConfigureCondition command) {
         PromotionCampaign c = required(command.campaignId());
         PromotionCondition condition = new PromotionCondition(
                 command.minOrderValue(),
                 command.applicableCategoryIds(),
                 command.maxClaimsPerUser(),
                 command.maxUsesPerVoucher());
-        c.configureCondition(condition);
+        c.configureCondition(condition, clock);
         PromotionCampaign saved = campaignRepository.save(c);
         eventPublisher.publish(c.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
-    public VoucherResult issueVoucher(CampaignCommands.IssueVoucher command) {
+    public Voucher issueVoucher(CampaignCommands.IssueVoucher command) {
         PromotionCampaign campaign = required(command.campaignId());
         if (voucherRepository.findByCode(command.voucherCode()).isPresent()) {
             throw new PromotionException(PromotionErrorCode.VOUCHER_DUPLICATE_CODE);
@@ -88,17 +86,17 @@ public class PromotionCampaignService {
         Money discount = Money.of(command.discountAmount(),
                 command.currency() == null ? campaign.getBudget().currency() : command.currency());
         Voucher v = Voucher.issue(command.voucherCode(), campaign.getCampaignId(),
-                discount, command.usageLimit(), command.validFrom(), command.validUntil());
+                discount, command.usageLimit(), command.validFrom(), command.validUntil(), clock);
         Voucher saved = voucherRepository.save(v);
         eventPublisher.publish(v.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
     public int processScheduledTransitions(Instant now, int batchSize) {
         int changed = 0;
         for (PromotionCampaign c : campaignRepository.findToActivate(now, batchSize)) {
             try {
-                c.activate();
+                c.activate(clock);
                 campaignRepository.save(c);
                 eventPublisher.publish(c.pullEvents());
                 changed++;
@@ -108,7 +106,7 @@ public class PromotionCampaignService {
         }
         for (PromotionCampaign c : campaignRepository.findToEnd(now, batchSize)) {
             try {
-                c.end();
+                c.end(clock);
                 campaignRepository.save(c);
                 eventPublisher.publish(c.pullEvents());
                 changed++;
@@ -120,22 +118,18 @@ public class PromotionCampaignService {
     }
 
     @Transactional(readOnly = true)
-    public CampaignResult get(String campaignId) {
-        return mapper.toResult(required(campaignId));
+    public PromotionCampaign get(String campaignId) {
+        return required(campaignId);
     }
 
     @Transactional(readOnly = true)
-    public List<CampaignResult> listByStatus(String status, int limit) {
-        return campaignRepository.listByStatus(status, limit).stream()
-                .map(mapper::toResult)
-                .toList();
+    public List<PromotionCampaign> listByStatus(String status, int limit) {
+        return campaignRepository.listByStatus(status, limit);
     }
 
     @Transactional(readOnly = true)
-    public List<VoucherResult> listVouchersByCampaignId(String campaignId, int limit) {
-        return voucherRepository.findByCampaignId(campaignId, limit).stream()
-                .map(mapper::toResult)
-                .toList();
+    public List<Voucher> listVouchersByCampaignId(String campaignId, int limit) {
+        return voucherRepository.findByCampaignId(campaignId, limit);
     }
 
     private PromotionCampaign required(String campaignId) {

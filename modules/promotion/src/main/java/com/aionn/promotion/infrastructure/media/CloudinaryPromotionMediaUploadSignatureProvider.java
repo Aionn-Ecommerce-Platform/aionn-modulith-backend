@@ -10,40 +10,40 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-import java.time.Instant;
+import java.time.Clock;
 import java.util.Map;
 import java.util.TreeMap;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "promotion.media", name = "provider", havingValue = "cloudinary",
-        matchIfMissing = true)
+@ConditionalOnProperty(prefix = "promotion.media", name = "provider", havingValue = "cloudinary", matchIfMissing = true)
 public class CloudinaryPromotionMediaUploadSignatureProvider
-        implements PromotionMediaUploadSignatureProviderPort {
+                implements PromotionMediaUploadSignatureProviderPort {
 
-    private final CloudinaryCredentialsProperties credentials;
-    private final PromotionCloudinaryProperties folders;
+        private final CloudinaryCredentialsProperties credentials;
+        private final PromotionCloudinaryProperties folders;
+        private final Clock clock;
 
-    @Override
-    public UploadSignatureResult generateBannerUploadSignature() {
-        String folder = folders.bannerFolder();
-        long timestamp = Instant.now().getEpochSecond();
+        @Override
+        public UploadSignatureResult generateBannerUploadSignature() {
+                String folder = folders.bannerFolder();
+                long timestamp = clock.instant().getEpochSecond();
 
-        Map<String, String> params = new TreeMap<>();
-        params.put("folder", folder);
-        params.put("timestamp", String.valueOf(timestamp));
-        params.put("eager", "c_fill,w_1600,h_600");
+                Map<String, String> params = new TreeMap<>();
+                params.put("folder", folder);
+                params.put("timestamp", String.valueOf(timestamp));
+                params.put("eager", "c_fill,w_1600,h_600");
 
-        String signature = CloudinarySigner.sign(params, credentials.apiSecret());
+                String signature = CloudinarySigner.sign(params, credentials.apiSecret());
 
-        log.debug("Generated promotion-banner upload signature, folder={}", folder);
-        return new UploadSignatureResult(
-                signature,
-                String.valueOf(timestamp),
-                credentials.apiKey(),
-                credentials.cloudName(),
-                credentials.uploadUrl("image"),
-                folder);
-    }
+                log.debug("Generated promotion-banner upload signature, folder={}", folder);
+                return new UploadSignatureResult(
+                                signature,
+                                String.valueOf(timestamp),
+                                credentials.apiKey(),
+                                credentials.cloudName(),
+                                credentials.uploadUrl("image"),
+                                folder);
+        }
 }

@@ -1,10 +1,16 @@
 package com.aionn.promotion.adapter.rest.controller;
 
 import com.aionn.promotion.adapter.rest.exception.PromotionExceptionHandler;
+import com.aionn.promotion.adapter.rest.mapper.voucher.VoucherDtoMapperImpl;
 import com.aionn.promotion.adapter.rest.support.session.CurrentUserIdArgumentResolver;
 import com.aionn.promotion.application.dto.voucher.command.VoucherCommands;
 import com.aionn.promotion.application.dto.voucher.result.UserVoucherResult;
-import com.aionn.promotion.application.service.VoucherService;
+import com.aionn.promotion.application.port.in.voucher.ApplyVoucherInputPort;
+import com.aionn.promotion.application.port.in.voucher.ClaimVoucherInputPort;
+import com.aionn.promotion.application.port.in.voucher.GetMyVoucherInputPort;
+import com.aionn.promotion.application.port.in.voucher.ListMyVouchersInputPort;
+import com.aionn.promotion.application.port.in.voucher.ReleaseVoucherInputPort;
+import com.aionn.promotion.application.port.in.voucher.ReserveVoucherInputPort;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,151 +41,164 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class VoucherControllerWebTest {
 
-    @Mock
-    private VoucherService voucherService;
+        @Mock
+        private ClaimVoucherInputPort claimVoucherInputPort;
+        @Mock
+        private ReserveVoucherInputPort reserveVoucherInputPort;
+        @Mock
+        private ApplyVoucherInputPort applyVoucherInputPort;
+        @Mock
+        private ReleaseVoucherInputPort releaseVoucherInputPort;
+        @Mock
+        private ListMyVouchersInputPort listMyVouchersInputPort;
+        @Mock
+        private GetMyVoucherInputPort getMyVoucherInputPort;
 
-    private MockMvc mockMvc;
+        private MockMvc mockMvc;
 
-    @BeforeEach
-    void setUp() {
-        VoucherController controller = new VoucherController(voucherService);
+        @BeforeEach
+        void setUp() {
+                VoucherController controller = new VoucherController(
+                                claimVoucherInputPort, reserveVoucherInputPort, applyVoucherInputPort,
+                                releaseVoucherInputPort, listMyVouchersInputPort, getMyVoucherInputPort,
+                                new VoucherDtoMapperImpl());
 
-        mockMvc = MockMvcBuilders.standaloneSetup(controller)
-                .setControllerAdvice(new PromotionExceptionHandler())
-                .setMessageConverters(new MappingJackson2HttpMessageConverter(
-                        Jackson2ObjectMapperBuilder.json().build()))
-                .setCustomArgumentResolvers(new CurrentUserIdArgumentResolver())
-                .build();
+                mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                                .setControllerAdvice(new PromotionExceptionHandler())
+                                .setMessageConverters(new MappingJackson2HttpMessageConverter(
+                                                Jackson2ObjectMapperBuilder.json().build()))
+                                .setCustomArgumentResolvers(new CurrentUserIdArgumentResolver())
+                                .build();
 
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(
-                        "user-1", "n/a",
-                        List.of(new SimpleGrantedAuthority("ROLE_USER"))));
-    }
+                SecurityContextHolder.getContext().setAuthentication(
+                                new UsernamePasswordAuthenticationToken(
+                                                "user-1", "n/a",
+                                                List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+        }
 
-    @AfterEach
-    void tearDown() {
-        SecurityContextHolder.clearContext();
-    }
+        @AfterEach
+        void tearDown() {
+                SecurityContextHolder.clearContext();
+        }
 
-    private static UserVoucherResult sample(String code, String status) {
-        Instant now = Instant.now();
-        return new UserVoucherResult(
-                "uv-1", code, "user-1", status, null,
-                null, "VND",
-                now, null, null, null, null, now,
-                new BigDecimal("50000"), "VND", "PLATFORM",
-                now.plusSeconds(86400), null, 100, 0);
-    }
+        private static UserVoucherResult sample(String code, String status) {
+                Instant now = Instant.parse("2026-06-25T00:00:00Z");
+                return new UserVoucherResult(
+                                "uv-1", code, "user-1", status, null,
+                                null, "VND",
+                                now, null, null, null, null, now,
+                                new BigDecimal("50000"), "VND", "PLATFORM",
+                                now.plusSeconds(86400), null, 100, 0);
+        }
 
-    @Test
-    void claimReturnsUserVoucher() throws Exception {
-        when(voucherService.claim(any(VoucherCommands.ClaimVoucher.class)))
-                .thenReturn(sample("V-1", "CLAIMED"));
+        @Test
+        void claimReturnsUserVoucher() throws Exception {
+                when(claimVoucherInputPort.execute(any(VoucherCommands.ClaimVoucher.class)))
+                                .thenReturn(sample("V-1", "CLAIMED"));
 
-        mockMvc.perform(post("/api/v1/promotions/vouchers/V-1/claim"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.voucherCode").value("V-1"))
-                .andExpect(jsonPath("$.data.status").value("CLAIMED"));
+                mockMvc.perform(post("/api/v1/promotions/vouchers/V-1/claim"))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.data.voucherCode").value("V-1"))
+                                .andExpect(jsonPath("$.data.status").value("CLAIMED"));
 
-        verify(voucherService).claim(any(VoucherCommands.ClaimVoucher.class));
-    }
+                verify(claimVoucherInputPort).execute(any(VoucherCommands.ClaimVoucher.class));
+        }
 
-    @Test
-    void reserveInvokesService() throws Exception {
-        when(voucherService.reserve(any(VoucherCommands.ReserveVoucher.class)))
-                .thenReturn(sample("V-1", "RESERVED"));
+        @Test
+        void reserveInvokesInputPort() throws Exception {
+                when(reserveVoucherInputPort.execute(any(VoucherCommands.ReserveVoucher.class)))
+                                .thenReturn(sample("V-1", "RESERVED"));
 
-        mockMvc.perform(post("/api/v1/promotions/vouchers/V-1/reserve")
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "orderId": "order-1",
-                                  "orderValue": 200000,
-                                  "currency": "VND"
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("RESERVED"));
-    }
+                mockMvc.perform(post("/api/v1/promotions/vouchers/V-1/reserve")
+                                .contentType(APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                  "orderId": "order-1",
+                                                  "orderValue": 200000,
+                                                  "currency": "VND"
+                                                }
+                                                """))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.status").value("RESERVED"));
+        }
 
-    @Test
-    void reserveRejectsMissingOrderId() throws Exception {
-        mockMvc.perform(post("/api/v1/promotions/vouchers/V-1/reserve")
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "orderId": "",
-                                  "orderValue": 100,
-                                  "currency": "VND"
-                                }
-                                """))
-                .andExpect(status().isBadRequest());
-    }
+        @Test
+        void reserveRejectsMissingOrderId() throws Exception {
+                mockMvc.perform(post("/api/v1/promotions/vouchers/V-1/reserve")
+                                .contentType(APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                  "orderId": "",
+                                                  "orderValue": 100,
+                                                  "currency": "VND"
+                                                }
+                                                """))
+                                .andExpect(status().isBadRequest());
+        }
 
-    @Test
-    void applyInvokesService() throws Exception {
-        when(voucherService.apply(any(VoucherCommands.ApplyVoucher.class)))
-                .thenReturn(sample("V-1", "APPLIED"));
+        @Test
+        void applyInvokesInputPort() throws Exception {
+                when(applyVoucherInputPort.execute(any(VoucherCommands.ApplyVoucher.class)))
+                                .thenReturn(sample("V-1", "APPLIED"));
 
-        mockMvc.perform(post("/api/v1/promotions/vouchers/V-1/apply")
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "orderId": "order-1",
-                                  "appliedAmount": 50000,
-                                  "currency": "VND"
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("APPLIED"));
-    }
+                mockMvc.perform(post("/api/v1/promotions/vouchers/V-1/apply")
+                                .contentType(APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                  "orderId": "order-1",
+                                                  "appliedAmount": 50000,
+                                                  "currency": "VND"
+                                                }
+                                                """))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.status").value("APPLIED"));
+        }
 
-    @Test
-    void releaseInvokesService() throws Exception {
-        when(voucherService.release(any(VoucherCommands.ReleaseVoucher.class)))
-                .thenReturn(sample("V-1", "RELEASED"));
+        @Test
+        void releaseInvokesInputPort() throws Exception {
+                when(releaseVoucherInputPort.execute(any(VoucherCommands.ReleaseVoucher.class)))
+                                .thenReturn(sample("V-1", "RELEASED"));
 
-        mockMvc.perform(post("/api/v1/promotions/vouchers/V-1/release")
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "orderId": "order-1",
-                                  "reason": "buyer cancelled"
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("RELEASED"));
-    }
+                mockMvc.perform(post("/api/v1/promotions/vouchers/V-1/release")
+                                .contentType(APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                  "orderId": "order-1",
+                                                  "reason": "buyer cancelled"
+                                                }
+                                                """))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.status").value("RELEASED"));
+        }
 
-    @Test
-    void listMineReturnsMyVouchers() throws Exception {
-        when(voucherService.listMine("user-1", 50))
-                .thenReturn(List.of(sample("V-1", "CLAIMED"), sample("V-2", "RESERVED")));
+        @Test
+        void listMineReturnsMyVouchers() throws Exception {
+                when(listMyVouchersInputPort.execute("user-1", 50))
+                                .thenReturn(List.of(sample("V-1", "CLAIMED"), sample("V-2", "RESERVED")));
 
-        mockMvc.perform(get("/api/v1/promotions/vouchers/me"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].voucherCode").value("V-1"))
-                .andExpect(jsonPath("$.data[1].voucherCode").value("V-2"));
-    }
+                mockMvc.perform(get("/api/v1/promotions/vouchers/me"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data[0].voucherCode").value("V-1"))
+                                .andExpect(jsonPath("$.data[1].voucherCode").value("V-2"));
+        }
 
-    @Test
-    void listMineCapsLimit() throws Exception {
-        when(voucherService.listMine("user-1", 100)).thenReturn(List.of());
+        @Test
+        void listMineCapsLimit() throws Exception {
+                when(listMyVouchersInputPort.execute("user-1", 100)).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/v1/promotions/vouchers/me").param("limit", "999"))
-                .andExpect(status().isOk());
+                mockMvc.perform(get("/api/v1/promotions/vouchers/me").param("limit", "999"))
+                                .andExpect(status().isOk());
 
-        verify(voucherService).listMine("user-1", 100);
-    }
+                verify(listMyVouchersInputPort).execute("user-1", 100);
+        }
 
-    @Test
-    void getMineReturnsVoucher() throws Exception {
-        when(voucherService.getMine("user-1", "V-9"))
-                .thenReturn(sample("V-9", "CLAIMED"));
+        @Test
+        void getMineReturnsVoucher() throws Exception {
+                when(getMyVoucherInputPort.execute("user-1", "V-9"))
+                                .thenReturn(sample("V-9", "CLAIMED"));
 
-        mockMvc.perform(get("/api/v1/promotions/vouchers/me/V-9"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.voucherCode").value("V-9"));
-    }
+                mockMvc.perform(get("/api/v1/promotions/vouchers/me/V-9"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.voucherCode").value("V-9"));
+        }
 }

@@ -1,8 +1,6 @@
 package com.aionn.promotion.application.service;
 
 import com.aionn.promotion.application.dto.banner.command.BannerCommands;
-import com.aionn.promotion.application.dto.banner.result.PromotionBannerResult;
-import com.aionn.promotion.application.mapper.PromotionResultMapper;
 import com.aionn.promotion.application.port.out.PromotionBannerPersistencePort;
 import com.aionn.promotion.domain.exception.PromotionErrorCode;
 import com.aionn.promotion.domain.exception.PromotionException;
@@ -20,26 +18,21 @@ import java.util.List;
 public class PromotionBannerService {
 
     private final PromotionBannerPersistencePort bannerRepository;
-    private final PromotionResultMapper mapper;
 
-    public List<PromotionBannerResult> listActive() {
-        return bannerRepository.findAllActive().stream()
-                .map(mapper::toResult)
-                .toList();
+    public List<PromotionBanner> listActive() {
+        return bannerRepository.findAllActive();
     }
 
-    public List<PromotionBannerResult> listAll() {
-        return bannerRepository.findAll().stream()
-                .map(mapper::toResult)
-                .toList();
+    public List<PromotionBanner> listAll() {
+        return bannerRepository.findAll();
     }
 
-    public PromotionBannerResult get(String bannerId) {
-        return mapper.toResult(required(bannerId));
+    public PromotionBanner get(String bannerId) {
+        return required(bannerId);
     }
 
     @Transactional
-    public PromotionBannerResult create(BannerCommands.CreateBanner command) {
+    public PromotionBanner create(BannerCommands.CreateBanner command) {
         PromotionBanner banner = PromotionBanner.create(
                 "BAN_" + IdGenerator.ulid(),
                 command.title(),
@@ -47,15 +40,15 @@ public class PromotionBannerService {
                 command.linkUrl(),
                 command.displayOrder(),
                 command.active());
-        return mapper.toResult(bannerRepository.save(banner));
+        return bannerRepository.save(banner);
     }
 
     @Transactional
-    public PromotionBannerResult update(BannerCommands.UpdateBanner command) {
+    public PromotionBanner update(BannerCommands.UpdateBanner command) {
         PromotionBanner banner = required(command.bannerId());
         banner.update(command.title(), command.imageUrl(), command.linkUrl(),
                 command.displayOrder(), command.active());
-        return mapper.toResult(bannerRepository.save(banner));
+        return bannerRepository.save(banner);
     }
 
     @Transactional

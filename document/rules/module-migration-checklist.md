@@ -27,7 +27,7 @@ Work top to bottom. Do not skip the wiring section: a module can compile, pass a
 ## 3. Database migrations
 
 - [ ] Place migrations at `modules/<module>/src/main/resources/db/V<major>.<minor>__<description>.sql`.
-- [ ] Use the next free major version. Currently taken: `V1.x` identity, `V2.x` catalog, `V3.x` inventory, `V4.x` ordering, `V5.x` payment, `V6.x` shipping.
+- [ ] Use the next free major version. Currently taken: `V1.x` identity, `V2.x` catalog, `V3.x` inventory, `V4.x` ordering, `V5.x` payment, `V6.x` shipping, `V7.x` reserved for notification, `V8.x` promotion.
 - [ ] Use `TIMESTAMPTZ` for every timestamp column (see `document/conventions/time-convention.md`).
 
 > [!WARNING]

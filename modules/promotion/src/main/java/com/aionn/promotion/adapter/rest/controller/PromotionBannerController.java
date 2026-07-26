@@ -2,9 +2,14 @@ package com.aionn.promotion.adapter.rest.controller;
 
 import com.aionn.promotion.adapter.rest.dto.banner.CreateBannerRequest;
 import com.aionn.promotion.adapter.rest.dto.banner.UpdateBannerRequest;
-import com.aionn.promotion.application.dto.banner.command.BannerCommands;
-import com.aionn.promotion.application.dto.banner.result.PromotionBannerResult;
-import com.aionn.promotion.application.service.PromotionBannerService;
+import com.aionn.promotion.adapter.rest.dto.banner.response.PromotionBannerResponse;
+import com.aionn.promotion.adapter.rest.mapper.banner.PromotionBannerDtoMapper;
+import com.aionn.promotion.application.port.in.banner.CreateBannerInputPort;
+import com.aionn.promotion.application.port.in.banner.DeleteBannerInputPort;
+import com.aionn.promotion.application.port.in.banner.GetBannerInputPort;
+import com.aionn.promotion.application.port.in.banner.ListActiveBannersInputPort;
+import com.aionn.promotion.application.port.in.banner.ListAllBannersInputPort;
+import com.aionn.promotion.application.port.in.banner.UpdateBannerInputPort;
 import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,61 +34,67 @@ import java.util.List;
 @Tag(name = "Promotion - Banner", description = "Public promotion banners + admin CRUD")
 public class PromotionBannerController {
 
-    private final PromotionBannerService bannerService;
+        private final ListActiveBannersInputPort listActiveBannersInputPort;
+        private final ListAllBannersInputPort listAllBannersInputPort;
+        private final GetBannerInputPort getBannerInputPort;
+        private final CreateBannerInputPort createBannerInputPort;
+        private final UpdateBannerInputPort updateBannerInputPort;
+        private final DeleteBannerInputPort deleteBannerInputPort;
+        private final PromotionBannerDtoMapper dtoMapper;
 
-    @GetMapping
-    @Operation(summary = "Get active promotion banners (public)")
-    public ResponseEntity<ApiResponse<List<PromotionBannerResult>>> getActiveBanners() {
-        return ResponseEntity.ok(ApiResponse.success(
-                bannerService.listActive(), "Promotion banners fetched"));
-    }
+        @GetMapping
+        @Operation(summary = "Get active promotion banners (public)")
+        public ResponseEntity<ApiResponse<List<PromotionBannerResponse>>> getActiveBanners() {
+                return ResponseEntity.ok(ApiResponse.success(
+                                dtoMapper.toResponses(listActiveBannersInputPort.execute()),
+                                "Promotion banners fetched"));
+        }
 
-    @GetMapping("/admin")
-    @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
-    @Operation(summary = "Admin — list all banners (active and inactive)")
-    public ResponseEntity<ApiResponse<List<PromotionBannerResult>>> listAll() {
-        return ResponseEntity.ok(ApiResponse.success(
-                bannerService.listAll(), "Promotion banners fetched"));
-    }
+        @GetMapping("/admin")
+        @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
+        @Operation(summary = "Admin — list all banners (active and inactive)")
+        public ResponseEntity<ApiResponse<List<PromotionBannerResponse>>> listAll() {
+                return ResponseEntity.ok(ApiResponse.success(
+                                dtoMapper.toResponses(listAllBannersInputPort.execute()),
+                                "Promotion banners fetched"));
+        }
 
-    @GetMapping("/admin/{bannerId}")
-    @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
-    @Operation(summary = "Admin — get banner by id")
-    public ResponseEntity<ApiResponse<PromotionBannerResult>> get(@PathVariable String bannerId) {
-        return ResponseEntity.ok(ApiResponse.success(
-                bannerService.get(bannerId), "Promotion banner fetched"));
-    }
+        @GetMapping("/admin/{bannerId}")
+        @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
+        @Operation(summary = "Admin — get banner by id")
+        public ResponseEntity<ApiResponse<PromotionBannerResponse>> get(@PathVariable String bannerId) {
+                return ResponseEntity.ok(ApiResponse.success(
+                                dtoMapper.toResponse(getBannerInputPort.execute(bannerId)),
+                                "Promotion banner fetched"));
+        }
 
-    @PostMapping
-    @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
-    @Operation(summary = "Admin — create banner")
-    public ResponseEntity<ApiResponse<PromotionBannerResult>> create(
-            @Valid @RequestBody CreateBannerRequest request) {
-        boolean active = request.active() == null || request.active();
-        return ApiResponse.createdResponse("Promotion banner created",
-                bannerService.create(new BannerCommands.CreateBanner(
-                        request.title(), request.imageUrl(), request.linkUrl(),
-                        request.displayOrder(), active)));
-    }
+        @PostMapping
+        @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
+        @Operation(summary = "Admin — create banner")
+        public ResponseEntity<ApiResponse<PromotionBannerResponse>> create(
+                        @Valid @RequestBody CreateBannerRequest request) {
+                return ApiResponse.createdResponse("Promotion banner created",
+                                dtoMapper.toResponse(
+                                                createBannerInputPort.execute(dtoMapper.toCreateCommand(request))));
+        }
 
-    @PutMapping("/{bannerId}")
-    @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
-    @Operation(summary = "Admin — update banner")
-    public ResponseEntity<ApiResponse<PromotionBannerResult>> update(
-            @PathVariable String bannerId,
-            @Valid @RequestBody UpdateBannerRequest request) {
-        return ResponseEntity.ok(ApiResponse.success(
-                bannerService.update(new BannerCommands.UpdateBanner(
-                        bannerId, request.title(), request.imageUrl(), request.linkUrl(),
-                        request.displayOrder(), request.active())),
-                "Promotion banner updated"));
-    }
+        @PutMapping("/{bannerId}")
+        @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
+        @Operation(summary = "Admin — update banner")
+        public ResponseEntity<ApiResponse<PromotionBannerResponse>> update(
+                        @PathVariable String bannerId,
+                        @Valid @RequestBody UpdateBannerRequest request) {
+                return ResponseEntity.ok(ApiResponse.success(
+                                dtoMapper.toResponse(updateBannerInputPort.execute(
+                                                dtoMapper.toUpdateCommand(bannerId, request))),
+                                "Promotion banner updated"));
+        }
 
-    @DeleteMapping("/{bannerId}")
-    @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
-    @Operation(summary = "Admin — delete banner")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String bannerId) {
-        bannerService.delete(new BannerCommands.DeleteBanner(bannerId));
-        return ResponseEntity.ok(ApiResponse.success("Promotion banner deleted"));
-    }
+        @DeleteMapping("/{bannerId}")
+        @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
+        @Operation(summary = "Admin — delete banner")
+        public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String bannerId) {
+                deleteBannerInputPort.execute(dtoMapper.toDeleteCommand(bannerId));
+                return ResponseEntity.ok(ApiResponse.success("Promotion banner deleted"));
+        }
 }

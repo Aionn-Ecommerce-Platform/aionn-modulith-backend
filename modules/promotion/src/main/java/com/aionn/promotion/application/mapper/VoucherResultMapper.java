@@ -11,4 +11,6 @@ public interface VoucherResultMapper {
     @Mapping(target = "discountAmount", expression = "java(voucher.getDiscountAmount().amount())")
     @Mapping(target = "currency", expression = "java(voucher.getDiscountAmount().currency())")
     VoucherResult toResult(Voucher voucher);
+
+    java.util.List<VoucherResult> toResults(java.util.List<Voucher> vouchers);
 }

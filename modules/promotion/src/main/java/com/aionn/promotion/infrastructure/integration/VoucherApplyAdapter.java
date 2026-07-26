@@ -21,11 +21,12 @@ import java.time.Instant;
 import java.util.Collections;
 
 /**
- * Handles discount calculations and applies/consumes the voucher in the database
+ * Handles discount calculations and applies/consumes the voucher in the
+ * database
  * as part of the checkout transaction.
  */
 @Slf4j
-@Component
+@Component("promotionVoucherApplyAdapter")
 @RequiredArgsConstructor
 public class VoucherApplyAdapter implements VoucherApplyPort {
 

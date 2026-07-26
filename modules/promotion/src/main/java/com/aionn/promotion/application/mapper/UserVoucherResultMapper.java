@@ -19,4 +19,6 @@ public interface UserVoucherResultMapper {
     @Mapping(target = "voucherUsageLimit", ignore = true)
     @Mapping(target = "voucherUsedCount", ignore = true)
     UserVoucherResult toResult(UserVoucher userVoucher);
+
+    java.util.List<UserVoucherResult> toResults(java.util.List<UserVoucher> userVouchers);
 }

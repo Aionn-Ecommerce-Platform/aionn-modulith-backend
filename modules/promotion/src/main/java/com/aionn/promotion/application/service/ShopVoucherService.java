@@ -1,8 +1,6 @@
 package com.aionn.promotion.application.service;
 
-import com.aionn.promotion.adapter.rest.dto.voucher.IssueVoucherRequest;
-import com.aionn.promotion.application.dto.voucher.result.VoucherResult;
-import com.aionn.promotion.application.mapper.PromotionResultMapper;
+import com.aionn.promotion.application.dto.voucher.command.VoucherCommands;
 import com.aionn.promotion.application.port.out.VoucherPersistencePort;
 import com.aionn.promotion.domain.exception.PromotionErrorCode;
 import com.aionn.promotion.domain.exception.PromotionException;
@@ -14,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.util.List;
 
 @Service
@@ -21,41 +20,43 @@ import java.util.List;
 @Transactional
 public class ShopVoucherService {
 
+    private static final int MAX_LIMIT = 100;
+
     private final VoucherPersistencePort voucherRepository;
     private final MerchantQueryPort merchantQueryPort;
-    private final PromotionResultMapper mapper;
     private final EventPublisher eventPublisher;
+    private final Clock clock;
 
-    public VoucherResult issue(String ownerId, IssueVoucherRequest request) {
-        String merchantId = merchantIdFor(ownerId);
-        String voucherCode = request.voucherCode().trim().toUpperCase();
+    public Voucher issue(VoucherCommands.IssueShopVoucher command) {
+        String merchantId = merchantIdFor(command.ownerId());
+        String voucherCode = command.voucherCode().trim().toUpperCase();
         if (voucherRepository.findByCode(voucherCode).isPresent()) {
             throw new PromotionException(PromotionErrorCode.VOUCHER_DUPLICATE_CODE);
         }
         Voucher voucher = Voucher.issueForShop(
                 voucherCode,
                 merchantId,
-                Money.of(request.discountAmount(), request.currency() == null ? "VND" : request.currency()),
-                request.usageLimit(), request.validFrom(), request.validUntil());
+                Money.of(command.discountAmount(), command.currency() == null ? "VND" : command.currency()),
+                command.usageLimit(), command.validFrom(), command.validUntil(), clock);
         Voucher saved = voucherRepository.save(voucher);
         eventPublisher.publish(voucher.pullEvents());
-        return mapper.toResult(saved);
+        return saved;
     }
 
     @Transactional(readOnly = true)
-    public List<VoucherResult> listMine(String ownerId, int limit) {
-        return voucherRepository.findByMerchantId(
-                        merchantIdFor(ownerId), Math.min(Math.max(limit, 1), 100)).stream()
-                .map(mapper::toResult)
-                .toList();
+    public List<Voucher> listMine(String ownerId, int limit) {
+        return voucherRepository.findByMerchantId(merchantIdFor(ownerId), safeLimit(limit));
     }
 
     @Transactional(readOnly = true)
-    public List<VoucherResult> listByMerchant(String merchantId, int limit) {
-        return voucherRepository.findByMerchantId(merchantId, Math.min(Math.max(limit, 1), 100)).stream()
-                .filter(voucher -> voucher.isValidNow(java.time.Instant.now()))
-                .map(mapper::toResult)
+    public List<Voucher> listByMerchant(String merchantId, int limit) {
+        return voucherRepository.findByMerchantId(merchantId, safeLimit(limit)).stream()
+                .filter(voucher -> voucher.isValidNow(clock.instant()))
                 .toList();
+    }
+
+    private static int safeLimit(int limit) {
+        return Math.min(Math.max(limit, 1), MAX_LIMIT);
     }
 
     private String merchantIdFor(String ownerId) {

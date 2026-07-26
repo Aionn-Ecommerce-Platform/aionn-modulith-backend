@@ -75,10 +75,17 @@ Open `modules/<module-name>/build/reports/jacoco/test/html/index.html` to inspec
 
 Read that number with care: the raw Jacoco total includes the excluded layers (DTOs, mappers, ports, usecases, JPA entities, config) and therefore understates the figure Sonar actually gates on. What matters is **effective coverage** — the ratio computed after dropping the packages listed in `sonar.coverage.exclusions`. The gap is large: `shipping` reported 60.5% raw while sitting at 97% effective.
 
+Compute it with the helper instead of doing the arithmetic by hand. It reads the Jacoco XML report, applies the same exclusion list as Sonar and prints the files that still have uncovered lines:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/coverage/effective-coverage.ps1 -Module promotion
+```
+
 Effective line coverage per module, as a baseline for new work:
 
 | Module    | Effective line | Effective branch |
 | :-------- | :------------- | :--------------- |
+| promotion | 99.6%          | 90.5%            |
 | shipping  | 97.0%          | 82.8%            |
 | identity  | 94.2%          | 75.3%            |
 | catalog   | 93.3%          | 72.7%            |

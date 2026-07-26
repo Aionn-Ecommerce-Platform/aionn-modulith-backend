@@ -14,6 +14,16 @@ public final class VoucherCommands {
         public record ClaimVoucher(String userId, String voucherCode) implements Command {
         }
 
+        public record IssueShopVoucher(
+                        String ownerId,
+                        String voucherCode,
+                        BigDecimal discountAmount,
+                        String currency,
+                        int usageLimit,
+                        Instant validFrom,
+                        Instant validUntil) implements Command {
+        }
+
         public record ReserveVoucher(
                         String userId,
                         String voucherCode,

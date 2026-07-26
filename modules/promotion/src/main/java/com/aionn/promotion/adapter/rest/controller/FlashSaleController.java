@@ -2,12 +2,19 @@ package com.aionn.promotion.adapter.rest.controller;
 
 import com.aionn.promotion.adapter.rest.dto.flashsale.RegisterFlashSaleRequest;
 import com.aionn.promotion.adapter.rest.dto.flashsale.RejectFlashSaleRequest;
+import com.aionn.promotion.adapter.rest.dto.flashsale.response.ActiveFlashSaleResponse;
+import com.aionn.promotion.adapter.rest.dto.flashsale.response.FlashSaleRegistrationResponse;
+import com.aionn.promotion.adapter.rest.mapper.flashsale.FlashSaleDtoMapper;
 import com.aionn.promotion.adapter.rest.support.session.CurrentAdminId;
 import com.aionn.promotion.adapter.rest.support.session.CurrentUserId;
-import com.aionn.promotion.application.dto.flashsale.command.FlashSaleCommands;
-import com.aionn.promotion.application.dto.flashsale.result.ActiveFlashSaleResult;
-import com.aionn.promotion.application.dto.flashsale.result.FlashSaleRegistrationResult;
-import com.aionn.promotion.application.service.FlashSaleService;
+import com.aionn.promotion.application.port.in.flashsale.ApproveFlashSaleInputPort;
+import com.aionn.promotion.application.port.in.flashsale.CancelFlashSaleInputPort;
+import com.aionn.promotion.application.port.in.flashsale.GetFlashSaleRegistrationInputPort;
+import com.aionn.promotion.application.port.in.flashsale.ListActiveFlashSalesInputPort;
+import com.aionn.promotion.application.port.in.flashsale.ListFlashSaleRegistrationsByStatusInputPort;
+import com.aionn.promotion.application.port.in.flashsale.ListMyFlashSaleRegistrationsInputPort;
+import com.aionn.promotion.application.port.in.flashsale.RegisterFlashSaleInputPort;
+import com.aionn.promotion.application.port.in.flashsale.RejectFlashSaleInputPort;
 import com.aionn.promotion.domain.valueobject.FlashSaleRegistrationStatus;
 import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,95 +40,105 @@ import java.util.List;
 @Tag(name = "Promotion - Flash Sale", description = "Flash sale registration + admin approval")
 public class FlashSaleController {
 
-    private final FlashSaleService flashSaleService;
+        private final RegisterFlashSaleInputPort registerFlashSaleInputPort;
+        private final ApproveFlashSaleInputPort approveFlashSaleInputPort;
+        private final RejectFlashSaleInputPort rejectFlashSaleInputPort;
+        private final CancelFlashSaleInputPort cancelFlashSaleInputPort;
+        private final ListMyFlashSaleRegistrationsInputPort listMyFlashSaleRegistrationsInputPort;
+        private final ListFlashSaleRegistrationsByStatusInputPort listFlashSaleRegistrationsByStatusInputPort;
+        private final GetFlashSaleRegistrationInputPort getFlashSaleRegistrationInputPort;
+        private final ListActiveFlashSalesInputPort listActiveFlashSalesInputPort;
+        private final FlashSaleDtoMapper dtoMapper;
 
-    @PostMapping("/registrations")
-    @PreAuthorize("hasAuthority('ROLE_MERCHANT')")
-    @Operation(summary = "Merchant registers a SKU for a flash sale slot")
-    public ResponseEntity<ApiResponse<FlashSaleRegistrationResult>> register(
-            @CurrentUserId String ownerId,
-            @Valid @RequestBody RegisterFlashSaleRequest request) {
-        return ApiResponse.createdResponse("Flash-sale registration submitted",
-                flashSaleService.register(new FlashSaleCommands.RegisterFlashSale(
-                        request.campaignId(), ownerId,
-                        request.productId(), request.skuId(),
-                        request.salePrice(), request.currency(), request.saleStock())));
-    }
+        @PostMapping("/registrations")
+        @PreAuthorize("hasAuthority('ROLE_MERCHANT')")
+        @Operation(summary = "Merchant registers a SKU for a flash sale slot")
+        public ResponseEntity<ApiResponse<FlashSaleRegistrationResponse>> register(
+                        @CurrentUserId String ownerId,
+                        @Valid @RequestBody RegisterFlashSaleRequest request) {
+                return ApiResponse.createdResponse("Flash-sale registration submitted",
+                                dtoMapper.toResponse(registerFlashSaleInputPort.execute(
+                                                dtoMapper.toRegisterCommand(ownerId, request))));
+        }
 
-    @PostMapping("/registrations/{registrationId}/approve")
-    @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
-    @Operation(summary = "Admin approves a pending flash-sale registration")
-    public ResponseEntity<ApiResponse<FlashSaleRegistrationResult>> approve(
-            @CurrentAdminId String adminId,
-            @PathVariable String registrationId) {
-        return ResponseEntity.ok(ApiResponse.success(
-                flashSaleService.approve(new FlashSaleCommands.ApproveFlashSale(
-                        registrationId, adminId)),
-                "Flash-sale registration approved"));
-    }
+        @PostMapping("/registrations/{registrationId}/approve")
+        @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
+        @Operation(summary = "Admin approves a pending flash-sale registration")
+        public ResponseEntity<ApiResponse<FlashSaleRegistrationResponse>> approve(
+                        @CurrentAdminId String adminId,
+                        @PathVariable String registrationId) {
+                return ResponseEntity.ok(ApiResponse.success(
+                                dtoMapper.toResponse(approveFlashSaleInputPort.execute(
+                                                dtoMapper.toApproveCommand(registrationId, adminId))),
+                                "Flash-sale registration approved"));
+        }
 
-    @PostMapping("/registrations/{registrationId}/reject")
-    @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
-    @Operation(summary = "Admin rejects a pending flash-sale registration")
-    public ResponseEntity<ApiResponse<FlashSaleRegistrationResult>> reject(
-            @CurrentAdminId String adminId,
-            @PathVariable String registrationId,
-            @Valid @RequestBody RejectFlashSaleRequest request) {
-        return ResponseEntity.ok(ApiResponse.success(
-                flashSaleService.reject(new FlashSaleCommands.RejectFlashSale(
-                        registrationId, adminId, request.reason())),
-                "Flash-sale registration rejected"));
-    }
+        @PostMapping("/registrations/{registrationId}/reject")
+        @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
+        @Operation(summary = "Admin rejects a pending flash-sale registration")
+        public ResponseEntity<ApiResponse<FlashSaleRegistrationResponse>> reject(
+                        @CurrentAdminId String adminId,
+                        @PathVariable String registrationId,
+                        @Valid @RequestBody RejectFlashSaleRequest request) {
+                return ResponseEntity.ok(ApiResponse.success(
+                                dtoMapper.toResponse(rejectFlashSaleInputPort.execute(
+                                                dtoMapper.toRejectCommand(registrationId, adminId, request))),
+                                "Flash-sale registration rejected"));
+        }
 
-    @DeleteMapping("/registrations/{registrationId}")
-    @PreAuthorize("hasAuthority('ROLE_MERCHANT')")
-    @Operation(summary = "Merchant cancels their own pending registration")
-    public ResponseEntity<ApiResponse<FlashSaleRegistrationResult>> cancel(
-            @CurrentUserId String ownerId,
-            @PathVariable String registrationId) {
-        return ResponseEntity.ok(ApiResponse.success(
-                flashSaleService.cancel(new FlashSaleCommands.CancelFlashSale(
-                        registrationId, ownerId)),
-                "Flash-sale registration cancelled"));
-    }
+        @DeleteMapping("/registrations/{registrationId}")
+        @PreAuthorize("hasAuthority('ROLE_MERCHANT')")
+        @Operation(summary = "Merchant cancels their own pending registration")
+        public ResponseEntity<ApiResponse<FlashSaleRegistrationResponse>> cancel(
+                        @CurrentUserId String ownerId,
+                        @PathVariable String registrationId) {
+                return ResponseEntity.ok(ApiResponse.success(
+                                dtoMapper.toResponse(cancelFlashSaleInputPort.execute(
+                                                dtoMapper.toCancelCommand(registrationId, ownerId))),
+                                "Flash-sale registration cancelled"));
+        }
 
-    @GetMapping("/registrations/mine")
-    @PreAuthorize("hasAuthority('ROLE_MERCHANT')")
-    @Operation(summary = "List my flash-sale registrations")
-    public ResponseEntity<ApiResponse<List<FlashSaleRegistrationResult>>> listMine(
-            @CurrentUserId String ownerId,
-            @RequestParam(required = false) FlashSaleRegistrationStatus status,
-            @RequestParam(defaultValue = "100") int limit) {
-        return ResponseEntity.ok(ApiResponse.success(
-                flashSaleService.listByMerchant(ownerId, status, limit),
-                "Flash-sale registrations fetched"));
-    }
+        @GetMapping("/registrations/mine")
+        @PreAuthorize("hasAuthority('ROLE_MERCHANT')")
+        @Operation(summary = "List my flash-sale registrations")
+        public ResponseEntity<ApiResponse<List<FlashSaleRegistrationResponse>>> listMine(
+                        @CurrentUserId String ownerId,
+                        @RequestParam(required = false) FlashSaleRegistrationStatus status,
+                        @RequestParam(defaultValue = "100") int limit) {
+                return ResponseEntity.ok(ApiResponse.success(
+                                dtoMapper.toResponses(
+                                                listMyFlashSaleRegistrationsInputPort.execute(ownerId, status, limit)),
+                                "Flash-sale registrations fetched"));
+        }
 
-    @GetMapping("/registrations")
-    @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
-    @Operation(summary = "Admin lists registrations by status")
-    public ResponseEntity<ApiResponse<List<FlashSaleRegistrationResult>>> listByStatus(
-            @RequestParam FlashSaleRegistrationStatus status,
-            @RequestParam(defaultValue = "100") int limit) {
-        return ResponseEntity.ok(ApiResponse.success(
-                flashSaleService.listByStatus(status, limit),
-                "Flash-sale registrations fetched"));
-    }
+        @GetMapping("/registrations")
+        @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
+        @Operation(summary = "Admin lists registrations by status")
+        public ResponseEntity<ApiResponse<List<FlashSaleRegistrationResponse>>> listByStatus(
+                        @RequestParam FlashSaleRegistrationStatus status,
+                        @RequestParam(defaultValue = "100") int limit) {
+                return ResponseEntity.ok(ApiResponse.success(
+                                dtoMapper.toResponses(
+                                                listFlashSaleRegistrationsByStatusInputPort.execute(status, limit)),
+                                "Flash-sale registrations fetched"));
+        }
 
-    @GetMapping("/registrations/{registrationId}")
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Get flash-sale registration by id")
-    public ResponseEntity<ApiResponse<FlashSaleRegistrationResult>> get(
-            @PathVariable String registrationId) {
-        return ResponseEntity.ok(ApiResponse.success(
-                flashSaleService.get(registrationId), "Flash-sale registration fetched"));
-    }
+        @GetMapping("/registrations/{registrationId}")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(summary = "Get flash-sale registration by id")
+        public ResponseEntity<ApiResponse<FlashSaleRegistrationResponse>> get(
+                        @PathVariable String registrationId) {
+                return ResponseEntity.ok(ApiResponse.success(
+                                dtoMapper.toResponse(getFlashSaleRegistrationInputPort.execute(registrationId)),
+                                "Flash-sale registration fetched"));
+        }
 
-    @GetMapping("/active")
-    @Operation(summary = "Public — active flash sales for the storefront")
-    public ResponseEntity<ApiResponse<List<ActiveFlashSaleResult>>> active(
-            @RequestParam(defaultValue = "5") int limit) {
-        return ResponseEntity.ok(ApiResponse.success(
-                flashSaleService.listActive(limit), "Active flash sales fetched"));
-    }
+        @GetMapping("/active")
+        @Operation(summary = "Public — active flash sales for the storefront")
+        public ResponseEntity<ApiResponse<List<ActiveFlashSaleResponse>>> active(
+                        @RequestParam(defaultValue = "5") int limit) {
+                return ResponseEntity.ok(ApiResponse.success(
+                                dtoMapper.toActiveResponses(listActiveFlashSalesInputPort.execute(limit)),
+                                "Active flash sales fetched"));
+        }
 }

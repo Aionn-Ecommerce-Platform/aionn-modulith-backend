@@ -18,4 +18,6 @@ public interface CampaignResultMapper {
     @Mapping(target = "maxClaimsPerUser", expression = "java(campaign.getCondition().maxClaimsPerUser())")
     @Mapping(target = "maxUsesPerVoucher", expression = "java(campaign.getCondition().maxUsesPerVoucher())")
     CampaignResult toResult(PromotionCampaign campaign);
+
+    java.util.List<CampaignResult> toResults(java.util.List<PromotionCampaign> campaigns);
 }

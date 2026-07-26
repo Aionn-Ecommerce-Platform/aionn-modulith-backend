@@ -2,7 +2,7 @@ package com.aionn.promotion.application.service;
 
 import com.aionn.promotion.application.dto.voucher.command.VoucherCommands;
 import com.aionn.promotion.application.dto.voucher.result.UserVoucherResult;
-import com.aionn.promotion.application.mapper.PromotionResultMapper;
+import com.aionn.promotion.application.mapper.UserVoucherResultMapper;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.promotion.application.port.out.PromotionCampaignPersistencePort;
 import com.aionn.promotion.application.port.out.UserVoucherPersistencePort;
@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -35,8 +36,9 @@ public class VoucherService {
     private final VoucherPersistencePort voucherRepository;
     private final UserVoucherPersistencePort userVoucherRepository;
     private final PromotionCampaignPersistencePort campaignRepository;
-    private final PromotionResultMapper mapper;
+    private final UserVoucherResultMapper mapper;
     private final EventPublisher eventPublisher;
+    private final Clock clock;
 
     public UserVoucherResult claim(VoucherCommands.ClaimVoucher command) {
         Voucher voucher = voucherRepository.lockByCode(command.voucherCode())
@@ -48,8 +50,8 @@ public class VoucherService {
                     throw new PromotionException(PromotionErrorCode.USER_VOUCHER_ALREADY_CLAIMED);
                 });
 
-        voucher.claimSlot();
-        UserVoucher uv = UserVoucher.claim(IdGenerator.ulid(), command.voucherCode(), command.userId());
+        voucher.claimSlot(clock);
+        UserVoucher uv = UserVoucher.claim(IdGenerator.ulid(), command.voucherCode(), command.userId(), clock);
         voucherRepository.save(voucher);
         UserVoucher saved = userVoucherRepository.save(uv);
         eventPublisher.publish(uv.pullEvents());
@@ -68,9 +70,9 @@ public class VoucherService {
         UserVoucher uv = userVoucherRepository.findByUserAndCode(command.userId(), command.voucherCode())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.USER_VOUCHER_NOT_FOUND));
         Instant expiresAt = command.expiresAt() != null ? command.expiresAt()
-                : Instant.now().plus(DEFAULT_RESERVATION_TTL);
-        voucher.reserveSlot();
-        uv.reserve(command.orderId(), expiresAt);
+                : clock.instant().plus(DEFAULT_RESERVATION_TTL);
+        voucher.reserveSlot(clock);
+        uv.reserve(command.orderId(), expiresAt, clock);
 
         voucherRepository.save(voucher);
         UserVoucher saved = userVoucherRepository.save(uv);
@@ -89,11 +91,11 @@ public class VoucherService {
         }
         Money applied = Money.of(command.appliedAmount(),
                 command.currency() == null ? voucher.getDiscountAmount().currency() : command.currency());
-        voucher.commitSlot();
+        voucher.commitSlot(clock);
         if (campaign != null) {
-            campaign.consumeBudget(applied);
+            campaign.consumeBudget(applied, clock);
         }
-        uv.apply(applied);
+        uv.apply(applied, clock);
 
         voucherRepository.save(voucher);
         if (campaign != null) {
@@ -112,8 +114,8 @@ public class VoucherService {
         if (uv.getReservedOrderId() == null || !uv.getReservedOrderId().equals(command.orderId())) {
             throw new PromotionException(PromotionErrorCode.USER_VOUCHER_RESERVED_BY_OTHER);
         }
-        voucher.releaseSlot();
-        uv.release(command.reason());
+        voucher.releaseSlot(clock);
+        uv.release(command.reason(), clock);
 
         voucherRepository.save(voucher);
         UserVoucher saved = userVoucherRepository.save(uv);
@@ -133,10 +135,10 @@ public class VoucherService {
         }
         Voucher voucher = voucherRepository.lockByCode(uv.getVoucherCode()).orElse(null);
         if (voucher != null) {
-            voucher.releaseSlot();
+            voucher.releaseSlot(clock);
             voucherRepository.save(voucher);
         }
-        uv.release(reason);
+        uv.release(reason, clock);
         userVoucherRepository.save(uv);
         eventPublisher.publish(uv.pullEvents());
         return 1;
@@ -153,10 +155,10 @@ public class VoucherService {
                 Voucher voucher = voucherRepository.lockByCode(uv.getVoucherCode())
                         .orElse(null);
                 if (voucher != null) {
-                    voucher.releaseSlot();
+                    voucher.releaseSlot(clock);
                     voucherRepository.save(voucher);
                 }
-                uv.release("expired");
+                uv.release("expired", clock);
                 userVoucherRepository.save(uv);
                 eventPublisher.publish(uv.pullEvents());
                 released++;
@@ -207,7 +209,7 @@ public class VoucherService {
         }
         PromotionCampaign campaign = campaignRepository.findById(voucher.getCampaignId())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.CAMPAIGN_NOT_FOUND));
-        campaign.ensureRunning();
+        campaign.ensureRunning(clock);
         return campaign;
     }
 }

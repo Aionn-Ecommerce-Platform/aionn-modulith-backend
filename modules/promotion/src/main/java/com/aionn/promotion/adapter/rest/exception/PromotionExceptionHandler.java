@@ -19,12 +19,14 @@ import java.util.Map;
 public class PromotionExceptionHandler extends AbstractModuleExceptionHandler {
 
     public PromotionExceptionHandler() {
-        registerErrors(HttpStatus.NOT_FOUND, "PRM_001", "PRM_101", "PRM_203");
+        registerErrors(HttpStatus.NOT_FOUND,
+                "PRM_001", "PRM_101", "PRM_106", "PRM_203", "PRM_401", "PRM_501");
         registerErrors(HttpStatus.CONFLICT,
-                "PRM_103", "PRM_104", "PRM_201", "PRM_202", "PRM_205");
+                "PRM_103", "PRM_104", "PRM_201", "PRM_202", "PRM_205", "PRM_402");
+        registerErrors(HttpStatus.FORBIDDEN, "PRM_105", "PRM_404");
         registerErrors(HttpStatus.BAD_REQUEST,
                 "PRM_002", "PRM_003", "PRM_004", "PRM_102", "PRM_204",
-                "PRM_301", "PRM_302", "PRM_900");
+                "PRM_301", "PRM_302", "PRM_403", "PRM_900");
         setDefaultStatus(HttpStatus.UNPROCESSABLE_ENTITY);
     }
 

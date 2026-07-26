@@ -4,6 +4,8 @@ import com.aionn.promotion.application.dto.flashsale.result.FlashSaleRegistratio
 import com.aionn.promotion.domain.model.FlashSaleRegistration;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class FlashSaleResultMapper {
 
@@ -24,5 +26,9 @@ public class FlashSaleResultMapper {
                 r.getDecidedAt(),
                 r.getDecidedBy(),
                 r.getUpdatedAt());
+    }
+
+    public List<FlashSaleRegistrationResult> toResults(List<FlashSaleRegistration> registrations) {
+        return registrations.stream().map(this::toResult).toList();
     }
 }
