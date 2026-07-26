@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: notification
+
+  flyway:
+    enabled: true
+    locations: classpath:db
+
+  mail:
+    host: ${NOTIFICATION_SMTP_HOST:localhost}
+    port: ${NOTIFICATION_SMTP_PORT:1025}
+    username: ${NOTIFICATION_SMTP_USERNAME:}
+    password: ${NOTIFICATION_SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${NOTIFICATION_SMTP_AUTH:false}
+          starttls:
+            enable: ${NOTIFICATION_SMTP_STARTTLS:false}
+          connectiontimeout: 10000
+          timeout: 15000
+          writetimeout: 15000
+
+notification:
+  defaults:
+    locale: ${NOTIFICATION_DEFAULT_LOCALE:vi-VN}
+    max-retry-attempts: ${NOTIFICATION_MAX_RETRY_ATTEMPTS:3}
+
+  email:
+    provider: ${NOTIFICATION_EMAIL_PROVIDER:logging}
+    from: ${NOTIFICATION_EMAIL_FROM:}
+    default-subject: ${NOTIFICATION_EMAIL_DEFAULT_SUBJECT:Aionn notification}
+
+  sms:
+    provider: ${NOTIFICATION_SMS_PROVIDER:logging}
+    twilio:
+      account-sid: ${TWILIO_ACCOUNT_SID:}
+      auth-token: ${TWILIO_AUTH_TOKEN:}
+      from-phone-number: ${TWILIO_FROM_PHONE_NUMBER:}
+
+  push:
+    provider: ${NOTIFICATION_PUSH_PROVIDER:logging}
+
+  recipient:
+    provider: ${NOTIFICATION_RECIPIENT_PROVIDER:identity}
+
+  retry:
+    enabled: ${NOTIFICATION_RETRY_ENABLED:true}
+    delay-ms: ${NOTIFICATION_RETRY_DELAY_MS:30000}
+    batch-size: ${NOTIFICATION_RETRY_BATCH:100}

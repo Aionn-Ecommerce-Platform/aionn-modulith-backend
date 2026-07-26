@@ -12,6 +12,7 @@ spring:
       - classpath:application-payment.yml
       - classpath:application-shipping.yml
       - classpath:application-promotion.yml
+      - classpath:application-notification.yml
 
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_LOCAL_PORT:5434}/${POSTGRES_DB:aionn}

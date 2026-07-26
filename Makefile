@@ -8,7 +8,7 @@ ENV_FILE := envs/common.env
 PROJECT := aionn-modulith-backend
 COMPOSE := $(CONTAINER) compose -p $(PROJECT) -f $(COMPOSE_FILE) --env-file $(ENV_FILE)
 
-LOAD_ENV := set -a; . envs/common.env; . envs/identity.env; . envs/catalog.env; . envs/inventory.env; . envs/ordering.env; . envs/payment.env; . envs/shipping.env; . envs/promotion.env; set +a
+LOAD_ENV := set -a; . envs/common.env; . envs/identity.env; . envs/catalog.env; . envs/inventory.env; . envs/ordering.env; . envs/payment.env; . envs/shipping.env; . envs/promotion.env; . envs/notification.env; set +a
 
 .PHONY: build test smoke run clean infra-up infra-down infra-restart infra-logs infra-ps infra-config reset-db
 
