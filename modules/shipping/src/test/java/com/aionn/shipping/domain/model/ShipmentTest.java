@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ShipmentTest {
@@ -96,8 +97,8 @@ class ShipmentTest {
     void ensureViewableAllowsBuyerAndSeller() {
         Shipment s = newRequested();
 
-        s.ensureViewableBy("U_1", null);
-        s.ensureViewableBy(null, "M_1");
+        assertThatCode(() -> s.ensureViewableBy("U_1", null)).doesNotThrowAnyException();
+        assertThatCode(() -> s.ensureViewableBy(null, "M_1")).doesNotThrowAnyException();
     }
 
     @Test
@@ -144,7 +145,8 @@ class ShipmentTest {
     @Test
     void ensureOwnedByMerchantAllowsCorrectMerchant() {
         Shipment s = newRequested();
-        s.ensureOwnedByMerchant("M_1");
+
+        assertThatCode(() -> s.ensureOwnedByMerchant("M_1")).doesNotThrowAnyException();
     }
 
     @Test

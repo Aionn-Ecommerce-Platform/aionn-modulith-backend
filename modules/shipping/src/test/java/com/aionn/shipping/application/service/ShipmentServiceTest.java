@@ -59,7 +59,7 @@ class ShipmentServiceTest {
                         500, BigDecimal.valueOf(20), BigDecimal.valueOf(15), BigDecimal.valueOf(10));
 
         @BeforeEach
-        void setUp() throws Exception {
+        void setUp() {
                 service = new ShipmentService(shipmentRepository, rateRepository, eventPublisher,
                                 carrierClient, integrationEventPublisher, merchantQueryPort,
                                 java.time.Clock.systemUTC(),
@@ -97,7 +97,7 @@ class ShipmentServiceTest {
                 CarrierClient.Quote carrierQuote = new CarrierClient.Quote(
                                 BigDecimal.valueOf(40000), "VND", "HN", "carrier-detail",
                                 Instant.now().plusSeconds(86400), Instant.now());
-                when(carrierClient.quote(eq(ADDRESS), eq(DIMENSIONS), eq("VND")))
+                when(carrierClient.quote(ADDRESS, DIMENSIONS, "VND"))
                                 .thenReturn(carrierQuote);
 
                 ShippingQuoteResult result = service.quote(new QuoteShippingCommand(
@@ -416,7 +416,7 @@ class ShipmentServiceTest {
         @Test
         void quoteDefaultsCurrencyToVndWhenCommandCurrencyIsNull() {
                 when(rateRepository.findByZoneCode("HN")).thenReturn(Optional.empty());
-                when(carrierClient.quote(eq(ADDRESS), eq(DIMENSIONS), eq("VND")))
+                when(carrierClient.quote(ADDRESS, DIMENSIONS, "VND"))
                                 .thenReturn(new CarrierClient.Quote(BigDecimal.valueOf(40000), "VND", "HN",
                                                 "carrier-detail", null, null));
 

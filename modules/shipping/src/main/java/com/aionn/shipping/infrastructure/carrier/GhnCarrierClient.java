@@ -37,6 +37,18 @@ public class GhnCarrierClient implements CarrierClient {
     private static final String CANCEL_PATH = "/shiip/public-api/v2/switch-status/cancel";
     private static final String DETAIL_PATH = "/shiip/public-api/v2/shipping-order/detail";
 
+    private static final String FIELD_FROM_DISTRICT_ID = "from_district_id";
+    private static final String FIELD_FROM_WARD_CODE = "from_ward_code";
+    private static final String FIELD_TO_DISTRICT_ID = "to_district_id";
+    private static final String FIELD_TO_WARD_CODE = "to_ward_code";
+    private static final String FIELD_WEIGHT = "weight";
+    private static final String FIELD_LENGTH = "length";
+    private static final String FIELD_WIDTH = "width";
+    private static final String FIELD_HEIGHT = "height";
+    private static final String FIELD_LEADTIME = "leadtime";
+    private static final String FIELD_ORDER_CODE = "order_code";
+    private static final String FIELD_ORDER_CODES = "order_codes";
+
     private final GhnProperties properties;
     private final GhnAddressResolver addressResolver;
     private final ObjectMapper objectMapper;
@@ -63,29 +75,26 @@ public class GhnCarrierClient implements CarrierClient {
         GhnAddressResolver.ResolvedGhn ghn = addressResolver.resolve(address);
 
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("from_district_id", properties.fromDistrictId());
-        body.put("from_ward_code", properties.fromWardCode());
-        body.put("to_district_id", ghn.districtId());
-        body.put("to_ward_code", ghn.wardCode());
+        body.put(FIELD_FROM_DISTRICT_ID, properties.fromDistrictId());
+        body.put(FIELD_FROM_WARD_CODE, properties.fromWardCode());
+        body.put(FIELD_TO_DISTRICT_ID, ghn.districtId());
+        body.put(FIELD_TO_WARD_CODE, ghn.wardCode());
         applyService(body);
-        body.put("weight", dimensions.weightGram());
-        body.put("length", dimensions.lengthCm().intValue());
-        body.put("width", dimensions.widthCm().intValue());
-        body.put("height", dimensions.heightCm().intValue());
+        putDimensions(body, dimensions);
 
         JsonNode data = post(FEE_PATH, body, "GHN quote");
         BigDecimal fee = data.has("total") ? new BigDecimal(data.get("total").asText()) : BigDecimal.ZERO;
 
         Map<String, Object> leadtimeBody = new LinkedHashMap<>();
-        leadtimeBody.put("from_district_id", properties.fromDistrictId());
-        leadtimeBody.put("from_ward_code", properties.fromWardCode());
-        leadtimeBody.put("to_district_id", ghn.districtId());
-        leadtimeBody.put("to_ward_code", ghn.wardCode());
+        leadtimeBody.put(FIELD_FROM_DISTRICT_ID, properties.fromDistrictId());
+        leadtimeBody.put(FIELD_FROM_WARD_CODE, properties.fromWardCode());
+        leadtimeBody.put(FIELD_TO_DISTRICT_ID, ghn.districtId());
+        leadtimeBody.put(FIELD_TO_WARD_CODE, ghn.wardCode());
         applyService(leadtimeBody);
 
         JsonNode leadtime = post(LEADTIME_PATH, leadtimeBody, "GHN leadtime");
-        Instant expectedDeliveryDate = leadtime.has("leadtime")
-                ? parseCarrierInstant(leadtime.get("leadtime").asText())
+        Instant expectedDeliveryDate = leadtime.has(FIELD_LEADTIME)
+                ? parseCarrierInstant(leadtime.get(FIELD_LEADTIME).asText())
                 : null;
         Instant orderDate = leadtime.has("order_date")
                 ? parseCarrierInstant(leadtime.get("order_date").asText())
@@ -105,10 +114,7 @@ public class GhnCarrierClient implements CarrierClient {
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("name", "Order " + orderId);
         item.put("quantity", 1);
-        item.put("weight", dimensions.weightGram());
-        item.put("length", dimensions.lengthCm().intValue());
-        item.put("width", dimensions.widthCm().intValue());
-        item.put("height", dimensions.heightCm().intValue());
+        putDimensions(item, dimensions);
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("payment_type_id", properties.paymentTypeId());
@@ -118,18 +124,15 @@ public class GhnCarrierClient implements CarrierClient {
         body.put("to_name", address.fullName());
         body.put("to_phone", address.phone());
         body.put("to_address", address.addressLine());
-        body.put("to_ward_code", ghn.wardCode());
-        body.put("to_district_id", ghn.districtId());
+        body.put(FIELD_TO_WARD_CODE, ghn.wardCode());
+        body.put(FIELD_TO_DISTRICT_ID, ghn.districtId());
         body.put("cod_amount", codAmount == null ? 0 : codAmount.longValueExact());
-        body.put("weight", dimensions.weightGram());
-        body.put("length", dimensions.lengthCm().intValue());
-        body.put("width", dimensions.widthCm().intValue());
-        body.put("height", dimensions.heightCm().intValue());
+        putDimensions(body, dimensions);
         applyService(body);
         body.put("items", List.of(item));
 
         JsonNode data = post(CREATE_PATH, body, "GHN create");
-        String orderCode = data.has("order_code") ? data.get("order_code").asText() : null;
+        String orderCode = data.has(FIELD_ORDER_CODE) ? data.get(FIELD_ORDER_CODE).asText() : null;
         Instant expected = data.has("expected_delivery_time")
                 ? parseInstant(data.get("expected_delivery_time").asText())
                 : null;
@@ -140,9 +143,16 @@ public class GhnCarrierClient implements CarrierClient {
         return new Registration(orderCode, orderCode, expected);
     }
 
+    private static void putDimensions(Map<String, Object> target, ShipmentDimensions dimensions) {
+        target.put(FIELD_WEIGHT, dimensions.weightGram());
+        target.put(FIELD_LENGTH, dimensions.lengthCm().intValue());
+        target.put(FIELD_WIDTH, dimensions.widthCm().intValue());
+        target.put(FIELD_HEIGHT, dimensions.heightCm().intValue());
+    }
+
     @Override
     public String fetchLabel(String trackingCode) {
-        Map<String, Object> body = Map.of("order_codes", List.of(trackingCode));
+        Map<String, Object> body = Map.of(FIELD_ORDER_CODES, List.of(trackingCode));
         JsonNode data = post(LABEL_TOKEN_PATH, body, "GHN label token");
         String token = data.has("token") ? data.get("token").asText() : null;
         if (token == null || token.isBlank()) {
@@ -154,13 +164,13 @@ public class GhnCarrierClient implements CarrierClient {
 
     @Override
     public void cancel(String trackingCode, String reason) {
-        Map<String, Object> body = Map.of("order_codes", List.of(trackingCode));
+        Map<String, Object> body = Map.of(FIELD_ORDER_CODES, List.of(trackingCode));
         post(CANCEL_PATH, body, "GHN cancel");
     }
 
     @Override
     public OrderDetail fetchOrderDetail(String trackingCode) {
-        Map<String, Object> body = Map.of("order_code", trackingCode);
+        Map<String, Object> body = Map.of(FIELD_ORDER_CODE, trackingCode);
         JsonNode data = post(DETAIL_PATH, body, "GHN detail");
         return new OrderDetail(
                 text(data, "status"),
@@ -170,7 +180,7 @@ public class GhnCarrierClient implements CarrierClient {
                 text(data, "signature_url"),
                 text(data, "reason"),
                 text(data, "current_warehouse_id"),
-                data.has("leadtime") ? parseInstant(data.get("leadtime").asText()) : null);
+                data.has(FIELD_LEADTIME) ? parseInstant(data.get(FIELD_LEADTIME).asText()) : null);
     }
 
     private static String text(JsonNode node, String field) {
@@ -205,6 +215,11 @@ public class GhnCarrierClient implements CarrierClient {
             return root.has("data") ? root.get("data") : root;
         } catch (ShippingException ex) {
             throw ex;
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.warn("{} interrupted", label);
+            throw new ShippingException(ShippingErrorCode.SHIPMENT_CARRIER_ERROR,
+                    label + " interrupted");
         } catch (Exception ex) {
             log.warn("{} threw {}: {}", label, ex.getClass().getSimpleName(), ex.getMessage());
             throw new ShippingException(ShippingErrorCode.SHIPMENT_CARRIER_ERROR,

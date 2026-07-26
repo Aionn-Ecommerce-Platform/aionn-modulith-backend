@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Component
@@ -41,7 +42,7 @@ public class GhnAddressResolver {
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
-    private volatile List<JsonNode> provincesCache;
+    private final AtomicReference<List<JsonNode>> provincesCache = new AtomicReference<>();
     private final Map<Integer, List<JsonNode>> districtsByProvince = new ConcurrentHashMap<>();
     private final Map<Integer, List<JsonNode>> wardsByDistrict = new ConcurrentHashMap<>();
 
@@ -56,24 +57,25 @@ public class GhnAddressResolver {
                                 + ", district=" + address.districtId()
                                 + ", ward=" + address.wardCode() + ")"));
 
-        JsonNode province = matchProvince(vn).orElseThrow(() -> new ShippingException(
-                ShippingErrorCode.SHIPMENT_CARRIER_ERROR,
-                "GHN has no matching province for '" + vn.provinceName() + "' (code " + vn.provinceCode() + ")"));
+        JsonNode province = matchProvince(vn).orElseThrow(() -> noMatch(
+                "province", vn.provinceName(), vn.provinceCode(), null));
         int provinceId = province.get("ProvinceID").asInt();
 
-        JsonNode district = matchDistrict(provinceId, vn).orElseThrow(() -> new ShippingException(
-                ShippingErrorCode.SHIPMENT_CARRIER_ERROR,
-                "GHN has no matching district for '" + vn.districtName() + "' (code " + vn.districtCode()
-                        + ") in province " + vn.provinceName()));
+        JsonNode district = matchDistrict(provinceId, vn).orElseThrow(() -> noMatch(
+                "district", vn.districtName(), vn.districtCode(), " in province " + vn.provinceName()));
         int districtId = district.get("DistrictID").asInt();
 
-        JsonNode ward = matchWard(districtId, vn).orElseThrow(() -> new ShippingException(
-                ShippingErrorCode.SHIPMENT_CARRIER_ERROR,
-                "GHN has no matching ward for '" + vn.wardName() + "' (code " + vn.wardCode()
-                        + ") in district " + vn.districtName()));
+        JsonNode ward = matchWard(districtId, vn).orElseThrow(() -> noMatch(
+                "ward", vn.wardName(), vn.wardCode(), " in district " + vn.districtName()));
         String ghnWardCode = ward.get("WardCode").asText();
 
         return new ResolvedGhn(provinceId, districtId, ghnWardCode);
+    }
+
+    private static ShippingException noMatch(String level, String name, String code, String scope) {
+        return new ShippingException(ShippingErrorCode.SHIPMENT_CARRIER_ERROR,
+                "GHN has no matching " + level + " for '" + name + "' (code " + code + ")"
+                        + (scope == null ? "" : scope));
     }
 
     private Optional<JsonNode> matchProvince(AddressLookupPort.ResolvedAddress vn) {
@@ -175,15 +177,10 @@ public class GhnAddressResolver {
     }
 
     private List<JsonNode> provinces() {
-        List<JsonNode> snapshot = provincesCache;
+        List<JsonNode> snapshot = provincesCache.get();
         if (snapshot == null) {
-            synchronized (this) {
-                snapshot = provincesCache;
-                if (snapshot == null) {
-                    snapshot = fetchList(PROVINCE_PATH, "GET", null, "GHN provinces");
-                    provincesCache = snapshot;
-                }
-            }
+            provincesCache.compareAndSet(null, fetchList(PROVINCE_PATH, "GET", null, "GHN provinces"));
+            snapshot = provincesCache.get();
         }
         return snapshot;
     }
@@ -233,6 +230,11 @@ public class GhnAddressResolver {
             return list;
         } catch (ShippingException ex) {
             throw ex;
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.warn("{} interrupted", label);
+            throw new ShippingException(ShippingErrorCode.SHIPMENT_CARRIER_ERROR,
+                    label + " interrupted");
         } catch (Exception ex) {
             log.warn("{} threw {}: {}", label, ex.getClass().getSimpleName(), ex.getMessage());
             throw new ShippingException(ShippingErrorCode.SHIPMENT_CARRIER_ERROR,
