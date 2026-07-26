@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: promotion
+
+  flyway:
+    enabled: true
+    locations: classpath:db
+
+promotion:
+  scheduler:
+    enabled: ${PROMOTION_SCHEDULER_ENABLED:true}
+    delay-ms: ${PROMOTION_SCHEDULER_DELAY_MS:30000}
+    batch-size: ${PROMOTION_SCHEDULER_BATCH:100}
+
+  voucher:
+    auto-release:
+      enabled: ${PROMOTION_VOUCHER_AUTORELEASE_ENABLED:true}
+      delay-ms: ${PROMOTION_VOUCHER_AUTORELEASE_DELAY_MS:30000}
+      batch-size: ${PROMOTION_VOUCHER_AUTORELEASE_BATCH:100}
+
+  media:
+    provider: ${PROMOTION_MEDIA_PROVIDER:cloudinary}
+    cloudinary:
+      banner-folder: ${CLOUDINARY_BANNER_FOLDER:aionn/promotion/banners}
+
