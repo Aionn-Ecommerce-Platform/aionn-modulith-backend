@@ -2,8 +2,6 @@ package com.aionn.config;
 
 import com.aionn.sharedkernel.integration.port.notification.IdentityNotificationPort;
 import com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort;
-import com.aionn.sharedkernel.integration.port.promotion.FlashSaleQueryPort;
-import com.aionn.sharedkernel.integration.port.promotion.VoucherApplyPort;
 import com.aionn.sharedkernel.integration.port.shipping.ShippingFulfillmentPort;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -12,15 +10,11 @@ import org.springframework.context.annotation.Configuration;
 
 import java.math.BigDecimal;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @Configuration
 @Slf4j
 public class StubIntegrationConfig {
-
 
     @Bean
     @ConditionalOnMissingBean
@@ -34,27 +28,12 @@ public class StubIntegrationConfig {
             }
 
             @Override
-            public RegistrationResult createAndRegister(String orderId, String merchantId, String userId, Address address, BigDecimal codAmount, BigDecimal shippingFee, String currency) {
+            public RegistrationResult createAndRegister(String orderId, String merchantId, String userId,
+                    Address address, BigDecimal codAmount, BigDecimal shippingFee, String currency) {
                 log.info("[stub] createAndRegister orderId={} merchantId={}", orderId, merchantId);
-                return new RegistrationResult("STUB_SHIP_" + System.currentTimeMillis(), "STUB_TRACK_" + System.currentTimeMillis(), "CARRIER_" + System.currentTimeMillis(), "https://carrier.com/print/stub");
-            }
-        };
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    VoucherApplyPort voucherApplyPortStub() {
-        log.warn("Using VoucherApplyPort stub — promotion module not yet migrated");
-        return new VoucherApplyPort() {
-            @Override
-            public Discount apply(String userId, String merchantId, String voucherCode, String orderId, BigDecimal lineSubtotal, String currency) {
-                log.info("[stub] apply voucherCode={} orderId={}", voucherCode, orderId);
-                return new Discount(BigDecimal.valueOf(10000), currency, true, "Success");
-            }
-
-            @Override
-            public void release(String userId, String orderId, String reason) {
-                log.info("[stub] release voucher orderId={}", orderId);
+                return new RegistrationResult("STUB_SHIP_" + System.currentTimeMillis(),
+                        "STUB_TRACK_" + System.currentTimeMillis(), "CARRIER_" + System.currentTimeMillis(),
+                        "https://carrier.com/print/stub");
             }
         };
     }
@@ -82,23 +61,6 @@ public class StubIntegrationConfig {
             @Override
             public Optional<OrderSummary> findOrderSummary(String orderId) {
                 return Optional.empty();
-            }
-        };
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    FlashSaleQueryPort flashSaleQueryPortStub() {
-        log.warn("Using FlashSaleQueryPort stub — promotion module not yet migrated");
-        return new FlashSaleQueryPort() {
-            @Override
-            public Map<String, ProductFlashSale> findActiveByProductIds(List<String> productIds) {
-                return Collections.emptyMap();
-            }
-
-            @Override
-            public List<ActiveFlashSaleCampaign> listActiveCampaigns(int limit) {
-                return List.of();
             }
         };
     }
