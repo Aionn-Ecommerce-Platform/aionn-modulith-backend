@@ -1,26 +1,28 @@
 package com.aionn.notification.adapter.rest.controller;
 
 import com.aionn.notification.adapter.rest.exception.NotificationExceptionHandler;
+import com.aionn.notification.adapter.rest.mapper.template.NotificationTemplateDtoMapperImpl;
 import com.aionn.notification.application.dto.template.command.TemplateCommands;
 import com.aionn.notification.application.dto.template.result.TemplateResult;
-import com.aionn.notification.application.service.NotificationTemplateService;
-import org.junit.jupiter.api.AfterEach;
+import com.aionn.notification.application.port.in.template.CreateTemplateInputPort;
+import com.aionn.notification.application.port.in.template.GetTemplateInputPort;
+import com.aionn.notification.application.port.in.template.ListTemplatesInputPort;
+import com.aionn.notification.application.port.in.template.UpdateTemplateInputPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.Instant;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -34,130 +36,129 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class NotificationTemplateControllerWebTest {
 
-    @Mock
-    private NotificationTemplateService templateService;
+        private static final Instant NOW = Instant.parse("2026-07-01T10:00:00Z");
 
-    private MockMvc mockMvc;
+        @Mock
+        private CreateTemplateInputPort createTemplateInputPort;
+        @Mock
+        private UpdateTemplateInputPort updateTemplateInputPort;
+        @Mock
+        private GetTemplateInputPort getTemplateInputPort;
+        @Mock
+        private ListTemplatesInputPort listTemplatesInputPort;
 
-    @BeforeEach
-    void setUp() {
-        NotificationTemplateController controller =
-                new NotificationTemplateController(templateService);
+        private MockMvc mockMvc;
 
-        mockMvc = MockMvcBuilders.standaloneSetup(controller)
-                .setControllerAdvice(new NotificationExceptionHandler())
-                .setMessageConverters(new MappingJackson2HttpMessageConverter(
-                        Jackson2ObjectMapperBuilder.json().build()))
-                .build();
+        @BeforeEach
+        void setUp() {
+                NotificationTemplateController controller = new NotificationTemplateController(
+                                createTemplateInputPort, updateTemplateInputPort, getTemplateInputPort,
+                                listTemplatesInputPort, new NotificationTemplateDtoMapperImpl());
 
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(
-                        "admin-1", "n/a",
-                        List.of(new SimpleGrantedAuthority("ROLE_SYSTEM_ADMIN"))));
-    }
+                mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                                .setControllerAdvice(new NotificationExceptionHandler())
+                                .setMessageConverters(new MappingJackson2HttpMessageConverter(
+                                                Jackson2ObjectMapperBuilder.json().build()))
+                                .build();
+        }
 
-    @AfterEach
-    void tearDown() {
-        SecurityContextHolder.clearContext();
-    }
+        private static TemplateResult sample(String templateId) {
+                return new TemplateResult(templateId, "identity.password-changed", "EMAIL", "SECURITY",
+                                "vi-VN", "Subject", "Xin chao {{name}}", List.of("name"), 1, true, NOW, NOW);
+        }
 
-    @Test
-    void createCreatesTemplate() throws Exception {
-        Instant now = Instant.now();
-        TemplateResult result = new TemplateResult(
-                "tpl-1", "ORDER_PLACED", "EMAIL", "TRANSACTION", "vi-VN",
-                "Subject {{name}}", "Hello {{name}}", List.of("name"),
-                1, true, now, now);
-        when(templateService.create(any(TemplateCommands.CreateTemplate.class))).thenReturn(result);
+        @Test
+        void createReturnsCreatedTemplate() throws Exception {
+                when(createTemplateInputPort.execute(any(TemplateCommands.CreateTemplate.class)))
+                                .thenReturn(sample("tpl-1"));
 
-        mockMvc.perform(post("/api/v1/notifications/templates")
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "eventType": "ORDER_PLACED",
-                                  "channel": "EMAIL",
-                                  "category": "TRANSACTION",
-                                  "locale": "vi-VN",
-                                  "subject": "Subject {{name}}",
-                                  "content": "Hello {{name}}"
-                                }
-                                """))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.templateId").value("tpl-1"))
-                .andExpect(jsonPath("$.data.eventType").value("ORDER_PLACED"));
+                mockMvc.perform(post("/api/v1/notifications/templates")
+                                .contentType(APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                  "eventType": "identity.password-changed",
+                                                  "channel": "EMAIL",
+                                                  "category": "SECURITY",
+                                                  "locale": "vi-VN",
+                                                  "subject": "Subject",
+                                                  "content": "Xin chao {{name}}"
+                                                }
+                                                """))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.data.templateId").value("tpl-1"))
+                                .andExpect(jsonPath("$.data.placeholders[0]").value("name"))
+                                .andExpect(jsonPath("$.message").value("Template created"));
+        }
 
-        verify(templateService).create(any(TemplateCommands.CreateTemplate.class));
-    }
+        @Test
+        void createRejectsBlankContent() throws Exception {
+                mockMvc.perform(post("/api/v1/notifications/templates")
+                                .contentType(APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                  "eventType": "identity.password-changed",
+                                                  "channel": "EMAIL",
+                                                  "category": "SECURITY",
+                                                  "content": ""
+                                                }
+                                                """))
+                                .andExpect(status().isBadRequest());
+        }
 
-    @Test
-    void updateUpdatesTemplate() throws Exception {
-        Instant now = Instant.now();
-        TemplateResult result = new TemplateResult(
-                "tpl-1", "ORDER_PLACED", "EMAIL", "TRANSACTION", "vi-VN",
-                "New Subject", "New Content", List.of(),
-                2, true, now, now);
-        when(templateService.update(any(TemplateCommands.UpdateTemplate.class))).thenReturn(result);
+        @Test
+        void createRejectsMissingChannel() throws Exception {
+                mockMvc.perform(post("/api/v1/notifications/templates")
+                                .contentType(APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                  "eventType": "identity.password-changed",
+                                                  "category": "SECURITY",
+                                                  "content": "hello"
+                                                }
+                                                """))
+                                .andExpect(status().isBadRequest());
+        }
 
-        mockMvc.perform(put("/api/v1/notifications/templates/tpl-1")
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "subject": "New Subject",
-                                  "content": "New Content"
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.templateId").value("tpl-1"))
-                .andExpect(jsonPath("$.data.version").value(2));
+        @Test
+        void updatePassesTemplateIdFromPath() throws Exception {
+                when(updateTemplateInputPort.execute(any(TemplateCommands.UpdateTemplate.class)))
+                                .thenReturn(sample("tpl-9"));
 
-        verify(templateService).update(any(TemplateCommands.UpdateTemplate.class));
-    }
+                mockMvc.perform(put("/api/v1/notifications/templates/tpl-9")
+                                .contentType(APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                  "subject": "New subject",
+                                                  "content": "New content"
+                                                }
+                                                """))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("Template updated"));
 
-    @Test
-    void getFetchesTemplate() throws Exception {
-        Instant now = Instant.now();
-        TemplateResult result = new TemplateResult(
-                "tpl-1", "ORDER_PLACED", "EMAIL", "TRANSACTION", "vi-VN",
-                "Subject", "Content", List.of(), 1, true, now, now);
-        when(templateService.get("tpl-1")).thenReturn(result);
+                ArgumentCaptor<TemplateCommands.UpdateTemplate> captor = ArgumentCaptor
+                                .forClass(TemplateCommands.UpdateTemplate.class);
+                verify(updateTemplateInputPort).execute(captor.capture());
+                assertThat(captor.getValue().templateId()).isEqualTo("tpl-9");
+        }
 
-        mockMvc.perform(get("/api/v1/notifications/templates/tpl-1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.templateId").value("tpl-1"));
+        @Test
+        void getReturnsTemplate() throws Exception {
+                when(getTemplateInputPort.execute("tpl-1")).thenReturn(sample("tpl-1"));
 
-        verify(templateService).get("tpl-1");
-    }
+                mockMvc.perform(get("/api/v1/notifications/templates/tpl-1"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.templateId").value("tpl-1"));
+        }
 
-    @Test
-    void listFetchesTemplates() throws Exception {
-        Instant now = Instant.now();
-        TemplateResult r1 = new TemplateResult(
-                "tpl-1", "ORDER_PLACED", "EMAIL", "TRANSACTION", "vi-VN",
-                "Subject", "Content", List.of(), 1, true, now, now);
-        when(templateService.list(100)).thenReturn(List.of(r1));
+        @Test
+        void listUsesDefaultLimit() throws Exception {
+                when(listTemplatesInputPort.execute(100))
+                                .thenReturn(List.of(sample("tpl-1"), sample("tpl-2")));
 
-        mockMvc.perform(get("/api/v1/notifications/templates"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].templateId").value("tpl-1"));
+                mockMvc.perform(get("/api/v1/notifications/templates"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data[1].templateId").value("tpl-2"));
 
-        verify(templateService).list(100);
-    }
-
-    @Test
-    void createRejectsBlankEventType() throws Exception {
-        mockMvc.perform(post("/api/v1/notifications/templates")
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "eventType": "",
-                                  "channel": "EMAIL",
-                                  "category": "TRANSACTION",
-                                  "locale": "vi-VN",
-                                  "subject": "Subject",
-                                  "content": "Content"
-                                }
-                                """))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.data.errorCode").value("VALIDATION_FAILED"));
-    }
+                verify(listTemplatesInputPort).execute(100);
+        }
 }

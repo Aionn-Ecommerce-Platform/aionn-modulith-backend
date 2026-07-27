@@ -12,4 +12,6 @@ public interface TemplateResultMapper {
     @Mapping(target = "category", expression = "java(template.getCategory().name())")
     @Mapping(target = "placeholders", expression = "java(java.util.List.copyOf(template.getPlaceholders()))")
     TemplateResult toResult(NotificationTemplate template);
+
+    java.util.List<TemplateResult> toResults(java.util.List<NotificationTemplate> templates);
 }

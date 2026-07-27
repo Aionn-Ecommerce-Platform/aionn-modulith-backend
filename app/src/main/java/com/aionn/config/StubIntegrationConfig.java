@@ -1,6 +1,5 @@
 package com.aionn.config;
 
-import com.aionn.sharedkernel.integration.port.notification.IdentityNotificationPort;
 import com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort;
 import com.aionn.sharedkernel.integration.port.shipping.ShippingFulfillmentPort;
 import lombok.extern.slf4j.Slf4j;
@@ -61,48 +60,6 @@ public class StubIntegrationConfig {
             @Override
             public Optional<OrderSummary> findOrderSummary(String orderId) {
                 return Optional.empty();
-            }
-        };
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    IdentityNotificationPort identityNotificationPortStub() {
-        log.warn("Using IdentityNotificationPort stub — notification module not yet migrated");
-        return new IdentityNotificationPort() {
-            @Override
-            public void sendPasswordResetRequested(String userId, String resetToken) {
-                log.info("[stub] sendPasswordResetRequested userId={} token=***", userId);
-            }
-
-            @Override
-            public void sendPasswordChanged(String userId, String channelHint) {
-                log.info("[stub] sendPasswordChanged userId={} channel={}", userId, channelHint);
-            }
-
-            @Override
-            public void sendEmailChanged(String userId, String oldEmail, String newEmail) {
-                log.info("[stub] sendEmailChanged userId={}", userId);
-            }
-
-            @Override
-            public void sendPhoneChanged(String userId, String oldPhone, String newPhone) {
-                log.info("[stub] sendPhoneChanged userId={}", userId);
-            }
-
-            @Override
-            public void sendEmailOtp(String email, String otpCode) {
-                log.info("[stub] sendEmailOtp email={} otp={}", email, otpCode);
-            }
-
-            @Override
-            public void sendPhoneOtp(String phoneNumber, String otpCode) {
-                log.info("[stub] sendPhoneOtp phone={} otp={}", phoneNumber, otpCode);
-            }
-
-            @Override
-            public void sendRegistrationOtp(String phoneNumber, String otpCode) {
-                log.info("[stub] sendRegistrationOtp phone={} otp={}", phoneNumber, otpCode);
             }
         };
     }

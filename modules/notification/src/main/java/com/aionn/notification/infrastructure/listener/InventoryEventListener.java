@@ -1,7 +1,7 @@
 package com.aionn.notification.infrastructure.listener;
 
 import com.aionn.notification.application.dto.notification.command.NotificationCommands;
-import com.aionn.notification.application.service.NotificationDispatchService;
+import com.aionn.notification.application.service.NotificationDeliveryOrchestrator;
 import com.aionn.notification.domain.valueobject.NotificationCategory;
 import com.aionn.sharedkernel.integration.event.inventory.SafetyStockBreachedIntegrationEvent;
 import com.aionn.sharedkernel.integration.event.inventory.StockCommittedIntegrationEvent;
@@ -23,7 +23,7 @@ public class InventoryEventListener {
 
     private static final String EVENT_SAFETY_STOCK_BREACHED = "inventory.safety-stock-breached";
 
-    private final NotificationDispatchService dispatchService;
+    private final NotificationDeliveryOrchestrator deliveryOrchestrator;
     private final MerchantQueryPort merchantQueryPort;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
@@ -43,7 +43,7 @@ public class InventoryEventListener {
         context.put("availableQty", String.valueOf(event.availableQty()));
         context.put("safetyStockQty", String.valueOf(event.safetyStockQty()));
         try {
-            dispatchService.sendByEvent(new NotificationCommands.SendByEvent(
+            deliveryOrchestrator.sendByEvent(new NotificationCommands.SendByEvent(
                     ownerId, EVENT_SAFETY_STOCK_BREACHED, NotificationCategory.SYSTEM,
                     null, null, null, context));
         } catch (RuntimeException ex) {

@@ -21,6 +21,15 @@ spring:
           timeout: 15000
           writetimeout: 15000
 
+management:
+  health:
+    # The mail health indicator opens an SMTP connection on every /actuator/health
+    # call. A dev box without a local SMTP server would report the whole
+    # application DOWN, so delivery failures are surfaced through notification
+    # status + metrics instead.
+    mail:
+      enabled: false
+
 notification:
   defaults:
     locale: ${NOTIFICATION_DEFAULT_LOCALE:vi-VN}

@@ -2,9 +2,12 @@ package com.aionn.notification.adapter.rest.controller;
 
 import com.aionn.notification.adapter.rest.dto.template.CreateTemplateRequest;
 import com.aionn.notification.adapter.rest.dto.template.UpdateTemplateRequest;
-import com.aionn.notification.application.dto.template.command.TemplateCommands;
-import com.aionn.notification.application.dto.template.result.TemplateResult;
-import com.aionn.notification.application.service.NotificationTemplateService;
+import com.aionn.notification.adapter.rest.dto.template.response.TemplateResponse;
+import com.aionn.notification.adapter.rest.mapper.template.NotificationTemplateDtoMapper;
+import com.aionn.notification.application.port.in.template.CreateTemplateInputPort;
+import com.aionn.notification.application.port.in.template.GetTemplateInputPort;
+import com.aionn.notification.application.port.in.template.ListTemplatesInputPort;
+import com.aionn.notification.application.port.in.template.UpdateTemplateInputPort;
 import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,42 +32,50 @@ import java.util.List;
 @Tag(name = "Notification - Template", description = "Template management")
 public class NotificationTemplateController {
 
-    private final NotificationTemplateService templateService;
+    private final CreateTemplateInputPort createTemplateInputPort;
+    private final UpdateTemplateInputPort updateTemplateInputPort;
+    private final GetTemplateInputPort getTemplateInputPort;
+    private final ListTemplatesInputPort listTemplatesInputPort;
+    private final NotificationTemplateDtoMapper dtoMapper;
 
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
     @Operation(summary = "Create template", description = "UC8.6")
-    public ResponseEntity<ApiResponse<TemplateResult>> create(@Valid @RequestBody CreateTemplateRequest request) {
+    public ResponseEntity<ApiResponse<TemplateResponse>> create(
+            @Valid @RequestBody CreateTemplateRequest request) {
         return ApiResponse.createdResponse("Template created",
-                templateService.create(new TemplateCommands.CreateTemplate(
-                        request.eventType(), request.channel(), request.category(),
-                        request.locale(), request.subject(), request.content())));
+                dtoMapper.toResponse(createTemplateInputPort.execute(
+                        dtoMapper.toCreateCommand(request))));
     }
 
     @PutMapping("/{templateId}")
     @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
     @Operation(summary = "Update template", description = "UC8.7")
-    public ResponseEntity<ApiResponse<TemplateResult>> update(
+    public ResponseEntity<ApiResponse<TemplateResponse>> update(
             @PathVariable String templateId,
             @Valid @RequestBody UpdateTemplateRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
-                templateService.update(new TemplateCommands.UpdateTemplate(
-                        templateId, request.subject(), request.content())),
+                dtoMapper.toResponse(updateTemplateInputPort.execute(
+                        dtoMapper.toUpdateCommand(templateId, request))),
                 "Template updated"));
     }
 
     @GetMapping("/{templateId}")
     @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
     @Operation(summary = "Get template")
-    public ResponseEntity<ApiResponse<TemplateResult>> get(@PathVariable String templateId) {
-        return ResponseEntity.ok(ApiResponse.success(templateService.get(templateId), "Template fetched"));
+    public ResponseEntity<ApiResponse<TemplateResponse>> get(@PathVariable String templateId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                dtoMapper.toResponse(getTemplateInputPort.execute(templateId)),
+                "Template fetched"));
     }
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
     @Operation(summary = "List templates")
-    public ResponseEntity<ApiResponse<List<TemplateResult>>> list(
+    public ResponseEntity<ApiResponse<List<TemplateResponse>>> list(
             @RequestParam(defaultValue = "100") int limit) {
-        return ResponseEntity.ok(ApiResponse.success(templateService.list(limit), "Templates fetched"));
+        return ResponseEntity.ok(ApiResponse.success(
+                dtoMapper.toResponses(listTemplatesInputPort.execute(limit)),
+                "Templates fetched"));
     }
 }

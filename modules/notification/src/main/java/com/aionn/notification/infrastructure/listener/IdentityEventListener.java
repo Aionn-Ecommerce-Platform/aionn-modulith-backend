@@ -1,7 +1,7 @@
 package com.aionn.notification.infrastructure.listener;
 
 import com.aionn.notification.application.dto.notification.command.NotificationCommands;
-import com.aionn.notification.application.service.NotificationDispatchService;
+import com.aionn.notification.application.service.NotificationDeliveryOrchestrator;
 import com.aionn.notification.domain.valueobject.NotificationCategory;
 import com.aionn.sharedkernel.integration.event.identity.EmailChangedIntegrationEvent;
 import com.aionn.sharedkernel.integration.event.identity.PasswordChangedIntegrationEvent;
@@ -24,7 +24,7 @@ public class IdentityEventListener {
     private static final String EVENT_EMAIL_CHANGED = "identity.email-changed";
     private static final String EVENT_PHONE_CHANGED = "identity.phone-changed";
 
-    private final NotificationDispatchService dispatchService;
+    private final NotificationDeliveryOrchestrator deliveryOrchestrator;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void on(PasswordChangedIntegrationEvent event) {
@@ -67,7 +67,7 @@ public class IdentityEventListener {
 
     private void dispatch(String userId, String eventType, Map<String, String> context) {
         try {
-            dispatchService.sendByEvent(new NotificationCommands.SendByEvent(
+            deliveryOrchestrator.sendByEvent(new NotificationCommands.SendByEvent(
                     userId, eventType, NotificationCategory.SECURITY,
                     null, null, null, context));
         } catch (RuntimeException ex) {

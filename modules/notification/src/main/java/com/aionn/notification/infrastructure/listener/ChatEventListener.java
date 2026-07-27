@@ -1,7 +1,7 @@
 package com.aionn.notification.infrastructure.listener;
 
 import com.aionn.notification.application.dto.notification.command.NotificationCommands;
-import com.aionn.notification.application.service.NotificationDispatchService;
+import com.aionn.notification.application.service.NotificationDeliveryOrchestrator;
 import com.aionn.notification.domain.valueobject.NotificationCategory;
 import com.aionn.sharedkernel.integration.event.chat.MessageSentIntegrationEvent;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +20,7 @@ public class ChatEventListener {
 
     private static final String EVENT_MESSAGE_RECEIVED = "chat.message-received";
 
-    private final NotificationDispatchService dispatchService;
+    private final NotificationDeliveryOrchestrator deliveryOrchestrator;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void on(MessageSentIntegrationEvent event) {
@@ -33,7 +33,7 @@ public class ChatEventListener {
         context.put("senderName", nullToEmpty(event.senderDisplayName()));
         context.put("messagePreview", nullToEmpty(event.messagePreview()));
         try {
-            dispatchService.sendByEvent(new NotificationCommands.SendByEvent(
+            deliveryOrchestrator.sendByEvent(new NotificationCommands.SendByEvent(
                     event.recipientId(), EVENT_MESSAGE_RECEIVED, NotificationCategory.CHAT,
                     null, null, null, context));
         } catch (RuntimeException ex) {

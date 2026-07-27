@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("all", "identity", "catalog", "inventory", "ordering", "payment", "shipping", "promotion")]
+    [ValidateSet("all", "identity", "catalog", "inventory", "ordering", "payment", "shipping", "promotion", "notification")]
     [string]$Module = "all"
 )
 
@@ -120,6 +120,11 @@ try {
     if ($Module -eq "promotion" -or $Module -eq "all") {
         Write-Host "Running E2E tests for Promotion module..."
         bash scripts/promotion/test-promotion-e2e.sh
+    }
+
+    if ($Module -eq "notification" -or $Module -eq "all") {
+        Write-Host "Running E2E tests for Notification module..."
+        bash scripts/notification/test-notification-e2e.sh
     }
 }
 finally {

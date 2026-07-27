@@ -1,15 +1,21 @@
 package com.aionn.notification.adapter.rest.controller;
 
 import com.aionn.notification.adapter.rest.exception.NotificationExceptionHandler;
+import com.aionn.notification.adapter.rest.mapper.subscription.NotificationSubscriptionDtoMapperImpl;
 import com.aionn.notification.adapter.rest.support.session.CurrentUserIdArgumentResolver;
 import com.aionn.notification.application.dto.subscription.command.SubscriptionCommands;
 import com.aionn.notification.application.dto.subscription.result.DeviceTokenResult;
 import com.aionn.notification.application.dto.subscription.result.SubscriptionResult;
-import com.aionn.notification.application.service.NotificationSubscriptionService;
+import com.aionn.notification.application.port.in.subscription.GetMySubscriptionInputPort;
+import com.aionn.notification.application.port.in.subscription.ListMyDeviceTokensInputPort;
+import com.aionn.notification.application.port.in.subscription.RegisterDeviceTokenInputPort;
+import com.aionn.notification.application.port.in.subscription.RemoveDeviceTokenInputPort;
+import com.aionn.notification.application.port.in.subscription.UpdateSubscriptionChannelInputPort;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
@@ -24,8 +30,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -39,137 +45,149 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class NotificationSubscriptionControllerWebTest {
 
-    @Mock
-    private NotificationSubscriptionService subscriptionService;
+        private static final Instant NOW = Instant.parse("2026-07-01T10:00:00Z");
 
-    private MockMvc mockMvc;
+        @Mock
+        private GetMySubscriptionInputPort getMySubscriptionInputPort;
+        @Mock
+        private UpdateSubscriptionChannelInputPort updateSubscriptionChannelInputPort;
+        @Mock
+        private RegisterDeviceTokenInputPort registerDeviceTokenInputPort;
+        @Mock
+        private RemoveDeviceTokenInputPort removeDeviceTokenInputPort;
+        @Mock
+        private ListMyDeviceTokensInputPort listMyDeviceTokensInputPort;
 
-    @BeforeEach
-    void setUp() {
-        NotificationSubscriptionController controller =
-                new NotificationSubscriptionController(subscriptionService);
+        private MockMvc mockMvc;
 
-        mockMvc = MockMvcBuilders.standaloneSetup(controller)
-                .setControllerAdvice(new NotificationExceptionHandler())
-                .setMessageConverters(new MappingJackson2HttpMessageConverter(
-                        Jackson2ObjectMapperBuilder.json().build()))
-                .setCustomArgumentResolvers(new CurrentUserIdArgumentResolver())
-                .build();
+        @BeforeEach
+        void setUp() {
+                NotificationSubscriptionController controller = new NotificationSubscriptionController(
+                                getMySubscriptionInputPort, updateSubscriptionChannelInputPort,
+                                registerDeviceTokenInputPort, removeDeviceTokenInputPort,
+                                listMyDeviceTokensInputPort, new NotificationSubscriptionDtoMapperImpl());
 
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(
-                        "user-123", "n/a",
-                        List.of(new SimpleGrantedAuthority("ROLE_USER"))));
-    }
+                mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                                .setControllerAdvice(new NotificationExceptionHandler())
+                                .setMessageConverters(new MappingJackson2HttpMessageConverter(
+                                                Jackson2ObjectMapperBuilder.json().build()))
+                                .setCustomArgumentResolvers(new CurrentUserIdArgumentResolver())
+                                .build();
 
-    @AfterEach
-    void tearDown() {
-        SecurityContextHolder.clearContext();
-    }
+                SecurityContextHolder.getContext().setAuthentication(
+                                new UsernamePasswordAuthenticationToken(
+                                                "user-123", "n/a",
+                                                List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+        }
 
-    @Test
-    void getMineFetchesSubscription() throws Exception {
-        Instant now = Instant.now();
-        SubscriptionResult result = new SubscriptionResult(
-                "user-123",
-                Map.of("TRANSACTION", Map.of("EMAIL", true)),
-                now, now);
-        when(subscriptionService.get("user-123")).thenReturn(result);
+        @AfterEach
+        void tearDown() {
+                SecurityContextHolder.clearContext();
+        }
 
-        mockMvc.perform(get("/api/v1/notifications/subscriptions/me"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.userId").value("user-123"));
+        private static SubscriptionResult subscription() {
+                return new SubscriptionResult("user-123",
+                                Map.of("SECURITY", Map.of("EMAIL", true, "SMS", false)), NOW, NOW);
+        }
 
-        verify(subscriptionService).get("user-123");
-    }
+        private static DeviceTokenResult deviceToken(String tokenId) {
+                return new DeviceTokenResult(tokenId, "user-123", "fcm-token", "android", true, NOW);
+        }
 
-    @Test
-    void updateChannelUpdatesSubscription() throws Exception {
-        Instant now = Instant.now();
-        SubscriptionResult result = new SubscriptionResult(
-                "user-123",
-                Map.of("PROMOTION", Map.of("EMAIL", false)),
-                now, now);
-        when(subscriptionService.updateChannel(any(SubscriptionCommands.UpdateChannel.class)))
-                .thenReturn(result);
+        @Test
+        void getMineReturnsSubscription() throws Exception {
+                when(getMySubscriptionInputPort.execute("user-123")).thenReturn(subscription());
 
-        mockMvc.perform(put("/api/v1/notifications/subscriptions/me")
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "category": "PROMOTION",
-                                  "channel": "EMAIL",
-                                  "enabled": false
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.userId").value("user-123"));
+                mockMvc.perform(get("/api/v1/notifications/subscriptions/me"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.userId").value("user-123"))
+                                .andExpect(jsonPath("$.data.settings.SECURITY.EMAIL").value(true));
+        }
 
-        verify(subscriptionService).updateChannel(any(SubscriptionCommands.UpdateChannel.class));
-    }
+        @Test
+        void updateChannelPassesCurrentUser() throws Exception {
+                when(updateSubscriptionChannelInputPort.execute(any(SubscriptionCommands.UpdateChannel.class)))
+                                .thenReturn(subscription());
 
-    @Test
-    void registerDeviceCreatesToken() throws Exception {
-        Instant now = Instant.now();
-        DeviceTokenResult result = new DeviceTokenResult(
-                "tok-1", "user-123", "device-token-abc", "iOS", true, now);
-        when(subscriptionService.registerDeviceToken(any(SubscriptionCommands.RegisterDeviceToken.class)))
-                .thenReturn(result);
+                mockMvc.perform(put("/api/v1/notifications/subscriptions/me")
+                                .contentType(APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                  "category": "PROMOTION",
+                                                  "channel": "EMAIL",
+                                                  "enabled": false
+                                                }
+                                                """))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("Subscription updated"));
 
-        mockMvc.perform(post("/api/v1/notifications/subscriptions/me/device-tokens")
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "deviceToken": "device-token-abc",
-                                  "os": "iOS"
-                                }
-                                """))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.tokenId").value("tok-1"))
-                .andExpect(jsonPath("$.data.deviceToken").value("device-token-abc"));
+                ArgumentCaptor<SubscriptionCommands.UpdateChannel> captor = ArgumentCaptor
+                                .forClass(SubscriptionCommands.UpdateChannel.class);
+                verify(updateSubscriptionChannelInputPort).execute(captor.capture());
+                assertThat(captor.getValue().userId()).isEqualTo("user-123");
+                assertThat(captor.getValue().enabled()).isFalse();
+        }
 
-        verify(subscriptionService).registerDeviceToken(any(SubscriptionCommands.RegisterDeviceToken.class));
-    }
+        @Test
+        void updateChannelRejectsMissingCategory() throws Exception {
+                mockMvc.perform(put("/api/v1/notifications/subscriptions/me")
+                                .contentType(APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                  "channel": "EMAIL",
+                                                  "enabled": false
+                                                }
+                                                """))
+                                .andExpect(status().isBadRequest());
+        }
 
-    @Test
-    void removeDeviceReturnsNoContent() throws Exception {
-        doNothing().when(subscriptionService)
-                .removeDeviceToken(any(SubscriptionCommands.RemoveDeviceToken.class));
+        @Test
+        void registerDeviceReturnsCreated() throws Exception {
+                when(registerDeviceTokenInputPort.execute(any(SubscriptionCommands.RegisterDeviceToken.class)))
+                                .thenReturn(deviceToken("tok-1"));
 
-        mockMvc.perform(delete("/api/v1/notifications/subscriptions/me/device-tokens/tok-1"))
-                .andExpect(status().isNoContent());
+                mockMvc.perform(post("/api/v1/notifications/subscriptions/me/device-tokens")
+                                .contentType(APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                  "deviceToken": "fcm-token",
+                                                  "os": "android"
+                                                }
+                                                """))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.data.tokenId").value("tok-1"))
+                                .andExpect(jsonPath("$.data.active").value(true));
+        }
 
-        verify(subscriptionService).removeDeviceToken(any(SubscriptionCommands.RemoveDeviceToken.class));
-    }
+        @Test
+        void registerDeviceRejectsBlankToken() throws Exception {
+                mockMvc.perform(post("/api/v1/notifications/subscriptions/me/device-tokens")
+                                .contentType(APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                  "deviceToken": "",
+                                                  "os": "android"
+                                                }
+                                                """))
+                                .andExpect(status().isBadRequest());
+        }
 
-    @Test
-    void listDevicesReturnsTokens() throws Exception {
-        Instant now = Instant.now();
-        DeviceTokenResult t1 = new DeviceTokenResult(
-                "tok-1", "user-123", "device-token-abc", "iOS", true, now);
-        DeviceTokenResult t2 = new DeviceTokenResult(
-                "tok-2", "user-123", "device-token-def", "Android", true, now);
-        when(subscriptionService.listDeviceTokens("user-123")).thenReturn(List.of(t1, t2));
+        @Test
+        void removeDeviceReturnsNoContent() throws Exception {
+                mockMvc.perform(delete("/api/v1/notifications/subscriptions/me/device-tokens/tok-1"))
+                                .andExpect(status().isNoContent());
 
-        mockMvc.perform(get("/api/v1/notifications/subscriptions/me/device-tokens"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].tokenId").value("tok-1"))
-                .andExpect(jsonPath("$.data[1].os").value("Android"));
+                verify(removeDeviceTokenInputPort).execute(
+                                new SubscriptionCommands.RemoveDeviceToken("user-123", "tok-1"));
+        }
 
-        verify(subscriptionService).listDeviceTokens("user-123");
-    }
+        @Test
+        void listDevicesReturnsTokens() throws Exception {
+                when(listMyDeviceTokensInputPort.execute("user-123"))
+                                .thenReturn(List.of(deviceToken("tok-1"), deviceToken("tok-2")));
 
-    @Test
-    void registerDeviceRejectsBlankToken() throws Exception {
-        mockMvc.perform(post("/api/v1/notifications/subscriptions/me/device-tokens")
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "deviceToken": "",
-                                  "os": "iOS"
-                                }
-                                """))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.data.errorCode").value("VALIDATION_FAILED"));
-    }
+                mockMvc.perform(get("/api/v1/notifications/subscriptions/me/device-tokens"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data[1].tokenId").value("tok-2"));
+        }
 }

@@ -1,10 +1,14 @@
 package com.aionn.notification.adapter.rest.controller;
 
 import com.aionn.notification.adapter.rest.dto.notification.SendNotificationRequest;
+import com.aionn.notification.adapter.rest.dto.notification.response.NotificationResponse;
+import com.aionn.notification.adapter.rest.mapper.notification.NotificationDtoMapper;
 import com.aionn.notification.adapter.rest.support.session.CurrentUserId;
-import com.aionn.notification.application.dto.notification.command.NotificationCommands;
-import com.aionn.notification.application.dto.notification.result.NotificationResult;
-import com.aionn.notification.application.service.NotificationDispatchService;
+import com.aionn.notification.application.port.in.notification.DeleteNotificationInputPort;
+import com.aionn.notification.application.port.in.notification.GetMyNotificationInputPort;
+import com.aionn.notification.application.port.in.notification.ListMyNotificationsInputPort;
+import com.aionn.notification.application.port.in.notification.MarkNotificationReadInputPort;
+import com.aionn.notification.application.port.in.notification.SendNotificationByEventInputPort;
 import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,62 +33,71 @@ import java.util.List;
 @Tag(name = "Notification", description = "Notification dispatch + inbox endpoints")
 public class NotificationController {
 
-        private final NotificationDispatchService dispatchService;
+        private static final int MIN_LIMIT = 1;
+        private static final int MAX_LIMIT = 100;
+
+        private final SendNotificationByEventInputPort sendNotificationByEventInputPort;
+        private final MarkNotificationReadInputPort markNotificationReadInputPort;
+        private final DeleteNotificationInputPort deleteNotificationInputPort;
+        private final GetMyNotificationInputPort getMyNotificationInputPort;
+        private final ListMyNotificationsInputPort listMyNotificationsInputPort;
+        private final NotificationDtoMapper dtoMapper;
 
         @PostMapping("/dispatch")
         @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
         @Operation(summary = "Send by event", description = "UC8.1 - system / admin trigger")
-        public ResponseEntity<ApiResponse<List<NotificationResult>>> dispatch(
+        public ResponseEntity<ApiResponse<List<NotificationResponse>>> dispatch(
                         @Valid @RequestBody SendNotificationRequest request) {
-                List<NotificationResult> result = dispatchService.sendByEvent(new NotificationCommands.SendByEvent(
-                                request.userId(), request.eventType(), request.category(),
-                                request.channels(), request.locale(), request.campaignId(), request.context()));
-                return ResponseEntity.ok(ApiResponse.success(result, "Notifications dispatched"));
+                return ResponseEntity.ok(ApiResponse.success(
+                                dtoMapper.toResponses(sendNotificationByEventInputPort.execute(
+                                                dtoMapper.toSendByEventCommand(request))),
+                                "Notifications dispatched"));
         }
 
         @PostMapping("/{notiId}/read")
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Mark read", description = "UC8.4")
-        public ResponseEntity<ApiResponse<NotificationResult>> markRead(
+        public ResponseEntity<ApiResponse<NotificationResponse>> markRead(
                         @CurrentUserId String userId,
                         @PathVariable String notiId) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                dispatchService.markRead(
-                                                new NotificationCommands.MarkRead(userId, notiId)),
+                                dtoMapper.toResponse(markNotificationReadInputPort.execute(
+                                                dtoMapper.toMarkReadCommand(userId, notiId))),
                                 "Notification marked read"));
         }
 
         @DeleteMapping("/{notiId}")
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Delete", description = "UC8.5 soft delete")
-        public ResponseEntity<ApiResponse<NotificationResult>> delete(
+        public ResponseEntity<ApiResponse<NotificationResponse>> delete(
                         @CurrentUserId String userId,
                         @PathVariable String notiId) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                dispatchService.delete(
-                                                new NotificationCommands.MarkDeleted(userId, notiId)),
+                                dtoMapper.toResponse(deleteNotificationInputPort.execute(
+                                                dtoMapper.toMarkDeletedCommand(userId, notiId))),
                                 "Notification deleted"));
         }
 
         @GetMapping("/{notiId}")
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Get notification")
-        public ResponseEntity<ApiResponse<NotificationResult>> get(
+        public ResponseEntity<ApiResponse<NotificationResponse>> get(
                         @CurrentUserId String userId,
                         @PathVariable String notiId) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                dispatchService.get(userId, notiId), "Notification fetched"));
+                                dtoMapper.toResponse(getMyNotificationInputPort.execute(userId, notiId)),
+                                "Notification fetched"));
         }
 
         @GetMapping
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "List my notifications")
-        public ResponseEntity<ApiResponse<List<NotificationResult>>> listMine(
+        public ResponseEntity<ApiResponse<List<NotificationResponse>>> listMine(
                         @CurrentUserId String userId,
                         @RequestParam(defaultValue = "50") int limit) {
-                int safeLimit = Math.min(Math.max(limit, 1), 100);
+                int safeLimit = Math.min(Math.max(limit, MIN_LIMIT), MAX_LIMIT);
                 return ResponseEntity.ok(ApiResponse.success(
-                                dispatchService.listMine(userId, safeLimit),
+                                dtoMapper.toResponses(listMyNotificationsInputPort.execute(userId, safeLimit)),
                                 "Notifications fetched"));
         }
 }

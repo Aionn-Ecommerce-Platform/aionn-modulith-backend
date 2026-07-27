@@ -1,7 +1,7 @@
 package com.aionn.notification.infrastructure.integration;
 
 import com.aionn.notification.application.dto.notification.command.NotificationCommands;
-import com.aionn.notification.application.service.NotificationDispatchService;
+import com.aionn.notification.application.service.NotificationDeliveryOrchestrator;
 import com.aionn.notification.domain.valueobject.NotificationCategory;
 import com.aionn.notification.domain.valueobject.NotificationChannel;
 import com.aionn.sharedkernel.integration.port.notification.IdentityNotificationPort;
@@ -25,11 +25,11 @@ public class IdentityNotificationAdapter implements IdentityNotificationPort {
     private static final String EVENT_PHONE_OTP = "identity.phone-otp";
     private static final String EVENT_REGISTRATION_OTP = "identity.registration-otp";
 
-    private final NotificationDispatchService dispatchService;
+    private final NotificationDeliveryOrchestrator deliveryOrchestrator;
 
     @Override
     public void sendPasswordResetRequested(String userId, String resetToken) {
-        safeDispatch(() -> dispatchService.sendByEvent(new NotificationCommands.SendByEvent(
+        safeDispatch(() -> deliveryOrchestrator.sendByEvent(new NotificationCommands.SendByEvent(
                 userId, EVENT_PASSWORD_RESET, NotificationCategory.SECURITY,
                 List.of(NotificationChannel.EMAIL), null, null,
                 Map.of("resetToken", resetToken))));
@@ -37,7 +37,7 @@ public class IdentityNotificationAdapter implements IdentityNotificationPort {
 
     @Override
     public void sendPasswordChanged(String userId, String channelHint) {
-        safeDispatch(() -> dispatchService.sendByEvent(new NotificationCommands.SendByEvent(
+        safeDispatch(() -> deliveryOrchestrator.sendByEvent(new NotificationCommands.SendByEvent(
                 userId, EVENT_PASSWORD_CHANGED, NotificationCategory.SECURITY,
                 null, null, null,
                 Map.of("channelHint", channelHint == null ? "" : channelHint))));
@@ -45,7 +45,7 @@ public class IdentityNotificationAdapter implements IdentityNotificationPort {
 
     @Override
     public void sendEmailChanged(String userId, String oldEmail, String newEmail) {
-        safeDispatch(() -> dispatchService.sendByEvent(new NotificationCommands.SendByEvent(
+        safeDispatch(() -> deliveryOrchestrator.sendByEvent(new NotificationCommands.SendByEvent(
                 userId, EVENT_EMAIL_CHANGED, NotificationCategory.SECURITY,
                 List.of(NotificationChannel.EMAIL), null, null,
                 Map.of("oldEmail", nullToEmpty(oldEmail), "newEmail", nullToEmpty(newEmail)))));
@@ -53,7 +53,7 @@ public class IdentityNotificationAdapter implements IdentityNotificationPort {
 
     @Override
     public void sendPhoneChanged(String userId, String oldPhone, String newPhone) {
-        safeDispatch(() -> dispatchService.sendByEvent(new NotificationCommands.SendByEvent(
+        safeDispatch(() -> deliveryOrchestrator.sendByEvent(new NotificationCommands.SendByEvent(
                 userId, EVENT_PHONE_CHANGED, NotificationCategory.SECURITY,
                 List.of(NotificationChannel.SMS), null, null,
                 Map.of("oldPhone", nullToEmpty(oldPhone), "newPhone", nullToEmpty(newPhone)))));
@@ -61,7 +61,7 @@ public class IdentityNotificationAdapter implements IdentityNotificationPort {
 
     @Override
     public void sendEmailOtp(String email, String otpCode) {
-        safeDispatch(() -> dispatchService.sendDirectByEvent(new NotificationCommands.SendDirectByEvent(
+        safeDispatch(() -> deliveryOrchestrator.sendDirectByEvent(new NotificationCommands.SendDirectByEvent(
                 email, EVENT_EMAIL_OTP, NotificationCategory.SECURITY,
                 NotificationChannel.EMAIL, email, null, null,
                 Map.of("otpCode", otpCode))));
@@ -69,7 +69,7 @@ public class IdentityNotificationAdapter implements IdentityNotificationPort {
 
     @Override
     public void sendPhoneOtp(String phoneNumber, String otpCode) {
-        safeDispatch(() -> dispatchService.sendDirectByEvent(new NotificationCommands.SendDirectByEvent(
+        safeDispatch(() -> deliveryOrchestrator.sendDirectByEvent(new NotificationCommands.SendDirectByEvent(
                 phoneNumber, EVENT_PHONE_OTP, NotificationCategory.SECURITY,
                 NotificationChannel.SMS, phoneNumber, null, null,
                 Map.of("otpCode", otpCode))));
@@ -77,7 +77,7 @@ public class IdentityNotificationAdapter implements IdentityNotificationPort {
 
     @Override
     public void sendRegistrationOtp(String phoneNumber, String otpCode) {
-        safeDispatch(() -> dispatchService.sendDirectByEvent(new NotificationCommands.SendDirectByEvent(
+        safeDispatch(() -> deliveryOrchestrator.sendDirectByEvent(new NotificationCommands.SendDirectByEvent(
                 phoneNumber, EVENT_REGISTRATION_OTP, NotificationCategory.SECURITY,
                 NotificationChannel.SMS, phoneNumber, null, null,
                 Map.of("otpCode", otpCode))));

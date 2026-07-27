@@ -2,11 +2,14 @@ package com.aionn.notification.adapter.rest.controller;
 
 import com.aionn.notification.adapter.rest.dto.provider.ConfigureProviderRequest;
 import com.aionn.notification.adapter.rest.dto.provider.UpdateProviderRequest;
+import com.aionn.notification.adapter.rest.dto.provider.response.ProviderResponse;
+import com.aionn.notification.adapter.rest.mapper.provider.NotificationProviderDtoMapper;
 import com.aionn.notification.adapter.rest.support.session.CurrentAdminId;
-import com.aionn.notification.application.dto.provider.command.ProviderCommands;
-import com.aionn.notification.application.dto.provider.result.ProviderResult;
-import com.aionn.notification.application.service.NotificationAnalyticsService;
-import com.aionn.notification.application.service.NotificationProviderService;
+import com.aionn.notification.application.dto.analytics.result.AnalyticsResult;
+import com.aionn.notification.application.port.in.analytics.GetCampaignAnalyticsInputPort;
+import com.aionn.notification.application.port.in.provider.ConfigureProviderInputPort;
+import com.aionn.notification.application.port.in.provider.ListProvidersInputPort;
+import com.aionn.notification.application.port.in.provider.UpdateProviderInputPort;
 import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,47 +34,50 @@ import java.util.List;
 @Tag(name = "Notification - Admin", description = "Provider config + analytics")
 public class NotificationProviderController {
 
-    private final NotificationProviderService providerService;
-    private final NotificationAnalyticsService analyticsService;
+        private final ConfigureProviderInputPort configureProviderInputPort;
+        private final UpdateProviderInputPort updateProviderInputPort;
+        private final ListProvidersInputPort listProvidersInputPort;
+        private final GetCampaignAnalyticsInputPort getCampaignAnalyticsInputPort;
+        private final NotificationProviderDtoMapper dtoMapper;
 
-    @PostMapping("/providers")
-    @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
-    @Operation(summary = "Configure provider", description = "UC8.11")
-    public ResponseEntity<ApiResponse<ProviderResult>> configure(
-            @CurrentAdminId String adminId,
-            @Valid @RequestBody ConfigureProviderRequest request) {
-        return ApiResponse.createdResponse("Provider configured",
-                providerService.configure(new ProviderCommands.ConfigureProvider(
-                        request.channel(), request.providerType(), request.config(),
-                        request.rateLimitPerMinute(), adminId)));
-    }
+        @PostMapping("/providers")
+        @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
+        @Operation(summary = "Configure provider", description = "UC8.11")
+        public ResponseEntity<ApiResponse<ProviderResponse>> configure(
+                        @CurrentAdminId String adminId,
+                        @Valid @RequestBody ConfigureProviderRequest request) {
+                return ApiResponse.createdResponse("Provider configured",
+                                dtoMapper.toResponse(configureProviderInputPort.execute(
+                                                dtoMapper.toConfigureCommand(adminId, request))));
+        }
 
-    @PutMapping("/providers/{providerId}")
-    @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
-    @Operation(summary = "Update provider")
-    public ResponseEntity<ApiResponse<ProviderResult>> update(
-            @CurrentAdminId String adminId,
-            @PathVariable String providerId,
-            @Valid @RequestBody UpdateProviderRequest request) {
-        return ResponseEntity.ok(ApiResponse.success(
-                providerService.update(new ProviderCommands.UpdateProvider(
-                        providerId, request.config(), request.rateLimitPerMinute(),
-                        request.active(), adminId)),
-                "Provider updated"));
-    }
+        @PutMapping("/providers/{providerId}")
+        @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
+        @Operation(summary = "Update provider")
+        public ResponseEntity<ApiResponse<ProviderResponse>> update(
+                        @CurrentAdminId String adminId,
+                        @PathVariable String providerId,
+                        @Valid @RequestBody UpdateProviderRequest request) {
+                return ResponseEntity.ok(ApiResponse.success(
+                                dtoMapper.toResponse(updateProviderInputPort.execute(
+                                                dtoMapper.toUpdateCommand(providerId, adminId, request))),
+                                "Provider updated"));
+        }
 
-    @GetMapping("/providers")
-    @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
-    @Operation(summary = "List providers")
-    public ResponseEntity<ApiResponse<List<ProviderResult>>> list() {
-        return ResponseEntity.ok(ApiResponse.success(providerService.listAll(), "Providers fetched"));
-    }
+        @GetMapping("/providers")
+        @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
+        @Operation(summary = "List providers")
+        public ResponseEntity<ApiResponse<List<ProviderResponse>>> list() {
+                return ResponseEntity.ok(ApiResponse.success(
+                                dtoMapper.toResponses(listProvidersInputPort.execute()),
+                                "Providers fetched"));
+        }
 
-    @GetMapping("/analytics")
-    @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
-    @Operation(summary = "Campaign analytics", description = "UC8.12")
-    public ResponseEntity<ApiResponse<?>> analytics(@RequestParam String campaignId) {
-        return ResponseEntity.ok(ApiResponse.success(
-                analyticsService.report(campaignId), "Analytics generated"));
-    }
+        @GetMapping("/analytics")
+        @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
+        @Operation(summary = "Campaign analytics", description = "UC8.12")
+        public ResponseEntity<ApiResponse<AnalyticsResult>> analytics(@RequestParam String campaignId) {
+                return ResponseEntity.ok(ApiResponse.success(
+                                getCampaignAnalyticsInputPort.execute(campaignId), "Analytics generated"));
+        }
 }

@@ -11,4 +11,6 @@ public interface ProviderResultMapper {
     @Mapping(target = "channel", expression = "java(provider.getChannel().name())")
     @Mapping(target = "config", expression = "java(java.util.Map.copyOf(provider.getConfig()))")
     ProviderResult toResult(NotificationProvider provider);
+
+    java.util.List<ProviderResult> toResults(java.util.List<NotificationProvider> providers);
 }

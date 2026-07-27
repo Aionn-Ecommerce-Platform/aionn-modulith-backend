@@ -8,4 +8,6 @@ import org.mapstruct.Mapper;
 public interface DeviceTokenResultMapper {
 
     DeviceTokenResult toResult(DeviceToken token);
+
+    java.util.List<DeviceTokenResult> toResults(java.util.List<DeviceToken> tokens);
 }

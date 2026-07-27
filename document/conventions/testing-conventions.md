@@ -83,15 +83,16 @@ powershell -ExecutionPolicy Bypass -File scripts/coverage/effective-coverage.ps1
 
 Effective line coverage per module, as a baseline for new work:
 
-| Module    | Effective line | Effective branch |
-| :-------- | :------------- | :--------------- |
-| promotion | 99.6%          | 90.5%            |
-| shipping  | 97.0%          | 82.8%            |
-| identity  | 94.2%          | 75.3%            |
-| catalog   | 93.3%          | 72.7%            |
-| payment   | 88.1%          | 65.4%            |
-| ordering  | 87.1%          | 62.8%            |
-| inventory | 84.9%          | 71.8%            |
+| Module       | Effective line | Effective branch |
+| :----------- | :------------- | :--------------- |
+| promotion    | 99.6%          | 90.5%            |
+| notification | 97.5%          | 88.8%            |
+| shipping     | 97.0%          | 82.8%            |
+| identity     | 94.2%          | 75.3%            |
+| catalog      | 93.3%          | 72.7%            |
+| payment      | 88.1%          | 65.4%            |
+| ordering     | 87.1%          | 62.8%            |
+| inventory    | 84.9%          | 71.8%            |
 
 ---
 
