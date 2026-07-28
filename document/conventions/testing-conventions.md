@@ -86,6 +86,7 @@ Effective line coverage per module, as a baseline for new work:
 | Module       | Effective line | Effective branch |
 | :----------- | :------------- | :--------------- |
 | promotion    | 99.6%          | 90.5%            |
+| chat         | 99.5%          | 92.3%            |
 | notification | 97.5%          | 88.8%            |
 | shipping     | 97.0%          | 82.8%            |
 | identity     | 94.2%          | 75.3%            |

@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: chat
+
+  flyway:
+    enabled: true
+    locations: classpath:db
+
+chat:
+  attachment:
+    max-size-mb: ${CHAT_ATTACHMENT_MAX_SIZE_MB:10}
+
+  websocket:
+    allowed-origins: ${CHAT_WS_ALLOWED_ORIGINS:http://localhost:3000}
+    client-heartbeat-ms: ${CHAT_WS_CLIENT_HEARTBEAT_MS:10000}
+    server-heartbeat-ms: ${CHAT_WS_SERVER_HEARTBEAT_MS:10000}
+
+  realtime:
+    provider: ${CHAT_REALTIME_PROVIDER:stomp}
+
+  presence:
+    provider: ${CHAT_PRESENCE_PROVIDER:redis}
+
+  conversation:
+    list-default-limit: ${CHAT_CONVERSATION_LIST_DEFAULT_LIMIT:50}
+    list-max-limit: ${CHAT_CONVERSATION_LIST_MAX_LIMIT:100}
+
+  message:
+    max-length: ${CHAT_MESSAGE_MAX_LENGTH:4000}
+    recall-window-seconds: ${CHAT_MESSAGE_RECALL_WINDOW_SECONDS:120}
+    list-default-limit: ${CHAT_MESSAGE_LIST_DEFAULT_LIMIT:30}
+    list-max-limit: ${CHAT_MESSAGE_LIST_MAX_LIMIT:100}
+
+  auto-reply:
+    default-away-message: ${CHAT_AUTO_REPLY_AWAY_MESSAGE:Hien tai shop dang ngoai gio lam viec, se phan hoi ban som nhat.}
+    default-timezone: ${CHAT_AUTO_REPLY_TIMEZONE:Asia/Ho_Chi_Minh}
+
+  media:
+    provider: ${CHAT_MEDIA_PROVIDER:cloudinary}
+    cloudinary:
+      chat-image-folder: ${CLOUDINARY_CHAT_IMAGE_FOLDER:aionn/chat/images}

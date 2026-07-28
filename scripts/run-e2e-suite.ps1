@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("all", "identity", "catalog", "inventory", "ordering", "payment", "shipping", "promotion", "notification")]
+    [ValidateSet("all", "identity", "catalog", "inventory", "ordering", "payment", "shipping", "promotion", "notification", "chat")]
     [string]$Module = "all"
 )
 
@@ -10,7 +10,7 @@ Write-Host "Stopping any running gradle daemons..."
 .\gradlew --stop
 
 # 2. Load env files
-Get-Content envs/common.env, envs/identity.env, envs/catalog.env, envs/inventory.env, envs/ordering.env, envs/payment.env, envs/shipping.env, envs/promotion.env, envs/notification.env | ForEach-Object {
+Get-Content envs/common.env, envs/identity.env, envs/catalog.env, envs/inventory.env, envs/ordering.env, envs/payment.env, envs/shipping.env, envs/promotion.env, envs/notification.env, envs/chat.env | ForEach-Object {
     $line = $_.Trim()
     if ($line -and -not $line.StartsWith("#")) {
         if ($line -match "^([^=]+)=(.*)$") {
@@ -125,6 +125,11 @@ try {
     if ($Module -eq "notification" -or $Module -eq "all") {
         Write-Host "Running E2E tests for Notification module..."
         bash scripts/notification/test-notification-e2e.sh
+    }
+
+    if ($Module -eq "chat" -or $Module -eq "all") {
+        Write-Host "Running E2E tests for Chat module..."
+        bash scripts/chat/test-chat-e2e.sh
     }
 }
 finally {
