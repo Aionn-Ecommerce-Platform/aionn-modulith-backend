@@ -18,7 +18,7 @@ public class ListMyConversationsUseCase implements ListMyConversationsQueryPort 
 
     @Override
     public List<ConversationResult> execute(String userId, boolean includeArchived, int limit) {
-        int safeLimit = Math.min(Math.max(limit, 1), conversationPolicy.getListMaxLimit());
+        int safeLimit = Math.clamp(limit, 1, conversationPolicy.getListMaxLimit());
         return conversationService.listForUser(userId, includeArchived, safeLimit);
     }
 }

@@ -18,6 +18,11 @@ import java.util.Map;
 @ConditionalOnProperty(prefix = "chat.realtime", name = "provider", havingValue = "stomp")
 public class StompRealtimeBroadcaster implements RealtimeBroadcaster {
 
+    private static final String CONVERSATION_TOPIC_PREFIX = "/topic/conversations/";
+    private static final String KEY_TYPE = "type";
+    private static final String KEY_CONVERSATION_ID = "conversationId";
+    private static final String KEY_USER_ID = "userId";
+
     private final SimpMessagingTemplate messagingTemplate;
 
     @Override
@@ -29,30 +34,31 @@ public class StompRealtimeBroadcaster implements RealtimeBroadcaster {
 
     @Override
     public void broadcastConversationRead(String conversationId, String userId, Instant readAt) {
-        Map<String, Object> payload = Map.of(
-                "type", "CONVERSATION_READ",
-                "conversationId", conversationId,
-                "userId", userId,
-                "readAt", readAt.toString());
-        messagingTemplate.convertAndSend("/topic/conversations/" + conversationId, payload);
+        broadcastToConversation(conversationId, Map.of(
+                KEY_TYPE, "CONVERSATION_READ",
+                KEY_CONVERSATION_ID, conversationId,
+                KEY_USER_ID, userId,
+                "readAt", readAt.toString()));
     }
 
     @Override
     public void broadcastTypingChange(String conversationId, String userId, boolean typing) {
-        Map<String, Object> payload = Map.of(
-                "type", "TYPING",
-                "conversationId", conversationId,
-                "userId", userId,
-                "typing", typing);
-        messagingTemplate.convertAndSend("/topic/conversations/" + conversationId, payload);
+        broadcastToConversation(conversationId, Map.of(
+                KEY_TYPE, "TYPING",
+                KEY_CONVERSATION_ID, conversationId,
+                KEY_USER_ID, userId,
+                "typing", typing));
     }
 
     @Override
     public void broadcastMessageRecalled(String conversationId, String messageId) {
-        Map<String, Object> payload = Map.of(
-                "type", "MESSAGE_RECALLED",
-                "conversationId", conversationId,
-                "messageId", messageId);
-        messagingTemplate.convertAndSend("/topic/conversations/" + conversationId, payload);
+        broadcastToConversation(conversationId, Map.of(
+                KEY_TYPE, "MESSAGE_RECALLED",
+                KEY_CONVERSATION_ID, conversationId,
+                "messageId", messageId));
+    }
+
+    private void broadcastToConversation(String conversationId, Map<String, Object> payload) {
+        messagingTemplate.convertAndSend(CONVERSATION_TOPIC_PREFIX + conversationId, payload);
     }
 }

@@ -162,14 +162,17 @@ public class Message extends AggregateRoot {
     }
 
     private static void validatePayload(MessageType type, MessagePayload payload) {
-        Guard.require(payload != null,
-                () -> new ChatException(ChatErrorCode.MESSAGE_EMPTY));
+        if (payload == null) {
+            throw new ChatException(ChatErrorCode.MESSAGE_EMPTY);
+        }
         if (type == MessageType.TEXT) {
             String body = payload.body();
-            Guard.require(body != null && !body.isBlank(),
-                    () -> new ChatException(ChatErrorCode.MESSAGE_EMPTY));
-            Guard.require(body.length() <= MAX_TEXT_LENGTH,
-                    () -> new ChatException(ChatErrorCode.MESSAGE_TOO_LONG));
+            if (body == null || body.isBlank()) {
+                throw new ChatException(ChatErrorCode.MESSAGE_EMPTY);
+            }
+            if (body.length() > MAX_TEXT_LENGTH) {
+                throw new ChatException(ChatErrorCode.MESSAGE_TOO_LONG);
+            }
         }
         Guard.require(type != MessageType.IMAGE || payload.metadata().containsKey("imageUrl"),
                 () -> new ChatException(ChatErrorCode.INVALID_ARGUMENT, "imageUrl required for IMAGE message"));

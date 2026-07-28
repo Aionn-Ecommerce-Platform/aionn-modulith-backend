@@ -16,19 +16,25 @@ public class NoopRealtimeBroadcaster implements RealtimeBroadcaster {
 
     @Override
     public void broadcastMessage(MessageResult message, List<String> recipientIds) {
-        log.debug("[NOOP] broadcastMessage to {}", recipientIds);
+        log.debug("[NOOP] broadcastMessage conversationId={} recipients={}",
+                message.conversationId(), recipientIds);
     }
 
     @Override
     public void broadcastConversationRead(String conversationId, String userId, Instant readAt) {
+        log.debug("[NOOP] broadcastConversationRead conversationId={} userId={} readAt={}",
+                conversationId, userId, readAt);
     }
 
     @Override
     public void broadcastTypingChange(String conversationId, String userId, boolean typing) {
+        log.debug("[NOOP] broadcastTypingChange conversationId={} userId={} typing={}",
+                conversationId, userId, typing);
     }
 
     @Override
     public void broadcastMessageRecalled(String conversationId, String messageId) {
+        log.debug("[NOOP] broadcastMessageRecalled conversationId={} messageId={}",
+                conversationId, messageId);
     }
 }
-

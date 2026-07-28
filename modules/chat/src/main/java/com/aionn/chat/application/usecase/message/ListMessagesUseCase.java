@@ -23,7 +23,7 @@ public class ListMessagesUseCase implements ListMessagesQueryPort {
     @Override
     @Transactional(readOnly = true)
     public List<MessageResult> execute(String userId, String conversationId, Instant before, int limit) {
-        int safeLimit = Math.min(Math.max(limit, 1), messagePolicy.getListMaxLimit());
+        int safeLimit = Math.clamp(limit, 1, messagePolicy.getListMaxLimit());
         if (before == null) {
             return chatResultMapper.toMessageResults(
                     messageService.listLatest(userId, conversationId, safeLimit));
