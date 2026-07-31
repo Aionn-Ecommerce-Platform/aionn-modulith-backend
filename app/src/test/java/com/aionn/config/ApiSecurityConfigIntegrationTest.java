@@ -36,12 +36,18 @@ class ApiSecurityConfigIntegrationTest {
     private com.aionn.identity.application.port.out.auth.TokenBlacklistPort tokenBlacklist;
 
     @Test
-    void requestStillReceivesSecurityHeadersWhenNoControllerMatches() throws Exception {
+    void unmatchedRequestRequiresAuthenticationAndReceivesSecurityHeaders() throws Exception {
         mockMvc.perform(get("/test/ping"))
-                .andExpect(status().isNotFound())
+                .andExpect(status().isForbidden())
                 .andExpect(header().string("X-Content-Type-Options", "nosniff"))
                 .andExpect(header().string("X-Frame-Options", "DENY"))
                 .andExpect(header().string("Referrer-Policy", "strict-origin-when-cross-origin"));
+    }
+
+    @Test
+    void explicitlyPublicRouteDoesNotRequireAuthentication() throws Exception {
+        mockMvc.perform(get("/api/v1/catalog/products/example"))
+                .andExpect(status().isNotFound());
     }
 
     @Test

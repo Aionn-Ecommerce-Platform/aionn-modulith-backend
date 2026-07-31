@@ -52,6 +52,31 @@ public class ApiSecurityConfig {
                                 ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN)))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/social-login",
+                                "/api/v1/auth/refresh",
+                                "/api/v1/registrations/**",
+                                "/api/v1/security/password-reset-requests",
+                                "/api/v1/security/password-reset",
+                                "/api/v1/feedbacks",
+                                "/api/v1/kyc/webhooks/sumsub",
+                                "/api/v1/payments/webhooks/**",
+                                "/api/v1/payments/vnpay/ipn",
+                                "/api/v1/shipping/webhooks/carrier")
+                        .permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/geography/**",
+                                "/api/v1/catalog/**",
+                                "/api/v1/inventory/items",
+                                "/api/v1/promotions/flash-sales/active",
+                                "/api/v1/promotions/banners",
+                                "/api/v1/promotions/campaigns",
+                                "/api/v1/promotions/campaigns/*",
+                                "/api/v1/promotions/campaigns/*/vouchers",
+                                "/api/v1/promotions/shop-vouchers/merchant/*",
+                                "/api/v1/payments/vnpay/return")
+                        .permitAll()
                         .requestMatchers(
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
@@ -61,7 +86,7 @@ public class ApiSecurityConfig {
                                 "/actuator/info")
                         .permitAll()
                         .requestMatchers("/actuator/**").denyAll()
-                        .anyRequest().permitAll())
+                        .anyRequest().authenticated())
                 .addFilterBefore(bearerAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
