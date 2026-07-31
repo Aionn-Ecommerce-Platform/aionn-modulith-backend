@@ -1,6 +1,5 @@
 package com.aionn.notification.domain.model;
 
-import com.aionn.sharedkernel.domain.Guard;
 import com.aionn.sharedkernel.domain.model.AggregateRoot;
 import com.aionn.notification.domain.event.NotificationEvents;
 import com.aionn.notification.domain.exception.NotificationErrorCode;

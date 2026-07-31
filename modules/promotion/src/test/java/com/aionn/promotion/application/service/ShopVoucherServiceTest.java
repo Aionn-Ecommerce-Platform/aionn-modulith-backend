@@ -24,6 +24,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -72,7 +73,7 @@ class ShopVoucherServiceTest {
         assertThat(issued.getScope()).isEqualTo(VoucherScope.SHOP);
         assertThat(issued.getMerchantId()).isEqualTo("mer-1");
         assertThat(issued.getCreatedAt()).isEqualTo(NOW);
-        verify(eventPublisher).publish(any(java.util.Collection.class));
+        verify(eventPublisher).publish(anyCollection());
     }
 
     @Test

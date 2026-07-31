@@ -30,6 +30,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -107,7 +108,7 @@ class FlashSaleServiceTest {
         assertThat(reg.getStatus()).isEqualTo(FlashSaleRegistrationStatus.PENDING);
         assertThat(reg.getMerchantId()).isEqualTo("mer-1");
         assertThat(reg.getSubmittedAt()).isEqualTo(NOW);
-        verify(eventPublisher).publish(any(java.util.Collection.class));
+        verify(eventPublisher).publish(anyCollection());
     }
 
     @Test

@@ -26,6 +26,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -107,7 +108,7 @@ class ConversationServiceTest {
                                 "buyer-1", "Buyer", null, "mer-1", "Shop", null, "buyer-1"));
 
                 verify(conversationRepository).save(any(Conversation.class));
-                verify(eventPublisher).publish(any(java.util.Collection.class));
+                verify(eventPublisher).publish(anyCollection());
         }
 
         @Test

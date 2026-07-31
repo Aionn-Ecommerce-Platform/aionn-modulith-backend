@@ -23,6 +23,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -117,7 +118,7 @@ class AutoReplyServiceTest {
         assertThat(saved.getAwayMessage()).isEqualTo("Away");
         assertThat(saved.getWorkingDays()).containsExactly(DayOfWeek.MONDAY);
         assertThat(saved.getUpdatedAt()).isEqualTo(NOW);
-        verify(eventPublisher).publish(any(java.util.Collection.class));
+        verify(eventPublisher).publish(anyCollection());
     }
 
     @Test
