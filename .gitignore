@@ -31,3 +31,5 @@ docker/*.local.env
 .jqwik-database
 **/.jqwik-database
 .disabled-tests-phase4/
+
+document/later_check/

@@ -20,6 +20,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -54,7 +55,7 @@ class UserBlockServiceTest {
 
         assertThat(saved.isActive()).isTrue();
         assertThat(saved.getCreatedAt()).isEqualTo(NOW);
-        verify(eventPublisher).publish(any(java.util.Collection.class));
+        verify(eventPublisher).publish(anyCollection());
     }
 
     @Test
@@ -65,7 +66,7 @@ class UserBlockServiceTest {
 
         assertThat(result.getBlockId()).isEqualTo("blk-1");
         verify(repository, never()).save(any());
-        verify(eventPublisher, never()).publish(any(java.util.Collection.class));
+        verify(eventPublisher, never()).publish(anyCollection());
     }
 
     @Test
@@ -89,7 +90,7 @@ class UserBlockServiceTest {
 
         assertThat(saved.isActive()).isFalse();
         assertThat(saved.getUpdatedAt()).isEqualTo(NOW);
-        verify(eventPublisher).publish(any(java.util.Collection.class));
+        verify(eventPublisher).publish(anyCollection());
     }
 
     @Test

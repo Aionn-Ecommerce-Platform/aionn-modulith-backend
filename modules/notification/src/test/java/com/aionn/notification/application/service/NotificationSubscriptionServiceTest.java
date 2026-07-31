@@ -24,6 +24,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -62,7 +63,7 @@ class NotificationSubscriptionServiceTest {
 
         assertThat(saved.isEnabled(NotificationCategory.PROMOTION, NotificationChannel.EMAIL)).isFalse();
         assertThat(saved.getUpdatedAt()).isEqualTo(NOW);
-        verify(eventPublisher).publish(any(java.util.Collection.class));
+        verify(eventPublisher).publish(anyCollection());
     }
 
     @Test
@@ -118,7 +119,7 @@ class NotificationSubscriptionServiceTest {
 
         assertThat(result.getTokenId()).isEqualTo("tok-existing");
         verify(deviceTokenRepository, never()).save(any());
-        verify(eventPublisher, never()).publish(any(java.util.Collection.class));
+        verify(eventPublisher, never()).publish(anyCollection());
     }
 
     @Test
@@ -133,7 +134,7 @@ class NotificationSubscriptionServiceTest {
 
         assertThat(result.isActive()).isTrue();
         assertThat(result.getRegisteredAt()).isEqualTo(NOW);
-        verify(eventPublisher).publish(any(java.util.Collection.class));
+        verify(eventPublisher).publish(anyCollection());
     }
 
     @Test
