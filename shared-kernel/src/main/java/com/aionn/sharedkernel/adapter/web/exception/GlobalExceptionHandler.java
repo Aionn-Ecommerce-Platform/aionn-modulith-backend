@@ -5,6 +5,7 @@ import com.aionn.sharedkernel.common.exception.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -50,6 +51,18 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ApiResponse<Map<String, Object>>> handleConflict(ConflictException ex) {
 		log.debug("Conflict: {}", ex.getMessage());
 		return buildErrorResponse(HttpStatus.CONFLICT, ex);
+	}
+
+	@ExceptionHandler(OptimisticLockingFailureException.class)
+	public ResponseEntity<ApiResponse<Map<String, Object>>> handleOptimisticLockingFailure(
+			OptimisticLockingFailureException ex) {
+		log.debug("Concurrent aggregate modification: {}", ex.getMessage());
+		return buildErrorResponse(
+				HttpStatus.CONFLICT,
+				"The resource was modified by another request. Reload it and try again.",
+				"CONCURRENT_MODIFICATION",
+				null,
+				null);
 	}
 
 	@ExceptionHandler(UnauthorizedException.class)

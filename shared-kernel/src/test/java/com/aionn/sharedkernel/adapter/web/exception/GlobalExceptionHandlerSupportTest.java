@@ -14,6 +14,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.core.MethodParameter;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.mock.http.MockHttpInputMessage;
 import org.springframework.security.access.AccessDeniedException;
@@ -34,6 +35,10 @@ class GlobalExceptionHandlerSupportTest {
         assertEquals(404, handler.handleNotFound(new NotFoundException("Product", "p-1")).getStatusCode().value());
         assertEquals(409,
                 handler.handleConflict(new ConflictException("Catalog", "CONFLICT", "dup")).getStatusCode().value());
+        var concurrentModification = handler.handleOptimisticLockingFailure(
+                new OptimisticLockingFailureException("stale aggregate"));
+        assertEquals(409, concurrentModification.getStatusCode().value());
+        assertEquals("CONCURRENT_MODIFICATION", concurrentModification.getBody().data().get("errorCode"));
         assertEquals(401, handler.handleUnauthorized(new UnauthorizedException()).getStatusCode().value());
         assertEquals(403, handler.handleForbidden(new ForbiddenException("delete")).getStatusCode().value());
         assertEquals(422,
