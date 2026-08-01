@@ -32,15 +32,11 @@ public class ResilientCatalogPricingAdapter implements CatalogPricingGateway {
     private final OrderingMetricsPort metrics;
 
     public ResilientCatalogPricingAdapter(
-            List<CatalogPricingGateway> delegates,
+            CatalogPricingAdapter delegate,
             RetryRegistry retryRegistry,
             CircuitBreakerRegistry circuitBreakerRegistry,
             OrderingMetricsPort metrics) {
-        this.delegate = delegates.stream()
-                .filter(impl -> !(impl instanceof ResilientCatalogPricingAdapter))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException(
-                        "No underlying CatalogPricingGateway implementation found"));
+        this.delegate = delegate;
         this.retry = retryRegistry.retry(INSTANCE);
         this.circuitBreaker = circuitBreakerRegistry.circuitBreaker(INSTANCE);
         this.metrics = metrics;

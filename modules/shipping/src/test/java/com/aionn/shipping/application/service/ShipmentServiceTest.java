@@ -95,6 +95,7 @@ class ShipmentServiceTest {
                 assertThat(result.fee()).isEqualByComparingTo(BigDecimal.valueOf(25000));
                 assertThat(result.source()).isEqualTo("configured-rate");
                 assertThat(result.zoneCode()).isEqualTo("HN");
+                verify(transactionTemplate).execute(any());
         }
 
         @Test

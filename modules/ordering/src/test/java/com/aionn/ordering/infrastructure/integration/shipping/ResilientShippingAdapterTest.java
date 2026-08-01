@@ -23,7 +23,7 @@ import static org.mockito.Mockito.when;
 class ResilientShippingAdapterTest {
 
     @Mock
-    private ShippingGateway delegate;
+    private ShippingFulfillmentAdapter delegate;
 
     @Mock
     private OrderingMetricsPort metrics;
@@ -38,7 +38,7 @@ class ResilientShippingAdapterTest {
     void setUp() {
         RetryRegistry retryRegistry = RetryRegistry.ofDefaults();
         CircuitBreakerRegistry circuitBreakerRegistry = CircuitBreakerRegistry.ofDefaults();
-        adapter = new ResilientShippingAdapter(List.of(delegate), retryRegistry, circuitBreakerRegistry, metrics);
+        adapter = new ResilientShippingAdapter(delegate, retryRegistry, circuitBreakerRegistry, metrics);
     }
 
     @Test

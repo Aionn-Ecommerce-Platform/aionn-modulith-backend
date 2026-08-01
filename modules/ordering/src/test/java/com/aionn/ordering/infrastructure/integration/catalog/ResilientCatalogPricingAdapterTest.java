@@ -26,7 +26,7 @@ import static org.mockito.Mockito.when;
 class ResilientCatalogPricingAdapterTest {
 
     @Mock
-    private CatalogPricingGateway delegate;
+    private CatalogPricingAdapter delegate;
 
     @Mock
     private RetryRegistry retryRegistry;
@@ -51,7 +51,7 @@ class ResilientCatalogPricingAdapterTest {
         when(retryRegistry.retry("ordering-catalog")).thenReturn(retry);
         when(circuitBreakerRegistry.circuitBreaker("ordering-catalog")).thenReturn(circuitBreaker);
 
-        adapter = new ResilientCatalogPricingAdapter(List.of(delegate), retryRegistry, circuitBreakerRegistry, metrics);
+        adapter = new ResilientCatalogPricingAdapter(delegate, retryRegistry, circuitBreakerRegistry, metrics);
     }
 
     @Test

@@ -142,11 +142,13 @@ public class ShipmentService {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public ShippingQuoteResult quote(QuoteShippingCommand command) {
         String currency = command.currency() == null ? "VND" : command.currency();
-        var rate = transactionTemplate.execute(status -> rateRepository.findByZoneCode(
-                command.address().provinceCode()));
-        if (rate.isPresent()) {
-            return new ShippingQuoteResult(rate.get().getBaseFee(), rate.get().getCurrency(),
-                    rate.get().getZoneCode(), "configured-rate", rate.get().getCondition(), null, null);
+        ShippingQuoteResult configuredRate = transactionTemplate.execute(status -> rateRepository
+                .findByZoneCode(command.address().provinceCode())
+                .map(rate -> new ShippingQuoteResult(rate.getBaseFee(), rate.getCurrency(),
+                        rate.getZoneCode(), "configured-rate", rate.getCondition(), null, null))
+                .orElse(null));
+        if (configuredRate != null) {
+            return configuredRate;
         }
         CarrierClient.Quote q = carrierClient.quote(command.address(), command.dimensions(), currency);
         return new ShippingQuoteResult(q.fee(), q.currency(), q.zoneCode(), "carrier", q.detail(),

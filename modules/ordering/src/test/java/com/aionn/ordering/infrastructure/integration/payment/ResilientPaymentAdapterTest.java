@@ -23,7 +23,7 @@ import static org.mockito.Mockito.when;
 class ResilientPaymentAdapterTest {
 
     @Mock
-    private PaymentGateway delegate;
+    private PaymentInitiateAdapter delegate;
 
     @Mock
     private OrderingMetricsPort metrics;
@@ -34,7 +34,7 @@ class ResilientPaymentAdapterTest {
     void setUp() {
         RetryRegistry retryRegistry = RetryRegistry.ofDefaults();
         CircuitBreakerRegistry circuitBreakerRegistry = CircuitBreakerRegistry.ofDefaults();
-        adapter = new ResilientPaymentAdapter(List.of(delegate), retryRegistry, circuitBreakerRegistry, metrics);
+        adapter = new ResilientPaymentAdapter(delegate, retryRegistry, circuitBreakerRegistry, metrics);
     }
 
     @Test

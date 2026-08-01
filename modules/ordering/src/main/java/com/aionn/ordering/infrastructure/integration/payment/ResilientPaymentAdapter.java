@@ -14,7 +14,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.function.Supplier;
 
 @Slf4j
@@ -32,15 +31,11 @@ public class ResilientPaymentAdapter implements PaymentGateway {
     private final OrderingMetricsPort metrics;
 
     public ResilientPaymentAdapter(
-            List<PaymentGateway> delegates,
+            PaymentInitiateAdapter delegate,
             RetryRegistry retryRegistry,
             CircuitBreakerRegistry circuitBreakerRegistry,
             OrderingMetricsPort metrics) {
-        this.delegate = delegates.stream()
-                .filter(impl -> !(impl instanceof ResilientPaymentAdapter))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException(
-                        "No underlying PaymentGateway implementation found"));
+        this.delegate = delegate;
         this.retry = retryRegistry.retry(INSTANCE);
         this.circuitBreaker = circuitBreakerRegistry.circuitBreaker(INSTANCE);
         this.metrics = metrics;

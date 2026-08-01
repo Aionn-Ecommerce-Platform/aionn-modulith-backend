@@ -26,7 +26,7 @@ import static org.mockito.Mockito.when;
 class ResilientShippingAdapterBranchTest {
 
     @Mock
-    private ShippingGateway delegate;
+    private ShippingFulfillmentAdapter delegate;
 
     @Mock
     private RetryRegistry retryRegistry;
@@ -46,7 +46,7 @@ class ResilientShippingAdapterBranchTest {
         when(retryRegistry.retry("ordering-shipping")).thenReturn(retry);
         when(circuitBreakerRegistry.circuitBreaker("ordering-shipping")).thenReturn(circuitBreaker);
 
-        adapter = new ResilientShippingAdapter(List.of(delegate), retryRegistry, circuitBreakerRegistry, metrics);
+        adapter = new ResilientShippingAdapter(delegate, retryRegistry, circuitBreakerRegistry, metrics);
     }
 
     @Test

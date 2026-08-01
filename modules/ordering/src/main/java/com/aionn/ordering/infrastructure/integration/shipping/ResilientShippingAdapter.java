@@ -14,7 +14,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.function.Supplier;
 
 @Slf4j
@@ -32,15 +31,11 @@ public class ResilientShippingAdapter implements ShippingGateway {
     private final OrderingMetricsPort metrics;
 
     public ResilientShippingAdapter(
-            List<ShippingGateway> delegates,
+            ShippingFulfillmentAdapter delegate,
             RetryRegistry retryRegistry,
             CircuitBreakerRegistry circuitBreakerRegistry,
             OrderingMetricsPort metrics) {
-        this.delegate = delegates.stream()
-                .filter(impl -> !(impl instanceof ResilientShippingAdapter))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException(
-                        "No underlying ShippingGateway implementation found"));
+        this.delegate = delegate;
         this.retry = retryRegistry.retry(INSTANCE);
         this.circuitBreaker = circuitBreakerRegistry.circuitBreaker(INSTANCE);
         this.metrics = metrics;
