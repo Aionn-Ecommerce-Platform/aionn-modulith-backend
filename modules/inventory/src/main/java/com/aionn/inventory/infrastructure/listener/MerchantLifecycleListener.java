@@ -9,11 +9,10 @@ import com.aionn.sharedkernel.integration.event.catalog.MerchantClosedIntegratio
 import com.aionn.sharedkernel.integration.event.catalog.MerchantSuspendedIntegrationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
 
@@ -25,7 +24,7 @@ public class MerchantLifecycleListener {
     private final WarehousePersistencePort warehouseRepository;
     private final EventPublisher eventPublisher;
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onSuspended(MerchantSuspendedIntegrationEvent event) {
         log.info("Merchant suspended, updating warehouses: merchantId={}", event.merchantId());
@@ -33,7 +32,7 @@ public class MerchantLifecycleListener {
                 "merchant-suspended:" + event.reason());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onClosed(MerchantClosedIntegrationEvent event) {
         log.info("Merchant closed, suspending warehouses: merchantId={}", event.merchantId());
@@ -41,7 +40,7 @@ public class MerchantLifecycleListener {
                 "merchant-closed:" + event.reason());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onActivated(MerchantActivatedIntegrationEvent event) {
         log.info("Merchant activated, lifting warehouse suspensions: merchantId={}", event.merchantId());

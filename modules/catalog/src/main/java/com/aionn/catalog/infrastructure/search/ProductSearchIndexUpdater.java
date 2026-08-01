@@ -12,11 +12,10 @@ import com.aionn.catalog.domain.model.AttributeTemplate;
 import com.aionn.catalog.domain.model.AttributeTemplate.AttributeDefinition;
 import com.aionn.catalog.domain.model.Product;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -34,82 +33,82 @@ public class ProductSearchIndexUpdater {
     private final ProductReviewPersistencePort reviewRepository;
     private final ProductSoldCounterPersistencePort soldCounterRepository;
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductPublished(ProductEvents.ProductPublished event) {
         reindex(event.productId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductRestored(ProductEvents.ProductRestored event) {
         reindex(event.productId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     public void onProductRejected(ProductEvents.ProductRejected event) {
         searchIndex.remove(event.productId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     public void onProductDeactivated(ProductEvents.ProductDeactivated event) {
         searchIndex.remove(event.productId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     public void onProductEmergencyTakedown(ProductEvents.ProductEmergencyTakedown event) {
         searchIndex.remove(event.productId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductVariantDefined(ProductEvents.ProductVariantDefined event) {
         reindexIfSearchable(event.productId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductVariantRemoved(ProductEvents.ProductVariantRemoved event) {
         reindexIfSearchable(event.productId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductVariantPriceChanged(ProductEvents.ProductVariantPriceChanged event) {
         reindexIfSearchable(event.productId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductMediaUpdated(ProductEvents.ProductMediaUpdated event) {
         reindexIfSearchable(event.productId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductBrandAssigned(ProductEvents.ProductBrandAssigned event) {
         reindexIfSearchable(event.productId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductCategorized(ProductEvents.ProductCategorized event) {
         reindexIfSearchable(event.productId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductMetadataUpdated(ProductEvents.ProductMetadataUpdated event) {
         reindexIfSearchable(event.productId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductCollectionAssigned(ProductEvents.ProductCollectionAssigned event) {
         reindexIfSearchable(event.productId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductAttributesDefined(ProductEvents.ProductAttributesDefined event) {
         reindexIfSearchable(event.productId());

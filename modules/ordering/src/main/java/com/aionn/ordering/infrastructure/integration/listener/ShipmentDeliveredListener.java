@@ -6,9 +6,8 @@ import com.aionn.ordering.domain.valueobject.OrderStatus;
 import com.aionn.sharedkernel.integration.event.shipping.ShipmentDeliveredIntegrationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 @Slf4j
 @Component
@@ -17,7 +16,7 @@ public class ShipmentDeliveredListener {
 
     private final OrderService orderService;
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @EventListener
     public void on(ShipmentDeliveredIntegrationEvent event) {
         try {
             OrderStatus status = orderService.statusOf(event.orderId());

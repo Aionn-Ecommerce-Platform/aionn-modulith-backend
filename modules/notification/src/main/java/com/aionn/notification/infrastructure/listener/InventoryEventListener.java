@@ -9,9 +9,8 @@ import com.aionn.sharedkernel.integration.event.inventory.StockReservationFailed
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,7 +25,7 @@ public class InventoryEventListener {
     private final NotificationDeliveryOrchestrator deliveryOrchestrator;
     private final MerchantQueryPort merchantQueryPort;
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @EventListener
     public void on(SafetyStockBreachedIntegrationEvent event) {
         String ownerId = merchantQueryPort.findOwnerIdByMerchantId(event.merchantId()).orElse(null);
         if (ownerId == null) {
@@ -57,13 +56,13 @@ public class InventoryEventListener {
      * Audit-log only so the cross-module flow is observable; downstream
      * recipients can be added once warehouse → owner resolution is wired.
      */
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @EventListener
     public void on(StockCommittedIntegrationEvent event) {
         log.info("[INTEGRATION] StockCommitted reservationId={} sku={} warehouse={} order={} qty={}",
                 event.reservationId(), event.skuId(), event.warehouseId(), event.orderId(), event.quantity());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @EventListener
     public void on(StockReservationFailedIntegrationEvent event) {
         log.info("[INTEGRATION] StockReservationFailed sku={} warehouse={} order={} qty={} reason={}",
                 event.skuId(), event.warehouseId(), event.orderId(), event.quantity(), event.reason());

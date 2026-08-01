@@ -8,9 +8,8 @@ import com.aionn.sharedkernel.integration.event.identity.PasswordChangedIntegrat
 import com.aionn.sharedkernel.integration.event.identity.PhoneChangedIntegrationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,7 +25,7 @@ public class IdentityEventListener {
 
     private final NotificationDeliveryOrchestrator deliveryOrchestrator;
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @EventListener
     public void on(PasswordChangedIntegrationEvent event) {
         Map<String, String> context = new HashMap<>();
         context.put("eventId", event.eventId());
@@ -37,7 +36,7 @@ public class IdentityEventListener {
         dispatch(event.userId(), EVENT_PASSWORD_CHANGED, context);
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @EventListener
     public void on(EmailChangedIntegrationEvent event) {
         Map<String, String> context = new HashMap<>();
         context.put("eventId", event.eventId());
@@ -51,7 +50,7 @@ public class IdentityEventListener {
         dispatch(event.userId(), EVENT_EMAIL_CHANGED, context);
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @EventListener
     public void on(PhoneChangedIntegrationEvent event) {
         Map<String, String> context = new HashMap<>();
         context.put("eventId", event.eventId());

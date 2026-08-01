@@ -6,9 +6,8 @@ import com.aionn.notification.domain.valueobject.NotificationCategory;
 import com.aionn.sharedkernel.integration.event.chat.MessageSentIntegrationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,7 +21,7 @@ public class ChatEventListener {
 
     private final NotificationDeliveryOrchestrator deliveryOrchestrator;
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @EventListener
     public void on(MessageSentIntegrationEvent event) {
         Map<String, String> context = new HashMap<>();
         context.put("eventId", event.eventId());
