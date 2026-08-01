@@ -5,11 +5,11 @@ import com.aionn.payment.infrastructure.persistence.entity.MerchantBalanceEntity
 import com.aionn.payment.infrastructure.persistence.repository.MerchantBalanceRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -22,8 +22,12 @@ class MerchantBalancePersistenceAdapterTest {
     @Mock
     private MerchantBalanceRepository jpa;
 
-    @InjectMocks
     private MerchantBalancePersistenceAdapter adapter;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        adapter = new MerchantBalancePersistenceAdapter(jpa, Clock.systemUTC());
+    }
 
     @Test
     void shouldFindAndSaveMerchantBalance() {

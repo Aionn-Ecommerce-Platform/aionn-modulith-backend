@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 
 import java.time.Duration;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 
@@ -22,6 +23,7 @@ public class OrderAutoCancelScheduler {
     private final OrderPersistencePort orderRepository;
     private final OrderAutoCancelWorker worker;
     private final OrderingProperties properties;
+    private final Clock clock;
 
     @Scheduled(fixedDelayString = "${ordering.auto-cancel.delay-ms:60000}")
     @SchedulerLock(name = "ordering-auto-cancel", lockAtMostFor = "PT15M", lockAtLeastFor = "PT55S")
@@ -29,7 +31,7 @@ public class OrderAutoCancelScheduler {
         try {
             int timeoutMinutes = properties.autoCancel().timeoutMinutes();
             int batchSize = properties.autoCancel().batchSize();
-            Instant cutoff = Instant.now().minus(Duration.ofMinutes(timeoutMinutes));
+            Instant cutoff = clock.instant().minus(Duration.ofMinutes(timeoutMinutes));
             List<String> pendingIds = orderRepository.findPendingOrderIdsOlderThan(cutoff, batchSize);
             int cancelled = 0;
             for (String orderId : pendingIds) {

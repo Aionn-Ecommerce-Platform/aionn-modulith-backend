@@ -12,11 +12,11 @@ import com.aionn.identity.infrastructure.persistence.repository.kyc.KycProfileRe
 import com.aionn.identity.infrastructure.persistence.repository.user.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.Clock;
 import java.time.ZoneOffset;
 import java.util.List;
 
@@ -36,8 +36,12 @@ class IdentityAnalyticsAdapterTest {
     @Mock
     private UserFeedbackRepository feedbackRepository;
 
-    @InjectMocks
     private IdentityAnalyticsAdapter adapter;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        adapter = new IdentityAnalyticsAdapter(userRepository, kycRepository, feedbackRepository, Clock.systemUTC());
+    }
 
     private UserRepository.StatusCount userStatusCount(UserStatus status, Long cnt) {
         UserRepository.StatusCount row = mock(UserRepository.StatusCount.class);

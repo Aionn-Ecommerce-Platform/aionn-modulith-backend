@@ -7,7 +7,7 @@ import com.aionn.payment.infrastructure.persistence.repository.MerchantBalanceRe
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.time.Instant;
+import java.time.Clock;
 import java.util.Optional;
 
 @Repository
@@ -15,6 +15,7 @@ import java.util.Optional;
 public class MerchantBalancePersistenceAdapter implements MerchantBalancePersistencePort {
 
     private final MerchantBalanceRepository jpa;
+    private final Clock clock;
 
     @Override
     public MerchantBalance save(MerchantBalance balance) {
@@ -27,7 +28,7 @@ public class MerchantBalancePersistenceAdapter implements MerchantBalancePersist
                         .build());
         entity.setPending(balance.getPending());
         entity.setAvailable(balance.getAvailable());
-        entity.setUpdatedAt(Instant.now());
+        entity.setUpdatedAt(clock.instant());
         return toDomain(jpa.save(entity));
     }
 

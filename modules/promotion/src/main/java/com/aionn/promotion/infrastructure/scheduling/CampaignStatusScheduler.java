@@ -9,7 +9,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 
-import java.time.Instant;
+import java.time.Clock;
 
 @Slf4j
 @Component
@@ -18,6 +18,7 @@ import java.time.Instant;
 public class CampaignStatusScheduler {
 
     private final PromotionCampaignService campaignService;
+    private final Clock clock;
 
     @Value("${promotion.scheduler.batch-size:100}")
     private int batchSize;
@@ -26,7 +27,7 @@ public class CampaignStatusScheduler {
     @SchedulerLock(name = "promotion-campaign-status", lockAtMostFor = "PT10M", lockAtLeastFor = "PT25S")
     public void run() {
         try {
-            int changed = campaignService.processScheduledTransitions(Instant.now(), batchSize);
+            int changed = campaignService.processScheduledTransitions(clock.instant(), batchSize);
             if (changed > 0) {
                 log.info("Promotion campaign status sweep transitioned {} campaign(s)", changed);
             }

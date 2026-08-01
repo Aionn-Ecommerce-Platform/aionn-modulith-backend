@@ -9,31 +9,32 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.Clock;
 
 @Component
 @RequiredArgsConstructor
 public class PaymentIntegrationEventPublisher implements PaymentIntegrationEventPublisherPort {
 
     private final IntegrationEventPublisher integrationEventPublisher;
+    private final Clock clock;
 
     @Override
     public void publishPaymentCaptured(String paymentId, String orderId, String transactionNo,
             BigDecimal amount, String currency) {
         integrationEventPublisher.publish(new PaymentCapturedIntegrationEvent(
-                null, paymentId, orderId, transactionNo, amount, currency, Instant.now()));
+                null, paymentId, orderId, transactionNo, amount, currency, clock.instant()));
     }
 
     @Override
     public void publishPaymentFailed(String paymentId, String orderId, String errorCode, String reason) {
         integrationEventPublisher.publish(new PaymentFailedIntegrationEvent(
-                null, paymentId, orderId, errorCode, reason, Instant.now()));
+                null, paymentId, orderId, errorCode, reason, clock.instant()));
     }
 
     @Override
     public void publishPaymentRefunded(String paymentId, String orderId, String refundTransactionNo,
             BigDecimal amount, String currency, String reason) {
         integrationEventPublisher.publish(new PaymentRefundedIntegrationEvent(
-                null, paymentId, orderId, refundTransactionNo, amount, currency, reason, Instant.now()));
+                null, paymentId, orderId, refundTransactionNo, amount, currency, reason, clock.instant()));
     }
 }

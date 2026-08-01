@@ -21,6 +21,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
+import java.time.Clock;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -45,6 +46,7 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
 
     private final VnpayProperties properties;
     private final ObjectMapper objectMapper;
+    private final Clock clock;
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
     @Override
@@ -58,7 +60,7 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
 
         long vnpAmount = request.amount().multiply(BigDecimal.valueOf(100)).longValueExact();
 
-        ZonedDateTime now = ZonedDateTime.now(VN_ZONE);
+        ZonedDateTime now = ZonedDateTime.now(clock.withZone(VN_ZONE));
         String createDate = now.format(VNP_DATE_FMT);
         String expireDate = now.plusMinutes(15).format(VNP_DATE_FMT);
 
@@ -159,8 +161,8 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
         ensureConfigured();
 
         long vnpAmount = request.amount().multiply(BigDecimal.valueOf(100)).longValueExact();
-        String createDate = ZonedDateTime.now(VN_ZONE).format(VNP_DATE_FMT);
-        String requestId = "RF" + System.currentTimeMillis();
+        String createDate = ZonedDateTime.now(clock.withZone(VN_ZONE)).format(VNP_DATE_FMT);
+        String requestId = "RF" + clock.millis();
 
         Map<String, String> body = new HashMap<>();
         body.put("vnp_RequestId", requestId);

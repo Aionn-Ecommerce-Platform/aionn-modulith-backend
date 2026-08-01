@@ -5,12 +5,13 @@ import com.aionn.ordering.infrastructure.config.OrderingProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.OptimisticLockingFailureException;
 
 import java.time.Instant;
+import java.time.Clock;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,8 +29,8 @@ class OrderAutoCancelSchedulerTest {
         @Mock
         private OrderAutoCancelWorker worker;
 
-        @InjectMocks
-        private OrderAutoCancelScheduler scheduler;
+        private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");
+        private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
         private OrderingProperties createPropertiesWithAutoCancel(int timeoutMinutes, int batchSize) {
                 OrderingProperties.Reservation reservation = new OrderingProperties.Reservation(86400);
@@ -42,7 +43,7 @@ class OrderAutoCancelSchedulerTest {
         void cancelsExpiredOrdersSuccessfully() {
                 OrderingProperties properties = createPropertiesWithAutoCancel(30, 10);
                 OrderAutoCancelScheduler scheduler = new OrderAutoCancelScheduler(
-                                orderRepository, worker, properties);
+                                orderRepository, worker, properties, CLOCK);
 
                 when(orderRepository.findPendingOrderIdsOlderThan(any(Instant.class), eq(10)))
                                 .thenReturn(List.of("order-1", "order-2", "order-3"));
@@ -58,30 +59,25 @@ class OrderAutoCancelSchedulerTest {
         void calculatesCutoffBasedOnTimeoutMinutes() {
                 OrderingProperties properties = createPropertiesWithAutoCancel(60, 50);
                 OrderAutoCancelScheduler scheduler = new OrderAutoCancelScheduler(
-                                orderRepository, worker, properties);
+                                orderRepository, worker, properties, CLOCK);
 
                 when(orderRepository.findPendingOrderIdsOlderThan(any(Instant.class), anyInt()))
                                 .thenReturn(List.of());
 
-                Instant beforeRun = Instant.now();
                 scheduler.run();
-                Instant afterRun = Instant.now();
 
                 ArgumentCaptor<Instant> cutoffCaptor = ArgumentCaptor.forClass(Instant.class);
                 verify(orderRepository).findPendingOrderIdsOlderThan(cutoffCaptor.capture(), eq(50));
 
                 Instant actualCutoff = cutoffCaptor.getValue();
-                // Verify cutoff is ~60 minutes before now (allowing 10 minute tolerance for latency on CI)
-                Instant expectedMin = beforeRun.minusSeconds(4200); // 70 minutes
-                Instant expectedMax = afterRun.minusSeconds(3000);  // 50 minutes
-                assertThat(actualCutoff).isBetween(expectedMin, expectedMax);
+                assertThat(actualCutoff).isEqualTo(NOW.minusSeconds(3600));
         }
 
         @Test
         void handlesOptimisticLockingFailureGracefully() {
                 OrderingProperties properties = createPropertiesWithAutoCancel(30, 10);
                 OrderAutoCancelScheduler scheduler = new OrderAutoCancelScheduler(
-                                orderRepository, worker, properties);
+                                orderRepository, worker, properties, CLOCK);
 
                 when(orderRepository.findPendingOrderIdsOlderThan(any(Instant.class), anyInt()))
                                 .thenReturn(List.of("order-1", "order-2"));
@@ -98,7 +94,7 @@ class OrderAutoCancelSchedulerTest {
         void handlesWorkerRuntimeExceptionGracefully() {
                 OrderingProperties properties = createPropertiesWithAutoCancel(30, 10);
                 OrderAutoCancelScheduler scheduler = new OrderAutoCancelScheduler(
-                                orderRepository, worker, properties);
+                                orderRepository, worker, properties, CLOCK);
 
                 when(orderRepository.findPendingOrderIdsOlderThan(any(Instant.class), anyInt()))
                                 .thenReturn(List.of("order-1", "order-2", "order-3"));
@@ -118,7 +114,7 @@ class OrderAutoCancelSchedulerTest {
         void doesNothingWhenNoPendingOrdersFound() {
                 OrderingProperties properties = createPropertiesWithAutoCancel(30, 10);
                 OrderAutoCancelScheduler scheduler = new OrderAutoCancelScheduler(
-                                orderRepository, worker, properties);
+                                orderRepository, worker, properties, CLOCK);
 
                 when(orderRepository.findPendingOrderIdsOlderThan(any(Instant.class), anyInt()))
                                 .thenReturn(List.of());
@@ -132,7 +128,7 @@ class OrderAutoCancelSchedulerTest {
         void handlesRepositoryExceptionGracefully() {
                 OrderingProperties properties = createPropertiesWithAutoCancel(30, 10);
                 OrderAutoCancelScheduler scheduler = new OrderAutoCancelScheduler(
-                                orderRepository, worker, properties);
+                                orderRepository, worker, properties, CLOCK);
 
                 when(orderRepository.findPendingOrderIdsOlderThan(any(Instant.class), anyInt()))
                                 .thenThrow(new RuntimeException("Database error"));
@@ -147,7 +143,7 @@ class OrderAutoCancelSchedulerTest {
         void usesBatchSizeFromProperties() {
                 OrderingProperties properties = createPropertiesWithAutoCancel(30, 25);
                 OrderAutoCancelScheduler scheduler = new OrderAutoCancelScheduler(
-                                orderRepository, worker, properties);
+                                orderRepository, worker, properties, CLOCK);
 
                 when(orderRepository.findPendingOrderIdsOlderThan(any(Instant.class), eq(25)))
                                 .thenReturn(List.of());

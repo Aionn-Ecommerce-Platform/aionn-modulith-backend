@@ -5,7 +5,7 @@ import com.aionn.sharedkernel.domain.model.EventEnvelope;
 import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
-import java.time.Instant;
+import java.time.Clock;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,18 +26,21 @@ public class OutboxDispatcher {
     private final int batchSize;
     private final int maxAttempts;
     private final Duration leaseDuration;
+    private final Clock clock;
 
     public OutboxDispatcher(OutboxEventRepository repository, ObjectMapper objectMapper,
             ApplicationEventPublisher eventPublisher,
             @Value("${aionn.outbox.batch-size:50}") int batchSize,
             @Value("${aionn.outbox.max-attempts:10}") int maxAttempts,
-            @Value("${aionn.outbox.lease-duration-seconds:300}") long leaseDurationSeconds) {
+            @Value("${aionn.outbox.lease-duration-seconds:300}") long leaseDurationSeconds,
+            Clock clock) {
         this.repository = repository;
         this.objectMapper = objectMapper;
         this.eventPublisher = eventPublisher;
         this.batchSize = batchSize;
         this.maxAttempts = maxAttempts;
         this.leaseDuration = Duration.ofSeconds(leaseDurationSeconds);
+        this.clock = clock;
     }
 
     @Scheduled(fixedDelayString = "${aionn.outbox.poll-delay-ms:1000}", scheduler = "outboxTaskScheduler")
@@ -67,7 +70,7 @@ public class OutboxDispatcher {
             boolean deadLetter = record.attempts() >= maxAttempts;
             long backoffSeconds = Math.min(3600, 1L << Math.min(record.attempts(), 12));
             boolean updated = repository.markFailed(record.eventId(), workerId, exception.getMessage(),
-                    Instant.now().plusSeconds(backoffSeconds), deadLetter);
+                    clock.instant().plusSeconds(backoffSeconds), deadLetter);
             if (!updated) {
                 log.warn("Lost outbox lease before failure update for event {}", record.eventId());
             }

@@ -19,6 +19,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.Clock;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -30,8 +32,13 @@ class OrderingIntegrationEventPublisherTest {
     @Mock
     private IntegrationEventPublisher integrationEventPublisher;
 
-    @InjectMocks
     private OrderingIntegrationEventPublisher publisher;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        publisher = new OrderingIntegrationEventPublisher(
+                integrationEventPublisher, Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC));
+    }
 
     private static ShippingAddress address() {
         return new ShippingAddress("a-1", "John", "+84912345678", "12 Main St", "WARD", "DIST", "PROV", "VN");

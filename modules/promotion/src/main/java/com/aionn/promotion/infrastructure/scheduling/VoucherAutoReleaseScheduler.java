@@ -10,7 +10,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 
-import java.time.Instant;
+import java.time.Clock;
 import java.util.List;
 
 @Slf4j
@@ -21,6 +21,7 @@ public class VoucherAutoReleaseScheduler {
 
     private final UserVoucherPersistencePort userVoucherRepository;
     private final VoucherAutoReleaseWorker worker;
+    private final Clock clock;
 
     @Value("${promotion.voucher.auto-release.batch-size:100}")
     private int batchSize;
@@ -29,7 +30,7 @@ public class VoucherAutoReleaseScheduler {
     @SchedulerLock(name = "promotion-voucher-auto-release", lockAtMostFor = "PT10M", lockAtLeastFor = "PT25S")
     public void run() {
         try {
-            List<UserVoucher> expired = userVoucherRepository.findExpiredReservations(Instant.now(), batchSize);
+            List<UserVoucher> expired = userVoucherRepository.findExpiredReservations(clock.instant(), batchSize);
             int released = 0;
             for (UserVoucher uv : expired) {
                 try {

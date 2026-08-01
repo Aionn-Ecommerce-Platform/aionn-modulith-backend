@@ -449,7 +449,7 @@ public class OrderService {
     public MerchantOrderAnalyticsResult getMerchantAnalytics(String ownerId, LocalDate from, LocalDate to) {
         String merchantId = requireMerchantIdForOwner(ownerId);
         ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
-        LocalDate safeTo = to == null ? LocalDate.now(zone) : to;
+        LocalDate safeTo = to == null ? LocalDate.now(clock.withZone(zone)) : to;
         LocalDate safeFrom = from == null ? safeTo.minusDays(6) : from;
         if (safeFrom.isAfter(safeTo)) {
             throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT);
@@ -520,7 +520,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public PlatformOrderAnalyticsResult getPlatformAnalytics(LocalDate from, LocalDate to) {
         ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
-        LocalDate safeTo = to == null ? LocalDate.now(zone) : to;
+        LocalDate safeTo = to == null ? LocalDate.now(clock.withZone(zone)) : to;
         LocalDate safeFrom = from == null ? safeTo.minusDays(29) : from;
         if (safeFrom.isAfter(safeTo)) {
             throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT);
@@ -600,7 +600,7 @@ public class OrderService {
     public List<TopProductResult> getMerchantTopProducts(String ownerId, LocalDate from, LocalDate to, int limit) {
         String merchantId = requireMerchantIdForOwner(ownerId);
         ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
-        LocalDate safeTo = to == null ? LocalDate.now(zone) : to;
+        LocalDate safeTo = to == null ? LocalDate.now(clock.withZone(zone)) : to;
         LocalDate safeFrom = from == null ? safeTo.minusDays(29) : from;
         if (safeFrom.isAfter(safeTo)) {
             throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT);
