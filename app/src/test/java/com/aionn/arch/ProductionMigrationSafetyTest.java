@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -42,7 +43,6 @@ class ProductionMigrationSafetyTest {
     private static final Pattern DML_TARGET = Pattern.compile(
             "(?i)\\b(?:insert\\s+into|update|delete\\s+from|truncate(?:\\s+table)?)\\s+"
                     + "(?:[a-z0-9_]+\\.)?\\\"?([a-z0-9_]+)\\\"?");
-    private static final Pattern DEMO_EMAIL = Pattern.compile("(?i)[a-z0-9._%+-]+@aionn\\.com");
     private static final Pattern BCRYPT_HASH = Pattern.compile("\\$2[aby]\\$\\d{2}\\$");
     private static final Pattern SAMPLE_ORDER = Pattern.compile("(?i)\\bORD_[0-9]{3,}\\b");
     private static final Pattern PROCEDURAL_BLOCK = Pattern.compile("(?i)\\bDO\\s+\\$\\$");
@@ -78,7 +78,7 @@ class ProductionMigrationSafetyTest {
                     .map(result -> result.group(1).toLowerCase())
                     .filter(DEMO_TABLES::contains)
                     .forEach(table -> violations.add(path + " writes demo table " + table));
-            if (DEMO_EMAIL.matcher(sql).find()) {
+            if (sql.toLowerCase(Locale.ROOT).contains("@aionn.com")) {
                 violations.add(path + " contains an @aionn.com demo email");
             }
             if (BCRYPT_HASH.matcher(sql).find()) {
