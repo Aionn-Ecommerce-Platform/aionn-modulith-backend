@@ -66,7 +66,10 @@ class OrderServiceTest {
 
     @BeforeEach
     void setUp() {
-        org.mockito.Mockito.lenient().when(clock.instant()).thenReturn(java.time.Instant.parse("2026-07-18T12:00:00Z"));
+        java.time.Clock fixedClock = java.time.Clock.fixed(
+                java.time.Instant.parse("2026-07-18T12:00:00Z"), java.time.ZoneOffset.UTC);
+        org.mockito.Mockito.lenient().when(clock.instant()).thenReturn(fixedClock.instant());
+        org.mockito.Mockito.lenient().when(clock.withZone(org.mockito.ArgumentMatchers.any())).thenReturn(fixedClock);
         orderService = new OrderService(
                 cartRepository, orderRepository, eventPublisher,
                 stockReservationGateway, paymentGateway, shippingGateway,
@@ -445,5 +448,19 @@ class OrderServiceTest {
         assertEquals(1, result.totalOrders());
         assertEquals(1, result.completedOrders());
         assertEquals(java.math.BigDecimal.valueOf(200), result.totalGmv());
+    }
+
+    @Test
+    void getMerchantTopProductsUsesClockForDefaultDateRange() {
+        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of(MERCHANT_ID));
+        when(orderRepository.findMerchantTopProductRows(
+                eq(MERCHANT_ID), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(List.of(new OrderPersistencePort.TopProductRow(
+                        "sku-1", 3, BigDecimal.valueOf(300))));
+
+        var result = orderService.getMerchantTopProducts("owner-1", null, null, 5);
+
+        assertEquals(1, result.size());
+        assertEquals("sku-1", result.getFirst().skuId());
     }
 }
