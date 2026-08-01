@@ -1,6 +1,5 @@
 package com.aionn.ordering.infrastructure.integration.shipping;
 
-import com.aionn.ordering.application.port.out.ShippingGateway;
 import com.aionn.ordering.application.port.out.observability.OrderingMetricsPort;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -13,7 +12,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
