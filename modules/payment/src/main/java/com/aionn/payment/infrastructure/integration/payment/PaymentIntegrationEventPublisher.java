@@ -5,6 +5,7 @@ import com.aionn.sharedkernel.integration.event.payment.PaymentCapturedIntegrati
 import com.aionn.sharedkernel.integration.event.payment.PaymentFailedIntegrationEvent;
 import com.aionn.sharedkernel.integration.event.payment.PaymentRefundedIntegrationEvent;
 import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -22,19 +23,19 @@ public class PaymentIntegrationEventPublisher implements PaymentIntegrationEvent
     public void publishPaymentCaptured(String paymentId, String orderId, String transactionNo,
             BigDecimal amount, String currency) {
         integrationEventPublisher.publish(new PaymentCapturedIntegrationEvent(
-                null, paymentId, orderId, transactionNo, amount, currency, clock.instant()));
+                IdGenerator.ulid(), paymentId, orderId, transactionNo, amount, currency, clock.instant()));
     }
 
     @Override
     public void publishPaymentFailed(String paymentId, String orderId, String errorCode, String reason) {
         integrationEventPublisher.publish(new PaymentFailedIntegrationEvent(
-                null, paymentId, orderId, errorCode, reason, clock.instant()));
+                IdGenerator.ulid(), paymentId, orderId, errorCode, reason, clock.instant()));
     }
 
     @Override
     public void publishPaymentRefunded(String paymentId, String orderId, String refundTransactionNo,
             BigDecimal amount, String currency, String reason) {
         integrationEventPublisher.publish(new PaymentRefundedIntegrationEvent(
-                null, paymentId, orderId, refundTransactionNo, amount, currency, reason, clock.instant()));
+                IdGenerator.ulid(), paymentId, orderId, refundTransactionNo, amount, currency, reason, clock.instant()));
     }
 }

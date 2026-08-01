@@ -13,7 +13,6 @@ import com.aionn.sharedkernel.integration.event.ordering.OrderShippedIntegration
 import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
