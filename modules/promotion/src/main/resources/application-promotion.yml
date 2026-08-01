@@ -1,11 +1,3 @@
-spring:
-  application:
-    name: promotion
-
-  flyway:
-    enabled: true
-    locations: classpath:db
-
 promotion:
   scheduler:
     enabled: ${PROMOTION_SCHEDULER_ENABLED:true}

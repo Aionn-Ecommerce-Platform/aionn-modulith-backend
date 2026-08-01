@@ -10,6 +10,8 @@ import org.opensearch.client.opensearch.indices.ExistsRequest;
 import org.opensearch.client.opensearch.indices.OpenSearchIndicesClient;
 import org.opensearch.client.transport.endpoints.BooleanResponse;
 
+import java.time.Duration;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -28,7 +30,8 @@ class OpenSearchIndexInitializerTest {
         indices = mock(OpenSearchIndicesClient.class);
         when(client.indices()).thenReturn(indices);
         CatalogSearchProperties props = new CatalogSearchProperties("opensearch",
-                new CatalogSearchProperties.OpenSearch("localhost", 9200, "http", "catalog-products", "", ""));
+                new CatalogSearchProperties.OpenSearch("localhost", 9200, "http", "catalog-products", "", "",
+                        Duration.ofSeconds(3), Duration.ofSeconds(10)));
         initializer = new OpenSearchIndexInitializer(client, props);
     }
 
