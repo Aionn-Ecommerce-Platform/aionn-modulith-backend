@@ -5,7 +5,9 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.hc.core5.http.HttpHost;
 import org.apache.hc.core5.util.Timeout;
+import org.apache.hc.client5.http.config.ConnectionConfig;
 import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManagerBuilder;
 import org.opensearch.client.json.jackson.JacksonJsonpMapper;
 import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.transport.OpenSearchTransport;
@@ -33,10 +35,17 @@ public class OpenSearchConfig {
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         CatalogSearchProperties.OpenSearch config = properties.opensearch();
+        ConnectionConfig connectionConfig = ConnectionConfig.custom()
+                .setConnectTimeout(Timeout.of(config.connectTimeout()))
+                .setSocketTimeout(Timeout.of(config.responseTimeout()))
+                .build();
         OpenSearchTransport transport = ApacheHttpClient5TransportBuilder
                 .builder(new HttpHost(config.scheme(), config.host(), config.port()))
-                .setHttpClientConfigCallback(client -> client.setDefaultRequestConfig(RequestConfig.custom()
-                        .setConnectTimeout(Timeout.of(config.connectTimeout()))
+                .setHttpClientConfigCallback(client -> client
+                        .setConnectionManager(PoolingAsyncClientConnectionManagerBuilder.create()
+                                .setDefaultConnectionConfig(connectionConfig)
+                                .build())
+                        .setDefaultRequestConfig(RequestConfig.custom()
                         .setConnectionRequestTimeout(Timeout.of(config.connectTimeout()))
                         .setResponseTimeout(Timeout.of(config.responseTimeout()))
                         .build()))

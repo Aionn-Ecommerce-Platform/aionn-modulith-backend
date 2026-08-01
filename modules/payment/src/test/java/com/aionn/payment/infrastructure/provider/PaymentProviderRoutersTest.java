@@ -121,6 +121,45 @@ class PaymentProviderRoutersTest {
     }
 
     @Test
+    void resilientClientShouldNotRetryRefundFailures() {
+        CircuitBreakerRegistry cbRegistry = CircuitBreakerRegistry.ofDefaults();
+        RetryRegistry retryRegistry = RetryRegistry.ofDefaults();
+        ResilientPaymentProviderClient resilient = new ResilientPaymentProviderClient(
+                stripeClient, retryRegistry, cbRegistry, metrics);
+        PaymentProviderClient.RefundRequest req = new PaymentProviderClient.RefundRequest(
+                "pay-1", "pi_123", java.math.BigDecimal.TEN, "USD", "test reason");
+        when(stripeClient.refund(req)).thenThrow(new RuntimeException("response lost"));
+
+        assertThrows(RuntimeException.class, () -> resilient.refund(req));
+
+        verify(stripeClient, times(1)).refund(req);
+        assertTrue(retryRegistry.getAllRetries().isEmpty());
+    }
+
+    @Test
+    void resilientClientShouldIsolateCircuitBreakersByOperation() {
+        CircuitBreakerRegistry cbRegistry = CircuitBreakerRegistry.ofDefaults();
+        RetryRegistry retryRegistry = RetryRegistry.ofDefaults();
+        ResilientPaymentProviderClient resilient = new ResilientPaymentProviderClient(
+                stripeClient, retryRegistry, cbRegistry, metrics);
+        PaymentProviderClient.AuthorizationRequest authorizationRequest = new PaymentProviderClient.AuthorizationRequest(
+                "pay-1", "order-1", "user-1", null, null,
+                java.math.BigDecimal.TEN, "USD", "key-1", null);
+        PaymentProviderClient.RefundRequest refundRequest = new PaymentProviderClient.RefundRequest(
+                "pay-1", "pi_123", java.math.BigDecimal.TEN, "USD", "test reason");
+        when(stripeClient.authorize(authorizationRequest)).thenReturn(
+                new PaymentProviderClient.Authorization(true, "pi_123", null, null, null));
+        when(stripeClient.refund(refundRequest)).thenReturn(
+                new PaymentProviderClient.Refund(true, "re_1", null));
+
+        resilient.authorize(authorizationRequest);
+        resilient.refund(refundRequest);
+
+        assertNotNull(cbRegistry.find("payment-provider-stripe-authorize").orElse(null));
+        assertNotNull(cbRegistry.find("payment-provider-stripe-refund").orElse(null));
+    }
+
+    @Test
     void resilientClientShouldDelegateVerifyAndParse() {
         CircuitBreakerRegistry cbRegistry = CircuitBreakerRegistry.ofDefaults();
         RetryRegistry retryRegistry = RetryRegistry.ofDefaults();

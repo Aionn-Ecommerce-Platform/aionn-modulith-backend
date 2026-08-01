@@ -12,6 +12,8 @@ import java.util.List;
 @Profile({"prod", "production"})
 public class ProductionProviderConfigurationValidator {
 
+    private static final int MIN_JWT_SECRET_LENGTH = 32;
+
     private final Environment environment;
 
     public ProductionProviderConfigurationValidator(Environment environment) {
@@ -22,7 +24,7 @@ public class ProductionProviderConfigurationValidator {
     void validate() {
         List<String> errors = new ArrayList<>();
 
-        require(errors, "IDENTITY_JWT_SECRET", "identity.jwt.secret");
+        requireMinimumLength(errors, "IDENTITY_JWT_SECRET", "identity.jwt.secret", MIN_JWT_SECRET_LENGTH);
         requireRemoteProvider(errors, "identity.registration.captcha.provider", "google",
                 "CAPTCHA_GOOGLE_SECRET_KEY", "identity.registration.captcha.google-secret-key");
         requireRemoteProvider(errors, "identity.auth.social.google.provider", "remote",
@@ -57,6 +59,7 @@ public class ProductionProviderConfigurationValidator {
         }
 
         rejectLocalhost(errors, "payment.invoice.base-url");
+        rejectLocalhost(errors, "payment.provider.vnpay.return-url");
         rejectLocalhost(errors, "payment.provider.vnpay.frontend-return-url");
         rejectLocalhost(errors, "chat.websocket.allowed-origins");
 
@@ -75,6 +78,15 @@ public class ProductionProviderConfigurationValidator {
     private void require(List<String> errors, String envName, String key) {
         if (blank(environment.getProperty(key))) {
             errors.add(envName + " is required");
+        }
+    }
+
+    private void requireMinimumLength(List<String> errors, String envName, String key, int minimumLength) {
+        String value = environment.getProperty(key);
+        if (blank(value)) {
+            errors.add(envName + " is required");
+        } else if (value.length() < minimumLength) {
+            errors.add(envName + " must be at least " + minimumLength + " characters");
         }
     }
 

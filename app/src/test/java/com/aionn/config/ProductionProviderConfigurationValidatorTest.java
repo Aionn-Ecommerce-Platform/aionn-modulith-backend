@@ -28,9 +28,19 @@ class ProductionProviderConfigurationValidatorTest {
         assertDoesNotThrow(() -> new ProductionProviderConfigurationValidator(environment).validate());
     }
 
+    @Test
+    void rejectsWeakJwtSecretAndLocalVnpayReturnUrl() {
+        MockEnvironment environment = completeEnvironment()
+                .withProperty("identity.jwt.secret", "too-short")
+                .withProperty("payment.provider.vnpay.return-url", "http://localhost:8080/payment/return");
+
+        assertThrows(IllegalStateException.class,
+                () -> new ProductionProviderConfigurationValidator(environment).validate());
+    }
+
     private static MockEnvironment completeEnvironment() {
         return new MockEnvironment()
-                .withProperty("identity.jwt.secret", "long-production-secret")
+                .withProperty("identity.jwt.secret", "long-production-secret-at-least-32-characters")
                 .withProperty("identity.registration.captcha.provider", "google")
                 .withProperty("identity.registration.captcha.google-secret-key", "captcha-secret")
                 .withProperty("identity.auth.social.google.provider", "remote")
