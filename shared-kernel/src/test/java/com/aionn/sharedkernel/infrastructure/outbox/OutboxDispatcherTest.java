@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.aionn.sharedkernel.integration.event.IntegrationEvent;
+import com.aionn.sharedkernel.domain.model.DomainEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.Instant;
@@ -69,6 +70,30 @@ class OutboxDispatcherTest {
         verify(repository, never()).markPublished("evt-3");
     }
 
+    @Test
+    void dispatchesDomainEnvelopeAndRetriesBeforeAttemptLimit() throws Exception {
+        OutboxEventRepository repository = mock(OutboxEventRepository.class);
+        ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
+        ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        DomainPayload payload = new DomainPayload(Instant.parse("2026-01-01T00:00:00Z"));
+        OutboxEventRecord record = new OutboxEventRecord("evt-4", "DOMAIN", payload.eventType(),
+                DomainPayload.class.getName(), mapper.writeValueAsString(payload), "Order", "order-4",
+                payload.occurredAt(), 1);
+        when(repository.claim(any(Integer.class), any(String.class), any())).thenReturn(List.of(record));
+
+        new OutboxDispatcher(repository, mapper, publisher, 10, 3).dispatch();
+
+        verify(publisher).publishEvent(any(com.aionn.sharedkernel.domain.model.EventEnvelope.class));
+
+        org.mockito.Mockito.doThrow(new IllegalStateException("temporary"))
+                .when(publisher).publishEvent(any(Object.class));
+        new OutboxDispatcher(repository, mapper, publisher, 10, 3).dispatch();
+        verify(repository).markFailed(eq("evt-4"), eq("temporary"), any(), eq(false));
+    }
+
     private record SampleEvent(String eventId, String orderId, Instant occurredAt) implements IntegrationEvent {
+    }
+
+    private record DomainPayload(Instant occurredAt) implements DomainEvent {
     }
 }
