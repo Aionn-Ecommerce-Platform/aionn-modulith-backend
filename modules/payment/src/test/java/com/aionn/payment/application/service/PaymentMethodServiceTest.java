@@ -16,6 +16,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -28,6 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class PaymentMethodServiceTest {
@@ -36,6 +39,8 @@ class PaymentMethodServiceTest {
     private PaymentMethodPersistencePort repository;
     @Mock
     private EventPublisher eventPublisher;
+    @Mock
+    private TransactionTemplate transactionTemplate;
 
     private final Instant fixedInstant = Instant.parse("2026-01-01T00:00:00Z");
     private final Clock clock = Clock.fixed(fixedInstant, java.time.ZoneOffset.UTC);
@@ -45,11 +50,14 @@ class PaymentMethodServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation ->
+                ((TransactionCallback<?>) invocation.getArgument(0)).doInTransaction(null));
         StripeProperties stripeProperties = new StripeProperties("", "");
-        service = new PaymentMethodService(repository, eventPublisher, stripeProperties, clock);
+        service = new PaymentMethodService(repository, eventPublisher, stripeProperties, clock, transactionTemplate);
 
         StripeProperties keyedProperties = new StripeProperties("sk_test_fake_key_for_test", "");
-        serviceWithKey = new PaymentMethodService(repository, eventPublisher, keyedProperties, clock);
+        serviceWithKey = new PaymentMethodService(repository, eventPublisher, keyedProperties, clock,
+                transactionTemplate);
     }
 
     @Test

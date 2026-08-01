@@ -9,10 +9,13 @@ import com.aionn.catalog.domain.event.ProductEvents;
 import com.aionn.catalog.domain.model.Product;
 import com.aionn.sharedkernel.domain.vo.Money;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.support.TransactionCallback;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -47,9 +50,18 @@ class ProductSearchIndexUpdaterTest {
         private com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort reviewRepository;
         @Mock
         private com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort soldCounterRepository;
+        @Mock
+        private TransactionTemplate transactionTemplate;
 
         @InjectMocks
         private ProductSearchIndexUpdater updater;
+
+        @BeforeEach
+        void executeTransactionsImmediately() {
+                org.mockito.Mockito.lenient().when(transactionTemplate.execute(any()))
+                                .thenAnswer(invocation -> ((TransactionCallback<?>) invocation.getArgument(0))
+                                                .doInTransaction(null));
+        }
 
         private Product publishedProduct() {
                 Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");

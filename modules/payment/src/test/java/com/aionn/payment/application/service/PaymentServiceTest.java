@@ -26,6 +26,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -39,6 +41,7 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -63,6 +66,8 @@ class PaymentServiceTest {
         private OrderQueryPort orderQueryPort;
         @Mock
         private PaymentProviderClient providerClient;
+        @Mock
+        private TransactionTemplate transactionTemplate;
 
         private final Instant fixedInstant = Instant.parse("2026-01-01T00:00:00Z");
         private final Clock clock = Clock.fixed(fixedInstant, java.time.ZoneOffset.UTC);
@@ -71,6 +76,8 @@ class PaymentServiceTest {
 
         @BeforeEach
         void setUp() {
+                lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation ->
+                                ((TransactionCallback<?>) invocation.getArgument(0)).doInTransaction(null));
                 service = new PaymentService(
                                 paymentRepository,
                                 paymentMethodRepository,
@@ -80,7 +87,8 @@ class PaymentServiceTest {
                                 eventPublisher,
                                 integrationEventPublisher,
                                 orderQueryPort,
-                                clock);
+                                clock,
+                                transactionTemplate);
         }
 
         @Test

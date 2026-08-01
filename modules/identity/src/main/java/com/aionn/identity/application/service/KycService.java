@@ -19,6 +19,7 @@ import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -207,6 +208,7 @@ public class KycService {
         return kycPersistencePort.save(kyc);
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public KycVerificationSessionResult generateVerificationSession(String userId, String kycId) {
         if (!kycPolicy.usesManagedProvider()) {
             throw new IdentityException(IdentityErrorCode.KYC_MANAGED_EXTERNALLY,
@@ -233,6 +235,7 @@ public class KycService {
                 session.sandbox());
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void handleSumsubWebhook(SumsubWebhookCommand command) {
         if (!kycPolicy.isSumsubEnabled()) {
             log.info("Ignoring Sumsub webhook because provider is not enabled");

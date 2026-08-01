@@ -22,19 +22,20 @@ import com.aionn.payment.domain.valueobject.PaymentMethodStatus;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.Money;
 import com.aionn.sharedkernel.util.IdGenerator;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.function.Supplier;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
-@Transactional
 public class PaymentService {
 
     private final PaymentPersistencePort paymentRepository;
@@ -46,29 +47,54 @@ public class PaymentService {
     private final PaymentIntegrationEventPublisherPort integrationEventPublisher;
     private final com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort orderQueryPort;
     private final Clock clock;
+    private final TransactionTemplate transactionTemplate;
 
+    @Autowired
+    public PaymentService(PaymentPersistencePort paymentRepository,
+            PaymentMethodPersistencePort paymentMethodRepository,
+            TransactionLedgerPersistencePort ledgerRepository, PaymentProviderRouter providerRouter,
+            InvoiceStorage invoiceStorage, EventPublisher eventPublisher,
+            PaymentIntegrationEventPublisherPort integrationEventPublisher,
+            com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort orderQueryPort, Clock clock,
+            TransactionTemplate transactionTemplate) {
+        this.paymentRepository = paymentRepository;
+        this.paymentMethodRepository = paymentMethodRepository;
+        this.ledgerRepository = ledgerRepository;
+        this.providerRouter = providerRouter;
+        this.invoiceStorage = invoiceStorage;
+        this.eventPublisher = eventPublisher;
+        this.integrationEventPublisher = integrationEventPublisher;
+        this.orderQueryPort = orderQueryPort;
+        this.clock = clock;
+        this.transactionTemplate = transactionTemplate;
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public PaymentInitiation initiate(InitiatePaymentCommand command) {
-        var existing = paymentRepository.findByIdempotencyKey(command.idempotencyKey());
+        var existing = inTransaction(() -> paymentRepository.findByIdempotencyKey(command.idempotencyKey()));
         if (existing.isPresent()) {
             return new PaymentInitiation(existing.get(), null);
         }
 
-        PaymentMethod method = null;
-        if (command.paymentMethodId() != null) {
-            method = paymentMethodRepository.findById(command.paymentMethodId())
+        PaymentMethod method = command.paymentMethodId() == null ? null : inTransaction(() -> {
+            PaymentMethod selected = paymentMethodRepository.findById(command.paymentMethodId())
                     .orElseThrow(() -> new PaymentException(PaymentErrorCode.METHOD_NOT_FOUND));
-            method.ensureOwnedBy(command.userId());
-            if (method.getStatus() != PaymentMethodStatus.VERIFIED) {
+            selected.ensureOwnedBy(command.userId());
+            if (selected.getStatus() != PaymentMethodStatus.VERIFIED) {
                 throw new PaymentException(PaymentErrorCode.METHOD_NOT_VERIFIED);
             }
-        }
+            return selected;
+        });
 
         Instant now = clock.instant();
         Money amount = Money.of(command.amount(), command.currency());
         Payment payment = Payment.initiate(IdGenerator.ulid(), command.orderId(), command.userId(),
                 command.paymentMethodId(), amount, command.gateway(), command.idempotencyKey(), now);
-        Payment saved = paymentRepository.save(payment);
-        eventPublisher.publish(payment.pullEvents());
+        Payment saved = inTransaction(() -> {
+            Payment persisted = paymentRepository.save(payment);
+            eventPublisher.publish(payment.pullEvents());
+            return persisted;
+        });
 
         PaymentProviderClient client = providerRouter.route(command.gateway());
         String merchantId = orderQueryPort.findOrderSummary(command.orderId())
@@ -91,7 +117,32 @@ public class PaymentService {
         return new PaymentInitiation(saved, auth.authUrl());
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Payment confirm(ConfirmPaymentCommand command) {
+        Payment existing = inTransaction(() -> required(command.paymentId()));
+        if (existing.getStatus().name().equals("PAID")) {
+            return existing;
+        }
+        Payment payment = inTransaction(() -> confirmInTransaction(command));
+        Payment current = payment;
+        try {
+            String invoiceUrl = invoiceStorage.storeInvoiceUrl(payment.getPaymentId(), payment.getOrderId());
+            current = inTransaction(() -> attachInvoice(command.paymentId(), invoiceUrl));
+        } catch (RuntimeException ex) {
+            log.warn("Invoice attachment failed for payment {}: {}. Order capture will still be published.",
+                    payment.getPaymentId(), ex.getMessage());
+        }
+
+        Payment captured = current;
+        inTransaction(() -> {
+            integrationEventPublisher.publishPaymentCaptured(captured.getPaymentId(), captured.getOrderId(),
+                    command.transactionNo(), captured.getAmount().amount(), captured.getAmount().currency());
+            return null;
+        });
+        return current;
+    }
+
+    private Payment confirmInTransaction(ConfirmPaymentCommand command) {
         Payment payment = required(command.paymentId());
         if (payment.getStatus().name().equals("PAID")) {
             return payment;
@@ -107,23 +158,23 @@ public class PaymentService {
         ledgerRepository.save(entry);
         eventPublisher.publish(entry.pullEvents());
 
-        Payment current = saved;
-        try {
-            String invoiceUrl = invoiceStorage.storeInvoiceUrl(saved.getPaymentId(), saved.getOrderId());
-            saved.attachInvoice(invoiceUrl, now);
-            current = paymentRepository.save(saved);
-            eventPublisher.publish(saved.pullEvents());
-        } catch (RuntimeException ex) {
-            log.warn("Invoice attachment failed for payment {}: {}. Order capture will still be published.",
-                    saved.getPaymentId(), ex.getMessage());
-        }
-
-        integrationEventPublisher.publishPaymentCaptured(current.getPaymentId(), current.getOrderId(),
-                command.transactionNo(), current.getAmount().amount(), current.getAmount().currency());
-        return current;
+        return saved;
     }
 
+    private Payment attachInvoice(String paymentId, String invoiceUrl) {
+        Payment payment = required(paymentId);
+        payment.attachInvoice(invoiceUrl, clock.instant());
+        Payment saved = paymentRepository.save(payment);
+        eventPublisher.publish(payment.pullEvents());
+        return saved;
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Payment fail(FailPaymentCommand command) {
+        return inTransaction(() -> failInTransaction(command));
+    }
+
+    private Payment failInTransaction(FailPaymentCommand command) {
         Payment payment = required(command.paymentId());
         if (payment.getStatus().name().equals("FAILED") || payment.getStatus().name().equals("PAID")
                 || payment.getStatus().name().equals("REFUNDED")) {
@@ -138,8 +189,9 @@ public class PaymentService {
         return saved;
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Payment refund(RefundPaymentCommand command) {
-        Payment payment = required(command.paymentId());
+        Payment payment = inTransaction(() -> required(command.paymentId()));
         Money refund = Money.of(command.amount(), command.currency());
 
         PaymentProviderClient client = providerRouter.route(payment.getGateway());
@@ -154,6 +206,29 @@ public class PaymentService {
         String refundId = providerRefund.refundTransactionNo() != null
                 ? providerRefund.refundTransactionNo()
                 : "refund-" + IdGenerator.ulid();
+        Payment saved = inTransaction(() -> persistRefund(command, refund, refundId));
+
+        return saved;
+    }
+
+    public Payment get(String paymentId) {
+        return inTransaction(() -> required(paymentId));
+    }
+
+    public Payment getForUser(String paymentId, String userId) {
+        Payment payment = inTransaction(() -> required(paymentId));
+        if (!payment.getUserId().equals(userId)) {
+            throw new PaymentException(PaymentErrorCode.PAYMENT_NOT_FOUND);
+        }
+        return payment;
+    }
+
+    public List<Payment> listByOrderId(String orderId) {
+        return inTransaction(() -> paymentRepository.findByOrderId(orderId));
+    }
+
+    private Payment persistRefund(RefundPaymentCommand command, Money refund, String refundId) {
+        Payment payment = required(command.paymentId());
         Instant now = clock.instant();
         payment.refund(refundId, refund, command.reason(), now);
         Payment saved = paymentRepository.save(payment);
@@ -164,29 +239,13 @@ public class PaymentService {
                 saved.getGateway().name(), refundId, now);
         ledgerRepository.save(entry);
         eventPublisher.publish(entry.pullEvents());
-
         integrationEventPublisher.publishPaymentRefunded(saved.getPaymentId(), saved.getOrderId(),
                 refundId, command.amount(), command.currency(), command.reason());
         return saved;
     }
 
-    @Transactional(readOnly = true)
-    public Payment get(String paymentId) {
-        return required(paymentId);
-    }
-
-    @Transactional(readOnly = true)
-    public Payment getForUser(String paymentId, String userId) {
-        Payment payment = required(paymentId);
-        if (!payment.getUserId().equals(userId)) {
-            throw new PaymentException(PaymentErrorCode.PAYMENT_NOT_FOUND);
-        }
-        return payment;
-    }
-
-    @Transactional(readOnly = true)
-    public List<Payment> listByOrderId(String orderId) {
-        return paymentRepository.findByOrderId(orderId);
+    private <T> T inTransaction(Supplier<T> work) {
+        return transactionTemplate.execute(status -> work.get());
     }
 
     Payment required(String paymentId) {

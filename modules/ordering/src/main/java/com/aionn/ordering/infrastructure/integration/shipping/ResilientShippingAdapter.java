@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.function.Supplier;
@@ -19,6 +21,7 @@ import java.util.function.Supplier;
 @Component
 @Primary
 @Order(0)
+@Transactional(propagation = Propagation.NOT_SUPPORTED)
 public class ResilientShippingAdapter implements ShippingGateway {
 
     private static final String INSTANCE = "ordering-shipping";
