@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -23,6 +24,7 @@ public class OrderAutoCancelScheduler {
     private final OrderingProperties properties;
 
     @Scheduled(fixedDelayString = "${ordering.auto-cancel.delay-ms:60000}")
+    @SchedulerLock(name = "ordering-auto-cancel", lockAtMostFor = "PT15M", lockAtLeastFor = "PT55S")
     public void run() {
         try {
             int timeoutMinutes = properties.autoCancel().timeoutMinutes();

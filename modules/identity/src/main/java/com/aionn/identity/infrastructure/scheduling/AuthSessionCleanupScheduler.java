@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 
 import java.time.Duration;
 import java.time.Clock;
@@ -22,6 +23,7 @@ public class AuthSessionCleanupScheduler {
 
     // Daily at 03:17 local time — off-peak, off the round hour mark.
     @Scheduled(cron = "0 17 3 * * *")
+    @SchedulerLock(name = "auth-session-cleanup", lockAtMostFor = "PT30M", lockAtLeastFor = "PT1M")
     public void purgeIdleSessions() {
         Instant cutoff = Instant.now(clock).minus(RETENTION);
         int deleted = authSessionPersistence.deleteIdleBefore(cutoff);
