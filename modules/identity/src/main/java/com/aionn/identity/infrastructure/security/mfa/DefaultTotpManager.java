@@ -10,6 +10,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
+import java.time.Clock;
 
 @Component
 @RequiredArgsConstructor
@@ -23,6 +24,7 @@ public class DefaultTotpManager implements TotpManagerPort {
     private static final int WINDOW_STEPS = 1;
 
     private final SecureRandom secureRandom = new SecureRandom();
+    private final Clock clock;
 
     @Override
     public String generateSecret() {
@@ -36,7 +38,7 @@ public class DefaultTotpManager implements TotpManagerPort {
         if (secret == null || secret.isBlank() || code == null || !code.matches("\\d{6}")) {
             return false;
         }
-        long currentCounter = System.currentTimeMillis() / 1000L / PERIOD_SECONDS;
+        long currentCounter = clock.instant().getEpochSecond() / PERIOD_SECONDS;
         for (long offset = -WINDOW_STEPS; offset <= WINDOW_STEPS; offset++) {
             if (generateCode(secret, currentCounter + offset).equals(code)) {
                 return true;

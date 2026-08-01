@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -30,10 +31,11 @@ public class IdentityAnalyticsAdapter
     private final UserRepository userRepository;
     private final KycProfileRepository kycRepository;
     private final UserFeedbackRepository feedbackRepository;
+    private final Clock clock;
 
     @Override
     public UserAnalyticsResult getUserAnalytics(LocalDate from, LocalDate to) {
-        LocalDate safeTo = to == null ? LocalDate.now(ZONE) : to;
+        LocalDate safeTo = to == null ? LocalDate.now(clock.withZone(ZONE)) : to;
         LocalDate safeFrom = from == null ? safeTo.minusDays(29) : from;
         validateRange(safeFrom, safeTo);
         Instant start = safeFrom.atStartOfDay(ZONE).toInstant();
@@ -73,7 +75,7 @@ public class IdentityAnalyticsAdapter
 
     @Override
     public KycAnalyticsResult getKycAnalytics(LocalDate from, LocalDate to) {
-        LocalDate safeTo = to == null ? LocalDate.now(ZONE) : to;
+        LocalDate safeTo = to == null ? LocalDate.now(clock.withZone(ZONE)) : to;
         LocalDate safeFrom = from == null ? safeTo.minusDays(29) : from;
         validateRange(safeFrom, safeTo);
         Instant start = safeFrom.atStartOfDay(ZONE).toInstant();
@@ -118,7 +120,7 @@ public class IdentityAnalyticsAdapter
 
     @Override
     public FeedbackAnalyticsResult getFeedbackAnalytics(LocalDate from, LocalDate to) {
-        LocalDate safeTo = to == null ? LocalDate.now(ZONE) : to;
+        LocalDate safeTo = to == null ? LocalDate.now(clock.withZone(ZONE)) : to;
         LocalDate safeFrom = from == null ? safeTo.minusDays(29) : from;
         validateRange(safeFrom, safeTo);
         Instant start = safeFrom.atStartOfDay(ZONE).toInstant();

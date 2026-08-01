@@ -14,6 +14,7 @@ import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.Clock;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -25,7 +26,7 @@ class OutboxEventRepositoryTest {
     @SuppressWarnings("unchecked")
     void claimsAndMapsOutboxRecords() throws Exception {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
-        OutboxEventRepository repository = new OutboxEventRepository(jdbc);
+        OutboxEventRepository repository = new OutboxEventRepository(jdbc, Clock.systemUTC());
         repository.claim(5, "worker-1", Duration.ofMinutes(2));
         ArgumentCaptor<RowMapper<OutboxEventRecord>> mapperCaptor = ArgumentCaptor.forClass(RowMapper.class);
         verify(jdbc).query(anyString(), mapperCaptor.capture(), eq(5), eq("worker-1"), any(Timestamp.class));
@@ -51,7 +52,7 @@ class OutboxEventRepositoryTest {
     @Test
     void updatesLifecycleAndInboxState() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
-        OutboxEventRepository repository = new OutboxEventRepository(jdbc);
+        OutboxEventRepository repository = new OutboxEventRepository(jdbc, Clock.systemUTC());
         when(jdbc.queryForObject(anyString(), eq(Integer.class), eq("consumer"), eq("evt")))
                 .thenReturn(1, 0, null);
 

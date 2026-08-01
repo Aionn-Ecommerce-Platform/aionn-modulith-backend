@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Duration;
-import java.time.Instant;
+import java.time.Clock;
 import java.util.Collections;
 
 /**
@@ -33,6 +33,7 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
     private final VoucherPersistencePort voucherRepository;
     private final UserVoucherPersistencePort userVoucherRepository;
     private final PromotionCampaignPersistencePort campaignRepository;
+    private final Clock clock;
 
     @Override
     @Transactional
@@ -64,7 +65,7 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
         // Check if user already claimed this voucher
         UserVoucher uv = userVoucherRepository.findByUserAndCode(userId, voucherCode).orElse(null);
         if (uv != null) {
-            if (!voucher.isValidNow(Instant.now())) {
+            if (!voucher.isValidNow(clock.instant())) {
                 return new Discount(BigDecimal.ZERO, currency, false, "voucher-not-usable");
             }
             if (uv.getStatus() == UserVoucherStatus.APPLIED) {
@@ -74,7 +75,7 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
                 return new Discount(BigDecimal.ZERO, currency, false, "voucher-expired");
             }
         } else {
-            if (!voucher.isUsable(Instant.now())) {
+            if (!voucher.isUsable(clock.instant())) {
                 return new Discount(BigDecimal.ZERO, currency, false, "voucher-not-usable");
             }
             voucher.claimSlot();
@@ -91,7 +92,7 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
         voucher.reserveSlot();
         voucher.commitSlot();
 
-        uv.reserve(orderId, Instant.now().plus(Duration.ofMinutes(15)));
+        uv.reserve(orderId, clock.instant().plus(Duration.ofMinutes(15)));
         uv.apply(Money.of(discount, discountCurrency));
 
         voucherRepository.save(voucher);

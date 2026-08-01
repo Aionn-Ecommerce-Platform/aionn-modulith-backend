@@ -65,11 +65,21 @@ public final class SharedKernelArchRules {
                         .because("to ensure all time-dependent logic in the domain is fully testable and deterministic (R9.4)")
                         .allowEmptyShould(true);
 
+        public static final ArchRule NO_DIRECT_SYSTEM_TIME_IN_PRODUCTION = noClasses()
+                        .should().callMethod(java.time.Instant.class, "now")
+                        .orShould().callMethod(System.class, "currentTimeMillis")
+                        .orShould().callMethod(java.time.ZonedDateTime.class, "now", java.time.ZoneId.class)
+                        .orShould().callMethod(java.time.LocalDate.class, "now", java.time.ZoneId.class)
+                        .as("Production classes should obtain current time from an injected Clock")
+                        .because("schedulers, publishers and adapters must remain deterministic in tests (R9.4)")
+                        .allowEmptyShould(true);
+
         public static void checkAll(JavaClasses classes) {
                 NO_DUPLICATE_MONEY.check(classes);
                 NO_DUPLICATE_PHONE_NUMBER.check(classes);
                 NO_DUPLICATE_ULID.check(classes);
                 NO_LOCAL_DATE_TIME.check(classes);
                 NO_BARE_INSTANT_NOW_IN_DOMAIN.check(classes);
+                NO_DIRECT_SYSTEM_TIME_IN_PRODUCTION.check(classes);
         }
 }

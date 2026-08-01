@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Duration;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -39,14 +40,16 @@ class OutboxEventRepository {
             """;
 
     private final JdbcTemplate jdbcTemplate;
+    private final Clock clock;
 
-    OutboxEventRepository(JdbcTemplate jdbcTemplate) {
+    OutboxEventRepository(JdbcTemplate jdbcTemplate, Clock clock) {
         this.jdbcTemplate = jdbcTemplate;
+        this.clock = clock;
     }
 
     List<OutboxEventRecord> claim(int batchSize, String owner, Duration leaseDuration) {
         return jdbcTemplate.query(CLAIM_SQL, this::map,
-                batchSize, owner, Timestamp.from(Instant.now().plus(leaseDuration)));
+                batchSize, owner, Timestamp.from(clock.instant().plus(leaseDuration)));
     }
 
     boolean markPublished(String eventId, String owner) {

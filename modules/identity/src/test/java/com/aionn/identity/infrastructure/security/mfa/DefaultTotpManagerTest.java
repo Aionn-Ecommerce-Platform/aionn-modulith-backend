@@ -1,11 +1,13 @@
 package com.aionn.identity.infrastructure.security.mfa;
 
+import java.time.Clock;
+
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class DefaultTotpManagerTest {
 
-    private final DefaultTotpManager manager = new DefaultTotpManager();
+    private final DefaultTotpManager manager = new DefaultTotpManager(Clock.systemUTC());
 
     @Test
     void generateSecretReturnsBase32String() {

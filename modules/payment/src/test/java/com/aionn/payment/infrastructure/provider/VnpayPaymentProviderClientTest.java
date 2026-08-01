@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
@@ -27,7 +28,7 @@ class VnpayPaymentProviderClientTest {
 
     @BeforeEach
     void setUp() {
-        client = new VnpayPaymentProviderClient(properties, objectMapper);
+        client = new VnpayPaymentProviderClient(properties, objectMapper, Clock.systemUTC());
     }
 
     @Test

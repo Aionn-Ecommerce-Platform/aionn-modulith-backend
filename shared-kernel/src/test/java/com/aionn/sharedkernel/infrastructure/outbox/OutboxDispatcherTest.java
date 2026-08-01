@@ -12,6 +12,7 @@ import com.aionn.sharedkernel.domain.model.DomainEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.Instant;
+import java.time.Clock;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
@@ -29,7 +30,7 @@ class OutboxDispatcherTest {
                 event.eventType(), event.orderId(), event.occurredAt(), 1);
         when(repository.claim(any(Integer.class), any(String.class), any())).thenReturn(List.of(record));
 
-        new OutboxDispatcher(repository, mapper, publisher, 10, 3, 300).dispatch();
+        new OutboxDispatcher(repository, mapper, publisher, 10, 3, 300, Clock.systemUTC()).dispatch();
 
         verify(publisher).publishEvent(event);
         verify(repository).markProcessed("spring-event-bus:" + event.eventType(), event.eventId());
@@ -49,7 +50,7 @@ class OutboxDispatcherTest {
         when(repository.claim(any(Integer.class), any(String.class), any())).thenReturn(List.of(record));
         when(repository.wasProcessed(consumer, event.eventId())).thenReturn(true);
 
-        new OutboxDispatcher(repository, mapper, publisher, 10, 3, 300).dispatch();
+        new OutboxDispatcher(repository, mapper, publisher, 10, 3, 300, Clock.systemUTC()).dispatch();
 
         verify(publisher, never()).publishEvent(any(Object.class));
         verify(repository).markPublished(eq(event.eventId()), any(String.class));
@@ -64,7 +65,7 @@ class OutboxDispatcherTest {
                 "missing.Event", "{}", "broken", "id", Instant.now(), 3);
         when(repository.claim(any(Integer.class), any(String.class), any())).thenReturn(List.of(record));
 
-        new OutboxDispatcher(repository, mapper, publisher, 10, 3, 300).dispatch();
+        new OutboxDispatcher(repository, mapper, publisher, 10, 3, 300, Clock.systemUTC()).dispatch();
 
         verify(repository).markFailed(eq("evt-3"), any(String.class), any(), any(), eq(true));
         verify(repository, never()).markPublished(eq("evt-3"), any(String.class));
@@ -81,13 +82,13 @@ class OutboxDispatcherTest {
                 payload.occurredAt(), 1);
         when(repository.claim(any(Integer.class), any(String.class), any())).thenReturn(List.of(record));
 
-        new OutboxDispatcher(repository, mapper, publisher, 10, 3, 300).dispatch();
+        new OutboxDispatcher(repository, mapper, publisher, 10, 3, 300, Clock.systemUTC()).dispatch();
 
         verify(publisher).publishEvent(any(com.aionn.sharedkernel.domain.model.EventEnvelope.class));
 
         org.mockito.Mockito.doThrow(new IllegalStateException("temporary"))
                 .when(publisher).publishEvent(any(Object.class));
-        new OutboxDispatcher(repository, mapper, publisher, 10, 3, 300).dispatch();
+        new OutboxDispatcher(repository, mapper, publisher, 10, 3, 300, Clock.systemUTC()).dispatch();
         verify(repository).markFailed(eq("evt-4"), any(String.class), eq("temporary"), any(), eq(false));
     }
 

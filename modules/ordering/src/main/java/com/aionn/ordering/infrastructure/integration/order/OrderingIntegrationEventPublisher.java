@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.time.Instant;
+import java.time.Clock;
 import java.util.List;
 
 @Slf4j
@@ -23,6 +23,7 @@ import java.util.List;
 public class OrderingIntegrationEventPublisher implements OrderingIntegrationEventPublisherPort {
 
     private final IntegrationEventPublisher integrationEventPublisher;
+    private final Clock clock;
 
     @Override
     public void publishOrderPlaced(Order order) {
@@ -34,31 +35,31 @@ public class OrderingIntegrationEventPublisher implements OrderingIntegrationEve
                 order.getTotalAmount() == null ? null : order.getTotalAmount().amount(),
                 order.getCurrency(),
                 order.getShippingAddress() == null ? null : order.getShippingAddress().addressId(),
-                order.getPaymentMethodId(), Instant.now()));
+                order.getPaymentMethodId(), clock.instant()));
     }
 
     @Override
     public void publishOrderApproved(String orderId, String paymentId) {
         integrationEventPublisher.publish(new OrderApprovedIntegrationEvent(
-                IdGenerator.ulid(), orderId, paymentId, Instant.now()));
+                IdGenerator.ulid(), orderId, paymentId, clock.instant()));
     }
 
     @Override
     public void publishOrderShipped(String orderId, String shipmentId) {
         integrationEventPublisher.publish(new OrderShippedIntegrationEvent(
-                IdGenerator.ulid(), orderId, shipmentId, Instant.now()));
+                IdGenerator.ulid(), orderId, shipmentId, clock.instant()));
     }
 
     @Override
     public void publishOrderCompleted(String orderId) {
         integrationEventPublisher.publish(new OrderCompletedIntegrationEvent(
-                IdGenerator.ulid(), orderId, Instant.now()));
+                IdGenerator.ulid(), orderId, clock.instant()));
     }
 
     @Override
     public void publishOrderCancelled(String orderId, String reasonCode, String reason, CancellationKind kind) {
         integrationEventPublisher.publish(new OrderCancelledIntegrationEvent(
-                IdGenerator.ulid(), orderId, reasonCode, reason, mapKind(kind), Instant.now()));
+                IdGenerator.ulid(), orderId, reasonCode, reason, mapKind(kind), clock.instant()));
     }
 
     private OrderPlacedIntegrationEvent.OrderLineItem toLineItem(OrderItem item) {

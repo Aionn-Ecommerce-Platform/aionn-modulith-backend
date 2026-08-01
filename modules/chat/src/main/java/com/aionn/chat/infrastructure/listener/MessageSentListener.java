@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
+import java.time.Clock;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -28,6 +28,7 @@ public class MessageSentListener {
     private final PresenceTracker presenceTracker;
     private final IntegrationEventPublisher integrationEventPublisher;
     private final ChatMetricsPort chatMetrics;
+    private final Clock clock;
 
     @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
@@ -67,7 +68,7 @@ public class MessageSentListener {
                     recipientId,
                     senderDisplayName,
                     preview,
-                    Instant.now());
+                    clock.instant());
 
             integrationEventPublisher.publish(integrationEvent);
             chatMetrics.pushNotificationDispatched("queued");
