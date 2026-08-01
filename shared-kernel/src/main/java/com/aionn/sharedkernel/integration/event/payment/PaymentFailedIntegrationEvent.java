@@ -10,7 +10,7 @@ public record PaymentFailedIntegrationEvent(
         String orderId,
         String errorCode,
         String reason,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.PaymentScoped {
 
     public PaymentFailedIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);

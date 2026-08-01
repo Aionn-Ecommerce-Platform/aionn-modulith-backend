@@ -9,7 +9,7 @@ public record ProductEmergencyTakedownIntegrationEvent(
         String productId,
         String adminId,
         String reason,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.ProductScoped {
 
     public ProductEmergencyTakedownIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);

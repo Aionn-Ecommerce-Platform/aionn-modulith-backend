@@ -14,7 +14,7 @@ public record PaymentRefundedIntegrationEvent(
         BigDecimal amount,
         String currency,
         String reason,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.PaymentScoped {
 
     public PaymentRefundedIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);

@@ -31,6 +31,7 @@ public class OrderLifecycleListener {
             }
         } catch (Exception ex) {
             log.warn("Failed to release vouchers for order {}: {}", orderId, ex.getMessage());
+            throw new IllegalStateException("Unable to release vouchers for order " + orderId, ex);
         }
     }
 }

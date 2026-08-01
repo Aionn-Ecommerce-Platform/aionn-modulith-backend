@@ -60,13 +60,13 @@ class OutboxEventRepositoryTest {
         assertFalse(repository.wasProcessed("consumer", "evt"));
         assertFalse(repository.wasProcessed("consumer", "evt"));
         repository.markProcessed("consumer", "evt");
-        repository.markPublished("evt");
-        repository.markFailed("evt", "temporary", Instant.parse("2026-01-01T00:01:00Z"), false);
-        repository.markFailed("evt", "x".repeat(4100), Instant.parse("2026-01-01T00:02:00Z"), true);
+        repository.markPublished("evt", "worker");
+        repository.markFailed("evt", "worker", "temporary", Instant.parse("2026-01-01T00:01:00Z"), false);
+        repository.markFailed("evt", "worker", "x".repeat(4100), Instant.parse("2026-01-01T00:02:00Z"), true);
 
         verify(jdbc).update(anyString(), eq("consumer"), eq("evt"));
-        verify(jdbc).update(anyString(), eq("evt"));
-        verify(jdbc).update(anyString(), eq("PENDING"), any(Timestamp.class), eq("temporary"), eq("evt"));
-        verify(jdbc).update(anyString(), eq("DEAD_LETTER"), any(Timestamp.class), eq("x".repeat(4000)), eq("evt"));
+        verify(jdbc).update(anyString(), eq("evt"), eq("worker"));
+        verify(jdbc).update(anyString(), eq("PENDING"), any(Timestamp.class), eq("temporary"), eq("evt"), eq("worker"));
+        verify(jdbc).update(anyString(), eq("DEAD_LETTER"), any(Timestamp.class), eq("x".repeat(4000)), eq("evt"), eq("worker"));
     }
 }

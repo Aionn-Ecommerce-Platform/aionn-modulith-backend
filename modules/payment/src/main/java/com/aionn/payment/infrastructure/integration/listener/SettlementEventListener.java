@@ -23,6 +23,7 @@ public class SettlementEventListener {
             settlementService.onOrderApproved(event.orderId(), event.paymentId());
         } catch (RuntimeException ex) {
             log.error("Settlement: failed to record SALE for order {}", event.orderId(), ex);
+            throw ex;
         }
     }
 
@@ -32,6 +33,7 @@ public class SettlementEventListener {
             settlementService.onOrderCompleted(event.orderId());
         } catch (RuntimeException ex) {
             log.error("Settlement: failed to move available for order {}", event.orderId(), ex);
+            throw ex;
         }
     }
 
@@ -41,6 +43,7 @@ public class SettlementEventListener {
             settlementService.onOrderCancelled(event.orderId());
         } catch (RuntimeException ex) {
             log.error("Settlement: failed to reverse for cancelled order {}", event.orderId(), ex);
+            throw ex;
         }
     }
 
@@ -51,6 +54,7 @@ public class SettlementEventListener {
                     event.amount(), event.currency());
         } catch (RuntimeException ex) {
             log.error("Settlement: failed to apply refund for payment {}", event.paymentId(), ex);
+            throw ex;
         }
     }
 }

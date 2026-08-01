@@ -18,6 +18,7 @@ import java.time.Instant;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class OrderingIntegrationListenersTest {
@@ -45,12 +46,12 @@ class OrderingIntegrationListenersTest {
     }
 
     @Test
-    void paymentCapturedListenerHandlesErrorGracefully() {
+    void paymentCapturedListenerPropagatesFailureForOutboxRetry() {
         PaymentCapturedIntegrationEvent event = new PaymentCapturedIntegrationEvent(
                 "ev-1", "pay-100", "ord-1", "tx-1", BigDecimal.TEN, "VND", Instant.now());
         doThrow(new RuntimeException("Error")).when(orderService).approvePayment("ord-1", "pay-100");
 
-        paymentCapturedListener.on(event);
+        assertThrows(RuntimeException.class, () -> paymentCapturedListener.on(event));
 
         verify(orderService).approvePayment("ord-1", "pay-100");
     }

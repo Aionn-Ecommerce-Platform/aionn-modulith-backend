@@ -4,8 +4,11 @@ import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 import lombok.extern.slf4j.Slf4j;
 import com.aionn.sharedkernel.infrastructure.outbox.OutboxEventStore;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.Collection;
 
@@ -17,10 +20,15 @@ public class SpringIntegrationEventPublisher implements IntegrationEventPublishe
     private final OutboxEventStore outboxEventStore;
 
     public SpringIntegrationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
-        this(applicationEventPublisher, null);
+        this(applicationEventPublisher, (OutboxEventStore) null);
     }
 
     @Autowired
+    public SpringIntegrationEventPublisher(ApplicationEventPublisher applicationEventPublisher,
+            ObjectProvider<OutboxEventStore> outboxEventStoreProvider) {
+        this(applicationEventPublisher, outboxEventStoreProvider.getIfAvailable());
+    }
+
     public SpringIntegrationEventPublisher(ApplicationEventPublisher applicationEventPublisher,
             OutboxEventStore outboxEventStore) {
         this.applicationEventPublisher = applicationEventPublisher;
@@ -35,10 +43,23 @@ public class SpringIntegrationEventPublisher implements IntegrationEventPublishe
         if (outboxEventStore != null) {
             outboxEventStore.append(event);
         } else {
-            applicationEventPublisher.publishEvent(event);
+            publishAfterCommit(event);
         }
 
         log.trace("Integration event published successfully: {}", event.eventType());
+    }
+
+    private void publishAfterCommit(IntegrationEvent event) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            applicationEventPublisher.publishEvent(event);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                applicationEventPublisher.publishEvent(event);
+            }
+        });
     }
 
     @Override

@@ -7,7 +7,7 @@ import java.time.Instant;
 public record OrderCompletedIntegrationEvent(
         String eventId,
         String orderId,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.OrderScoped {
 
     public OrderCompletedIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);

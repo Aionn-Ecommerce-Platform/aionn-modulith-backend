@@ -61,14 +61,9 @@ public class MerchantLifecycleListener {
             if (warehouse.getStatus() == targetStatus) {
                 continue;
             }
-            try {
-                warehouse.suspend(adminId, reason);
-                warehouseRepository.save(warehouse);
-                eventPublisher.publish(warehouse.pullEvents());
-            } catch (Exception ex) {
-                log.warn("Cannot suspend warehouse {} for merchant {}: {}",
-                        warehouse.getWarehouseId(), merchantId, ex.getMessage());
-            }
+            warehouse.suspend(adminId, reason);
+            warehouseRepository.save(warehouse);
+            eventPublisher.publish(warehouse.pullEvents());
         }
     }
 }

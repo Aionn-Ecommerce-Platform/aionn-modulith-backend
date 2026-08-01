@@ -11,7 +11,7 @@ public record StockCommittedIntegrationEvent(
         String warehouseId,
         String orderId,
         int quantity,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.ReservationScoped {
 
     public StockCommittedIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);

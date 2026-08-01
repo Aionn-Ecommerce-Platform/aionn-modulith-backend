@@ -38,6 +38,7 @@ public class OrderLifecycleListener {
             } catch (Exception ex) {
                 log.warn("Cannot auto-cancel shipment {} for order {}: {}",
                         shipment.getShipmentId(), orderId, ex.getMessage());
+                throw new IllegalStateException("Unable to cancel shipment " + shipment.getShipmentId(), ex);
             }
         }
     }

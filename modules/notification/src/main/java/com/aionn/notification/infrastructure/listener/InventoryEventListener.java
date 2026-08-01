@@ -41,14 +41,9 @@ public class InventoryEventListener {
         context.put("warehouseId", event.warehouseId());
         context.put("availableQty", String.valueOf(event.availableQty()));
         context.put("safetyStockQty", String.valueOf(event.safetyStockQty()));
-        try {
-            deliveryOrchestrator.sendByEvent(new NotificationCommands.SendByEvent(
-                    ownerId, EVENT_SAFETY_STOCK_BREACHED, NotificationCategory.SYSTEM,
-                    null, null, null, context));
-        } catch (RuntimeException ex) {
-            log.warn("Notification dispatch failed for SafetyStockBreached owner={} sku={}: {}",
-                    ownerId, event.skuId(), ex.getMessage());
-        }
+        deliveryOrchestrator.sendByEvent(new NotificationCommands.SendByEvent(
+                ownerId, EVENT_SAFETY_STOCK_BREACHED, NotificationCategory.SYSTEM,
+                null, null, null, context));
     }
 
     /**

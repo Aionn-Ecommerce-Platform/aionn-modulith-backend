@@ -8,7 +8,7 @@ public record MerchantActivatedIntegrationEvent(
         String eventId,
         String merchantId,
         String adminId,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.MerchantScoped {
 
     public MerchantActivatedIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);

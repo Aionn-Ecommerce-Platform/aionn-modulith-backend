@@ -21,6 +21,7 @@ public class PaymentFailedListener {
         } catch (RuntimeException ex) {
             log.error("Could not cancel order {} after payment {} failed (auto-cancel scheduler will retry)",
                     event.orderId(), event.paymentId(), ex);
+            throw ex;
         }
     }
 }

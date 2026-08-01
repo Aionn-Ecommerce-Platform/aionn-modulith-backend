@@ -49,12 +49,12 @@ class OutboxEventRepository {
                 batchSize, owner, Timestamp.from(Instant.now().plus(leaseDuration)));
     }
 
-    void markPublished(String eventId) {
-        jdbcTemplate.update("""
+    boolean markPublished(String eventId, String owner) {
+        return jdbcTemplate.update("""
                 UPDATE outbox_events SET status = 'PUBLISHED', published_at = NOW(),
                     lease_owner = NULL, lease_until = NULL, last_error = NULL, updated_at = NOW()
-                WHERE event_id = ?
-                """, eventId);
+                WHERE event_id = ? AND status = 'PROCESSING' AND lease_owner = ?
+                """, eventId, owner) == 1;
     }
 
     boolean wasProcessed(String consumerId, String eventId) {
@@ -72,13 +72,14 @@ class OutboxEventRepository {
                 """, consumerId, eventId);
     }
 
-    void markFailed(String eventId, String error, Instant nextAttempt, boolean deadLetter) {
-        jdbcTemplate.update("""
+    boolean markFailed(String eventId, String owner, String error, Instant nextAttempt,
+            boolean deadLetter) {
+        return jdbcTemplate.update("""
                 UPDATE outbox_events SET status = ?, next_attempt_at = ?, last_error = ?,
                     lease_owner = NULL, lease_until = NULL, updated_at = NOW()
-                WHERE event_id = ?
+                WHERE event_id = ? AND status = 'PROCESSING' AND lease_owner = ?
                 """, deadLetter ? "DEAD_LETTER" : "PENDING", Timestamp.from(nextAttempt),
-                truncate(error), eventId);
+                truncate(error), eventId, owner) == 1;
     }
 
     private OutboxEventRecord map(ResultSet result, int rowNumber) throws SQLException {

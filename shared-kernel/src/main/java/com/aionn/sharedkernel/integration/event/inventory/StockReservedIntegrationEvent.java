@@ -12,7 +12,7 @@ public record StockReservedIntegrationEvent(
         String orderId,
         int quantity,
         Instant expiresAt,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.ReservationScoped {
 
     public StockReservedIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);

@@ -26,6 +26,7 @@ public class ShipmentDeliveredListener {
         } catch (RuntimeException ex) {
             log.error("Could not complete order {} after shipment {} delivered",
                     event.orderId(), event.shipmentId(), ex);
+            throw ex;
         }
     }
 }

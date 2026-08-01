@@ -75,5 +75,8 @@ class OutboxEventStoreTest {
     private record DomainPayload(Instant occurredAt) implements DomainEvent { }
 
     private record OrderEvent(String eventId, String orderId, Instant occurredAt)
-            implements IntegrationEvent { }
+            implements IntegrationEvent {
+        @Override public String aggregateType() { return "Order"; }
+        @Override public String aggregateId() { return orderId; }
+    }
 }

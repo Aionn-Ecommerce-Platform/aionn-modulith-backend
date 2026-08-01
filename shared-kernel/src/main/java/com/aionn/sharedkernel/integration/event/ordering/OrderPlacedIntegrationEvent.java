@@ -18,7 +18,7 @@ public record OrderPlacedIntegrationEvent(
         String currency,
         String addressId,
         String paymentMethodId,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.OrderScoped {
 
     public OrderPlacedIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);

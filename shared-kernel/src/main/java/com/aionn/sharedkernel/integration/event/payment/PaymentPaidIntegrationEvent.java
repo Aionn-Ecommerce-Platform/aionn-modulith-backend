@@ -14,7 +14,7 @@ public record PaymentPaidIntegrationEvent(
         String currency,
         String gateway,
         String transactionNo,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.PaymentScoped {
 
     public PaymentPaidIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);

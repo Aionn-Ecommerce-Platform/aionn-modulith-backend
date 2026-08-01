@@ -10,7 +10,7 @@ public record ShipmentDeliveryFailedIntegrationEvent(
         String orderId,
         String reason,
         int attemptCount,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.ShipmentScoped {
 
     public ShipmentDeliveryFailedIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);

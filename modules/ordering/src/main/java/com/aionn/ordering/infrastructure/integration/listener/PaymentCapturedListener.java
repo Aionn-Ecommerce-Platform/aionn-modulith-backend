@@ -21,6 +21,7 @@ public class PaymentCapturedListener {
         } catch (RuntimeException ex) {
             log.error("Could not approve order {} after payment {} was captured",
                     event.orderId(), event.paymentId(), ex);
+            throw ex;
         }
     }
 }

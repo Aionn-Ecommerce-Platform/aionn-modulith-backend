@@ -12,7 +12,7 @@ public record MessageSentIntegrationEvent(
         String recipientId,
         String senderDisplayName,
         String messagePreview,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.ConversationScoped {
 
     public MessageSentIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);

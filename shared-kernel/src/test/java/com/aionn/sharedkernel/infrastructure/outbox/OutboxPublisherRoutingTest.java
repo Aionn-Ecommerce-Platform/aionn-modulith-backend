@@ -13,6 +13,8 @@ import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 class OutboxPublisherRoutingTest {
 
@@ -48,6 +50,30 @@ class OutboxPublisherRoutingTest {
 
         verify(store, org.mockito.Mockito.times(2)).append(event);
         verify(delegate, never()).publishEvent(event);
+    }
+
+    @Test
+    void fallbackPublishersWaitForTheSurroundingTransactionToCommit() {
+        ApplicationEventPublisher delegate = mock(ApplicationEventPublisher.class);
+        EventEnvelope envelope = new EventEnvelope("evt-3", "Order", "order-3",
+                new DomainPayload(OCCURRED_AT), OCCURRED_AT);
+        IntegrationEvent event = new OrderEvent("evt-4", "order-4", OCCURRED_AT);
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            new SpringEventPublisher(delegate).publish(List.of(envelope));
+            new SpringIntegrationEventPublisher(delegate).publish(event);
+            verify(delegate, never()).publishEvent(envelope);
+            verify(delegate, never()).publishEvent(event);
+
+            for (TransactionSynchronization synchronization
+                    : TransactionSynchronizationManager.getSynchronizations()) {
+                synchronization.afterCommit();
+            }
+            verify(delegate).publishEvent(envelope);
+            verify(delegate).publishEvent(event);
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 
     private record DomainPayload(Instant occurredAt) implements DomainEvent { }

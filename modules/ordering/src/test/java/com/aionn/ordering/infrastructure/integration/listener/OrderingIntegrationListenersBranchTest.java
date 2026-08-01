@@ -14,6 +14,7 @@ import java.time.Instant;
 
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class OrderingIntegrationListenersBranchTest {
@@ -41,23 +42,23 @@ class OrderingIntegrationListenersBranchTest {
     }
 
     @Test
-    void paymentFailedListenerHandlesErrorGracefully() {
+    void paymentFailedListenerPropagatesFailureForOutboxRetry() {
         PaymentFailedIntegrationEvent event = new PaymentFailedIntegrationEvent(
                 "ev-1", "pay-100", "ord-1", "ERR", "reason", Instant.now());
         doThrow(new RuntimeException("Error")).when(orderService).cancelOnPaymentFailure("ord-1", "ERR", "reason");
 
-        paymentFailedListener.on(event);
+        assertThrows(RuntimeException.class, () -> paymentFailedListener.on(event));
 
         verify(orderService).cancelOnPaymentFailure("ord-1", "ERR", "reason");
     }
 
     @Test
-    void shipmentDeliveredListenerHandlesErrorGracefully() {
+    void shipmentDeliveredListenerPropagatesFailureForOutboxRetry() {
         ShipmentDeliveredIntegrationEvent event = new ShipmentDeliveredIntegrationEvent(
                 "ev-1", "ship-100", "ord-1", "http://sig", Instant.now(), Instant.now());
         doThrow(new RuntimeException("Error")).when(orderService).statusOf("ord-1");
 
-        shipmentDeliveredListener.on(event);
+        assertThrows(RuntimeException.class, () -> shipmentDeliveredListener.on(event));
 
         verify(orderService).statusOf("ord-1");
     }

@@ -11,7 +11,7 @@ public record SafetyStockBreachedIntegrationEvent(
         String skuId,
         String warehouseId,
         int availableQty,
-        int safetyStockQty) implements IntegrationEvent {
+        int safetyStockQty) implements IntegrationEvent.WarehouseScoped {
 
     public SafetyStockBreachedIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);

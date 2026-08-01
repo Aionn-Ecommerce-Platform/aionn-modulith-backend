@@ -9,7 +9,7 @@ public record ShipmentCancelledIntegrationEvent(
         String shipmentId,
         String orderId,
         String reason,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.ShipmentScoped {
 
     public ShipmentCancelledIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);
