@@ -23,7 +23,6 @@ import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.Money;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,7 +48,6 @@ public class PaymentService {
     private final Clock clock;
     private final TransactionTemplate transactionTemplate;
 
-    @Autowired
     public PaymentService(PaymentPersistencePort paymentRepository,
             PaymentMethodPersistencePort paymentMethodRepository,
             TransactionLedgerPersistencePort ledgerRepository, PaymentProviderRouter providerRouter,

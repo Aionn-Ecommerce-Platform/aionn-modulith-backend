@@ -14,7 +14,6 @@ import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.JdbcTemplate;
