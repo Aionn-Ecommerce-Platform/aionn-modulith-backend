@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 
 import java.time.Clock;
 import java.util.List;
@@ -24,6 +25,7 @@ public class ReservationAutoReleaseScheduler {
     private final Clock clock;
 
     @Scheduled(fixedDelayString = "${inventory.reservation.auto-release.delay-ms:30000}")
+    @SchedulerLock(name = "inventory-reservation-auto-release", lockAtMostFor = "PT10M", lockAtLeastFor = "PT25S")
     public void releaseExpired() {
         try {
             int batchSize = properties.reservation().autoRelease().batchSize();

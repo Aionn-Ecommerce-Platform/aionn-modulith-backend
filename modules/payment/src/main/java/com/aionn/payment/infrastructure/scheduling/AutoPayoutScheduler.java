@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -30,6 +31,7 @@ public class AutoPayoutScheduler {
     private int batchSize;
 
     @Scheduled(cron = "${payment.auto-payout.cron:0 0 2 * * *}")
+    @SchedulerLock(name = "payment-auto-payout", lockAtMostFor = "PT1H", lockAtLeastFor = "PT1M")
     public void run() {
         try {
             List<MerchantBalanceQueryPort.EligibleBalance> candidates =

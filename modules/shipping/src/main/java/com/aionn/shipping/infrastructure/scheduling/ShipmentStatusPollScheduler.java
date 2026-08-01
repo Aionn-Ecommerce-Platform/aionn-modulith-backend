@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 
 import java.util.List;
 
@@ -22,6 +23,7 @@ public class ShipmentStatusPollScheduler {
     private final ShippingProperties properties;
 
     @Scheduled(fixedDelayString = "${shipping.status-poller.delay-ms:60000}")
+    @SchedulerLock(name = "shipping-status-poll", lockAtMostFor = "PT15M", lockAtLeastFor = "PT55S")
     public void pollActive() {
         try {
             int batchSize = properties.statusPoller().batchSize();

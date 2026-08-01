@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 
 import java.time.Instant;
 
@@ -22,6 +23,7 @@ public class CampaignStatusScheduler {
     private int batchSize;
 
     @Scheduled(fixedDelayString = "${promotion.scheduler.delay-ms:30000}")
+    @SchedulerLock(name = "promotion-campaign-status", lockAtMostFor = "PT10M", lockAtLeastFor = "PT25S")
     public void run() {
         try {
             int changed = campaignService.processScheduledTransitions(Instant.now(), batchSize);

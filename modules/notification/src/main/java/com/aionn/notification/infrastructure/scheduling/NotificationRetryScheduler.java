@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 
 @Slf4j
 @Component
@@ -20,6 +21,7 @@ public class NotificationRetryScheduler {
     private int batchSize;
 
     @Scheduled(fixedDelayString = "${notification.retry.delay-ms:30000}")
+    @SchedulerLock(name = "notification-retry", lockAtMostFor = "PT10M", lockAtLeastFor = "PT25S")
     public void run() {
         try {
             int succeeded = deliveryOrchestrator.retryPending(batchSize);

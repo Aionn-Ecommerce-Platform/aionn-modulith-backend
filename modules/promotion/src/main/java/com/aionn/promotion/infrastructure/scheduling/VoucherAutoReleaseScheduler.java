@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 
 import java.time.Instant;
 import java.util.List;
@@ -25,6 +26,7 @@ public class VoucherAutoReleaseScheduler {
     private int batchSize;
 
     @Scheduled(fixedDelayString = "${promotion.voucher.auto-release.delay-ms:30000}")
+    @SchedulerLock(name = "promotion-voucher-auto-release", lockAtMostFor = "PT10M", lockAtLeastFor = "PT25S")
     public void run() {
         try {
             List<UserVoucher> expired = userVoucherRepository.findExpiredReservations(Instant.now(), batchSize);

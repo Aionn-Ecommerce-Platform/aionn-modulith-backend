@@ -7,11 +7,16 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Duration;
+import java.time.Instant;
+import net.javacrumbs.shedlock.core.LockConfiguration;
+import net.javacrumbs.shedlock.provider.jdbctemplate.JdbcTemplateLockProvider;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 @Testcontainers
 class FlywayMigrationIntegrationTest {
@@ -41,6 +46,27 @@ class FlywayMigrationIntegrationTest {
         assertThat(rowCount("orders")).isPositive();
         assertThat(rowCount("payments")).isPositive();
         assertThat(rowCount("products")).isPositive();
+    }
+
+    @Test
+    void databaseLockAllowsOnlyOneApplicationInstanceToOwnAJob() {
+        Flyway production = flyway("classpath:db");
+        production.clean();
+        production.migrate();
+        DriverManagerDataSource dataSource = new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+        var firstInstance = new JdbcTemplateLockProvider(dataSource);
+        var secondInstance = new JdbcTemplateLockProvider(dataSource);
+        var configuration = new LockConfiguration(Instant.now(), "multi-instance-test",
+                Duration.ofMinutes(5), Duration.ZERO);
+
+        var firstLock = firstInstance.lock(configuration);
+        var competingLock = secondInstance.lock(configuration);
+
+        assertThat(firstLock).isPresent();
+        assertThat(competingLock).isEmpty();
+        firstLock.orElseThrow().unlock();
+        assertThat(secondInstance.lock(configuration)).isPresent();
     }
 
     private static Flyway flyway(String... locations) {
