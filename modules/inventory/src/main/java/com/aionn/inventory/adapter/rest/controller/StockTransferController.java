@@ -69,6 +69,7 @@ public class StockTransferController {
     }
 
     @GetMapping("/{transferId}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get transfer details")
     public ResponseEntity<ApiResponse<StockTransferResponse>> get(@PathVariable String transferId) {
         return ResponseEntity.ok(ApiResponse.success(

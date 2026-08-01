@@ -111,6 +111,7 @@ public class WarehouseController {
     }
 
     @GetMapping("/{warehouseId}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get warehouse")
     public ResponseEntity<ApiResponse<WarehouseResponse>> get(@PathVariable String warehouseId) {
         return ResponseEntity.ok(ApiResponse.success(
