@@ -20,6 +20,7 @@ import com.aionn.sharedkernel.util.Sha256Hasher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
@@ -71,6 +72,7 @@ public class PasswordResetService {
         integrationEventPublisher.publishPasswordChanged(userId, "self-service");
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void requestPasswordReset(String identity, String ipAddress) {
         log.info("Processing password reset request");
         var user = userSecurityPort.findByIdentity(identity);

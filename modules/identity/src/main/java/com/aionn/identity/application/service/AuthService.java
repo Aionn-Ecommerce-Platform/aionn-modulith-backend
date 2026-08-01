@@ -39,6 +39,7 @@ import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
@@ -91,6 +92,7 @@ public class AuthService {
         return authResultMapper.toLoginResult(savedSession, accessToken, refreshToken, accessTokenExpiresAt);
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public SocialLoginResult socialLogin(SocialLoginCommand command) {
         log.debug("Social login attempt: provider={}", command.provider());
 
@@ -141,6 +143,7 @@ public class AuthService {
         return authSessionPersistencePort.findByUserId(userId);
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public SocialLink linkSocial(LinkSocialCommand command) {
         IdentityUser user = validateUserExists(command.userId());
         AuthProvider provider = AuthProvider.from(command.provider());

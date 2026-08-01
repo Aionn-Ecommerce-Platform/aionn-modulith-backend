@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -19,6 +21,7 @@ import java.util.function.Supplier;
 @Component
 @Primary
 @Order(0)
+@Transactional(propagation = Propagation.NOT_SUPPORTED)
 public class ResilientCatalogPricingAdapter implements CatalogPricingGateway {
 
     private static final String INSTANCE = "ordering-catalog";
@@ -29,15 +32,11 @@ public class ResilientCatalogPricingAdapter implements CatalogPricingGateway {
     private final OrderingMetricsPort metrics;
 
     public ResilientCatalogPricingAdapter(
-            List<CatalogPricingGateway> delegates,
+            CatalogPricingAdapter delegate,
             RetryRegistry retryRegistry,
             CircuitBreakerRegistry circuitBreakerRegistry,
             OrderingMetricsPort metrics) {
-        this.delegate = delegates.stream()
-                .filter(impl -> !(impl instanceof ResilientCatalogPricingAdapter))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException(
-                        "No underlying CatalogPricingGateway implementation found"));
+        this.delegate = delegate;
         this.retry = retryRegistry.retry(INSTANCE);
         this.circuitBreaker = circuitBreakerRegistry.circuitBreaker(INSTANCE);
         this.metrics = metrics;

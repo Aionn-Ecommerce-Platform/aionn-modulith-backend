@@ -16,6 +16,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -24,6 +25,7 @@ import java.util.Map;
 // Runs after commit so slow search latency never extends business transactions.
 @Component
 @RequiredArgsConstructor
+@Transactional(propagation = Propagation.NOT_SUPPORTED)
 public class ProductSearchIndexUpdater {
 
     private final ProductPersistencePort productRepository;
@@ -32,15 +34,14 @@ public class ProductSearchIndexUpdater {
     private final AttributeTemplatePersistencePort attributeTemplateRepository;
     private final ProductReviewPersistencePort reviewRepository;
     private final ProductSoldCounterPersistencePort soldCounterRepository;
+    private final TransactionTemplate transactionTemplate;
 
     @EventListener
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductPublished(ProductEvents.ProductPublished event) {
         reindex(event.productId());
     }
 
     @EventListener
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductRestored(ProductEvents.ProductRestored event) {
         reindex(event.productId());
     }
@@ -61,70 +62,65 @@ public class ProductSearchIndexUpdater {
     }
 
     @EventListener
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductVariantDefined(ProductEvents.ProductVariantDefined event) {
         reindexIfSearchable(event.productId());
     }
 
     @EventListener
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductVariantRemoved(ProductEvents.ProductVariantRemoved event) {
         reindexIfSearchable(event.productId());
     }
 
     @EventListener
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductVariantPriceChanged(ProductEvents.ProductVariantPriceChanged event) {
         reindexIfSearchable(event.productId());
     }
 
     @EventListener
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductMediaUpdated(ProductEvents.ProductMediaUpdated event) {
         reindexIfSearchable(event.productId());
     }
 
     @EventListener
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductBrandAssigned(ProductEvents.ProductBrandAssigned event) {
         reindexIfSearchable(event.productId());
     }
 
     @EventListener
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductCategorized(ProductEvents.ProductCategorized event) {
         reindexIfSearchable(event.productId());
     }
 
     @EventListener
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductMetadataUpdated(ProductEvents.ProductMetadataUpdated event) {
         reindexIfSearchable(event.productId());
     }
 
     @EventListener
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductCollectionAssigned(ProductEvents.ProductCollectionAssigned event) {
         reindexIfSearchable(event.productId());
     }
 
     @EventListener
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onProductAttributesDefined(ProductEvents.ProductAttributesDefined event) {
         reindexIfSearchable(event.productId());
     }
 
     private void reindex(String productId) {
-        productRepository.findById(productId)
-                .ifPresent(product -> searchIndex.index(buildSearchDocument(product)));
+        ProductSearchDocument document = transactionTemplate.execute(status -> productRepository.findById(productId)
+                .map(this::buildSearchDocument).orElse(null));
+        if (document != null) {
+            searchIndex.index(document);
+        }
     }
 
     private void reindexIfSearchable(String productId) {
-        productRepository.findById(productId).ifPresent(product -> {
-            if (product.getStatus().isSearchable()) {
-                searchIndex.index(buildSearchDocument(product));
-            }
-        });
+        ProductSearchDocument document = transactionTemplate.execute(status -> productRepository.findById(productId)
+                .filter(product -> product.getStatus().isSearchable())
+                .map(this::buildSearchDocument).orElse(null));
+        if (document != null) {
+            searchIndex.index(document);
+        }
     }
 
     private ProductSearchDocument buildSearchDocument(Product product) {

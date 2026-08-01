@@ -19,7 +19,9 @@ import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.util.List;
@@ -38,6 +40,7 @@ public class ShipmentService {
     private final MerchantQueryPort merchantQueryPort;
     private final Clock clock;
     private final GhnProperties ghnProperties;
+    private final TransactionTemplate transactionTemplate;
 
     public Shipment createShipment(CreateShipmentCommand command) {
         String merchantId = command.merchantId();
@@ -136,13 +139,16 @@ public class ShipmentService {
         }
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public ShippingQuoteResult quote(QuoteShippingCommand command) {
         String currency = command.currency() == null ? "VND" : command.currency();
-        var rate = rateRepository.findByZoneCode(command.address().provinceCode());
-        if (rate.isPresent()) {
-            return new ShippingQuoteResult(rate.get().getBaseFee(), rate.get().getCurrency(),
-                    rate.get().getZoneCode(), "configured-rate", rate.get().getCondition(), null, null);
+        ShippingQuoteResult configuredRate = transactionTemplate.execute(status -> rateRepository
+                .findByZoneCode(command.address().provinceCode())
+                .map(rate -> new ShippingQuoteResult(rate.getBaseFee(), rate.getCurrency(),
+                        rate.getZoneCode(), "configured-rate", rate.getCondition(), null, null))
+                .orElse(null));
+        if (configuredRate != null) {
+            return configuredRate;
         }
         CarrierClient.Quote q = carrierClient.quote(command.address(), command.dimensions(), currency);
         return new ShippingQuoteResult(q.fee(), q.currency(), q.zoneCode(), "carrier", q.detail(),

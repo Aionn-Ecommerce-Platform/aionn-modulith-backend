@@ -28,6 +28,7 @@ import com.aionn.sharedkernel.util.OtpGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -64,6 +65,7 @@ public class AccountManagementService {
         return requestDataExport(command.userId());
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void sendVerifyPrimaryEmailOtp(String userId) {
         IdentityUser user = getActiveUser(userId);
         if (user.getEmail() == null || user.getEmail().isBlank()) {
@@ -96,6 +98,7 @@ public class AccountManagementService {
         log.info("Email verified for user: {}", userId);
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void requestEmailChangeOtp(String userId, String newEmail) {
         IdentityUser user = getActiveUser(userId);
         if (newEmail == null || newEmail.isBlank()) {
@@ -144,6 +147,7 @@ public class AccountManagementService {
         return userResultMapper.toUserProfileView(saved);
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void requestPhoneChangeOtp(String userId, String newPhone) {
         getActiveUser(userId);
         if (newPhone == null || newPhone.isBlank()) {

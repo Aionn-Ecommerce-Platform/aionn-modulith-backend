@@ -20,6 +20,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -50,6 +52,8 @@ class ShipmentServiceTest {
         MerchantQueryPort merchantQueryPort;
         @Mock
         GhnProperties ghnProperties;
+        @Mock
+        TransactionTemplate transactionTemplate;
 
         ShipmentService service;
 
@@ -60,10 +64,12 @@ class ShipmentServiceTest {
 
         @BeforeEach
         void setUp() {
+                lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation ->
+                                ((TransactionCallback<?>) invocation.getArgument(0)).doInTransaction(null));
                 service = new ShipmentService(shipmentRepository, rateRepository, eventPublisher,
                                 carrierClient, integrationEventPublisher, merchantQueryPort,
                                 java.time.Clock.systemUTC(),
-                                ghnProperties);
+                                ghnProperties, transactionTemplate);
         }
 
         @Test
@@ -89,6 +95,7 @@ class ShipmentServiceTest {
                 assertThat(result.fee()).isEqualByComparingTo(BigDecimal.valueOf(25000));
                 assertThat(result.source()).isEqualTo("configured-rate");
                 assertThat(result.zoneCode()).isEqualTo("HN");
+                verify(transactionTemplate).execute(any());
         }
 
         @Test

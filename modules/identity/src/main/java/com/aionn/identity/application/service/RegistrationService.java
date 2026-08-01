@@ -32,6 +32,7 @@ import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
@@ -63,6 +64,7 @@ public class RegistrationService {
     private final IdentityMetricsPort identityMetrics;
 
     private final Clock clock;
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public InitiateRegistrationResult initiate(InitiateRegistrationCommand command) {
         log.debug("Initiating registration for identity: {}", command.identity());
 
@@ -119,6 +121,7 @@ public class RegistrationService {
         return registrationResultMapper.toVerifyOtpResult(session.getRegId(), session.getVerificationToken());
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public ResendRegistrationOtpResult resendOtp(ResendRegistrationOtpCommand command) {
         var session = registrationSessionStore.findByRegId(command.regId())
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.REGISTRATION_SESSION_NOT_FOUND));

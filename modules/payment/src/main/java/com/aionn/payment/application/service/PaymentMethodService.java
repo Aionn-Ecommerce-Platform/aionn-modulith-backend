@@ -18,7 +18,7 @@ import com.stripe.param.SetupIntentCreateParams;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -28,15 +28,19 @@ import java.util.Locale;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class PaymentMethodService {
 
     private final PaymentMethodPersistencePort repository;
     private final EventPublisher eventPublisher;
     private final StripeProperties stripeProperties;
     private final Clock clock;
+    private final TransactionTemplate transactionTemplate;
 
     public PaymentMethod link(LinkMethodCommand command) {
+        return inTransaction(() -> linkInTransaction(command));
+    }
+
+    private PaymentMethod linkInTransaction(LinkMethodCommand command) {
         Instant now = clock.instant();
         PaymentMethod method = PaymentMethod.link(IdGenerator.ulid(),
                 command.userId(), command.provider(), command.last4Digits(), command.gatewayToken(), now);
@@ -46,6 +50,10 @@ public class PaymentMethodService {
     }
 
     public PaymentMethod verify(VerifyMethodCommand command) {
+        return inTransaction(() -> verifyInTransaction(command));
+    }
+
+    private PaymentMethod verifyInTransaction(VerifyMethodCommand command) {
         PaymentMethod method = ownedBy(command.methodId(), command.userId());
         Instant now = clock.instant();
         method.verify(now);
@@ -98,13 +106,8 @@ public class PaymentMethodService {
             }
 
             String provider = normalizeCardBrand(card.getBrand());
-            Instant now = clock.instant();
-            PaymentMethod method = PaymentMethod.link(IdGenerator.ulid(),
-                    userId, provider, card.getLast4(), stripePaymentMethodId, now);
-            method.verify(now);
-            PaymentMethod saved = repository.save(method);
-            eventPublisher.publish(method.pullEvents());
-            return saved;
+            return inTransaction(() -> persistVerifiedMethod(
+                    userId, provider, card.getLast4(), stripePaymentMethodId));
         } catch (StripeException ex) {
             log.warn("Stripe setup-intent completion failed: {}", ex.getMessage());
             throw new PaymentException(PaymentErrorCode.PAYMENT_GATEWAY_ERROR, ex.getMessage());
@@ -112,6 +115,13 @@ public class PaymentMethodService {
     }
 
     public void remove(RemoveMethodCommand command) {
+        inTransaction(() -> {
+            removeInTransaction(command);
+            return null;
+        });
+    }
+
+    private void removeInTransaction(RemoveMethodCommand command) {
         PaymentMethod method = ownedBy(command.methodId(), command.userId());
         Instant now = clock.instant();
         method.remove(now);
@@ -119,14 +129,27 @@ public class PaymentMethodService {
         eventPublisher.publish(method.pullEvents());
     }
 
-    @Transactional(readOnly = true)
     public List<PaymentMethod> listMine(String userId) {
-        return repository.findActiveByUserId(userId);
+        return inTransaction(() -> repository.findActiveByUserId(userId));
     }
 
-    @Transactional(readOnly = true)
     public PaymentMethod get(String userId, String methodId) {
-        return ownedBy(methodId, userId);
+        return inTransaction(() -> ownedBy(methodId, userId));
+    }
+
+    private PaymentMethod persistVerifiedMethod(String userId, String provider, String last4,
+            String stripePaymentMethodId) {
+        Instant now = clock.instant();
+        PaymentMethod method = PaymentMethod.link(IdGenerator.ulid(),
+                userId, provider, last4, stripePaymentMethodId, now);
+        method.verify(now);
+        PaymentMethod saved = repository.save(method);
+        eventPublisher.publish(method.pullEvents());
+        return saved;
+    }
+
+    private <T> T inTransaction(java.util.function.Supplier<T> work) {
+        return transactionTemplate.execute(status -> work.get());
     }
 
     private PaymentMethod ownedBy(String methodId, String userId) {
