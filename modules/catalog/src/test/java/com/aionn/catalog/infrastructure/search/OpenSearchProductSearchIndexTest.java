@@ -11,6 +11,7 @@ import org.opensearch.client.opensearch.core.BulkResponse;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +39,8 @@ class OpenSearchProductSearchIndexTest {
     void setUp() {
         client = mock(OpenSearchClient.class);
         CatalogSearchProperties props = new CatalogSearchProperties("opensearch",
-                new CatalogSearchProperties.OpenSearch("localhost", 9200, "http", "catalog-products", "", ""));
+                new CatalogSearchProperties.OpenSearch("localhost", 9200, "http", "catalog-products", "", "",
+                        Duration.ofSeconds(3), Duration.ofSeconds(10)));
         index = new OpenSearchProductSearchIndex(client, props);
     }
 

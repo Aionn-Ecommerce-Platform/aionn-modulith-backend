@@ -3,6 +3,8 @@ package com.aionn.catalog.infrastructure.config.properties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
+import java.time.Duration;
+
 @ConfigurationProperties(prefix = "catalog.search")
 public record CatalogSearchProperties(
         @DefaultValue("in-process") String provider,
@@ -14,7 +16,9 @@ public record CatalogSearchProperties(
             @DefaultValue("http") String scheme,
             @DefaultValue("catalog-products") String indexName,
             @DefaultValue("") String username,
-            @DefaultValue("") String password) {
+            @DefaultValue("") String password,
+            @DefaultValue("3s") Duration connectTimeout,
+            @DefaultValue("10s") Duration responseTimeout) {
 
         public boolean hasCredentials() {
             return username != null && !username.isBlank()

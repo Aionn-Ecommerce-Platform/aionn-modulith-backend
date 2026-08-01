@@ -15,11 +15,9 @@ import java.util.function.Supplier;
 @Slf4j
 public class ResilientPaymentProviderClient implements PaymentProviderClient {
 
-    private static final String INSTANCE = "payment-provider";
-
     private final PaymentProviderClient delegate;
-    private final Retry retry;
-    private final CircuitBreaker circuitBreaker;
+    private final RetryRegistry retryRegistry;
+    private final CircuitBreakerRegistry circuitBreakerRegistry;
     private final PaymentMetricsPort metrics;
     private final String gatewayLabel;
 
@@ -29,8 +27,8 @@ public class ResilientPaymentProviderClient implements PaymentProviderClient {
             CircuitBreakerRegistry circuitBreakerRegistry,
             PaymentMetricsPort metrics) {
         this.delegate = delegate;
-        this.retry = retryRegistry.retry(INSTANCE);
-        this.circuitBreaker = circuitBreakerRegistry.circuitBreaker(INSTANCE);
+        this.retryRegistry = retryRegistry;
+        this.circuitBreakerRegistry = circuitBreakerRegistry;
         this.metrics = metrics;
         this.gatewayLabel = delegate.kind().name().toLowerCase();
     }
@@ -42,28 +40,33 @@ public class ResilientPaymentProviderClient implements PaymentProviderClient {
 
     @Override
     public Authorization authorize(AuthorizationRequest request) {
-        return execute("authorize", () -> delegate.authorize(request));
+        return execute("authorize", true, () -> delegate.authorize(request));
     }
 
     @Override
     public Refund refund(RefundRequest request) {
-        return execute("refund", () -> delegate.refund(request));
+        return execute("refund", false, () -> delegate.refund(request));
     }
 
     @Override
     public String generateInvoice(String paymentId, String orderId, BigDecimal amount, String currency) {
-        return execute("generateInvoice",
+        return execute("generateInvoice", false,
                 () -> delegate.generateInvoice(paymentId, orderId, amount, currency));
     }
 
     @Override
     public WebhookEvent verifyAndParse(String rawBody, String signatureHeader) {
-        return execute("verifyWebhook", () -> delegate.verifyAndParse(rawBody, signatureHeader));
+        return execute("verifyWebhook", false, () -> delegate.verifyAndParse(rawBody, signatureHeader));
     }
 
-    private <T> T execute(String operation, Supplier<T> action) {
-        Supplier<T> decorated = Retry.decorateSupplier(retry,
-                CircuitBreaker.decorateSupplier(circuitBreaker, action));
+    private <T> T execute(String operation, boolean retryable, Supplier<T> action) {
+        String instance = "payment-provider-" + gatewayLabel + "-" + operation;
+        CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker(instance);
+        Supplier<T> decorated = CircuitBreaker.decorateSupplier(circuitBreaker, action);
+        if (retryable) {
+            Retry retry = retryRegistry.retry(instance);
+            decorated = Retry.decorateSupplier(retry, decorated);
+        }
         try {
             T result = decorated.get();
             metrics.providerOutcome(gatewayLabel, operation, "success");

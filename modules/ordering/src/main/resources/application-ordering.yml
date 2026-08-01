@@ -1,11 +1,3 @@
-spring:
-  application:
-    name: ordering
-
-  flyway:
-    enabled: true
-    locations: classpath:db
-
 ordering:
   reservation:
     ttl-seconds: ${ORDERING_RESERVATION_TTL_SECONDS:86400}

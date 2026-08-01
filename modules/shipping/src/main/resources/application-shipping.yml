@@ -1,11 +1,3 @@
-spring:
-  application:
-    name: shipping
-
-  flyway:
-    enabled: true
-    locations: classpath:db
-
 shipping:
   carrier:
     ghn:

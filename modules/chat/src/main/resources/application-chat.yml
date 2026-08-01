@@ -1,11 +1,3 @@
-spring:
-  application:
-    name: chat
-
-  flyway:
-    enabled: true
-    locations: classpath:db
-
 chat:
   attachment:
     max-size-mb: ${CHAT_ATTACHMENT_MAX_SIZE_MB:10}

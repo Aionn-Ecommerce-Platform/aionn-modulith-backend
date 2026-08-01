@@ -1,7 +1,3 @@
-spring:
-  flyway:
-    enabled: true
-
 identity:
   registration:
     max-verify-attempts: ${IDENTITY_REGISTRATION_MAX_VERIFY_ATTEMPTS:5}

@@ -9,6 +9,8 @@ spring:
     import:
       - classpath:application-identity.yml
       - classpath:application-catalog.yml
+      - classpath:application-inventory.yml
+      - classpath:application-ordering.yml
       - classpath:application-payment.yml
       - classpath:application-shipping.yml
       - classpath:application-promotion.yml
@@ -20,12 +22,25 @@ spring:
     username: ${POSTGRES_USER:postgres}
     password: ${POSTGRES_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT_MS:30000}
+      validation-timeout: ${DB_POOL_VALIDATION_TIMEOUT_MS:5000}
+      idle-timeout: ${DB_POOL_IDLE_TIMEOUT_MS:600000}
+      max-lifetime: ${DB_POOL_MAX_LIFETIME_MS:1800000}
+      leak-detection-threshold: ${DB_POOL_LEAK_DETECTION_MS:60000}
 
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_LOCAL_PORT:6379}
       password: ${REDIS_PASSWORD:}
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:3s}
+      timeout: ${REDIS_COMMAND_TIMEOUT:5s}
+
+  transaction:
+    default-timeout: ${DB_TRANSACTION_TIMEOUT:30s}
 
   jpa:
     hibernate:
@@ -50,6 +65,9 @@ spring:
       mail:
         smtp:
           auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:true}
+          connectiontimeout: ${SMTP_CONNECT_TIMEOUT_MS:10000}
+          timeout: ${SMTP_READ_TIMEOUT_MS:15000}
+          writetimeout: ${SMTP_WRITE_TIMEOUT_MS:15000}
           starttls:
             enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:true}
 
@@ -73,7 +91,23 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       show-details: never
+
+resilience4j:
+  retry:
+    configs:
+      default:
+        max-attempts: ${PROVIDER_RETRY_MAX_ATTEMPTS:3}
+        wait-duration: ${PROVIDER_RETRY_WAIT:200ms}
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: ${PROVIDER_CIRCUIT_WINDOW_SIZE:20}
+        minimum-number-of-calls: ${PROVIDER_CIRCUIT_MIN_CALLS:10}
+        failure-rate-threshold: ${PROVIDER_CIRCUIT_FAILURE_RATE:50}
+        wait-duration-in-open-state: ${PROVIDER_CIRCUIT_OPEN_WAIT:30s}

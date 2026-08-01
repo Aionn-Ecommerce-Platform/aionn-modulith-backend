@@ -1,8 +1,3 @@
-spring:
-  flyway:
-    enabled: true
-    out-of-order: true
-
 catalog:
   merchant-search-sync:
     page-size: ${CATALOG_MERCHANT_SEARCH_SYNC_PAGE_SIZE:100}
@@ -22,6 +17,8 @@ catalog:
       index-name: ${CATALOG_SEARCH_OPENSEARCH_INDEX_NAME:catalog-products}
       username: ${CATALOG_SEARCH_OPENSEARCH_USERNAME:}
       password: ${CATALOG_SEARCH_OPENSEARCH_PASSWORD:}
+      connect-timeout: ${CATALOG_SEARCH_OPENSEARCH_CONNECT_TIMEOUT:3s}
+      response-timeout: ${CATALOG_SEARCH_OPENSEARCH_RESPONSE_TIMEOUT:10s}
       index-shards: ${CATALOG_SEARCH_OPENSEARCH_INDEX_SHARDS:1}
       index-replicas: ${CATALOG_SEARCH_OPENSEARCH_INDEX_REPLICAS:0}
       ngram-min: ${CATALOG_SEARCH_OPENSEARCH_NGRAM_MIN:2}
