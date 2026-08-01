@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 
 import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class OrderLifecycleListenerTest {
@@ -59,7 +60,7 @@ class OrderLifecycleListenerTest {
     }
 
     @Test
-    void onOrderCancelledHandlesExceptionGracefully() {
+    void onOrderCancelledPropagatesFailureForOutboxRetry() {
         OrderCancelledIntegrationEvent event = new OrderCancelledIntegrationEvent(
                 "evt-1",
                 "O_1",
@@ -74,7 +75,7 @@ class OrderLifecycleListenerTest {
         when(shipment1.getShipmentId()).thenReturn("S_1");
         doThrow(new RuntimeException("Error")).when(shipmentService).applyCancel("S_1", "USER_CANCELLED:REASON_1");
 
-        listener.onOrderCancelled(event);
+        assertThrows(IllegalStateException.class, () -> listener.onOrderCancelled(event));
 
         verify(shipmentService).applyCancel("S_1", "USER_CANCELLED:REASON_1");
     }

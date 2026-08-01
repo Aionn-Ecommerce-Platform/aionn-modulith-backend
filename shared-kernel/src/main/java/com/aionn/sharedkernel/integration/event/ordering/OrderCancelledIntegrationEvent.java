@@ -10,7 +10,7 @@ public record OrderCancelledIntegrationEvent(
         String reasonCode,
         String reason,
         CancellationType cancellationType,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.OrderScoped {
 
     public OrderCancelledIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);

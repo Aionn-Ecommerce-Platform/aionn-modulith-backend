@@ -7,15 +7,12 @@ import com.aionn.sharedkernel.integration.event.identity.EmailChangedIntegration
 import com.aionn.sharedkernel.integration.event.identity.PasswordChangedIntegrationEvent;
 import com.aionn.sharedkernel.integration.event.identity.PhoneChangedIntegrationEvent;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class IdentityEventListener {
@@ -26,7 +23,7 @@ public class IdentityEventListener {
 
     private final NotificationDeliveryOrchestrator deliveryOrchestrator;
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @EventListener
     public void on(PasswordChangedIntegrationEvent event) {
         Map<String, String> context = new HashMap<>();
         context.put("eventId", event.eventId());
@@ -37,7 +34,7 @@ public class IdentityEventListener {
         dispatch(event.userId(), EVENT_PASSWORD_CHANGED, context);
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @EventListener
     public void on(EmailChangedIntegrationEvent event) {
         Map<String, String> context = new HashMap<>();
         context.put("eventId", event.eventId());
@@ -51,7 +48,7 @@ public class IdentityEventListener {
         dispatch(event.userId(), EVENT_EMAIL_CHANGED, context);
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @EventListener
     public void on(PhoneChangedIntegrationEvent event) {
         Map<String, String> context = new HashMap<>();
         context.put("eventId", event.eventId());
@@ -66,12 +63,8 @@ public class IdentityEventListener {
     }
 
     private void dispatch(String userId, String eventType, Map<String, String> context) {
-        try {
-            deliveryOrchestrator.sendByEvent(new NotificationCommands.SendByEvent(
-                    userId, eventType, NotificationCategory.SECURITY,
-                    null, null, null, context));
-        } catch (RuntimeException ex) {
-            log.warn("Notification dispatch failed for {}/{}: {}", userId, eventType, ex.getMessage());
-        }
+        deliveryOrchestrator.sendByEvent(new NotificationCommands.SendByEvent(
+                userId, eventType, NotificationCategory.SECURITY,
+                null, null, null, context));
     }
 }

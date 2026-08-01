@@ -11,7 +11,7 @@ public record StockReservationFailedIntegrationEvent(
         String orderId,
         int quantity,
         String reason,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.OrderScoped {
 
     public StockReservationFailedIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);

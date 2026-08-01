@@ -8,7 +8,7 @@ public record PasswordChangedIntegrationEvent(
         String eventId,
         String userId,
         String channelHint,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.UserScoped {
 
     public PasswordChangedIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);

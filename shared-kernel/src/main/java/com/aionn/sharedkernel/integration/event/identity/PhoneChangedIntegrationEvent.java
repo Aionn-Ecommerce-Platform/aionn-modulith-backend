@@ -9,7 +9,7 @@ public record PhoneChangedIntegrationEvent(
         String userId,
         String oldPhone,
         String newPhone,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.UserScoped {
 
     public PhoneChangedIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);

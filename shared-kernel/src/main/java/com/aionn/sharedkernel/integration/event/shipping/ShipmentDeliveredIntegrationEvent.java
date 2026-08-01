@@ -10,7 +10,7 @@ public record ShipmentDeliveredIntegrationEvent(
         String orderId,
         String signatureUrl,
         Instant deliveredAt,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.ShipmentScoped {
 
     public ShipmentDeliveredIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);

@@ -8,7 +8,7 @@ public record OrderApprovedIntegrationEvent(
         String eventId,
         String orderId,
         String paymentId,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.OrderScoped {
 
     public OrderApprovedIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);

@@ -9,7 +9,7 @@ public record EmailChangedIntegrationEvent(
         String userId,
         String oldEmail,
         String newEmail,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.UserScoped {
 
     public EmailChangedIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);

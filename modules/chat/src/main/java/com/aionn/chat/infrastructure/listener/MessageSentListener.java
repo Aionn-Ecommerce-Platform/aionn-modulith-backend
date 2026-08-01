@@ -10,11 +10,10 @@ import com.aionn.sharedkernel.integration.event.chat.MessageSentIntegrationEvent
 import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.Instant;
 import java.util.HashSet;
@@ -30,7 +29,7 @@ public class MessageSentListener {
     private final IntegrationEventPublisher integrationEventPublisher;
     private final ChatMetricsPort chatMetrics;
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void onMessageSent(ChatEvents.MessageSent event) {
         if (event.recipientIds() == null || event.recipientIds().isEmpty()) {

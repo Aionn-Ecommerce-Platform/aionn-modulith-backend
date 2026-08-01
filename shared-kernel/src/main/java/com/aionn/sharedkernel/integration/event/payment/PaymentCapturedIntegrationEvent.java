@@ -13,7 +13,7 @@ public record PaymentCapturedIntegrationEvent(
         String transactionNo,
         BigDecimal amount,
         String currency,
-        Instant occurredAt) implements IntegrationEvent {
+        Instant occurredAt) implements IntegrationEvent.PaymentScoped {
 
     public PaymentCapturedIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);
