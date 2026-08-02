@@ -7,7 +7,8 @@ updates:
       day: monday
       time: "02:00"
       timezone: Asia/Ho_Chi_Minh
-    open-pull-requests-limit: 10
+    # Keep security updates enabled, but disable routine version-update PRs.
+    open-pull-requests-limit: 0
     labels:
       - dependencies
 
@@ -17,5 +18,7 @@ updates:
       interval: monthly
       time: "02:00"
       timezone: Asia/Ho_Chi_Minh
+    # Keep security updates enabled, but disable routine version-update PRs.
+    open-pull-requests-limit: 0
     labels:
       - dependencies
