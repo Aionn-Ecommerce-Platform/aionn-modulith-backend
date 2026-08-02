@@ -80,7 +80,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(DomainException.class)
 	public ResponseEntity<ApiResponse<Map<String, Object>>> handleDomain(DomainException ex) {
 		log.warn("Domain exception [{}]: {}", ex.getErrorCode(), ex.getMessage());
-		return buildErrorResponse(HttpStatus.UNPROCESSABLE_ENTITY, ex);
+		return buildErrorResponse(HttpStatus.UNPROCESSABLE_CONTENT, ex);
 	}
 
 	@ExceptionHandler(IllegalArgumentException.class)

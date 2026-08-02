@@ -24,7 +24,7 @@ import com.aionn.shipping.domain.exception.ShippingErrorCode;
 import com.aionn.shipping.domain.exception.ShippingException;
 import com.aionn.shipping.domain.valueobject.ShipmentAddress;
 import com.aionn.shipping.domain.valueobject.ShipmentDimensions;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,8 +33,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -78,7 +77,7 @@ class ShipmentControllerWebTest {
     private final ShippingRateDtoMapper shippingRateDtoMapper = Mappers.getMapper(ShippingRateDtoMapper.class);
 
     private MockMvc mockMvc;
-    private final ObjectMapper objectMapper = Jackson2ObjectMapperBuilder.json().build();
+    private final JsonMapper objectMapper = JsonMapper.builder().build();
 
     @BeforeEach
     void setUp() {
@@ -96,7 +95,7 @@ class ShipmentControllerWebTest {
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new ShippingExceptionHandler())
-                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .setMessageConverters(new JacksonJsonHttpMessageConverter(objectMapper))
                 .setCustomArgumentResolvers(new StubCurrentUserIdResolver("user-1"))
                 .build();
     }

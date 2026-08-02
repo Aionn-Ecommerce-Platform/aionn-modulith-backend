@@ -24,7 +24,7 @@ public class ShippingExceptionHandler extends AbstractModuleExceptionHandler {
         registerErrors(HttpStatus.BAD_REQUEST, "SHP_002", "SHP_900");
         registerErrors(HttpStatus.SERVICE_UNAVAILABLE, "SHP_004");
         registerErrors(HttpStatus.FORBIDDEN, "SHP_005");
-        setDefaultStatus(HttpStatus.UNPROCESSABLE_ENTITY);
+        setDefaultStatus(HttpStatus.UNPROCESSABLE_CONTENT);
     }
 
     @Override

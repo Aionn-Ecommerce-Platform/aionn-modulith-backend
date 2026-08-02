@@ -20,8 +20,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import tools.jackson.databind.json.JsonMapper;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -64,8 +64,8 @@ class ConsentControllerWebTest {
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new IdentityExceptionHandler())
                                 .addInterceptors(new MockSecurityInterceptor())
-                                .setMessageConverters(new MappingJackson2HttpMessageConverter(
-                                                Jackson2ObjectMapperBuilder.json().build()))
+                                .setMessageConverters(new JacksonJsonHttpMessageConverter(
+                                                JsonMapper.builder().build()))
                                 .setCustomArgumentResolvers(
                                                 new ClientIpArgumentResolver(new ClientIpResolver()),
                                                 new ClientUserAgentArgumentResolver(),

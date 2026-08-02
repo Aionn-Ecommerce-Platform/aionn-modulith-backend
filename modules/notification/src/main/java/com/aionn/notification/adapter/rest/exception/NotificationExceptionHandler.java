@@ -25,7 +25,7 @@ public class NotificationExceptionHandler extends AbstractModuleExceptionHandler
         registerErrors(HttpStatus.FORBIDDEN, "NTF_002");
         registerErrors(HttpStatus.BAD_REQUEST,
                 "NTF_003", "NTF_103", "NTF_202", "NTF_302", "NTF_900");
-        setDefaultStatus(HttpStatus.UNPROCESSABLE_ENTITY);
+        setDefaultStatus(HttpStatus.UNPROCESSABLE_CONTENT);
     }
 
     @Override

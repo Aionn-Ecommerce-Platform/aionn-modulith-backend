@@ -59,6 +59,6 @@ public class StompRealtimeBroadcaster implements RealtimeBroadcaster {
     }
 
     private void broadcastToConversation(String conversationId, Map<String, Object> payload) {
-        messagingTemplate.convertAndSend(CONVERSATION_TOPIC_PREFIX + conversationId, payload);
+        messagingTemplate.convertAndSend(CONVERSATION_TOPIC_PREFIX + conversationId, (Object) payload);
     }
 }

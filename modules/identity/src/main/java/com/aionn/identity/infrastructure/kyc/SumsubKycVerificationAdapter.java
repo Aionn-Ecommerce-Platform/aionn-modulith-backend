@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
-import org.springframework.boot.http.client.ClientHttpRequestFactorySettings;
+import org.springframework.boot.http.client.HttpClientSettings;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -45,7 +45,7 @@ public class SumsubKycVerificationAdapter implements ExternalKycVerificationPort
         this.kycProperties = kycProperties;
         this.objectMapper = objectMapper;
         this.clock = clock;
-        var settings = ClientHttpRequestFactorySettings.defaults()
+        var settings = HttpClientSettings.defaults()
                 .withConnectTimeout(CONNECT_TIMEOUT)
                 .withReadTimeout(READ_TIMEOUT);
         this.clientBuilder = RestClient.builder()

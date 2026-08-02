@@ -44,7 +44,7 @@ public class IdentityExceptionHandler extends AbstractModuleExceptionHandler {
                                 "IDENTITY_602");
                 registerErrors(HttpStatus.TOO_MANY_REQUESTS, "IDENTITY_103", "IDENTITY_107");
                 registerErrors(HttpStatus.BAD_GATEWAY, "IDENTITY_406");
-                setDefaultStatus(HttpStatus.UNPROCESSABLE_ENTITY);
+                setDefaultStatus(HttpStatus.UNPROCESSABLE_CONTENT);
         }
 
         @Override

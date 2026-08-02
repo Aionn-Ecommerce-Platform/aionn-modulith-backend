@@ -26,7 +26,7 @@ public class ChatExceptionHandler extends AbstractModuleExceptionHandler {
         registerErrors(HttpStatus.BAD_REQUEST,
                 "CHT_003", "CHT_103", "CHT_104", "CHT_105", "CHT_106",
                 "CHT_203", "CHT_900");
-        setDefaultStatus(HttpStatus.UNPROCESSABLE_ENTITY);
+        setDefaultStatus(HttpStatus.UNPROCESSABLE_CONTENT);
     }
 
     @Override

@@ -15,15 +15,14 @@ import com.aionn.inventory.application.port.in.transfer.CancelTransferInputPort;
 import com.aionn.inventory.application.port.in.transfer.CompleteTransferInputPort;
 import com.aionn.inventory.application.port.in.transfer.GetTransferInputPort;
 import com.aionn.inventory.application.port.in.transfer.InitiateTransferInputPort;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -46,7 +45,7 @@ class StockTransferControllerWebTest {
     @Mock private GetTransferInputPort getTransferInputPort;
 
     private MockMvc mockMvc;
-    private final ObjectMapper objectMapper = Jackson2ObjectMapperBuilder.json().build();
+    private final JsonMapper objectMapper = JsonMapper.builder().build();
 
     @BeforeEach
     void setUp() {
@@ -59,7 +58,7 @@ class StockTransferControllerWebTest {
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new InventoryExceptionHandler())
-                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .setMessageConverters(new JacksonJsonHttpMessageConverter(objectMapper))
                 .addInterceptors(new MockSecurityInterceptor())
                 .build();
     }

@@ -80,10 +80,10 @@ class AbstractModuleExceptionHandlerTest {
                 assertEquals(HttpStatus.NOT_FOUND, handler.statusFor("SAMPLE_404"),
                                 "registered SAMPLE_404 must map to NOT_FOUND");
 
-                assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, handler.statusFor("SAMPLE_999"),
+                assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, handler.statusFor("SAMPLE_999"),
                                 "unregistered errorCode must map to default 422");
 
-                assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, handler.statusFor(null),
+                assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, handler.statusFor(null),
                                 "null errorCode must map to default 422");
         }
 
@@ -125,7 +125,7 @@ class AbstractModuleExceptionHandlerTest {
 
                 SampleModuleExceptionHandler handler = new SampleModuleExceptionHandler();
 
-                assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, handler.statusFor(errorCode),
+                assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, handler.statusFor(errorCode),
                                 "unregistered errorCode must fall back to default 422");
                 assertEquals(422, handler.statusFor(errorCode).value(),
                                 "default fallback status code must be 422");

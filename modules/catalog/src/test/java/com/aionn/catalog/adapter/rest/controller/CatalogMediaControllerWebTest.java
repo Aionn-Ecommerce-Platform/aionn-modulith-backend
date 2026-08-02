@@ -7,14 +7,13 @@ import com.aionn.catalog.adapter.rest.support.TestAuth;
 import com.aionn.catalog.adapter.rest.support.session.CurrentOwnerIdArgumentResolver;
 import com.aionn.catalog.application.dto.media.result.UploadSignatureResult;
 import com.aionn.catalog.application.port.in.media.GenerateProductMediaUploadSignatureInputPort;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -31,7 +30,7 @@ class CatalogMediaControllerWebTest {
     private GenerateProductMediaUploadSignatureInputPort generateProductMediaUploadSignatureInputPort;
 
     private MockMvc mockMvc;
-    private final ObjectMapper objectMapper = Jackson2ObjectMapperBuilder.json().build();
+    private final JsonMapper objectMapper = JsonMapper.builder().build();
 
     @BeforeEach
     void setUp() {
@@ -42,7 +41,7 @@ class CatalogMediaControllerWebTest {
                 .setControllerAdvice(new CatalogExceptionHandler())
                 .setCustomArgumentResolvers(new CurrentOwnerIdArgumentResolver())
                 .addInterceptors(new MockSecurityInterceptor())
-                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .setMessageConverters(new JacksonJsonHttpMessageConverter(objectMapper))
                 .build();
     }
 

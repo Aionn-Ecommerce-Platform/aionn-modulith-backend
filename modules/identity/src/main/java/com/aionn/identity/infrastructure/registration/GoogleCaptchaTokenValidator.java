@@ -6,7 +6,7 @@ import com.aionn.identity.infrastructure.config.properties.RegistrationPropertie
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
-import org.springframework.boot.http.client.ClientHttpRequestFactorySettings;
+import org.springframework.boot.http.client.HttpClientSettings;
 import org.springframework.http.MediaType;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
@@ -33,7 +33,7 @@ public class GoogleCaptchaTokenValidator implements CaptchaTokenValidatorPort {
         this.properties = properties;
         // Explicit timeouts so a slow / hung siteverify call cannot pin the
         // registration thread indefinitely.
-        var settings = ClientHttpRequestFactorySettings.defaults()
+        var settings = HttpClientSettings.defaults()
                 .withConnectTimeout(CONNECT_TIMEOUT)
                 .withReadTimeout(READ_TIMEOUT);
         this.restClient = RestClient.builder()

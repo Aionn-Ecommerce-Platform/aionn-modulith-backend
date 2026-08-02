@@ -25,7 +25,7 @@ public class PaymentExceptionHandler extends AbstractModuleExceptionHandler {
         registerErrors(HttpStatus.BAD_REQUEST,
                 "PAY_002", "PAY_005", "PAY_006", "PAY_103", "PAY_900");
         registerErrors(HttpStatus.SERVICE_UNAVAILABLE, "PAY_004");
-        setDefaultStatus(HttpStatus.UNPROCESSABLE_ENTITY);
+        setDefaultStatus(HttpStatus.UNPROCESSABLE_CONTENT);
     }
 
     @Override

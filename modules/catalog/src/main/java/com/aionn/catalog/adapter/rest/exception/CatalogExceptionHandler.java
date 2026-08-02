@@ -31,7 +31,7 @@ public class CatalogExceptionHandler extends AbstractModuleExceptionHandler {
                 "CATALOG_003", "CATALOG_105", "CATALOG_302", "CATALOG_304",
                 "CATALOG_307", "CATALOG_308", "CATALOG_309",
                 "CATALOG_402", "CATALOG_900");
-        setDefaultStatus(HttpStatus.UNPROCESSABLE_ENTITY);
+        setDefaultStatus(HttpStatus.UNPROCESSABLE_CONTENT);
     }
 
     @Override
