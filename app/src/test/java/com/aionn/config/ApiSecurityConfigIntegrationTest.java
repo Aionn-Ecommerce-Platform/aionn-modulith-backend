@@ -4,6 +4,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.Mockito.when;
+
+import com.aionn.identity.application.port.out.auth.AccessTokenClaims;
+import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -57,6 +62,21 @@ class ApiSecurityConfigIntegrationTest {
     }
 
     @Test
+    void healthEndpointIsPublic() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void validBearerTokenAuthenticatesProtectedRequest() throws Exception {
+        when(tokenIssuer.parseClaims("valid-token"))
+                .thenReturn(Optional.of(new AccessTokenClaims("user-1", "session-1", null, List.of("USER"))));
+
+        mockMvc.perform(get("/test/ping").header("Authorization", "Bearer valid-token"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void preflightRequestUsesCorsConfiguration() throws Exception {
         mockMvc.perform(options("/test/ping")
                         .header("Origin", "https://frontend.example")
@@ -66,6 +86,14 @@ class ApiSecurityConfigIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Access-Control-Allow-Origin", "https://frontend.example"))
                 .andExpect(header().string("Access-Control-Expose-Headers", "X-Request-Id, Idempotent-Replay"));
+    }
+
+    @Test
+    void preflightRequestRejectsUnknownOrigin() throws Exception {
+        mockMvc.perform(options("/test/ping")
+                        .header("Origin", "https://attacker.example")
+                        .header("Access-Control-Request-Method", "GET"))
+                .andExpect(status().isForbidden());
     }
 
     @SpringBootApplication(exclude = {

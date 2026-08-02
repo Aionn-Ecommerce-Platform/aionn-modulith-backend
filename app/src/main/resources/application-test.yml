@@ -1,5 +1,0 @@
-spring:
-  flyway:
-    locations:
-      - classpath:db
-      - classpath:db-demo

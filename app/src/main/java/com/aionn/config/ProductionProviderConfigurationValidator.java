@@ -1,5 +1,6 @@
 package com.aionn.config;
 
+import com.aionn.identity.application.policy.IdentityValidationConstants;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
@@ -7,8 +8,6 @@ import org.springframework.stereotype.Component;
 import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
-
-import static com.aionn.identity.application.policy.IdentityValidationConstants.JWT_SECRET_MIN_LENGTH;
 
 @Component
 @Profile("prod")
@@ -24,7 +23,8 @@ public class ProductionProviderConfigurationValidator {
     void validate() {
         List<String> errors = new ArrayList<>();
 
-        requireMinimumLength(errors, "IDENTITY_JWT_SECRET", "identity.jwt.secret", JWT_SECRET_MIN_LENGTH);
+        requireMinimumLength(errors, "IDENTITY_JWT_SECRET", "identity.jwt.secret",
+                IdentityValidationConstants.JWT_SECRET_MIN_LENGTH);
         requireRemoteProvider(errors, "identity.registration.captcha.provider", "google",
                 "CAPTCHA_GOOGLE_SECRET_KEY", "identity.registration.captcha.google-secret-key");
         requireRemoteProvider(errors, "identity.auth.social.google.provider", "remote",

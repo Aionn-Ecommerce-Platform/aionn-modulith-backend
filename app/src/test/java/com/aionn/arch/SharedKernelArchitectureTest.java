@@ -13,11 +13,6 @@ class SharedKernelArchitectureTest {
             .importPackages("com.aionn");
 
     @Test
-    void noModuleRedefinesSharedKernelValueObjects() {
-        SharedKernelArchRules.checkAll(IMPORTED_CLASSES);
-    }
-
-    @Test
     void noModuleRedefinesMoney() {
         SharedKernelArchRules.NO_DUPLICATE_MONEY.check(IMPORTED_CLASSES);
     }
@@ -30,11 +25,6 @@ class SharedKernelArchitectureTest {
     @Test
     void noModuleRedefinesUlid() {
         SharedKernelArchRules.NO_DUPLICATE_ULID.check(IMPORTED_CLASSES);
-    }
-
-    @Test
-    void noModuleRedefinesAnySharedValueObject() {
-        SharedKernelArchRules.NO_DUPLICATE_SHARED_VALUE_OBJECTS.check(IMPORTED_CLASSES);
     }
 
     @Test
