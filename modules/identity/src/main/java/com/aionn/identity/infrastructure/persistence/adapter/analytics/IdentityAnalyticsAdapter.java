@@ -35,7 +35,7 @@ public class IdentityAnalyticsAdapter
 
     @Override
     public UserAnalyticsResult getUserAnalytics(LocalDate from, LocalDate to) {
-        LocalDate safeTo = to == null ? LocalDate.now(clock.withZone(ZONE)) : to;
+        LocalDate safeTo = to == null ? clock.instant().atZone(ZONE).toLocalDate() : to;
         LocalDate safeFrom = from == null ? safeTo.minusDays(29) : from;
         validateRange(safeFrom, safeTo);
         Instant start = safeFrom.atStartOfDay(ZONE).toInstant();
@@ -75,7 +75,7 @@ public class IdentityAnalyticsAdapter
 
     @Override
     public KycAnalyticsResult getKycAnalytics(LocalDate from, LocalDate to) {
-        LocalDate safeTo = to == null ? LocalDate.now(clock.withZone(ZONE)) : to;
+        LocalDate safeTo = to == null ? clock.instant().atZone(ZONE).toLocalDate() : to;
         LocalDate safeFrom = from == null ? safeTo.minusDays(29) : from;
         validateRange(safeFrom, safeTo);
         Instant start = safeFrom.atStartOfDay(ZONE).toInstant();
@@ -120,7 +120,7 @@ public class IdentityAnalyticsAdapter
 
     @Override
     public FeedbackAnalyticsResult getFeedbackAnalytics(LocalDate from, LocalDate to) {
-        LocalDate safeTo = to == null ? LocalDate.now(clock.withZone(ZONE)) : to;
+        LocalDate safeTo = to == null ? clock.instant().atZone(ZONE).toLocalDate() : to;
         LocalDate safeFrom = from == null ? safeTo.minusDays(29) : from;
         validateRange(safeFrom, safeTo);
         Instant start = safeFrom.atStartOfDay(ZONE).toInstant();

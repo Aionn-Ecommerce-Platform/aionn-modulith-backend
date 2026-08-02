@@ -25,7 +25,7 @@ public class AuthSessionCleanupScheduler {
     @Scheduled(cron = "0 17 3 * * *")
     @SchedulerLock(name = "auth-session-cleanup", lockAtMostFor = "PT30M", lockAtLeastFor = "PT1M")
     public void purgeIdleSessions() {
-        Instant cutoff = Instant.now(clock).minus(RETENTION);
+        Instant cutoff = clock.instant().minus(RETENTION);
         int deleted = authSessionPersistence.deleteIdleBefore(cutoff);
         if (deleted > 0) {
             log.info("Purged {} auth sessions idle since before {}", deleted, cutoff);

@@ -49,7 +49,7 @@ public class RedisRegistrationSessionStore implements RegistrationSessionStorePo
         if (expiredAt == null) {
             return Duration.ofMinutes(5);
         }
-        long seconds = Duration.between(Instant.now(clock), expiredAt).getSeconds();
+        long seconds = Duration.between(clock.instant(), expiredAt).getSeconds();
         if (seconds <= 0) {
             return Duration.ofSeconds(1);
         }

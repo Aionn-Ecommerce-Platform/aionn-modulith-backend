@@ -5,7 +5,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
-import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,7 +27,7 @@ public class InMemoryRegistrationRateLimiter implements RegistrationRateLimiterP
         }
 
         String bucket = scope + ":" + key;
-        long now = Instant.now(clock).getEpochSecond();
+        long now = clock.instant().getEpochSecond();
         long threshold = now - windowSeconds;
 
         // Atomic load-or-create + prune inside a single ConcurrentHashMap slot
@@ -55,7 +54,7 @@ public class InMemoryRegistrationRateLimiter implements RegistrationRateLimiterP
     // accumulate stale entries.
     @org.springframework.scheduling.annotation.Scheduled(fixedDelayString = "PT10M")
     void evictDrainedBuckets() {
-        long threshold = Instant.now(clock).getEpochSecond() - 3600;
+        long threshold = clock.instant().getEpochSecond() - 3600;
         requestsByKey.entrySet().removeIf(entry -> {
             ArrayDeque<Long> q = entry.getValue();
             Long last = q.peekLast();

@@ -34,7 +34,7 @@ public class RedisUserOtpChallengeStore implements UserOtpChallengeStorePort {
         String key = key(challenge.userId(), challenge.purpose());
         String value = serialize(challenge);
 
-        Duration ttl = Duration.between(Instant.now(clock), challenge.expiresAt())
+        Duration ttl = Duration.between(clock.instant(), challenge.expiresAt())
                 .plus(EXPIRY_BUFFER);
         if (ttl.isNegative() || ttl.isZero()) {
             ttl = Duration.ofMinutes(10);

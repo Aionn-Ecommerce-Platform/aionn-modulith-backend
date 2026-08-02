@@ -70,7 +70,7 @@ public class AuthTokenResponseHandler {
     }
 
     private ResponseCookie buildRefreshCookie(String refreshToken, Instant expiresAt) {
-        long maxAgeSeconds = Duration.between(Instant.now(clock), expiresAt).getSeconds();
+        long maxAgeSeconds = Duration.between(clock.instant(), expiresAt).getSeconds();
         if (maxAgeSeconds < 0) {
             maxAgeSeconds = 0;
         }

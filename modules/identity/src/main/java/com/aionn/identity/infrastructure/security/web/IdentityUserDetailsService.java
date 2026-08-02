@@ -13,7 +13,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
-import java.time.Instant;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -36,7 +35,7 @@ public class IdentityUserDetailsService implements UserDetailsService {
                                 .collect(Collectors.toSet());
 
                 boolean accountLocked = user.getLockedUntil() != null
-                                && user.getLockedUntil().isAfter(Instant.now(clock));
+                                && user.getLockedUntil().isAfter(clock.instant());
                 boolean enabled = user.getStatus() == UserStatus.ACTIVE;
 
                 return User.builder()
