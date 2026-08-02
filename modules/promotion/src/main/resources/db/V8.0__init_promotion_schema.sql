@@ -1,10 +1,3 @@
--- -----------------------------------------------------------------------------
--- Squashed from V8.0__init_promotion_schema.sql
--- -----------------------------------------------------------------------------
--- =====================================================================
--- PROMOTION MODULE - INIT SCHEMA
--- =====================================================================
-
 CREATE TABLE promotion_campaigns (
     campaign_id            VARCHAR(50) PRIMARY KEY,
     name                   VARCHAR(150) NOT NULL,
@@ -69,13 +62,6 @@ CREATE UNIQUE INDEX idx_user_vouchers_user_voucher ON user_vouchers(user_id, vou
 CREATE INDEX idx_user_vouchers_status_expires      ON user_vouchers(status, reserved_expires_at);
 CREATE INDEX idx_user_vouchers_order               ON user_vouchers(reserved_order_id);
 
--- -----------------------------------------------------------------------------
--- Squashed from V8.2__create_promotion_banners.sql
--- -----------------------------------------------------------------------------
--- =====================================================================
--- PROMOTION MODULE - CREATE PROMOTION BANNERS
--- =====================================================================
-
 CREATE TABLE promotion_banners (
     banner_id      VARCHAR(50) PRIMARY KEY,
     title          VARCHAR(150) NOT NULL,
@@ -90,13 +76,8 @@ CREATE TABLE promotion_banners (
 
 CREATE INDEX idx_promotion_banners_active ON promotion_banners(active, display_order);
 
--- -----------------------------------------------------------------------------
--- Squashed from V8.4__flash_sale_registrations.sql
--- -----------------------------------------------------------------------------
--- =====================================================================
 -- FLASH SALE REGISTRATIONS — merchant signs a SKU into a FLASH_SALE
 -- campaign; admin approves so the platform stays curated.
--- =====================================================================
 
 CREATE TABLE flash_sale_registrations (
     registration_id   VARCHAR(50)  PRIMARY KEY,
@@ -128,17 +109,6 @@ CREATE INDEX idx_flash_sale_merchant
 CREATE UNIQUE INDEX uq_flash_sale_campaign_sku
     ON flash_sale_registrations(campaign_id, sku_id);
 
--- -----------------------------------------------------------------------------
--- Squashed from V8.5__seed_flash_sale_vouchers.sql
--- -----------------------------------------------------------------------------
--- =====================================================================
--- V8.5 — Seed vouchers for Flash Sale campaign + fix CAMP_MEGA status
--- =====================================================================
-
--- Fix CAMP_MEGA: seed data used 'ACTIVE' but the domain enum is 'RUNNING'
--- -----------------------------------------------------------------------------
--- Squashed from V8.6__add_shop_vouchers.sql
--- -----------------------------------------------------------------------------
 -- Platform vouchers belong to campaigns; shop vouchers belong to merchants.
 ALTER TABLE vouchers
     ADD COLUMN scope VARCHAR(20) NOT NULL DEFAULT 'PLATFORM',
@@ -154,12 +124,3 @@ ALTER TABLE vouchers
     );
 
 CREATE INDEX idx_vouchers_merchant ON vouchers(merchant_id);
-
--- -----------------------------------------------------------------------------
--- Squashed from V8.7__seed_more_vouchers.sql
--- -----------------------------------------------------------------------------
--- =====================================================================
--- V8.7 — Seed more platform and shop vouchers
--- =====================================================================
-
--- Platform Vouchers for CAMP_MEGA

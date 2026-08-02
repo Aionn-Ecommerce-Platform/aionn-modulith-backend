@@ -173,7 +173,6 @@ CREATE TABLE product_sold_counters (
     CONSTRAINT chk_sold_count_nonneg CHECK (sold_count >= 0)
 );
 
-
 ALTER TABLE merchants ADD COLUMN province_code VARCHAR(10);
 ALTER TABLE merchants ADD COLUMN province_name VARCHAR(100);
 CREATE INDEX idx_merchants_province ON merchants(province_code);

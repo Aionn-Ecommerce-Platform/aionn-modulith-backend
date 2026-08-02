@@ -1,10 +1,3 @@
--- Development/test fixtures. Never include classpath:db-demo in production.
-
-
-
--- -----------------------------------------------------------------------------
--- Squashed from V4.1__seed_ordering_data.sql
--- -----------------------------------------------------------------------------
 -- Seed Orders
 
 INSERT INTO orders (order_id, user_id, merchant_id, currency, total_amount, shipping_fee, address_full_name, address_phone, address_line, address_ward_code, address_district_code, address_province_code, address_country_code, status, reason_code, version, created_at, updated_at, completed_at, cancelled_at) VALUES
@@ -508,7 +501,6 @@ INSERT INTO orders (order_id, user_id, merchant_id, currency, total_amount, ship
 ('ORD_0498', '01KV05RTCKZ9MMZRZJZ60VST57', 'MER_009', 'VND', 530000.0, 30000.0, 'Customer 0498', '+8499999999', '303 Main St', 'VN-SG-Q1-BN', 'VN-SG-Q1', 'VN-SG', 'VN', 'PENDING', NULL, 0, '2026-05-19 19:42:22', '2026-05-19 19:42:22', NULL, NULL),
 ('ORD_0499', '01KV05RTEGM1JETXB6VTE5ZEW3', 'MER_005', 'VND', 17750000.0, 30000.0, 'Customer 0499', '+8499999999', '96 Main St', 'VN-SG-Q1-BT', 'VN-HN-HK', 'VN-HN', 'VN', 'PREPARING', NULL, 0, '2026-04-18 15:42:22', '2026-04-18 15:42:22', NULL, NULL),
 ('ORD_0500', '01KV05RTFBHFA44M0RJQCQB8Z3', 'MER_005', 'VND', 1470000.0, 30000.0, 'Customer 0500', '+8499999999', '303 Main St', 'VN-HN-BA-PX', 'VN-HN-BA', 'VN-HN', 'VN', 'PREPARING', NULL, 0, '2026-05-02 15:42:22', '2026-05-02 15:42:22', NULL, NULL);
-
 
 -- Seed Order Items
 
@@ -1014,7 +1006,6 @@ INSERT INTO order_items (order_id, sku_id, qty, unit_price, warehouse_id) VALUES
 ('ORD_0260', 'SKU_00887', 1, 18000000.0, 'WH_001'),
 ('ORD_0261', 'SKU_00289', 2, 14000000.0, 'WH_006');
 
-
 INSERT INTO order_items (order_id, sku_id, qty, unit_price, warehouse_id) VALUES
 ('ORD_0261', 'SKU_00432', 2, 22000000.0, 'WH_006'),
 ('ORD_0262', 'SKU_00037', 2, 760000.0, 'WH_014'),
@@ -1487,118 +1478,3 @@ INSERT INTO order_items (order_id, sku_id, qty, unit_price, warehouse_id) VALUES
 ('ORD_0499', 'SKU_00024', 2, 500000.0, 'WH_005'),
 ('ORD_0500', 'SKU_01469', 2, 200000.0, 'WH_005'),
 ('ORD_0500', 'SKU_01100', 2, 520000.0, 'WH_005');
-
-
-DO $$
-DECLARE
-    merchants    TEXT[] := ARRAY['MER_001','MER_002','MER_003','MER_004','MER_005','MER_006','MER_007','MER_008','MER_009','MER_010','MER_011','MER_012','MER_013','MER_014','MER_015'];
-    statuses     TEXT[] := ARRAY['PENDING','APPROVED','PREPARING','SHIPPED','COMPLETED','COMPLETED','COMPLETED','COMPLETED','COMPLETED','CANCELLED'];
-    buyers       TEXT[];
-    v_merchant_id  TEXT;
-    v_buyer_id     TEXT;
-    v_buyer_name   TEXT;
-    v_buyer_phone  TEXT;
-    v_sku_id       TEXT;
-    new_order_id TEXT;
-    new_status   TEXT;
-    base_total   NUMERIC(18,2);
-    item_qty     INT;
-    item_price   NUMERIC(18,2);
-    n_items      INT;
-    created_ts   TIMESTAMPTZ;
-    updated_ts   TIMESTAMPTZ;
-    completed_ts TIMESTAMPTZ;
-    cancelled_ts TIMESTAMPTZ;
-    i            INT;
-    j            INT;
-    seq          INT := 1000;
-    sku_pool     TEXT[];
-BEGIN
-    -- Collect buyer user_ids from the existing seed (anyone who appears in orders today)
-    SELECT array_agg(DISTINCT user_id) INTO buyers
-    FROM orders;
-    IF buyers IS NULL OR array_length(buyers, 1) IS NULL THEN
-        RAISE NOTICE 'No buyers found; skipping seed.';
-        RETURN;
-    END IF;
-
-    -- Build a per-merchant SKU pool from products + variants
-    FOREACH v_merchant_id IN ARRAY merchants LOOP
-        SELECT array_agg(pv.sku_id) INTO sku_pool
-        FROM products p
-        JOIN product_variants pv ON pv.product_id = p.product_id
-        WHERE p.merchant_id = v_merchant_id
-          AND p.status = 'PUBLISHED'
-        LIMIT 200;
-
-        IF sku_pool IS NULL OR array_length(sku_pool, 1) IS NULL THEN
-            CONTINUE;
-        END IF;
-
-        FOR i IN 1..30 LOOP
-            seq := seq + 1;
-            new_order_id := 'ORD_S' || lpad(seq::text, 5, '0');
-
-            IF EXISTS (SELECT 1 FROM orders WHERE order_id = new_order_id) THEN
-                CONTINUE;
-            END IF;
-
-            new_status := statuses[1 + (random() * (array_length(statuses,1) - 1))::int];
-            v_buyer_id := buyers[1 + (random() * (array_length(buyers,1) - 1))::int];
-            SELECT display_name, phone INTO v_buyer_name, v_buyer_phone
-            FROM users WHERE user_id = v_buyer_id;
-            v_buyer_name := COALESCE(v_buyer_name, 'Customer ' || substring(v_buyer_id, 1, 6));
-            v_buyer_phone := COALESCE(v_buyer_phone, '+84999000000');
-
-            IF random() < 0.7 THEN
-                created_ts := NOW() - (random() * INTERVAL '14 days');
-            ELSE
-                created_ts := NOW() - (INTERVAL '14 days' + random() * INTERVAL '46 days');
-            END IF;
-            updated_ts := created_ts + INTERVAL '1 hour';
-            completed_ts := NULL;
-            cancelled_ts := NULL;
-            IF new_status = 'COMPLETED' THEN
-                completed_ts := created_ts + (2 + random() * 5) * INTERVAL '1 day';
-                updated_ts := completed_ts;
-            ELSIF new_status = 'CANCELLED' THEN
-                cancelled_ts := created_ts + random() * INTERVAL '1 day';
-                updated_ts := cancelled_ts;
-            END IF;
-
-            n_items := 1 + (random() * 3)::int;
-            base_total := 30000;
-
-            INSERT INTO orders (
-                order_id, user_id, merchant_id, currency, total_amount, shipping_fee,
-                address_full_name, address_phone, address_line,
-                address_ward_code, address_district_code, address_province_code, address_country_code,
-                status, version, created_at, updated_at, completed_at, cancelled_at
-            ) VALUES (
-                new_order_id, v_buyer_id, v_merchant_id, 'VND', 0, 30000,
-                v_buyer_name, v_buyer_phone, 'Số nhà 123 đường Demo',
-                'VN-SG-Q1-BT', 'VN-SG-Q1', 'VN-SG', 'VN',
-                new_status, 0, created_ts, updated_ts, completed_ts, cancelled_ts
-            );
-
-            FOR j IN 1..n_items LOOP
-                v_sku_id := sku_pool[1 + (random() * (array_length(sku_pool,1) - 1))::int];
-                item_qty := 1 + (random() * 2)::int;
-                SELECT pv.price INTO item_price
-                FROM product_variants pv
-                WHERE pv.sku_id = v_sku_id
-                LIMIT 1;
-                IF item_price IS NULL THEN item_price := 150000; END IF;
-
-                INSERT INTO order_items (order_id, sku_id, qty, unit_price, warehouse_id)
-                VALUES (new_order_id, v_sku_id, item_qty, item_price, 'WH_001')
-                ON CONFLICT (order_id, sku_id)
-                DO UPDATE SET qty = order_items.qty + EXCLUDED.qty;
-
-                base_total := base_total + item_price * item_qty;
-            END LOOP;
-
-            UPDATE orders SET total_amount = base_total WHERE order_id = new_order_id;
-        END LOOP;
-    END LOOP;
-END $$;

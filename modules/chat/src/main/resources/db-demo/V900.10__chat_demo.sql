@@ -1,125 +1,55 @@
--- Development/test fixtures. Never include classpath:db-demo in production.
+INSERT INTO chat_conversations (
+    conversation_id, buyer_id, merchant_id, participants,
+    last_message_id, last_message_preview, last_message_type,
+    last_message_sender_id, last_message_at, is_archived, version,
+    created_at, updated_at
+) VALUES
+('CONV_DEMO_001', '01KV05RTC7NA4KZMMP8KXX7461', 'MER_001', '["01KV05RTC7NA4KZMMP8KXX7461","MER_001"]'::jsonb,
+ 'MSG_DEMO_004', 'Cảm ơn shop, mình sẽ đặt hàng ngay.', 'TEXT', '01KV05RTC7NA4KZMMP8KXX7461', NOW() - INTERVAL '1 hour', FALSE, 0,
+ NOW() - INTERVAL '3 hours', NOW() - INTERVAL '1 hour'),
+('CONV_DEMO_002', '01KV05RTC836YVQ3DF9FZFT2A7', 'MER_002', '["01KV05RTC836YVQ3DF9FZFT2A7","MER_002"]'::jsonb,
+ 'MSG_DEMO_008', 'Shop đã gửi ảnh thực tế, bạn kiểm tra giúp nhé.', 'TEXT', 'MER_002', NOW() - INTERVAL '2 hours', FALSE, 0,
+ NOW() - INTERVAL '6 hours', NOW() - INTERVAL '2 hours'),
+('CONV_DEMO_003', '01KV05RTC9AYX7XR183X8EQBF0', 'MER_003', '["01KV05RTC9AYX7XR183X8EQBF0","MER_003"]'::jsonb,
+ 'MSG_DEMO_012', 'Đơn sẽ được bàn giao cho đơn vị vận chuyển trong hôm nay.', 'TEXT', 'MER_003', NOW() - INTERVAL '30 minutes', FALSE, 0,
+ NOW() - INTERVAL '1 day', NOW() - INTERVAL '30 minutes');
 
--- ============================================================================
--- V10.2 — Seed chat conversations + messages so merchant inbox has activity.
--- Pairs random buyers with each merchant and writes a 3-5 message thread.
--- Skip if conversation already exists (unique on buyer_id, merchant_id).
--- ============================================================================
+INSERT INTO chat_messages (
+    message_id, conversation_id, sender_id, sender_role, type, body,
+    status, delivered_to, read_by, is_recalled, version, sent_at, updated_at
+) VALUES
+('MSG_DEMO_001', 'CONV_DEMO_001', '01KV05RTC7NA4KZMMP8KXX7461', 'BUYER', 'TEXT', 'Shop ơi, sản phẩm này còn hàng không?',
+ 'READ', '["MER_001"]'::jsonb, '["MER_001"]'::jsonb, FALSE, 0, NOW() - INTERVAL '3 hours', NOW() - INTERVAL '3 hours'),
+('MSG_DEMO_002', 'CONV_DEMO_001', 'MER_001', 'MERCHANT', 'TEXT', 'Chào bạn, sản phẩm hiện vẫn còn hàng.',
+ 'READ', '["01KV05RTC7NA4KZMMP8KXX7461"]'::jsonb, '["01KV05RTC7NA4KZMMP8KXX7461"]'::jsonb, FALSE, 0, NOW() - INTERVAL '2 hours 40 minutes', NOW() - INTERVAL '2 hours 40 minutes'),
+('MSG_DEMO_003', 'CONV_DEMO_001', '01KV05RTC7NA4KZMMP8KXX7461', 'BUYER', 'TEXT', 'Thời gian giao đến Hà Nội khoảng bao lâu?',
+ 'READ', '["MER_001"]'::jsonb, '["MER_001"]'::jsonb, FALSE, 0, NOW() - INTERVAL '2 hours', NOW() - INTERVAL '2 hours'),
+('MSG_DEMO_004', 'CONV_DEMO_001', '01KV05RTC7NA4KZMMP8KXX7461', 'BUYER', 'TEXT', 'Cảm ơn shop, mình sẽ đặt hàng ngay.',
+ 'SENT', '["MER_001"]'::jsonb, '[]'::jsonb, FALSE, 0, NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 hour'),
 
-DO $$
-DECLARE
-    merchants TEXT[] := ARRAY['MER_001','MER_002','MER_003','MER_004','MER_005','MER_006','MER_007','MER_008','MER_009','MER_010','MER_011','MER_012','MER_013','MER_014','MER_015'];
-    buyers TEXT[];
-    v_merchant_id TEXT;
-    v_buyer_id TEXT;
-    new_conv_id TEXT;
-    new_msg_id TEXT;
-    last_preview TEXT;
-    last_sender TEXT;
-    last_at TIMESTAMPTZ;
-    conv_seq INT := 1000;
-    msg_seq INT := 1000;
-    i INT;
-    j INT;
-    n_msgs INT;
-    msg_time TIMESTAMPTZ;
-    msg_body TEXT;
-    msg_sender TEXT;
-    msg_role TEXT;
-    buyer_lines TEXT[] := ARRAY[
-        'Shop ơi sản phẩm còn không ạ?',
-        'Mình muốn đặt 2 cái, ship Hà Nội bao lâu?',
-        'Có size lớn hơn không shop?',
-        'Cho mình xin thêm ảnh thực tế với',
-        'Bên mình bảo hành bao lâu vậy?',
-        'Ok mình chốt đơn, cảm ơn shop nhé!'
-    ];
-    seller_lines TEXT[] := ARRAY[
-        'Dạ shop còn hàng nhé, anh/chị đặt giúp ạ.',
-        'Ship HN khoảng 1-2 ngày, sẽ có ngay khi đặt.',
-        'Dạ shop có nhiều size, anh/chị xem chi tiết ở phần biến thể nhé.',
-        'Em gửi thêm ảnh ngay, anh/chị check tin nhắn tiếp theo nhé.',
-        'Bảo hành chính hãng 12 tháng tại các trung tâm nhé.',
-        'Em cảm ơn anh/chị, đơn sẽ được xử lý trong hôm nay ạ!'
-    ];
-BEGIN
-    SELECT array_agg(DISTINCT user_id) INTO buyers FROM orders;
-    IF buyers IS NULL OR array_length(buyers, 1) IS NULL THEN
-        RAISE NOTICE 'No buyers found; skipping chat seed.';
-        RETURN;
-    END IF;
+('MSG_DEMO_005', 'CONV_DEMO_002', '01KV05RTC836YVQ3DF9FZFT2A7', 'BUYER', 'TEXT', 'Cho mình xin thêm ảnh thực tế của sản phẩm.',
+ 'READ', '["MER_002"]'::jsonb, '["MER_002"]'::jsonb, FALSE, 0, NOW() - INTERVAL '6 hours', NOW() - INTERVAL '6 hours'),
+('MSG_DEMO_006', 'CONV_DEMO_002', 'MER_002', 'MERCHANT', 'TEXT', 'Được bạn nhé, shop đang chuẩn bị ảnh.',
+ 'READ', '["01KV05RTC836YVQ3DF9FZFT2A7"]'::jsonb, '["01KV05RTC836YVQ3DF9FZFT2A7"]'::jsonb, FALSE, 0, NOW() - INTERVAL '5 hours', NOW() - INTERVAL '5 hours'),
+('MSG_DEMO_007', 'CONV_DEMO_002', '01KV05RTC836YVQ3DF9FZFT2A7', 'BUYER', 'TEXT', 'Mình cần xem phần màu sắc và kích thước.',
+ 'READ', '["MER_002"]'::jsonb, '["MER_002"]'::jsonb, FALSE, 0, NOW() - INTERVAL '4 hours', NOW() - INTERVAL '4 hours'),
+('MSG_DEMO_008', 'CONV_DEMO_002', 'MER_002', 'MERCHANT', 'TEXT', 'Shop đã gửi ảnh thực tế, bạn kiểm tra giúp nhé.',
+ 'DELIVERED', '["01KV05RTC836YVQ3DF9FZFT2A7"]'::jsonb, '[]'::jsonb, FALSE, 0, NOW() - INTERVAL '2 hours', NOW() - INTERVAL '2 hours'),
 
-    FOREACH v_merchant_id IN ARRAY merchants LOOP
-        -- 6 conversations per merchant
-        FOR i IN 1..6 LOOP
-            v_buyer_id := buyers[1 + (random() * (array_length(buyers,1) - 1))::int];
-            conv_seq := conv_seq + 1;
-            new_conv_id := 'CONV_S' || lpad(conv_seq::text, 5, '0');
+('MSG_DEMO_009', 'CONV_DEMO_003', '01KV05RTC9AYX7XR183X8EQBF0', 'BUYER', 'TEXT', 'Đơn hàng của mình đã được chuẩn bị chưa shop?',
+ 'READ', '["MER_003"]'::jsonb, '["MER_003"]'::jsonb, FALSE, 0, NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
+('MSG_DEMO_010', 'CONV_DEMO_003', 'MER_003', 'MERCHANT', 'TEXT', 'Shop đã đóng gói xong và đang chờ bàn giao.',
+ 'READ', '["01KV05RTC9AYX7XR183X8EQBF0"]'::jsonb, '["01KV05RTC9AYX7XR183X8EQBF0"]'::jsonb, FALSE, 0, NOW() - INTERVAL '20 hours', NOW() - INTERVAL '20 hours'),
+('MSG_DEMO_011', 'CONV_DEMO_003', '01KV05RTC9AYX7XR183X8EQBF0', 'BUYER', 'TEXT', 'Khi nào đơn vị vận chuyển nhận được hàng?',
+ 'READ', '["MER_003"]'::jsonb, '["MER_003"]'::jsonb, FALSE, 0, NOW() - INTERVAL '2 hours', NOW() - INTERVAL '2 hours'),
+('MSG_DEMO_012', 'CONV_DEMO_003', 'MER_003', 'MERCHANT', 'TEXT', 'Đơn sẽ được bàn giao cho đơn vị vận chuyển trong hôm nay.',
+ 'SENT', '["01KV05RTC9AYX7XR183X8EQBF0"]'::jsonb, '[]'::jsonb, FALSE, 0, NOW() - INTERVAL '30 minutes', NOW() - INTERVAL '30 minutes');
 
-            -- Skip if same buyer↔merchant pair already has a conversation
-            IF EXISTS (
-                SELECT 1 FROM chat_conversations c
-                 WHERE c.buyer_id = v_buyer_id AND c.merchant_id = v_merchant_id
-            ) THEN
-                CONTINUE;
-            END IF;
-
-            n_msgs := 3 + (random() * 3)::int;
-            msg_time := NOW() - (random() * INTERVAL '10 days');
-            last_preview := NULL;
-            last_sender := NULL;
-            last_at := NULL;
-
-            INSERT INTO chat_conversations (
-                conversation_id, buyer_id, merchant_id, participants,
-                is_archived, version, created_at, updated_at
-            ) VALUES (
-                new_conv_id, v_buyer_id, v_merchant_id,
-                jsonb_build_array(v_buyer_id, v_merchant_id),
-                FALSE, 0, msg_time, msg_time
-            );
-
-            FOR j IN 1..n_msgs LOOP
-                msg_seq := msg_seq + 1;
-                new_msg_id := 'MSG_S' || lpad(msg_seq::text, 6, '0');
-
-                IF j % 2 = 1 THEN
-                    msg_role := 'BUYER';
-                    msg_sender := v_buyer_id;
-                    msg_body := buyer_lines[1 + (random() * (array_length(buyer_lines,1) - 1))::int];
-                ELSE
-                    msg_role := 'MERCHANT';
-                    msg_sender := v_merchant_id;
-                    msg_body := seller_lines[1 + (random() * (array_length(seller_lines,1) - 1))::int];
-                END IF;
-
-                msg_time := msg_time + (5 + random() * 120) * INTERVAL '1 minute';
-
-                INSERT INTO chat_messages (
-                    message_id, conversation_id, sender_id, sender_role,
-                    type, body, status, delivered_to, read_by,
-                    is_recalled, version, sent_at, updated_at
-                ) VALUES (
-                    new_msg_id, new_conv_id, msg_sender, msg_role,
-                    'TEXT', msg_body, 'READ',
-                    jsonb_build_array(CASE WHEN msg_role = 'BUYER' THEN v_merchant_id ELSE v_buyer_id END),
-                    jsonb_build_array(CASE WHEN msg_role = 'BUYER' THEN v_merchant_id ELSE v_buyer_id END),
-                    FALSE, 0, msg_time, msg_time
-                );
-
-                last_preview := msg_body;
-                last_sender := msg_sender;
-                last_at := msg_time;
-            END LOOP;
-
-            UPDATE chat_conversations
-               SET last_message_id = new_msg_id,
-                   last_message_preview = last_preview,
-                   last_message_type = 'TEXT',
-                   last_message_sender_id = last_sender,
-                   last_message_at = last_at,
-                   updated_at = last_at
-             WHERE conversation_id = new_conv_id;
-        END LOOP;
-    END LOOP;
-END $$;
+INSERT INTO chat_merchant_auto_replies (
+    merchant_id, is_enabled, greeting, away_message,
+    working_hour_start, working_hour_end, working_days, timezone,
+    version, created_at, updated_at
+) VALUES
+('MER_001', TRUE, 'Xin chào! Shop MER_001 đã nhận được tin nhắn của bạn.', 'Shop sẽ phản hồi vào giờ làm việc tiếp theo.', '08:00', '18:00', '[1,2,3,4,5,6]'::jsonb, 'Asia/Ho_Chi_Minh', 0, NOW(), NOW()),
+('MER_002', TRUE, 'Xin chào! Shop MER_002 có thể hỗ trợ gì cho bạn?', 'Shop hiện ngoài giờ làm việc và sẽ phản hồi sớm.', '09:00', '19:00', '[1,2,3,4,5,6]'::jsonb, 'Asia/Ho_Chi_Minh', 0, NOW(), NOW()),
+('MER_003', TRUE, 'Cảm ơn bạn đã liên hệ shop MER_003.', 'Tin nhắn đã được ghi nhận. Shop sẽ phản hồi vào ngày mai.', '08:30', '17:30', '[1,2,3,4,5]'::jsonb, 'Asia/Ho_Chi_Minh', 0, NOW(), NOW());

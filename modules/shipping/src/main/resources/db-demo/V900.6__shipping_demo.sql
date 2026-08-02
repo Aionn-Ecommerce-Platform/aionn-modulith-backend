@@ -1,2 +1,33 @@
--- Development/test fixtures. Never include classpath:db-demo in production.
-
+INSERT INTO shipments (
+    shipment_id, order_id, merchant_id, user_id,
+    tracking_code, carrier_order_id, weight_gram,
+    to_full_name, to_phone, to_address_line,
+    to_ward_code, to_district_id, to_province_code, to_country_code,
+    shipping_fee, currency, current_location,
+    expected_delivery_date, status, version,
+    created_at, updated_at, picked_at, delivered_at, cancelled_at, returned_at
+) VALUES
+('SHIP_DEMO_001', 'ORD_0001', 'MER_011', '01KV05RTDBF3XFEWCW3R75YKT0',
+ 'DEMO_DELIVERED_001', 'GHN_DEMO_001', 1200,
+ 'Buyer 037', '+8490100037', '123 Nguyễn Huệ, Quận 1',
+ '20308', '1442', '79', 'VN', 30000, 'VND', 'Thành phố Hồ Chí Minh',
+ NOW() - INTERVAL '1 day', 'DELIVERED', 0,
+ NOW() - INTERVAL '5 days', NOW() - INTERVAL '2 days', NOW() - INTERVAL '4 days', NOW() - INTERVAL '2 days', NULL, NULL),
+('SHIP_DEMO_002', 'ORD_0002', 'MER_011', '01KV05RTFBHFA44M0RJQCQB8Z3',
+ 'DEMO_DELIVERED_002', 'GHN_DEMO_002', 800,
+ 'Buyer 100', '+8490100100', '45 Lê Lợi, Quận 1',
+ '20311', '1442', '79', 'VN', 30000, 'VND', 'Thành phố Hồ Chí Minh',
+ NOW() - INTERVAL '2 days', 'DELIVERED', 0,
+ NOW() - INTERVAL '7 days', NOW() - INTERVAL '3 days', NOW() - INTERVAL '6 days', NOW() - INTERVAL '3 days', NULL, NULL),
+('SHIP_DEMO_003', 'ORD_0010', 'MER_004', '01KV05RTC7NA4KZMMP8KXX7461',
+ 'DEMO_CANCELLED_003', 'GHN_DEMO_003', 1500,
+ 'Buyer 001', '+8490100001', '78 Trần Hưng Đạo, Hoàn Kiếm',
+ '00127', '21', '01', 'VN', 40000, 'VND', NULL,
+ NOW() + INTERVAL '2 days', 'CANCELLED', 0,
+ NOW() - INTERVAL '3 days', NOW() - INTERVAL '2 days', NULL, NULL, NOW() - INTERVAL '2 days', NULL),
+('SHIP_DEMO_004', 'ORD_0004', 'MER_001', '01KV05RTEJ3E9608X7KXVBDXQ1',
+ 'DEMO_RETURNED_004', 'GHN_DEMO_004', 2100,
+ 'Buyer 075', '+8490100075', '12 Bạch Đằng, Hải Châu',
+ '20195', '1526', '48', 'VN', 40000, 'VND', 'Đà Nẵng',
+ NOW() - INTERVAL '2 days', 'RETURNED', 0,
+ NOW() - INTERVAL '8 days', NOW() - INTERVAL '1 day', NOW() - INTERVAL '7 days', NULL, NULL, NOW() - INTERVAL '1 day');

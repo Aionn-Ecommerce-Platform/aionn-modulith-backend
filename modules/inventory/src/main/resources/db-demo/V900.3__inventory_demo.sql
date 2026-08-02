@@ -1,10 +1,3 @@
--- Development/test fixtures. Never include classpath:db-demo in production.
-
-
-
--- -----------------------------------------------------------------------------
--- Squashed from V3.1__seed_inventory_data.sql
--- -----------------------------------------------------------------------------
 -- Seed Warehouses
 
 INSERT INTO warehouses (warehouse_id, merchant_id, address, priority_level, status, version, created_at, updated_at) VALUES
@@ -23,7 +16,6 @@ INSERT INTO warehouses (warehouse_id, merchant_id, address, priority_level, stat
 ('WH_013', 'MER_013', '112 Le Loi Street, Dist 1, HCMC, VN', 1, 'ACTIVE', 0, NOW(), NOW()),
 ('WH_014', 'MER_014', '113 Le Loi Street, Dist 1, HCMC, VN', 1, 'ACTIVE', 0, NOW(), NOW()),
 ('WH_015', 'MER_015', '114 Le Loi Street, Dist 1, HCMC, VN', 1, 'ACTIVE', 0, NOW(), NOW());
-
 
 -- Seed Inventory Items
 
@@ -529,7 +521,6 @@ INSERT INTO inventory_items (sku_id, warehouse_id, physical_qty, available_qty, 
 ('SKU_00499', 'WH_001', 119, 119, 17, FALSE, 0, NOW(), NOW()),
 ('SKU_00500', 'WH_002', 312, 312, 10, FALSE, 0, NOW(), NOW());
 
-
 INSERT INTO inventory_items (sku_id, warehouse_id, physical_qty, available_qty, safety_stock_qty, is_locked, version, created_at, updated_at) VALUES
 ('SKU_00501', 'WH_003', 202, 202, 15, FALSE, 0, NOW(), NOW()),
 ('SKU_00502', 'WH_004', 549, 549, 11, FALSE, 0, NOW(), NOW()),
@@ -1032,7 +1023,6 @@ INSERT INTO inventory_items (sku_id, warehouse_id, physical_qty, available_qty, 
 ('SKU_00999', 'WH_015', 773, 773, 25, FALSE, 0, NOW(), NOW()),
 ('SKU_01000', 'WH_001', 701, 701, 16, FALSE, 0, NOW(), NOW());
 
-
 INSERT INTO inventory_items (sku_id, warehouse_id, physical_qty, available_qty, safety_stock_qty, is_locked, version, created_at, updated_at) VALUES
 ('SKU_01001', 'WH_001', 596, 596, 26, FALSE, 0, NOW(), NOW()),
 ('SKU_01002', 'WH_002', 385, 385, 26, FALSE, 0, NOW(), NOW()),
@@ -1512,10 +1502,6 @@ INSERT INTO inventory_items (sku_id, warehouse_id, physical_qty, available_qty, 
 ('SKU_01476', 'WH_010', 634, 634, 23, FALSE, 0, NOW(), NOW()),
 ('SKU_01477', 'WH_011', 271, 271, 25, FALSE, 0, NOW(), NOW());
 
-
--- -----------------------------------------------------------------------------
--- Squashed from V3.2__refine_inventory_data.sql
--- -----------------------------------------------------------------------------
 -- Seed inventory data for new product variants PR_0001 - PR_0005
 
 DELETE FROM inventory_items WHERE sku_id IN (
@@ -1525,7 +1511,6 @@ DELETE FROM inventory_items WHERE sku_id IN (
   'SKU_PR0004_S_GRY', 'SKU_PR0004_M_GRY', 'SKU_PR0004_L_BLK',
   'SKU_PR0005_256_BLK', 'SKU_PR0005_512_BLK', 'SKU_PR0005_256_GRN'
 );
-
 
 INSERT INTO inventory_items (sku_id, warehouse_id, physical_qty, available_qty, safety_stock_qty, is_locked, version, created_at, updated_at) VALUES
 -- PR_0001 in WH_002
