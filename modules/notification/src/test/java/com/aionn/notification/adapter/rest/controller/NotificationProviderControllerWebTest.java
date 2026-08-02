@@ -1,7 +1,7 @@
 package com.aionn.notification.adapter.rest.controller;
 
 import com.aionn.notification.adapter.rest.exception.NotificationExceptionHandler;
-import com.aionn.notification.adapter.rest.mapper.provider.NotificationProviderDtoMapperImpl;
+import com.aionn.notification.adapter.rest.mapper.provider.NotificationProviderDtoMapper;
 import com.aionn.notification.adapter.rest.support.session.CurrentAdminIdArgumentResolver;
 import com.aionn.notification.application.dto.analytics.result.AnalyticsResult;
 import com.aionn.notification.application.dto.provider.command.ProviderCommands;
@@ -17,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mapstruct.factory.Mappers;
 import tools.jackson.databind.json.JsonMapper;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -60,7 +61,8 @@ class NotificationProviderControllerWebTest {
         void setUp() {
                 NotificationProviderController controller = new NotificationProviderController(
                                 configureProviderInputPort, updateProviderInputPort, listProvidersInputPort,
-                                getCampaignAnalyticsInputPort, new NotificationProviderDtoMapperImpl());
+                                getCampaignAnalyticsInputPort,
+                                Mappers.getMapper(NotificationProviderDtoMapper.class));
 
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new NotificationExceptionHandler())

@@ -1,7 +1,7 @@
 package com.aionn.notification.adapter.rest.controller;
 
 import com.aionn.notification.adapter.rest.exception.NotificationExceptionHandler;
-import com.aionn.notification.adapter.rest.mapper.template.NotificationTemplateDtoMapperImpl;
+import com.aionn.notification.adapter.rest.mapper.template.NotificationTemplateDtoMapper;
 import com.aionn.notification.application.dto.template.command.TemplateCommands;
 import com.aionn.notification.application.dto.template.result.TemplateResult;
 import com.aionn.notification.application.port.in.template.CreateTemplateInputPort;
@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mapstruct.factory.Mappers;
 import tools.jackson.databind.json.JsonMapper;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
@@ -53,7 +54,8 @@ class NotificationTemplateControllerWebTest {
         void setUp() {
                 NotificationTemplateController controller = new NotificationTemplateController(
                                 createTemplateInputPort, updateTemplateInputPort, getTemplateInputPort,
-                                listTemplatesInputPort, new NotificationTemplateDtoMapperImpl());
+                                listTemplatesInputPort,
+                                Mappers.getMapper(NotificationTemplateDtoMapper.class));
 
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new NotificationExceptionHandler())
