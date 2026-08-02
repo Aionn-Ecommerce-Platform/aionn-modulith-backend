@@ -2,10 +2,12 @@ package com.aionn.catalog.infrastructure.persistence.adapter.merchant;
 
 import com.aionn.catalog.application.port.out.merchant.MerchantPersistencePort;
 import com.aionn.catalog.domain.model.Merchant;
+import com.aionn.catalog.infrastructure.persistence.entity.MerchantEntity;
 import com.aionn.catalog.infrastructure.persistence.mapper.MerchantDomainMapper;
 import com.aionn.catalog.infrastructure.persistence.repository.merchant.MerchantRepository;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.core.TypedPropertyPath;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
@@ -44,7 +46,8 @@ public class MerchantPersistenceAdapter implements MerchantPersistencePort {
     @Override
     public List<Merchant> list(OffsetPagination pagination) {
         return jpa.findAll(PageRequest.of(pagination.page(), pagination.size(),
-                Sort.by("createdAt").descending().and(Sort.by("merchantId").ascending())))
+                Sort.by(Sort.Direction.DESC, TypedPropertyPath.path(MerchantEntity::getCreatedAt))
+                        .and(Sort.by(Sort.Direction.ASC, TypedPropertyPath.path(MerchantEntity::getMerchantId)))))
                 .stream()
                 .map(mapper::toDomain)
                 .toList();

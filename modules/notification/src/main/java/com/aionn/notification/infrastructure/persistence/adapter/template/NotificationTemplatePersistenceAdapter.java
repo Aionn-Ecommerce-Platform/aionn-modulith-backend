@@ -7,6 +7,7 @@ import com.aionn.notification.infrastructure.persistence.entity.NotificationTemp
 import com.aionn.notification.infrastructure.persistence.mapper.NotificationTemplateDomainMapper;
 import com.aionn.notification.infrastructure.persistence.repository.NotificationTemplateRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.core.TypedPropertyPath;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
@@ -42,7 +43,8 @@ public class NotificationTemplatePersistenceAdapter implements NotificationTempl
     @Override
     public List<NotificationTemplate> findAll(int limit) {
         return jpa.findAll(PageRequest.of(0, Math.max(1, limit),
-                Sort.by(Sort.Direction.DESC, "updatedAt"))).stream()
+                Sort.by(Sort.Direction.DESC,
+                        TypedPropertyPath.path(NotificationTemplateEntity::getUpdatedAt)))).stream()
                 .map(mapper::toDomain)
                 .toList();
     }

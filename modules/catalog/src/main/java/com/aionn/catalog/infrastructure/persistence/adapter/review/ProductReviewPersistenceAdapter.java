@@ -3,10 +3,12 @@ package com.aionn.catalog.infrastructure.persistence.adapter.review;
 import com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort;
 import com.aionn.catalog.domain.model.ProductReview;
 import com.aionn.catalog.domain.valueobject.ReviewStatus;
+import com.aionn.catalog.infrastructure.persistence.entity.ProductReviewEntity;
 import com.aionn.catalog.infrastructure.persistence.mapper.ReviewDomainMapper;
 import com.aionn.catalog.infrastructure.persistence.repository.review.ProductReviewRepository;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.core.TypedPropertyPath;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
@@ -43,7 +45,8 @@ public class ProductReviewPersistenceAdapter implements ProductReviewPersistence
             OffsetPagination pagination) {
         return jpa.findByProductIdAndStatus(productId, status.name(),
                 PageRequest.of(pagination.page(), pagination.size(),
-                        Sort.by("createdAt").descending().and(Sort.by("reviewId").ascending())))
+                        Sort.by(Sort.Direction.DESC, TypedPropertyPath.path(ProductReviewEntity::getCreatedAt))
+                                .and(Sort.by(Sort.Direction.ASC, TypedPropertyPath.path(ProductReviewEntity::getReviewId)))))
                 .stream()
                 .map(mapper::toDomain)
                 .toList();
@@ -58,7 +61,8 @@ public class ProductReviewPersistenceAdapter implements ProductReviewPersistence
     public List<ProductReview> findByUserId(String userId, OffsetPagination pagination) {
         return jpa.findByUserId(userId,
                 PageRequest.of(pagination.page(), pagination.size(),
-                        Sort.by("createdAt").descending().and(Sort.by("reviewId").ascending())))
+                        Sort.by(Sort.Direction.DESC, TypedPropertyPath.path(ProductReviewEntity::getCreatedAt))
+                                .and(Sort.by(Sort.Direction.ASC, TypedPropertyPath.path(ProductReviewEntity::getReviewId)))))
                 .stream()
                 .map(mapper::toDomain)
                 .toList();
@@ -73,7 +77,8 @@ public class ProductReviewPersistenceAdapter implements ProductReviewPersistence
     public List<ProductReview> findByStatus(ReviewStatus status, OffsetPagination pagination) {
         return jpa.findByStatus(status.name(),
                 PageRequest.of(pagination.page(), pagination.size(),
-                        Sort.by("reportedAt").descending().and(Sort.by("reviewId").ascending())))
+                        Sort.by(Sort.Direction.DESC, TypedPropertyPath.path(ProductReviewEntity::getReportedAt))
+                                .and(Sort.by(Sort.Direction.ASC, TypedPropertyPath.path(ProductReviewEntity::getReviewId)))))
                 .stream()
                 .map(mapper::toDomain)
                 .toList();

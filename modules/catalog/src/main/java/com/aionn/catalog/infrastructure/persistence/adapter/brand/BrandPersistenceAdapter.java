@@ -3,11 +3,13 @@ package com.aionn.catalog.infrastructure.persistence.adapter.brand;
 import com.aionn.catalog.application.port.out.brand.BrandPersistencePort;
 import com.aionn.catalog.domain.model.Brand;
 import com.aionn.catalog.domain.valueobject.ProductStatus;
+import com.aionn.catalog.infrastructure.persistence.entity.BrandEntity;
 import com.aionn.catalog.infrastructure.persistence.mapper.BrandDomainMapper;
 import com.aionn.catalog.infrastructure.persistence.repository.brand.BrandRepository;
 import com.aionn.catalog.infrastructure.persistence.repository.product.ProductRepository;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.core.TypedPropertyPath;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
@@ -47,7 +49,8 @@ public class BrandPersistenceAdapter implements BrandPersistencePort {
     @Override
     public List<Brand> list(OffsetPagination pagination) {
         return jpa.findAll(PageRequest.of(pagination.page(), pagination.size(),
-                Sort.by("createdAt").descending().and(Sort.by("brandId").ascending())))
+                Sort.by(Sort.Direction.DESC, TypedPropertyPath.path(BrandEntity::getCreatedAt))
+                        .and(Sort.by(Sort.Direction.ASC, TypedPropertyPath.path(BrandEntity::getBrandId)))))
                 .stream()
                 .map(mapper::toDomain)
                 .toList();
