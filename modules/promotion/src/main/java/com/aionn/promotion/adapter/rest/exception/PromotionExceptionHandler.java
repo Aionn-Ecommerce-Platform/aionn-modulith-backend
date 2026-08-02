@@ -27,7 +27,7 @@ public class PromotionExceptionHandler extends AbstractModuleExceptionHandler {
         registerErrors(HttpStatus.BAD_REQUEST,
                 "PRM_002", "PRM_003", "PRM_004", "PRM_102", "PRM_204",
                 "PRM_301", "PRM_302", "PRM_403", "PRM_900");
-        setDefaultStatus(HttpStatus.UNPROCESSABLE_ENTITY);
+        setDefaultStatus(HttpStatus.UNPROCESSABLE_CONTENT);
     }
 
     @Override

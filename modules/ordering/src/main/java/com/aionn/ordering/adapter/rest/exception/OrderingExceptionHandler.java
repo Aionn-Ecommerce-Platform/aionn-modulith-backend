@@ -26,7 +26,7 @@ public class OrderingExceptionHandler extends AbstractModuleExceptionHandler {
         registerErrors(HttpStatus.BAD_REQUEST,
                 "ORD_004", "ORD_103", "ORD_105", "ORD_107", "ORD_108",
                 "ORD_202", "ORD_900");
-        setDefaultStatus(HttpStatus.UNPROCESSABLE_ENTITY);
+        setDefaultStatus(HttpStatus.UNPROCESSABLE_CONTENT);
     }
 
     @Override

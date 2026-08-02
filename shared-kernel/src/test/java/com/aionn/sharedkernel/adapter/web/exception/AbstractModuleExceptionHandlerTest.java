@@ -32,7 +32,7 @@ class AbstractModuleExceptionHandlerTest {
         static final class CustomDefaultHandler extends AbstractModuleExceptionHandler {
 
                 CustomDefaultHandler() {
-                        setDefaultStatus(HttpStatus.I_AM_A_TEAPOT);
+                        setDefaultStatus(HttpStatus.EXPECTATION_FAILED);
                         registerErrors(HttpStatus.BAD_REQUEST, "X_1");
                 }
 
@@ -80,10 +80,10 @@ class AbstractModuleExceptionHandlerTest {
                 assertEquals(HttpStatus.NOT_FOUND, handler.statusFor("SAMPLE_404"),
                                 "registered SAMPLE_404 must map to NOT_FOUND");
 
-                assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, handler.statusFor("SAMPLE_999"),
+                assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, handler.statusFor("SAMPLE_999"),
                                 "unregistered errorCode must map to default 422");
 
-                assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, handler.statusFor(null),
+                assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, handler.statusFor(null),
                                 "null errorCode must map to default 422");
         }
 
@@ -94,16 +94,16 @@ class AbstractModuleExceptionHandlerTest {
                 assertEquals(HttpStatus.BAD_REQUEST, handler.statusFor("X_1"),
                                 "registered code must keep its registered status");
 
-                assertEquals(HttpStatus.I_AM_A_TEAPOT, handler.statusFor(null),
+                assertEquals(HttpStatus.EXPECTATION_FAILED, handler.statusFor(null),
                                 "null errorCode must use the custom default status");
-                assertEquals(HttpStatus.I_AM_A_TEAPOT, handler.statusFor("UNKNOWN_CODE"),
+                assertEquals(HttpStatus.EXPECTATION_FAILED, handler.statusFor("UNKNOWN_CODE"),
                                 "unregistered errorCode must use the custom default status");
 
                 ResponseEntity<ApiResponse<Map<String, Object>>> unknownResponse = handler
                                 .handle(new DomainException(DOMAIN, "UNKNOWN_CODE", "unknown code"));
-                assertEquals(HttpStatus.I_AM_A_TEAPOT.value(), unknownResponse.getStatusCode().value(),
+                assertEquals(HttpStatus.EXPECTATION_FAILED.value(), unknownResponse.getStatusCode().value(),
                                 "handleException with an unknown code must use the custom default status");
-                assertEquals(String.valueOf(HttpStatus.I_AM_A_TEAPOT.value()), unknownResponse.getBody().statusCode(),
+                assertEquals(String.valueOf(HttpStatus.EXPECTATION_FAILED.value()), unknownResponse.getBody().statusCode(),
                                 "ApiResponse.error statusCode must reflect the custom default status");
         }
 
@@ -125,7 +125,7 @@ class AbstractModuleExceptionHandlerTest {
 
                 SampleModuleExceptionHandler handler = new SampleModuleExceptionHandler();
 
-                assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, handler.statusFor(errorCode),
+                assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, handler.statusFor(errorCode),
                                 "unregistered errorCode must fall back to default 422");
                 assertEquals(422, handler.statusFor(errorCode).value(),
                                 "default fallback status code must be 422");

@@ -28,7 +28,7 @@ public class InventoryExceptionHandler extends AbstractModuleExceptionHandler {
         registerErrors(HttpStatus.BAD_REQUEST,
                 "INV_003", "INV_103", "INV_104", "INV_106", "INV_107",
                 "INV_202", "INV_203", "INV_302", "INV_401", "INV_900");
-        setDefaultStatus(HttpStatus.UNPROCESSABLE_ENTITY);
+        setDefaultStatus(HttpStatus.UNPROCESSABLE_CONTENT);
     }
 
     @Override

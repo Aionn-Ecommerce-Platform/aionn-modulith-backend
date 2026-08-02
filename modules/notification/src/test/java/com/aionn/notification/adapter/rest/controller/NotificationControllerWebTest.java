@@ -1,7 +1,7 @@
 package com.aionn.notification.adapter.rest.controller;
 
 import com.aionn.notification.adapter.rest.exception.NotificationExceptionHandler;
-import com.aionn.notification.adapter.rest.mapper.notification.NotificationDtoMapperImpl;
+import com.aionn.notification.adapter.rest.mapper.notification.NotificationDtoMapper;
 import com.aionn.notification.adapter.rest.support.session.CurrentAdminIdArgumentResolver;
 import com.aionn.notification.adapter.rest.support.session.CurrentUserIdArgumentResolver;
 import com.aionn.notification.application.dto.notification.command.NotificationCommands;
@@ -17,8 +17,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.mapstruct.factory.Mappers;
+import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -61,12 +62,12 @@ class NotificationControllerWebTest {
                 NotificationController controller = new NotificationController(
                                 sendNotificationByEventInputPort, markNotificationReadInputPort,
                                 deleteNotificationInputPort, getMyNotificationInputPort,
-                                listMyNotificationsInputPort, new NotificationDtoMapperImpl());
+                                listMyNotificationsInputPort, Mappers.getMapper(NotificationDtoMapper.class));
 
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new NotificationExceptionHandler())
-                                .setMessageConverters(new MappingJackson2HttpMessageConverter(
-                                                Jackson2ObjectMapperBuilder.json().build()))
+                                .setMessageConverters(new JacksonJsonHttpMessageConverter(
+                                                JacksonMapperFactory.create()))
                                 .setCustomArgumentResolvers(
                                                 new CurrentUserIdArgumentResolver(),
                                                 new CurrentAdminIdArgumentResolver())

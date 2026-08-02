@@ -6,6 +6,7 @@ import com.aionn.shipping.infrastructure.persistence.entity.ShippingRateEntity;
 import com.aionn.shipping.infrastructure.persistence.mapper.ShippingRateDomainMapper;
 import com.aionn.shipping.infrastructure.persistence.repository.ShippingRateRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.core.TypedPropertyPath;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
@@ -37,7 +38,8 @@ public class ShippingRateRepositoryPersistenceAdapter implements ShippingRateRep
 
     @Override
     public List<ShippingRate> findAll() {
-        return jpa.findAll(Sort.by(Sort.Direction.ASC, "zoneCode")).stream()
+        return jpa.findAll(Sort.by(Sort.Direction.ASC,
+                TypedPropertyPath.path(ShippingRateEntity::getZoneCode))).stream()
                 .map(mapper::toDomain)
                 .toList();
     }

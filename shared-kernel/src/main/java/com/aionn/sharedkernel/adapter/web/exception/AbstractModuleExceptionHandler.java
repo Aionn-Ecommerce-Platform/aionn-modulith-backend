@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 public abstract class AbstractModuleExceptionHandler {
 
     private final Map<String, HttpStatus> codeToStatus = new HashMap<>();
-    private HttpStatus defaultStatus = HttpStatus.UNPROCESSABLE_ENTITY;
+    private HttpStatus defaultStatus = HttpStatus.UNPROCESSABLE_CONTENT;
 
     protected void registerErrors(HttpStatus status, String... errorCodes) {
         for (String code : errorCodes) {

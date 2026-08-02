@@ -3,10 +3,12 @@ package com.aionn.catalog.infrastructure.persistence.adapter.product;
 import com.aionn.catalog.application.port.out.product.ProductPersistencePort;
 import com.aionn.catalog.domain.model.Product;
 import com.aionn.catalog.domain.valueobject.ProductStatus;
+import com.aionn.catalog.infrastructure.persistence.entity.ProductEntity;
 import com.aionn.catalog.infrastructure.persistence.mapper.ProductDomainMapper;
 import com.aionn.catalog.infrastructure.persistence.repository.product.ProductRepository;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.core.TypedPropertyPath;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
@@ -51,7 +53,8 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
     public List<Product> listByMerchant(String merchantId, OffsetPagination pagination) {
         return jpa.findByMerchantId(merchantId,
                 PageRequest.of(pagination.page(), pagination.size(),
-                        Sort.by("createdAt").descending().and(Sort.by("productId").ascending())))
+                        Sort.by(Sort.Direction.DESC, TypedPropertyPath.path(ProductEntity::getCreatedAt))
+                                .and(Sort.by(Sort.Direction.ASC, TypedPropertyPath.path(ProductEntity::getProductId)))))
                 .stream()
                 .map(mapper::toDomain)
                 .toList();
@@ -66,7 +69,8 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
     public List<Product> listByStatus(ProductStatus status, OffsetPagination pagination) {
         return jpa.findByStatus(status.name(),
                 PageRequest.of(pagination.page(), pagination.size(),
-                        Sort.by("createdAt").descending().and(Sort.by("productId").ascending())))
+                        Sort.by(Sort.Direction.DESC, TypedPropertyPath.path(ProductEntity::getCreatedAt))
+                                .and(Sort.by(Sort.Direction.ASC, TypedPropertyPath.path(ProductEntity::getProductId)))))
                 .stream()
                 .map(mapper::toDomain)
                 .toList();

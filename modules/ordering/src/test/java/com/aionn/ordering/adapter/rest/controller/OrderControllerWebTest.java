@@ -14,8 +14,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -62,8 +62,8 @@ class OrderControllerWebTest {
                 getPlatformOrderAnalyticsInputPort, getTopProductsInputPort, dtoMapper);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new OrderingExceptionHandler(), new GlobalExceptionHandler())
-                .setMessageConverters(new MappingJackson2HttpMessageConverter(
-                        Jackson2ObjectMapperBuilder.json().build()))
+                .setMessageConverters(new JacksonJsonHttpMessageConverter(
+                        JacksonMapperFactory.create()))
                 .setCustomArgumentResolvers(new CurrentUserIdArgumentResolver(),
                         new com.aionn.ordering.adapter.rest.support.session.CurrentMerchantIdArgumentResolver(merchantOwnershipVerifierPort))
                 .build();

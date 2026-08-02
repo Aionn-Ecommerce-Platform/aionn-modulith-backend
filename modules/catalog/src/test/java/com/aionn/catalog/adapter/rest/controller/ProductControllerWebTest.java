@@ -55,15 +55,15 @@ import com.aionn.catalog.application.port.in.product.RestoreProductInputPort;
 import com.aionn.catalog.application.port.in.product.SubmitForReviewInputPort;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -147,7 +147,7 @@ class ProductControllerWebTest {
         private com.aionn.catalog.application.port.in.product.SearchProductCatalogInputPort searchProductCatalogInputPort;
 
         private MockMvc mockMvc;
-        private final ObjectMapper objectMapper = Jackson2ObjectMapperBuilder.json().build();
+        private final JsonMapper objectMapper = JacksonMapperFactory.create();
 
         @BeforeEach
         void setUp() {
@@ -172,7 +172,7 @@ class ProductControllerWebTest {
                                                 new CurrentAdminIdArgumentResolver(),
                                                 new CurrentOwnerIdArgumentResolver())
                                 .addInterceptors(new MockSecurityInterceptor())
-                                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                                .setMessageConverters(new JacksonJsonHttpMessageConverter(objectMapper))
                                 .build();
         }
 

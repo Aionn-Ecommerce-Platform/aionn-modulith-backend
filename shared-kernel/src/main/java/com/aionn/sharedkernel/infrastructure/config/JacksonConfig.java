@@ -25,4 +25,10 @@ public class JacksonConfig {
                         JsonInclude.Value.construct(JsonInclude.Include.NON_NULL, JsonInclude.Include.NON_NULL))
                 .build();
     }
+
+    @Bean
+    @Primary
+    public tools.jackson.databind.json.JsonMapper jsonMapper() {
+        return JacksonMapperFactory.create();
+    }
 }

@@ -9,15 +9,15 @@ import com.aionn.inventory.adapter.rest.support.session.CurrentAdminIdArgumentRe
 import com.aionn.inventory.application.dto.warehouse.command.LiftSuspensionCommand;
 import com.aionn.inventory.application.dto.warehouse.result.WarehouseResult;
 import com.aionn.inventory.application.port.in.warehouse.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -43,7 +43,7 @@ class WarehouseControllerBranchWebTest {
     @Mock private ListWarehousesByOwnerInputPort listWarehousesByOwnerInputPort;
 
     private MockMvc mockMvc;
-    private final ObjectMapper objectMapper = Jackson2ObjectMapperBuilder.json().build();
+    private final JsonMapper objectMapper = JacksonMapperFactory.create();
 
     @BeforeEach
     void setUp() {
@@ -59,7 +59,7 @@ class WarehouseControllerBranchWebTest {
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new InventoryExceptionHandler())
-                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .setMessageConverters(new JacksonJsonHttpMessageConverter(objectMapper))
                 .setCustomArgumentResolvers(new CurrentAdminIdArgumentResolver())
                 .addInterceptors(new MockSecurityInterceptor())
                 .build();

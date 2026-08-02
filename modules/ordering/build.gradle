@@ -9,7 +9,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
     // Resilience
-    implementation 'io.github.resilience4j:resilience4j-spring-boot3'
+    implementation 'io.github.resilience4j:resilience4j-spring-boot4:2.4.0'
     implementation 'io.github.resilience4j:resilience4j-circuitbreaker'
     implementation 'io.github.resilience4j:resilience4j-retry'
 
