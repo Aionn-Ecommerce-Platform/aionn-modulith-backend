@@ -53,7 +53,7 @@ public class NotificationSubscriptionController {
 
         @PutMapping("/me")
         @PreAuthorize("isAuthenticated()")
-        @Operation(summary = "Update channel", description = "UC8.9")
+        @Operation(summary = "Update channel")
         public ResponseEntity<ApiResponse<SubscriptionResponse>> updateChannel(
                         @CurrentUserId String userId,
                         @Valid @RequestBody UpdateSubscriptionRequest request) {
@@ -65,7 +65,7 @@ public class NotificationSubscriptionController {
 
         @PostMapping("/me/device-tokens")
         @PreAuthorize("isAuthenticated()")
-        @Operation(summary = "Register device token", description = "UC8.8")
+        @Operation(summary = "Register device token")
         public ResponseEntity<ApiResponse<DeviceTokenResponse>> registerDevice(
                         @CurrentUserId String userId,
                         @Valid @RequestBody RegisterDeviceTokenRequest request) {

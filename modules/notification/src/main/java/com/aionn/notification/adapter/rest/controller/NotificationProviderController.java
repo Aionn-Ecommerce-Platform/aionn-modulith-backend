@@ -42,7 +42,7 @@ public class NotificationProviderController {
 
         @PostMapping("/providers")
         @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
-        @Operation(summary = "Configure provider", description = "UC8.11")
+        @Operation(summary = "Configure provider")
         public ResponseEntity<ApiResponse<ProviderResponse>> configure(
                         @CurrentAdminId String adminId,
                         @Valid @RequestBody ConfigureProviderRequest request) {
@@ -75,7 +75,7 @@ public class NotificationProviderController {
 
         @GetMapping("/analytics")
         @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
-        @Operation(summary = "Campaign analytics", description = "UC8.12")
+        @Operation(summary = "Campaign analytics")
         public ResponseEntity<ApiResponse<AnalyticsResult>> analytics(@RequestParam String campaignId) {
                 return ResponseEntity.ok(ApiResponse.success(
                                 getCampaignAnalyticsInputPort.execute(campaignId), "Analytics generated"));

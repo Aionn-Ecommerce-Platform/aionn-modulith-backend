@@ -13,6 +13,8 @@ import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,9 +35,6 @@ import java.util.List;
 @Tag(name = "Notification", description = "Notification dispatch + inbox endpoints")
 public class NotificationController {
 
-        private static final int MIN_LIMIT = 1;
-        private static final int MAX_LIMIT = 100;
-
         private final SendNotificationByEventInputPort sendNotificationByEventInputPort;
         private final MarkNotificationReadInputPort markNotificationReadInputPort;
         private final DeleteNotificationInputPort deleteNotificationInputPort;
@@ -45,7 +44,7 @@ public class NotificationController {
 
         @PostMapping("/dispatch")
         @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
-        @Operation(summary = "Send by event", description = "UC8.1 - system / admin trigger")
+        @Operation(summary = "Send by event", description = "System or administrator-triggered notification")
         public ResponseEntity<ApiResponse<List<NotificationResponse>>> dispatch(
                         @Valid @RequestBody SendNotificationRequest request) {
                 return ResponseEntity.ok(ApiResponse.success(
@@ -56,7 +55,7 @@ public class NotificationController {
 
         @PostMapping("/{notiId}/read")
         @PreAuthorize("isAuthenticated()")
-        @Operation(summary = "Mark read", description = "UC8.4")
+        @Operation(summary = "Mark read")
         public ResponseEntity<ApiResponse<NotificationResponse>> markRead(
                         @CurrentUserId String userId,
                         @PathVariable String notiId) {
@@ -68,7 +67,7 @@ public class NotificationController {
 
         @DeleteMapping("/{notiId}")
         @PreAuthorize("isAuthenticated()")
-        @Operation(summary = "Delete", description = "UC8.5 soft delete")
+        @Operation(summary = "Delete", description = "Soft-delete a notification from the user's inbox")
         public ResponseEntity<ApiResponse<NotificationResponse>> delete(
                         @CurrentUserId String userId,
                         @PathVariable String notiId) {
@@ -94,10 +93,9 @@ public class NotificationController {
         @Operation(summary = "List my notifications")
         public ResponseEntity<ApiResponse<List<NotificationResponse>>> listMine(
                         @CurrentUserId String userId,
-                        @RequestParam(defaultValue = "50") int limit) {
-                int safeLimit = Math.min(Math.max(limit, MIN_LIMIT), MAX_LIMIT);
+                        @RequestParam(defaultValue = "50") @Min(1) @Max(100) int limit) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                dtoMapper.toResponses(listMyNotificationsInputPort.execute(userId, safeLimit)),
+                                dtoMapper.toResponses(listMyNotificationsInputPort.execute(userId, limit)),
                                 "Notifications fetched"));
         }
 }

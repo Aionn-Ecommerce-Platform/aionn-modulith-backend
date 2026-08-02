@@ -40,7 +40,7 @@ public class NotificationTemplateController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
-    @Operation(summary = "Create template", description = "UC8.6")
+    @Operation(summary = "Create template")
     public ResponseEntity<ApiResponse<TemplateResponse>> create(
             @Valid @RequestBody CreateTemplateRequest request) {
         return ApiResponse.createdResponse("Template created",
@@ -50,7 +50,7 @@ public class NotificationTemplateController {
 
     @PutMapping("/{templateId}")
     @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
-    @Operation(summary = "Update template", description = "UC8.7")
+    @Operation(summary = "Update template")
     public ResponseEntity<ApiResponse<TemplateResponse>> update(
             @PathVariable String templateId,
             @Valid @RequestBody UpdateTemplateRequest request) {
