@@ -187,13 +187,16 @@ public class OpenSearchProductSearchIndex implements ProductSearchIndex {
 
     private Map<String, Aggregation> buildAggregations(ProductSearchCriteria criteria) {
         Map<String, Aggregation> aggs = new LinkedHashMap<>();
-        aggs.put(FACET_BRANDS, Aggregation.of(a -> a.terms(t -> t.field(FIELD_BRAND_ID).size(50))));
-        aggs.put(FACET_CATEGORIES, Aggregation.of(a -> a.terms(t -> t.field(FIELD_CATEGORY_IDS).size(100))));
+        aggs.put(FACET_BRANDS, Aggregation.of(a -> a.terms(t -> t.field(FIELD_BRAND_ID)
+                .size(searchProperties.opensearch().facetBrandSize()))));
+        aggs.put(FACET_CATEGORIES, Aggregation.of(a -> a.terms(t -> t.field(FIELD_CATEGORY_IDS)
+                .size(searchProperties.opensearch().facetCategorySize()))));
         aggs.put(FACET_PRICE_MIN, Aggregation.of(a -> a.min(m -> m.field(FIELD_PRICE_FROM))));
         aggs.put(FACET_PRICE_MAX, Aggregation.of(a -> a.max(m -> m.field("priceTo"))));
         for (String attrKey : criteria.attributes().keySet()) {
             aggs.put(FACET_ATTR_PREFIX + attrKey, Aggregation.of(a -> a.terms(t -> t
-                    .field("filterableAttributes." + attrKey + ".keyword").size(50))));
+                    .field("filterableAttributes." + attrKey + ".keyword")
+                    .size(searchProperties.opensearch().facetAttributeSize()))));
         }
         return aggs;
     }

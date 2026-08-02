@@ -1,15 +1,14 @@
 package com.aionn.payment.infrastructure.scheduling;
 
 import com.aionn.payment.application.port.out.MerchantBalanceQueryPort;
+import com.aionn.payment.infrastructure.config.properties.PaymentAutoPayoutProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @Slf4j
@@ -20,22 +19,15 @@ public class AutoPayoutScheduler {
 
     private final MerchantBalanceQueryPort balanceQueryPort;
     private final AutoPayoutWorker worker;
-
-    @Value("${payment.auto-payout.threshold:100000}")
-    private BigDecimal threshold;
-
-    @Value("${payment.auto-payout.currency:VND}")
-    private String currency;
-
-    @Value("${payment.auto-payout.batch-size:50}")
-    private int batchSize;
+    private final PaymentAutoPayoutProperties properties;
 
     @Scheduled(cron = "${payment.auto-payout.cron:0 0 2 * * *}")
     @SchedulerLock(name = "payment-auto-payout", lockAtMostFor = "PT1H", lockAtLeastFor = "PT1M")
     public void run() {
         try {
             List<MerchantBalanceQueryPort.EligibleBalance> candidates =
-                    balanceQueryPort.findEligibleForAutoPayout(threshold, currency, batchSize);
+                    balanceQueryPort.findEligibleForAutoPayout(
+                            properties.threshold(), properties.currency(), properties.batchSize());
             int created = 0;
             for (MerchantBalanceQueryPort.EligibleBalance c : candidates) {
                 if (processSingleCandidate(c)) {

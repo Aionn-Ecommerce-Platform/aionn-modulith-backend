@@ -31,7 +31,7 @@ class OpenSearchIndexInitializerTest {
         when(client.indices()).thenReturn(indices);
         CatalogSearchProperties props = new CatalogSearchProperties("opensearch",
                 new CatalogSearchProperties.OpenSearch("localhost", 9200, "http", "catalog-products", "", "",
-                        Duration.ofSeconds(3), Duration.ofSeconds(10)));
+                        Duration.ofSeconds(3), Duration.ofSeconds(10), 1, 0, 2, 15, 50, 100, 50));
         initializer = new OpenSearchIndexInitializer(client, props);
     }
 

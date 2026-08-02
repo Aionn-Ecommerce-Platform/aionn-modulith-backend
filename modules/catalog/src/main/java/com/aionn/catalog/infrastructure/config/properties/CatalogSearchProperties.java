@@ -18,7 +18,14 @@ public record CatalogSearchProperties(
             @DefaultValue("") String username,
             @DefaultValue("") String password,
             @DefaultValue("3s") Duration connectTimeout,
-            @DefaultValue("10s") Duration responseTimeout) {
+            @DefaultValue("10s") Duration responseTimeout,
+            @DefaultValue("1") int indexShards,
+            @DefaultValue("0") int indexReplicas,
+            @DefaultValue("2") int ngramMin,
+            @DefaultValue("15") int ngramMax,
+            @DefaultValue("50") int facetBrandSize,
+            @DefaultValue("100") int facetCategorySize,
+            @DefaultValue("50") int facetAttributeSize) {
 
         public boolean hasCredentials() {
             return username != null && !username.isBlank()

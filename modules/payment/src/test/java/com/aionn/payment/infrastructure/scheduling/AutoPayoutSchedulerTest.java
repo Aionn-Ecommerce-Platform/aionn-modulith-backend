@@ -1,12 +1,12 @@
 package com.aionn.payment.infrastructure.scheduling;
 
 import com.aionn.payment.application.port.out.MerchantBalanceQueryPort;
+import com.aionn.payment.infrastructure.config.properties.PaymentAutoPayoutProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -24,14 +24,17 @@ class AutoPayoutSchedulerTest {
     @Mock
     private AutoPayoutWorker worker;
 
+    @Mock
+    private PaymentAutoPayoutProperties properties;
+
     @InjectMocks
     private AutoPayoutScheduler scheduler;
 
     @Test
     void runProcessesEligibleCandidatesSuccessfully() {
-        ReflectionTestUtils.setField(scheduler, "threshold", BigDecimal.valueOf(100000));
-        ReflectionTestUtils.setField(scheduler, "currency", "VND");
-        ReflectionTestUtils.setField(scheduler, "batchSize", 50);
+        when(properties.threshold()).thenReturn(BigDecimal.valueOf(100000));
+        when(properties.currency()).thenReturn("VND");
+        when(properties.batchSize()).thenReturn(50);
 
         MerchantBalanceQueryPort.EligibleBalance candidate =
                 new MerchantBalanceQueryPort.EligibleBalance("m-1", "VND", BigDecimal.valueOf(500000));
@@ -47,9 +50,9 @@ class AutoPayoutSchedulerTest {
 
     @Test
     void runHandlesWorkerExceptionGracefully() {
-        ReflectionTestUtils.setField(scheduler, "threshold", BigDecimal.valueOf(100000));
-        ReflectionTestUtils.setField(scheduler, "currency", "VND");
-        ReflectionTestUtils.setField(scheduler, "batchSize", 50);
+        when(properties.threshold()).thenReturn(BigDecimal.valueOf(100000));
+        when(properties.currency()).thenReturn("VND");
+        when(properties.batchSize()).thenReturn(50);
 
         MerchantBalanceQueryPort.EligibleBalance candidate =
                 new MerchantBalanceQueryPort.EligibleBalance("m-1", "VND", BigDecimal.valueOf(500000));

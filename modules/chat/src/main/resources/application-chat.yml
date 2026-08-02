@@ -1,7 +1,4 @@
 chat:
-  attachment:
-    max-size-mb: ${CHAT_ATTACHMENT_MAX_SIZE_MB:10}
-
   websocket:
     allowed-origins: ${CHAT_WS_ALLOWED_ORIGINS:http://localhost:3000}
     client-heartbeat-ms: ${CHAT_WS_CLIENT_HEARTBEAT_MS:10000}
