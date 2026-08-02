@@ -32,7 +32,7 @@ dependencies {
     api 'net.javacrumbs.shedlock:shedlock-spring:7.7.0'
     implementation 'net.javacrumbs.shedlock:shedlock-provider-jdbc-template:7.7.0'
 
-    api 'com.github.ben-manes.caffeine:caffeine:3.1.8'
+    api 'com.github.ben-manes.caffeine:caffeine:3.2.4'
     compileOnly 'org.springframework.data:spring-data-redis'
     compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
     compileOnly 'org.springframework.boot:spring-boot-webmvc'
