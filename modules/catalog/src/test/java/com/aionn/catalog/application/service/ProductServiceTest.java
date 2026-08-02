@@ -103,16 +103,12 @@ class ProductServiceTest {
         @InjectMocks
         private ProductService productService;
 
-        @BeforeEach
-        void executeTransactionsImmediately() {
-                lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation ->
-                                ((TransactionCallback<?>) invocation.getArgument(0)).doInTransaction(null));
-        }
-
         private ProductResult sampleResult;
 
         @BeforeEach
         void setUp() {
+                lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation ->
+                                ((TransactionCallback<?>) invocation.getArgument(0)).doInTransaction(null));
                 sampleResult = new ProductResult(
                                 PRODUCT_ID, MERCHANT_ID, "Widget", null,
                                 List.of(), List.of(), List.of(), Map.of(),

@@ -50,7 +50,7 @@ public class PaymentPreferenceService {
         }
 
         preferenceRepository.save(new Preference(userId, SAVED_CARD_TYPE, paymentMethodId));
-        return new PaymentPreferenceResult("SAVED_CARD", paymentMethodId);
+        return new PaymentPreferenceResult(SAVED_CARD_TYPE, paymentMethodId);
     }
 
     private boolean isUsableMethod(String userId, String methodId) {
