@@ -1,8 +1,3 @@
--- Development/test fixtures. Never include classpath:db-demo in production.
-
-
-
-
 INSERT INTO users (user_id, email, phone, username, password_hash, display_name, status, version, created_at, updated_at) VALUES
 ('01KV05RTC7NA4KZMMP8KXX7461', 'buyer_001@example.test', '+8490100001', 'buyer_001', NULL, 'Buyer 001', 'ACTIVE', 0, NOW(), NOW()),
 ('01KV05RTC836YVQ3DF9FZFT2A7', 'buyer_002@example.test', '+8490100002', 'buyer_002', NULL, 'Buyer 002', 'ACTIVE', 0, NOW(), NOW()),
