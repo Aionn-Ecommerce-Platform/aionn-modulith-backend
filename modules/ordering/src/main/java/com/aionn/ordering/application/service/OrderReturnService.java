@@ -141,7 +141,7 @@ public class OrderReturnService {
     @Transactional(readOnly = true)
     public ReturnAnalyticsResult adminAnalytics(java.time.LocalDate from, java.time.LocalDate to) {
         java.time.ZoneId zone = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
-        java.time.LocalDate safeTo = to == null ? java.time.LocalDate.now(clock.withZone(zone)) : to;
+        java.time.LocalDate safeTo = to == null ? clock.instant().atZone(zone).toLocalDate() : to;
         java.time.LocalDate safeFrom = from == null ? safeTo.minusDays(29) : from;
         if (safeFrom.isAfter(safeTo)) {
             throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT);

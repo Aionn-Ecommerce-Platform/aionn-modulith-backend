@@ -48,5 +48,21 @@ public class VoucherPersistenceAdapter implements VoucherPersistencePort {
                 .map(mapper::toDomain)
                 .toList();
     }
+
+    @Override
+    public List<MerchantVoucherRow> findMerchantVoucherRows(String merchantId) {
+        return jpa.findMerchantVoucherRows(merchantId).stream()
+                .map(row -> new MerchantVoucherRow(
+                        row.getVoucherCode(),
+                        row.getCampaignId(),
+                        valueOrZero(row.getUsageLimit()),
+                        valueOrZero(row.getUsedCount()),
+                        row.getDiscountAmount()))
+                .toList();
+    }
+
+    private static int valueOrZero(Integer value) {
+        return value == null ? 0 : value;
+    }
 }
 

@@ -1,6 +1,5 @@
 package com.aionn.ordering.infrastructure.policy;
 
-import com.aionn.ordering.application.policy.SpringAutoCancelPolicy;
 import com.aionn.ordering.infrastructure.config.properties.OrderingAutoCancelProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

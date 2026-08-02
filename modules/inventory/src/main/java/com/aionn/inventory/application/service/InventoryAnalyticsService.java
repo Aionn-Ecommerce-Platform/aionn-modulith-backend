@@ -1,7 +1,7 @@
 package com.aionn.inventory.application.service;
 
 import com.aionn.inventory.application.dto.analytics.result.LowStockAlertResult;
-import com.aionn.inventory.infrastructure.persistence.repository.InventoryItemRepository;
+import com.aionn.inventory.application.port.out.InventoryItemPersistencePort;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -13,7 +13,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class InventoryAnalyticsService {
 
-    private final InventoryItemRepository inventoryRepository;
+    private final InventoryItemPersistencePort inventoryRepository;
     private final MerchantQueryPort merchantQueryPort;
 
     @Transactional(readOnly = true)
@@ -22,11 +22,11 @@ public class InventoryAnalyticsService {
                 .orElseThrow(() -> new IllegalStateException("No merchant for owner " + ownerId));
         return inventoryRepository.findLowStockForMerchant(merchantId).stream()
                 .map(row -> new LowStockAlertResult(
-                        row.getSkuId(),
-                        row.getWarehouseId(),
-                        row.getPhysicalQty() == null ? 0 : row.getPhysicalQty(),
-                        row.getAvailableQty() == null ? 0 : row.getAvailableQty(),
-                        row.getSafetyStockQty() == null ? 0 : row.getSafetyStockQty()))
+                        row.skuId(),
+                        row.warehouseId(),
+                        row.physicalQty(),
+                        row.availableQty(),
+                        row.safetyStockQty()))
                 .toList();
     }
 }

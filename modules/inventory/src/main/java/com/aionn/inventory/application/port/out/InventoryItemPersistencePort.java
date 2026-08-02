@@ -21,4 +21,14 @@ public interface InventoryItemPersistencePort {
     List<InventoryItem> findBySku(String skuId);
 
     Page<InventoryItem> findByWarehouse(String warehouseId, Pageable pageable);
+
+    List<LowStockItem> findLowStockForMerchant(String merchantId);
+
+    record LowStockItem(
+            String skuId,
+            String warehouseId,
+            int physicalQty,
+            int availableQty,
+            int safetyStockQty) {
+    }
 }

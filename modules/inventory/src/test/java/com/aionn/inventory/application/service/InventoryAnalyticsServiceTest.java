@@ -1,8 +1,8 @@
 package com.aionn.inventory.application.service;
 
 import com.aionn.inventory.application.dto.analytics.result.LowStockAlertResult;
-import com.aionn.inventory.infrastructure.persistence.repository.InventoryItemRepository;
-import com.aionn.inventory.infrastructure.persistence.repository.InventoryItemRepository.LowStockProjection;
+import com.aionn.inventory.application.port.out.InventoryItemPersistencePort;
+import com.aionn.inventory.application.port.out.InventoryItemPersistencePort.LowStockItem;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,7 +20,7 @@ import static org.mockito.Mockito.*;
 class InventoryAnalyticsServiceTest {
 
     @Mock
-    private InventoryItemRepository inventoryRepository;
+    private InventoryItemPersistencePort inventoryRepository;
 
     @Mock
     private MerchantQueryPort merchantQueryPort;
@@ -32,12 +32,7 @@ class InventoryAnalyticsServiceTest {
     void getMerchantLowStockReturnsResultList() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("merchant-1"));
 
-        LowStockProjection row = mock(LowStockProjection.class);
-        when(row.getSkuId()).thenReturn("sku-1");
-        when(row.getWarehouseId()).thenReturn("wh-1");
-        when(row.getPhysicalQty()).thenReturn(5);
-        when(row.getAvailableQty()).thenReturn(3);
-        when(row.getSafetyStockQty()).thenReturn(10);
+        LowStockItem row = new LowStockItem("sku-1", "wh-1", 5, 3, 10);
 
         when(inventoryRepository.findLowStockForMerchant("merchant-1")).thenReturn(List.of(row));
 
