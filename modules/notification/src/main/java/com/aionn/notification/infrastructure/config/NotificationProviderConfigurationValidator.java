@@ -16,7 +16,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class NotificationProviderConfigurationValidator implements SmartInitializingSingleton {
 
-    private static final Set<String> PRODUCTION_PROFILES = Set.of("prod", "production");
+    private static final Set<String> PRODUCTION_PROFILES = Set.of("prod");
 
     private final NotificationEmailProperties emailProperties;
     private final NotificationSmsProperties smsProperties;

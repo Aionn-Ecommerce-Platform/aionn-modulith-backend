@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-@Profile({"prod", "production"})
+@Profile("prod")
 public class ProductionProviderConfigurationValidator {
 
     private static final int MIN_JWT_SECRET_LENGTH = 32;

@@ -16,7 +16,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class PaymentProviderConfigurationValidator implements SmartInitializingSingleton {
 
-    private static final Set<String> PRODUCTION_PROFILES = Set.of("prod", "production");
+    private static final Set<String> PRODUCTION_PROFILES = Set.of("prod");
 
     private final StripeProperties stripeProperties;
     private final VnpayProperties vnpayProperties;

@@ -25,8 +25,7 @@ public class JwtSecurityValidator {
 
     @EventListener(ApplicationReadyEvent.class)
     public void validateJwtSecurity() {
-        boolean isProd = Arrays.asList(environment.getActiveProfiles()).contains("prod")
-                || Arrays.asList(environment.getActiveProfiles()).contains("production");
+        boolean isProd = Arrays.asList(environment.getActiveProfiles()).contains("prod");
 
         String secret = jwtProperties.secret();
         if (secret == null || secret.isBlank()) {
