@@ -8,11 +8,11 @@ import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.aionn.identity.application.policy.IdentityValidationConstants.JWT_SECRET_MIN_LENGTH;
+
 @Component
 @Profile("prod")
 public class ProductionProviderConfigurationValidator {
-
-    private static final int MIN_JWT_SECRET_LENGTH = 32;
 
     private final Environment environment;
 
@@ -24,7 +24,7 @@ public class ProductionProviderConfigurationValidator {
     void validate() {
         List<String> errors = new ArrayList<>();
 
-        requireMinimumLength(errors, "IDENTITY_JWT_SECRET", "identity.jwt.secret", MIN_JWT_SECRET_LENGTH);
+        requireMinimumLength(errors, "IDENTITY_JWT_SECRET", "identity.jwt.secret", JWT_SECRET_MIN_LENGTH);
         requireRemoteProvider(errors, "identity.registration.captcha.provider", "google",
                 "CAPTCHA_GOOGLE_SECRET_KEY", "identity.registration.captcha.google-secret-key");
         requireRemoteProvider(errors, "identity.auth.social.google.provider", "remote",

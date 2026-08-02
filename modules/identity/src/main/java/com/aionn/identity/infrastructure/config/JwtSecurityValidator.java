@@ -11,13 +11,13 @@ import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 
+import static com.aionn.identity.application.policy.IdentityValidationConstants.JWT_SECRET_MIN_LENGTH;
+import static com.aionn.identity.application.policy.IdentityValidationConstants.MFA_ENCRYPTION_KEY_MIN_LENGTH;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtSecurityValidator {
-
-    private static final int MIN_SECRET_LENGTH = 32;
-    private static final int MIN_MFA_KEY_LENGTH = 32;
 
     private final JwtProperties jwtProperties;
     private final MfaProperties mfaProperties;
@@ -37,9 +37,9 @@ public class JwtSecurityValidator {
         }
 
         if (isProd) {
-            if (secret.length() < MIN_SECRET_LENGTH) {
+            if (secret.length() < JWT_SECRET_MIN_LENGTH) {
                 throw new IllegalStateException(
-                        "CRITICAL: JWT secret must be at least " + MIN_SECRET_LENGTH +
+                        "CRITICAL: JWT secret must be at least " + JWT_SECRET_MIN_LENGTH +
                                 " characters for HS256. Current length: " + secret.length());
             }
             if (MfaProperties.DEFAULT_ENCRYPTION_KEY.equals(mfaKey)) {
@@ -47,23 +47,23 @@ public class JwtSecurityValidator {
                         "CRITICAL: MFA encryption key is using dev-default value in production! " +
                                 "Set IDENTITY_MFA_ENCRYPTION_KEY to a secure random string.");
             }
-            if (mfaKey.length() < MIN_MFA_KEY_LENGTH) {
+            if (mfaKey.length() < MFA_ENCRYPTION_KEY_MIN_LENGTH) {
                 throw new IllegalStateException(
-                        "CRITICAL: MFA encryption key must be at least " + MIN_MFA_KEY_LENGTH +
+                        "CRITICAL: MFA encryption key must be at least " + MFA_ENCRYPTION_KEY_MIN_LENGTH +
                                 " characters. Current length: " + mfaKey.length());
             }
             log.info("JWT security validation passed for production profile");
         } else {
-            if (secret.length() < MIN_SECRET_LENGTH) {
+            if (secret.length() < JWT_SECRET_MIN_LENGTH) {
                 log.warn("JWT secret is shorter than {} characters. Override via IDENTITY_JWT_SECRET.",
-                        MIN_SECRET_LENGTH);
+                        JWT_SECRET_MIN_LENGTH);
             }
             if (MfaProperties.DEFAULT_ENCRYPTION_KEY.equals(mfaKey)) {
                 log.warn(
                         "MFA encryption key is using dev-default value. Override via IDENTITY_MFA_ENCRYPTION_KEY for non-dev environments.");
-            } else if (mfaKey.length() < MIN_MFA_KEY_LENGTH) {
+            } else if (mfaKey.length() < MFA_ENCRYPTION_KEY_MIN_LENGTH) {
                 log.warn("MFA encryption key is shorter than {} characters. Override via IDENTITY_MFA_ENCRYPTION_KEY.",
-                        MIN_MFA_KEY_LENGTH);
+                        MFA_ENCRYPTION_KEY_MIN_LENGTH);
             }
         }
     }
