@@ -18,7 +18,7 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 
     // Cloudinary for image/document upload
-    implementation 'com.cloudinary:cloudinary-http5:2.0.0'
+    implementation 'com.cloudinary:cloudinary-http5:2.4.0'
 
     implementation 'org.mapstruct:mapstruct:1.6.3'
     annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
