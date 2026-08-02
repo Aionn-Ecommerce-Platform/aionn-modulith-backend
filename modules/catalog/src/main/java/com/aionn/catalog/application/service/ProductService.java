@@ -24,6 +24,7 @@ import com.aionn.catalog.application.mapper.ProductSearchDocumentMapper;
 import com.aionn.catalog.application.policy.CatalogProductPolicy;
 import com.aionn.catalog.application.port.out.attribute.AttributeTemplatePersistencePort;
 import com.aionn.catalog.application.port.out.search.ProductSearchIndex;
+import com.aionn.catalog.application.port.out.search.ProductSearchIndexPort;
 import com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort;
 import com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort;
 import com.aionn.catalog.domain.model.AttributeTemplate;
@@ -32,7 +33,6 @@ import com.aionn.catalog.application.port.out.category.CategoryPersistencePort;
 import com.aionn.catalog.application.port.out.merchant.MerchantPersistencePort;
 import com.aionn.catalog.application.port.out.product.ProductPersistencePort;
 import com.aionn.catalog.application.port.out.product.UserBrowsingHistoryPersistencePort;
-import com.aionn.catalog.application.port.out.search.ProductSearchIndexPort;
 import com.aionn.catalog.domain.model.UserBrowsingHistory;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
@@ -48,6 +48,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -78,6 +80,7 @@ public class ProductService {
     private final CatalogProductPolicy productPolicy;
     private final EventPublisher eventPublisher;
     private final Clock clock;
+    private final TransactionTemplate transactionTemplate;
 
     public Product create(CreateProductCommand command) {
         merchantRepository.findById(command.merchantId())
@@ -145,7 +148,6 @@ public class ProductService {
         product.emergencyTakedown(command.adminId(), command.reason(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
-        searchIndex.delete(product.getProductId());
         return saved;
     }
 
@@ -234,7 +236,6 @@ public class ProductService {
         product.publish(command.adminId(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
-        searchIndex.index(saved);
         return saved;
     }
 
@@ -259,7 +260,6 @@ public class ProductService {
         product.deactivate(command.reason(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
-        searchIndex.delete(product.getProductId());
         return saved;
     }
 
@@ -268,7 +268,6 @@ public class ProductService {
         product.restore(clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
-        searchIndex.index(saved);
         return saved;
     }
 
@@ -373,22 +372,23 @@ public class ProductService {
         return ProductSearchResult.of(jpaSearchFallback(criteria));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void syncAllToSearchIndex() {
         log.info("Syncing all published products to the catalog search index...");
         int limit = 100;
         int offset = 0;
         long total = 0;
         while (true) {
-            List<Product> products = productRepository.findPublished(limit, offset);
-            if (products.isEmpty()) {
+            int pageOffset = offset;
+            List<ProductSearchDocument> docs = transactionTemplate.execute(status ->
+                    productRepository.findPublished(limit, pageOffset).stream()
+                            .map(this::buildSearchDocument)
+                            .toList());
+            if (docs == null || docs.isEmpty()) {
                 break;
             }
-            List<ProductSearchDocument> docs = products.stream()
-                    .map(this::buildSearchDocument)
-                    .toList();
             catalogSearchIndex.indexAll(docs);
-            total += products.size();
+            total += docs.size();
             offset += limit;
         }
         log.info("Synced {} published products to the catalog search index", total);

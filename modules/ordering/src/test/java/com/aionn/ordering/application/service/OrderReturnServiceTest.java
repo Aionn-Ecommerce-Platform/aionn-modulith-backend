@@ -19,6 +19,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -47,15 +49,18 @@ class OrderReturnServiceTest {
     @Mock private MerchantQueryPort merchantQueryPort;
     @Mock private PaymentGateway paymentGateway;
     @Mock private java.time.Clock clock;
+    @Mock private TransactionTemplate transactionTemplate;
 
     private OrderReturnService service;
 
     @BeforeEach
     void setUp() {
         lenient().when(clock.instant()).thenReturn(java.time.Instant.parse("2026-07-18T12:00:00Z"));
+        lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation ->
+                ((TransactionCallback<?>) invocation.getArgument(0)).doInTransaction(null));
         service = new OrderReturnService(
                 orderRepository, returnRepository, eventPublisher,
-                merchantQueryPort, paymentGateway, clock);
+                merchantQueryPort, paymentGateway, clock, transactionTemplate);
     }
 
     private static ShippingAddress address() {

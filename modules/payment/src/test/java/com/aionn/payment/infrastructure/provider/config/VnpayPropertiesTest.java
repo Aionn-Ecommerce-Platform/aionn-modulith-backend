@@ -9,6 +9,7 @@ class VnpayPropertiesTest {
     @Test
     void shouldCreateWithAllFields() {
         VnpayProperties p = new VnpayProperties(
+                true,
                 "TMN", "SECRET", "https://pay.url", "http://return",
                 "http://fe/return", "https://api.url", "2.1.0", "pay", "VND", "vn");
 

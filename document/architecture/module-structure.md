@@ -242,7 +242,8 @@ Two things that do **not** work as substitutes:
 - Moving `@Transactional` from the class onto individual methods. The orchestrating method still needs a transaction for its writes, so the remote call stays inside it.
 - Marking the orchestrating method `NOT_SUPPORTED` while leaving it in the Service. Calling a sibling method through `this` bypasses the Spring proxy, so the write would then run with no transaction at all.
 
-Reference implementation: `ShipmentCarrierOrchestrator` in `shipping`. `ordering`, `payment`, `catalog`, `identity` and `inventory` still have outbound calls inside transactions and are scheduled for the same treatment.
+Reference implementations include `ShipmentCarrierOrchestrator` in `shipping`, the phase-based ordering services, and
+the payment provider ports. `identity` and `inventory` still require the same outbound-call audit.
 
 ### B. Persistence Layer Separation
 

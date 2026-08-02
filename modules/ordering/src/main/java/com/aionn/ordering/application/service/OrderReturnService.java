@@ -21,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -40,6 +42,7 @@ public class OrderReturnService {
     private final MerchantQueryPort merchantQueryPort;
     private final PaymentGateway paymentGateway;
     private final java.time.Clock clock;
+    private final TransactionTemplate transactionTemplate;
 
     public OrderReturn requestReturn(RequestReturnCommand command) {
         Order order = orderRepository.findById(command.orderId())
@@ -64,14 +67,18 @@ public class OrderReturnService {
         return saved;
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public OrderReturn approve(ApproveReturnCommand command) {
-        OrderReturn r = ownedByOwner(command.returnId(), command.ownerId());
-        Money refundAmount = command.refundAmount() == null
-                ? null
-                : Money.of(command.refundAmount(), command.currency() == null ? "VND" : command.currency());
-        r.approve(refundAmount, command.returnWarehouseId(), clock.instant());
-        OrderReturn saved = returnRepository.save(r);
-        eventPublisher.publish(r.pullEvents());
+        OrderReturn saved = transactionTemplate.execute(status -> {
+            OrderReturn r = ownedByOwner(command.returnId(), command.ownerId());
+            Money refundAmount = command.refundAmount() == null
+                    ? null
+                    : Money.of(command.refundAmount(), command.currency() == null ? "VND" : command.currency());
+            r.approve(refundAmount, command.returnWarehouseId(), clock.instant());
+            OrderReturn persisted = returnRepository.save(r);
+            eventPublisher.publish(r.pullEvents());
+            return persisted;
+        });
         triggerRefundIfPaid(saved, "return approved");
         return saved;
     }
@@ -172,16 +179,20 @@ public class OrderReturnService {
                 returnRate, refundTotal, currency, statusList, reasonList);
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public OrderReturn adminApprove(String returnId, java.math.BigDecimal refundAmount,
             String currency, String returnWarehouseId) {
-        OrderReturn r = returnRepository.findById(returnId)
-                .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
-        Money refund = refundAmount == null
-                ? null
-                : Money.of(refundAmount, currency == null ? "VND" : currency);
-        r.approve(refund, returnWarehouseId, clock.instant());
-        OrderReturn saved = returnRepository.save(r);
-        eventPublisher.publish(r.pullEvents());
+        OrderReturn saved = transactionTemplate.execute(status -> {
+            OrderReturn r = returnRepository.findById(returnId)
+                    .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
+            Money refund = refundAmount == null
+                    ? null
+                    : Money.of(refundAmount, currency == null ? "VND" : currency);
+            r.approve(refund, returnWarehouseId, clock.instant());
+            OrderReturn persisted = returnRepository.save(r);
+            eventPublisher.publish(r.pullEvents());
+            return persisted;
+        });
         triggerRefundIfPaid(saved, "return approved (admin)");
         return saved;
     }
@@ -190,18 +201,23 @@ public class OrderReturnService {
         if (r.getRefundAmount() == null) {
             return;
         }
-        Order order = orderRepository.findById(r.getOrderId()).orElse(null);
-        if (order == null || order.getPaymentId() == null) {
+        RefundRequest refund = transactionTemplate.execute(status -> orderRepository.findById(r.getOrderId())
+                .filter(order -> order.getPaymentId() != null)
+                .map(order -> new RefundRequest(order.getPaymentId(), r.getRefundAmount().amount(),
+                        r.getRefundAmount().currency(), reason))
+                .orElse(null));
+        if (refund == null) {
             return;
         }
         try {
-            paymentGateway.refund(order.getPaymentId(), r.getRefundAmount().amount(),
-                    r.getRefundAmount().currency(), reason);
+            paymentGateway.refund(refund.paymentId(), refund.amount(), refund.currency(), refund.reason());
         } catch (RuntimeException ex) {
             log.error("Refund for return {} (order {}) failed", r.getReturnId(), r.getOrderId(), ex);
             throw ex;
         }
     }
+
+    private record RefundRequest(String paymentId, java.math.BigDecimal amount, String currency, String reason) {}
 
     public OrderReturn adminReject(String returnId, String reason) {
         OrderReturn r = returnRepository.findById(returnId)

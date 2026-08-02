@@ -2,11 +2,11 @@ package com.aionn.payment.application.service;
 
 import com.aionn.payment.application.dto.preference.result.PaymentPreferenceResult;
 import com.aionn.payment.application.port.out.PaymentMethodPersistencePort;
+import com.aionn.payment.application.port.out.PaymentPreferencePersistencePort;
+import com.aionn.payment.application.port.out.PaymentPreferencePersistencePort.Preference;
 import com.aionn.payment.domain.exception.PaymentErrorCode;
 import com.aionn.payment.domain.exception.PaymentException;
 import com.aionn.payment.domain.valueobject.PaymentMethodStatus;
-import com.aionn.payment.infrastructure.persistence.entity.PaymentPreferenceEntity;
-import com.aionn.payment.infrastructure.persistence.repository.PaymentPreferenceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,41 +19,29 @@ public class PaymentPreferenceService {
     private static final String SAVED_CARD_TYPE = "SAVED_CARD";
     private static final String VNPAY_TYPE = "VNPAY";
 
-    private final PaymentPreferenceRepository preferenceRepository;
+    private final PaymentPreferencePersistencePort preferenceRepository;
     private final PaymentMethodPersistencePort paymentMethodRepository;
 
     public PaymentPreferenceResult get(String userId) {
-        PaymentPreferenceEntity preference = preferenceRepository.findById(userId).orElse(null);
-        if (preference == null || "COD".equals(preference.getPaymentType())) {
+        Preference preference = preferenceRepository.findByUserId(userId).orElse(null);
+        if (preference == null || "COD".equals(preference.paymentType())) {
             return cod();
         }
 
-        if (!isUsableMethod(userId, preference.getPaymentMethodId())) {
-            preference.setPaymentType("COD");
-            preference.setPaymentMethodId(null);
-            preferenceRepository.save(preference);
+        if (!isUsableMethod(userId, preference.paymentMethodId())) {
+            preferenceRepository.save(new Preference(userId, "COD", null));
             return cod();
         }
-        return new PaymentPreferenceResult(SAVED_CARD_TYPE, preference.getPaymentMethodId());
+        return new PaymentPreferenceResult(SAVED_CARD_TYPE, preference.paymentMethodId());
     }
 
     public PaymentPreferenceResult update(String userId, String paymentType, String paymentMethodId) {
-        PaymentPreferenceEntity preference = preferenceRepository.findById(userId).orElseGet(() -> {
-            PaymentPreferenceEntity created = new PaymentPreferenceEntity();
-            created.setUserId(userId);
-            return created;
-        });
-
         if ("COD".equalsIgnoreCase(paymentType)) {
-            preference.setPaymentType("COD");
-            preference.setPaymentMethodId(null);
-            preferenceRepository.save(preference);
+            preferenceRepository.save(new Preference(userId, "COD", null));
             return cod();
         }
         if (VNPAY_TYPE.equalsIgnoreCase(paymentType)) {
-            preference.setPaymentType(VNPAY_TYPE);
-            preference.setPaymentMethodId(null);
-            preferenceRepository.save(preference);
+            preferenceRepository.save(new Preference(userId, VNPAY_TYPE, null));
             return new PaymentPreferenceResult(VNPAY_TYPE, null);
         }
         if (!SAVED_CARD_TYPE.equalsIgnoreCase(paymentType) || !isUsableMethod(userId, paymentMethodId)) {
@@ -61,9 +49,7 @@ public class PaymentPreferenceService {
                     "A verified saved card is required for this payment preference");
         }
 
-        preference.setPaymentType("SAVED_CARD");
-        preference.setPaymentMethodId(paymentMethodId);
-        preferenceRepository.save(preference);
+        preferenceRepository.save(new Preference(userId, SAVED_CARD_TYPE, paymentMethodId));
         return new PaymentPreferenceResult("SAVED_CARD", paymentMethodId);
     }
 

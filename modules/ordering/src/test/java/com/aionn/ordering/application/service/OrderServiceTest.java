@@ -26,6 +26,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -34,6 +36,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -58,6 +61,7 @@ class OrderServiceTest {
     @Mock private MerchantQueryPort merchantQueryPort;
     @Mock private OrderingIntegrationEventPublisherPort integrationEventPublisher;
     @Mock private java.time.Clock clock;
+    @Mock private TransactionTemplate transactionTemplate;
     private final OrderingProperties orderingProperties = new OrderingProperties(
             new OrderingProperties.Reservation(86400),
             new OrderingProperties.AutoCancel(true, 15, 60_000L, 100));
@@ -65,16 +69,24 @@ class OrderServiceTest {
     private OrderService orderService;
 
     @BeforeEach
+    @SuppressWarnings("unchecked")
     void setUp() {
         java.time.Clock fixedClock = java.time.Clock.fixed(
                 java.time.Instant.parse("2026-07-18T12:00:00Z"), java.time.ZoneOffset.UTC);
         org.mockito.Mockito.lenient().when(clock.instant()).thenReturn(fixedClock.instant());
         org.mockito.Mockito.lenient().when(clock.withZone(org.mockito.ArgumentMatchers.any())).thenReturn(fixedClock);
+        org.mockito.Mockito.lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation ->
+                ((TransactionCallback<?>) invocation.getArgument(0)).doInTransaction(null));
+        org.mockito.Mockito.lenient().doAnswer(invocation -> {
+            ((java.util.function.Consumer<org.springframework.transaction.TransactionStatus>) invocation.getArgument(0))
+                    .accept(null);
+            return null;
+        }).when(transactionTemplate).executeWithoutResult(any());
         orderService = new OrderService(
                 cartRepository, orderRepository, eventPublisher,
                 stockReservationGateway, paymentGateway, shippingGateway,
                 catalogPricingGateway, voucherGateway, cartService, merchantQueryPort,
-                integrationEventPublisher, orderingProperties, clock);
+                integrationEventPublisher, orderingProperties, clock, transactionTemplate);
     }
 
     private static ShippingAddress address() {
@@ -245,8 +257,6 @@ class OrderServiceTest {
 
         Order order = pendingOrder();
         when(orderRepository.save(org.mockito.ArgumentMatchers.any(Order.class))).thenReturn(order);
-        when(orderRepository.findById(order.getOrderId())).thenReturn(Optional.of(order));
-        when(cartService.loadOwned(USER_ID)).thenReturn(com.aionn.ordering.domain.model.Cart.create("cart-1", USER_ID, java.time.Instant.now()));
 
         Order result = orderService.placeOrderHeadless(command);
 
@@ -295,7 +305,6 @@ class OrderServiceTest {
 
         Order order = pendingOrder();
         when(orderRepository.save(org.mockito.ArgumentMatchers.any(Order.class))).thenReturn(order);
-        when(orderRepository.findById(order.getOrderId())).thenReturn(Optional.of(order));
 
         Order result = orderService.placeOrder(command);
 
