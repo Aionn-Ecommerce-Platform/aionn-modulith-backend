@@ -9,6 +9,7 @@ import com.aionn.inventory.adapter.rest.support.session.CurrentAdminIdArgumentRe
 import com.aionn.inventory.application.dto.warehouse.command.LiftSuspensionCommand;
 import com.aionn.inventory.application.dto.warehouse.result.WarehouseResult;
 import com.aionn.inventory.application.port.in.warehouse.*;
+import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,7 +43,7 @@ class WarehouseControllerBranchWebTest {
     @Mock private ListWarehousesByOwnerInputPort listWarehousesByOwnerInputPort;
 
     private MockMvc mockMvc;
-    private final JsonMapper objectMapper = JsonMapper.builder().build();
+    private final JsonMapper objectMapper = JacksonMapperFactory.create();
 
     @BeforeEach
     void setUp() {

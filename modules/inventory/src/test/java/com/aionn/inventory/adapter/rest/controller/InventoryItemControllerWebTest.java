@@ -15,6 +15,7 @@ import com.aionn.inventory.application.dto.inventory.result.InventoryItemResult;
 import com.aionn.inventory.application.port.in.inventory.*;
 import com.aionn.inventory.domain.exception.InventoryErrorCode;
 import com.aionn.inventory.domain.exception.InventoryException;
+import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,7 +54,7 @@ class InventoryItemControllerWebTest {
     @Mock private GetMerchantLowStockInputPort getMerchantLowStockInputPort;
 
     private MockMvc mockMvc;
-    private final JsonMapper objectMapper = JsonMapper.builder().build();
+    private final JsonMapper objectMapper = JacksonMapperFactory.create();
 
     @BeforeEach
     void setUp() {

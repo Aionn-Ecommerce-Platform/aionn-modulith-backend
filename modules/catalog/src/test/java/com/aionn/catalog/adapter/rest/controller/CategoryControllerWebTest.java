@@ -24,6 +24,7 @@ import com.aionn.catalog.application.port.in.category.MoveCategoryInputPort;
 import com.aionn.catalog.application.port.in.category.UpdateCategoryInputPort;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
+import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -72,7 +73,7 @@ class CategoryControllerWebTest {
         private GetCategoryInputPort getCategoryInputPort;
 
         private MockMvc mockMvc;
-        private final JsonMapper objectMapper = JsonMapper.builder().build();
+        private final JsonMapper objectMapper = JacksonMapperFactory.create();
 
         @BeforeEach
         void setUp() {

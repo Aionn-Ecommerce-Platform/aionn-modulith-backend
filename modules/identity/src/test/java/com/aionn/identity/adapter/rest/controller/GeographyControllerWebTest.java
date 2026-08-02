@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tools.jackson.databind.json.JsonMapper;
+import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -66,7 +66,7 @@ class GeographyControllerWebTest {
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new IdentityExceptionHandler())
                 .setMessageConverters(new JacksonJsonHttpMessageConverter(
-                        JsonMapper.builder().build()))
+                        JacksonMapperFactory.create()))
                 .build();
     }
 

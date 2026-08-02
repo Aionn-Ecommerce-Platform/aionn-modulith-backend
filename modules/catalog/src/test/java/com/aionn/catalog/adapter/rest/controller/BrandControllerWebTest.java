@@ -21,6 +21,7 @@ import com.aionn.catalog.application.port.in.brand.ListBrandsInputPort;
 import com.aionn.catalog.application.port.in.brand.UpdateBrandInputPort;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
+import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,7 +62,7 @@ class BrandControllerWebTest {
     private GetBrandInputPort getBrandInputPort;
 
     private MockMvc mockMvc;
-    private final JsonMapper objectMapper = JsonMapper.builder().build();
+    private final JsonMapper objectMapper = JacksonMapperFactory.create();
 
     @BeforeEach
     void setUp() {

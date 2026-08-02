@@ -22,6 +22,7 @@ import com.aionn.catalog.application.port.in.merchant.SuspendMerchantInputPort;
 import com.aionn.catalog.application.port.in.merchant.UpdateMerchantProfileInputPort;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
+import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,7 +69,7 @@ class MerchantControllerWebTest {
         private com.aionn.catalog.application.port.in.merchant.UpdateMerchantCommissionRateInputPort updateMerchantCommissionRateInputPort;
 
         private MockMvc mockMvc;
-        private final JsonMapper objectMapper = JsonMapper.builder().build();
+        private final JsonMapper objectMapper = JacksonMapperFactory.create();
 
         @BeforeEach
         void setUp() {

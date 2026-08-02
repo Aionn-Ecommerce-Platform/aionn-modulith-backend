@@ -15,6 +15,7 @@ import com.aionn.inventory.application.port.in.transfer.CancelTransferInputPort;
 import com.aionn.inventory.application.port.in.transfer.CompleteTransferInputPort;
 import com.aionn.inventory.application.port.in.transfer.GetTransferInputPort;
 import com.aionn.inventory.application.port.in.transfer.InitiateTransferInputPort;
+import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,7 +46,7 @@ class StockTransferControllerWebTest {
     @Mock private GetTransferInputPort getTransferInputPort;
 
     private MockMvc mockMvc;
-    private final JsonMapper objectMapper = JsonMapper.builder().build();
+    private final JsonMapper objectMapper = JacksonMapperFactory.create();
 
     @BeforeEach
     void setUp() {

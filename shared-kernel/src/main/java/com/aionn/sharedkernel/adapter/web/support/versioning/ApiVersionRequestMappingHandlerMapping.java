@@ -10,21 +10,18 @@ import java.lang.reflect.Method;
 public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandlerMapping {
 
     @Override
-    @Nullable
-    protected RequestCondition<?> getCustomTypeCondition(Class<?> handlerType) { // NOSONAR
+    protected @Nullable RequestCondition<?> getCustomTypeCondition(Class<?> handlerType) { // NOSONAR
         ApiVersion apiVersion = AnnotationUtils.findAnnotation(handlerType, ApiVersion.class);
         return createCondition(apiVersion);
     }
 
     @Override
-    @Nullable
-    protected RequestCondition<?> getCustomMethodCondition(Method method) { // NOSONAR
+    protected @Nullable RequestCondition<?> getCustomMethodCondition(Method method) { // NOSONAR
         ApiVersion apiVersion = AnnotationUtils.findAnnotation(method, ApiVersion.class);
         return createCondition(apiVersion);
     }
 
-    @Nullable
-    private RequestCondition<?> createCondition(ApiVersion apiVersion) {
+    private @Nullable RequestCondition<?> createCondition(ApiVersion apiVersion) {
         return apiVersion == null ? null : new ApiVersionRequestCondition(apiVersion.value());
     }
 }

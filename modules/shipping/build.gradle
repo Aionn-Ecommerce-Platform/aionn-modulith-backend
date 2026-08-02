@@ -10,8 +10,8 @@ dependencies {
 
     // Resilience
     implementation 'io.github.resilience4j:resilience4j-spring-boot4:2.4.0'
-    implementation 'io.github.resilience4j:resilience4j-circuitbreaker:2.2.0'
-    implementation 'io.github.resilience4j:resilience4j-retry:2.2.0'
+    implementation 'io.github.resilience4j:resilience4j-circuitbreaker:2.4.0'
+    implementation 'io.github.resilience4j:resilience4j-retry:2.4.0'
 
     // Mapping / annotation processing
     implementation 'org.mapstruct:mapstruct:1.6.3'

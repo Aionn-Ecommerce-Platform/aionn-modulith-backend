@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tools.jackson.databind.json.JsonMapper;
+import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -83,7 +83,7 @@ class PaymentMethodControllerWebTest {
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new PaymentExceptionHandler())
                 .setMessageConverters(new JacksonJsonHttpMessageConverter(
-                        JsonMapper.builder().build()))
+                        JacksonMapperFactory.create()))
                 .setCustomArgumentResolvers(new CurrentUserIdArgumentResolver())
                 .build();
 

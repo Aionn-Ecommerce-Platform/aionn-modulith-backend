@@ -40,6 +40,7 @@ import com.aionn.catalog.application.port.in.review.ReportReviewInputPort;
 import com.aionn.catalog.application.port.in.review.RestoreReviewInputPort;
 import com.aionn.catalog.application.port.in.review.SubmitReviewInputPort;
 import com.aionn.catalog.application.port.in.review.UpdateReviewInputPort;
+import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -99,7 +100,7 @@ class ReviewControllerWebTest {
     private CheckReviewEligibilityInputPort checkReviewEligibilityInputPort;
 
     private MockMvc mockMvc;
-    private final JsonMapper objectMapper = JsonMapper.builder().build();
+    private final JsonMapper objectMapper = JacksonMapperFactory.create();
 
     @BeforeEach
     void setUp() {

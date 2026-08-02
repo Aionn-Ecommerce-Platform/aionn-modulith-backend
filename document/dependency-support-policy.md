@@ -1,6 +1,6 @@
 # Dependency support and vulnerability policy
 
-The supported framework baseline is Java 21, Spring Boot 4.1.x, and Spring Cloud 2025.1.x. Patch releases may be
+The supported framework baseline is Java 21, Spring Boot 4.1.x, and Spring Cloud 2025.1.2 or newer. Patch releases may be
 adopted directly through a reviewed pull request. Minor or major upgrades require the full Gradle test suite and the
 module E2E suite because they can change public APIs, serialization, or provider behavior.
 
@@ -24,7 +24,7 @@ Dependabot checks Gradle dependencies weekly and GitHub Actions monthly. GitHub 
 for the repository.
 
 - Critical or actively exploited vulnerabilities: triage within one business day and release a fix as soon as tests pass.
-- High severity vulnerabilities: triage within two business days and target the next patch release.
+- High-severity vulnerabilities: triage within two business days and target the next patch release.
 - Medium and low severity vulnerabilities: review during the monthly dependency maintenance window.
 - A suppression requires an owner, evidence that the vulnerable path is not reachable, and an expiry date.
 - Every dependency update must pass `gradlew test` and `scripts/run-e2e-suite.ps1 -Module all` before merge.

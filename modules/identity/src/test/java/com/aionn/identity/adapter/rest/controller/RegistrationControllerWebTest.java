@@ -33,7 +33,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
-import tools.jackson.databind.json.JsonMapper;
+import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -84,7 +84,7 @@ class RegistrationControllerWebTest {
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setMessageConverters(new JacksonJsonHttpMessageConverter(
-                        JsonMapper.builder().build()))
+                        JacksonMapperFactory.create()))
                 .setCustomArgumentResolvers(
                         new ClientIpArgumentResolver(new ClientIpResolver()),
                         new ClientUserAgentArgumentResolver(),

@@ -24,6 +24,7 @@ import com.aionn.shipping.domain.exception.ShippingErrorCode;
 import com.aionn.shipping.domain.exception.ShippingException;
 import com.aionn.shipping.domain.valueobject.ShipmentAddress;
 import com.aionn.shipping.domain.valueobject.ShipmentDimensions;
+import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -77,7 +78,7 @@ class ShipmentControllerWebTest {
     private final ShippingRateDtoMapper shippingRateDtoMapper = Mappers.getMapper(ShippingRateDtoMapper.class);
 
     private MockMvc mockMvc;
-    private final JsonMapper objectMapper = JsonMapper.builder().build();
+    private final JsonMapper objectMapper = JacksonMapperFactory.create();
 
     @BeforeEach
     void setUp() {

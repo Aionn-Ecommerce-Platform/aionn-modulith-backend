@@ -12,6 +12,7 @@ import com.aionn.shipping.application.port.in.rate.UpdateRateInputPort;
 import com.aionn.shipping.application.port.in.rate.GetRateInputPort;
 import com.aionn.shipping.domain.exception.ShippingErrorCode;
 import com.aionn.shipping.domain.exception.ShippingException;
+import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,7 +50,7 @@ class ShippingRateControllerWebTest {
     private final ShippingRateDtoMapper shippingRateDtoMapper = Mappers.getMapper(ShippingRateDtoMapper.class);
 
     private MockMvc mockMvc;
-    private final JsonMapper objectMapper = JsonMapper.builder().build();
+    private final JsonMapper objectMapper = JacksonMapperFactory.create();
 
     @BeforeEach
     void setUp() {

@@ -28,13 +28,12 @@ public class RedisConfig {
         return template;
     }
 
-    private static GenericJacksonJsonRedisSerializer redisValueSerializer() {
+    static GenericJacksonJsonRedisSerializer redisValueSerializer() {
         // Narrow polymorphic deserialization to the packages actually written to
         // Redis: aionn domain objects, and the JDK types they compose (strings,
         // collections, time). Avoid opening the whole java.* namespace, which
         // includes historical Jackson gadget classes.
         PolymorphicTypeValidator typeValidator = BasicPolymorphicTypeValidator.builder()
-                .allowIfBaseType(Object.class)
                 .allowIfSubType("com.aionn.")
                 .allowIfSubType("java.lang.")
                 .allowIfSubType("java.util.")

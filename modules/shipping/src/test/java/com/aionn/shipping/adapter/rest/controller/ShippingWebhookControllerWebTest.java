@@ -8,6 +8,7 @@ import com.aionn.shipping.application.dto.shipment.result.ShipmentResult;
 import com.aionn.shipping.application.port.in.shipment.ApplyCarrierWebhookInputPort;
 import com.aionn.shipping.domain.exception.ShippingErrorCode;
 import com.aionn.shipping.domain.exception.ShippingException;
+import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,7 +39,7 @@ class ShippingWebhookControllerWebTest {
     private ApplyCarrierWebhookInputPort applyCarrierWebhookInputPort;
 
     private final ShipmentDtoMapper shipmentDtoMapper = Mappers.getMapper(ShipmentDtoMapper.class);
-    private final JsonMapper objectMapper = JsonMapper.builder().build();
+    private final JsonMapper objectMapper = JacksonMapperFactory.create();
 
     private MockMvc buildMockMvc() {
         ShippingWebhookController controller = new ShippingWebhookController(applyCarrierWebhookInputPort, shipmentDtoMapper);
