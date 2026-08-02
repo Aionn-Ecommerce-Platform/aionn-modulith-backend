@@ -13,6 +13,8 @@ import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -137,10 +139,9 @@ public class OrderController {
         public ResponseEntity<ApiResponse<List<OrderResponse>>> listForMerchant(
                         @CurrentMerchantId String ownerId,
                         @RequestParam(required = false) String status,
-                        @RequestParam(defaultValue = "20") int limit) {
-                int safeLimit = Math.min(Math.max(limit, 1), 100);
+                        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit) {
                 List<OrderResponse> responses = listOrdersInputPort.execute(
-                                ownerId, "MERCHANT", status, safeLimit).stream()
+                                ownerId, "MERCHANT", status, limit).stream()
                                 .map(dtoMapper::toResponse)
                                 .toList();
                 return ResponseEntity.ok(ApiResponse.success(responses, "Orders fetched"));
@@ -164,7 +165,7 @@ public class OrderController {
                         @CurrentMerchantId String ownerId,
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
-                        @RequestParam(defaultValue = "5") int limit) {
+                        @RequestParam(defaultValue = "5") @Min(1) @Max(100) int limit) {
                 List<TopProductResult> result = getTopProductsInputPort.execute(ownerId, from, to, limit);
                 return ResponseEntity.ok(ApiResponse.success(result, "Top products fetched"));
         }
@@ -195,10 +196,9 @@ public class OrderController {
         public ResponseEntity<ApiResponse<List<OrderResponse>>> listMine(
                         @CurrentUserId String userId,
                         @RequestParam(required = false) String status,
-                        @RequestParam(defaultValue = "20") int limit) {
-                int safeLimit = Math.min(Math.max(limit, 1), 100);
+                        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit) {
                 List<OrderResponse> responses = listOrdersInputPort.execute(
-                                userId, "USER", status, safeLimit).stream()
+                                userId, "USER", status, limit).stream()
                                 .map(dtoMapper::toResponse)
                                 .toList();
                 return ResponseEntity.ok(ApiResponse.success(responses, "Orders fetched"));

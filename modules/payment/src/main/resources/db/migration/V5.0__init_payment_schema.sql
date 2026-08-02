@@ -1,6 +1,3 @@
--- -----------------------------------------------------------------------------
--- Squashed from V5.0__init_payment_schema.sql
--- -----------------------------------------------------------------------------
 CREATE TABLE payment_methods (
     method_id     VARCHAR(50) PRIMARY KEY,
     user_id       VARCHAR(50) NOT NULL,
@@ -56,10 +53,6 @@ CREATE INDEX idx_ledgers_payment      ON transaction_ledgers(payment_id);
 CREATE INDEX idx_ledgers_gateway_time ON transaction_ledgers(gateway, occurred_at);
 CREATE INDEX idx_ledgers_gateway_txn  ON transaction_ledgers(gateway_transaction_no);
 
--- -----------------------------------------------------------------------------
--- Squashed from V5.2__add_payment_preferences.sql
--- Squashed from V5.3__allow_vnpay_payment_preference.sql
--- -----------------------------------------------------------------------------
 CREATE TABLE payment_preferences (
     user_id VARCHAR(50) PRIMARY KEY,
     payment_type VARCHAR(20) NOT NULL DEFAULT 'COD',
@@ -68,9 +61,6 @@ CREATE TABLE payment_preferences (
     CONSTRAINT chk_payment_preferences_type CHECK (payment_type IN ('COD', 'SAVED_CARD', 'VNPAY'))
 );
 
--- -----------------------------------------------------------------------------
--- Squashed from V5.4__settlement_schema.sql
--- -----------------------------------------------------------------------------
 CREATE TABLE merchant_balances (
     merchant_id  VARCHAR(50)   NOT NULL,
     currency     VARCHAR(3)    NOT NULL,
@@ -125,4 +115,3 @@ CREATE TABLE settlement_ledger (
 CREATE INDEX idx_settlement_ledger_merchant ON settlement_ledger(merchant_id, created_at);
 CREATE INDEX idx_settlement_ledger_order ON settlement_ledger(order_id);
 CREATE INDEX idx_settlement_ledger_payout ON settlement_ledger(payout_id);
-

@@ -19,13 +19,13 @@ import com.aionn.ordering.application.port.out.ShippingGateway;
 import com.aionn.ordering.application.port.out.StockReservationGateway;
 import com.aionn.ordering.application.port.out.VoucherGateway;
 import com.aionn.ordering.application.port.out.integration.OrderingIntegrationEventPublisherPort;
+import com.aionn.ordering.application.policy.ReservationPolicy;
 import com.aionn.ordering.domain.exception.OrderingErrorCode;
 import com.aionn.ordering.domain.exception.OrderingException;
 import com.aionn.ordering.domain.model.Cart;
 import com.aionn.ordering.domain.model.Order;
 import com.aionn.ordering.domain.model.OrderItem;
 import com.aionn.ordering.domain.valueobject.OrderStatus;
-import com.aionn.ordering.infrastructure.config.OrderingProperties;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.Money;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
@@ -64,7 +64,7 @@ public class OrderService {
     private final CartService cartService;
     private final MerchantQueryPort merchantQueryPort;
     private final OrderingIntegrationEventPublisherPort integrationEventPublisher;
-    private final OrderingProperties properties;
+    private final ReservationPolicy reservationPolicy;
     private final java.time.Clock clock;
     private final TransactionTemplate transactionTemplate;
 
@@ -188,7 +188,7 @@ public class OrderService {
                             p.price(), currency);
                 }).toList();
         List<StockReservationGateway.Reservation> reservations;
-        int ttlSeconds = properties.reservation().ttlSeconds();
+        int ttlSeconds = reservationPolicy.ttlSeconds();
         try {
             reservations = stockReservationGateway.reserveAll(IdGenerator.ulid(), reservationLines, ttlSeconds);
         } catch (StockReservationGateway.ReservationException ex) {
@@ -474,7 +474,7 @@ public class OrderService {
     public MerchantOrderAnalyticsResult getMerchantAnalytics(String ownerId, LocalDate from, LocalDate to) {
         String merchantId = requireMerchantIdForOwner(ownerId);
         ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
-        LocalDate safeTo = to == null ? LocalDate.now(clock.withZone(zone)) : to;
+        LocalDate safeTo = to == null ? clock.instant().atZone(zone).toLocalDate() : to;
         LocalDate safeFrom = from == null ? safeTo.minusDays(6) : from;
         if (safeFrom.isAfter(safeTo)) {
             throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT);
@@ -545,7 +545,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public PlatformOrderAnalyticsResult getPlatformAnalytics(LocalDate from, LocalDate to) {
         ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
-        LocalDate safeTo = to == null ? LocalDate.now(clock.withZone(zone)) : to;
+        LocalDate safeTo = to == null ? clock.instant().atZone(zone).toLocalDate() : to;
         LocalDate safeFrom = from == null ? safeTo.minusDays(29) : from;
         if (safeFrom.isAfter(safeTo)) {
             throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT);
@@ -625,7 +625,7 @@ public class OrderService {
     public List<TopProductResult> getMerchantTopProducts(String ownerId, LocalDate from, LocalDate to, int limit) {
         String merchantId = requireMerchantIdForOwner(ownerId);
         ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
-        LocalDate safeTo = to == null ? LocalDate.now(clock.withZone(zone)) : to;
+        LocalDate safeTo = to == null ? clock.instant().atZone(zone).toLocalDate() : to;
         LocalDate safeFrom = from == null ? safeTo.minusDays(29) : from;
         if (safeFrom.isAfter(safeTo)) {
             throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT);

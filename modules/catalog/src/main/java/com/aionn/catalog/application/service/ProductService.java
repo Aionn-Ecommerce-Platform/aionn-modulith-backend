@@ -151,11 +151,11 @@ public class ProductService {
         return saved;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public PageResult<Product> search(String keyword, OffsetPagination pagination) {
         List<String> ids = searchIndex.searchIds(keyword, pagination);
-        List<Product> products = productRepository.findAllByIds(ids);
         long total = searchIndex.countMatches(keyword);
+        List<Product> products = transactionTemplate.execute(status -> productRepository.findAllByIds(ids));
         return new PageResult<>(products, pagination.page(), pagination.size(), total);
     }
 
@@ -351,12 +351,13 @@ public class ProductService {
         userBrowsingHistoryRepository.save(history);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public ProductSearchResult searchCatalog(ProductSearchCriteria criteria) {
         Optional<ProductSearchIndex.SearchHits> hitsOpt = catalogSearchIndex.search(criteria);
         if (hitsOpt.isPresent()) {
             ProductSearchIndex.SearchHits hits = hitsOpt.get();
-            List<Product> products = productRepository.findByIdsPreserveOrder(hits.productIds());
+            List<Product> products = transactionTemplate.execute(
+                    status -> productRepository.findByIdsPreserveOrder(hits.productIds()));
             List<ProductResult> results = products.stream()
                     .map(productResultMapper::toResult)
                     .toList();
@@ -369,7 +370,7 @@ public class ProductService {
                             : new ProductSearchResult.PriceRange(hits.priceMin(), hits.priceMax()));
             return ProductSearchResult.of(results, criteria.page(), criteria.size(), hits.totalHits(), facets);
         }
-        return ProductSearchResult.of(jpaSearchFallback(criteria));
+        return transactionTemplate.execute(status -> ProductSearchResult.of(jpaSearchFallback(criteria)));
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)

@@ -1,7 +1,7 @@
 package com.aionn.promotion.application.service;
 
 import com.aionn.promotion.application.dto.analytics.result.MerchantVoucherAnalyticsResult;
-import com.aionn.promotion.infrastructure.persistence.repository.VoucherRepository;
+import com.aionn.promotion.application.port.out.VoucherPersistencePort;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,7 +15,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class VoucherAnalyticsService {
 
-    private final VoucherRepository voucherRepository;
+    private final VoucherPersistencePort voucherRepository;
     private final MerchantQueryPort merchantQueryPort;
 
     @Transactional(readOnly = true)
@@ -28,23 +28,23 @@ public class VoucherAnalyticsService {
         long totalRedeemed = 0;
         BigDecimal totalDiscount = BigDecimal.ZERO;
         for (var row : rows) {
-            int limit = row.getUsageLimit() == null ? 0 : row.getUsageLimit();
-            int used = row.getUsedCount() == null ? 0 : row.getUsedCount();
+            int limit = row.usageLimit();
+            int used = row.usedCount();
             totalIssued += limit;
             totalRedeemed += used;
-            if (row.getDiscountAmount() != null && used > 0) {
-                totalDiscount = totalDiscount.add(row.getDiscountAmount().multiply(BigDecimal.valueOf(used)));
+            if (row.discountAmount() != null && used > 0) {
+                totalDiscount = totalDiscount.add(row.discountAmount().multiply(BigDecimal.valueOf(used)));
             }
         }
         long remaining = Math.max(0, totalIssued - totalRedeemed);
         double rate = totalIssued == 0 ? 0.0 : (double) totalRedeemed / totalIssued;
         List<MerchantVoucherAnalyticsResult.TopVoucher> top = rows.stream()
                 .map(row -> new MerchantVoucherAnalyticsResult.TopVoucher(
-                        row.getVoucherCode(),
-                        row.getCampaignId(),
-                        row.getUsedCount() == null ? 0L : row.getUsedCount().longValue(),
-                        row.getUsageLimit() == null ? 0L : row.getUsageLimit().longValue(),
-                        row.getDiscountAmount() == null ? BigDecimal.ZERO : row.getDiscountAmount()))
+                        row.voucherCode(),
+                        row.campaignId(),
+                        row.usedCount(),
+                        row.usageLimit(),
+                        row.discountAmount() == null ? BigDecimal.ZERO : row.discountAmount()))
                 .sorted(Comparator.comparingLong(MerchantVoucherAnalyticsResult.TopVoucher::redeemed).reversed())
                 .limit(10)
                 .toList();

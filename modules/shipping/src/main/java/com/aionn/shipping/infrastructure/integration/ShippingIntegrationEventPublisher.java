@@ -22,18 +22,18 @@ public class ShippingIntegrationEventPublisher implements ShippingIntegrationEve
     @Override
     public void publishDispatched(String shipmentId, String orderId, String trackingCode) {
         integrationEventPublisher.publish(new ShipmentDispatchedIntegrationEvent(
-                IdGenerator.ulid(), shipmentId, orderId, trackingCode, Instant.now(clock)));
+                IdGenerator.ulid(), shipmentId, orderId, trackingCode, clock.instant()));
     }
 
     @Override
     public void publishDelivered(String shipmentId, String orderId, String signatureUrl, Instant deliveredAt) {
         integrationEventPublisher.publish(new ShipmentDeliveredIntegrationEvent(
-                IdGenerator.ulid(), shipmentId, orderId, signatureUrl, deliveredAt, Instant.now(clock)));
+                IdGenerator.ulid(), shipmentId, orderId, signatureUrl, deliveredAt, clock.instant()));
     }
 
     @Override
     public void publishDeliveryFailed(String shipmentId, String orderId, String reason, int attemptCount) {
         integrationEventPublisher.publish(new ShipmentDeliveryFailedIntegrationEvent(
-                IdGenerator.ulid(), shipmentId, orderId, reason, attemptCount, Instant.now(clock)));
+                IdGenerator.ulid(), shipmentId, orderId, reason, attemptCount, clock.instant()));
     }
 }

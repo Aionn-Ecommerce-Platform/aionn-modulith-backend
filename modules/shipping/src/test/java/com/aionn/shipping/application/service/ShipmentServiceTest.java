@@ -2,6 +2,7 @@ package com.aionn.shipping.application.service;
 
 import com.aionn.shipping.application.dto.rate.result.ShippingQuoteResult;
 import com.aionn.shipping.application.dto.shipment.command.*;
+import com.aionn.shipping.application.policy.CarrierWebhookSecurityPolicy;
 import com.aionn.shipping.application.port.out.CarrierClient;
 import com.aionn.shipping.application.port.out.ShipmentPersistencePort;
 import com.aionn.shipping.application.port.out.ShippingRatePersistencePort;
@@ -12,7 +13,6 @@ import com.aionn.shipping.domain.model.Shipment;
 import com.aionn.shipping.domain.model.ShippingRate;
 import com.aionn.shipping.domain.valueobject.ShipmentAddress;
 import com.aionn.shipping.domain.valueobject.ShipmentDimensions;
-import com.aionn.shipping.infrastructure.carrier.config.GhnProperties;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -51,7 +52,7 @@ class ShipmentServiceTest {
         @Mock
         MerchantQueryPort merchantQueryPort;
         @Mock
-        GhnProperties ghnProperties;
+        CarrierWebhookSecurityPolicy webhookSecurityPolicy;
         @Mock
         TransactionTemplate transactionTemplate;
 
@@ -66,10 +67,12 @@ class ShipmentServiceTest {
         void setUp() {
                 lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation ->
                                 ((TransactionCallback<?>) invocation.getArgument(0)).doInTransaction(null));
+                lenient().when(webhookSecurityPolicy.isAuthorized(any())).thenReturn(true);
+                lenient().when(webhookSecurityPolicy.isAuthorized(isNull())).thenReturn(true);
                 service = new ShipmentService(shipmentRepository, rateRepository, eventPublisher,
                                 carrierClient, integrationEventPublisher, merchantQueryPort,
                                 java.time.Clock.systemUTC(),
-                                ghnProperties, transactionTemplate);
+                                webhookSecurityPolicy, transactionTemplate);
         }
 
         @Test
@@ -259,7 +262,7 @@ class ShipmentServiceTest {
 
         @Test
         void applyCarrierWebhookVerifiesSecretSuccessfully() {
-                when(ghnProperties.webhookSecret()).thenReturn("correct-secret");
+                when(webhookSecurityPolicy.isAuthorized("correct-secret")).thenReturn(true);
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
                                 ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND");
                 shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null);
@@ -275,7 +278,7 @@ class ShipmentServiceTest {
 
         @Test
         void applyCarrierWebhookThrowsWhenSecretMismatches() {
-                when(ghnProperties.webhookSecret()).thenReturn("correct-secret");
+                when(webhookSecurityPolicy.isAuthorized("wrong-secret")).thenReturn(false);
 
                 assertThatThrownBy(() -> service.applyCarrierWebhook(new CarrierWebhookCommand(
                                 "TRACK_1", "PICKED_UP", null, null, null, null, null, null, "WH_1", "wrong-secret")))
@@ -395,7 +398,7 @@ class ShipmentServiceTest {
 
         @Test
         void applyCarrierWebhookSkipsSecretCheckWhenNoSecretConfigured() {
-                when(ghnProperties.webhookSecret()).thenReturn("  ");
+                when(webhookSecurityPolicy.isAuthorized(null)).thenReturn(true);
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
                                 ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND");
                 shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null);
@@ -411,7 +414,7 @@ class ShipmentServiceTest {
 
         @Test
         void applyCarrierWebhookRejectsMissingSecretWhenConfigured() {
-                when(ghnProperties.webhookSecret()).thenReturn("correct-secret");
+                when(webhookSecurityPolicy.isAuthorized(null)).thenReturn(false);
 
                 assertThatThrownBy(() -> service.applyCarrierWebhook(new CarrierWebhookCommand(
                                 "TRACK_1", "PICKED_UP", null, null, null, null, null, null, "WH_1", null)))

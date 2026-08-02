@@ -17,7 +17,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class OrderingProviderConfigurationValidator implements SmartInitializingSingleton {
 
-    private static final Set<String> PRODUCTION_PROFILES = Set.of("prod", "production");
+    private static final Set<String> PRODUCTION_PROFILES = Set.of("prod");
 
     private final OrderingPaymentProperties paymentProperties;
     private final OrderingShippingProperties shippingProperties;

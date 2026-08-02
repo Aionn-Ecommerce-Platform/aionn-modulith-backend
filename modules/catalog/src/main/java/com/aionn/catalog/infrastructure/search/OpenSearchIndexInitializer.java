@@ -69,7 +69,9 @@ public class OpenSearchIndexInitializer {
         private IndexSettings buildSettings() {
                 TokenFilter edgeNgram = new TokenFilter.Builder()
                                 .definition(TokenFilterDefinition.of(b -> b
-                                                .edgeNgram(EdgeNGramTokenFilter.of(en -> en.minGram(2).maxGram(15)))))
+                                                .edgeNgram(EdgeNGramTokenFilter.of(en -> en
+                                                        .minGram(searchProperties.opensearch().ngramMin())
+                                                        .maxGram(searchProperties.opensearch().ngramMax())))))
                                 .build();
 
                 Analyzer textAnalyzer = Analyzer.of(b -> b
@@ -87,8 +89,8 @@ public class OpenSearchIndexInitializer {
                                 .analyzer(ANALYZER_AUTOCOMPLETE, autocompleteAnalyzer));
 
                 return IndexSettings.of(b -> b
-                                .numberOfShards("1")
-                                .numberOfReplicas("0")
+                                .numberOfShards(String.valueOf(searchProperties.opensearch().indexShards()))
+                                .numberOfReplicas(String.valueOf(searchProperties.opensearch().indexReplicas()))
                                 .analysis(analysis));
         }
 

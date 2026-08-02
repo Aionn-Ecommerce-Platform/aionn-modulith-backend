@@ -31,6 +31,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -191,22 +192,18 @@ class NotificationControllerWebTest {
         }
 
         @Test
-        void listMineCapsLimit() throws Exception {
-                when(listMyNotificationsInputPort.execute("user-123", 100)).thenReturn(List.of());
-
+        void listMineRejectsLimitAboveMaximum() throws Exception {
                 mockMvc.perform(get("/api/v1/notifications").param("limit", "9999"))
-                                .andExpect(status().isOk());
+                                .andExpect(status().isBadRequest());
 
-                verify(listMyNotificationsInputPort).execute("user-123", 100);
+                verifyNoInteractions(listMyNotificationsInputPort);
         }
 
         @Test
-        void listMineRaisesLimitFloorToOne() throws Exception {
-                when(listMyNotificationsInputPort.execute("user-123", 1)).thenReturn(List.of());
-
+        void listMineRejectsLimitBelowMinimum() throws Exception {
                 mockMvc.perform(get("/api/v1/notifications").param("limit", "0"))
-                                .andExpect(status().isOk());
+                                .andExpect(status().isBadRequest());
 
-                verify(listMyNotificationsInputPort).execute("user-123", 1);
+                verifyNoInteractions(listMyNotificationsInputPort);
         }
 }

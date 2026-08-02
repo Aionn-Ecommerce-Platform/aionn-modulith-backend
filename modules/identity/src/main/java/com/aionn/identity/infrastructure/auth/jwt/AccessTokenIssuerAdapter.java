@@ -29,7 +29,7 @@ public class AccessTokenIssuerAdapter implements AccessTokenIssuerPort {
 
     @Override
     public String issueAccessToken(String userId, String sessionId, Instant expiresAt, Set<String> roles) {
-        Instant now = Instant.now(clock);
+        Instant now = clock.instant();
         Instant accessExpiry = now.plusSeconds(jwtProperties.accessTokenExpiryMinutes() * 60L);
         if (accessExpiry.isAfter(expiresAt)) {
             accessExpiry = expiresAt;

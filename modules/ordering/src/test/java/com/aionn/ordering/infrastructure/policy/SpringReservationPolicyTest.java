@@ -1,6 +1,5 @@
 package com.aionn.ordering.infrastructure.policy;
 
-import com.aionn.ordering.application.policy.SpringReservationPolicy;
 import com.aionn.ordering.infrastructure.config.properties.OrderingReservationProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

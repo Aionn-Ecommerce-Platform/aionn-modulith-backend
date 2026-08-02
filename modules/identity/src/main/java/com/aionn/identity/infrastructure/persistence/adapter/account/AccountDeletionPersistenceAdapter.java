@@ -30,7 +30,7 @@ public class AccountDeletionPersistenceAdapter implements AccountDeletionPort {
                 .deletionRequestId(IdGenerator.ulid())
                 .user(user)
                 .status(AccountDeletionStatus.PENDING)
-                .requestedAt(Instant.now(clock))
+                .requestedAt(clock.instant())
                 .scheduledDeletionAt(scheduledDeletionAt)
                 .build();
         AccountDeletionRequestEntity saved = accountDeletionRequestRepository.save(request);
@@ -48,7 +48,7 @@ public class AccountDeletionPersistenceAdapter implements AccountDeletionPort {
         accountDeletionRequestRepository.findByUser_UserIdAndStatus(userId, AccountDeletionStatus.PENDING)
                 .ifPresent(request -> {
                     request.setStatus(AccountDeletionStatus.CANCELLED);
-                    request.setCanceledAt(Instant.now(clock));
+                    request.setCanceledAt(clock.instant());
                     accountDeletionRequestRepository.save(request);
                 });
     }

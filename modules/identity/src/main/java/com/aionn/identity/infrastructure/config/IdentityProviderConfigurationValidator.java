@@ -1,21 +1,19 @@
 package com.aionn.identity.infrastructure.config;
 
 import com.aionn.identity.infrastructure.config.properties.KycProperties;
+import com.aionn.identity.infrastructure.config.properties.IdentityMediaProperties;
 import com.aionn.identity.infrastructure.config.properties.RegistrationProperties;
 import com.aionn.identity.infrastructure.config.properties.SocialAuthProperties;
 import com.aionn.sharedkernel.media.CloudinaryCredentialsProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.SmartInitializingSingleton;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
 public class IdentityProviderConfigurationValidator implements SmartInitializingSingleton {
 
-    @Value("${identity.media.provider:cloudinary}")
-    private String mediaProvider;
-
+    private final IdentityMediaProperties mediaProperties;
     private final CloudinaryCredentialsProperties cloudinaryProperties;
     private final KycProperties kycProperties;
     private final SocialAuthProperties socialAuthProperties;
@@ -32,7 +30,7 @@ public class IdentityProviderConfigurationValidator implements SmartInitializing
     }
 
     private void validateCloudinary() {
-        if (!"cloudinary".equalsIgnoreCase(mediaProvider)) {
+        if (!"cloudinary".equalsIgnoreCase(mediaProperties.provider())) {
             return;
         }
         requireNotBlank(cloudinaryProperties.cloudName(), "CLOUDINARY_CLOUD_NAME");
@@ -78,7 +76,7 @@ public class IdentityProviderConfigurationValidator implements SmartInitializing
     }
 
     private void validateImplementedProviders() {
-        if ("remote".equalsIgnoreCase(mediaProvider)) {
+        if ("remote".equalsIgnoreCase(mediaProperties.provider())) {
             throw new IllegalStateException("identity.media.provider=remote is not implemented; use cloudinary");
         }
     }

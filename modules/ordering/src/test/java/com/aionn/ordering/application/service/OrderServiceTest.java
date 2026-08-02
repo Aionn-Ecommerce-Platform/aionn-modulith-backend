@@ -17,7 +17,7 @@ import com.aionn.ordering.domain.model.Order;
 import com.aionn.ordering.domain.model.OrderItem;
 import com.aionn.ordering.domain.valueobject.OrderStatus;
 import com.aionn.ordering.domain.valueobject.ShippingAddress;
-import com.aionn.ordering.infrastructure.config.OrderingProperties;
+import com.aionn.ordering.application.policy.ReservationPolicy;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.Money;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
@@ -39,6 +39,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -62,9 +63,8 @@ class OrderServiceTest {
     @Mock private OrderingIntegrationEventPublisherPort integrationEventPublisher;
     @Mock private java.time.Clock clock;
     @Mock private TransactionTemplate transactionTemplate;
-    private final OrderingProperties orderingProperties = new OrderingProperties(
-            new OrderingProperties.Reservation(86400),
-            new OrderingProperties.AutoCancel(true, 15, 60_000L, 100));
+    @Mock
+    private ReservationPolicy reservationPolicy;
 
     private OrderService orderService;
 
@@ -86,7 +86,8 @@ class OrderServiceTest {
                 cartRepository, orderRepository, eventPublisher,
                 stockReservationGateway, paymentGateway, shippingGateway,
                 catalogPricingGateway, voucherGateway, cartService, merchantQueryPort,
-                integrationEventPublisher, orderingProperties, clock, transactionTemplate);
+                integrationEventPublisher, reservationPolicy, clock, transactionTemplate);
+        lenient().when(reservationPolicy.ttlSeconds()).thenReturn(86400);
     }
 
     private static ShippingAddress address() {

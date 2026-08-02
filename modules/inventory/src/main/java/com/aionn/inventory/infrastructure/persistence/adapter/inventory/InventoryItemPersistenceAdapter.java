@@ -62,6 +62,22 @@ public class InventoryItemPersistenceAdapter implements InventoryItemPersistence
         return jpa.findByIdWarehouseId(warehouseId, pageable).map(mapper::toDomain);
     }
 
+    @Override
+    public List<LowStockItem> findLowStockForMerchant(String merchantId) {
+        return jpa.findLowStockForMerchant(merchantId).stream()
+                .map(row -> new LowStockItem(
+                        row.getSkuId(),
+                        row.getWarehouseId(),
+                        valueOrZero(row.getPhysicalQty()),
+                        valueOrZero(row.getAvailableQty()),
+                        valueOrZero(row.getSafetyStockQty())))
+                .toList();
+    }
+
+    private static int valueOrZero(Integer value) {
+        return value == null ? 0 : value;
+    }
+
     private static InventoryItemEntity.InventoryItemId toId(InventoryItemKey key) {
         return new InventoryItemEntity.InventoryItemId(key.skuId(), key.warehouseId());
     }

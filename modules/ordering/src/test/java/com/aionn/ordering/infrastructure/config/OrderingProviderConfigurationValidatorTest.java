@@ -76,15 +76,14 @@ class OrderingProviderConfigurationValidatorTest {
     }
 
     @Test
-    void throwsExceptionWhenPaymentProviderIsAssumeSuccessInProductionProfile() {
+    void doesNotTreatProductionAsAliasForProdProfile() {
         // Given
         when(paymentProperties.provider()).thenReturn("assume-success");
         when(environment.getActiveProfiles()).thenReturn(new String[]{"production"});
 
         // When/Then
-        assertThatThrownBy(() -> validator.afterSingletonsInstantiated())
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("ordering.payment.provider=assume-success is not allowed in production");
+        assertThatCode(() -> validator.afterSingletonsInstantiated())
+                .doesNotThrowAnyException();
     }
 
     @Test
@@ -196,15 +195,14 @@ class OrderingProviderConfigurationValidatorTest {
     }
 
     @Test
-    void detectsProductionProfileFromMultipleProfiles() {
+    void ignoresProductionAliasAmongMultipleProfiles() {
         // Given
         when(paymentProperties.provider()).thenReturn("assume-success");
         when(environment.getActiveProfiles()).thenReturn(new String[]{"dev", "production", "other"});
 
         // When/Then
-        assertThatThrownBy(() -> validator.afterSingletonsInstantiated())
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("is not allowed in production");
+        assertThatCode(() -> validator.afterSingletonsInstantiated())
+                .doesNotThrowAnyException();
     }
 
     @Test

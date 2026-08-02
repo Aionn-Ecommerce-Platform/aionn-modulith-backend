@@ -372,8 +372,6 @@ INSERT INTO wards (code, name, name_en, district_code, active) VALUES
 ('VN-SG-GV-W1', 'Ward 1', 'Ward 1', 'VN-SG-GV', TRUE),
 ('VN-SG-BTA-W1', 'Ward 1', 'Ward 1', 'VN-SG-BTA', TRUE);
 
-
--- Merged from V1_1_1__add_optimistic_lock_version.sql
 -- Add optimistic-lock counters required by JPA @Version on UserEntity,
 -- AuthSessionEntity and KycProfileEntity. Without these columns Hibernate fails at
 -- startup with SchemaManagementException because the entity declares a non-nullable
@@ -391,10 +389,7 @@ ALTER TABLE auth_sessions
 ALTER TABLE kyc_profiles
     ADD COLUMN version BIGINT NOT NULL DEFAULT 0;
 
--- -----------------------------------------------------------------------------
--- Squashed from V1.1__seed_full_vn_geography.sql
--- -----------------------------------------------------------------------------
--- Full VN GSO geography seed. Replaces the small test seed from V1.
+-- Full VN GSO geography reference data.
 -- Codes are zero-padded so they line up with GHN's GovernmentCode for cross-carrier mapping.
 
 DELETE FROM wards;
@@ -11238,4 +11233,3 @@ CREATE INDEX idx_user_feedbacks_created_at ON user_feedbacks(created_at DESC);
 
 ALTER TABLE user_feedbacks
     ADD COLUMN admin_reply TEXT;
-

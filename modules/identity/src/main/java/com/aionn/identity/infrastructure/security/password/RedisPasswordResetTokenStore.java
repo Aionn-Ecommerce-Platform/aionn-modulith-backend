@@ -23,7 +23,7 @@ public class RedisPasswordResetTokenStore {
     private final Clock clock;
 
     public void save(String token, String userId, Instant expiresAt) {
-        Duration ttl = Duration.between(Instant.now(clock), expiresAt);
+        Duration ttl = Duration.between(clock.instant(), expiresAt);
         if (ttl.isNegative() || ttl.isZero()) {
             ttl = Duration.ofMinutes(1);
         }

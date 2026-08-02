@@ -6,7 +6,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
-import java.time.Instant;
 
 @Component
 @ConditionalOnProperty(prefix = "identity.media", name = "provider", havingValue = "mock")
@@ -31,7 +30,7 @@ public class MockMediaUploadSignatureProvider implements MediaUploadSignaturePro
     private UploadSignatureResult placeholder(String folder) {
         return new UploadSignatureResult(
                 "mock-signature",
-                String.valueOf(Instant.now(clock).getEpochSecond()),
+                String.valueOf(clock.instant().getEpochSecond()),
                 "mock-api-key",
                 "mock-cloud",
                 "https://example.invalid/mock-upload",

@@ -16,6 +16,8 @@ import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -34,9 +36,6 @@ import java.util.List;
 @RequiredArgsConstructor
 @Tag(name = "Promotion - Voucher", description = "User voucher claim/reserve/apply/release")
 public class VoucherController {
-
-        private static final int MIN_LIMIT = 1;
-        private static final int MAX_LIMIT = 100;
 
         private final ClaimVoucherInputPort claimVoucherInputPort;
         private final ReserveVoucherInputPort reserveVoucherInputPort;
@@ -101,11 +100,10 @@ public class VoucherController {
         @Operation(summary = "List my vouchers")
         public ResponseEntity<ApiResponse<List<UserVoucherResponse>>> listMine(
                         @CurrentUserId String userId,
-                        @RequestParam(defaultValue = "50") int limit) {
-                int safeLimit = Math.min(Math.max(limit, MIN_LIMIT), MAX_LIMIT);
+                        @RequestParam(defaultValue = "50") @Min(1) @Max(100) int limit) {
                 return ResponseEntity.ok(ApiResponse.success(
                                 dtoMapper.toUserVoucherResponses(
-                                                listMyVouchersInputPort.execute(userId, safeLimit)),
+                                                listMyVouchersInputPort.execute(userId, limit)),
                                 "Vouchers fetched"));
         }
 

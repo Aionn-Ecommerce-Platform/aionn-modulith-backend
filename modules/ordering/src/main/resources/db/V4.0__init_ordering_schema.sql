@@ -1,6 +1,3 @@
--- -----------------------------------------------------------------------------
--- Squashed from V4.0__init_ordering_schema.sql
--- -----------------------------------------------------------------------------
 CREATE TABLE carts (
     cart_id      VARCHAR(50) PRIMARY KEY,
     user_id      VARCHAR(50) NOT NULL,

@@ -56,7 +56,7 @@ public class PromotionCampaignController {
 
         @PostMapping
         @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
-        @Operation(summary = "Create campaign", description = "UC9.1")
+        @Operation(summary = "Create campaign")
         public ResponseEntity<ApiResponse<CampaignResponse>> create(
                         @CurrentAdminId String adminId,
                         @Valid @RequestBody CreateCampaignRequest request) {
@@ -99,7 +99,7 @@ public class PromotionCampaignController {
 
         @PutMapping("/{campaignId}/conditions")
         @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
-        @Operation(summary = "Configure conditions", description = "UC9.8")
+        @Operation(summary = "Configure conditions")
         public ResponseEntity<ApiResponse<CampaignResponse>> configureCondition(
                         @PathVariable String campaignId,
                         @Valid @RequestBody ConfigureConditionRequest request) {
@@ -111,7 +111,7 @@ public class PromotionCampaignController {
 
         @PostMapping("/{campaignId}/vouchers")
         @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
-        @Operation(summary = "Issue voucher", description = "UC9.2")
+        @Operation(summary = "Issue voucher")
         public ResponseEntity<ApiResponse<VoucherResponse>> issueVoucher(
                         @PathVariable String campaignId,
                         @Valid @RequestBody IssueVoucherRequest request) {

@@ -1,5 +1,6 @@
-package com.aionn.ordering.application.policy;
+package com.aionn.ordering.infrastructure.policy;
 
+import com.aionn.ordering.application.policy.AutoCancelPolicy;
 import com.aionn.ordering.infrastructure.config.properties.OrderingAutoCancelProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

@@ -1,10 +1,3 @@
--- Development/test fixtures. Never include classpath:db-demo in production.
-
-
-
--- -----------------------------------------------------------------------------
--- Squashed from V5.1__seed_payment_data.sql
--- -----------------------------------------------------------------------------
 -- Seed Payments
 
 INSERT INTO payments (payment_id, order_id, user_id, amount, currency, gateway, idempotency_key, transaction_no, status, version, created_at, updated_at, paid_at) VALUES
@@ -458,1351 +451,487 @@ INSERT INTO payments (payment_id, order_id, user_id, amount, currency, gateway, 
 ('PAY_0499', 'ORD_0499', '01KV05RTEGM1JETXB6VTE5ZEW3', 17750000.0, 'VND', 'STRIPE', 'idem_ORD_0499', 'txn_ORD_0499', 'PAID', 0, '2026-04-18 15:42:22', '2026-04-18 15:42:22', '2026-04-18 15:42:22'),
 ('PAY_0500', 'ORD_0500', '01KV05RTFBHFA44M0RJQCQB8Z3', 1470000.0, 'VND', 'STRIPE', 'idem_ORD_0500', 'txn_ORD_0500', 'PAID', 0, '2026-05-02 15:42:22', '2026-05-02 15:42:22', '2026-05-02 15:42:22');
 
-
 -- Associate Payments with Orders
 
 UPDATE orders SET payment_id = 'PAY_0001' WHERE order_id = 'ORD_0001';
-
-
 UPDATE orders SET payment_id = 'PAY_0002' WHERE order_id = 'ORD_0002';
-
-
 UPDATE orders SET payment_id = 'PAY_0003' WHERE order_id = 'ORD_0003';
-
-
 UPDATE orders SET payment_id = 'PAY_0004' WHERE order_id = 'ORD_0004';
-
-
 UPDATE orders SET payment_id = 'PAY_0005' WHERE order_id = 'ORD_0005';
-
-
 UPDATE orders SET payment_id = 'PAY_0006' WHERE order_id = 'ORD_0006';
-
-
 UPDATE orders SET payment_id = 'PAY_0007' WHERE order_id = 'ORD_0007';
-
-
 UPDATE orders SET payment_id = 'PAY_0008' WHERE order_id = 'ORD_0008';
-
-
 UPDATE orders SET payment_id = 'PAY_0011' WHERE order_id = 'ORD_0011';
-
-
 UPDATE orders SET payment_id = 'PAY_0012' WHERE order_id = 'ORD_0012';
-
-
 UPDATE orders SET payment_id = 'PAY_0013' WHERE order_id = 'ORD_0013';
-
-
 UPDATE orders SET payment_id = 'PAY_0014' WHERE order_id = 'ORD_0014';
-
-
 UPDATE orders SET payment_id = 'PAY_0015' WHERE order_id = 'ORD_0015';
-
-
 UPDATE orders SET payment_id = 'PAY_0016' WHERE order_id = 'ORD_0016';
-
-
 UPDATE orders SET payment_id = 'PAY_0017' WHERE order_id = 'ORD_0017';
-
-
 UPDATE orders SET payment_id = 'PAY_0018' WHERE order_id = 'ORD_0018';
-
-
 UPDATE orders SET payment_id = 'PAY_0019' WHERE order_id = 'ORD_0019';
-
-
 UPDATE orders SET payment_id = 'PAY_0020' WHERE order_id = 'ORD_0020';
-
-
 UPDATE orders SET payment_id = 'PAY_0021' WHERE order_id = 'ORD_0021';
-
-
 UPDATE orders SET payment_id = 'PAY_0023' WHERE order_id = 'ORD_0023';
-
-
 UPDATE orders SET payment_id = 'PAY_0025' WHERE order_id = 'ORD_0025';
-
-
 UPDATE orders SET payment_id = 'PAY_0026' WHERE order_id = 'ORD_0026';
-
-
 UPDATE orders SET payment_id = 'PAY_0027' WHERE order_id = 'ORD_0027';
-
-
 UPDATE orders SET payment_id = 'PAY_0028' WHERE order_id = 'ORD_0028';
-
-
 UPDATE orders SET payment_id = 'PAY_0029' WHERE order_id = 'ORD_0029';
-
-
 UPDATE orders SET payment_id = 'PAY_0030' WHERE order_id = 'ORD_0030';
-
-
 UPDATE orders SET payment_id = 'PAY_0031' WHERE order_id = 'ORD_0031';
-
-
 UPDATE orders SET payment_id = 'PAY_0032' WHERE order_id = 'ORD_0032';
-
-
 UPDATE orders SET payment_id = 'PAY_0033' WHERE order_id = 'ORD_0033';
-
-
 UPDATE orders SET payment_id = 'PAY_0034' WHERE order_id = 'ORD_0034';
-
-
 UPDATE orders SET payment_id = 'PAY_0036' WHERE order_id = 'ORD_0036';
-
-
 UPDATE orders SET payment_id = 'PAY_0037' WHERE order_id = 'ORD_0037';
-
-
 UPDATE orders SET payment_id = 'PAY_0038' WHERE order_id = 'ORD_0038';
-
-
 UPDATE orders SET payment_id = 'PAY_0039' WHERE order_id = 'ORD_0039';
-
-
 UPDATE orders SET payment_id = 'PAY_0040' WHERE order_id = 'ORD_0040';
-
-
 UPDATE orders SET payment_id = 'PAY_0041' WHERE order_id = 'ORD_0041';
-
-
 UPDATE orders SET payment_id = 'PAY_0042' WHERE order_id = 'ORD_0042';
-
-
 UPDATE orders SET payment_id = 'PAY_0043' WHERE order_id = 'ORD_0043';
-
-
 UPDATE orders SET payment_id = 'PAY_0044' WHERE order_id = 'ORD_0044';
-
-
 UPDATE orders SET payment_id = 'PAY_0046' WHERE order_id = 'ORD_0046';
-
-
 UPDATE orders SET payment_id = 'PAY_0047' WHERE order_id = 'ORD_0047';
-
-
 UPDATE orders SET payment_id = 'PAY_0049' WHERE order_id = 'ORD_0049';
-
-
 UPDATE orders SET payment_id = 'PAY_0050' WHERE order_id = 'ORD_0050';
-
-
 UPDATE orders SET payment_id = 'PAY_0051' WHERE order_id = 'ORD_0051';
-
-
 UPDATE orders SET payment_id = 'PAY_0052' WHERE order_id = 'ORD_0052';
-
-
 UPDATE orders SET payment_id = 'PAY_0053' WHERE order_id = 'ORD_0053';
-
-
 UPDATE orders SET payment_id = 'PAY_0054' WHERE order_id = 'ORD_0054';
-
-
 UPDATE orders SET payment_id = 'PAY_0055' WHERE order_id = 'ORD_0055';
-
-
 UPDATE orders SET payment_id = 'PAY_0056' WHERE order_id = 'ORD_0056';
-
-
 UPDATE orders SET payment_id = 'PAY_0057' WHERE order_id = 'ORD_0057';
-
-
 UPDATE orders SET payment_id = 'PAY_0058' WHERE order_id = 'ORD_0058';
-
-
 UPDATE orders SET payment_id = 'PAY_0059' WHERE order_id = 'ORD_0059';
-
-
 UPDATE orders SET payment_id = 'PAY_0061' WHERE order_id = 'ORD_0061';
-
-
 UPDATE orders SET payment_id = 'PAY_0062' WHERE order_id = 'ORD_0062';
-
-
 UPDATE orders SET payment_id = 'PAY_0063' WHERE order_id = 'ORD_0063';
-
-
 UPDATE orders SET payment_id = 'PAY_0064' WHERE order_id = 'ORD_0064';
-
-
 UPDATE orders SET payment_id = 'PAY_0065' WHERE order_id = 'ORD_0065';
-
-
 UPDATE orders SET payment_id = 'PAY_0067' WHERE order_id = 'ORD_0067';
-
-
 UPDATE orders SET payment_id = 'PAY_0068' WHERE order_id = 'ORD_0068';
-
-
 UPDATE orders SET payment_id = 'PAY_0070' WHERE order_id = 'ORD_0070';
-
-
 UPDATE orders SET payment_id = 'PAY_0071' WHERE order_id = 'ORD_0071';
-
-
 UPDATE orders SET payment_id = 'PAY_0072' WHERE order_id = 'ORD_0072';
-
-
 UPDATE orders SET payment_id = 'PAY_0073' WHERE order_id = 'ORD_0073';
-
-
 UPDATE orders SET payment_id = 'PAY_0074' WHERE order_id = 'ORD_0074';
-
-
 UPDATE orders SET payment_id = 'PAY_0075' WHERE order_id = 'ORD_0075';
-
-
 UPDATE orders SET payment_id = 'PAY_0076' WHERE order_id = 'ORD_0076';
-
-
 UPDATE orders SET payment_id = 'PAY_0077' WHERE order_id = 'ORD_0077';
-
-
 UPDATE orders SET payment_id = 'PAY_0078' WHERE order_id = 'ORD_0078';
-
-
 UPDATE orders SET payment_id = 'PAY_0079' WHERE order_id = 'ORD_0079';
-
-
 UPDATE orders SET payment_id = 'PAY_0080' WHERE order_id = 'ORD_0080';
-
-
 UPDATE orders SET payment_id = 'PAY_0081' WHERE order_id = 'ORD_0081';
-
-
 UPDATE orders SET payment_id = 'PAY_0082' WHERE order_id = 'ORD_0082';
-
-
 UPDATE orders SET payment_id = 'PAY_0083' WHERE order_id = 'ORD_0083';
-
-
 UPDATE orders SET payment_id = 'PAY_0084' WHERE order_id = 'ORD_0084';
-
-
 UPDATE orders SET payment_id = 'PAY_0085' WHERE order_id = 'ORD_0085';
-
-
 UPDATE orders SET payment_id = 'PAY_0086' WHERE order_id = 'ORD_0086';
-
-
 UPDATE orders SET payment_id = 'PAY_0087' WHERE order_id = 'ORD_0087';
-
-
 UPDATE orders SET payment_id = 'PAY_0088' WHERE order_id = 'ORD_0088';
-
-
 UPDATE orders SET payment_id = 'PAY_0089' WHERE order_id = 'ORD_0089';
-
-
 UPDATE orders SET payment_id = 'PAY_0090' WHERE order_id = 'ORD_0090';
-
-
 UPDATE orders SET payment_id = 'PAY_0091' WHERE order_id = 'ORD_0091';
-
-
 UPDATE orders SET payment_id = 'PAY_0092' WHERE order_id = 'ORD_0092';
-
-
 UPDATE orders SET payment_id = 'PAY_0094' WHERE order_id = 'ORD_0094';
-
-
 UPDATE orders SET payment_id = 'PAY_0095' WHERE order_id = 'ORD_0095';
-
-
 UPDATE orders SET payment_id = 'PAY_0096' WHERE order_id = 'ORD_0096';
-
-
 UPDATE orders SET payment_id = 'PAY_0097' WHERE order_id = 'ORD_0097';
-
-
 UPDATE orders SET payment_id = 'PAY_0099' WHERE order_id = 'ORD_0099';
-
-
 UPDATE orders SET payment_id = 'PAY_0100' WHERE order_id = 'ORD_0100';
-
-
 UPDATE orders SET payment_id = 'PAY_0101' WHERE order_id = 'ORD_0101';
-
-
 UPDATE orders SET payment_id = 'PAY_0103' WHERE order_id = 'ORD_0103';
-
-
 UPDATE orders SET payment_id = 'PAY_0105' WHERE order_id = 'ORD_0105';
-
-
 UPDATE orders SET payment_id = 'PAY_0106' WHERE order_id = 'ORD_0106';
-
-
 UPDATE orders SET payment_id = 'PAY_0107' WHERE order_id = 'ORD_0107';
-
-
 UPDATE orders SET payment_id = 'PAY_0109' WHERE order_id = 'ORD_0109';
-
-
 UPDATE orders SET payment_id = 'PAY_0110' WHERE order_id = 'ORD_0110';
-
-
 UPDATE orders SET payment_id = 'PAY_0111' WHERE order_id = 'ORD_0111';
-
-
 UPDATE orders SET payment_id = 'PAY_0112' WHERE order_id = 'ORD_0112';
-
-
 UPDATE orders SET payment_id = 'PAY_0113' WHERE order_id = 'ORD_0113';
-
-
 UPDATE orders SET payment_id = 'PAY_0114' WHERE order_id = 'ORD_0114';
-
-
 UPDATE orders SET payment_id = 'PAY_0115' WHERE order_id = 'ORD_0115';
-
-
 UPDATE orders SET payment_id = 'PAY_0116' WHERE order_id = 'ORD_0116';
-
-
 UPDATE orders SET payment_id = 'PAY_0117' WHERE order_id = 'ORD_0117';
-
-
 UPDATE orders SET payment_id = 'PAY_0118' WHERE order_id = 'ORD_0118';
-
-
 UPDATE orders SET payment_id = 'PAY_0119' WHERE order_id = 'ORD_0119';
-
-
 UPDATE orders SET payment_id = 'PAY_0120' WHERE order_id = 'ORD_0120';
-
-
 UPDATE orders SET payment_id = 'PAY_0121' WHERE order_id = 'ORD_0121';
-
-
 UPDATE orders SET payment_id = 'PAY_0122' WHERE order_id = 'ORD_0122';
-
-
 UPDATE orders SET payment_id = 'PAY_0124' WHERE order_id = 'ORD_0124';
-
-
 UPDATE orders SET payment_id = 'PAY_0125' WHERE order_id = 'ORD_0125';
-
-
 UPDATE orders SET payment_id = 'PAY_0126' WHERE order_id = 'ORD_0126';
-
-
 UPDATE orders SET payment_id = 'PAY_0127' WHERE order_id = 'ORD_0127';
-
-
 UPDATE orders SET payment_id = 'PAY_0128' WHERE order_id = 'ORD_0128';
-
-
 UPDATE orders SET payment_id = 'PAY_0129' WHERE order_id = 'ORD_0129';
-
-
 UPDATE orders SET payment_id = 'PAY_0132' WHERE order_id = 'ORD_0132';
-
-
 UPDATE orders SET payment_id = 'PAY_0133' WHERE order_id = 'ORD_0133';
-
-
 UPDATE orders SET payment_id = 'PAY_0134' WHERE order_id = 'ORD_0134';
-
-
 UPDATE orders SET payment_id = 'PAY_0135' WHERE order_id = 'ORD_0135';
-
-
 UPDATE orders SET payment_id = 'PAY_0136' WHERE order_id = 'ORD_0136';
-
-
 UPDATE orders SET payment_id = 'PAY_0138' WHERE order_id = 'ORD_0138';
-
-
 UPDATE orders SET payment_id = 'PAY_0139' WHERE order_id = 'ORD_0139';
-
-
 UPDATE orders SET payment_id = 'PAY_0140' WHERE order_id = 'ORD_0140';
-
-
 UPDATE orders SET payment_id = 'PAY_0141' WHERE order_id = 'ORD_0141';
-
-
 UPDATE orders SET payment_id = 'PAY_0142' WHERE order_id = 'ORD_0142';
-
-
 UPDATE orders SET payment_id = 'PAY_0143' WHERE order_id = 'ORD_0143';
-
-
 UPDATE orders SET payment_id = 'PAY_0144' WHERE order_id = 'ORD_0144';
-
-
 UPDATE orders SET payment_id = 'PAY_0145' WHERE order_id = 'ORD_0145';
-
-
 UPDATE orders SET payment_id = 'PAY_0146' WHERE order_id = 'ORD_0146';
-
-
 UPDATE orders SET payment_id = 'PAY_0147' WHERE order_id = 'ORD_0147';
-
-
 UPDATE orders SET payment_id = 'PAY_0148' WHERE order_id = 'ORD_0148';
-
-
 UPDATE orders SET payment_id = 'PAY_0149' WHERE order_id = 'ORD_0149';
-
-
 UPDATE orders SET payment_id = 'PAY_0151' WHERE order_id = 'ORD_0151';
-
-
 UPDATE orders SET payment_id = 'PAY_0152' WHERE order_id = 'ORD_0152';
-
-
 UPDATE orders SET payment_id = 'PAY_0154' WHERE order_id = 'ORD_0154';
-
-
 UPDATE orders SET payment_id = 'PAY_0155' WHERE order_id = 'ORD_0155';
-
-
 UPDATE orders SET payment_id = 'PAY_0156' WHERE order_id = 'ORD_0156';
-
-
 UPDATE orders SET payment_id = 'PAY_0157' WHERE order_id = 'ORD_0157';
-
-
 UPDATE orders SET payment_id = 'PAY_0158' WHERE order_id = 'ORD_0158';
-
-
 UPDATE orders SET payment_id = 'PAY_0159' WHERE order_id = 'ORD_0159';
-
-
 UPDATE orders SET payment_id = 'PAY_0160' WHERE order_id = 'ORD_0160';
-
-
 UPDATE orders SET payment_id = 'PAY_0161' WHERE order_id = 'ORD_0161';
-
-
 UPDATE orders SET payment_id = 'PAY_0162' WHERE order_id = 'ORD_0162';
-
-
 UPDATE orders SET payment_id = 'PAY_0163' WHERE order_id = 'ORD_0163';
-
-
 UPDATE orders SET payment_id = 'PAY_0164' WHERE order_id = 'ORD_0164';
-
-
 UPDATE orders SET payment_id = 'PAY_0165' WHERE order_id = 'ORD_0165';
-
-
 UPDATE orders SET payment_id = 'PAY_0166' WHERE order_id = 'ORD_0166';
-
-
 UPDATE orders SET payment_id = 'PAY_0167' WHERE order_id = 'ORD_0167';
-
-
 UPDATE orders SET payment_id = 'PAY_0168' WHERE order_id = 'ORD_0168';
-
-
 UPDATE orders SET payment_id = 'PAY_0169' WHERE order_id = 'ORD_0169';
-
-
 UPDATE orders SET payment_id = 'PAY_0170' WHERE order_id = 'ORD_0170';
-
-
 UPDATE orders SET payment_id = 'PAY_0171' WHERE order_id = 'ORD_0171';
-
-
 UPDATE orders SET payment_id = 'PAY_0173' WHERE order_id = 'ORD_0173';
-
-
 UPDATE orders SET payment_id = 'PAY_0174' WHERE order_id = 'ORD_0174';
-
-
 UPDATE orders SET payment_id = 'PAY_0175' WHERE order_id = 'ORD_0175';
-
-
 UPDATE orders SET payment_id = 'PAY_0176' WHERE order_id = 'ORD_0176';
-
-
 UPDATE orders SET payment_id = 'PAY_0177' WHERE order_id = 'ORD_0177';
-
-
 UPDATE orders SET payment_id = 'PAY_0178' WHERE order_id = 'ORD_0178';
-
-
 UPDATE orders SET payment_id = 'PAY_0179' WHERE order_id = 'ORD_0179';
-
-
 UPDATE orders SET payment_id = 'PAY_0180' WHERE order_id = 'ORD_0180';
-
-
 UPDATE orders SET payment_id = 'PAY_0181' WHERE order_id = 'ORD_0181';
-
-
 UPDATE orders SET payment_id = 'PAY_0182' WHERE order_id = 'ORD_0182';
-
-
 UPDATE orders SET payment_id = 'PAY_0183' WHERE order_id = 'ORD_0183';
-
-
 UPDATE orders SET payment_id = 'PAY_0184' WHERE order_id = 'ORD_0184';
-
-
 UPDATE orders SET payment_id = 'PAY_0185' WHERE order_id = 'ORD_0185';
-
-
 UPDATE orders SET payment_id = 'PAY_0186' WHERE order_id = 'ORD_0186';
-
-
 UPDATE orders SET payment_id = 'PAY_0187' WHERE order_id = 'ORD_0187';
-
-
 UPDATE orders SET payment_id = 'PAY_0188' WHERE order_id = 'ORD_0188';
-
-
 UPDATE orders SET payment_id = 'PAY_0189' WHERE order_id = 'ORD_0189';
-
-
 UPDATE orders SET payment_id = 'PAY_0190' WHERE order_id = 'ORD_0190';
-
-
 UPDATE orders SET payment_id = 'PAY_0191' WHERE order_id = 'ORD_0191';
-
-
 UPDATE orders SET payment_id = 'PAY_0192' WHERE order_id = 'ORD_0192';
-
-
 UPDATE orders SET payment_id = 'PAY_0193' WHERE order_id = 'ORD_0193';
-
-
 UPDATE orders SET payment_id = 'PAY_0194' WHERE order_id = 'ORD_0194';
-
-
 UPDATE orders SET payment_id = 'PAY_0195' WHERE order_id = 'ORD_0195';
-
-
 UPDATE orders SET payment_id = 'PAY_0196' WHERE order_id = 'ORD_0196';
-
-
 UPDATE orders SET payment_id = 'PAY_0197' WHERE order_id = 'ORD_0197';
-
-
 UPDATE orders SET payment_id = 'PAY_0199' WHERE order_id = 'ORD_0199';
-
-
 UPDATE orders SET payment_id = 'PAY_0200' WHERE order_id = 'ORD_0200';
-
-
 UPDATE orders SET payment_id = 'PAY_0202' WHERE order_id = 'ORD_0202';
-
-
 UPDATE orders SET payment_id = 'PAY_0203' WHERE order_id = 'ORD_0203';
-
-
 UPDATE orders SET payment_id = 'PAY_0204' WHERE order_id = 'ORD_0204';
-
-
 UPDATE orders SET payment_id = 'PAY_0205' WHERE order_id = 'ORD_0205';
-
-
 UPDATE orders SET payment_id = 'PAY_0206' WHERE order_id = 'ORD_0206';
-
-
 UPDATE orders SET payment_id = 'PAY_0207' WHERE order_id = 'ORD_0207';
-
-
 UPDATE orders SET payment_id = 'PAY_0208' WHERE order_id = 'ORD_0208';
-
-
 UPDATE orders SET payment_id = 'PAY_0209' WHERE order_id = 'ORD_0209';
-
-
 UPDATE orders SET payment_id = 'PAY_0210' WHERE order_id = 'ORD_0210';
-
-
 UPDATE orders SET payment_id = 'PAY_0211' WHERE order_id = 'ORD_0211';
-
-
 UPDATE orders SET payment_id = 'PAY_0213' WHERE order_id = 'ORD_0213';
-
-
 UPDATE orders SET payment_id = 'PAY_0214' WHERE order_id = 'ORD_0214';
-
-
 UPDATE orders SET payment_id = 'PAY_0215' WHERE order_id = 'ORD_0215';
-
-
 UPDATE orders SET payment_id = 'PAY_0216' WHERE order_id = 'ORD_0216';
-
-
 UPDATE orders SET payment_id = 'PAY_0217' WHERE order_id = 'ORD_0217';
-
-
 UPDATE orders SET payment_id = 'PAY_0218' WHERE order_id = 'ORD_0218';
-
-
 UPDATE orders SET payment_id = 'PAY_0220' WHERE order_id = 'ORD_0220';
-
-
 UPDATE orders SET payment_id = 'PAY_0221' WHERE order_id = 'ORD_0221';
-
-
 UPDATE orders SET payment_id = 'PAY_0222' WHERE order_id = 'ORD_0222';
-
-
 UPDATE orders SET payment_id = 'PAY_0223' WHERE order_id = 'ORD_0223';
-
-
 UPDATE orders SET payment_id = 'PAY_0224' WHERE order_id = 'ORD_0224';
-
-
 UPDATE orders SET payment_id = 'PAY_0225' WHERE order_id = 'ORD_0225';
-
-
 UPDATE orders SET payment_id = 'PAY_0226' WHERE order_id = 'ORD_0226';
-
-
 UPDATE orders SET payment_id = 'PAY_0228' WHERE order_id = 'ORD_0228';
-
-
 UPDATE orders SET payment_id = 'PAY_0229' WHERE order_id = 'ORD_0229';
-
-
 UPDATE orders SET payment_id = 'PAY_0230' WHERE order_id = 'ORD_0230';
-
-
 UPDATE orders SET payment_id = 'PAY_0231' WHERE order_id = 'ORD_0231';
-
-
 UPDATE orders SET payment_id = 'PAY_0232' WHERE order_id = 'ORD_0232';
-
-
 UPDATE orders SET payment_id = 'PAY_0233' WHERE order_id = 'ORD_0233';
-
-
 UPDATE orders SET payment_id = 'PAY_0234' WHERE order_id = 'ORD_0234';
-
-
 UPDATE orders SET payment_id = 'PAY_0235' WHERE order_id = 'ORD_0235';
-
-
 UPDATE orders SET payment_id = 'PAY_0236' WHERE order_id = 'ORD_0236';
-
-
 UPDATE orders SET payment_id = 'PAY_0237' WHERE order_id = 'ORD_0237';
-
-
 UPDATE orders SET payment_id = 'PAY_0238' WHERE order_id = 'ORD_0238';
-
-
 UPDATE orders SET payment_id = 'PAY_0239' WHERE order_id = 'ORD_0239';
-
-
 UPDATE orders SET payment_id = 'PAY_0240' WHERE order_id = 'ORD_0240';
-
-
 UPDATE orders SET payment_id = 'PAY_0241' WHERE order_id = 'ORD_0241';
-
-
 UPDATE orders SET payment_id = 'PAY_0242' WHERE order_id = 'ORD_0242';
-
-
 UPDATE orders SET payment_id = 'PAY_0243' WHERE order_id = 'ORD_0243';
-
-
 UPDATE orders SET payment_id = 'PAY_0244' WHERE order_id = 'ORD_0244';
-
-
 UPDATE orders SET payment_id = 'PAY_0245' WHERE order_id = 'ORD_0245';
-
-
 UPDATE orders SET payment_id = 'PAY_0246' WHERE order_id = 'ORD_0246';
-
-
 UPDATE orders SET payment_id = 'PAY_0248' WHERE order_id = 'ORD_0248';
-
-
 UPDATE orders SET payment_id = 'PAY_0249' WHERE order_id = 'ORD_0249';
-
-
 UPDATE orders SET payment_id = 'PAY_0250' WHERE order_id = 'ORD_0250';
-
-
 UPDATE orders SET payment_id = 'PAY_0251' WHERE order_id = 'ORD_0251';
-
-
 UPDATE orders SET payment_id = 'PAY_0252' WHERE order_id = 'ORD_0252';
-
-
 UPDATE orders SET payment_id = 'PAY_0253' WHERE order_id = 'ORD_0253';
-
-
 UPDATE orders SET payment_id = 'PAY_0254' WHERE order_id = 'ORD_0254';
-
-
 UPDATE orders SET payment_id = 'PAY_0255' WHERE order_id = 'ORD_0255';
-
-
 UPDATE orders SET payment_id = 'PAY_0256' WHERE order_id = 'ORD_0256';
-
-
 UPDATE orders SET payment_id = 'PAY_0257' WHERE order_id = 'ORD_0257';
-
-
 UPDATE orders SET payment_id = 'PAY_0258' WHERE order_id = 'ORD_0258';
-
-
 UPDATE orders SET payment_id = 'PAY_0260' WHERE order_id = 'ORD_0260';
-
-
 UPDATE orders SET payment_id = 'PAY_0261' WHERE order_id = 'ORD_0261';
-
-
 UPDATE orders SET payment_id = 'PAY_0262' WHERE order_id = 'ORD_0262';
-
-
 UPDATE orders SET payment_id = 'PAY_0263' WHERE order_id = 'ORD_0263';
-
-
 UPDATE orders SET payment_id = 'PAY_0264' WHERE order_id = 'ORD_0264';
-
-
 UPDATE orders SET payment_id = 'PAY_0265' WHERE order_id = 'ORD_0265';
-
-
 UPDATE orders SET payment_id = 'PAY_0266' WHERE order_id = 'ORD_0266';
-
-
 UPDATE orders SET payment_id = 'PAY_0267' WHERE order_id = 'ORD_0267';
-
-
 UPDATE orders SET payment_id = 'PAY_0268' WHERE order_id = 'ORD_0268';
-
-
 UPDATE orders SET payment_id = 'PAY_0269' WHERE order_id = 'ORD_0269';
-
-
 UPDATE orders SET payment_id = 'PAY_0270' WHERE order_id = 'ORD_0270';
-
-
 UPDATE orders SET payment_id = 'PAY_0271' WHERE order_id = 'ORD_0271';
-
-
 UPDATE orders SET payment_id = 'PAY_0272' WHERE order_id = 'ORD_0272';
-
-
 UPDATE orders SET payment_id = 'PAY_0273' WHERE order_id = 'ORD_0273';
-
-
 UPDATE orders SET payment_id = 'PAY_0275' WHERE order_id = 'ORD_0275';
-
-
 UPDATE orders SET payment_id = 'PAY_0276' WHERE order_id = 'ORD_0276';
-
-
 UPDATE orders SET payment_id = 'PAY_0277' WHERE order_id = 'ORD_0277';
-
-
 UPDATE orders SET payment_id = 'PAY_0278' WHERE order_id = 'ORD_0278';
-
-
 UPDATE orders SET payment_id = 'PAY_0279' WHERE order_id = 'ORD_0279';
-
-
 UPDATE orders SET payment_id = 'PAY_0281' WHERE order_id = 'ORD_0281';
-
-
 UPDATE orders SET payment_id = 'PAY_0282' WHERE order_id = 'ORD_0282';
-
-
 UPDATE orders SET payment_id = 'PAY_0283' WHERE order_id = 'ORD_0283';
-
-
 UPDATE orders SET payment_id = 'PAY_0284' WHERE order_id = 'ORD_0284';
-
-
 UPDATE orders SET payment_id = 'PAY_0285' WHERE order_id = 'ORD_0285';
-
-
 UPDATE orders SET payment_id = 'PAY_0286' WHERE order_id = 'ORD_0286';
-
-
 UPDATE orders SET payment_id = 'PAY_0287' WHERE order_id = 'ORD_0287';
-
-
 UPDATE orders SET payment_id = 'PAY_0288' WHERE order_id = 'ORD_0288';
-
-
 UPDATE orders SET payment_id = 'PAY_0289' WHERE order_id = 'ORD_0289';
-
-
 UPDATE orders SET payment_id = 'PAY_0291' WHERE order_id = 'ORD_0291';
-
-
 UPDATE orders SET payment_id = 'PAY_0292' WHERE order_id = 'ORD_0292';
-
-
 UPDATE orders SET payment_id = 'PAY_0293' WHERE order_id = 'ORD_0293';
-
-
 UPDATE orders SET payment_id = 'PAY_0294' WHERE order_id = 'ORD_0294';
-
-
 UPDATE orders SET payment_id = 'PAY_0295' WHERE order_id = 'ORD_0295';
-
-
 UPDATE orders SET payment_id = 'PAY_0296' WHERE order_id = 'ORD_0296';
-
-
 UPDATE orders SET payment_id = 'PAY_0297' WHERE order_id = 'ORD_0297';
-
-
 UPDATE orders SET payment_id = 'PAY_0299' WHERE order_id = 'ORD_0299';
-
-
 UPDATE orders SET payment_id = 'PAY_0300' WHERE order_id = 'ORD_0300';
-
-
 UPDATE orders SET payment_id = 'PAY_0302' WHERE order_id = 'ORD_0302';
-
-
 UPDATE orders SET payment_id = 'PAY_0303' WHERE order_id = 'ORD_0303';
-
-
 UPDATE orders SET payment_id = 'PAY_0305' WHERE order_id = 'ORD_0305';
-
-
 UPDATE orders SET payment_id = 'PAY_0306' WHERE order_id = 'ORD_0306';
-
-
 UPDATE orders SET payment_id = 'PAY_0307' WHERE order_id = 'ORD_0307';
-
-
 UPDATE orders SET payment_id = 'PAY_0308' WHERE order_id = 'ORD_0308';
-
-
 UPDATE orders SET payment_id = 'PAY_0309' WHERE order_id = 'ORD_0309';
-
-
 UPDATE orders SET payment_id = 'PAY_0310' WHERE order_id = 'ORD_0310';
-
-
 UPDATE orders SET payment_id = 'PAY_0311' WHERE order_id = 'ORD_0311';
-
-
 UPDATE orders SET payment_id = 'PAY_0312' WHERE order_id = 'ORD_0312';
-
-
 UPDATE orders SET payment_id = 'PAY_0313' WHERE order_id = 'ORD_0313';
-
-
 UPDATE orders SET payment_id = 'PAY_0314' WHERE order_id = 'ORD_0314';
-
-
 UPDATE orders SET payment_id = 'PAY_0315' WHERE order_id = 'ORD_0315';
-
-
 UPDATE orders SET payment_id = 'PAY_0317' WHERE order_id = 'ORD_0317';
-
-
 UPDATE orders SET payment_id = 'PAY_0318' WHERE order_id = 'ORD_0318';
-
-
 UPDATE orders SET payment_id = 'PAY_0319' WHERE order_id = 'ORD_0319';
-
-
 UPDATE orders SET payment_id = 'PAY_0320' WHERE order_id = 'ORD_0320';
-
-
 UPDATE orders SET payment_id = 'PAY_0321' WHERE order_id = 'ORD_0321';
-
-
 UPDATE orders SET payment_id = 'PAY_0322' WHERE order_id = 'ORD_0322';
-
-
 UPDATE orders SET payment_id = 'PAY_0323' WHERE order_id = 'ORD_0323';
-
-
 UPDATE orders SET payment_id = 'PAY_0324' WHERE order_id = 'ORD_0324';
-
-
 UPDATE orders SET payment_id = 'PAY_0325' WHERE order_id = 'ORD_0325';
-
-
 UPDATE orders SET payment_id = 'PAY_0326' WHERE order_id = 'ORD_0326';
-
-
 UPDATE orders SET payment_id = 'PAY_0327' WHERE order_id = 'ORD_0327';
-
-
 UPDATE orders SET payment_id = 'PAY_0328' WHERE order_id = 'ORD_0328';
-
-
 UPDATE orders SET payment_id = 'PAY_0329' WHERE order_id = 'ORD_0329';
-
-
 UPDATE orders SET payment_id = 'PAY_0330' WHERE order_id = 'ORD_0330';
-
-
 UPDATE orders SET payment_id = 'PAY_0331' WHERE order_id = 'ORD_0331';
-
-
 UPDATE orders SET payment_id = 'PAY_0332' WHERE order_id = 'ORD_0332';
-
-
 UPDATE orders SET payment_id = 'PAY_0333' WHERE order_id = 'ORD_0333';
-
-
 UPDATE orders SET payment_id = 'PAY_0334' WHERE order_id = 'ORD_0334';
-
-
 UPDATE orders SET payment_id = 'PAY_0335' WHERE order_id = 'ORD_0335';
-
-
 UPDATE orders SET payment_id = 'PAY_0336' WHERE order_id = 'ORD_0336';
-
-
 UPDATE orders SET payment_id = 'PAY_0337' WHERE order_id = 'ORD_0337';
-
-
 UPDATE orders SET payment_id = 'PAY_0338' WHERE order_id = 'ORD_0338';
-
-
 UPDATE orders SET payment_id = 'PAY_0339' WHERE order_id = 'ORD_0339';
-
-
 UPDATE orders SET payment_id = 'PAY_0340' WHERE order_id = 'ORD_0340';
-
-
 UPDATE orders SET payment_id = 'PAY_0342' WHERE order_id = 'ORD_0342';
-
-
 UPDATE orders SET payment_id = 'PAY_0343' WHERE order_id = 'ORD_0343';
-
-
 UPDATE orders SET payment_id = 'PAY_0344' WHERE order_id = 'ORD_0344';
-
-
 UPDATE orders SET payment_id = 'PAY_0345' WHERE order_id = 'ORD_0345';
-
-
 UPDATE orders SET payment_id = 'PAY_0346' WHERE order_id = 'ORD_0346';
-
-
 UPDATE orders SET payment_id = 'PAY_0347' WHERE order_id = 'ORD_0347';
-
-
 UPDATE orders SET payment_id = 'PAY_0348' WHERE order_id = 'ORD_0348';
-
-
 UPDATE orders SET payment_id = 'PAY_0349' WHERE order_id = 'ORD_0349';
-
-
 UPDATE orders SET payment_id = 'PAY_0350' WHERE order_id = 'ORD_0350';
-
-
 UPDATE orders SET payment_id = 'PAY_0351' WHERE order_id = 'ORD_0351';
-
-
 UPDATE orders SET payment_id = 'PAY_0352' WHERE order_id = 'ORD_0352';
-
-
 UPDATE orders SET payment_id = 'PAY_0353' WHERE order_id = 'ORD_0353';
-
-
 UPDATE orders SET payment_id = 'PAY_0354' WHERE order_id = 'ORD_0354';
-
-
 UPDATE orders SET payment_id = 'PAY_0355' WHERE order_id = 'ORD_0355';
-
-
 UPDATE orders SET payment_id = 'PAY_0356' WHERE order_id = 'ORD_0356';
-
-
 UPDATE orders SET payment_id = 'PAY_0357' WHERE order_id = 'ORD_0357';
-
-
 UPDATE orders SET payment_id = 'PAY_0358' WHERE order_id = 'ORD_0358';
-
-
 UPDATE orders SET payment_id = 'PAY_0359' WHERE order_id = 'ORD_0359';
-
-
 UPDATE orders SET payment_id = 'PAY_0360' WHERE order_id = 'ORD_0360';
-
-
 UPDATE orders SET payment_id = 'PAY_0361' WHERE order_id = 'ORD_0361';
-
-
 UPDATE orders SET payment_id = 'PAY_0362' WHERE order_id = 'ORD_0362';
-
-
 UPDATE orders SET payment_id = 'PAY_0363' WHERE order_id = 'ORD_0363';
-
-
 UPDATE orders SET payment_id = 'PAY_0364' WHERE order_id = 'ORD_0364';
-
-
 UPDATE orders SET payment_id = 'PAY_0365' WHERE order_id = 'ORD_0365';
-
-
 UPDATE orders SET payment_id = 'PAY_0366' WHERE order_id = 'ORD_0366';
-
-
 UPDATE orders SET payment_id = 'PAY_0367' WHERE order_id = 'ORD_0367';
-
-
 UPDATE orders SET payment_id = 'PAY_0369' WHERE order_id = 'ORD_0369';
-
-
 UPDATE orders SET payment_id = 'PAY_0370' WHERE order_id = 'ORD_0370';
-
-
 UPDATE orders SET payment_id = 'PAY_0371' WHERE order_id = 'ORD_0371';
-
-
 UPDATE orders SET payment_id = 'PAY_0373' WHERE order_id = 'ORD_0373';
-
-
 UPDATE orders SET payment_id = 'PAY_0374' WHERE order_id = 'ORD_0374';
-
-
 UPDATE orders SET payment_id = 'PAY_0375' WHERE order_id = 'ORD_0375';
-
-
 UPDATE orders SET payment_id = 'PAY_0376' WHERE order_id = 'ORD_0376';
-
-
 UPDATE orders SET payment_id = 'PAY_0377' WHERE order_id = 'ORD_0377';
-
-
 UPDATE orders SET payment_id = 'PAY_0378' WHERE order_id = 'ORD_0378';
-
-
 UPDATE orders SET payment_id = 'PAY_0380' WHERE order_id = 'ORD_0380';
-
-
 UPDATE orders SET payment_id = 'PAY_0381' WHERE order_id = 'ORD_0381';
-
-
 UPDATE orders SET payment_id = 'PAY_0382' WHERE order_id = 'ORD_0382';
-
-
 UPDATE orders SET payment_id = 'PAY_0383' WHERE order_id = 'ORD_0383';
-
-
 UPDATE orders SET payment_id = 'PAY_0384' WHERE order_id = 'ORD_0384';
-
-
 UPDATE orders SET payment_id = 'PAY_0385' WHERE order_id = 'ORD_0385';
-
-
 UPDATE orders SET payment_id = 'PAY_0386' WHERE order_id = 'ORD_0386';
-
-
 UPDATE orders SET payment_id = 'PAY_0387' WHERE order_id = 'ORD_0387';
-
-
 UPDATE orders SET payment_id = 'PAY_0388' WHERE order_id = 'ORD_0388';
-
-
 UPDATE orders SET payment_id = 'PAY_0389' WHERE order_id = 'ORD_0389';
-
-
 UPDATE orders SET payment_id = 'PAY_0390' WHERE order_id = 'ORD_0390';
-
-
 UPDATE orders SET payment_id = 'PAY_0391' WHERE order_id = 'ORD_0391';
-
-
 UPDATE orders SET payment_id = 'PAY_0392' WHERE order_id = 'ORD_0392';
-
-
 UPDATE orders SET payment_id = 'PAY_0393' WHERE order_id = 'ORD_0393';
-
-
 UPDATE orders SET payment_id = 'PAY_0394' WHERE order_id = 'ORD_0394';
-
-
 UPDATE orders SET payment_id = 'PAY_0395' WHERE order_id = 'ORD_0395';
-
-
 UPDATE orders SET payment_id = 'PAY_0396' WHERE order_id = 'ORD_0396';
-
-
 UPDATE orders SET payment_id = 'PAY_0397' WHERE order_id = 'ORD_0397';
-
-
 UPDATE orders SET payment_id = 'PAY_0398' WHERE order_id = 'ORD_0398';
-
-
 UPDATE orders SET payment_id = 'PAY_0399' WHERE order_id = 'ORD_0399';
-
-
 UPDATE orders SET payment_id = 'PAY_0400' WHERE order_id = 'ORD_0400';
-
-
 UPDATE orders SET payment_id = 'PAY_0401' WHERE order_id = 'ORD_0401';
-
-
 UPDATE orders SET payment_id = 'PAY_0402' WHERE order_id = 'ORD_0402';
-
-
 UPDATE orders SET payment_id = 'PAY_0403' WHERE order_id = 'ORD_0403';
-
-
 UPDATE orders SET payment_id = 'PAY_0404' WHERE order_id = 'ORD_0404';
-
-
 UPDATE orders SET payment_id = 'PAY_0406' WHERE order_id = 'ORD_0406';
-
-
 UPDATE orders SET payment_id = 'PAY_0407' WHERE order_id = 'ORD_0407';
-
-
 UPDATE orders SET payment_id = 'PAY_0408' WHERE order_id = 'ORD_0408';
-
-
 UPDATE orders SET payment_id = 'PAY_0409' WHERE order_id = 'ORD_0409';
-
-
 UPDATE orders SET payment_id = 'PAY_0410' WHERE order_id = 'ORD_0410';
-
-
 UPDATE orders SET payment_id = 'PAY_0411' WHERE order_id = 'ORD_0411';
-
-
 UPDATE orders SET payment_id = 'PAY_0412' WHERE order_id = 'ORD_0412';
-
-
 UPDATE orders SET payment_id = 'PAY_0414' WHERE order_id = 'ORD_0414';
-
-
 UPDATE orders SET payment_id = 'PAY_0415' WHERE order_id = 'ORD_0415';
-
-
 UPDATE orders SET payment_id = 'PAY_0416' WHERE order_id = 'ORD_0416';
-
-
 UPDATE orders SET payment_id = 'PAY_0417' WHERE order_id = 'ORD_0417';
-
-
 UPDATE orders SET payment_id = 'PAY_0418' WHERE order_id = 'ORD_0418';
-
-
 UPDATE orders SET payment_id = 'PAY_0419' WHERE order_id = 'ORD_0419';
-
-
 UPDATE orders SET payment_id = 'PAY_0420' WHERE order_id = 'ORD_0420';
-
-
 UPDATE orders SET payment_id = 'PAY_0421' WHERE order_id = 'ORD_0421';
-
-
 UPDATE orders SET payment_id = 'PAY_0422' WHERE order_id = 'ORD_0422';
-
-
 UPDATE orders SET payment_id = 'PAY_0424' WHERE order_id = 'ORD_0424';
-
-
 UPDATE orders SET payment_id = 'PAY_0426' WHERE order_id = 'ORD_0426';
-
-
 UPDATE orders SET payment_id = 'PAY_0427' WHERE order_id = 'ORD_0427';
-
-
 UPDATE orders SET payment_id = 'PAY_0428' WHERE order_id = 'ORD_0428';
-
-
 UPDATE orders SET payment_id = 'PAY_0429' WHERE order_id = 'ORD_0429';
-
-
 UPDATE orders SET payment_id = 'PAY_0430' WHERE order_id = 'ORD_0430';
-
-
 UPDATE orders SET payment_id = 'PAY_0432' WHERE order_id = 'ORD_0432';
-
-
 UPDATE orders SET payment_id = 'PAY_0433' WHERE order_id = 'ORD_0433';
-
-
 UPDATE orders SET payment_id = 'PAY_0434' WHERE order_id = 'ORD_0434';
-
-
 UPDATE orders SET payment_id = 'PAY_0435' WHERE order_id = 'ORD_0435';
-
-
 UPDATE orders SET payment_id = 'PAY_0436' WHERE order_id = 'ORD_0436';
-
-
 UPDATE orders SET payment_id = 'PAY_0437' WHERE order_id = 'ORD_0437';
-
-
 UPDATE orders SET payment_id = 'PAY_0438' WHERE order_id = 'ORD_0438';
-
-
 UPDATE orders SET payment_id = 'PAY_0439' WHERE order_id = 'ORD_0439';
-
-
 UPDATE orders SET payment_id = 'PAY_0440' WHERE order_id = 'ORD_0440';
-
-
 UPDATE orders SET payment_id = 'PAY_0441' WHERE order_id = 'ORD_0441';
-
-
 UPDATE orders SET payment_id = 'PAY_0442' WHERE order_id = 'ORD_0442';
-
-
 UPDATE orders SET payment_id = 'PAY_0443' WHERE order_id = 'ORD_0443';
-
-
 UPDATE orders SET payment_id = 'PAY_0444' WHERE order_id = 'ORD_0444';
-
-
 UPDATE orders SET payment_id = 'PAY_0445' WHERE order_id = 'ORD_0445';
-
-
 UPDATE orders SET payment_id = 'PAY_0446' WHERE order_id = 'ORD_0446';
-
-
 UPDATE orders SET payment_id = 'PAY_0447' WHERE order_id = 'ORD_0447';
-
-
 UPDATE orders SET payment_id = 'PAY_0448' WHERE order_id = 'ORD_0448';
-
-
 UPDATE orders SET payment_id = 'PAY_0449' WHERE order_id = 'ORD_0449';
-
-
 UPDATE orders SET payment_id = 'PAY_0450' WHERE order_id = 'ORD_0450';
-
-
 UPDATE orders SET payment_id = 'PAY_0451' WHERE order_id = 'ORD_0451';
-
-
 UPDATE orders SET payment_id = 'PAY_0452' WHERE order_id = 'ORD_0452';
-
-
 UPDATE orders SET payment_id = 'PAY_0453' WHERE order_id = 'ORD_0453';
-
-
 UPDATE orders SET payment_id = 'PAY_0454' WHERE order_id = 'ORD_0454';
-
-
 UPDATE orders SET payment_id = 'PAY_0455' WHERE order_id = 'ORD_0455';
-
-
 UPDATE orders SET payment_id = 'PAY_0456' WHERE order_id = 'ORD_0456';
-
-
 UPDATE orders SET payment_id = 'PAY_0457' WHERE order_id = 'ORD_0457';
-
-
 UPDATE orders SET payment_id = 'PAY_0458' WHERE order_id = 'ORD_0458';
-
-
 UPDATE orders SET payment_id = 'PAY_0459' WHERE order_id = 'ORD_0459';
-
-
 UPDATE orders SET payment_id = 'PAY_0460' WHERE order_id = 'ORD_0460';
-
-
 UPDATE orders SET payment_id = 'PAY_0461' WHERE order_id = 'ORD_0461';
-
-
 UPDATE orders SET payment_id = 'PAY_0462' WHERE order_id = 'ORD_0462';
-
-
 UPDATE orders SET payment_id = 'PAY_0463' WHERE order_id = 'ORD_0463';
-
-
 UPDATE orders SET payment_id = 'PAY_0464' WHERE order_id = 'ORD_0464';
-
-
 UPDATE orders SET payment_id = 'PAY_0465' WHERE order_id = 'ORD_0465';
-
-
 UPDATE orders SET payment_id = 'PAY_0466' WHERE order_id = 'ORD_0466';
-
-
 UPDATE orders SET payment_id = 'PAY_0467' WHERE order_id = 'ORD_0467';
-
-
 UPDATE orders SET payment_id = 'PAY_0468' WHERE order_id = 'ORD_0468';
-
-
 UPDATE orders SET payment_id = 'PAY_0469' WHERE order_id = 'ORD_0469';
-
-
 UPDATE orders SET payment_id = 'PAY_0471' WHERE order_id = 'ORD_0471';
-
-
 UPDATE orders SET payment_id = 'PAY_0472' WHERE order_id = 'ORD_0472';
-
-
 UPDATE orders SET payment_id = 'PAY_0473' WHERE order_id = 'ORD_0473';
-
-
 UPDATE orders SET payment_id = 'PAY_0474' WHERE order_id = 'ORD_0474';
-
-
 UPDATE orders SET payment_id = 'PAY_0475' WHERE order_id = 'ORD_0475';
-
-
 UPDATE orders SET payment_id = 'PAY_0476' WHERE order_id = 'ORD_0476';
-
-
 UPDATE orders SET payment_id = 'PAY_0478' WHERE order_id = 'ORD_0478';
-
-
 UPDATE orders SET payment_id = 'PAY_0479' WHERE order_id = 'ORD_0479';
-
-
 UPDATE orders SET payment_id = 'PAY_0480' WHERE order_id = 'ORD_0480';
-
-
 UPDATE orders SET payment_id = 'PAY_0482' WHERE order_id = 'ORD_0482';
-
-
 UPDATE orders SET payment_id = 'PAY_0483' WHERE order_id = 'ORD_0483';
-
-
 UPDATE orders SET payment_id = 'PAY_0484' WHERE order_id = 'ORD_0484';
-
-
 UPDATE orders SET payment_id = 'PAY_0485' WHERE order_id = 'ORD_0485';
-
-
 UPDATE orders SET payment_id = 'PAY_0486' WHERE order_id = 'ORD_0486';
-
-
 UPDATE orders SET payment_id = 'PAY_0488' WHERE order_id = 'ORD_0488';
-
-
 UPDATE orders SET payment_id = 'PAY_0490' WHERE order_id = 'ORD_0490';
-
-
 UPDATE orders SET payment_id = 'PAY_0491' WHERE order_id = 'ORD_0491';
-
-
 UPDATE orders SET payment_id = 'PAY_0492' WHERE order_id = 'ORD_0492';
-
-
 UPDATE orders SET payment_id = 'PAY_0493' WHERE order_id = 'ORD_0493';
-
-
 UPDATE orders SET payment_id = 'PAY_0494' WHERE order_id = 'ORD_0494';
-
-
 UPDATE orders SET payment_id = 'PAY_0495' WHERE order_id = 'ORD_0495';
-
-
 UPDATE orders SET payment_id = 'PAY_0496' WHERE order_id = 'ORD_0496';
-
-
 UPDATE orders SET payment_id = 'PAY_0497' WHERE order_id = 'ORD_0497';
-
-
 UPDATE orders SET payment_id = 'PAY_0499' WHERE order_id = 'ORD_0499';
-
-
 UPDATE orders SET payment_id = 'PAY_0500' WHERE order_id = 'ORD_0500';
+
+INSERT INTO payment_preferences (user_id, payment_type, payment_method_id, updated_at) VALUES
+('01KV05RTC7NA4KZMMP8KXX7461', 'COD', NULL, NOW()),
+('01KV05RTC836YVQ3DF9FZFT2A7', 'VNPAY', NULL, NOW()),
+('01KV05RTC9AYX7XR183X8EQBF0', 'COD', NULL, NOW()),
+('01KV05RTCATYB3M97J3TJ1NEAP', 'VNPAY', NULL, NOW()),
+('01KV05RTCBBPV0GBS7DFTEHY1T', 'COD', NULL, NOW());
+
+INSERT INTO merchant_balances (merchant_id, currency, pending, available, version, created_at, updated_at) VALUES
+('MER_001', 'VND', 18230000, 12500000, 0, NOW() - INTERVAL '30 days', NOW()),
+('MER_002', 'VND', 36030000, 27800000, 0, NOW() - INTERVAL '30 days', NOW()),
+('MER_003', 'VND', 550000, 4200000, 0, NOW() - INTERVAL '30 days', NOW()),
+('MER_004', 'VND', 1430000, 8950000, 0, NOW() - INTERVAL '30 days', NOW()),
+('MER_005', 'VND', 2890000, 15600000, 0, NOW() - INTERVAL '30 days', NOW());
+
+INSERT INTO merchant_payouts (
+    payout_id, merchant_id, amount, currency, status,
+    bank_name, bank_account_no, bank_account_name, external_ref, note,
+    requested_at, completed_at, version
+) VALUES
+('PAYOUT_DEMO_001', 'MER_001', 5000000, 'VND', 'COMPLETED', 'Vietcombank', '0123456789', 'AIONN MERCHANT 001', 'BANK_DEMO_001', 'Demo payout', NOW() - INTERVAL '10 days', NOW() - INTERVAL '9 days', 0),
+('PAYOUT_DEMO_002', 'MER_002', 8000000, 'VND', 'PROCESSING', 'Techcombank', '0987654321', 'AIONN MERCHANT 002', 'BANK_DEMO_002', 'Demo payout', NOW() - INTERVAL '1 day', NULL, 0),
+('PAYOUT_DEMO_003', 'MER_003', 2000000, 'VND', 'PENDING', 'ACB', '1122334455', 'AIONN MERCHANT 003', NULL, 'Demo payout', NOW() - INTERVAL '2 hours', NULL, 0);
+
+INSERT INTO settlement_ledger (
+    entry_id, merchant_id, order_id, payment_id, payout_id,
+    kind, gross, commission, net, currency, note, created_at
+) VALUES
+('SETTLE_DEMO_001', 'MER_001', 'ORD_0004', 'PAY_0004', NULL, 'SALE', 1430000, 71500, 1358500, 'VND', 'Settlement for ORD_0004', NOW() - INTERVAL '12 days'),
+('SETTLE_DEMO_002', 'MER_001', 'ORD_0004', 'PAY_0004', NULL, 'MOVE_AVAILABLE', 1358500, 0, 1358500, 'VND', 'Funds became available', NOW() - INTERVAL '10 days'),
+('SETTLE_DEMO_003', 'MER_001', NULL, NULL, 'PAYOUT_DEMO_001', 'PAYOUT_DEBIT', 5000000, 0, 5000000, 'VND', 'Completed merchant payout', NOW() - INTERVAL '9 days'),
+('SETTLE_DEMO_004', 'MER_002', 'ORD_0034', 'PAY_0034', NULL, 'SALE', 22910000, 1145500, 21764500, 'VND', 'Settlement for ORD_0034', NOW() - INTERVAL '8 days'),
+('SETTLE_DEMO_005', 'MER_003', 'ORD_0023', 'PAY_0023', NULL, 'SALE', 23030000, 1151500, 21878500, 'VND', 'Settlement for ORD_0023', NOW() - INTERVAL '6 days');

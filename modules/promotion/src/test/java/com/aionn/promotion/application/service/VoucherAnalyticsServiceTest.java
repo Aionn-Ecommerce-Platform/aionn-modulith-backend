@@ -1,7 +1,8 @@
 package com.aionn.promotion.application.service;
 
 import com.aionn.promotion.application.dto.analytics.result.MerchantVoucherAnalyticsResult;
-import com.aionn.promotion.infrastructure.persistence.repository.VoucherRepository;
+import com.aionn.promotion.application.port.out.VoucherPersistencePort;
+import com.aionn.promotion.application.port.out.VoucherPersistencePort.MerchantVoucherRow;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,41 +22,19 @@ import static org.mockito.Mockito.when;
 class VoucherAnalyticsServiceTest {
 
     @Mock
-    private VoucherRepository voucherRepository;
+    private VoucherPersistencePort voucherRepository;
     @Mock
     private MerchantQueryPort merchantQueryPort;
 
     @InjectMocks
     private VoucherAnalyticsService service;
 
-    private static VoucherRepository.MerchantVoucherProjection row(String code, String campaignId,
+    private static MerchantVoucherRow row(String code, String campaignId,
             Integer limit, Integer used, BigDecimal discount) {
-        return new VoucherRepository.MerchantVoucherProjection() {
-            @Override
-            public String getVoucherCode() {
-                return code;
-            }
-
-            @Override
-            public String getCampaignId() {
-                return campaignId;
-            }
-
-            @Override
-            public Integer getUsageLimit() {
-                return limit;
-            }
-
-            @Override
-            public Integer getUsedCount() {
-                return used;
-            }
-
-            @Override
-            public BigDecimal getDiscountAmount() {
-                return discount;
-            }
-        };
+        return new MerchantVoucherRow(code, campaignId,
+                limit == null ? 0 : limit,
+                used == null ? 0 : used,
+                discount);
     }
 
     @Test

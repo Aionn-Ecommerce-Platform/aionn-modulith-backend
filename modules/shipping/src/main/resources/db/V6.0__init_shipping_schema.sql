@@ -1,6 +1,3 @@
--- -----------------------------------------------------------------------------
--- Squashed from V6.0__init_shipping_schema.sql
--- -----------------------------------------------------------------------------
 CREATE TABLE shipments (
     shipment_id            VARCHAR(50) PRIMARY KEY,
     order_id               VARCHAR(50) NOT NULL,
@@ -60,21 +57,8 @@ CREATE TABLE shipping_rates (
     updated_at TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
 
--- -----------------------------------------------------------------------------
--- Squashed from V6.1__seed_shipping_rates.sql
--- -----------------------------------------------------------------------------
--- Seed Shipping Rates
-
+-- Baseline domestic fallback rates.
 INSERT INTO shipping_rates (rate_id, zone_code, base_fee, currency, condition, version, created_at, updated_at) VALUES
 ('SR_VN_HN', 'VN-HN', 30000.0, 'VND', 'Hanoi Delivery', 0, NOW(), NOW()),
 ('SR_VN_SG', 'VN-SG', 35000.0, 'VND', 'HCMC Delivery', 0, NOW(), NOW()),
 ('SR_VN_DN', 'VN-DN', 40000.0, 'VND', 'Da Nang Delivery', 0, NOW(), NOW());
-
--- -----------------------------------------------------------------------------
--- Squashed from V6.2__seed_shipment_data.sql
--- -----------------------------------------------------------------------------
--- Intentionally empty: shipment seed data was removed because tracking codes
--- (TRACK_xxxx) don't exist on the GHN sandbox and cause poller errors in dev.
--- Real shipments will be created through the order/checkout flow.
-SELECT 1;
-

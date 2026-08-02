@@ -5,6 +5,7 @@ import com.aionn.shipping.application.dto.shipment.command.CarrierWebhookCommand
 import com.aionn.shipping.application.dto.shipment.command.CreateShipmentCommand;
 import com.aionn.shipping.application.dto.shipment.command.QuoteShippingCommand;
 import com.aionn.shipping.application.dto.shipment.command.ResolveIssueCommand;
+import com.aionn.shipping.application.policy.CarrierWebhookSecurityPolicy;
 import com.aionn.shipping.application.port.out.CarrierClient;
 import com.aionn.shipping.application.port.out.ShipmentPersistencePort;
 import com.aionn.shipping.application.port.out.ShippingRatePersistencePort;
@@ -12,7 +13,6 @@ import com.aionn.shipping.application.port.out.integration.ShippingIntegrationEv
 import com.aionn.shipping.domain.exception.ShippingErrorCode;
 import com.aionn.shipping.domain.exception.ShippingException;
 import com.aionn.shipping.domain.model.Shipment;
-import com.aionn.shipping.infrastructure.carrier.config.GhnProperties;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
 import com.aionn.sharedkernel.util.IdGenerator;
@@ -39,7 +39,7 @@ public class ShipmentService {
     private final ShippingIntegrationEventPublisherPort integrationEventPublisher;
     private final MerchantQueryPort merchantQueryPort;
     private final Clock clock;
-    private final GhnProperties ghnProperties;
+    private final CarrierWebhookSecurityPolicy webhookSecurityPolicy;
     private final TransactionTemplate transactionTemplate;
 
     public Shipment createShipment(CreateShipmentCommand command) {
@@ -115,11 +115,7 @@ public class ShipmentService {
     }
 
     private void verifyWebhookSecret(String provided) {
-        String expected = ghnProperties.webhookSecret();
-        if (expected == null || expected.isBlank()) {
-            return;
-        }
-        if (provided == null || !expected.equals(provided)) {
+        if (!webhookSecurityPolicy.isAuthorized(provided)) {
             throw new ShippingException(ShippingErrorCode.SHIPMENT_FORBIDDEN,
                     "Invalid webhook secret");
         }

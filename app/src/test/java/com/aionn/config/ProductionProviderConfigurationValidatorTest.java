@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.env.MockEnvironment;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ProductionProviderConfigurationValidatorTest {
 
@@ -12,13 +12,28 @@ class ProductionProviderConfigurationValidatorTest {
     void rejectsDevelopmentFallbacksAndMissingCredentials() {
         MockEnvironment environment = new MockEnvironment()
                 .withProperty("identity.registration.captcha.provider", "google")
+                .withProperty("identity.auth.social.google.provider", "remote")
+                .withProperty("identity.kyc.provider", "sumsub")
+                .withProperty("identity.media.provider", "cloudinary")
                 .withProperty("payment.provider.stripe.enabled", "true")
                 .withProperty("payment.provider.vnpay.enabled", "true")
                 .withProperty("notification.email.provider", "logging")
                 .withProperty("payment.invoice.base-url", "http://localhost:8080/invoices");
 
-        assertThrows(IllegalStateException.class,
-                () -> new ProductionProviderConfigurationValidator(environment).validate());
+        assertThatThrownBy(() -> new ProductionProviderConfigurationValidator(environment).validate())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("IDENTITY_JWT_SECRET is required")
+                .hasMessageContaining("CAPTCHA_GOOGLE_SECRET_KEY is required")
+                .hasMessageContaining("IDENTITY_AUTH_GOOGLE_CLIENT_ID is required")
+                .hasMessageContaining("IDENTITY_KYC_SUMSUB_APP_TOKEN is required")
+                .hasMessageContaining("STRIPE_API_KEY is required")
+                .hasMessageContaining("VNPAY_TMN_CODE is required")
+                .hasMessageContaining("GHN_API_TOKEN is required")
+                .hasMessageContaining("notification.email.provider must use a real provider")
+                .hasMessageContaining("notification.sms.provider must use a real provider")
+                .hasMessageContaining("notification.push.provider must use a real provider")
+                .hasMessageContaining("CLOUDINARY_CLOUD_NAME is required")
+                .hasMessageContaining("payment.invoice.base-url must not target localhost");
     }
 
     @Test
@@ -34,8 +49,10 @@ class ProductionProviderConfigurationValidatorTest {
                 .withProperty("identity.jwt.secret", "too-short")
                 .withProperty("payment.provider.vnpay.return-url", "http://localhost:8080/payment/return");
 
-        assertThrows(IllegalStateException.class,
-                () -> new ProductionProviderConfigurationValidator(environment).validate());
+        assertThatThrownBy(() -> new ProductionProviderConfigurationValidator(environment).validate())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("IDENTITY_JWT_SECRET must be at least ")
+                .hasMessageContaining("payment.provider.vnpay.return-url must not target localhost");
     }
 
     private static MockEnvironment completeEnvironment() {

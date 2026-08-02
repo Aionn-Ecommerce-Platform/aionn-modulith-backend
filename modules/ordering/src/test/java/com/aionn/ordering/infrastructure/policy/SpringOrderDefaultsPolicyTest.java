@@ -1,6 +1,5 @@
 package com.aionn.ordering.infrastructure.policy;
 
-import com.aionn.ordering.application.policy.SpringOrderDefaultsPolicy;
 import com.aionn.ordering.infrastructure.config.properties.OrderingDefaultsProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

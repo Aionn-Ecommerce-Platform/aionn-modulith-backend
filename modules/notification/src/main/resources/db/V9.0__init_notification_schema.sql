@@ -1,6 +1,3 @@
--- -----------------------------------------------------------------------------
--- Squashed from V9.0__init_notification_schema.sql
--- -----------------------------------------------------------------------------
 CREATE TABLE notification_templates (
     template_id  VARCHAR(50) PRIMARY KEY,
     event_type   VARCHAR(100) NOT NULL,
@@ -77,10 +74,8 @@ CREATE TABLE notification_configurations (
 );
 CREATE INDEX idx_provider_channel_active ON notification_configurations(channel, is_active);
 
--- ---------------------------------------------------------------------
 -- Default identity-driven templates (vi-VN). Event-type strings match
 -- IdentityNotificationAdapter and IdentityEventListener.
--- ---------------------------------------------------------------------
 INSERT INTO notification_templates (template_id, event_type, channel, category, locale, subject, content, placeholders, version, is_active)
 VALUES
 ('idn_pwd_reset_em_vi',
@@ -143,11 +138,8 @@ VALUES
  'Aionn: ma OTP dang ky cua ban la {{otpCode}}. Hieu luc 5 phut. Khong chia se voi ai.',
  '["otpCode"]'::jsonb, 1, TRUE);
 
-
--- ---------------------------------------------------------------------
 -- Chat -> notification fan-out templates. Triggered by
 -- MessageSentIntegrationEvent for offline recipients only.
--- ---------------------------------------------------------------------
 INSERT INTO notification_templates (template_id, event_type, channel, category, locale, subject, content, placeholders, version, is_active)
 VALUES
 ('chat_msg_in_app_vi',
@@ -168,12 +160,7 @@ VALUES
  '{{messagePreview}}',
  '["senderName","messagePreview","conversationId"]'::jsonb, 1, TRUE);
 
--- -----------------------------------------------------------------------------
--- Squashed from V9.1__add_english_notification_templates.sql
--- -----------------------------------------------------------------------------
--- =====================================================================
--- Seed translation data for English (en-US) templates
--- =====================================================================
+-- English counterparts for the built-in templates.
 
 INSERT INTO notification_templates (template_id, event_type, channel, category, locale, subject, content, placeholders, version, is_active)
 VALUES

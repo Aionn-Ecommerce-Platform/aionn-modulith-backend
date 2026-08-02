@@ -1,8 +1,6 @@
 catalog:
   merchant-search-sync:
     page-size: ${CATALOG_MERCHANT_SEARCH_SYNC_PAGE_SIZE:100}
-  ordering:
-    provider: ${CATALOG_ORDERING_PROVIDER:assume-empty}
   product:
     default-currency: ${CATALOG_PRODUCT_DEFAULT_CURRENCY:VND}
     clone-name-suffix: "${CATALOG_PRODUCT_CLONE_NAME_SUFFIX: (Copy)}"

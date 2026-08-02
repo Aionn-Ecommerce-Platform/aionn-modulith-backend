@@ -1,5 +1,3 @@
--- Development/test fixtures. Never include classpath:db-demo in production.
-
 CREATE OR REPLACE FUNCTION aionn_catalog_seed_color_label(p_color TEXT, p_option TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
@@ -31,7 +29,6 @@ BEGIN
 END;
 $$;
 
-
 CREATE OR REPLACE FUNCTION aionn_catalog_seed_variant_size(p_size TEXT, p_option TEXT, p_is_shoe BOOLEAN)
 RETURNS TEXT
 LANGUAGE plpgsql
@@ -52,7 +49,6 @@ BEGIN
     RETURN apparel_sizes[((option_number - 1) % array_length(apparel_sizes, 1)) + 1];
 END;
 $$;
-
 
 CREATE OR REPLACE FUNCTION aionn_catalog_seed_variant_attributes(
     p_attributes JSONB,
@@ -119,7 +115,6 @@ BEGIN
     RETURN CASE WHEN attrs = '{}'::jsonb THEN jsonb_build_object('type', 'Tiêu chuẩn') ELSE attrs END;
 END;
 $$;
-
 
 CREATE OR REPLACE FUNCTION aionn_catalog_seed_description(
     p_name TEXT,
@@ -231,7 +226,6 @@ BEGIN
 END;
 $$;
 
-
 CREATE OR REPLACE FUNCTION aionn_catalog_seed_images(p_category_ids JSONB) RETURNS JSONB
 LANGUAGE plpgsql
 AS $$
@@ -275,13 +269,6 @@ BEGIN
 END;
 $$;
 
-
-
-
-
--- -----------------------------------------------------------------------------
--- Squashed from V2.1__seed_catalog_data.sql
--- -----------------------------------------------------------------------------
 -- Seed Merchants
 
 INSERT INTO merchants (merchant_id, owner_id, name, logo_url, description, status, version, created_at, updated_at) VALUES
@@ -300,7 +287,6 @@ INSERT INTO merchants (merchant_id, owner_id, name, logo_url, description, statu
 ('MER_013', '01KV05RTFRFE6Q2WDK8D48SGQD', 'Eco Living Co', 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=200&q=80', 'Cửa hàng chính hãng Eco Living Co cung cấp các sản phẩm chất lượng cao.', 'ACTIVE', 0, NOW(), NOW()),
 ('MER_014', '01KV05RTFSN9NDA92Y53Y6CZAB', 'PureCare Cosmetics', 'https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d?auto=format&fit=crop&w=200&q=80', 'Cửa hàng chính hãng PureCare Cosmetics cung cấp các sản phẩm chất lượng cao.', 'ACTIVE', 0, NOW(), NOW()),
 ('MER_015', '01KV05RTFT68XSSQCKAKSRXD31', 'ActiveGlow Sports', 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?auto=format&fit=crop&w=200&q=80', 'Cửa hàng chính hãng ActiveGlow Sports cung cấp các sản phẩm chất lượng cao.', 'ACTIVE', 0, NOW(), NOW());
-
 
 -- Seed Categories
 
@@ -324,7 +310,6 @@ INSERT INTO categories (category_id, parent_id, name, slug, icon_url, is_active,
 ('CAT_SKN', 'CAT_HBE', 'Chăm sóc da', 'skincare', 'https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?auto=format&fit=crop&w=200&q=80', TRUE, NOW(), NOW()),
 ('CAT_VIT', 'CAT_HBE', 'Vitamin & Thực phẩm chức năng', 'vitamins', 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=200&q=80', TRUE, NOW(), NOW());
 
-
 -- Seed Brands
 
 INSERT INTO brands (brand_id, name, logo_url, description, status, created_at, updated_at) VALUES
@@ -338,7 +323,6 @@ INSERT INTO brands (brand_id, name, logo_url, description, status, created_at, u
 ('BR_GLOW', 'Mỹ phẩm GlowUp', 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=200&q=80', 'Các sản phẩm chăm sóc da đã qua kiểm nghiệm da liễu.', 'ACTIVE', NOW(), NOW()),
 ('BR_FIT', 'Dụng cụ thể thao FitLife', 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=200&q=80', 'Trang phục và thiết bị thể thao cao cấp.', 'ACTIVE', NOW(), NOW()),
 ('BR_ZEPHYR', 'Thiết bị gia dụng Zephyr', 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=200&q=80', 'Thiết bị gia dụng thông minh thế hệ mới.', 'ACTIVE', NOW(), NOW());
-
 
 -- Seed Products
 
@@ -844,7 +828,6 @@ INSERT INTO products (product_id, merchant_id, brand_id, name, category_ids, ima
 ('PR_0499', 'MER_005', 'BR_GLOW', 'Thực phẩm bổ sung êm ái Alpha 499', '["CAT_HBE", "CAT_VIT"]'::jsonb, '["https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=600&q=80"]'::jsonb, '["silent", "supplement", "alpha"]'::jsonb, '[]'::jsonb, '{"color": "Grey", "size": "S"}'::jsonb, 'Trải nghiệm tương lai với Thực phẩm bổ sung êm ái Alpha 499. Một sản phẩm hiệu năng cao được chế tạo bởi Mỹ phẩm GlowUp nhằm mang lại độ bền tối đa và trải nghiệm người dùng vượt trội.', 'PUBLISHED', 0, NOW(), NOW()),
 ('PR_0500', 'MER_006', 'BR_APEX', 'Khóa thông minh chuyên nghiệp Lite 500', '["CAT_SMH", "CAT_SMS"]'::jsonb, '["https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=600&q=80"]'::jsonb, '["pro", "lock", "lite"]'::jsonb, '[]'::jsonb, '{"resolution": "1080p FHD"}'::jsonb, 'Trải nghiệm tương lai với Khóa thông minh chuyên nghiệp Lite 500. Một sản phẩm hiệu năng cao được chế tạo bởi Phòng thí nghiệm Apex nhằm mang lại độ bền tối đa và trải nghiệm người dùng vượt trội.', 'PUBLISHED', 0, NOW(), NOW());
 
-
 INSERT INTO products (product_id, merchant_id, brand_id, name, category_ids, image_list, tags, collection_ids, attributes, ai_description, status, version, created_at, updated_at) VALUES
 ('PR_0501', 'MER_007', 'BR_ELEG', 'Váy liền cổ điển Y 501', '["CAT_FAS", "CAT_WCL"]'::jsonb, '["https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=600&q=80"]'::jsonb, '["classic", "dress", "y"]'::jsonb, '[]'::jsonb, '{"color": "Grey", "size": "S"}'::jsonb, 'Trải nghiệm tương lai với Váy liền cổ điển Y 501. Một sản phẩm hiệu năng cao được chế tạo bởi Thời trang Elegance nhằm mang lại độ bền tối đa và trải nghiệm người dùng vượt trội.', 'PUBLISHED', 0, NOW(), NOW()),
 ('PR_0502', 'MER_008', 'BR_VINA', 'Cảm biến năng động Max 502', '["CAT_SMH", "CAT_SMS"]'::jsonb, '["https://images.unsplash.com/photo-1557597774-9d273605dfa9?auto=format&fit=crop&w=600&q=80"]'::jsonb, '["active", "sensor", "max"]'::jsonb, '[]'::jsonb, '{"resolution": "1080p FHD"}'::jsonb, 'Trải nghiệm tương lai với Cảm biến năng động Max 502. Một sản phẩm hiệu năng cao được chế tạo bởi Thiết bị thông minh Vina nhằm mang lại độ bền tối đa và trải nghiệm người dùng vượt trội.', 'PUBLISHED', 0, NOW(), NOW()),
@@ -1346,7 +1329,6 @@ INSERT INTO products (product_id, merchant_id, brand_id, name, category_ids, ima
 ('PR_0998', 'MER_009', 'BR_ELEG', 'Quần dài tân tiến Max 998', '["CAT_FAS", "CAT_MCL"]'::jsonb, '["https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=600&q=80"]'::jsonb, '["neo", "pants", "max"]'::jsonb, '[]'::jsonb, '{"color": "Grey", "size": "L"}'::jsonb, 'Trải nghiệm tương lai với Quần dài tân tiến Max 998. Một sản phẩm hiệu năng cao được thiết kế nhằm mang lại độ bền tối đa và trải nghiệm người dùng vượt trội.', 'PUBLISHED', 0, NOW(), NOW()),
 ('PR_0999', 'MER_010', 'BR_FIT', 'Giày thể thao công thái học Mini 999', '["CAT_FAS", "CAT_SHO"]'::jsonb, '["https://images.unsplash.com/photo-1608231387042-66d1773070a5?auto=format&fit=crop&w=600&q=80"]'::jsonb, '["ergonomic", "sneaker", "mini"]'::jsonb, '[]'::jsonb, '{"color": "Navy", "size": "XL"}'::jsonb, 'Trải nghiệm tương lai với Giày thể thao công thái học Mini 999. Một sản phẩm hiệu năng cao được chế tạo bởi Dụng cụ thể thao FitLife nhằm mang lại độ bền tối đa và trải nghiệm người dùng vượt trội.', 'PUBLISHED', 0, NOW(), NOW()),
 ('PR_1000', 'MER_011', 'BR_GLOW', 'Sữa rửa mặt ưu tú Beta 1000', '["CAT_HBE", "CAT_SKN"]'::jsonb, '["https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?auto=format&fit=crop&w=600&q=80"]'::jsonb, '["elite", "cleanser", "beta"]'::jsonb, '[]'::jsonb, '{"volume": "30ml", "skin_type": "Sensitive/Dry/Oily"}'::jsonb, 'Trải nghiệm tương lai với Sữa rửa mặt ưu tú Beta 1000. Một sản phẩm hiệu năng cao được chế tạo bởi Mỹ phẩm GlowUp nhằm mang lại độ bền tối đa và trải nghiệm người dùng vượt trội.', 'PUBLISHED', 0, NOW(), NOW());
-
 
 -- Seed Product Variants
 
@@ -1852,7 +1834,6 @@ INSERT INTO product_variants (sku_id, product_id, attribute_values, price, curre
 ('SKU_00499', 'PR_0330', '{"option": "Option 1"}'::jsonb, 220000.0, 'VND'),
 ('SKU_00500', 'PR_0331', '{"option": "Option 1"}'::jsonb, 660000.0, 'VND');
 
-
 INSERT INTO product_variants (sku_id, product_id, attribute_values, price, currency) VALUES
 ('SKU_00501', 'PR_0332', '{"option": "Option 1"}'::jsonb, 320000.0, 'VND'),
 ('SKU_00502', 'PR_0333', '{"option": "Option 1"}'::jsonb, 9000000.0, 'VND'),
@@ -2355,7 +2336,6 @@ INSERT INTO product_variants (sku_id, product_id, attribute_values, price, curre
 ('SKU_00999', 'PR_0674', '{"option": "Option 1"}'::jsonb, 400000.0, 'VND'),
 ('SKU_01000', 'PR_0675', '{"option": "Option 1"}'::jsonb, 60000.0, 'VND');
 
-
 INSERT INTO product_variants (sku_id, product_id, attribute_values, price, currency) VALUES
 ('SKU_01001', 'PR_0675', '{"option": "Option 2"}'::jsonb, 280000.0, 'VND'),
 ('SKU_01002', 'PR_0676', '{"option": "Option 1"}'::jsonb, 18000000.0, 'VND'),
@@ -2835,10 +2815,6 @@ INSERT INTO product_variants (sku_id, product_id, attribute_values, price, curre
 ('SKU_01476', 'PR_0999', '{"option": "Option 2"}'::jsonb, 140000.0, 'VND'),
 ('SKU_01477', 'PR_1000', '{"option": "Option 1"}'::jsonb, 640000.0, 'VND');
 
-
--- -----------------------------------------------------------------------------
--- Squashed from V2.3__seed_category_translations_en.sql
--- -----------------------------------------------------------------------------
 INSERT INTO category_translations (category_id, locale, name, created_at, updated_at) VALUES
 ('CAT_ELE', 'en', 'Electronics', NOW(), NOW()),
 ('CAT_LAP', 'en', 'Laptops', NOW(), NOW()),
@@ -2859,18 +2835,10 @@ INSERT INTO category_translations (category_id, locale, name, created_at, update
 ('CAT_SKN', 'en', 'Skincare', NOW(), NOW()),
 ('CAT_VIT', 'en', 'Vitamins & Supplements', NOW(), NOW());
 
-
--- -----------------------------------------------------------------------------
--- Squashed from V2.5__mock_original_prices.sql
--- -----------------------------------------------------------------------------
--- MOCK ORIGINAL_PRICE FOR A PORTION OF PRODUCT VARIANTS TO SHOW DISCOUNTS
 UPDATE product_variants
 SET original_price = ROUND(price * 1.25, 0)
 WHERE length(sku_id) % 2 = 0;
 
-
--- Seed: deterministic-ish sold count for every existing product so the
--- card layout has a number to render. Range ~50..5000 keyed off product_id.
 INSERT INTO product_sold_counters (product_id, sold_count, updated_at)
 SELECT p.product_id,
        50 + (ABS(('x' || substring(md5(p.product_id), 1, 8))::bit(32)::int) % 4950),
@@ -2878,10 +2846,6 @@ SELECT p.product_id,
 FROM products p
 ON CONFLICT (product_id) DO NOTHING;
 
-
--- Backfill the 15 seed merchants across a curated mix of major commerce hubs
--- so the storefront's "Location" filter has variety out of the box. Names are
--- the canonical provinces.name values from V1.1, and codes the GSO ones.
 UPDATE merchants SET province_code = '01', province_name = 'Thành phố Hà Nội'        WHERE merchant_id = 'MER_001';
 
 UPDATE merchants SET province_code = '79', province_name = 'Thành phố Hồ Chí Minh'   WHERE merchant_id = 'MER_002';
@@ -2912,21 +2876,11 @@ UPDATE merchants SET province_code = '77', province_name = 'Tỉnh Bà Rịa - V
 
 UPDATE merchants SET province_code = '89', province_name = 'Tỉnh An Giang'            WHERE merchant_id = 'MER_015';
 
-
--- -----------------------------------------------------------------------------
--- Squashed from V2.8__expand_sale_coverage.sql
--- -----------------------------------------------------------------------------
--- Bump sale coverage. V2.5 only marked ~half the variants (even-length sku_id)
--- with an original_price, so the storefront feels mostly off-sale. Fill in the
--- remaining variants with varying markups so most cards now show a strike
--- price and discount badge — and so the "On sale" filter has real volume.
-
 UPDATE product_variants
 SET original_price = ROUND(price * 1.40, 0)
 WHERE original_price IS NULL
   AND price IS NOT NULL
   AND length(sku_id) % 3 = 0;
-
 
 UPDATE product_variants
 SET original_price = ROUND(price * 1.20, 0)
@@ -2934,12 +2888,10 @@ WHERE original_price IS NULL
   AND price IS NOT NULL
   AND length(sku_id) % 3 = 1;
 
-
 UPDATE product_variants
 SET original_price = ROUND(price * 1.15, 0)
 WHERE original_price IS NULL
   AND price IS NOT NULL;
-
 
 UPDATE products
 SET
@@ -2948,14 +2900,12 @@ SET
   attributes = '{"brand": "Apex", "connectivity": "Zigbee 3.0", "material": "Tempered Glass", "voltage": "220V"}'::jsonb
 WHERE product_id = 'PR_0001';
 
-
 UPDATE products
 SET
   ai_description = 'Áo len cổ điển Alpha 2 được dệt từ sợi len cừu tự nhiên cao cấp, giữ ấm tối ưu mà vẫn mềm mại, không gây ngứa da. Thiết kế cổ tròn basic, bo chun nhẹ ở cổ tay và gấu áo tạo form dáng thanh lịch, phù hợp cho cả đi học, đi làm hay đi chơi. Sản phẩm có độ bền màu cao, không bai nhão sau khi giặt máy nhiều lần.',
   image_list = '["https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1509319117193-57bab727e09d?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?auto=format&fit=crop&w=600&q=80"]'::jsonb,
   attributes = '{"material": "90% Wool, 10% Cashmere", "origin": "Vietnam", "style": "Classic Casual"}'::jsonb
 WHERE product_id = 'PR_0002';
-
 
 UPDATE products
 SET
@@ -2964,14 +2914,12 @@ SET
   attributes = '{"material": "Suede Leather", "sole": "Natural Rubber", "style": "Loafer"}'::jsonb
 WHERE product_id = 'PR_0003';
 
-
 UPDATE products
 SET
   ai_description = 'Áo thun thể thao nam cấp ẩm Max 4 sử dụng công nghệ dệt Double-Face tiên tiến, thoáng khí và thấm hút mồ hôi siêu tốc. Sợi vải co giãn 4 chiều mềm mại, bền bỉ và giữ form cực tốt. Phù hợp cho các hoạt động thể thao ngoài trời, chạy bộ, tập gym hoặc mặc ở nhà hàng ngày.',
   image_list = '["https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=600&q=80", "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80"]'::jsonb,
   attributes = '{"material": "95% Polyester, 5% Spandex", "weight": "180gsm", "fit": "Regular Fit"}'::jsonb
 WHERE product_id = 'PR_0004';
-
 
 UPDATE products
 SET
@@ -2980,67 +2928,46 @@ SET
   attributes = '{"screen": "6.7 LTPO OLED", "storage": "256GB / 512GB", "processor": "Aionn AI Octa-Core", "os": "Android 14"}'::jsonb
 WHERE product_id = 'PR_0005';
 
-
-
--- Seed English translations for translations table
 INSERT INTO product_translations (product_id, locale, name, ai_description, created_at, updated_at) VALUES
 ('PR_0001', 'en', 'Alpha 1 Neural Control Panel', 'Experience the future with the Alpha 1 Neural Control Panel. A premium smart automation device crafted by Apex Labs for maximum durability and an outstanding smart home control experience. Supports Zigbee 3.0, crystal-clear touchscreen OLED, and built-in virtual assistant to manage all your home appliances with one tap.', NOW(), NOW())
 ON CONFLICT (product_id, locale) DO UPDATE SET name = EXCLUDED.name, ai_description = EXCLUDED.ai_description;
-
 
 INSERT INTO product_translations (product_id, locale, name, ai_description, created_at, updated_at) VALUES
 ('PR_0002', 'en', 'Alpha 2 Classic Sweater', 'The Classic Sweater Alpha 2 is knitted from premium natural sheep wool, offering optimal warmth while remaining soft and itch-free. Features a basic round neck, light ribbed cuffs and hem for an elegant fit, suitable for school, work, or casual outings. High color fastness, does not shrink after machine washing.', NOW(), NOW())
 ON CONFLICT (product_id, locale) DO UPDATE SET name = EXCLUDED.name, ai_description = EXCLUDED.ai_description;
 
-
 INSERT INTO product_translations (product_id, locale, name, ai_description, created_at, updated_at) VALUES
 ('PR_0003', 'en', 'Prime 3 Hydrating Loafer', 'Prime 3 Men Loafer features a youthful, dynamic design and ultimate foot comfort. Made of premium soft suede leather along with anti-bacterial moisture-wicking insoles. Solid cast rubber sole offers excellent slip resistance, keeping your feet relaxed during continuous movement all day long.', NOW(), NOW())
 ON CONFLICT (product_id, locale) DO UPDATE SET name = EXCLUDED.name, ai_description = EXCLUDED.ai_description;
-
 
 INSERT INTO product_translations (product_id, locale, name, ai_description, created_at, updated_at) VALUES
 ('PR_0004', 'en', 'Max 4 Hydrating Tee', 'Max 4 Men Athletic Tee features advanced Double-Face knit technology, highly breathable and quick-absorbing. The 4-way stretch fabric is soft, durable and keeps its shape. Perfect for outdoor sports, running, gym sessions, or everyday casual home wear.', NOW(), NOW())
 ON CONFLICT (product_id, locale) DO UPDATE SET name = EXCLUDED.name, ai_description = EXCLUDED.ai_description;
 
-
 INSERT INTO product_translations (product_id, locale, name, ai_description, created_at, updated_at) VALUES
 ('PR_0005', 'en', 'Alpha 5 Eco Foldable Phone', 'Breakthrough premium foldable smartphone Alpha 5. Features a folding 6.7" LTPO OLED 120Hz display. Powered by Aionn Group AI octa-core processor, dual 50MP OIS cameras, ultra-fast UFS 4.0 storage, and a durable battery supporting 65W fast charging.', NOW(), NOW())
 ON CONFLICT (product_id, locale) DO UPDATE SET name = EXCLUDED.name, ai_description = EXCLUDED.ai_description;
 
-
-
--- Refine Product Variants (Delete old Option 1 variants and replace with detailed Size/Color variations)
 DELETE FROM product_variants WHERE product_id IN ('PR_0001', 'PR_0002', 'PR_0003', 'PR_0004', 'PR_0005');
 
-
 INSERT INTO product_variants (sku_id, product_id, attribute_values, price, original_price, currency) VALUES
--- PR_0001 (Bảng điều khiển thần kinh Alpha 1)
 ('SKU_PR0001_BLK', 'PR_0001', '{"color": "Đen (Black)", "type": "Tiêu chuẩn"}'::jsonb, 620000.0, 750000.0, 'VND'),
 ('SKU_PR0001_WHT', 'PR_0001', '{"color": "Trắng (White)", "type": "Tiêu chuẩn"}'::jsonb, 650000.0, 780000.0, 'VND'),
-
--- PR_0002 (Áo len cổ điển Alpha 2)
 ('SKU_PR0002_M_NVY', 'PR_0002', '{"size": "M", "color": "Xanh biển (Navy)"}'::jsonb, 120000.0, 180000.0, 'VND'),
 ('SKU_PR0002_L_NVY', 'PR_0002', '{"size": "L", "color": "Xanh biển (Navy)"}'::jsonb, 130000.0, 190000.0, 'VND'),
 ('SKU_PR0002_M_GRY', 'PR_0002', '{"size": "M", "color": "Xám (Grey)"}'::jsonb, 120000.0, 180000.0, 'VND'),
 ('SKU_PR0002_L_GRY', 'PR_0002', '{"size": "L", "color": "Xám (Grey)"}'::jsonb, 130000.0, 190000.0, 'VND'),
 ('SKU_PR0002_XL_BLK', 'PR_0002', '{"size": "XL", "color": "Đen (Black)"}'::jsonb, 140000.0, 200000.0, 'VND'),
-
--- PR_0003 (Giày lười cấp ẩm Prime 3)
 ('SKU_PR0003_39_WHT', 'PR_0003', '{"size": "39", "color": "Trắng (White)"}'::jsonb, 740000.0, 950000.0, 'VND'),
 ('SKU_PR0003_40_WHT', 'PR_0003', '{"size": "40", "color": "Trắng (White)"}'::jsonb, 740000.0, 950000.0, 'VND'),
 ('SKU_PR0003_41_BLK', 'PR_0003', '{"size": "41", "color": "Đen (Black)"}'::jsonb, 750000.0, 980000.0, 'VND'),
 ('SKU_PR0003_42_BLK', 'PR_0003', '{"size": "42", "color": "Đen (Black)"}'::jsonb, 750000.0, 980000.0, 'VND'),
-
--- PR_0004 (Áo thun cấp ẩm Max 4)
 ('SKU_PR0004_S_GRY', 'PR_0004', '{"size": "S", "color": "Xám (Grey)"}'::jsonb, 740000.0, 890000.0, 'VND'),
 ('SKU_PR0004_M_GRY', 'PR_0004', '{"size": "M", "color": "Xám (Grey)"}'::jsonb, 740000.0, 890000.0, 'VND'),
 ('SKU_PR0004_L_BLK', 'PR_0004', '{"size": "L", "color": "Đen (Black)"}'::jsonb, 760000.0, 920000.0, 'VND'),
-
--- PR_0005 (Điện thoại gập sinh thái Alpha 5)
 ('SKU_PR0005_256_BLK', 'PR_0005', '{"storage": "256GB", "color": "Đen (Black)"}'::jsonb, 8000000.0, 9500000.0, 'VND'),
 ('SKU_PR0005_512_BLK', 'PR_0005', '{"storage": "512GB", "color": "Đen (Black)"}'::jsonb, 9500000.0, 11000000.0, 'VND'),
 ('SKU_PR0005_256_GRN', 'PR_0005', '{"storage": "256GB", "color": "Xanh lá (Green)"}'::jsonb, 8200000.0, 9800000.0, 'VND');
-
 
 UPDATE product_variants pv
 SET attribute_values = aionn_catalog_seed_variant_attributes(
@@ -3053,25 +2980,13 @@ WHERE p.product_id = pv.product_id
   AND pv.attribute_values ? 'option'
   AND pv.attribute_values ->> 'option' ~* '^option\s+\d+$';
 
-
--- -----------------------------------------------------------------------------
--- Squashed from V2.10__fix_flash_sale_variant_prices.sql
--- -----------------------------------------------------------------------------
--- PR_0011 (Bóng đèn thần kinh Max 11) - Sibling SKU_00013: 40k -> 260k (Original price of flash sale SKU_00012)
 UPDATE product_variants SET price = 260000.0 WHERE sku_id = 'SKU_00013';
 
-
--- PR_0013 (Áo khoác cấp ẩm Z 13) - Sibling SKU_00016: 100k -> 260k (Original price of flash sale SKU_00015)
 UPDATE product_variants SET price = 260000.0 WHERE sku_id = 'SKU_00016';
 
-
--- PR_0018 (Dải đèn LED không dây X 18) - Sibling SKU_00022: 40k -> 800k (Original price of flash sale SKU_00023)
 UPDATE product_variants SET price = 800000.0 WHERE sku_id = 'SKU_00022';
 
-
--- PR_0036 (Giày bốt siêu cấp Max 36) - Sibling SKU_00049: 120k -> 420k (Original price of flash sale SKU_00048)
 UPDATE product_variants SET price = 420000.0 WHERE sku_id = 'SKU_00049';
-
 
 UPDATE products p
 SET ai_description = aionn_catalog_seed_description(p.name, b.name, p.category_ids, p.attributes),
@@ -3079,102 +2994,29 @@ SET ai_description = aionn_catalog_seed_description(p.name, b.name, p.category_i
 FROM brands b
 WHERE b.brand_id = p.brand_id;
 
-
 UPDATE products
 SET image_list = aionn_catalog_seed_images(category_ids),
     updated_at = NOW();
 
-INSERT INTO product_reviews (review_id, product_id, user_id, order_id, rating, title, content, image_urls, status, merchant_reply, merchant_replied_at, created_at, updated_at) VALUES
-('REV_0001', 'PR_0001', '01KV05RTFCABHZSQJR4BTNKB4K', 'ORD_001', 5, 'Sản phẩm tuyệt vời!', 'Bảng điều khiển rất hiện đại và dễ sử dụng. Chất lượng tốt, giao hàng nhanh. Rất hài lòng với sản phẩm này!', '["https://images.unsplash.com/photo-1565814636199-ae8133055c1c?auto=format&fit=crop&w=600&q=80"]'::jsonb, 'VISIBLE', 'Cảm ơn bạn đã tin tưởng sản phẩm của chúng tôi! Chúc bạn sử dụng hiệu quả.', NOW() - INTERVAL '2 days', NOW() - INTERVAL '5 days', NOW() - INTERVAL '2 days'),
-
-('REV_0002', 'PR_0005', '01KV05RTFCABHZSQJR4BTNKB4K', 'ORD_001', 4, 'Điện thoại gập rất tốt', 'Màn hình đẹp, gập mở mượt mà. Trừ 1 sao vì pin hơi yếu, nhưng tổng thể rất ổn!', '["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=80"]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '4 days', NOW() - INTERVAL '4 days'),
-
-('REV_0003', 'PR_0010', '01KV05RTFCABHZSQJR4BTNKB4K', 'ORD_001', 5, 'Dép quá êm!', 'Đi rất thoải mái, không gây đau chân. Chất liệu mềm mại và bền. Sẽ mua thêm!', '[]'::jsonb, 'VISIBLE', 'Rất vui khi bạn hài lòng! Chúng tôi luôn có nhiều màu sắc và kích cỡ để bạn lựa chọn.', NOW() - INTERVAL '1 day', NOW() - INTERVAL '3 days', NOW() - INTERVAL '1 day'),
-
--- User 01KV05RTFD9R88AGKRTYSBYGW8 reviews
-('REV_0004', 'PR_0002', '01KV05RTFD9R88AGKRTYSBYGW8', 'ORD_002', 5, 'Áo len cực đẹp', 'Chất vải mềm mại, ấm áp, form áo vừa vặn. Đóng gói cẩn thận. Giá cả hợp lý!', '["https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80"]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '6 days', NOW() - INTERVAL '6 days'),
-
-('REV_0005', 'PR_0008', '01KV05RTFD9R88AGKRTYSBYGW8', 'ORD_002', 4, 'Điện thoại nhỏ gọn tiện lợi', 'Màn hình nhỏ nhưng hiển thị sắc nét. Camera tốt, pin trâu. Hơi tiếc là không có sạc nhanh.', '[]'::jsonb, 'VISIBLE', 'Cảm ơn phản hồi của bạn. Dòng sản phẩm mới của chúng tôi sẽ có sạc nhanh!', NOW() - INTERVAL '1 day', NOW() - INTERVAL '5 days', NOW() - INTERVAL '1 day'),
-
-('REV_0006', 'PR_0015', '01KV05RTFD9R88AGKRTYSBYGW8', 'ORD_002', 3, 'Tạm ổn', 'Điện thoại dùng bình thường, không có gì đặc biệt. Giá hơi cao so với cấu hình.', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '4 days', NOW() - INTERVAL '4 days'),
-
--- User 01KV05RTFEECNWP83Q8D0MX5NR reviews
-('REV_0007', 'PR_0003', '01KV05RTFEECNWP83Q8D0MX5NR', 'ORD_003', 5, 'Giày rất đẹp và thoải mái', 'Giày đi êm chân, không bị đau. Màu sắc đẹp như hình. Đóng gói cẩn thận. Sẽ ủng hộ shop lâu dài!', '["https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?auto=format&fit=crop&w=600&q=80"]'::jsonb, 'VISIBLE', 'Cảm ơn bạn rất nhiều! Chúc bạn luôn tự tin và thoải mái.', NOW() - INTERVAL '2 days', NOW() - INTERVAL '7 days', NOW() - INTERVAL '2 days'),
-
-('REV_0008', 'PR_0011', '01KV05RTFEECNWP83Q8D0MX5NR', 'ORD_003', 5, 'Bóng đèn thông minh tuyệt vời', 'Điều khiển qua app rất tiện. Ánh sáng mềm mại, điều chỉnh được độ sáng và màu. Giá hợp lý!', '["https://images.unsplash.com/photo-1565814636199-ae8133055c1c?auto=format&fit=crop&w=600&q=80"]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '6 days', NOW() - INTERVAL '6 days'),
-
-('REV_0009', 'PR_0019', '01KV05RTFEECNWP83Q8D0MX5NR', 'ORD_003', 4, 'Giày thể thao đẹp, chất lượng tốt', 'Giày nhẹ, đi thoải mái. Đế cao su chống trơn tốt. Trừ 1 sao vì size hơi nhỏ so với thông thường.', '[]'::jsonb, 'VISIBLE', 'Xin lỗi vì sự bất tiện! Chúng tôi đã cập nhật bảng size chi tiết hơn trên trang sản phẩm.', NOW() - INTERVAL '1 day', NOW() - INTERVAL '5 days', NOW() - INTERVAL '1 day'),
-
--- User 01KV05RTFFQNP5Z7WS7TV6EZQ3 reviews
-('REV_0010', 'PR_0004', '01KV05RTFFQNP5Z7WS7TV6EZQ3', 'ORD_004', 5, 'Áo thun chất lượng cao', 'Vải cotton mềm mại, thấm hút mồ hôi tốt. Form áo đẹp, không bị nhăn sau khi giặt. Đáng tiền!', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days'),
-
-('REV_0011', 'PR_0012', '01KV05RTFFQNP5Z7WS7TV6EZQ3', 'ORD_004', 5, 'Kẹo dẻo vitamin ngon', 'Hương vị thơm ngon, không bị ngấy. Con em rất thích. Bổ sung vitamin hàng ngày rất tiện!', '["https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=600&q=80"]'::jsonb, 'VISIBLE', 'Cảm ơn bạn! Chúc gia đình bạn luôn khỏe mạnh.', NOW() - INTERVAL '3 days', NOW() - INTERVAL '7 days', NOW() - INTERVAL '3 days'),
-
-('REV_0012', 'PR_0020', '01KV05RTFFQNP5Z7WS7TV6EZQ3', 'ORD_004', 4, 'Điện thoại giá rẻ, chất lượng tốt', 'Màn hình hiển thị sáng, pin trâu. Cấu hình đủ dùng cho nhu cầu cơ bản. Tốt cho người già.', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '6 days', NOW() - INTERVAL '6 days'),
-
--- User 01KV05RTFGD8DGY2MA0D2SASFB reviews
-('REV_0013', 'PR_0006', '01KV05RTFGD8DGY2MA0D2SASFB', 'ORD_005', 5, 'Váy đẹp, chất vải tốt', 'Váy mặc rất duyên dáng, vải mát. Màu sắc đúng như hình. Rất hài lòng với lần mua này!', '["https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=600&q=80"]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '9 days', NOW() - INTERVAL '9 days'),
-
-('REV_0014', 'PR_0013', '01KV05RTFGD8DGY2MA0D2SASFB', 'ORD_005', 5, 'Áo khoác đẹp và ấm', 'Chất liệu dày dặn, giữ ấm tốt. Thiết kế thời trang. Rất đáng mua!', '[]'::jsonb, 'VISIBLE', 'Cảm ơn bạn đã lựa chọn sản phẩm của chúng tôi!', NOW() - INTERVAL '2 days', NOW() - INTERVAL '8 days', NOW() - INTERVAL '2 days'),
-
-('REV_0015', 'PR_0024', '01KV05RTFGD8DGY2MA0D2SASFB', 'ORD_005', 4, 'Củ sạc nhỏ gọn, tiện lợi', 'Sạc nhanh, nhỏ gọn dễ mang đi. Hơi nóng khi sạc nhưng vẫn chấp nhận được.', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days'),
-
--- User 01KV05RTFHK15HJ1HVAWCCC0DM reviews
-('REV_0016', 'PR_0007', '01KV05RTFHK15HJ1HVAWCCC0DM', 'ORD_006', 4, 'Áo khoác chất lượng', 'Vải dày, may đẹp. Phù hợp mùa đông. Trừ 1 sao vì màu hơi nhạt hơn ảnh.', '[]'::jsonb, 'VISIBLE', 'Xin lỗi về sự khác biệt màu sắc. Chúng tôi đã cập nhật ảnh chụp thật hơn.', NOW() - INTERVAL '1 day', NOW() - INTERVAL '10 days', NOW() - INTERVAL '1 day'),
-
-('REV_0017', 'PR_0014', '01KV05RTFHK15HJ1HVAWCCC0DM', 'ORD_006', 5, 'Ghế ngồi rất êm', 'Ghế thiết kế đẹp, ngồi thoải mái. Chất liệu bền. Rất phù hợp cho văn phòng!', '["https://images.unsplash.com/photo-1595428774223-ef52624120d2?auto=format&fit=crop&w=600&q=80"]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '9 days', NOW() - INTERVAL '9 days'),
-
-('REV_0018', 'PR_0025', '01KV05RTFHK15HJ1HVAWCCC0DM', 'ORD_006', 5, 'Giá đỡ chắc chắn, thiết kế đẹp', 'Giá đỡ làm bằng kim loại chắc chắn. Thiết kế tối giản, sang trọng. Đáng đồng tiền!', '[]'::jsonb, 'VISIBLE', 'Cảm ơn bạn đã tin tưởng chất lượng sản phẩm!', NOW() - INTERVAL '3 days', NOW() - INTERVAL '8 days', NOW() - INTERVAL '3 days'),
-
--- User 01KV05RTFJQ2FMYHJV9DKAX76J reviews
-('REV_0019', 'PR_0009', '01KV05RTFJQ2FMYHJV9DKAX76J', 'ORD_007', 5, 'Laptop mạnh mẽ', 'Cấu hình cao, chạy mượt mà. Thiết kế đẹp, màn hình sắc nét. Rất phù hợp cho công việc!', '["https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=600&q=80"]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '11 days', NOW() - INTERVAL '11 days'),
-
-('REV_0020', 'PR_0016', '01KV05RTFJQ2FMYHJV9DKAX76J', 'ORD_007', 4, 'Áo khoác đẹp nhưng hơi mỏng', 'Thiết kế đẹp, vải mềm mại. Nhưng hơi mỏng, không phù hợp trời rất lạnh.', '[]'::jsonb, 'VISIBLE', 'Cảm ơn góp ý! Đây là dòng áo khoác mùa thu, chúng tôi có dòng áo khoác mùa đông dày hơn.', NOW() - INTERVAL '2 days', NOW() - INTERVAL '10 days', NOW() - INTERVAL '2 days'),
-
-('REV_0021', 'PR_0029', '01KV05RTFJQ2FMYHJV9DKAX76J', 'ORD_007', 5, 'Bộ điều nhiệt thông minh tuyệt vời', 'Điều khiển từ xa qua app rất tiện. Tiết kiệm điện. Lắp đặt dễ dàng. Rất hài lòng!', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '9 days', NOW() - INTERVAL '9 days'),
-
--- User 01KV05RTFKGZEB4QJ0QAR56P0K reviews
-('REV_0022', 'PR_0017', '01KV05RTFKGZEB4QJ0QAR56P0K', 'ORD_008', 5, 'Nồi cơm điện chất lượng cao', 'Nấu cơm rất ngon, chín đều. Dễ sử dụng, dễ vệ sinh. Giá hợp lý!', '["https://images.unsplash.com/photo-1588854337236-6889d631faa8?auto=format&fit=crop&w=600&q=80"]'::jsonb, 'VISIBLE', 'Cảm ơn bạn! Chúc gia đình bạn bữa cơm ngon miệng!', NOW() - INTERVAL '4 days', NOW() - INTERVAL '12 days', NOW() - INTERVAL '4 days'),
-
-('REV_0023', 'PR_0018', '01KV05RTFKGZEB4QJ0QAR56P0K', 'ORD_008', 5, 'Dải đèn LED đẹp', 'Ánh sáng màu sắc đa dạng. Điều khiển qua remote tiện lợi. Dán dính chắc chắn.', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '11 days', NOW() - INTERVAL '11 days'),
-
-('REV_0024', 'PR_0030', '01KV05RTFKGZEB4QJ0QAR56P0K', 'ORD_008', 4, 'Bếp nướng nhỏ gọn, tiện dụng', 'Nướng nhanh, nhiệt độ đều. Dễ vệ sinh. Hơi nhỏ cho gia đình đông người.', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days'),
-
--- User 01KV05RTFMGMD0RKM204JGX80N reviews
-('REV_0025', 'PR_0021', '01KV05RTFMGMD0RKM204JGX80N', 'ORD_009', 5, 'Áo khoác thiết kế đẹp', 'Chất vải cao cấp, form áo đẹp. Mặc lên rất sang trọng. Giá có cao nhưng đáng tiền!', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '13 days', NOW() - INTERVAL '13 days'),
-
-('REV_0026', 'PR_0022', '01KV05RTFMGMD0RKM204JGX80N', 'ORD_009', 5, 'Viên nang tốt cho sức khỏe', 'Dùng được 2 tuần thấy cơ thể khỏe hơn. Không bị tác dụng phụ. Sẽ mua tiếp!', '["https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&w=600&q=80"]'::jsonb, 'VISIBLE', 'Cảm ơn bạn! Chúc bạn luôn dồi dào sức khỏe.', NOW() - INTERVAL '5 days', NOW() - INTERVAL '12 days', NOW() - INTERVAL '5 days'),
-
-('REV_0027', 'PR_0031', '01KV05RTFMGMD0RKM204JGX80N', 'ORD_009', 4, 'Tai nghe chất lượng âm thanh tốt', 'Âm thanh trong trẻo, bass đậm. Pin trâu. Hơi khó kết nối bluetooth ban đầu.', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '11 days', NOW() - INTERVAL '11 days'),
-
--- User 01KV05RTFNH4AW0JQG3MGZAGRK reviews
-('REV_0028', 'PR_0023', '01KV05RTFNH4AW0JQG3MGZAGRK', 'ORD_010', 5, 'Laptop hiệu năng cao', 'Cấu hình mạnh, chạy phần mềm nặng mượt mà. Thiết kế mỏng nhẹ. Rất đáng mua!', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '14 days', NOW() - INTERVAL '14 days'),
-
-('REV_0029', 'PR_0026', '01KV05RTFNH4AW0JQG3MGZAGRK', 'ORD_010', 5, 'Kẹo dẻo vitamin cho cả gia đình', 'Cả nhà đều thích dùng. Hương vị thơm ngon. Bổ sung vitamin hàng ngày rất tiện!', '[]'::jsonb, 'VISIBLE', 'Rất vui khi cả gia đình bạn hài lòng!', NOW() - INTERVAL '6 days', NOW() - INTERVAL '13 days', NOW() - INTERVAL '6 days'),
-
-('REV_0030', 'PR_0033', '01KV05RTFNH4AW0JQG3MGZAGRK', 'ORD_010', 5, 'Camera an ninh chất lượng cao', 'Hình ảnh sắc nét cả ngày lẫn đêm. App điều khiển dễ dùng. Lắp đặt đơn giản!', '["https://images.unsplash.com/photo-1562408590-e32931084e23?auto=format&fit=crop&w=600&q=80"]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '12 days', NOW() - INTERVAL '12 days'),
-
--- More diverse reviews with different ratings
-('REV_0031', 'PR_0027', '01KV05RTFPWNS3N0WXRWQSFQ4T', 'ORD_011', 3, 'Áo len bình thường', 'Chất vải tạm ổn, không mềm lắm. Giá hơi cao so với chất lượng.', '[]'::jsonb, 'VISIBLE', 'Xin lỗi vì không đáp ứng kỳ vọng của bạn. Chúng tôi sẽ cải thiện chất lượng sản phẩm.', NOW() - INTERVAL '3 days', NOW() - INTERVAL '15 days', NOW() - INTERVAL '3 days'),
-
-('REV_0032', 'PR_0028', '01KV05RTFPWNS3N0WXRWQSFQ4T', 'ORD_011', 5, 'Thực phẩm bổ sung hiệu quả', 'Dùng được 3 tuần thấy sức khỏe tốt hơn. Dễ uống. Giá cả hợp lý!', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '14 days', NOW() - INTERVAL '14 days'),
-
-('REV_0033', 'PR_0034', '01KV05RTFPWNS3N0WXRWQSFQ4T', 'ORD_011', 4, 'Đồng hồ thông minh đẹp', 'Thiết kế đẹp, màn hình sắc nét. Nhiều tính năng hữu ích. Pin hơi yếu.', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '13 days', NOW() - INTERVAL '13 days'),
-
-('REV_0034', 'PR_0032', '01KV05RTFQN0617KQBQP29S3KR', 'ORD_012', 4, 'Vitamin tốt', 'Sản phẩm chất lượng, bổ sung vitamin đầy đủ. Hơi đắt.', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '16 days', NOW() - INTERVAL '16 days'),
-
-('REV_0035', 'PR_0035', '01KV05RTFQN0617KQBQP29S3KR', 'ORD_012', 5, 'Củ sạc nhỏ gọn tiện lợi', 'Sạc nhanh, nhỏ gọn dễ mang theo. Chất lượng tốt. Giá hợp lý!', '[]'::jsonb, 'VISIBLE', 'Cảm ơn bạn đã tin tưởng sản phẩm!', NOW() - INTERVAL '7 days', NOW() - INTERVAL '15 days', NOW() - INTERVAL '7 days'),
-
-('REV_0036', 'PR_0036', '01KV05RTFQN0617KQBQP29S3KR', 'ORD_012', 5, 'Giày bốt đẹp và bền', 'Chất liệu da tốt, đi êm chân. Thiết kế thời trang. Rất đáng mua!', '["https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80"]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '14 days', NOW() - INTERVAL '14 days'),
-
-('REV_0037', 'PR_0037', '01KV05RTFRFE6Q2WDK8D48SGQD', 'ORD_013', 4, 'Áo sơ mi chất lượng tốt', 'Vải mịn, may đẹp. Form áo vừa vặn. Hơi dễ nhăn.', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '17 days', NOW() - INTERVAL '17 days'),
-
-('REV_0038', 'PR_0038', '01KV05RTFRFE6Q2WDK8D48SGQD', 'ORD_013', 5, 'Laptop văn phòng tốt', 'Cấu hình đủ dùng cho công việc văn phòng. Pin trâu. Giá cả phải chăng!', '[]'::jsonb, 'VISIBLE', 'Cảm ơn bạn! Chúc bạn làm việc hiệu quả.', NOW() - INTERVAL '8 days', NOW() - INTERVAL '16 days', NOW() - INTERVAL '8 days'),
-
-('REV_0039', 'PR_0039', '01KV05RTFRFE6Q2WDK8D48SGQD', 'ORD_013', 5, 'Camera an ninh đáng tin cậy', 'Hình ảnh rõ nét, ghi hình liên tục. Cảnh báo chuyển động chính xác. Tuyệt vời!', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days'),
-
-('REV_0040', 'PR_0001', '01KV05RTFSN9NDA92Y53Y6CZAB', 'ORD_014', 4, 'Bảng điều khiển hiện đại', 'Giao diện đẹp, dễ sử dụng. Tích hợp nhiều tính năng. Hướng dẫn hơi ít.', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '18 days', NOW() - INTERVAL '18 days');
-
+INSERT INTO product_reviews (
+    review_id, product_id, user_id, order_id, rating, title, content,
+    image_urls, status, merchant_reply, merchant_replied_at, created_at, updated_at
+) VALUES
+('REV_DEMO_001', 'PR_0700', '01KV05RTDBF3XFEWCW3R75YKT0', 'ORD_0001', 5, 'Sản phẩm đúng mô tả', 'Sản phẩm hoạt động ổn định, đóng gói cẩn thận và giao đúng thời gian.', '[]'::jsonb, 'VISIBLE', 'Cảm ơn bạn đã tin tưởng sản phẩm của shop.', NOW() - INTERVAL '4 days', NOW() - INTERVAL '6 days', NOW() - INTERVAL '4 days'),
+('REV_DEMO_002', 'PR_0595', '01KV05RTDBF3XFEWCW3R75YKT0', 'ORD_0001', 4, 'Chất lượng tốt', 'Chất liệu tốt và kích thước phù hợp. Sản phẩm giống hình ảnh mô tả.', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '6 days', NOW() - INTERVAL '6 days'),
+('REV_DEMO_003', 'PR_0985', '01KV05RTFBHFA44M0RJQCQB8Z3', 'ORD_0002', 5, 'Trải nghiệm rất tốt', 'Thiết bị vận hành mượt, hoàn thiện chắc chắn và đáp ứng đúng nhu cầu.', '[]'::jsonb, 'VISIBLE', 'Shop cảm ơn phản hồi của bạn.', NOW() - INTERVAL '3 days', NOW() - INTERVAL '5 days', NOW() - INTERVAL '3 days'),
+('REV_DEMO_004', 'PR_0413', '01KV05RTCQ139RZA3XTS7HBFBM', 'ORD_0003', 4, 'Dễ sử dụng', 'Sản phẩm dễ sử dụng, thông tin hướng dẫn rõ ràng và đóng gói sạch sẽ.', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days'),
+('REV_DEMO_005', 'PR_0075', '01KV05RTEJ3E9608X7KXVBDXQ1', 'ORD_0004', 5, 'Hài lòng với sản phẩm', 'Sản phẩm phù hợp với mô tả và mang lại trải nghiệm sử dụng tốt.', '[]'::jsonb, 'VISIBLE', 'Cảm ơn bạn đã lựa chọn shop.', NOW() - INTERVAL '2 days', NOW() - INTERVAL '5 days', NOW() - INTERVAL '2 days'),
+('REV_DEMO_006', 'PR_0777', '01KV05RTDNP8Q35P66R926YJY4', 'ORD_0006', 4, 'Đáng mua', 'Thiết kế đẹp, thao tác thuận tiện và chất lượng tương xứng với giá.', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days'),
+('REV_DEMO_007', 'PR_0102', '01KV05RTDNP8Q35P66R926YJY4', 'ORD_0006', 5, 'Phù hợp và thoải mái', 'Phom dáng phù hợp, chất liệu thoải mái và đường may khá chắc chắn.', '[]'::jsonb, 'VISIBLE', 'Shop rất vui khi bạn hài lòng.', NOW() - INTERVAL '5 days', NOW() - INTERVAL '7 days', NOW() - INTERVAL '5 days'),
+('REV_DEMO_008', 'PR_0509', '01KV05RTERWY89CBPY6SE5HMXB', 'ORD_0007', 4, 'Sử dụng thuận tiện', 'Sản phẩm dễ thao tác, hoạt động ổn định và vệ sinh khá đơn giản.', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '9 days', NOW() - INTERVAL '9 days'),
+('REV_DEMO_009', 'PR_0689', '01KV05RTERWY89CBPY6SE5HMXB', 'ORD_0007', 5, 'Hoạt động ổn định', 'Khả năng phản hồi tốt, kết nối ổn định và cài đặt không mất nhiều thời gian.', '[]'::jsonb, 'VISIBLE', 'Cảm ơn bạn đã chia sẻ trải nghiệm.', NOW() - INTERVAL '4 days', NOW() - INTERVAL '8 days', NOW() - INTERVAL '4 days'),
+('REV_DEMO_010', 'PR_0434', '01KV05RTERWY89CBPY6SE5HMXB', 'ORD_0007', 4, 'Đáp ứng đúng nhu cầu', 'Tính năng hoạt động đúng như mô tả và chất lượng hoàn thiện tốt.', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days'),
+('REV_DEMO_011', 'PR_0513', '01KV05RTE18FY9C78H3DGV6X16', 'ORD_0012', 5, 'Mặc đẹp và vừa vặn', 'Chất vải dễ chịu, phom dáng đẹp và màu sắc giống hình sản phẩm.', '[]'::jsonb, 'VISIBLE', 'Cảm ơn bạn đã ủng hộ shop.', NOW() - INTERVAL '3 days', NOW() - INTERVAL '6 days', NOW() - INTERVAL '3 days'),
+('REV_DEMO_012', 'PR_0363', '01KV05RTE18FY9C78H3DGV6X16', 'ORD_0012', 4, 'Thiết bị tốt', 'Màn hình hiển thị rõ, thao tác mượt và thời lượng sử dụng đáp ứng nhu cầu.', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '6 days', NOW() - INTERVAL '6 days'),
+('REV_DEMO_013', 'PR_0896', '01KV05RTCSS8FXCSPJPF1CSH5S', 'ORD_0015', 5, 'Hiển thị sắc nét', 'Màn hình có chất lượng hiển thị tốt, kết nối thuận tiện và thiết kế chắc chắn.', '[]'::jsonb, 'VISIBLE', 'Shop cảm ơn đánh giá của bạn.', NOW() - INTERVAL '2 days', NOW() - INTERVAL '5 days', NOW() - INTERVAL '2 days'),
+('REV_DEMO_014', 'PR_0551', '01KV05RTCSS8FXCSPJPF1CSH5S', 'ORD_0015', 4, 'Hoàn thiện tốt', 'Phụ kiện chắc chắn, sử dụng ổn định và phù hợp với thông tin mô tả.', '[]'::jsonb, 'VISIBLE', NULL, NULL, NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
+('REV_DEMO_015', 'PR_0746', '01KV05RTCSS8FXCSPJPF1CSH5S', 'ORD_0015', 5, 'Chắc chắn và tiện lợi', 'Giá đỡ chắc chắn, dễ điều chỉnh và phù hợp với không gian làm việc.', '[]'::jsonb, 'VISIBLE', 'Cảm ơn bạn đã phản hồi.', NOW() - INTERVAL '1 day', NOW() - INTERVAL '4 days', NOW() - INTERVAL '1 day');
 
 DROP FUNCTION aionn_catalog_seed_variant_attributes(JSONB, JSONB, TEXT);
 DROP FUNCTION aionn_catalog_seed_variant_size(TEXT, TEXT, BOOLEAN);
@@ -3183,4 +3025,3 @@ DROP FUNCTION aionn_catalog_seed_color_label(TEXT, TEXT);
 DROP FUNCTION aionn_catalog_seed_description(TEXT, TEXT, JSONB, JSONB);
 
 DROP FUNCTION aionn_catalog_seed_images(JSONB);
-

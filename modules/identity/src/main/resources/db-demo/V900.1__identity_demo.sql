@@ -1,8 +1,3 @@
--- Development/test fixtures. Never include classpath:db-demo in production.
-
-
-
-
 INSERT INTO users (user_id, email, phone, username, password_hash, display_name, status, version, created_at, updated_at) VALUES
 ('01KV05RTC7NA4KZMMP8KXX7461', 'buyer_001@example.test', '+8490100001', 'buyer_001', NULL, 'Buyer 001', 'ACTIVE', 0, NOW(), NOW()),
 ('01KV05RTC836YVQ3DF9FZFT2A7', 'buyer_002@example.test', '+8490100002', 'buyer_002', NULL, 'Buyer 002', 'ACTIVE', 0, NOW(), NOW()),
@@ -129,7 +124,6 @@ INSERT INTO users (user_id, email, phone, username, password_hash, display_name,
 ('01KV05RTG2MG91QM6RT7JNQGY7', 'sys_admin_03@example.test', '+849040003', 'sys_admin_03', NULL, 'Sys Admin 03', 'ACTIVE', 0, NOW(), NOW()),
 ('01KV05RTG396VJVNRN276GRD7R', 'sys_admin_04@example.test', '+849040004', 'sys_admin_04', NULL, 'Sys Admin 04', 'ACTIVE', 0, NOW(), NOW()),
 ('01KV05RTG4G7SZR4FF5M83ENDF', 'sys_admin_05@example.test', '+849040005', 'sys_admin_05', NULL, 'Sys Admin 05', 'ACTIVE', 0, NOW(), NOW());
-
 
 INSERT INTO user_roles (user_id, role) VALUES
 ('01KV05RTC7NA4KZMMP8KXX7461', 'BUYER'),

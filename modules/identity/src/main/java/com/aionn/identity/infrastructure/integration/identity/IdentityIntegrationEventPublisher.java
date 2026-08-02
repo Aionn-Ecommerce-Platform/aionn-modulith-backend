@@ -11,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
-import java.time.Instant;
 
 @Slf4j
 @Component
@@ -25,20 +24,20 @@ public class IdentityIntegrationEventPublisher implements IdentityIntegrationEve
     public void publishPasswordChanged(String userId, String channelHint) {
         log.debug("Publishing PasswordChangedIntegrationEvent for user: {}", userId);
         integrationEventPublisher.publish(new PasswordChangedIntegrationEvent(
-                IdGenerator.ulid(), userId, channelHint, Instant.now(clock)));
+                IdGenerator.ulid(), userId, channelHint, clock.instant()));
     }
 
     @Override
     public void publishEmailChanged(String userId, String oldEmail, String newEmail) {
         log.debug("Publishing EmailChangedIntegrationEvent for user: {}", userId);
         integrationEventPublisher.publish(new EmailChangedIntegrationEvent(
-                IdGenerator.ulid(), userId, oldEmail, newEmail, Instant.now(clock)));
+                IdGenerator.ulid(), userId, oldEmail, newEmail, clock.instant()));
     }
 
     @Override
     public void publishPhoneChanged(String userId, String oldPhone, String newPhone) {
         log.debug("Publishing PhoneChangedIntegrationEvent for user: {}", userId);
         integrationEventPublisher.publish(new PhoneChangedIntegrationEvent(
-                IdGenerator.ulid(), userId, oldPhone, newPhone, Instant.now(clock)));
+                IdGenerator.ulid(), userId, oldPhone, newPhone, clock.instant()));
     }
 }

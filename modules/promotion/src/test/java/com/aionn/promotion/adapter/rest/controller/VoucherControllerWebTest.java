@@ -31,6 +31,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -183,13 +184,11 @@ class VoucherControllerWebTest {
         }
 
         @Test
-        void listMineCapsLimit() throws Exception {
-                when(listMyVouchersInputPort.execute("user-1", 100)).thenReturn(List.of());
-
+        void listMineRejectsLimitAboveMaximum() throws Exception {
                 mockMvc.perform(get("/api/v1/promotions/vouchers/me").param("limit", "999"))
-                                .andExpect(status().isOk());
+                                .andExpect(status().isBadRequest());
 
-                verify(listMyVouchersInputPort).execute("user-1", 100);
+                verifyNoInteractions(listMyVouchersInputPort);
         }
 
         @Test

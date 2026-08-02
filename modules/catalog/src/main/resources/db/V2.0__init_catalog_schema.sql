@@ -1,6 +1,3 @@
--- -----------------------------------------------------------------------------
--- Squashed from V2.0__init_catalog_schema.sql
--- -----------------------------------------------------------------------------
 CREATE TABLE merchants (
     merchant_id VARCHAR(50) PRIMARY KEY,
     owner_id    VARCHAR(50) NOT NULL,
@@ -167,28 +164,7 @@ CREATE INDEX idx_reviews_user ON product_reviews(user_id);
 CREATE INDEX idx_reviews_status ON product_reviews(status);
 CREATE INDEX idx_reviews_reported ON product_reviews(status) WHERE status = 'REPORTED';
 
--- -----------------------------------------------------------------------------
--- Squashed from V2.2__seed_review_data.sql
--- -----------------------------------------------------------------------------
--- Seed Product Reviews
--- Only adding reviews for products that users have completed orders for
--- Using realistic Vietnamese reviews with proper ratings and feedback
-
--- User 01KV05RTFCABHZSQJR4BTNKB4K reviews for their purchased products
--- -----------------------------------------------------------------------------
--- Squashed from V2.4__add_original_price_to_product_variants.sql
--- -----------------------------------------------------------------------------
--- ALTER BẢNG PRODUCT_VARIANTS ĐỂ THÊM CỘT ORIGINAL_PRICE CHO DISCOUNT/SALE
 ALTER TABLE product_variants ADD COLUMN original_price NUMERIC(18, 2);
-
--- -----------------------------------------------------------------------------
--- Squashed from V2.6__product_sold_counters.sql
--- -----------------------------------------------------------------------------
--- =====================================================================
--- PRODUCT SOLD COUNTERS — total units sold per product. Updated by an
--- ordering-side listener (TODO) on completed orders; seed data here so
--- the storefront has realistic "Đã bán X" badges from day one.
--- =====================================================================
 
 CREATE TABLE product_sold_counters (
     product_id  VARCHAR(50) PRIMARY KEY,
@@ -197,28 +173,10 @@ CREATE TABLE product_sold_counters (
     CONSTRAINT chk_sold_count_nonneg CHECK (sold_count >= 0)
 );
 
--- -----------------------------------------------------------------------------
--- Squashed from V2.7__add_merchant_province.sql
--- -----------------------------------------------------------------------------
--- Add storefront province to merchants. Codes are the canonical zero-padded
--- VN GSO codes seeded by identity (V1.1__seed_full_vn_geography.sql); the
--- denormalized provinceName is a snapshot for read-side display so the search
--- index doesn't have to join across modules.
 ALTER TABLE merchants ADD COLUMN province_code VARCHAR(10);
 ALTER TABLE merchants ADD COLUMN province_name VARCHAR(100);
 CREATE INDEX idx_merchants_province ON merchants(province_code);
 
-
-
-
--- -----------------------------------------------------------------------------
--- Product-detail description enrichment for all seeded products.
--- -----------------------------------------------------------------------------
-
-
--- -----------------------------------------------------------------------------
--- Squashed from V2.1__create_catalog_settings.sql
--- -----------------------------------------------------------------------------
 CREATE TABLE catalog_settings (
     key   VARCHAR(100) PRIMARY KEY,
     value VARCHAR(255) NOT NULL,
@@ -227,10 +185,6 @@ CREATE TABLE catalog_settings (
 
 INSERT INTO catalog_settings (key, value) VALUES ('default_commission_rate', '0.0500');
 
--- -----------------------------------------------------------------------------
--- Squashed from V2.3__user_browsing_history.sql
--- -----------------------------------------------------------------------------
--- Per-user recent category/brand preferences, used for personalized feeds.
 CREATE TABLE user_browsing_history (
     user_id      VARCHAR(50) PRIMARY KEY,
     category_ids JSONB       NOT NULL DEFAULT '[]'::jsonb,

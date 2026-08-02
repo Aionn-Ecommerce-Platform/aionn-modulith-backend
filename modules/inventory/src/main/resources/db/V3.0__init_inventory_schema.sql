@@ -1,6 +1,3 @@
--- -----------------------------------------------------------------------------
--- Squashed from V3.0__init_inventory_schema.sql
--- -----------------------------------------------------------------------------
 CREATE TABLE warehouses (
     warehouse_id   VARCHAR(50) PRIMARY KEY,
     merchant_id    VARCHAR(50) NOT NULL,

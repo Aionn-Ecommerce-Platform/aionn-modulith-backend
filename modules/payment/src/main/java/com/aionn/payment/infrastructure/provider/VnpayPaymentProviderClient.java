@@ -60,7 +60,7 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
 
         long vnpAmount = request.amount().multiply(BigDecimal.valueOf(100)).longValueExact();
 
-        ZonedDateTime now = ZonedDateTime.now(clock.withZone(VN_ZONE));
+        ZonedDateTime now = clock.instant().atZone(VN_ZONE);
         String createDate = now.format(VNP_DATE_FMT);
         String expireDate = now.plusMinutes(15).format(VNP_DATE_FMT);
 
@@ -161,7 +161,7 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
         ensureConfigured();
 
         long vnpAmount = request.amount().multiply(BigDecimal.valueOf(100)).longValueExact();
-        String createDate = ZonedDateTime.now(clock.withZone(VN_ZONE)).format(VNP_DATE_FMT);
+        String createDate = clock.instant().atZone(VN_ZONE).format(VNP_DATE_FMT);
         String requestId = "RF" + clock.millis();
 
         Map<String, String> body = new HashMap<>();

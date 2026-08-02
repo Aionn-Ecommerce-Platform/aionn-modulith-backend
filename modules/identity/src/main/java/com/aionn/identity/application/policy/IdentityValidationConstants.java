@@ -13,6 +13,9 @@ public final class IdentityValidationConstants {
     public static final int REFRESH_TOKEN_BYTES = 48;
     public static final int AGENT_KEY_BYTES = 32;
 
+    public static final int JWT_SECRET_MIN_LENGTH = 32;
+    public static final int MFA_ENCRYPTION_KEY_MIN_LENGTH = 32;
+
     private IdentityValidationConstants() {
     }
 }
