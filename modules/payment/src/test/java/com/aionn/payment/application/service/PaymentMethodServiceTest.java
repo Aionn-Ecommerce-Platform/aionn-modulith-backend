@@ -4,11 +4,11 @@ import com.aionn.payment.application.dto.method.command.LinkMethodCommand;
 import com.aionn.payment.application.dto.method.command.RemoveMethodCommand;
 import com.aionn.payment.application.dto.method.command.VerifyMethodCommand;
 import com.aionn.payment.application.port.out.PaymentMethodPersistencePort;
+import com.aionn.payment.application.port.out.StripeSetupIntentPort;
 import com.aionn.payment.domain.exception.PaymentErrorCode;
 import com.aionn.payment.domain.exception.PaymentException;
 import com.aionn.payment.domain.model.PaymentMethod;
 import com.aionn.payment.domain.valueobject.PaymentMethodStatus;
-import com.aionn.payment.infrastructure.provider.config.StripeProperties;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,23 +40,20 @@ class PaymentMethodServiceTest {
     @Mock
     private EventPublisher eventPublisher;
     @Mock
+    private StripeSetupIntentPort stripeSetupIntentPort;
+    @Mock
     private TransactionTemplate transactionTemplate;
 
     private final Instant fixedInstant = Instant.parse("2026-01-01T00:00:00Z");
     private final Clock clock = Clock.fixed(fixedInstant, java.time.ZoneOffset.UTC);
 
     private PaymentMethodService service;
-    private PaymentMethodService serviceWithKey;
 
     @BeforeEach
     void setUp() {
         lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation ->
                 ((TransactionCallback<?>) invocation.getArgument(0)).doInTransaction(null));
-        StripeProperties stripeProperties = new StripeProperties("", "");
-        service = new PaymentMethodService(repository, eventPublisher, stripeProperties, clock, transactionTemplate);
-
-        StripeProperties keyedProperties = new StripeProperties("sk_test_fake_key_for_test", "");
-        serviceWithKey = new PaymentMethodService(repository, eventPublisher, keyedProperties, clock,
+        service = new PaymentMethodService(repository, eventPublisher, stripeSetupIntentPort, clock,
                 transactionTemplate);
     }
 
@@ -137,6 +134,8 @@ class PaymentMethodServiceTest {
 
     @Test
     void createStripeSetupIntentMissingApiKeyThrows() {
+        when(stripeSetupIntentPort.create("u1"))
+                .thenThrow(new PaymentException(PaymentErrorCode.PAYMENT_GATEWAY_ERROR, "missing key"));
         assertThatThrownBy(() -> service.createStripeSetupIntent("u1"))
                 .isInstanceOf(PaymentException.class)
                 .extracting("errorCode")
@@ -167,6 +166,8 @@ class PaymentMethodServiceTest {
 
     @Test
     void completeStripeSetupIntentMissingApiKeyThrows() {
+        when(stripeSetupIntentPort.complete("u1", "si_123"))
+                .thenThrow(new PaymentException(PaymentErrorCode.PAYMENT_GATEWAY_ERROR, "missing key"));
         assertThatThrownBy(() -> service.completeStripeSetupIntent("u1", "si_123"))
                 .isInstanceOf(PaymentException.class)
                 .extracting("errorCode")
@@ -216,18 +217,24 @@ class PaymentMethodServiceTest {
     }
 
     @Test
-    void createStripeSetupIntentWithValidKeyThrowsGatewayErrorOnStripeFailure() {
-        assertThatThrownBy(() -> serviceWithKey.createStripeSetupIntent("u1"))
-                .isInstanceOf(PaymentException.class)
-                .extracting("errorCode")
-                .isEqualTo(PaymentErrorCode.PAYMENT_GATEWAY_ERROR.getCode());
+    void createStripeSetupIntentDelegatesToGateway() {
+        var expected = new com.aionn.payment.application.dto.method.result.StripeSetupIntentResult("si_1", "secret");
+        when(stripeSetupIntentPort.create("u1")).thenReturn(expected);
+
+        assertThat(service.createStripeSetupIntent("u1")).isEqualTo(expected);
     }
 
     @Test
-    void completeStripeSetupIntentWithValidKeyThrowsGatewayErrorOnStripeFailure() {
-        assertThatThrownBy(() -> serviceWithKey.completeStripeSetupIntent("u1", "si_test"))
-                .isInstanceOf(PaymentException.class)
-                .extracting("errorCode")
-                .isEqualTo(PaymentErrorCode.PAYMENT_GATEWAY_ERROR.getCode());
+    void completeStripeSetupIntentPersistsGatewayResultInTransaction() {
+        when(stripeSetupIntentPort.complete("u1", "si_test"))
+                .thenReturn(new StripeSetupIntentPort.CompletedSetupIntent("VISA", "4242", "pm_1"));
+        when(repository.save(any(PaymentMethod.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        PaymentMethod result = service.completeStripeSetupIntent("u1", "si_test");
+
+        assertThat(result.getProvider()).isEqualTo("VISA");
+        assertThat(result.getLast4Digits()).isEqualTo("4242");
+        assertThat(result.getStatus()).isEqualTo(PaymentMethodStatus.VERIFIED);
+        verify(repository).save(any(PaymentMethod.class));
     }
 }

@@ -1,14 +1,14 @@
 package com.aionn.payment.application.service;
 
+import com.aionn.payment.application.port.out.StripeConnectPort;
+import com.aionn.payment.domain.exception.PaymentErrorCode;
 import com.aionn.payment.domain.exception.PaymentException;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
 
@@ -20,20 +20,16 @@ class StripeConnectServiceTest {
 
     @Mock
     private MerchantQueryPort merchantQueryPort;
+    @Mock
+    private StripeConnectPort stripeConnectPort;
 
     @InjectMocks
     private StripeConnectService stripeConnectService;
 
-    @BeforeEach
-    void setUp() {
-        ReflectionTestUtils.setField(stripeConnectService, "refreshUrl", "http://refresh");
-        ReflectionTestUtils.setField(stripeConnectService, "returnUrl", "http://return");
-    }
-
     @Test
     void shouldSyncAccountCapabilitiesCorrectly() {
-        // Since syncAccountCapabilities makes a live Stripe API call in account fetch, 
-        // we can test the fallback catch block gracefully when network fails or keys are missing.
+        when(stripeConnectPort.fetchAccountCapabilities("acct_invalid"))
+                .thenThrow(new PaymentException(PaymentErrorCode.PAYMENT_GATEWAY_ERROR, "failed"));
         stripeConnectService.syncAccountCapabilities("acct_invalid");
         verifyNoInteractions(merchantQueryPort);
     }
@@ -47,12 +43,7 @@ class StripeConnectServiceTest {
 
     @Test
     void shouldApplyAccountUpdateSuccessfully() {
-        com.stripe.model.Account account = mock(com.stripe.model.Account.class);
-        java.util.Map<String, String> metadata = java.util.Map.of("merchantId", "m-1");
-        
-        when(account.getMetadata()).thenReturn(metadata);
-        when(account.getChargesEnabled()).thenReturn(true);
-        when(account.getPayoutsEnabled()).thenReturn(false);
+        var account = new StripeConnectPort.AccountCapabilities("acct_1", "m-1", true, false);
 
         stripeConnectService.applyAccountUpdate(account);
 
@@ -61,8 +52,7 @@ class StripeConnectServiceTest {
 
     @Test
     void shouldSkipAccountUpdateWhenNoMerchantId() {
-        com.stripe.model.Account account = mock(com.stripe.model.Account.class);
-        when(account.getMetadata()).thenReturn(null);
+        var account = new StripeConnectPort.AccountCapabilities("acct_1", null, false, false);
 
         stripeConnectService.applyAccountUpdate(account);
 
@@ -70,23 +60,28 @@ class StripeConnectServiceTest {
     }
 
     @Test
-    void createOnboardingLinkThrowsWhenMerchantHasStripeAccountButStripeApiFails() {
+    void createOnboardingLinkUsesExistingStripeAccount() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(java.util.Optional.of("m-1"));
 
         MerchantQueryPort.StripeConnectInfo info = mock(MerchantQueryPort.StripeConnectInfo.class);
         when(info.stripeAccountId()).thenReturn("acct_existing");
         when(merchantQueryPort.findStripeConnectInfo("m-1")).thenReturn(java.util.Optional.of(info));
 
-        assertThrows(com.aionn.payment.domain.exception.PaymentException.class,
-                () -> stripeConnectService.createOnboardingLink("owner-1"));
+        when(stripeConnectPort.createOnboardingLink("acct_existing")).thenReturn("https://stripe/onboard");
+
+        assertEquals("https://stripe/onboard", stripeConnectService.createOnboardingLink("owner-1"));
+        verify(stripeConnectPort, never()).createExpressAccount(anyString());
     }
 
     @Test
-    void createOnboardingLinkThrowsWhenMerchantHasNoStripeAccountAndStripeApiFails() {
+    void createOnboardingLinkCreatesAndSavesMissingStripeAccount() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-2")).thenReturn(java.util.Optional.of("m-2"));
         when(merchantQueryPort.findStripeConnectInfo("m-2")).thenReturn(java.util.Optional.empty());
 
-        assertThrows(com.aionn.payment.domain.exception.PaymentException.class,
-                () -> stripeConnectService.createOnboardingLink("owner-2"));
+        when(stripeConnectPort.createExpressAccount("m-2")).thenReturn("acct_new");
+        when(stripeConnectPort.createOnboardingLink("acct_new")).thenReturn("https://stripe/onboard");
+
+        assertEquals("https://stripe/onboard", stripeConnectService.createOnboardingLink("owner-2"));
+        verify(merchantQueryPort).saveStripeAccountId("m-2", "acct_new");
     }
 }

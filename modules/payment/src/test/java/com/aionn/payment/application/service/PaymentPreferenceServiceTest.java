@@ -2,11 +2,11 @@ package com.aionn.payment.application.service;
 
 import com.aionn.payment.application.dto.preference.result.PaymentPreferenceResult;
 import com.aionn.payment.application.port.out.PaymentMethodPersistencePort;
+import com.aionn.payment.application.port.out.PaymentPreferencePersistencePort;
+import com.aionn.payment.application.port.out.PaymentPreferencePersistencePort.Preference;
 import com.aionn.payment.domain.exception.PaymentException;
 import com.aionn.payment.domain.model.PaymentMethod;
 import com.aionn.payment.domain.valueobject.PaymentMethodStatus;
-import com.aionn.payment.infrastructure.persistence.entity.PaymentPreferenceEntity;
-import com.aionn.payment.infrastructure.persistence.repository.PaymentPreferenceRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,7 +23,7 @@ import static org.mockito.Mockito.*;
 class PaymentPreferenceServiceTest {
 
     @Mock
-    private PaymentPreferenceRepository preferenceRepository;
+    private PaymentPreferencePersistencePort preferenceRepository;
     @Mock
     private PaymentMethodPersistencePort paymentMethodRepository;
 
@@ -32,7 +32,7 @@ class PaymentPreferenceServiceTest {
 
     @Test
     void shouldReturnCodWhenNoPreferenceFound() {
-        when(preferenceRepository.findById("user-1")).thenReturn(Optional.empty());
+        when(preferenceRepository.findByUserId("user-1")).thenReturn(Optional.empty());
 
         PaymentPreferenceResult result = preferenceService.get("user-1");
 
@@ -42,10 +42,8 @@ class PaymentPreferenceServiceTest {
 
     @Test
     void shouldReturnCodWhenPreferenceIsCod() {
-        PaymentPreferenceEntity entity = new PaymentPreferenceEntity();
-        entity.setUserId("user-1");
-        entity.setPaymentType("COD");
-        when(preferenceRepository.findById("user-1")).thenReturn(Optional.of(entity));
+        when(preferenceRepository.findByUserId("user-1"))
+                .thenReturn(Optional.of(new Preference("user-1", "COD", null)));
 
         PaymentPreferenceResult result = preferenceService.get("user-1");
 
@@ -55,11 +53,8 @@ class PaymentPreferenceServiceTest {
 
     @Test
     void shouldReturnSavedCardWhenCardIsUsable() {
-        PaymentPreferenceEntity entity = new PaymentPreferenceEntity();
-        entity.setUserId("user-1");
-        entity.setPaymentType("SAVED_CARD");
-        entity.setPaymentMethodId("card-1");
-        when(preferenceRepository.findById("user-1")).thenReturn(Optional.of(entity));
+        when(preferenceRepository.findByUserId("user-1"))
+                .thenReturn(Optional.of(new Preference("user-1", "SAVED_CARD", "card-1")));
 
         PaymentMethod card = new PaymentMethod("card-1", "user-1", "VISA", "4242", "tok-1", PaymentMethodStatus.VERIFIED, Instant.now(), Instant.now(), Instant.now());
         when(paymentMethodRepository.findById("card-1")).thenReturn(Optional.of(card));
@@ -72,11 +67,8 @@ class PaymentPreferenceServiceTest {
 
     @Test
     void shouldResetToCodWhenCardIsNotUsable() {
-        PaymentPreferenceEntity entity = new PaymentPreferenceEntity();
-        entity.setUserId("user-1");
-        entity.setPaymentType("SAVED_CARD");
-        entity.setPaymentMethodId("card-1");
-        when(preferenceRepository.findById("user-1")).thenReturn(Optional.of(entity));
+        when(preferenceRepository.findByUserId("user-1"))
+                .thenReturn(Optional.of(new Preference("user-1", "SAVED_CARD", "card-1")));
 
         when(paymentMethodRepository.findById("card-1")).thenReturn(Optional.empty());
 
@@ -84,41 +76,27 @@ class PaymentPreferenceServiceTest {
 
         assertEquals("COD", result.paymentType());
         assertNull(result.paymentMethodId());
-        verify(preferenceRepository).save(entity);
-        assertEquals("COD", entity.getPaymentType());
-        assertNull(entity.getPaymentMethodId());
+        verify(preferenceRepository).save(new Preference("user-1", "COD", null));
     }
 
     @Test
     void shouldUpdateToCod() {
-        PaymentPreferenceEntity entity = new PaymentPreferenceEntity();
-        entity.setUserId("user-1");
-        when(preferenceRepository.findById("user-1")).thenReturn(Optional.of(entity));
-
         PaymentPreferenceResult result = preferenceService.update("user-1", "COD", null);
 
         assertEquals("COD", result.paymentType());
-        verify(preferenceRepository).save(entity);
+        verify(preferenceRepository).save(new Preference("user-1", "COD", null));
     }
 
     @Test
     void shouldUpdateToVnpay() {
-        PaymentPreferenceEntity entity = new PaymentPreferenceEntity();
-        entity.setUserId("user-1");
-        when(preferenceRepository.findById("user-1")).thenReturn(Optional.of(entity));
-
         PaymentPreferenceResult result = preferenceService.update("user-1", "VNPAY", null);
 
         assertEquals("VNPAY", result.paymentType());
-        verify(preferenceRepository).save(entity);
+        verify(preferenceRepository).save(new Preference("user-1", "VNPAY", null));
     }
 
     @Test
     void shouldUpdateToSavedCardSuccessfully() {
-        PaymentPreferenceEntity entity = new PaymentPreferenceEntity();
-        entity.setUserId("user-1");
-        when(preferenceRepository.findById("user-1")).thenReturn(Optional.of(entity));
-
         PaymentMethod card = new PaymentMethod("card-1", "user-1", "VISA", "4242", "tok-1", PaymentMethodStatus.VERIFIED, Instant.now(), Instant.now(), Instant.now());
         when(paymentMethodRepository.findById("card-1")).thenReturn(Optional.of(card));
 
@@ -126,15 +104,11 @@ class PaymentPreferenceServiceTest {
 
         assertEquals("SAVED_CARD", result.paymentType());
         assertEquals("card-1", result.paymentMethodId());
-        verify(preferenceRepository).save(entity);
+        verify(preferenceRepository).save(new Preference("user-1", "SAVED_CARD", "card-1"));
     }
 
     @Test
     void shouldFailToUpdateToSavedCardWhenNotVerified() {
-        PaymentPreferenceEntity entity = new PaymentPreferenceEntity();
-        entity.setUserId("user-1");
-        when(preferenceRepository.findById("user-1")).thenReturn(Optional.of(entity));
-
         PaymentMethod card = new PaymentMethod("card-1", "user-1", "VISA", "4242", "tok-1", PaymentMethodStatus.LINKED, Instant.now(), Instant.now(), null);
         when(paymentMethodRepository.findById("card-1")).thenReturn(Optional.of(card));
 

@@ -1,8 +1,8 @@
 package com.aionn.payment.infrastructure.config;
 
 import com.aionn.payment.infrastructure.config.properties.PaymentInvoiceProperties;
-import com.aionn.payment.infrastructure.config.properties.PaymentStripeProperties;
-import com.aionn.payment.infrastructure.config.properties.PaymentVnpayProperties;
+import com.aionn.payment.infrastructure.provider.config.StripeProperties;
+import com.aionn.payment.infrastructure.provider.config.VnpayProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.SmartInitializingSingleton;
@@ -18,8 +18,8 @@ public class PaymentProviderConfigurationValidator implements SmartInitializingS
 
     private static final Set<String> PRODUCTION_PROFILES = Set.of("prod", "production");
 
-    private final PaymentStripeProperties stripeProperties;
-    private final PaymentVnpayProperties vnpayProperties;
+    private final StripeProperties stripeProperties;
+    private final VnpayProperties vnpayProperties;
     private final PaymentInvoiceProperties invoiceProperties;
     private final Environment environment;
 

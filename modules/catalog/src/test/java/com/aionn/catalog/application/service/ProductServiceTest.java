@@ -35,6 +35,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Spy;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -51,6 +53,7 @@ import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -75,6 +78,8 @@ class ProductServiceTest {
         private CategoryPersistencePort categoryRepository;
         @Mock
         private ProductSearchIndexPort searchIndex;
+        @Mock
+        private TransactionTemplate transactionTemplate;
         @Mock
         private com.aionn.catalog.application.port.out.search.ProductSearchIndex catalogSearchIndex;
         @Mock
@@ -102,6 +107,8 @@ class ProductServiceTest {
 
         @BeforeEach
         void setUp() {
+                lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation ->
+                                ((TransactionCallback<?>) invocation.getArgument(0)).doInTransaction(null));
                 sampleResult = new ProductResult(
                                 PRODUCT_ID, MERCHANT_ID, "Widget", null,
                                 List.of(), List.of(), List.of(), Map.of(),
@@ -299,7 +306,7 @@ class ProductServiceTest {
         }
 
         @Test
-        void publishTransitionsAndIndexes() {
+        void publishTransitionsAndPublishesDomainEvent() {
                 Product product = publishableProduct();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -307,11 +314,11 @@ class ProductServiceTest {
                 productService.publish(new PublishProductCommand(PRODUCT_ID, ADMIN_ID));
 
                 assertThat(product.getStatus()).isEqualTo(ProductStatus.PUBLISHED);
-                verify(searchIndex).index(product);
+                verify(eventPublisher).publish(anyCollection());
         }
 
         @Test
-        void deactivateHidesAndRemovesFromIndex() {
+        void deactivateHidesAndPublishesDomainEvent() {
                 Product product = publishableProduct();
                 product.publish(ADMIN_ID);
                 product.pullEvents();
@@ -321,7 +328,7 @@ class ProductServiceTest {
                 productService.deactivate(new DeactivateProductCommand(PRODUCT_ID, MERCHANT_ID, "policy"));
 
                 assertThat(product.getStatus()).isEqualTo(ProductStatus.HIDDEN);
-                verify(searchIndex).delete(PRODUCT_ID);
+                verify(eventPublisher).publish(anyCollection());
         }
 
         @Test
@@ -415,7 +422,7 @@ class ProductServiceTest {
         }
 
         @Test
-        void emergencyTakedownRemovesFromSearchIndex() {
+        void emergencyTakedownPublishesDomainEvent() {
                 Product product = publishableProduct();
                 product.publish(ADMIN_ID);
                 product.pullEvents();
@@ -427,7 +434,7 @@ class ProductServiceTest {
                                                 PRODUCT_ID, ADMIN_ID, "policy"));
 
                 assertThat(product.getStatus()).isEqualTo(ProductStatus.TAKEN_DOWN);
-                verify(searchIndex).delete(PRODUCT_ID);
+                verify(eventPublisher).publish(anyCollection());
         }
 
         @Test
@@ -734,7 +741,7 @@ class ProductServiceTest {
         }
 
         @Test
-        void restoreRepublishesHiddenProductAndReindexes() {
+        void restoreRepublishesHiddenProductAndPublishesDomainEvent() {
                 Product product = publishableProduct();
                 product.publish(ADMIN_ID);
                 product.deactivate("policy");
@@ -747,7 +754,7 @@ class ProductServiceTest {
                                                 PRODUCT_ID, MERCHANT_ID));
 
                 assertThat(product.getStatus()).isEqualTo(ProductStatus.PUBLISHED);
-                verify(searchIndex).index(product);
+                verify(eventPublisher).publish(anyCollection());
         }
 
         @Test

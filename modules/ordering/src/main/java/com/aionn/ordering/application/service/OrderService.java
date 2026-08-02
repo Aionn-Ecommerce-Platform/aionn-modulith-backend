@@ -34,6 +34,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -64,7 +66,9 @@ public class OrderService {
     private final OrderingIntegrationEventPublisherPort integrationEventPublisher;
     private final OrderingProperties properties;
     private final java.time.Clock clock;
+    private final TransactionTemplate transactionTemplate;
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order placeOrder(PlaceOrderCommand command) {
         Cart cart = cartService.loadOwned(command.userId());
         if (cart.isEmpty()) {
@@ -105,7 +109,7 @@ public class OrderService {
         // Online payments stay pending until the gateway confirms them; keep
         // cart lines in that case so a failed payment can be retried.
         if (result.getStatus() == OrderStatus.APPROVED) {
-            removePurchasedItemsFromCart(command.userId(), lines);
+            transactionTemplate.executeWithoutResult(status -> removePurchasedItemsFromCart(command.userId(), lines));
         }
 
         return result;
@@ -115,6 +119,7 @@ public class OrderService {
      * Headless placement: no cart involvement. Used by UCP agentic checkout
      * where the agent commits a snapshot of line items directly.
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order placeOrderHeadless(PlaceOrderHeadlessCommand command) {
         if (command.lines() == null || command.lines().isEmpty()) {
             throw new OrderingException(OrderingErrorCode.CART_EMPTY,
@@ -219,13 +224,18 @@ public class OrderService {
         String proposalId = "prop-" + System.nanoTime();
         Order order = Order.place(orderId, userId, merchantId, proposalId,
                 paymentMethodId, currency, items, shippingAddress, shippingFee, lineSubtotal, clock.instant());
-        Order saved = orderRepository.save(order);
-        eventPublisher.publish(order.pullEvents());
-        integrationEventPublisher.publishOrderPlaced(saved);
-        if (paymentMethodId == null || "COD".equalsIgnoreCase(paymentMethodId)) {
-            return approvePayment(saved.getOrderId(), null);
-        }
-        return saved;
+        return transactionTemplate.execute(status -> {
+            Order saved = orderRepository.save(order);
+            eventPublisher.publish(order.pullEvents());
+            integrationEventPublisher.publishOrderPlaced(saved);
+            if (paymentMethodId == null || "COD".equalsIgnoreCase(paymentMethodId)) {
+                saved.approve(null, clock.instant());
+                saved = orderRepository.save(saved);
+                eventPublisher.publish(saved.pullEvents());
+                integrationEventPublisher.publishOrderApproved(saved.getOrderId(), null);
+            }
+            return saved;
+        });
     }
 
     public Order approvePayment(String orderId, String paymentId) {
@@ -260,12 +270,16 @@ public class OrderService {
         eventPublisher.publish(freshCart.pullEvents());
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order confirmPreparation(ConfirmPreparationCommand command) {
-        String merchantId = requireMerchantIdForOwner(command.ownerId());
-        Order order = ownedByMerchant(command.orderId(), merchantId);
-        order.confirmPreparation(clock.instant());
-        Order saved = orderRepository.save(order);
-        eventPublisher.publish(order.pullEvents());
+        Order saved = transactionTemplate.execute(status -> {
+            String merchantId = requireMerchantIdForOwner(command.ownerId());
+            Order order = ownedByMerchant(command.orderId(), merchantId);
+            order.confirmPreparation(clock.instant());
+            Order persisted = orderRepository.save(order);
+            eventPublisher.publish(order.pullEvents());
+            return persisted;
+        });
         triggerShipmentRegistration(saved);
         return saved;
     }
@@ -286,22 +300,22 @@ public class OrderService {
         }
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order cancel(CancelOrderCommand command) {
-        Order order = ownedByUser(command.orderId(), command.userId());
-        if (order.getStatus().isPickedUpByCarrier()) {
-            throw new OrderingException(OrderingErrorCode.ORDER_ALREADY_PICKED_UP);
-        }
-        order.cancel("USER_CANCELLED", command.reason(), clock.instant());
-        releaseReservationsBestEffort(order, "order-cancelled");
-        releaseVoucherBestEffort(order, "order-cancelled");
-        if (order.getPaymentId() != null) {
-            paymentGateway.refund(order.getPaymentId(), order.getTotalAmount().amount(),
-                    order.getCurrency(), "user cancellation");
-        }
-        Order saved = orderRepository.save(order);
-        eventPublisher.publish(order.pullEvents());
-        integrationEventPublisher.publishOrderCancelled(saved.getOrderId(), "USER_CANCELLED",
-                command.reason(), OrderingIntegrationEventPublisherPort.CancellationKind.USER_CANCELLED);
+        Order saved = transactionTemplate.execute(status -> {
+            Order order = ownedByUser(command.orderId(), command.userId());
+            if (order.getStatus().isPickedUpByCarrier()) {
+                throw new OrderingException(OrderingErrorCode.ORDER_ALREADY_PICKED_UP);
+            }
+            order.cancel("USER_CANCELLED", command.reason(), clock.instant());
+            Order persisted = orderRepository.save(order);
+            eventPublisher.publish(order.pullEvents());
+            integrationEventPublisher.publishOrderCancelled(persisted.getOrderId(), "USER_CANCELLED",
+                    command.reason(), OrderingIntegrationEventPublisherPort.CancellationKind.USER_CANCELLED);
+            return persisted;
+        });
+        releaseReservationsBestEffort(saved, "order-cancelled");
+        refundIfPaid(saved, "user cancellation");
         return saved;
     }
 
@@ -309,48 +323,44 @@ public class OrderService {
      * Cancel a PENDING order whose online payment failed. Idempotent: if the
      * order is already cancelled or approved (race with capture event), no-op.
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order cancelOnPaymentFailure(String orderId, String errorCode, String reason) {
-        Order order = required(orderId);
-        if (order.getStatus() != OrderStatus.PENDING) {
-            log.info("Skipping payment-failure cancel for order {}: status is {}",
-                    orderId, order.getStatus());
-            return order;
+        Order saved = transactionTemplate.execute(status -> {
+            Order order = required(orderId);
+            if (order.getStatus() != OrderStatus.PENDING) {
+                log.info("Skipping payment-failure cancel for order {}: status is {}",
+                        orderId, order.getStatus());
+                return order;
+            }
+            order.autoCancel("PAYMENT_FAILED", clock.instant());
+            Order persisted = orderRepository.save(order);
+            eventPublisher.publish(order.pullEvents());
+            integrationEventPublisher.publishOrderCancelled(persisted.getOrderId(), "PAYMENT_FAILED",
+                    reason == null ? errorCode : reason,
+                    OrderingIntegrationEventPublisherPort.CancellationKind.AUTO_CANCELLED);
+            return persisted;
+        });
+        if (saved.getStatus() == OrderStatus.CANCELLED) {
+            releaseReservationsBestEffort(saved, "payment-failed");
         }
-        order.autoCancel("PAYMENT_FAILED", clock.instant());
-        releaseReservationsBestEffort(order, "payment-failed");
-        releaseVoucherBestEffort(order, "payment-failed");
-        Order saved = orderRepository.save(order);
-        eventPublisher.publish(order.pullEvents());
-        integrationEventPublisher.publishOrderCancelled(saved.getOrderId(), "PAYMENT_FAILED",
-                reason == null ? errorCode : reason,
-                OrderingIntegrationEventPublisherPort.CancellationKind.AUTO_CANCELLED);
         return saved;
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order rejectByMerchant(RejectOrderCommand command) {
-        String merchantId = requireMerchantIdForOwner(command.ownerId());
-        Order order = ownedByMerchant(command.orderId(), merchantId);
-        order.rejectByMerchant(merchantId, command.reason(), clock.instant());
-        releaseReservationsBestEffort(order, "merchant-rejected");
-        releaseVoucherBestEffort(order, "merchant-rejected");
-        if (order.getPaymentId() != null) {
-            paymentGateway.refund(order.getPaymentId(), order.getTotalAmount().amount(),
-                    order.getCurrency(), "merchant rejected");
-        }
-        Order saved = orderRepository.save(order);
-        eventPublisher.publish(order.pullEvents());
-        integrationEventPublisher.publishOrderCancelled(saved.getOrderId(), "MERCHANT_REJECTED",
-                command.reason(), OrderingIntegrationEventPublisherPort.CancellationKind.MERCHANT_REJECTED);
+        Order saved = transactionTemplate.execute(status -> {
+            String merchantId = requireMerchantIdForOwner(command.ownerId());
+            Order order = ownedByMerchant(command.orderId(), merchantId);
+            order.rejectByMerchant(merchantId, command.reason(), clock.instant());
+            Order persisted = orderRepository.save(order);
+            eventPublisher.publish(order.pullEvents());
+            integrationEventPublisher.publishOrderCancelled(persisted.getOrderId(), "MERCHANT_REJECTED",
+                    command.reason(), OrderingIntegrationEventPublisherPort.CancellationKind.MERCHANT_REJECTED);
+            return persisted;
+        });
+        releaseReservationsBestEffort(saved, "merchant-rejected");
+        refundIfPaid(saved, "merchant rejected");
         return saved;
-    }
-
-    private void releaseVoucherBestEffort(Order order, String reason) {
-        try {
-            voucherGateway.release(order.getUserId(), order.getOrderId(), reason);
-        } catch (RuntimeException ex) {
-            log.warn("Voucher release for order {} ({}) failed: {}",
-                    order.getOrderId(), reason, ex.getMessage());
-        }
     }
 
     private void releaseReservationsBestEffort(Order order, String reason) {
@@ -367,36 +377,51 @@ public class OrderService {
         }
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order changeShippingInfo(ChangeShippingInfoCommand command) {
-        Order order = ownedByUser(command.orderId(), command.userId());
+        Order snapshot = transactionTemplate.execute(status -> ownedByUser(command.orderId(), command.userId()));
         BigDecimal feeOverride = command.newShippingFee();
         Money newFee;
         if (feeOverride == null) {
-            ShippingGateway.ShippingQuote quote = shippingGateway.quote(order.getOrderId(), order.getMerchantId(),
-                    command.newAddress(), order.getCurrency());
+            ShippingGateway.ShippingQuote quote = shippingGateway.quote(snapshot.getOrderId(), snapshot.getMerchantId(),
+                    command.newAddress(), snapshot.getCurrency());
             newFee = Money.of(quote.fee(), quote.currency());
         } else {
-            newFee = Money.of(feeOverride, order.getCurrency());
+            newFee = Money.of(feeOverride, snapshot.getCurrency());
         }
-        order.changeShippingInfo(command.newAddress(), newFee, clock.instant());
-        Order saved = orderRepository.save(order);
-        eventPublisher.publish(order.pullEvents());
-        return saved;
+        return transactionTemplate.execute(status -> {
+            Order order = ownedByUser(command.orderId(), command.userId());
+            order.changeShippingInfo(command.newAddress(), newFee, clock.instant());
+            Order saved = orderRepository.save(order);
+            eventPublisher.publish(order.pullEvents());
+            return saved;
+        });
     }
 
+    private void refundIfPaid(Order order, String reason) {
+        if (order.getPaymentId() != null) {
+            paymentGateway.refund(order.getPaymentId(), order.getTotalAmount().amount(),
+                    order.getCurrency(), reason);
+        }
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order markShipped(ConfirmShippedCommand command) {
-        Order order = required(command.orderId());
-        order.markShipped(command.shipmentId(), clock.instant());
-        for (OrderItem item : order.items()) {
+        Order snapshot = transactionTemplate.execute(status -> required(command.orderId()));
+        for (OrderItem item : snapshot.items()) {
             if (item.reservationId() == null) {
                 continue;
             }
             stockReservationGateway.commit(item.reservationId());
         }
-        Order saved = orderRepository.save(order);
-        eventPublisher.publish(order.pullEvents());
-        integrationEventPublisher.publishOrderShipped(saved.getOrderId(), command.shipmentId());
-        return saved;
+        return transactionTemplate.execute(status -> {
+            Order order = required(command.orderId());
+            order.markShipped(command.shipmentId(), clock.instant());
+            Order saved = orderRepository.save(order);
+            eventPublisher.publish(order.pullEvents());
+            integrationEventPublisher.publishOrderShipped(saved.getOrderId(), command.shipmentId());
+            return saved;
+        });
     }
 
     public Order complete(ConfirmDeliveredCommand command) {
