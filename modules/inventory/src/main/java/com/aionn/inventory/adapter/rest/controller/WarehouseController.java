@@ -113,9 +113,11 @@ public class WarehouseController {
     @GetMapping("/{warehouseId}")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get warehouse")
-    public ResponseEntity<ApiResponse<WarehouseResponse>> get(@PathVariable String warehouseId) {
+    public ResponseEntity<ApiResponse<WarehouseResponse>> get(
+            @CurrentMerchantId String merchantId,
+            @PathVariable String warehouseId) {
         return ResponseEntity.ok(ApiResponse.success(
-                dtoMapper.toResponse(getWarehouseInputPort.execute(warehouseId)), "Warehouse fetched"));
+                dtoMapper.toResponse(getWarehouseInputPort.execute(warehouseId, merchantId)), "Warehouse fetched"));
     }
 
     @GetMapping

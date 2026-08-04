@@ -127,9 +127,10 @@ public class FlashSaleController {
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Get flash-sale registration by id")
         public ResponseEntity<ApiResponse<FlashSaleRegistrationResponse>> get(
+                        @CurrentUserId String ownerId,
                         @PathVariable String registrationId) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                dtoMapper.toResponse(getFlashSaleRegistrationInputPort.execute(registrationId)),
+                                dtoMapper.toResponse(getFlashSaleRegistrationInputPort.execute(registrationId, ownerId)),
                                 "Flash-sale registration fetched"));
         }
 

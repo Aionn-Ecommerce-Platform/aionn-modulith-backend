@@ -11,7 +11,6 @@ import com.aionn.inventory.domain.exception.InventoryException;
 import com.aionn.inventory.domain.model.Warehouse;
 import com.aionn.inventory.domain.valueobject.WarehouseStatus;
 import com.aionn.sharedkernel.application.port.EventPublisher;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,13 +28,11 @@ public class WarehouseService {
 
     private final WarehousePersistencePort warehouseRepository;
     private final EventPublisher eventPublisher;
-    private final MerchantQueryPort merchantQueryPort;
     private final Clock clock;
 
     public Warehouse create(CreateWarehouseCommand command) {
-        String merchantId = requireMerchantIdForOwner(command.ownerId());
         Warehouse warehouse = Warehouse.create(IdGenerator.ulid(),
-                merchantId, command.address(), command.priorityLevel(), clock);
+                command.ownerId(), command.address(), command.priorityLevel(), clock);
         Warehouse saved = warehouseRepository.save(warehouse);
         eventPublisher.publish(warehouse.pullEvents());
         return saved;
@@ -86,9 +83,15 @@ public class WarehouseService {
     }
 
     @Transactional(readOnly = true)
+    public Warehouse getOwned(String warehouseId, String merchantId) {
+        Warehouse warehouse = required(warehouseId);
+        warehouse.ensureOwnedBy(merchantId);
+        return warehouse;
+    }
+
+    @Transactional(readOnly = true)
     public List<Warehouse> listByOwner(String ownerId) {
-        String merchantId = requireMerchantIdForOwner(ownerId);
-        return warehouseRepository.findByMerchantOrderByPriority(merchantId);
+        return warehouseRepository.findByMerchantOrderByPriority(ownerId);
     }
 
     private Warehouse required(String warehouseId) {
@@ -97,15 +100,8 @@ public class WarehouseService {
     }
 
     Warehouse ownedByOwner(String warehouseId, String ownerId) {
-        String merchantId = requireMerchantIdForOwner(ownerId);
         Warehouse warehouse = required(warehouseId);
-        warehouse.ensureOwnedBy(merchantId);
+        warehouse.ensureOwnedBy(ownerId);
         return warehouse;
-    }
-
-    String requireMerchantIdForOwner(String ownerId) {
-        return merchantQueryPort.findMerchantIdByOwnerId(ownerId)
-                .orElseThrow(() -> new InventoryException(InventoryErrorCode.WAREHOUSE_FORBIDDEN,
-                        "No merchant registered for the authenticated user"));
     }
 }

@@ -144,10 +144,12 @@ class WarehouseControllerWebTest {
 
     @Test
     void getReturnsNotFoundWhenWarehouseMissing() throws Exception {
-        when(getWarehouseInputPort.execute("WH_X"))
+        when(getWarehouseInputPort.execute("WH_X", "M_1"))
                 .thenThrow(new InventoryException(InventoryErrorCode.WAREHOUSE_NOT_FOUND));
 
-        mockMvc.perform(get("/api/v1/inventory/warehouses/WH_X"))
+        mockMvc.perform(get("/api/v1/inventory/warehouses/WH_X")
+                        .with(TestAuth.authUser("owner-1", "ROLE_MERCHANT"))
+                        .header("X-Merchant-Id", "M_1"))
                 .andExpect(status().isNotFound());
     }
 

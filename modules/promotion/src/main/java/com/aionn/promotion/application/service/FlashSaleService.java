@@ -134,6 +134,17 @@ public class FlashSaleService {
         }
 
         @Transactional(readOnly = true)
+        public FlashSaleRegistration getOwned(String registrationId, String ownerId) {
+                String merchantId = merchantQueryPort.findMerchantIdByOwnerId(ownerId)
+                                .orElseThrow(() -> new PromotionException(PromotionErrorCode.FLASH_SALE_FORBIDDEN));
+                FlashSaleRegistration registration = required(registrationId);
+                if (!registration.getMerchantId().equals(merchantId)) {
+                        throw new PromotionException(PromotionErrorCode.FLASH_SALE_FORBIDDEN);
+                }
+                return registration;
+        }
+
+        @Transactional(readOnly = true)
         public List<ActiveFlashSaleResult> listActive(int limit) {
                 int safeLimit = Math.min(Math.max(limit, 1), 50);
                 List<FlashSaleRegistration> approved = registrationRepository.findAllApprovedRunning(safeLimit * 50);

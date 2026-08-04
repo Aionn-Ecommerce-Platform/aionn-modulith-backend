@@ -233,7 +233,7 @@ class FlashSaleControllerWebTest {
 
     @Test
     void getReturnsRegistration() throws Exception {
-        when(getFlashSaleRegistrationInputPort.execute("reg-1"))
+        when(getFlashSaleRegistrationInputPort.execute("reg-1", "owner-1"))
                 .thenReturn(sample("reg-1", "APPROVED"));
 
         mockMvc.perform(get("/api/v1/promotions/flash-sales/registrations/reg-1"))

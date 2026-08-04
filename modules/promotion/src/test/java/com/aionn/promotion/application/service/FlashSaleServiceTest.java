@@ -324,6 +324,25 @@ class FlashSaleServiceTest {
     }
 
     @Test
+    void getOwnedReturnsRegistrationForOwningMerchant() {
+        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
+        when(registrationRepository.findById("reg-1")).thenReturn(Optional.of(pending()));
+
+        assertThat(service().getOwned("reg-1", "owner-1").getRegistrationId()).isEqualTo("reg-1");
+    }
+
+    @Test
+    void getOwnedRejectsForeignMerchant() {
+        when(merchantQueryPort.findMerchantIdByOwnerId("owner-2")).thenReturn(Optional.of("mer-2"));
+        when(registrationRepository.findById("reg-1")).thenReturn(Optional.of(pending()));
+
+        assertThatThrownBy(() -> service().getOwned("reg-1", "owner-2"))
+                .isInstanceOf(PromotionException.class)
+                .extracting(ex -> ((PromotionException) ex).getErrorCode())
+                .isEqualTo(PromotionErrorCode.FLASH_SALE_FORBIDDEN.getCode());
+    }
+
+    @Test
     void listActiveReturnsEmptyWhenNoApprovedRegistrations() {
         when(registrationRepository.findAllApprovedRunning(anyInt())).thenReturn(List.of());
 
