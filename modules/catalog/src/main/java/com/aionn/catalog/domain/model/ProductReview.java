@@ -184,6 +184,15 @@ public class ProductReview extends AggregateRoot {
         registerEvent(new ReviewEvents.ReviewDeleted(reviewId, adminId, this.updatedAt));
     }
 
+    public void withdraw(String userId, Clock clock) {
+        if (!this.userId.equals(userId)) {
+            throw new CatalogException(CatalogErrorCode.REVIEW_FORBIDDEN, "User does not own this review");
+        }
+        this.status = ReviewStatus.DELETED;
+        this.updatedAt = clock.instant();
+        registerEvent(new ReviewEvents.ReviewWithdrawn(reviewId, userId, this.updatedAt));
+    }
+
     public void restore(String adminId) {
         restore(adminId, Clock.systemUTC());
     }

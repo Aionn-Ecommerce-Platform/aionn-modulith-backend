@@ -14,11 +14,11 @@ import com.aionn.inventory.application.dto.inventory.command.EmergencyUnlockComm
 import com.aionn.inventory.application.dto.inventory.result.InventoryItemResult;
 import com.aionn.inventory.application.port.in.inventory.*;
 import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -163,7 +163,7 @@ public class InventoryItemController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
         PageResult<InventoryItemResult> result = listInventoryItemsByWarehouseInputPort.execute(
-                authentication.getName(), warehouseId, PageRequest.of(page, size));
+                authentication.getName(), warehouseId, OffsetPagination.of(page, size));
         return ResponseEntity.ok(ApiResponse.success(result, "Inventory items fetched"));
     }
 

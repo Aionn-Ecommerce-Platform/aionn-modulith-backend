@@ -22,7 +22,9 @@ class ApplicationLayerArchitectureTest {
                         "com.stripe..",
                         "com.twilio..",
                         "com.cloudinary..",
-                        "org.opensearch..")
+                        "org.opensearch..",
+                        "org.springframework.data..",
+                        "jakarta.persistence..")
                 .check(PRODUCTION_CLASSES);
     }
 }

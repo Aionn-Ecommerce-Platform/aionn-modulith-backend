@@ -7,7 +7,7 @@ import com.aionn.inventory.application.port.in.inventory.ListInventoryItemsByWar
 import com.aionn.inventory.application.service.InventoryItemService;
 import com.aionn.inventory.domain.model.InventoryItem;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,8 +20,8 @@ public class ListInventoryItemsByWarehouseUseCase implements ListInventoryItemsB
 
     @Override
     @Transactional(readOnly = true)
-    public PageResult<InventoryItemResult> execute(String ownerId, String warehouseId, Pageable pageable) {
-        PageResult<InventoryItem> page = inventoryItemService.listByWarehouse(ownerId, warehouseId, pageable);
+    public PageResult<InventoryItemResult> execute(String ownerId, String warehouseId, OffsetPagination pagination) {
+        PageResult<InventoryItem> page = inventoryItemService.listByWarehouse(ownerId, warehouseId, pagination);
         return new PageResult<>(
                 inventoryItemResultMapper.toResults(page.content()),
                 page.page(),

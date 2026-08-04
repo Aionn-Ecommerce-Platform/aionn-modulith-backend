@@ -1,10 +1,14 @@
 package com.aionn.catalog.domain.model;
 
+import com.aionn.catalog.domain.event.ReviewEvents;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.catalog.domain.valueobject.ReviewStatus;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -137,6 +141,19 @@ class ProductReviewTest {
         review.adminDelete(ADMIN_ID);
         assertThat(review.getStatus()).isEqualTo(ReviewStatus.DELETED);
         assertThat(review.pullEvents()).hasSize(1);
+    }
+
+    @Test
+    void userWithdrawalEmitsUserEventInsteadOfAdminDeletion() {
+        ProductReview review = freshReview();
+        review.pullEvents();
+
+        review.withdraw(USER_ID, Clock.fixed(Instant.parse("2026-01-02T03:04:05Z"), ZoneOffset.UTC));
+
+        assertThat(review.getStatus()).isEqualTo(ReviewStatus.DELETED);
+        assertThat(review.pullEvents().getFirst().payload())
+                .isEqualTo(new ReviewEvents.ReviewWithdrawn(
+                        REVIEW_ID, USER_ID, Instant.parse("2026-01-02T03:04:05Z")));
     }
 
     @Test

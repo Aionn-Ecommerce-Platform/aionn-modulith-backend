@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 
 import java.util.List;
 import java.util.Optional;
@@ -142,7 +143,7 @@ class InventoryItemPersistenceAdapterTest {
                 .thenReturn(new PageImpl<>(List.of(entity)));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
-        assertThat(adapter.findByWarehouse(WAREHOUSE_ID, PageRequest.of(0, 10)))
+        assertThat(adapter.findByWarehouse(WAREHOUSE_ID, OffsetPagination.of(0, 10)).content())
                 .containsExactly(domain);
 
         ArgumentCaptor<PageRequest> captor = ArgumentCaptor.forClass(PageRequest.class);

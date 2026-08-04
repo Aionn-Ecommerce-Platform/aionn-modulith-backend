@@ -17,7 +17,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
-class ResilientOutboundOrderNotifierTest {
+class InventoryOutboundOrderNotifierTest {
 
     @Mock
     IntegrationEventPublisher integrationEventPublisher;

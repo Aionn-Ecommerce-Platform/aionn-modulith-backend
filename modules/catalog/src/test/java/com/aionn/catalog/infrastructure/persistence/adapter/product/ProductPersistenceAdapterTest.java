@@ -1,6 +1,7 @@
 package com.aionn.catalog.infrastructure.persistence.adapter.product;
 
 import com.aionn.catalog.domain.model.Product;
+import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.catalog.domain.valueobject.ProductStatus;
 import com.aionn.catalog.infrastructure.persistence.entity.ProductEntity;
 import com.aionn.catalog.infrastructure.persistence.mapper.ProductDomainMapper;
@@ -15,11 +16,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -48,6 +51,18 @@ class ProductPersistenceAdapterTest {
         when(mapper.toDomain(entity)).thenReturn(domain);
 
         assertThat(adapter.save(domain)).isSameAs(domain);
+    }
+
+    @Test
+    void saveTranslatesSkuConstraintViolation() {
+        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
+        ProductEntity entity = new ProductEntity();
+        when(mapper.toEntity(domain)).thenReturn(entity);
+        when(jpa.save(entity)).thenThrow(new DataIntegrityViolationException("uq_product_variants_sku"));
+
+        assertThatThrownBy(() -> adapter.save(domain))
+                .isInstanceOf(CatalogException.class)
+                .hasMessageContaining("SKU");
     }
 
     @Test

@@ -21,13 +21,12 @@ import com.aionn.inventory.domain.valueobject.InventoryItemKey;
 import com.aionn.inventory.application.dto.common.PageResult;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.model.EventEnvelope;
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -148,20 +147,15 @@ public class InventoryItemService {
     }
 
     @Transactional(readOnly = true)
-    public PageResult<InventoryItem> listByWarehouse(String ownerId, String warehouseId, Pageable pageable) {
+    public PageResult<InventoryItem> listByWarehouse(
+            String ownerId, String warehouseId, OffsetPagination pagination) {
         Warehouse warehouse = warehouseRepository.findById(warehouseId)
                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.WAREHOUSE_NOT_FOUND));
         String merchantId = merchantQueryPort.findMerchantIdByOwnerId(ownerId)
                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.WAREHOUSE_FORBIDDEN,
                         "No merchant registered for the authenticated user"));
         warehouse.ensureOwnedBy(merchantId);
-        Page<InventoryItem> page = itemRepository.findByWarehouse(warehouseId, pageable);
-        return new PageResult<>(
-                page.getContent(),
-                page.getNumber(),
-                page.getSize(),
-                page.getNumberOfElements(),
-                page.getTotalElements());
+        return itemRepository.findByWarehouse(warehouseId, pagination);
     }
 
     private OwnerContext ownerContext(String ownerId, String warehouseId) {

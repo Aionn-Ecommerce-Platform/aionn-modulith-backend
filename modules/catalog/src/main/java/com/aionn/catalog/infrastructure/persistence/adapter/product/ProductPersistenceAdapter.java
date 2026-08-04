@@ -2,6 +2,8 @@ package com.aionn.catalog.infrastructure.persistence.adapter.product;
 
 import com.aionn.catalog.application.port.out.product.ProductPersistencePort;
 import com.aionn.catalog.domain.model.Product;
+import com.aionn.catalog.domain.exception.CatalogErrorCode;
+import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.catalog.domain.valueobject.ProductStatus;
 import com.aionn.catalog.infrastructure.persistence.entity.ProductEntity;
 import com.aionn.catalog.infrastructure.persistence.mapper.ProductDomainMapper;
@@ -9,6 +11,7 @@ import com.aionn.catalog.infrastructure.persistence.repository.product.ProductRe
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.core.TypedPropertyPath;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
@@ -30,8 +33,16 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
         jpa.findById(product.getProductId()).ifPresent(existing -> {
             entity.setVersion(existing.getVersion());
         });
-        var saved = jpa.save(entity);
-        return mapper.toDomain(saved);
+        try {
+            var saved = jpa.save(entity);
+            return mapper.toDomain(saved);
+        } catch (DataIntegrityViolationException ex) {
+            if (isSkuConstraintViolation(ex)) {
+                throw new CatalogException(CatalogErrorCode.PRODUCT_VARIANT_DUPLICATE,
+                        "A product variant with this SKU already exists");
+            }
+            throw ex;
+        }
     }
 
     @Override
@@ -165,5 +176,17 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
                 .map(byId::get)
                 .filter(java.util.Objects::nonNull)
                 .toList();
+    }
+
+    private static boolean isSkuConstraintViolation(DataIntegrityViolationException exception) {
+        Throwable current = exception;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null && message.toLowerCase(java.util.Locale.ROOT).contains("sku")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }
