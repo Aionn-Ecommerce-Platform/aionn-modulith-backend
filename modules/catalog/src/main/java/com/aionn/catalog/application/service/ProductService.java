@@ -24,7 +24,6 @@ import com.aionn.catalog.application.mapper.ProductSearchDocumentMapper;
 import com.aionn.catalog.application.policy.CatalogProductPolicy;
 import com.aionn.catalog.application.port.out.attribute.AttributeTemplatePersistencePort;
 import com.aionn.catalog.application.port.out.search.ProductSearchIndex;
-import com.aionn.catalog.application.port.out.search.ProductSearchIndexPort;
 import com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort;
 import com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort;
 import com.aionn.catalog.domain.model.AttributeTemplate;
@@ -70,7 +69,6 @@ public class ProductService {
     private final MerchantPersistencePort merchantRepository;
     private final BrandPersistencePort brandRepository;
     private final CategoryPersistencePort categoryRepository;
-    private final ProductSearchIndexPort searchIndex;
     private final ProductSearchIndex catalogSearchIndex;
     private final ProductSearchDocumentMapper searchDocumentMapper;
     private final AttributeTemplatePersistencePort attributeTemplateRepository;
@@ -153,10 +151,23 @@ public class ProductService {
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public PageResult<Product> search(String keyword, OffsetPagination pagination) {
-        List<String> ids = searchIndex.searchIds(keyword, pagination);
-        long total = searchIndex.countMatches(keyword);
-        List<Product> products = transactionTemplate.execute(status -> productRepository.findAllByIds(ids));
-        return new PageResult<>(products, pagination.page(), pagination.size(), total);
+        ProductSearchCriteria criteria = new ProductSearchCriteria(
+                keyword, null, ProductStatus.PUBLISHED, List.of(), List.of(),
+                null, null, Map.of(), ProductSearchCriteria.Sort.RELEVANCE,
+                pagination.page(), pagination.size());
+        Optional<ProductSearchIndex.SearchHits> hits = catalogSearchIndex.search(criteria);
+        if (hits.isPresent()) {
+            ProductSearchIndex.SearchHits result = hits.get();
+            List<Product> products = transactionTemplate.execute(
+                    status -> productRepository.findByIdsPreserveOrder(result.productIds()));
+            return new PageResult<>(products, pagination.page(), pagination.size(), result.totalHits());
+        }
+        return transactionTemplate.execute(status -> {
+            int offset = pagination.page() * pagination.size();
+            List<Product> products = productRepository.searchPublished(keyword, pagination.size(), offset);
+            long total = productRepository.countSearchPublished(keyword);
+            return new PageResult<>(products, pagination.page(), pagination.size(), total);
+        });
     }
 
     public Product changeVariantPrice(ChangeVariantPriceCommand command) {

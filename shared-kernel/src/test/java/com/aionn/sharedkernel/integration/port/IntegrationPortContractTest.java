@@ -131,6 +131,10 @@ class IntegrationPortContractTest {
                 assertEquals("camp-1", campaign.campaignId());
                 assertEquals("addr-1", placeCommand.shippingAddress().addressId());
                 assertEquals(1000L, placedOrder.totalAmountMinor());
+                assertEquals("o-1", orderSummary.orderId());
+                assertEquals("u-1", orderSummary.userId());
+                assertEquals("m-1", orderSummary.merchantId());
+                assertEquals(BigDecimal.valueOf(100), orderSummary.totalAmount());
                 assertEquals("VND", orderSummary.currency());
                 assertEquals("COMPLETED", orderSnapshot.status());
                 assertEquals("track-1", shippingRegistration.trackingCode());

@@ -17,7 +17,6 @@ import com.aionn.catalog.application.port.out.brand.BrandPersistencePort;
 import com.aionn.catalog.application.port.out.category.CategoryPersistencePort;
 import com.aionn.catalog.application.port.out.merchant.MerchantPersistencePort;
 import com.aionn.catalog.application.port.out.product.ProductPersistencePort;
-import com.aionn.catalog.application.port.out.search.ProductSearchIndexPort;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.catalog.domain.model.Brand;
@@ -76,8 +75,6 @@ class ProductServiceTest {
         private BrandPersistencePort brandRepository;
         @Mock
         private CategoryPersistencePort categoryRepository;
-        @Mock
-        private ProductSearchIndexPort searchIndex;
         @Mock
         private TransactionTemplate transactionTemplate;
         @Mock
@@ -439,10 +436,12 @@ class ProductServiceTest {
 
         @Test
         void searchDelegatesToIndex() {
-                when(searchIndex.searchIds("keyword", OffsetPagination.of(0, 20))).thenReturn(List.of(PRODUCT_ID));
+                var criteria = criteria("keyword", null, List.of(), List.of(), null, null);
+                var hits = new com.aionn.catalog.application.port.out.search.ProductSearchIndex.SearchHits(
+                                List.of(PRODUCT_ID), 1L, Map.of(), Map.of(), Map.of(), null, null);
+                when(catalogSearchIndex.search(criteria)).thenReturn(Optional.of(hits));
                 Product product = publishableProduct();
-                when(productRepository.findAllByIds(List.of(PRODUCT_ID))).thenReturn(List.of(product));
-                when(searchIndex.countMatches("keyword")).thenReturn(1L);
+                when(productRepository.findByIdsPreserveOrder(List.of(PRODUCT_ID))).thenReturn(List.of(product));
 
                 PageResult<Product> page = productService.search("keyword", OffsetPagination.of(0, 20));
 
@@ -452,10 +451,11 @@ class ProductServiceTest {
         }
 
         @Test
-        void searchReturnsEmptyWhenIndexEmpty() {
-                when(searchIndex.searchIds("nothing", OffsetPagination.of(0, 20))).thenReturn(List.of());
-                when(productRepository.findAllByIds(List.of())).thenReturn(List.of());
-                when(searchIndex.countMatches("nothing")).thenReturn(0L);
+        void searchFallsBackToDatabaseWhenIndexUnavailable() {
+                var criteria = criteria("nothing", null, List.of(), List.of(), null, null);
+                when(catalogSearchIndex.search(criteria)).thenReturn(Optional.empty());
+                when(productRepository.searchPublished("nothing", 20, 0)).thenReturn(List.of());
+                when(productRepository.countSearchPublished("nothing")).thenReturn(0L);
 
                 PageResult<Product> page = productService.search("nothing", OffsetPagination.of(0, 20));
 
