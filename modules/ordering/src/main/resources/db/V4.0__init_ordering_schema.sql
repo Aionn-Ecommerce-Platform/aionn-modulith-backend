@@ -92,3 +92,22 @@ CREATE INDEX idx_order_returns_status   ON order_returns(status);
 CREATE INDEX idx_order_returns_refund_retry
     ON order_returns(refund_status, next_refund_attempt_at)
     WHERE refund_status IN ('PENDING', 'FAILED');
+
+CREATE TABLE ordering_compensation_tasks (
+    task_id         VARCHAR(150) PRIMARY KEY,
+    task_type       VARCHAR(30)  NOT NULL,
+    resource_id     VARCHAR(100),
+    user_id         VARCHAR(50),
+    order_id        VARCHAR(50),
+    reason          VARCHAR(255) NOT NULL,
+    status          VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
+    attempts        INTEGER      NOT NULL DEFAULT 0,
+    next_attempt_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    last_error      VARCHAR(1000),
+    completed_at    TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_ordering_compensation_retry
+    ON ordering_compensation_tasks(status, next_attempt_at)
+    WHERE status IN ('PENDING', 'FAILED');

@@ -5,6 +5,7 @@ import com.aionn.ordering.application.dto.order.command.ConfirmDeliveredCommand;
 import com.aionn.ordering.application.dto.order.command.ConfirmShippedCommand;
 import com.aionn.ordering.application.dto.order.command.RejectOrderCommand;
 import com.aionn.ordering.application.port.out.CartPersistencePort;
+import com.aionn.ordering.application.port.out.CompensationTaskPort;
 import com.aionn.ordering.application.port.out.CatalogPricingGateway;
 import com.aionn.ordering.application.port.out.OrderPersistencePort;
 import com.aionn.ordering.application.port.out.PaymentGateway;
@@ -45,6 +46,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -71,6 +74,7 @@ class OrderServiceTest {
     @Mock private TransactionTemplate transactionTemplate;
     @Mock
     private ReservationPolicy reservationPolicy;
+    @Mock private CompensationTaskPort compensationTaskPort;
 
     private OrderService orderService;
 
@@ -92,7 +96,8 @@ class OrderServiceTest {
                 cartRepository, orderRepository, eventPublisher,
                 stockReservationGateway, paymentGateway, shippingGateway,
                 catalogPricingGateway, voucherGateway, cartService, merchantQueryPort,
-                integrationEventPublisher, reservationPolicy, clock, transactionTemplate);
+                integrationEventPublisher, reservationPolicy, clock, transactionTemplate,
+                compensationTaskPort);
         lenient().when(reservationPolicy.ttlSeconds()).thenReturn(86400);
     }
 
@@ -393,6 +398,35 @@ class OrderServiceTest {
 
         verify(voucherGateway).release(eq(USER_ID), anyString(), eq("order-placement-failed"));
         verify(stockReservationGateway).release("res-1", "order-placement-failed");
+    }
+
+    @Test
+    void placementPersistsEachCompensationThatCannotCompleteImmediately() {
+        var command = new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand(
+                USER_ID,
+                List.of(new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand.Line("sku-1", 1)),
+                "SAVE10", "COD", "VND", address());
+        var skuPricing = new CatalogPricingGateway.SkuPricing(
+                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true,
+                List.of("category-1"));
+        var reservation = new StockReservationGateway.Reservation(
+                "res-1", "sku-1", "wh-1", 1, BigDecimal.valueOf(100), "VND");
+        when(catalogPricingGateway.resolve(List.of("sku-1"))).thenReturn(java.util.Map.of("sku-1", skuPricing));
+        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND")))
+                .thenReturn(new ShippingGateway.ShippingQuote(BigDecimal.TEN, "VND"));
+        when(stockReservationGateway.reserveAll(anyString(), any(), eq(86400))).thenReturn(List.of(reservation));
+        when(voucherGateway.apply(eq(USER_ID), eq(MERCHANT_ID), eq("SAVE10"), anyString(),
+                eq(BigDecimal.valueOf(100)), eq("VND"), eq(List.of("category-1"))))
+                .thenReturn(new VoucherGateway.Discount(BigDecimal.TEN, "VND", true, null));
+        when(orderRepository.save(any(Order.class))).thenThrow(new RuntimeException("database unavailable"));
+        doThrow(new RuntimeException("promotion unavailable"))
+                .when(voucherGateway).release(eq(USER_ID), anyString(), eq("order-placement-failed"));
+        doThrow(new RuntimeException("inventory unavailable"))
+                .when(stockReservationGateway).release("res-1", "order-placement-failed");
+
+        assertThrows(RuntimeException.class, () -> orderService.placeOrderHeadless(command));
+
+        verify(compensationTaskPort, times(2)).enqueue(any(CompensationTaskPort.Task.class));
     }
 
     @Test

@@ -12,6 +12,7 @@ import com.aionn.ordering.application.dto.order.result.MerchantOrderAnalyticsRes
 import com.aionn.ordering.application.dto.order.result.PlatformOrderAnalyticsResult;
 import com.aionn.ordering.application.dto.order.result.TopProductResult;
 import com.aionn.ordering.application.port.out.CartPersistencePort;
+import com.aionn.ordering.application.port.out.CompensationTaskPort;
 import com.aionn.ordering.application.port.out.CatalogPricingGateway;
 import com.aionn.ordering.application.port.out.OrderPersistencePort;
 import com.aionn.ordering.application.port.out.PaymentGateway;
@@ -67,6 +68,7 @@ public class OrderService {
     private final ReservationPolicy reservationPolicy;
     private final java.time.Clock clock;
     private final TransactionTemplate transactionTemplate;
+    private final CompensationTaskPort compensationTaskPort;
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order placeOrder(PlaceOrderCommand command) {
@@ -377,6 +379,7 @@ public class OrderService {
             } catch (RuntimeException ex) {
                 log.warn("Release of reservation {} ({}) failed: {}",
                         item.reservationId(), reason, ex.getMessage());
+                enqueueReservationRelease(item.reservationId(), reason);
             }
         }
     }
@@ -734,6 +737,7 @@ public class OrderService {
             } catch (Exception ex) {
                 log.warn("Failed to release reservation {} during compensation: {}", r.reservationId(),
                         ex.getMessage());
+                enqueueReservationRelease(r.reservationId(), reason);
             }
         }
     }
@@ -745,9 +749,28 @@ public class OrderService {
                 voucherGateway.release(userId, orderId, "order-placement-failed");
             } catch (RuntimeException ex) {
                 log.error("Failed to release voucher for aborted order {}", orderId, ex);
+                enqueueCompensation(new CompensationTaskPort.Task(
+                        "voucher-release:" + orderId,
+                        CompensationTaskPort.Type.VOUCHER_RELEASE,
+                        voucherCode, userId, orderId, "order-placement-failed", 0));
             }
         }
         releaseReservations(reservations, "order-placement-failed");
+    }
+
+    private void enqueueReservationRelease(String reservationId, String reason) {
+        enqueueCompensation(new CompensationTaskPort.Task(
+                "reservation-release:" + reservationId,
+                CompensationTaskPort.Type.RESERVATION_RELEASE,
+                reservationId, null, null, reason, 0));
+    }
+
+    private void enqueueCompensation(CompensationTaskPort.Task task) {
+        try {
+            compensationTaskPort.enqueue(task);
+        } catch (RuntimeException persistenceFailure) {
+            log.error("Unable to persist compensation task {}", task.taskId(), persistenceFailure);
+        }
     }
 
     public OrderStatus statusOf(String orderId) {
