@@ -2,9 +2,9 @@ package com.aionn.promotion.adapter.rest.controller;
 
 import com.aionn.promotion.adapter.rest.dto.voucher.IssueVoucherRequest;
 import com.aionn.promotion.adapter.rest.dto.voucher.response.VoucherResponse;
+import com.aionn.promotion.adapter.rest.dto.voucher.response.MerchantVoucherAnalyticsResponse;
 import com.aionn.promotion.adapter.rest.mapper.voucher.VoucherDtoMapper;
 import com.aionn.promotion.adapter.rest.support.session.CurrentUserId;
-import com.aionn.promotion.application.dto.analytics.result.MerchantVoucherAnalyticsResult;
 import com.aionn.promotion.application.port.in.analytics.GetMerchantVoucherAnalyticsInputPort;
 import com.aionn.promotion.application.port.in.voucher.IssueShopVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.ListMyShopVouchersInputPort;
@@ -43,9 +43,10 @@ public class ShopVoucherController {
         @GetMapping("/analytics")
         @PreAuthorize("hasAuthority('ROLE_MERCHANT')")
         @Operation(summary = "Voucher redemption analytics for the authenticated merchant")
-        public ResponseEntity<ApiResponse<MerchantVoucherAnalyticsResult>> analytics(@CurrentUserId String ownerId) {
+        public ResponseEntity<ApiResponse<MerchantVoucherAnalyticsResponse>> analytics(@CurrentUserId String ownerId) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                getMerchantVoucherAnalyticsInputPort.execute(ownerId), "Voucher analytics fetched"));
+                                dtoMapper.toResponse(getMerchantVoucherAnalyticsInputPort.execute(ownerId)),
+                                "Voucher analytics fetched"));
         }
 
         @PostMapping

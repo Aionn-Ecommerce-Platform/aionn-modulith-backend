@@ -4,14 +4,24 @@ import com.aionn.ordering.adapter.rest.dto.request.*;
 import com.aionn.ordering.adapter.rest.dto.response.CartResponse;
 import com.aionn.ordering.adapter.rest.dto.response.OrderResponse;
 import com.aionn.ordering.adapter.rest.dto.response.OrderReturnResponse;
+import com.aionn.ordering.adapter.rest.dto.response.MerchantOrderAnalyticsResponse;
+import com.aionn.ordering.adapter.rest.dto.response.PlatformOrderAnalyticsResponse;
+import com.aionn.ordering.adapter.rest.dto.response.TopProductResponse;
+import com.aionn.ordering.adapter.rest.dto.response.ReturnAnalyticsResponse;
 import com.aionn.ordering.application.dto.cart.command.*;
 import com.aionn.ordering.application.dto.cart.result.CartResult;
 import com.aionn.ordering.application.dto.order.command.*;
 import com.aionn.ordering.application.dto.order.result.OrderResult;
+import com.aionn.ordering.application.dto.order.result.MerchantOrderAnalyticsResult;
+import com.aionn.ordering.application.dto.order.result.PlatformOrderAnalyticsResult;
+import com.aionn.ordering.application.dto.order.result.TopProductResult;
 import com.aionn.ordering.application.dto.returns.command.*;
 import com.aionn.ordering.application.dto.returns.result.ReturnResult;
+import com.aionn.ordering.application.dto.returns.result.ReturnAnalyticsResult;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
+
+import java.util.List;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface OrderingDtoMapper {
@@ -71,4 +81,14 @@ public interface OrderingDtoMapper {
     OrderResponse toResponse(OrderResult result);
 
     OrderReturnResponse toResponse(ReturnResult result);
+
+    MerchantOrderAnalyticsResponse toResponse(MerchantOrderAnalyticsResult result);
+
+    PlatformOrderAnalyticsResponse toResponse(PlatformOrderAnalyticsResult result);
+
+    TopProductResponse toResponse(TopProductResult result);
+
+    List<TopProductResponse> toTopProductResponses(List<TopProductResult> results);
+
+    ReturnAnalyticsResponse toResponse(ReturnAnalyticsResult result);
 }

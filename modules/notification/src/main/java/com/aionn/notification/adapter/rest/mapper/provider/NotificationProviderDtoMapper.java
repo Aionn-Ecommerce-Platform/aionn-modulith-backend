@@ -3,6 +3,8 @@ package com.aionn.notification.adapter.rest.mapper.provider;
 import com.aionn.notification.adapter.rest.dto.provider.ConfigureProviderRequest;
 import com.aionn.notification.adapter.rest.dto.provider.UpdateProviderRequest;
 import com.aionn.notification.adapter.rest.dto.provider.response.ProviderResponse;
+import com.aionn.notification.adapter.rest.dto.provider.response.CampaignAnalyticsResponse;
+import com.aionn.notification.application.dto.analytics.result.AnalyticsResult;
 import com.aionn.notification.application.dto.provider.command.ProviderCommands;
 import com.aionn.notification.application.dto.provider.result.ProviderResult;
 import org.mapstruct.Mapper;
@@ -15,6 +17,8 @@ public interface NotificationProviderDtoMapper {
     ProviderResponse toResponse(ProviderResult result);
 
     List<ProviderResponse> toResponses(List<ProviderResult> results);
+
+    CampaignAnalyticsResponse toResponse(AnalyticsResult result);
 
     default ProviderCommands.ConfigureProvider toConfigureCommand(String adminId,
             ConfigureProviderRequest request) {

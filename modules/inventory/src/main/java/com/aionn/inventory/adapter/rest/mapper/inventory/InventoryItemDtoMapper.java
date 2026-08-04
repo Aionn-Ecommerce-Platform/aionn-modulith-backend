@@ -9,7 +9,6 @@ import com.aionn.inventory.adapter.rest.dto.inventory.request.TrackBatchAndExpir
 import com.aionn.inventory.adapter.rest.dto.inventory.response.InventoryItemResponse;
 import com.aionn.inventory.adapter.rest.dto.inventory.response.LowStockAlertResponse;
 import com.aionn.inventory.application.dto.analytics.result.LowStockAlertResult;
-import com.aionn.inventory.application.dto.common.PageResult;
 import com.aionn.inventory.application.dto.inventory.command.AuditInventoryCommand;
 import com.aionn.inventory.application.dto.inventory.command.ConfigureSafetyStockCommand;
 import com.aionn.inventory.application.dto.inventory.command.EmergencyLockCommand;
@@ -44,12 +43,4 @@ public interface InventoryItemDtoMapper {
 
     List<LowStockAlertResponse> toLowStockResponses(List<LowStockAlertResult> results);
 
-    default PageResult<InventoryItemResponse> toResponsePage(PageResult<InventoryItemResult> page) {
-        return new PageResult<>(
-                toResponses(page.content()),
-                page.page(),
-                page.size(),
-                page.returned(),
-                page.totalElements());
-    }
 }
