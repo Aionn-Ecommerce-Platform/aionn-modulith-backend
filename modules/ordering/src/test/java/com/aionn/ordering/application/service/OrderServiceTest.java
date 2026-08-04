@@ -337,6 +337,31 @@ class OrderServiceTest {
     }
 
     @Test
+    void placementCompensatesVoucherAndStockWhenOrderPersistenceFails() {
+        var command = new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand(
+                USER_ID,
+                List.of(new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand.Line("sku-1", 1)),
+                "SAVE10", "COD", "VND", address());
+        var skuPricing = new CatalogPricingGateway.SkuPricing(
+                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true);
+        var reservation = new StockReservationGateway.Reservation(
+                "res-1", "sku-1", "wh-1", 1, BigDecimal.valueOf(100), "VND");
+        when(catalogPricingGateway.resolve(List.of("sku-1"))).thenReturn(java.util.Map.of("sku-1", skuPricing));
+        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND")))
+                .thenReturn(new ShippingGateway.ShippingQuote(BigDecimal.TEN, "VND"));
+        when(stockReservationGateway.reserveAll(anyString(), any(), eq(86400))).thenReturn(List.of(reservation));
+        when(voucherGateway.apply(eq(USER_ID), eq(MERCHANT_ID), eq("SAVE10"), anyString(),
+                eq(BigDecimal.valueOf(100)), eq("VND")))
+                .thenReturn(new VoucherGateway.Discount(BigDecimal.TEN, "VND", true, null));
+        when(orderRepository.save(any(Order.class))).thenThrow(new RuntimeException("database unavailable"));
+
+        assertThrows(RuntimeException.class, () -> orderService.placeOrderHeadless(command));
+
+        verify(voucherGateway).release(eq(USER_ID), anyString(), eq("order-placement-failed"));
+        verify(stockReservationGateway).release("res-1", "order-placement-failed");
+    }
+
+    @Test
     void changeShippingInfoAlwaysUsesCarrierQuote() {
         Order order = pendingOrder();
         ShippingAddress replacement = new ShippingAddress("addr-2", "User", "+84912345678",

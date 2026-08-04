@@ -97,9 +97,9 @@ public class UserVoucher extends AggregateRoot {
     }
 
     public void release(String reason, Clock clock) {
-        Guard.require(status == UserVoucherStatus.RESERVED,
+        Guard.require(status == UserVoucherStatus.RESERVED || status == UserVoucherStatus.APPLIED,
                 () -> new PromotionException(PromotionErrorCode.USER_VOUCHER_INVALID_STATE,
-                        "Only RESERVED vouchers can be released"));
+                        "Only RESERVED or APPLIED vouchers can be released"));
         String orderId = reservedOrderId;
         this.status = UserVoucherStatus.RELEASED;
         Instant now = clock.instant();

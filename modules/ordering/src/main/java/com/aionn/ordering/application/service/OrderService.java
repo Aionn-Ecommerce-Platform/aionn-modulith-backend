@@ -203,33 +203,37 @@ public class OrderService {
             lineSubtotal = lineSubtotal.add(unit.multiply(r.qty()));
         }
 
-        if (voucherCode != null) {
-            VoucherGateway.Discount discount = voucherGateway.apply(
-                    userId, merchantId, voucherCode, orderId, lineSubtotal.amount(), currency);
-            if (!discount.valid()) {
-                releaseReservations(reservations, "voucher-invalid");
-                throw new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
-                        "Voucher invalid: " + discount.reason());
+        try {
+            if (voucherCode != null) {
+                VoucherGateway.Discount discount = voucherGateway.apply(
+                        userId, merchantId, voucherCode, orderId, lineSubtotal.amount(), currency);
+                if (!discount.valid()) {
+                    throw new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
+                            "Voucher invalid: " + discount.reason());
+                }
+                BigDecimal newSubtotal = lineSubtotal.amount().subtract(discount.amount()).max(BigDecimal.ZERO);
+                lineSubtotal = Money.of(newSubtotal, currency);
             }
-            BigDecimal newSubtotal = lineSubtotal.amount().subtract(discount.amount()).max(BigDecimal.ZERO);
-            lineSubtotal = Money.of(newSubtotal, currency);
-        }
 
-        String proposalId = "prop-" + System.nanoTime();
-        Order order = Order.place(orderId, userId, merchantId, proposalId,
-                paymentMethodId, currency, items, shippingAddress, shippingFee, lineSubtotal, clock.instant());
-        return transactionTemplate.execute(status -> {
-            Order saved = orderRepository.save(order);
-            eventPublisher.publish(order.pullEvents());
-            integrationEventPublisher.publishOrderPlaced(saved);
-            if (paymentMethodId == null || "COD".equalsIgnoreCase(paymentMethodId)) {
-                saved.approve(null, clock.instant());
-                saved = orderRepository.save(saved);
-                eventPublisher.publish(saved.pullEvents());
-                integrationEventPublisher.publishOrderApproved(saved.getOrderId(), null);
-            }
-            return saved;
-        });
+            String proposalId = "prop-" + System.nanoTime();
+            Order order = Order.place(orderId, userId, merchantId, proposalId,
+                    paymentMethodId, currency, items, shippingAddress, shippingFee, lineSubtotal, clock.instant());
+            return transactionTemplate.execute(status -> {
+                Order saved = orderRepository.save(order);
+                eventPublisher.publish(order.pullEvents());
+                integrationEventPublisher.publishOrderPlaced(saved);
+                if (paymentMethodId == null || "COD".equalsIgnoreCase(paymentMethodId)) {
+                    saved.approve(null, clock.instant());
+                    saved = orderRepository.save(saved);
+                    eventPublisher.publish(saved.pullEvents());
+                    integrationEventPublisher.publishOrderApproved(saved.getOrderId(), null);
+                }
+                return saved;
+            });
+        } catch (RuntimeException failure) {
+            compensateFailedPlacement(userId, orderId, voucherCode, reservations);
+            throw failure;
+        }
     }
 
     public Order approvePayment(String orderId, String paymentId) {
@@ -715,6 +719,18 @@ public class OrderService {
                         ex.getMessage());
             }
         }
+    }
+
+    private void compensateFailedPlacement(String userId, String orderId, String voucherCode,
+            List<StockReservationGateway.Reservation> reservations) {
+        if (voucherCode != null) {
+            try {
+                voucherGateway.release(userId, orderId, "order-placement-failed");
+            } catch (RuntimeException ex) {
+                log.error("Failed to release voucher for aborted order {}", orderId, ex);
+            }
+        }
+        releaseReservations(reservations, "order-placement-failed");
     }
 
     public OrderStatus statusOf(String orderId) {

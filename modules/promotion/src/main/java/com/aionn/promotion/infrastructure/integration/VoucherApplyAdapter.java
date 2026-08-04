@@ -69,6 +69,9 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
                 return new Discount(BigDecimal.ZERO, currency, false, "voucher-not-usable");
             }
             if (uv.getStatus() == UserVoucherStatus.APPLIED) {
+                if (orderId.equals(uv.getReservedOrderId()) && uv.getAppliedAmount() != null) {
+                    return new Discount(uv.getAppliedAmount().amount(), uv.getAppliedAmount().currency(), true, null);
+                }
                 return new Discount(BigDecimal.ZERO, currency, false, "voucher-already-used");
             }
             if (uv.getStatus() == UserVoucherStatus.EXPIRED) {
@@ -78,8 +81,8 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
             if (!voucher.isUsable(clock.instant())) {
                 return new Discount(BigDecimal.ZERO, currency, false, "voucher-not-usable");
             }
-            voucher.claimSlot();
-            uv = UserVoucher.claim(IdGenerator.ulid(), voucherCode, userId);
+            voucher.claimSlot(clock);
+            uv = UserVoucher.claim(IdGenerator.ulid(), voucherCode, userId, clock);
             userVoucherRepository.save(uv);
         }
 
@@ -89,11 +92,11 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
         }
         String discountCurrency = voucher.getDiscountAmount().currency();
 
-        voucher.reserveSlot();
-        voucher.commitSlot();
+        voucher.reserveSlot(clock);
+        voucher.commitSlot(clock);
 
-        uv.reserve(orderId, clock.instant().plus(Duration.ofMinutes(15)));
-        uv.apply(Money.of(discount, discountCurrency));
+        uv.reserve(orderId, clock.instant().plus(Duration.ofMinutes(15)), clock);
+        uv.apply(Money.of(discount, discountCurrency), clock);
 
         voucherRepository.save(voucher);
         userVoucherRepository.save(uv);
@@ -113,10 +116,14 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
                     }
                     Voucher voucher = voucherRepository.findByCode(uv.getVoucherCode()).orElse(null);
                     if (voucher != null) {
-                        voucher.releaseSlot();
+                        if (uv.getStatus() == UserVoucherStatus.APPLIED) {
+                            voucher.releaseCommittedSlot(clock);
+                        } else {
+                            voucher.releaseSlot(clock);
+                        }
                         voucherRepository.save(voucher);
                     }
-                    uv.release(reason);
+                    uv.release(reason, clock);
                     userVoucherRepository.save(uv);
                 });
     }
