@@ -22,6 +22,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -125,21 +126,6 @@ class SettlementServiceTest {
     }
 
     @Test
-    void onOrderCancelledShouldReversePendingBalance() {
-        SettlementLedgerEntry sale = new SettlementLedgerEntry("sle-1", "merch-1", "order-1", "pay-1", null,
-                SettlementLedgerEntry.SettlementKind.SALE, BigDecimal.valueOf(100), BigDecimal.valueOf(5), BigDecimal.valueOf(95), "VND", null, clock.instant());
-
-        when(ledgerRepo.findByOrder("order-1")).thenReturn(java.util.List.of(sale));
-        MerchantBalance balance = new MerchantBalance("merch-1", "VND", BigDecimal.valueOf(95), BigDecimal.ZERO, 0L, clock.instant(), clock.instant());
-        when(balanceRepo.lockForUpdate("merch-1", "VND")).thenReturn(Optional.of(balance));
-
-        service.onOrderCancelled("order-1");
-
-        verify(balanceRepo).save(any());
-        verify(ledgerRepo).save(any());
-    }
-
-    @Test
     void onPaymentRefundedShouldDeductBalance() {
         SettlementLedgerEntry sale = new SettlementLedgerEntry("sle-1", "merch-1", "order-1", "pay-1", null,
                 SettlementLedgerEntry.SettlementKind.SALE, BigDecimal.valueOf(100), BigDecimal.valueOf(5), BigDecimal.valueOf(95), "VND", null, clock.instant());
@@ -148,7 +134,7 @@ class SettlementServiceTest {
         MerchantBalance balance = new MerchantBalance("merch-1", "VND", BigDecimal.ZERO, BigDecimal.valueOf(100), 0L, clock.instant(), clock.instant());
         when(balanceRepo.lockForUpdate("merch-1", "VND")).thenReturn(Optional.of(balance));
 
-        service.onPaymentRefunded("order-1", "pay-1", BigDecimal.valueOf(100), "VND");
+        service.onPaymentRefunded("order-1", "pay-1", "refund-1", BigDecimal.valueOf(100), "VND");
 
         verify(balanceRepo).save(any());
         verify(ledgerRepo).save(any());
@@ -171,11 +157,60 @@ class SettlementServiceTest {
                 clock.instant(), clock.instant());
         when(balanceRepo.lockForUpdate("merch-1", "VND")).thenReturn(Optional.of(balance));
 
-        service.onPaymentRefunded("order-1", "pay-1", BigDecimal.valueOf(50), "VND");
+        service.onPaymentRefunded("order-1", "pay-1", "refund-2", BigDecimal.valueOf(50), "VND");
 
         ArgumentCaptor<SettlementLedgerEntry> entry = ArgumentCaptor.forClass(SettlementLedgerEntry.class);
         verify(ledgerRepo).save(entry.capture());
         assertEquals(BigDecimal.valueOf(-47), entry.getValue().getNet());
         assertEquals(BigDecimal.ZERO, balance.getAvailable());
+    }
+
+    @Test
+    void refundUsesAvailableAndPendingTogether() {
+        SettlementLedgerEntry sale = new SettlementLedgerEntry("sle-1", "merch-1", "order-1", "pay-1", null,
+                SettlementLedgerEntry.SettlementKind.SALE, BigDecimal.valueOf(100), BigDecimal.valueOf(5),
+                BigDecimal.valueOf(95), "VND", null, clock.instant());
+        when(ledgerRepo.findByOrder("order-1")).thenReturn(java.util.List.of(sale));
+        MerchantBalance balance = new MerchantBalance(
+                "merch-1", "VND", BigDecimal.valueOf(55), BigDecimal.valueOf(40), 0L,
+                clock.instant(), clock.instant());
+        when(balanceRepo.lockForUpdate("merch-1", "VND")).thenReturn(Optional.of(balance));
+
+        service.onPaymentRefunded("order-1", "pay-1", "refund-split",
+                BigDecimal.valueOf(100), "VND");
+
+        assertEquals(BigDecimal.ZERO, balance.getAvailable());
+        assertEquals(BigDecimal.ZERO, balance.getPending());
+        verify(balanceRepo).save(balance);
+        verify(ledgerRepo).save(any());
+    }
+
+    @Test
+    void insufficientRefundBalanceFailsInsteadOfAcknowledgingEvent() {
+        SettlementLedgerEntry sale = new SettlementLedgerEntry("sle-1", "merch-1", "order-1", "pay-1", null,
+                SettlementLedgerEntry.SettlementKind.SALE, BigDecimal.valueOf(100), BigDecimal.valueOf(5),
+                BigDecimal.valueOf(95), "VND", null, clock.instant());
+        when(ledgerRepo.findByOrder("order-1")).thenReturn(java.util.List.of(sale));
+        MerchantBalance balance = new MerchantBalance(
+                "merch-1", "VND", BigDecimal.TEN, BigDecimal.TEN, 0L,
+                clock.instant(), clock.instant());
+        when(balanceRepo.lockForUpdate("merch-1", "VND")).thenReturn(Optional.of(balance));
+
+        assertThrows(RuntimeException.class, () -> service.onPaymentRefunded(
+                "order-1", "pay-1", "refund-insufficient", BigDecimal.valueOf(100), "VND"));
+
+        verify(balanceRepo, never()).save(any());
+        verify(ledgerRepo, never()).save(any());
+    }
+
+    @Test
+    void duplicateRefundEffectDoesNotMutateBalance() {
+        when(ledgerRepo.existsById(anyString())).thenReturn(true);
+
+        service.onPaymentRefunded("order-1", "pay-1", "refund-duplicate",
+                BigDecimal.valueOf(100), "VND");
+
+        verify(balanceRepo, never()).lockForUpdate(anyString(), anyString());
+        verify(ledgerRepo, never()).save(any());
     }
 }

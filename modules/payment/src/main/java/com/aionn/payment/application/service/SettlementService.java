@@ -2,13 +2,15 @@ package com.aionn.payment.application.service;
 
 import com.aionn.payment.application.port.out.MerchantBalancePersistencePort;
 import com.aionn.payment.application.port.out.SettlementLedgerPersistencePort;
+import com.aionn.payment.domain.exception.PaymentErrorCode;
+import com.aionn.payment.domain.exception.PaymentException;
 import com.aionn.payment.domain.model.MerchantBalance;
 import com.aionn.payment.domain.model.SettlementLedgerEntry;
 import com.aionn.payment.domain.model.SettlementLedgerEntry.SettlementKind;
 import com.aionn.sharedkernel.domain.vo.Money;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
 import com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort;
-import com.aionn.sharedkernel.util.IdGenerator;
+import com.aionn.sharedkernel.util.Sha256Hasher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,6 +36,8 @@ public class SettlementService {
     private final Clock clock;
 
     public void onOrderApproved(String orderId, String paymentId) {
+        String effectId = effectId("SALE", orderId);
+        if (ledgerRepo.existsById(effectId)) return;
         OrderQueryPort.OrderSummary order = orderQueryPort.findOrderSummary(orderId).orElse(null);
         if (order == null) {
             log.warn("Settlement: order {} not found, skipping SALE entry", orderId);
@@ -45,17 +49,20 @@ public class SettlementService {
 
         Instant now = clock.instant();
         MerchantBalance balance = loadOrCreate(order.merchantId(), order.currency(), now);
+        if (ledgerRepo.existsById(effectId)) return;
         balance.addPending(net, now);
         balanceRepo.save(balance);
 
         ledgerRepo.save(new SettlementLedgerEntry(
-                "SLE_" + IdGenerator.ulid(),
+                effectId,
                 order.merchantId(), orderId, paymentId, null,
                 SettlementKind.SALE, order.totalAmount(), commission, net,
                 order.currency(), null, now));
     }
 
     public void onOrderCompleted(String orderId) {
+        String effectId = effectId("MOVE", orderId);
+        if (ledgerRepo.existsById(effectId)) return;
         OrderQueryPort.OrderSummary order = orderQueryPort.findOrderSummary(orderId).orElse(null);
         if (order == null) return;
         SettlementLedgerEntry sale = findSaleEntry(orderId);
@@ -68,46 +75,26 @@ public class SettlementService {
             log.warn("Settlement: balance missing for completed order {}", orderId);
             return;
         }
+        if (ledgerRepo.existsById(effectId)) return;
         balance.moveToAvailable(sale.getNet(), now);
         balanceRepo.save(balance);
 
         ledgerRepo.save(new SettlementLedgerEntry(
-                "SLE_" + IdGenerator.ulid(),
+                effectId,
                 order.merchantId(), orderId, sale.getPaymentId(), null,
                 SettlementKind.MOVE_AVAILABLE, sale.getNet(), BigDecimal.ZERO, sale.getNet(),
                 order.currency(), null, now));
     }
 
-    public void onOrderCancelled(String orderId) {
-        SettlementLedgerEntry sale = findSaleEntry(orderId);
-        if (sale == null) return;
-        boolean alreadyMoved = ledgerRepo.findByOrder(orderId).stream()
-                .anyMatch(e -> e.getKind() == SettlementKind.MOVE_AVAILABLE);
-
-        Instant now = clock.instant();
-        MerchantBalance balance = balanceRepo.lockForUpdate(sale.getMerchantId(), sale.getCurrency())
-                .orElse(null);
-        if (balance == null) return;
-
-        if (alreadyMoved) {
-            balance.debitAvailable(sale.getNet(), now);
-        } else {
-            balance.reversePending(sale.getNet(), now);
-        }
-        balanceRepo.save(balance);
-
-        ledgerRepo.save(new SettlementLedgerEntry(
-                "SLE_" + IdGenerator.ulid(),
-                sale.getMerchantId(), orderId, sale.getPaymentId(), null,
-                SettlementKind.REVERSAL, sale.getNet(), BigDecimal.ZERO, sale.getNet().negate(),
-                sale.getCurrency(), "order cancelled", now));
-    }
-
-    public void onPaymentRefunded(String orderId, String paymentId, BigDecimal refundAmount, String currency) {
+    public void onPaymentRefunded(String orderId, String paymentId, String refundId,
+            BigDecimal refundAmount, String currency) {
+        String effectId = effectId("REFUND", refundId);
+        if (ledgerRepo.existsById(effectId)) return;
         SettlementLedgerEntry sale = findSaleEntry(orderId);
         if (sale == null) return;
         MerchantBalance balance = balanceRepo.lockForUpdate(sale.getMerchantId(), currency).orElse(null);
         if (balance == null) return;
+        if (ledgerRepo.existsById(effectId)) return;
 
         // Re-read under the merchant-balance lock so concurrent partial refunds allocate
         // against the same cumulative ledger state. Rounding the cumulative target and
@@ -138,18 +125,23 @@ public class SettlementService {
         if (netDeduct.signum() <= 0) return;
 
         Instant now = clock.instant();
-        if (balance.getAvailable().compareTo(netDeduct) >= 0) {
-            balance.debitAvailable(netDeduct, now);
-        } else if (balance.getPending().compareTo(netDeduct) >= 0) {
-            balance.reversePending(netDeduct, now);
-        } else {
-            log.warn("Settlement: insufficient balance for refund of order {}", orderId);
-            return;
+        BigDecimal totalBalance = balance.getAvailable().add(balance.getPending());
+        if (totalBalance.compareTo(netDeduct) < 0) {
+            throw new PaymentException(PaymentErrorCode.PAYMENT_AMOUNT_EXCEEDED,
+                    "Settlement balance cannot cover refund for order " + orderId);
+        }
+        BigDecimal availableDeduct = balance.getAvailable().min(netDeduct);
+        if (availableDeduct.signum() > 0) {
+            balance.debitAvailable(availableDeduct, now);
+        }
+        BigDecimal pendingDeduct = netDeduct.subtract(availableDeduct);
+        if (pendingDeduct.signum() > 0) {
+            balance.reversePending(pendingDeduct, now);
         }
         balanceRepo.save(balance);
 
         ledgerRepo.save(new SettlementLedgerEntry(
-                "SLE_" + IdGenerator.ulid(),
+                effectId,
                 sale.getMerchantId(), orderId, paymentId, null,
                 SettlementKind.REFUND, refundAmount, BigDecimal.ZERO, netDeduct.negate(),
                 currency, "payment refunded", now));
@@ -168,5 +160,9 @@ public class SettlementService {
 
     private static BigDecimal currencyAmount(BigDecimal amount, String currency) {
         return Money.of(amount, currency).amount();
+    }
+
+    private static String effectId(String kind, String businessKey) {
+        return "SLE_" + kind + "_" + Sha256Hasher.hexDigest(businessKey).substring(0, 32);
     }
 }

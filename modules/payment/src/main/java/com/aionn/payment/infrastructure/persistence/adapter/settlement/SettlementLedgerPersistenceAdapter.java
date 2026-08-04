@@ -36,6 +36,11 @@ public class SettlementLedgerPersistenceAdapter implements SettlementLedgerPersi
     }
 
     @Override
+    public boolean existsById(String entryId) {
+        return jpa.existsById(entryId);
+    }
+
+    @Override
     public List<SettlementLedgerEntry> findByMerchant(String merchantId, int limit) {
         return jpa.findByMerchantIdOrderByCreatedAtDesc(merchantId,
                 PageRequest.of(0, Math.max(1, limit))).stream()
