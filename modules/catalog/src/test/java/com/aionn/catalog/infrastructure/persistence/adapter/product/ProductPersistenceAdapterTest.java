@@ -26,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -51,6 +52,7 @@ class ProductPersistenceAdapterTest {
         when(mapper.toDomain(entity)).thenReturn(domain);
 
         assertThat(adapter.save(domain)).isSameAs(domain);
+        verify(jpa, never()).findById(PRODUCT_ID);
     }
 
     @Test
@@ -272,5 +274,26 @@ class ProductPersistenceAdapterTest {
 
         assertThat(adapter.findByIdsPreserveOrder(List.of(p2.getProductId(), p1.getProductId())))
                 .containsExactly(p2, p1);
+    }
+
+    @Test
+    void searchFallbackPushesFiltersAndPaginationToDatabase() {
+        ProductEntity entity = new ProductEntity();
+        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
+        var filter = new com.aionn.catalog.application.port.out.product.ProductPersistencePort.FallbackFilter(
+                " widget ", MERCHANT_ID, ProductStatus.PUBLISHED,
+                List.of("brand-1", "brand-2"), List.of("cat-1"),
+                new java.math.BigDecimal("10"), new java.math.BigDecimal("50"));
+        when(jpa.searchFallback("widget", MERCHANT_ID, "PUBLISHED", "brand-1,brand-2", "cat-1",
+                new java.math.BigDecimal("10"), new java.math.BigDecimal("50"), 20, 40))
+                .thenReturn(List.of(entity));
+        when(jpa.countFallback("widget", MERCHANT_ID, "PUBLISHED", "brand-1,brand-2", "cat-1",
+                new java.math.BigDecimal("10"), new java.math.BigDecimal("50"))).thenReturn(41L);
+        when(mapper.toDomain(entity)).thenReturn(domain);
+
+        var page = adapter.searchFallback(filter, OffsetPagination.of(2, 20));
+
+        assertThat(page.content()).containsExactly(domain);
+        assertThat(page.totalElements()).isEqualTo(41);
     }
 }

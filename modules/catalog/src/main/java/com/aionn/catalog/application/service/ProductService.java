@@ -429,58 +429,15 @@ public class ProductService {
     }
 
     private PageResult<ProductResult> jpaSearchFallback(ProductSearchCriteria criteria) {
-        ProductStatus requiredStatus = criteria.status() != null ? criteria.status() : ProductStatus.PUBLISHED;
-        List<Product> filtered = fallbackCandidates(criteria).stream()
-                .filter(p -> p.getStatus() == requiredStatus)
-                .filter(p -> matchesFacets(p, criteria))
-                .toList();
-
-        long totalElements = filtered.size();
-        int from = Math.min(criteria.page() * criteria.size(), filtered.size());
-        int to = Math.min(from + criteria.size(), filtered.size());
-        List<ProductResult> results = filtered.subList(from, to).stream()
+        var page = productRepository.searchFallback(
+                new ProductPersistencePort.FallbackFilter(
+                        criteria.q(), criteria.merchantId(), criteria.status(), criteria.brandIds(),
+                        criteria.categoryIds(), criteria.priceMin(), criteria.priceMax()),
+                OffsetPagination.of(criteria.page(), criteria.size()));
+        List<ProductResult> results = page.content().stream()
                 .map(productResultMapper::toResult)
                 .toList();
-        return new PageResult<>(results, criteria.page(), criteria.size(), totalElements);
-    }
-
-    private List<Product> fallbackCandidates(ProductSearchCriteria criteria) {
-        if (criteria.merchantId() != null && !criteria.merchantId().isBlank()) {
-            return productRepository.listByMerchant(criteria.merchantId(),
-                    OffsetPagination.of(0, OffsetPagination.MAX_SIZE));
-        }
-        if (criteria.hasText()) {
-            return productRepository.searchPublished(criteria.q(), 10_000, 0);
-        }
-        return productRepository.findPublished(10_000, 0);
-    }
-
-    private static boolean matchesFacets(Product product, ProductSearchCriteria criteria) {
-        if (!criteria.brandIds().isEmpty()
-                && (product.getBrandId() == null || !criteria.brandIds().contains(product.getBrandId()))) {
-            return false;
-        }
-        if (!criteria.categoryIds().isEmpty()
-                && product.categoryIds().stream().noneMatch(criteria.categoryIds()::contains)) {
-            return false;
-        }
-        return matchesPrice(product, criteria.priceMin(), criteria.priceMax());
-    }
-
-    private static boolean matchesPrice(Product product, BigDecimal min, BigDecimal max) {
-        if (min == null && max == null) {
-            return true;
-        }
-        return product.variants().stream().anyMatch(v -> {
-            BigDecimal price = v.price() == null ? null : v.price().amount();
-            if (price == null) {
-                return false;
-            }
-            if (min != null && price.compareTo(min) < 0) {
-                return false;
-            }
-            return max == null || price.compareTo(max) <= 0;
-        });
+        return new PageResult<>(results, criteria.page(), criteria.size(), page.totalElements());
     }
 
     private static boolean isRealUser(String userId) {

@@ -30,9 +30,6 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
     @Override
     public Product save(Product product) {
         var entity = mapper.toEntity(product);
-        jpa.findById(product.getProductId()).ifPresent(existing -> {
-            entity.setVersion(existing.getVersion());
-        });
         try {
             var saved = jpa.save(entity);
             return mapper.toDomain(saved);
@@ -188,5 +185,29 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
             current = current.getCause();
         }
         return false;
+    }
+
+    @Override
+    public FallbackPage searchFallback(FallbackFilter filter, OffsetPagination pagination) {
+        String query = normalize(filter.query());
+        String merchantId = normalize(filter.merchantId());
+        String brands = csv(filter.brandIds());
+        String categories = csv(filter.categoryIds());
+        String status = (filter.status() == null ? ProductStatus.PUBLISHED : filter.status()).name();
+        List<Product> content = jpa.searchFallback(query, merchantId, status, brands, categories,
+                        filter.priceMin(), filter.priceMax(), pagination.size(), pagination.offset()).stream()
+                .map(mapper::toDomain)
+                .toList();
+        long total = jpa.countFallback(query, merchantId, status, brands, categories,
+                filter.priceMin(), filter.priceMax());
+        return new FallbackPage(content, total);
+    }
+
+    private static String normalize(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static String csv(List<String> values) {
+        return values == null || values.isEmpty() ? "" : String.join(",", values);
     }
 }

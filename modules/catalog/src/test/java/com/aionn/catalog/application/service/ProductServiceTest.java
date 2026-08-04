@@ -51,6 +51,7 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
@@ -584,7 +585,8 @@ class ProductServiceTest {
                 when(catalogSearchIndex.search(criteria)).thenReturn(Optional.empty());
                 Product product = publishableProduct();
                 product.publish(ADMIN_ID);
-                when(productRepository.searchPublished("widget", 10_000, 0)).thenReturn(List.of(product));
+                when(productRepository.searchFallback(any(), eq(OffsetPagination.of(0, 20))))
+                                .thenReturn(new ProductPersistencePort.FallbackPage(List.of(product), 1));
                 when(productResultMapper.toResult(product)).thenReturn(sampleResult);
 
                 com.aionn.catalog.application.dto.search.ProductSearchResult result = productService
@@ -611,8 +613,8 @@ class ProductServiceTest {
                 Product product = publishableProduct();
                 product.publish(ADMIN_ID);
                 product.assignBrand(BRAND_ID);
-                when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, OffsetPagination.MAX_SIZE)))
-                                .thenReturn(List.of(product));
+                when(productRepository.searchFallback(any(), eq(OffsetPagination.of(0, 20))))
+                                .thenReturn(new ProductPersistencePort.FallbackPage(List.of(product), 1));
                 when(productResultMapper.toResult(product)).thenReturn(sampleResult);
 
                 var result = productService.searchCatalog(c);
@@ -626,7 +628,8 @@ class ProductServiceTest {
                 when(catalogSearchIndex.search(c)).thenReturn(Optional.empty());
                 Product product = publishableProduct();
                 product.publish(ADMIN_ID);
-                when(productRepository.findPublished(10_000, 0)).thenReturn(List.of(product));
+                when(productRepository.searchFallback(any(), eq(OffsetPagination.of(0, 20))))
+                                .thenReturn(new ProductPersistencePort.FallbackPage(List.of(product), 1));
                 when(productResultMapper.toResult(product)).thenReturn(sampleResult);
 
                 var result = productService.searchCatalog(c);
@@ -638,10 +641,8 @@ class ProductServiceTest {
         void searchCatalogFallbackFiltersOutByBrandCategoryPrice() {
                 var c = criteria(null, null, List.of("other-cat"), List.of("other-brand"), null, null);
                 when(catalogSearchIndex.search(c)).thenReturn(Optional.empty());
-                Product product = publishableProduct();
-                product.publish(ADMIN_ID);
-                product.assignBrand(BRAND_ID);
-                when(productRepository.findPublished(10_000, 0)).thenReturn(List.of(product));
+                when(productRepository.searchFallback(any(), eq(OffsetPagination.of(0, 20))))
+                                .thenReturn(new ProductPersistencePort.FallbackPage(List.of(), 0));
 
                 var result = productService.searchCatalog(c);
 

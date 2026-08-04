@@ -109,6 +109,7 @@ public interface ProductDomainMapper {
                 entity.getStatus() != null ? ProductStatus.valueOf(entity.getStatus()) : null,
                 base.getCreatedAt(),
                 base.getUpdatedAt(),
+                entity.getVersion(),
                 translations);
     }
 }

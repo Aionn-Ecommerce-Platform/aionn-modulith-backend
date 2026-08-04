@@ -36,6 +36,7 @@ public class Product extends AggregateRoot {
     private ProductStatus status;
     private final Instant createdAt;
     private Instant updatedAt;
+    private final long version;
     private final List<Translation> translations = new ArrayList<>();
 
     public record Translation(String locale, String name, String aiDescription) {}
@@ -59,6 +60,7 @@ public class Product extends AggregateRoot {
             ProductStatus status,
             Instant createdAt,
             Instant updatedAt,
+            long version,
             List<Translation> translations) {
         this.productId = productId;
         this.merchantId = merchantId;
@@ -80,6 +82,7 @@ public class Product extends AggregateRoot {
         this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.version = version;
         if (translations != null)
             this.translations.addAll(translations);
     }
@@ -94,7 +97,7 @@ public class Product extends AggregateRoot {
         Instant now = clock.instant();
         Product product = new Product(productId, merchantId, name.trim(), null,
                 List.of(), List.of(), List.of(), List.of(), Map.of(), List.of(),
-                null, ProductStatus.DRAFT, now, now, List.of());
+                null, ProductStatus.DRAFT, now, now, 0L, List.of());
         product.registerEvent(new ProductEvents.ProductCreated(productId, merchantId, name, now));
         return product;
     }
