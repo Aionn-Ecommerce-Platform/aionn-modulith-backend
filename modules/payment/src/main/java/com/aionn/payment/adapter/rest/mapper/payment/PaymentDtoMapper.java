@@ -21,7 +21,8 @@ public interface PaymentDtoMapper {
     RefundPaymentCommand toCommand(String paymentId, RefundRequest request);
 
     default ConfirmPaymentCommand toConfirmCommand(PaymentProviderClient.WebhookEvent event) {
-        return new ConfirmPaymentCommand(event.paymentId(), event.transactionNo());
+        return new ConfirmPaymentCommand(
+                event.paymentId(), event.transactionNo(), event.amount(), event.currency());
     }
 
     default FailPaymentCommand toFailCommand(PaymentProviderClient.WebhookEvent event, String defaultErrorCode) {

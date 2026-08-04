@@ -98,10 +98,8 @@ class VnpayReturnControllerWebTest {
         PaymentProviderClient.WebhookEvent event = new PaymentProviderClient.WebhookEvent("payment.captured", "pay-1", "txn-1", BigDecimal.TEN, "VND", true, null, null);
         when(providerClient.verifyAndParse(any(), any())).thenReturn(event);
 
-        PaymentResult payment = new PaymentResult("pay-1", "order-1", "user-1", null, BigDecimal.TEN, BigDecimal.ZERO, "VND", "VNPAY", "INITIATED", null, null, null, null, Instant.now(), Instant.now(), null, null);
-        when(getPaymentInputPort.execute("pay-1")).thenReturn(payment);
-
-        ConfirmPaymentCommand command = new ConfirmPaymentCommand("pay-1", "txn-1");
+        ConfirmPaymentCommand command = new ConfirmPaymentCommand(
+                "pay-1", "txn-1", BigDecimal.TEN, "VND");
         when(paymentDtoMapper.toConfirmCommand(event)).thenReturn(command);
 
         mockMvc.perform(post("/api/v1/payments/vnpay/ipn?vnpay_params=1"))
@@ -127,11 +125,6 @@ class VnpayReturnControllerWebTest {
                 "payment.failed", "pay-1", "txn-1", BigDecimal.TEN, "VND", false, "VNPAY_24", "Cancelled");
         when(providerClient.verifyAndParse(any(), any())).thenReturn(event);
 
-        PaymentResult payment = new PaymentResult("pay-1", "order-1", "user-1", null, BigDecimal.TEN,
-                BigDecimal.ZERO, "VND", "VNPAY", "INITIATED", null, null, null, null,
-                Instant.now(), Instant.now(), null, null);
-        when(getPaymentInputPort.execute("pay-1")).thenReturn(payment);
-
         com.aionn.payment.application.dto.payment.command.FailPaymentCommand failCommand =
                 new com.aionn.payment.application.dto.payment.command.FailPaymentCommand("pay-1", "VNPAY_ERROR", "Cancelled");
         when(paymentDtoMapper.toFailCommand(event, "VNPAY_ERROR")).thenReturn(failCommand);
@@ -149,16 +142,16 @@ class VnpayReturnControllerWebTest {
                 "payment.captured", "pay-1", "txn-1", BigDecimal.TEN, "VND", true, null, null);
         when(providerClient.verifyAndParse(any(), any())).thenReturn(event);
 
-        PaymentResult payment = new PaymentResult("pay-1", "order-1", "user-1", null, BigDecimal.TEN,
-                BigDecimal.ZERO, "VND", "VNPAY", "PAID", "txn-1", null, null, null,
-                Instant.now(), Instant.now(), Instant.now(), null);
-        when(getPaymentInputPort.execute("pay-1")).thenReturn(payment);
+        ConfirmPaymentCommand command = new ConfirmPaymentCommand(
+                "pay-1", "txn-1", BigDecimal.TEN, "VND");
+        when(paymentDtoMapper.toConfirmCommand(event)).thenReturn(command);
 
         mockMvc.perform(post("/api/v1/payments/vnpay/ipn?vnpay_params=1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.RspCode").value("00"));
 
-        verifyNoInteractions(confirmPaymentInputPort, failPaymentInputPort);
+        verify(confirmPaymentInputPort).execute(command);
+        verifyNoInteractions(failPaymentInputPort);
     }
 
     @Test
@@ -166,7 +159,10 @@ class VnpayReturnControllerWebTest {
         PaymentProviderClient.WebhookEvent event = new PaymentProviderClient.WebhookEvent(
                 "payment.captured", "pay-missing", "txn-1", BigDecimal.TEN, "VND", true, null, null);
         when(providerClient.verifyAndParse(any(), any())).thenReturn(event);
-        when(getPaymentInputPort.execute("pay-missing")).thenThrow(
+        ConfirmPaymentCommand command = new ConfirmPaymentCommand(
+                "pay-missing", "txn-1", BigDecimal.TEN, "VND");
+        when(paymentDtoMapper.toConfirmCommand(event)).thenReturn(command);
+        when(confirmPaymentInputPort.execute(command)).thenThrow(
                 new com.aionn.payment.domain.exception.PaymentException(
                         com.aionn.payment.domain.exception.PaymentErrorCode.PAYMENT_NOT_FOUND));
 
@@ -180,7 +176,10 @@ class VnpayReturnControllerWebTest {
         PaymentProviderClient.WebhookEvent event = new PaymentProviderClient.WebhookEvent(
                 "payment.captured", "pay-1", "txn-1", BigDecimal.TEN, "VND", true, null, null);
         when(providerClient.verifyAndParse(any(), any())).thenReturn(event);
-        when(getPaymentInputPort.execute("pay-1")).thenThrow(
+        ConfirmPaymentCommand command = new ConfirmPaymentCommand(
+                "pay-1", "txn-1", BigDecimal.TEN, "VND");
+        when(paymentDtoMapper.toConfirmCommand(event)).thenReturn(command);
+        when(confirmPaymentInputPort.execute(command)).thenThrow(
                 new com.aionn.payment.domain.exception.PaymentException(
                         com.aionn.payment.domain.exception.PaymentErrorCode.PAYMENT_GATEWAY_ERROR));
 

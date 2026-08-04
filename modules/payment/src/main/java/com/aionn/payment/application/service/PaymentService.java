@@ -71,8 +71,17 @@ public class PaymentService {
     public PaymentInitiation initiate(InitiatePaymentCommand command) {
         var existing = inTransaction(() -> paymentRepository.findByIdempotencyKey(command.idempotencyKey()));
         if (existing.isPresent()) {
-            return new PaymentInitiation(existing.get(), null);
+            Payment priorPayment = existing.get();
+            if (!priorPayment.getOrderId().equals(command.orderId())
+                    || !priorPayment.getUserId().equals(command.userId())) {
+                throw new PaymentException(PaymentErrorCode.PAYMENT_NOT_FOUND);
+            }
+            return new PaymentInitiation(priorPayment, null);
         }
+
+        var order = orderQueryPort.findOrderSummary(command.orderId())
+                .filter(summary -> summary.userId().equals(command.userId()))
+                .orElseThrow(() -> new PaymentException(PaymentErrorCode.PAYMENT_NOT_FOUND));
 
         PaymentMethod method = command.paymentMethodId() == null ? null : inTransaction(() -> {
             PaymentMethod selected = paymentMethodRepository.findById(command.paymentMethodId())
@@ -85,7 +94,7 @@ public class PaymentService {
         });
 
         Instant now = clock.instant();
-        Money amount = Money.of(command.amount(), command.currency());
+        Money amount = Money.of(order.totalAmount(), order.currency());
         Payment payment = Payment.initiate(IdGenerator.ulid(), command.orderId(), command.userId(),
                 command.paymentMethodId(), amount, command.gateway(), command.idempotencyKey(), now);
         Payment saved = inTransaction(() -> {
@@ -95,17 +104,16 @@ public class PaymentService {
         });
 
         PaymentProviderClient client = providerRouter.route(command.gateway());
-        String merchantId = orderQueryPort.findOrderSummary(command.orderId())
-                .map(s -> s.merchantId()).orElse(null);
         PaymentProviderClient.Authorization auth = client.authorize(
                 new PaymentProviderClient.AuthorizationRequest(
                         saved.getPaymentId(), command.orderId(), command.userId(),
-                        merchantId,
+                        order.merchantId(),
                         method == null ? null : method.getGatewayToken(),
-                        command.amount(), command.currency(), command.idempotencyKey(), null));
+                        order.totalAmount(), order.currency(), command.idempotencyKey(), null));
 
         if (auth.captured()) {
-            Payment confirmed = confirm(new ConfirmPaymentCommand(saved.getPaymentId(), auth.transactionNo()));
+            Payment confirmed = confirm(new ConfirmPaymentCommand(
+                    saved.getPaymentId(), auth.transactionNo(), order.totalAmount(), order.currency()));
             return new PaymentInitiation(confirmed, null);
         } else if (auth.declineCode() != null) {
             Payment failed = fail(new FailPaymentCommand(saved.getPaymentId(),
@@ -118,6 +126,7 @@ public class PaymentService {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Payment confirm(ConfirmPaymentCommand command) {
         Payment existing = inTransaction(() -> required(command.paymentId()));
+        validateCapturedAmount(existing, command);
         if (existing.getStatus().name().equals("PAID")) {
             return existing;
         }
@@ -138,6 +147,15 @@ public class PaymentService {
             return null;
         });
         return current;
+    }
+
+    private void validateCapturedAmount(Payment payment, ConfirmPaymentCommand command) {
+        if (command.amount() == null || command.currency() == null
+                || payment.getAmount().amount().compareTo(command.amount()) != 0
+                || !payment.getAmount().currency().equalsIgnoreCase(command.currency())) {
+            throw new PaymentException(PaymentErrorCode.INVALID_ARGUMENT,
+                    "Gateway amount or currency does not match the payment");
+        }
     }
 
     private Payment confirmInTransaction(ConfirmPaymentCommand command) {

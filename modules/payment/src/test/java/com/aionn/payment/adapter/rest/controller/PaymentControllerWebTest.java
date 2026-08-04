@@ -101,7 +101,9 @@ class PaymentControllerWebTest {
     void initiateCreatesPayment() throws Exception {
         PaymentResult result = sampleResult("pay-1", "INITIATED");
         PaymentResponse response = sampleResponse("pay-1", "INITIATED");
-        InitiatePaymentCommand command = new InitiatePaymentCommand("order-1", "user-123", null, new BigDecimal("100.00"), "VND", com.aionn.payment.domain.valueobject.PaymentGatewayKind.STRIPE, "idem-1");
+        InitiatePaymentCommand command = new InitiatePaymentCommand(
+                "order-1", "user-123", null,
+                com.aionn.payment.domain.valueobject.PaymentGatewayKind.STRIPE, "idem-1");
         
         org.mockito.Mockito.lenient().when(paymentDtoMapper.toCommand(any(), any(), any())).thenReturn(command);
         when(initiatePaymentInputPort.execute(any(InitiatePaymentCommand.class))).thenReturn(result);
@@ -112,8 +114,6 @@ class PaymentControllerWebTest {
                         .content("""
                                 {
                                   "orderId": "order-1",
-                                  "amount": 100.00,
-                                  "currency": "VND",
                                   "gateway": "STRIPE",
                                   "idempotencyKey": "idem-1"
                                 }
@@ -132,8 +132,6 @@ class PaymentControllerWebTest {
                         .content("""
                                 {
                                   "orderId": "",
-                                  "amount": 100.00,
-                                  "currency": "VND",
                                   "gateway": "STRIPE",
                                   "idempotencyKey": "idem-1"
                                 }
@@ -144,7 +142,9 @@ class PaymentControllerWebTest {
 
     @Test
     void initiateMissingMethodReturnsNotFound() throws Exception {
-        InitiatePaymentCommand command = new InitiatePaymentCommand("order-1", "user-123", "missing", new BigDecimal("50.00"), "VND", com.aionn.payment.domain.valueobject.PaymentGatewayKind.STRIPE, "idem-9");
+        InitiatePaymentCommand command = new InitiatePaymentCommand(
+                "order-1", "user-123", "missing",
+                com.aionn.payment.domain.valueobject.PaymentGatewayKind.STRIPE, "idem-9");
         org.mockito.Mockito.lenient().when(paymentDtoMapper.toCommand(any(), any(), any())).thenReturn(command);
         
         when(initiatePaymentInputPort.execute(any(InitiatePaymentCommand.class)))
@@ -156,8 +156,6 @@ class PaymentControllerWebTest {
                                 {
                                   "orderId": "order-1",
                                   "paymentMethodId": "missing",
-                                  "amount": 50.00,
-                                  "currency": "VND",
                                   "gateway": "STRIPE",
                                   "idempotencyKey": "idem-9"
                                 }

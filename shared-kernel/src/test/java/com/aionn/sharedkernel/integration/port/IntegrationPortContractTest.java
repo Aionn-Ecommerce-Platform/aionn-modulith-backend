@@ -93,7 +93,8 @@ class IntegrationPortContractTest {
                                                 "ward-1",
                                                 "district-1", "province-1", "VN"));
                 var placedOrder = new OrderPlacementPort.PlacedOrder("o-1", 1000L, "VND", "PENDING");
-                var orderSummary = new OrderQueryPort.OrderSummary("o-1", "m-1", BigDecimal.valueOf(100), "VND");
+                var orderSummary = new OrderQueryPort.OrderSummary(
+                                "o-1", "u-1", "m-1", BigDecimal.valueOf(100), "VND");
                 var orderSnapshot = new OrderSnapshotQueryPort.OrderSnapshot(
                                 "o-1",
                                 "u-1",

@@ -74,13 +74,10 @@ public class VnpayReturnController {
             return ResponseEntity.ok(response);
         }
         try {
-            PaymentResult current = getPaymentInputPort.execute(event.paymentId());
-            if (!"PAID".equals(current.status()) && !"FAILED".equals(current.status())) {
-                if (event.success()) {
-                    confirmPaymentInputPort.execute(paymentDtoMapper.toConfirmCommand(event));
-                } else {
-                    failPaymentInputPort.execute(paymentDtoMapper.toFailCommand(event, "VNPAY_ERROR"));
-                }
+            if (event.success()) {
+                confirmPaymentInputPort.execute(paymentDtoMapper.toConfirmCommand(event));
+            } else {
+                failPaymentInputPort.execute(paymentDtoMapper.toFailCommand(event, "VNPAY_ERROR"));
             }
             response.put(RSP_CODE_KEY, "00");
             response.put(MESSAGE_KEY, "Confirm Success");
@@ -115,13 +112,10 @@ public class VnpayReturnController {
         }
 
         try {
-            PaymentResult current = getPaymentInputPort.execute(event.paymentId());
-            if (!"PAID".equals(current.status()) && !"FAILED".equals(current.status())) {
-                if (event.success()) {
-                    confirmPaymentInputPort.execute(paymentDtoMapper.toConfirmCommand(event));
-                } else {
-                    failPaymentInputPort.execute(paymentDtoMapper.toFailCommand(event, "VNPAY_ERROR"));
-                }
+            if (event.success()) {
+                confirmPaymentInputPort.execute(paymentDtoMapper.toConfirmCommand(event));
+            } else {
+                failPaymentInputPort.execute(paymentDtoMapper.toFailCommand(event, "VNPAY_ERROR"));
             }
         } catch (Exception ex) {
             log.error("VNPay return finalisation failed for {}", event.paymentId(), ex);

@@ -46,7 +46,8 @@ class SettlementServiceTest {
 
     @Test
     void onOrderApprovedShouldCreditPendingBalance() {
-        OrderQueryPort.OrderSummary summary = new OrderQueryPort.OrderSummary("order-1", "merch-1", BigDecimal.valueOf(100), "VND");
+        OrderQueryPort.OrderSummary summary = new OrderQueryPort.OrderSummary(
+                "order-1", "user-1", "merch-1", BigDecimal.valueOf(100), "VND");
         when(orderQueryPort.findOrderSummary("order-1")).thenReturn(Optional.of(summary));
         when(merchantQueryPort.findCommissionRate("merch-1")).thenReturn(Optional.of(BigDecimal.valueOf(0.05)));
 
@@ -69,7 +70,8 @@ class SettlementServiceTest {
 
     @Test
     void onOrderCompletedShouldMoveBalanceToAvailable() {
-        OrderQueryPort.OrderSummary summary = new OrderQueryPort.OrderSummary("order-1", "merch-1", BigDecimal.valueOf(100), "VND");
+        OrderQueryPort.OrderSummary summary = new OrderQueryPort.OrderSummary(
+                "order-1", "user-1", "merch-1", BigDecimal.valueOf(100), "VND");
         SettlementLedgerEntry sale = new SettlementLedgerEntry("sle-1", "merch-1", "order-1", "pay-1", null,
                 SettlementLedgerEntry.SettlementKind.SALE, BigDecimal.valueOf(100), BigDecimal.valueOf(5), BigDecimal.valueOf(95), "VND", null, clock.instant());
 

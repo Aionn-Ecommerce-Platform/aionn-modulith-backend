@@ -54,7 +54,9 @@ class PaymentWebhookControllerWebTest {
                 lenient().when(paymentDtoMapper.toConfirmCommand(any(PaymentProviderClient.WebhookEvent.class)))
                                 .thenAnswer(inv -> {
                                         PaymentProviderClient.WebhookEvent event = inv.getArgument(0);
-                                        return new ConfirmPaymentCommand(event.paymentId(), event.transactionNo());
+                                        return new ConfirmPaymentCommand(
+                                                        event.paymentId(), event.transactionNo(),
+                                                        event.amount(), event.currency());
                                 });
 
                 lenient().when(paymentDtoMapper.toFailCommand(any(PaymentProviderClient.WebhookEvent.class), any(String.class)))
