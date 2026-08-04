@@ -11,9 +11,13 @@ import com.aionn.promotion.application.port.in.banner.ListActiveBannersInputPort
 import com.aionn.promotion.application.port.in.banner.ListAllBannersInputPort;
 import com.aionn.promotion.application.port.in.banner.UpdateBannerInputPort;
 import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.sharedkernel.adapter.web.response.PageMetadata;
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,6 +28,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -44,18 +49,26 @@ public class PromotionBannerController {
 
         @GetMapping
         @Operation(summary = "Get active promotion banners (public)")
-        public ResponseEntity<ApiResponse<List<PromotionBannerResponse>>> getActiveBanners() {
-                return ResponseEntity.ok(ApiResponse.success(
-                                dtoMapper.toResponses(listActiveBannersInputPort.execute()),
+        public ResponseEntity<ApiResponse<List<PromotionBannerResponse>>> getActiveBanners(
+                        @RequestParam(defaultValue = "0") @Min(0) int page,
+                        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+                var result = listActiveBannersInputPort.execute(OffsetPagination.of(page, size));
+                return ResponseEntity.ok(ApiResponse.successWithPaging(
+                                dtoMapper.toResponses(result.content()),
+                                PageMetadata.of(result.page(), result.size(), result.totalElements()),
                                 "Promotion banners fetched"));
         }
 
         @GetMapping("/admin")
         @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
         @Operation(summary = "Admin — list all banners (active and inactive)")
-        public ResponseEntity<ApiResponse<List<PromotionBannerResponse>>> listAll() {
-                return ResponseEntity.ok(ApiResponse.success(
-                                dtoMapper.toResponses(listAllBannersInputPort.execute()),
+        public ResponseEntity<ApiResponse<List<PromotionBannerResponse>>> listAll(
+                        @RequestParam(defaultValue = "0") @Min(0) int page,
+                        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+                var result = listAllBannersInputPort.execute(OffsetPagination.of(page, size));
+                return ResponseEntity.ok(ApiResponse.successWithPaging(
+                                dtoMapper.toResponses(result.content()),
+                                PageMetadata.of(result.page(), result.size(), result.totalElements()),
                                 "Promotion banners fetched"));
         }
 

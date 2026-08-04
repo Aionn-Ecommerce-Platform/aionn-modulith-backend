@@ -18,6 +18,8 @@ import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -160,8 +162,8 @@ public class InventoryItemController {
     public ResponseEntity<ApiResponse<PageResult<InventoryItemResult>>> listByWarehouse(
             Authentication authentication,
             @PathVariable String warehouseId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "50") @Min(1) @Max(100) int size) {
         PageResult<InventoryItemResult> result = listInventoryItemsByWarehouseInputPort.execute(
                 authentication.getName(), warehouseId, OffsetPagination.of(page, size));
         return ResponseEntity.ok(ApiResponse.success(result, "Inventory items fetched"));

@@ -2,14 +2,16 @@ package com.aionn.promotion.infrastructure.persistence.adapter;
 
 import com.aionn.promotion.application.port.out.PromotionBannerPersistencePort;
 import com.aionn.promotion.domain.model.PromotionBanner;
+import com.aionn.promotion.application.dto.common.PageResult;
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import com.aionn.promotion.infrastructure.persistence.entity.PromotionBannerEntity;
 import com.aionn.promotion.infrastructure.persistence.mapper.PromotionBannerDomainMapper;
 import com.aionn.promotion.infrastructure.persistence.repository.JpaPromotionBannerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.PageRequest;
 
 @Repository
 @RequiredArgsConstructor
@@ -19,17 +21,17 @@ public class PromotionBannerPersistenceAdapter implements PromotionBannerPersist
     private final PromotionBannerDomainMapper mapper;
 
     @Override
-    public List<PromotionBanner> findAllActive() {
-        return jpa.findAllActiveOrderByDisplayOrder().stream()
-                .map(mapper::toDomain)
-                .toList();
+    public PageResult<PromotionBanner> findAllActive(OffsetPagination pagination) {
+        var page = jpa.findAllActiveOrderByDisplayOrder(PageRequest.of(pagination.page(), pagination.size()))
+                .map(mapper::toDomain);
+        return new PageResult<>(page.getContent(), page.getNumber(), page.getSize(), page.getTotalElements());
     }
 
     @Override
-    public List<PromotionBanner> findAll() {
-        return jpa.findAllOrdered().stream()
-                .map(mapper::toDomain)
-                .toList();
+    public PageResult<PromotionBanner> findAll(OffsetPagination pagination) {
+        var page = jpa.findAllOrdered(PageRequest.of(pagination.page(), pagination.size()))
+                .map(mapper::toDomain);
+        return new PageResult<>(page.getContent(), page.getNumber(), page.getSize(), page.getTotalElements());
     }
 
     @Override

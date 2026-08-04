@@ -5,12 +5,12 @@ import com.aionn.promotion.application.port.out.PromotionBannerPersistencePort;
 import com.aionn.promotion.domain.exception.PromotionErrorCode;
 import com.aionn.promotion.domain.exception.PromotionException;
 import com.aionn.promotion.domain.model.PromotionBanner;
+import com.aionn.promotion.application.dto.common.PageResult;
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -19,12 +19,12 @@ public class PromotionBannerService {
 
     private final PromotionBannerPersistencePort bannerRepository;
 
-    public List<PromotionBanner> listActive() {
-        return bannerRepository.findAllActive();
+    public PageResult<PromotionBanner> listActive(OffsetPagination pagination) {
+        return bannerRepository.findAllActive(pagination);
     }
 
-    public List<PromotionBanner> listAll() {
-        return bannerRepository.findAll();
+    public PageResult<PromotionBanner> listAll(OffsetPagination pagination) {
+        return bannerRepository.findAll(pagination);
     }
 
     public PromotionBanner get(String bannerId) {

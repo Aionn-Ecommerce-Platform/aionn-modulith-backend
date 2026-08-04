@@ -74,18 +74,22 @@ class PromotionBannerControllerWebTest {
 
     @Test
     void publicListReturnsActiveBanners() throws Exception {
-        when(listActiveBannersInputPort.execute()).thenReturn(List.of(sample("BAN_1")));
+        when(listActiveBannersInputPort.execute(any()))
+                .thenReturn(new com.aionn.promotion.application.dto.common.PageResult<>(
+                        List.of(sample("BAN_1")), 0, 20, 1));
 
         mockMvc.perform(get("/api/v1/promotions/banners"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].bannerId").value("BAN_1"))
+                .andExpect(jsonPath("$.paging.totalElements").value(1))
                 .andExpect(jsonPath("$.message").value("Promotion banners fetched"));
     }
 
     @Test
     void adminListReturnsAllBanners() throws Exception {
-        when(listAllBannersInputPort.execute())
-                .thenReturn(List.of(sample("BAN_1"), sample("BAN_2")));
+        when(listAllBannersInputPort.execute(any()))
+                .thenReturn(new com.aionn.promotion.application.dto.common.PageResult<>(
+                        List.of(sample("BAN_1"), sample("BAN_2")), 0, 20, 2));
 
         mockMvc.perform(get("/api/v1/promotions/banners/admin"))
                 .andExpect(status().isOk())

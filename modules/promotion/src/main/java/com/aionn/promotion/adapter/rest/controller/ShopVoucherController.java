@@ -13,6 +13,8 @@ import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -62,7 +64,7 @@ public class ShopVoucherController {
         @Operation(summary = "List vouchers issued by the authenticated merchant")
         public ResponseEntity<ApiResponse<List<VoucherResponse>>> listMine(
                         @CurrentUserId String ownerId,
-                        @RequestParam(defaultValue = "50") int limit) {
+                        @RequestParam(defaultValue = "50") @Min(1) @Max(100) int limit) {
                 return ResponseEntity.ok(ApiResponse.success(
                                 dtoMapper.toResponses(listMyShopVouchersInputPort.execute(ownerId, limit)),
                                 "Shop vouchers fetched"));
@@ -72,7 +74,7 @@ public class ShopVoucherController {
         @Operation(summary = "List collectible vouchers for a public shop page")
         public ResponseEntity<ApiResponse<List<VoucherResponse>>> listByMerchant(
                         @PathVariable String merchantId,
-                        @RequestParam(defaultValue = "20") int limit) {
+                        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit) {
                 return ResponseEntity.ok(ApiResponse.success(
                                 dtoMapper.toResponses(listShopVouchersByMerchantInputPort.execute(merchantId, limit)),
                                 "Shop vouchers fetched"));
