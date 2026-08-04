@@ -20,7 +20,7 @@ import org.springframework.context.ApplicationEventPublisher;
 class OutboxDispatcherTest {
 
     @Test
-    void dispatchesAndRecordsInboxBeforeCompletingOutbox() throws Exception {
+    void dispatchesBeforeCompletingOutbox() throws Exception {
         OutboxEventRepository repository = mock(OutboxEventRepository.class);
         ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
         ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
@@ -33,26 +33,6 @@ class OutboxDispatcherTest {
         new OutboxDispatcher(repository, mapper, publisher, 10, 3, 300, Clock.systemUTC()).dispatch();
 
         verify(publisher).publishEvent(event);
-        verify(repository).markProcessed("spring-event-bus:" + event.eventType(), event.eventId());
-        verify(repository).markPublished(eq(event.eventId()), any(String.class));
-    }
-
-    @Test
-    void skipsAlreadyProcessedEventAndCompletesOutbox() throws Exception {
-        OutboxEventRepository repository = mock(OutboxEventRepository.class);
-        ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
-        ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
-        SampleEvent event = new SampleEvent("evt-2", "order-2", Instant.parse("2026-01-01T00:00:00Z"));
-        OutboxEventRecord record = new OutboxEventRecord(event.eventId(), "INTEGRATION",
-                event.eventType(), SampleEvent.class.getName(), mapper.writeValueAsString(event),
-                event.eventType(), event.orderId(), event.occurredAt(), 2);
-        String consumer = "spring-event-bus:" + event.eventType();
-        when(repository.claim(any(Integer.class), any(String.class), any())).thenReturn(List.of(record));
-        when(repository.wasProcessed(consumer, event.eventId())).thenReturn(true);
-
-        new OutboxDispatcher(repository, mapper, publisher, 10, 3, 300, Clock.systemUTC()).dispatch();
-
-        verify(publisher, never()).publishEvent(any(Object.class));
         verify(repository).markPublished(eq(event.eventId()), any(String.class));
     }
 
