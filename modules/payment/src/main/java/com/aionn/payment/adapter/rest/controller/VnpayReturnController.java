@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.util.LinkedHashMap;
@@ -55,9 +56,12 @@ public class VnpayReturnController {
         }
         String paymentId = String.valueOf(body.get(PAYMENT_ID_KEY));
         PaymentResult payment = getPaymentInputPort.execute(paymentId);
-        String separator = vnpayProperties.frontendReturnUrl().contains("?") ? "&" : "?";
-        URI redirect = URI.create(vnpayProperties.frontendReturnUrl() + separator
-                + "paymentId=" + paymentId + "&orderId=" + payment.orderId());
+        URI redirect = UriComponentsBuilder.fromUriString(vnpayProperties.frontendReturnUrl())
+                .encode()
+                .queryParam("paymentId", "{paymentId}")
+                .queryParam("orderId", "{orderId}")
+                .buildAndExpand(paymentId, payment.orderId())
+                .toUri();
         return ResponseEntity.status(HttpStatus.FOUND).location(redirect).build();
     }
 

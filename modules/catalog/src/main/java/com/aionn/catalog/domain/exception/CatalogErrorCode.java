@@ -19,6 +19,7 @@ public enum CatalogErrorCode {
     CATEGORY_SLUG_CONFLICT("CATALOG_103", "Category slug must be unique"),
     CATEGORY_HAS_PRODUCTS("CATALOG_104", "Category still has products assigned"),
     CATEGORY_CYCLE("CATALOG_105", "Category move would create a cycle"),
+    CATEGORY_HAS_CHILDREN("CATALOG_106", "Category still has active child categories"),
 
     // Brand
     BRAND_NOT_FOUND("CATALOG_201", "Brand not found"),

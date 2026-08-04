@@ -95,7 +95,7 @@ class CartServiceTest {
         Cart result = cartService.addItem(new AddItemCommand(USER_ID, "sku-1", 1));
 
         assertNotNull(result);
-        verify(cartRepository, times(2)).save(any());
+        verify(cartRepository).save(any());
     }
 
     @Test
@@ -168,15 +168,15 @@ class CartServiceTest {
     }
 
     @Test
-    @DisplayName("getMyCart() creates cart if none exists")
-    void getMyCart_createsCartIfNoneExists() {
-        Cart newCart = emptyCart();
+    @DisplayName("getMyCart() returns a transient empty cart without writing")
+    void getMyCart_returnsTransientCartWithoutPersisting() {
         when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
-        when(cartRepository.save(any(Cart.class))).thenReturn(newCart);
 
         Cart result = cartService.getMyCart(USER_ID);
 
         assertNotNull(result);
-        verify(cartRepository).save(any());
+        assertTrue(result.getItems().isEmpty());
+        verify(cartRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
     }
 }

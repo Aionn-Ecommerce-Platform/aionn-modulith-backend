@@ -75,6 +75,24 @@ class VnpayReturnControllerWebTest {
     }
 
     @Test
+    void shouldEncodeRedirectValuesAndPreserveExistingQuery() throws Exception {
+        when(vnpayProperties.frontendReturnUrl()).thenReturn("http://fe/return?source=vnpay");
+        PaymentProviderClient.WebhookEvent event = new PaymentProviderClient.WebhookEvent(
+                "payment.captured", "pay/1 &", "txn-1", BigDecimal.TEN, "VND", true, null, null);
+        when(providerClient.verifyAndParse(any(), any())).thenReturn(event);
+        PaymentResult payment = new PaymentResult(
+                "pay/1 &", "order?1=ok", "user-1", null, BigDecimal.TEN, BigDecimal.ZERO,
+                "VND", "VNPAY", "PAID", "txn-1", null, null, null,
+                Instant.now(), Instant.now(), Instant.now(), null);
+        when(getPaymentInputPort.execute("pay/1 &")).thenReturn(payment);
+
+        mockMvc.perform(get("/api/v1/payments/vnpay/return?vnpay_params=1"))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl(
+                        "http://fe/return?source=vnpay&paymentId=pay%2F1%20%26&orderId=order%3F1%3Dok"));
+    }
+
+    @Test
     void shouldHandleReturnWebhookNoPaymentId() throws Exception {
         PaymentProviderClient.WebhookEvent event = new PaymentProviderClient.WebhookEvent("ping", null, null, null, null, true, null, null);
         when(providerClient.verifyAndParse(any(), any())).thenReturn(event);

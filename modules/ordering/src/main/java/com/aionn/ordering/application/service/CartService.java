@@ -88,9 +88,7 @@ public class CartService {
     }
 
     private Cart loadOrCreate(String userId) {
-        return cartRepository.findByUserId(userId).orElseGet(() -> {
-            Cart cart = Cart.create(IdGenerator.ulid(), userId, clock.instant());
-            return cartRepository.save(cart);
-        });
+        return cartRepository.findByUserId(userId)
+                .orElseGet(() -> Cart.create(IdGenerator.ulid(), userId, clock.instant()));
     }
 }

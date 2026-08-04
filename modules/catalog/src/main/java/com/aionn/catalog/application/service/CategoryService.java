@@ -90,6 +90,9 @@ public class CategoryService {
         if (categoryRepository.hasProducts(categoryId)) {
             throw new CatalogException(CatalogErrorCode.CATEGORY_HAS_PRODUCTS);
         }
+        if (!categoryRepository.findActiveChildren(categoryId).isEmpty()) {
+            throw new CatalogException(CatalogErrorCode.CATEGORY_HAS_CHILDREN);
+        }
         category.markDeleted(clock);
         categoryRepository.save(category);
         eventPublisher.publish(category.pullEvents());

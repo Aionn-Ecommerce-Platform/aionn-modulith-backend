@@ -5,6 +5,7 @@ import com.aionn.payment.application.port.out.SettlementLedgerPersistencePort;
 import com.aionn.payment.domain.model.MerchantBalance;
 import com.aionn.payment.domain.model.SettlementLedgerEntry;
 import com.aionn.payment.domain.model.SettlementLedgerEntry.SettlementKind;
+import com.aionn.sharedkernel.domain.vo.Money;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
 import com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort;
 import com.aionn.sharedkernel.util.IdGenerator;
@@ -39,8 +40,8 @@ public class SettlementService {
             return;
         }
         BigDecimal rate = merchantQueryPort.findCommissionRate(order.merchantId()).orElse(DEFAULT_RATE);
-        BigDecimal commission = order.totalAmount().multiply(rate).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal net = order.totalAmount().subtract(commission);
+        BigDecimal commission = currencyAmount(order.totalAmount().multiply(rate), order.currency());
+        BigDecimal net = currencyAmount(order.totalAmount().subtract(commission), order.currency());
 
         Instant now = clock.instant();
         MerchantBalance balance = loadOrCreate(order.merchantId(), order.currency(), now);
@@ -106,7 +107,7 @@ public class SettlementService {
         SettlementLedgerEntry sale = findSaleEntry(orderId);
         if (sale == null) return;
         BigDecimal proportion = refundAmount.divide(sale.getGross(), 8, RoundingMode.HALF_UP);
-        BigDecimal netDeduct = sale.getNet().multiply(proportion).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal netDeduct = currencyAmount(sale.getNet().multiply(proportion), currency);
 
         Instant now = clock.instant();
         MerchantBalance balance = balanceRepo.lockForUpdate(sale.getMerchantId(), currency).orElse(null);
@@ -138,5 +139,9 @@ public class SettlementService {
                 .filter(e -> e.getKind() == SettlementKind.SALE)
                 .findFirst()
                 .orElse(null);
+    }
+
+    private static BigDecimal currencyAmount(BigDecimal amount, String currency) {
+        return Money.of(amount, currency).amount();
     }
 }

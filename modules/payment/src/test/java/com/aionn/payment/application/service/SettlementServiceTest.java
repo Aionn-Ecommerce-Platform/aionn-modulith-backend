@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
@@ -20,6 +21,7 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -58,6 +60,41 @@ class SettlementServiceTest {
 
         verify(balanceRepo).save(any());
         verify(ledgerRepo).save(any());
+    }
+
+    @Test
+    void onOrderApprovedRoundsCommissionToCurrencyFractionDigits() {
+        OrderQueryPort.OrderSummary summary = new OrderQueryPort.OrderSummary(
+                "order-1", "user-1", "merch-1", new BigDecimal("101"), "VND");
+        when(orderQueryPort.findOrderSummary("order-1")).thenReturn(Optional.of(summary));
+        when(merchantQueryPort.findCommissionRate("merch-1")).thenReturn(Optional.of(new BigDecimal("0.05")));
+        MerchantBalance balance = MerchantBalance.empty("merch-1", "VND", clock.instant());
+        when(balanceRepo.lockForUpdate("merch-1", "VND")).thenReturn(Optional.of(balance));
+
+        service.onOrderApproved("order-1", "pay-1");
+
+        ArgumentCaptor<SettlementLedgerEntry> entry = ArgumentCaptor.forClass(SettlementLedgerEntry.class);
+        verify(ledgerRepo).save(entry.capture());
+        assertEquals(new BigDecimal("5"), entry.getValue().getCommission());
+        assertEquals(new BigDecimal("96"), entry.getValue().getNet());
+        assertEquals(new BigDecimal("96"), balance.getPending());
+    }
+
+    @Test
+    void onOrderApprovedPreservesTwoDecimalCurrencyPrecision() {
+        OrderQueryPort.OrderSummary summary = new OrderQueryPort.OrderSummary(
+                "order-1", "user-1", "merch-1", new BigDecimal("1.01"), "USD");
+        when(orderQueryPort.findOrderSummary("order-1")).thenReturn(Optional.of(summary));
+        when(merchantQueryPort.findCommissionRate("merch-1")).thenReturn(Optional.of(new BigDecimal("0.05")));
+        MerchantBalance balance = MerchantBalance.empty("merch-1", "USD", clock.instant());
+        when(balanceRepo.lockForUpdate("merch-1", "USD")).thenReturn(Optional.of(balance));
+
+        service.onOrderApproved("order-1", "pay-1");
+
+        ArgumentCaptor<SettlementLedgerEntry> entry = ArgumentCaptor.forClass(SettlementLedgerEntry.class);
+        verify(ledgerRepo).save(entry.capture());
+        assertEquals(new BigDecimal("0.05"), entry.getValue().getCommission());
+        assertEquals(new BigDecimal("0.96"), entry.getValue().getNet());
     }
 
     @Test
