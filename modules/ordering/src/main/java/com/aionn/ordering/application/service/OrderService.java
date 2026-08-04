@@ -103,7 +103,6 @@ public class OrderService {
                 cart.getVoucherCode(),
                 command.paymentMethodId(),
                 command.currency(),
-                command.shippingFee(),
                 command.shippingAddressSnapshot());
 
         // Online payments stay pending until the gateway confirms them; keep
@@ -131,7 +130,6 @@ public class OrderService {
                 command.voucherCode(),
                 command.paymentMethodId(),
                 command.currency(),
-                command.shippingFee(),
                 command.shippingAddressSnapshot());
     }
 
@@ -145,7 +143,6 @@ public class OrderService {
             String voucherCode,
             String paymentMethodId,
             String requestCurrency,
-            BigDecimal shippingFeeAmount,
             com.aionn.ordering.domain.valueobject.ShippingAddress shippingAddress) {
 
         List<String> skuIds = lines.stream().map(PlaceOrderHeadlessCommand.Line::skuId).toList();
@@ -179,6 +176,8 @@ public class OrderService {
                             + " does not match catalog pricing currency " + pricingCurrency);
         }
         String currency = pricingCurrency;
+        String orderId = IdGenerator.ulid();
+        Money shippingFee = quoteShippingFee(orderId, merchantId, shippingAddress, currency);
 
         List<StockReservationGateway.ReservationLine> reservationLines = lines.stream()
                 .map(line -> {
@@ -204,8 +203,6 @@ public class OrderService {
             lineSubtotal = lineSubtotal.add(unit.multiply(r.qty()));
         }
 
-        String orderId = IdGenerator.ulid();
-
         if (voucherCode != null) {
             VoucherGateway.Discount discount = voucherGateway.apply(
                     userId, merchantId, voucherCode, orderId, lineSubtotal.amount(), currency);
@@ -218,9 +215,6 @@ public class OrderService {
             lineSubtotal = Money.of(newSubtotal, currency);
         }
 
-        Money shippingFee = shippingFeeAmount == null
-                ? Money.zero(currency)
-                : Money.of(shippingFeeAmount, currency);
         String proposalId = "prop-" + System.nanoTime();
         Order order = Order.place(orderId, userId, merchantId, proposalId,
                 paymentMethodId, currency, items, shippingAddress, shippingFee, lineSubtotal, clock.instant());
@@ -380,15 +374,8 @@ public class OrderService {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order changeShippingInfo(ChangeShippingInfoCommand command) {
         Order snapshot = transactionTemplate.execute(status -> ownedByUser(command.orderId(), command.userId()));
-        BigDecimal feeOverride = command.newShippingFee();
-        Money newFee;
-        if (feeOverride == null) {
-            ShippingGateway.ShippingQuote quote = shippingGateway.quote(snapshot.getOrderId(), snapshot.getMerchantId(),
-                    command.newAddress(), snapshot.getCurrency());
-            newFee = Money.of(quote.fee(), quote.currency());
-        } else {
-            newFee = Money.of(feeOverride, snapshot.getCurrency());
-        }
+        Money newFee = quoteShippingFee(snapshot.getOrderId(), snapshot.getMerchantId(),
+                command.newAddress(), snapshot.getCurrency());
         return transactionTemplate.execute(status -> {
             Order order = ownedByUser(command.orderId(), command.userId());
             order.changeShippingInfo(command.newAddress(), newFee, clock.instant());
@@ -396,6 +383,17 @@ public class OrderService {
             eventPublisher.publish(order.pullEvents());
             return saved;
         });
+    }
+
+    private Money quoteShippingFee(String orderId, String merchantId,
+            com.aionn.ordering.domain.valueobject.ShippingAddress address, String currency) {
+        ShippingGateway.ShippingQuote quote = shippingGateway.quote(orderId, merchantId, address, currency);
+        if (quote == null || quote.fee() == null || quote.currency() == null
+                || quote.fee().signum() < 0 || !currency.equalsIgnoreCase(quote.currency())) {
+            throw new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
+                    "Shipping quote is missing, negative, or uses a different currency");
+        }
+        return Money.of(quote.fee(), currency);
     }
 
     private void refundIfPaid(Order order, String reason) {

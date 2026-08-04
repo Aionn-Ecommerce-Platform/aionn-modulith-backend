@@ -242,7 +242,7 @@ class OrderServiceTest {
                 new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand(
                         USER_ID,
                         List.of(new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand.Line("sku-1", 2)),
-                        null, "COD", "VND", BigDecimal.ZERO, address()
+                        null, "COD", "VND", address()
                 );
 
         CatalogPricingGateway.SkuPricing skuPricing = new CatalogPricingGateway.SkuPricing(
@@ -255,13 +255,16 @@ class OrderServiceTest {
         );
         when(stockReservationGateway.reserveAll(anyString(), org.mockito.ArgumentMatchers.anyList(), eq(86400)))
                 .thenReturn(List.of(reservation));
+        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND")))
+                .thenReturn(new ShippingGateway.ShippingQuote(BigDecimal.valueOf(30000), "VND"));
 
-        Order order = pendingOrder();
-        when(orderRepository.save(org.mockito.ArgumentMatchers.any(Order.class))).thenReturn(order);
+        when(orderRepository.save(org.mockito.ArgumentMatchers.any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         Order result = orderService.placeOrderHeadless(command);
 
         assertEquals(OrderStatus.APPROVED, result.getStatus());
+        assertEquals(BigDecimal.valueOf(30000), result.getShippingFee().amount());
     }
 
     @Test
@@ -270,7 +273,7 @@ class OrderServiceTest {
                 new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand(
                         USER_ID,
                         List.of(new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand.Line("sku-1", 2)),
-                        null, "COD", "VND", BigDecimal.ZERO, address()
+                        null, "COD", "VND", address()
                 );
 
         CatalogPricingGateway.SkuPricing skuPricing = new CatalogPricingGateway.SkuPricing(
@@ -285,7 +288,7 @@ class OrderServiceTest {
     void placeOrderSucceedsWhenCartIsValid() {
         com.aionn.ordering.application.dto.order.command.PlaceOrderCommand command =
                 new com.aionn.ordering.application.dto.order.command.PlaceOrderCommand(
-                        USER_ID, "addr-1", "COD", "VND", BigDecimal.ZERO, address(), List.of("sku-1"), "COD"
+                        USER_ID, "addr-1", "COD", "VND", address(), List.of("sku-1"), "COD"
                 );
 
         java.time.Instant now = java.time.Instant.now();
@@ -303,13 +306,52 @@ class OrderServiceTest {
         );
         when(stockReservationGateway.reserveAll(anyString(), org.mockito.ArgumentMatchers.anyList(), eq(86400)))
                 .thenReturn(List.of(reservation));
+        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND")))
+                .thenReturn(new ShippingGateway.ShippingQuote(BigDecimal.valueOf(25000), "VND"));
 
-        Order order = pendingOrder();
-        when(orderRepository.save(org.mockito.ArgumentMatchers.any(Order.class))).thenReturn(order);
+        when(orderRepository.save(org.mockito.ArgumentMatchers.any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         Order result = orderService.placeOrder(command);
 
         assertEquals(OrderStatus.APPROVED, result.getStatus());
+        assertEquals(BigDecimal.valueOf(25000), result.getShippingFee().amount());
+    }
+
+    @Test
+    void placementQuotesShippingBeforeReservingStock() {
+        var command = new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand(
+                USER_ID,
+                List.of(new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand.Line("sku-1", 1)),
+                null, "COD", "VND", address());
+        var skuPricing = new CatalogPricingGateway.SkuPricing(
+                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true);
+        when(catalogPricingGateway.resolve(List.of("sku-1"))).thenReturn(java.util.Map.of("sku-1", skuPricing));
+        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND")))
+                .thenThrow(new RuntimeException("carrier unavailable"));
+
+        assertThrows(RuntimeException.class, () -> orderService.placeOrderHeadless(command));
+
+        verify(stockReservationGateway, never()).reserveAll(anyString(), any(), eq(86400));
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void changeShippingInfoAlwaysUsesCarrierQuote() {
+        Order order = pendingOrder();
+        ShippingAddress replacement = new ShippingAddress("addr-2", "User", "+84912345678",
+                "99 new street", "WARD-2", "DIST-2", "PROV-2", "VN");
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(shippingGateway.quote(ORDER_ID, MERCHANT_ID, replacement, "VND"))
+                .thenReturn(new ShippingGateway.ShippingQuote(BigDecimal.valueOf(45000), "VND"));
+        when(orderRepository.save(order)).thenReturn(order);
+
+        Order result = orderService.changeShippingInfo(
+                new com.aionn.ordering.application.dto.order.command.ChangeShippingInfoCommand(
+                        ORDER_ID, USER_ID, replacement));
+
+        assertEquals(BigDecimal.valueOf(45000), result.getShippingFee().amount());
+        assertEquals(replacement, result.getShippingAddress());
     }
 
     @Test

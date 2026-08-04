@@ -1,6 +1,5 @@
 package com.aionn.sharedkernel.integration.port.ordering;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 // Cross-service order placement port. Used by callers that already know the
@@ -19,7 +18,6 @@ public interface OrderPlacementPort {
             String voucherCode,
             String paymentMethodId,
             String currency,
-            BigDecimal shippingFee,
             ShippingAddress shippingAddress) {
 
         public record Line(String skuId, int qty) {

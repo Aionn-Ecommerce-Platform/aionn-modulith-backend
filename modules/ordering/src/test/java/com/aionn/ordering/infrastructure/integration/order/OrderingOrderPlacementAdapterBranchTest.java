@@ -11,7 +11,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -27,7 +26,7 @@ class OrderingOrderPlacementAdapterBranchTest {
         @Test
         void placeHeadlessHandlesNullShippingAddress() {
                 OrderPlacementPort.PlaceCommand command = new OrderPlacementPort.PlaceCommand(
-                                "usr-1", java.util.List.of(), "VOUCHER", "pm-1", "VND", BigDecimal.TEN, null);
+                                "usr-1", java.util.List.of(), "VOUCHER", "pm-1", "VND", null);
 
                 Order order = new Order("ord-1", null, "usr-1", "m-1", "prop-1", "pm-1", "VND",
                                 java.util.List.of(), null, null, null,

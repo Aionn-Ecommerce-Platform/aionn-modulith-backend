@@ -3,7 +3,6 @@ package com.aionn.ordering.application.dto.order.command;
 import com.aionn.ordering.domain.valueobject.ShippingAddress;
 import com.aionn.sharedkernel.application.command.Command;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -20,7 +19,6 @@ public record PlaceOrderHeadlessCommand(
         String voucherCode,
         String paymentMethodId,
         String currency,
-        BigDecimal shippingFee,
         ShippingAddress shippingAddressSnapshot) implements Command {
 
     public record Line(String skuId, int qty) {

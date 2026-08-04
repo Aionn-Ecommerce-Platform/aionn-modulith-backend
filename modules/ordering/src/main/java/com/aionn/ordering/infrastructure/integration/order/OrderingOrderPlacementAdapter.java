@@ -43,7 +43,6 @@ public class OrderingOrderPlacementAdapter implements OrderPlacementPort {
                                 command.voucherCode(),
                                 command.paymentMethodId(),
                                 command.currency(),
-                                command.shippingFee(),
                                 addr));
                 long total = order.getTotalAmount() == null ? 0L : order.getTotalAmount().amount().longValue();
                 return new PlacedOrder(order.getOrderId(), total, order.getCurrency(), order.getStatus().name());

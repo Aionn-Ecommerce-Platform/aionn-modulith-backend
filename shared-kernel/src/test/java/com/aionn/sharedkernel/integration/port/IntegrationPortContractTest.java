@@ -88,7 +88,6 @@ class IntegrationPortContractTest {
                                 "VOUCHER",
                                 "pm-1",
                                 "VND",
-                                BigDecimal.valueOf(30),
                                 new OrderPlacementPort.PlaceCommand.ShippingAddress("addr-1", "A", "0909", "123 Street",
                                                 "ward-1",
                                                 "district-1", "province-1", "VN"));
