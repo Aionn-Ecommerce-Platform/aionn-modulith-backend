@@ -23,6 +23,7 @@ dependencies {
     compileOnly 'org.springframework:spring-webmvc'
     compileOnly 'org.springframework:spring-tx'
     compileOnly 'org.springframework:spring-jdbc'
+    compileOnly 'io.micrometer:micrometer-core'
     compileOnly 'org.springframework.security:spring-security-core'
     compileOnly 'org.springframework.security:spring-security-web'
 
@@ -54,6 +55,7 @@ dependencies {
     testImplementation 'jakarta.validation:jakarta.validation-api'
     testImplementation 'org.springframework.data:spring-data-redis'
     testImplementation 'org.springframework:spring-jdbc'
+    testImplementation 'io.micrometer:micrometer-core'
     testImplementation 'net.jqwik:jqwik:1.9.2'
     testImplementation 'com.tngtech.archunit:archunit-junit5:1.3.0'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
