@@ -18,6 +18,15 @@ public interface CatalogPricingGateway {
             String warehouseId,
             BigDecimal price,
             String currency,
-            boolean active) {
+            boolean active,
+            List<String> categoryIds) {
+        public SkuPricing(String skuId, String merchantId, String warehouseId,
+                BigDecimal price, String currency, boolean active) {
+            this(skuId, merchantId, warehouseId, price, currency, active, List.of());
+        }
+
+        public SkuPricing {
+            categoryIds = categoryIds == null ? List.of() : List.copyOf(categoryIds);
+        }
     }
 }

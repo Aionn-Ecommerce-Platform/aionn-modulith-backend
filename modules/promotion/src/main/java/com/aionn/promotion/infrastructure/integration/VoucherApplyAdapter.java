@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Clock;
-import java.util.Collections;
+import java.util.List;
 
 /**
  * Handles discount calculations and applies/consumes the voucher in the
@@ -38,7 +38,7 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
     @Override
     @Transactional
     public Discount apply(String userId, String merchantId, String voucherCode, String orderId,
-            BigDecimal lineSubtotal, String currency) {
+            BigDecimal lineSubtotal, String currency, List<String> orderCategoryIds) {
         Voucher voucher = voucherRepository.lockByCode(voucherCode).orElse(null);
         if (voucher == null) {
             return new Discount(BigDecimal.ZERO, currency, false, "voucher-not-found");
@@ -52,11 +52,12 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
             PromotionCampaign campaign = campaignRepository.findById(voucher.getCampaignId()).orElse(null);
             if (campaign != null) {
                 try {
-                    campaign.ensureRunning();
+                    campaign.ensureRunning(clock);
                 } catch (Exception e) {
                     return new Discount(BigDecimal.ZERO, currency, false, "campaign-not-running");
                 }
-                if (!campaign.getCondition().matches(lineSubtotal, Collections.emptyList())) {
+                if (!campaign.getCondition().matches(lineSubtotal,
+                        orderCategoryIds == null ? List.of() : orderCategoryIds)) {
                     return new Discount(BigDecimal.ZERO, currency, false, "campaign-condition-not-met");
                 }
             }

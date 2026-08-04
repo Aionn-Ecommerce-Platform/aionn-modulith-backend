@@ -1,12 +1,13 @@
 package com.aionn.ordering.application.port.out;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /** Outbound port for voucher discount preview at order placement. */
 public interface VoucherGateway {
 
     Discount apply(String userId, String merchantId, String voucherCode, String orderId,
-            BigDecimal lineSubtotal, String currency);
+            BigDecimal lineSubtotal, String currency, List<String> orderCategoryIds);
 
     void release(String userId, String orderId, String reason);
 

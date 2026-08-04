@@ -27,10 +27,12 @@ class VoucherApplyAdapterTest {
     @Test
     void applyDelegatesToVoucherApplyPort() {
         VoucherApplyPort.Discount discount = new VoucherApplyPort.Discount(BigDecimal.TEN, "VND", true, "Applied");
-        when(voucherApplyPort.apply("usr-1", "m-1", "VOUCHER", "ord-1", BigDecimal.valueOf(100), "VND"))
+        when(voucherApplyPort.apply("usr-1", "m-1", "VOUCHER", "ord-1",
+                BigDecimal.valueOf(100), "VND", java.util.List.of("cat-1")))
                 .thenReturn(discount);
 
-        VoucherGateway.Discount result = adapter.apply("usr-1", "m-1", "VOUCHER", "ord-1", BigDecimal.valueOf(100), "VND");
+        VoucherGateway.Discount result = adapter.apply("usr-1", "m-1", "VOUCHER", "ord-1",
+                BigDecimal.valueOf(100), "VND", java.util.List.of("cat-1"));
 
         assertEquals(BigDecimal.TEN, result.amount());
         assertEquals("VND", result.currency());

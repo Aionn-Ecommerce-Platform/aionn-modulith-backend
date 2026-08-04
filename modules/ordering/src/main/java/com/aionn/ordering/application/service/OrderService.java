@@ -205,8 +205,13 @@ public class OrderService {
 
         try {
             if (voucherCode != null) {
+                List<String> orderCategoryIds = pricing.values().stream()
+                        .flatMap(sku -> sku.categoryIds().stream())
+                        .distinct()
+                        .toList();
                 VoucherGateway.Discount discount = voucherGateway.apply(
-                        userId, merchantId, voucherCode, orderId, lineSubtotal.amount(), currency);
+                        userId, merchantId, voucherCode, orderId, lineSubtotal.amount(), currency,
+                        orderCategoryIds);
                 if (!discount.valid()) {
                     throw new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
                             "Voucher invalid: " + discount.reason());
