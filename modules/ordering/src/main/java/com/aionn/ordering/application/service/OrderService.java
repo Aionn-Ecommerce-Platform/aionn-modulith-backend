@@ -211,6 +211,7 @@ public class OrderService {
                     throw new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
                             "Voucher invalid: " + discount.reason());
                 }
+                validateVoucherDiscount(discount, currency);
                 BigDecimal newSubtotal = lineSubtotal.amount().subtract(discount.amount()).max(BigDecimal.ZERO);
                 lineSubtotal = Money.of(newSubtotal, currency);
             }
@@ -387,6 +388,17 @@ public class OrderService {
             eventPublisher.publish(order.pullEvents());
             return saved;
         });
+    }
+
+    private static void validateVoucherDiscount(VoucherGateway.Discount discount, String orderCurrency) {
+        if (discount.amount() == null || discount.amount().signum() < 0) {
+            throw new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
+                    "Voucher returned an invalid discount amount");
+        }
+        if (discount.currency() == null || !discount.currency().equals(orderCurrency)) {
+            throw new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
+                    "Voucher currency does not match order currency");
+        }
     }
 
     private Money quoteShippingFee(String orderId, String merchantId,

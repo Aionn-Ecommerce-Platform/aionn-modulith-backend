@@ -106,12 +106,38 @@ public class SettlementService {
     public void onPaymentRefunded(String orderId, String paymentId, BigDecimal refundAmount, String currency) {
         SettlementLedgerEntry sale = findSaleEntry(orderId);
         if (sale == null) return;
-        BigDecimal proportion = refundAmount.divide(sale.getGross(), 8, RoundingMode.HALF_UP);
-        BigDecimal netDeduct = currencyAmount(sale.getNet().multiply(proportion), currency);
-
-        Instant now = clock.instant();
         MerchantBalance balance = balanceRepo.lockForUpdate(sale.getMerchantId(), currency).orElse(null);
         if (balance == null) return;
+
+        // Re-read under the merchant-balance lock so concurrent partial refunds allocate
+        // against the same cumulative ledger state. Rounding the cumulative target and
+        // subtracting what was already allocated guarantees that all parts add up to
+        // exactly the sale net amount.
+        java.util.List<SettlementLedgerEntry> entries = ledgerRepo.findByOrder(orderId);
+        sale = entries.stream()
+                .filter(entry -> entry.getKind() == SettlementKind.SALE)
+                .findFirst()
+                .orElse(null);
+        if (sale == null || refundAmount == null || refundAmount.signum() <= 0
+                || !sale.getCurrency().equals(currency)) {
+            return;
+        }
+        BigDecimal previouslyRefundedGross = entries.stream()
+                .filter(entry -> entry.getKind() == SettlementKind.REFUND)
+                .map(SettlementLedgerEntry::getGross)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal previouslyAllocatedNet = entries.stream()
+                .filter(entry -> entry.getKind() == SettlementKind.REFUND)
+                .map(SettlementLedgerEntry::getNet)
+                .map(BigDecimal::abs)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal cumulativeRefund = previouslyRefundedGross.add(refundAmount).min(sale.getGross());
+        BigDecimal cumulativeProportion = cumulativeRefund.divide(sale.getGross(), 8, RoundingMode.HALF_UP);
+        BigDecimal cumulativeNet = currencyAmount(sale.getNet().multiply(cumulativeProportion), currency);
+        BigDecimal netDeduct = cumulativeNet.subtract(previouslyAllocatedNet);
+        if (netDeduct.signum() <= 0) return;
+
+        Instant now = clock.instant();
         if (balance.getAvailable().compareTo(netDeduct) >= 0) {
             balance.debitAvailable(netDeduct, now);
         } else if (balance.getPending().compareTo(netDeduct) >= 0) {

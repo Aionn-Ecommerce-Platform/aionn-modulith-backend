@@ -39,6 +39,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -390,6 +391,33 @@ class OrderServiceTest {
 
         verify(voucherGateway).release(eq(USER_ID), anyString(), eq("order-placement-failed"));
         verify(stockReservationGateway).release("res-1", "order-placement-failed");
+    }
+
+    @Test
+    void placementRejectsVoucherWithDifferentCurrencyAndReleasesStock() {
+        var command = new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand(
+                USER_ID,
+                List.of(new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand.Line("sku-1", 1)),
+                "SAVE10", "COD", "USD", address());
+        var skuPricing = new CatalogPricingGateway.SkuPricing(
+                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "USD", true);
+        var reservation = new StockReservationGateway.Reservation(
+                "res-1", "sku-1", "wh-1", 1, BigDecimal.valueOf(100), "USD");
+        when(catalogPricingGateway.resolve(List.of("sku-1"))).thenReturn(java.util.Map.of("sku-1", skuPricing));
+        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("USD")))
+                .thenReturn(new ShippingGateway.ShippingQuote(BigDecimal.TEN, "USD"));
+        when(stockReservationGateway.reserveAll(anyString(), any(), eq(86400))).thenReturn(List.of(reservation));
+        when(voucherGateway.apply(eq(USER_ID), eq(MERCHANT_ID), eq("SAVE10"), anyString(),
+                any(BigDecimal.class), eq("USD")))
+                .thenReturn(new VoucherGateway.Discount(BigDecimal.valueOf(100_000), "VND", true, null));
+
+        assertThatThrownBy(() -> orderService.placeOrderHeadless(command))
+                .isInstanceOf(OrderingException.class)
+                .hasMessageContaining("currency");
+
+        verify(voucherGateway).release(eq(USER_ID), anyString(), eq("order-placement-failed"));
+        verify(stockReservationGateway).release("res-1", "order-placement-failed");
+        verify(orderRepository, never()).save(any());
     }
 
     @Test

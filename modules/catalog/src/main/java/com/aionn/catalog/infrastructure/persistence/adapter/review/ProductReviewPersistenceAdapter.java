@@ -33,7 +33,10 @@ public class ProductReviewPersistenceAdapter implements ProductReviewPersistence
         try {
             return mapper.toDomain(jpa.save(mapper.toEntity(review)));
         } catch (DataIntegrityViolationException ex) {
-            throw new CatalogException(CatalogErrorCode.REVIEW_ALREADY_EXISTS);
+            if (isDuplicateReviewViolation(ex)) {
+                throw new CatalogException(CatalogErrorCode.REVIEW_ALREADY_EXISTS);
+            }
+            throw ex;
         }
     }
 
@@ -111,5 +114,21 @@ public class ProductReviewPersistenceAdapter implements ProductReviewPersistence
             distribution.put(((Number) row[0]).intValue(), ((Number) row[1]).longValue());
         }
         return distribution;
+    }
+
+    private static boolean isDuplicateReviewViolation(DataIntegrityViolationException exception) {
+        Throwable current = exception;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null) {
+                String normalized = message.toLowerCase(java.util.Locale.ROOT);
+                if (normalized.contains("uq_reviews_user_product")
+                        || (normalized.contains("user_id") && normalized.contains("product_id"))) {
+                    return true;
+                }
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }

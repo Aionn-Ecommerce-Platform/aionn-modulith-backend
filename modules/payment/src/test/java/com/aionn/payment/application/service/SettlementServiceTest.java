@@ -153,4 +153,29 @@ class SettlementServiceTest {
         verify(balanceRepo).save(any());
         verify(ledgerRepo).save(any());
     }
+
+    @Test
+    void partialRefundsAllocateRoundingFromCumulativeTotal() {
+        SettlementLedgerEntry sale = new SettlementLedgerEntry("sle-1", "merch-1", "order-1", "pay-1", null,
+                SettlementLedgerEntry.SettlementKind.SALE, BigDecimal.valueOf(100), BigDecimal.valueOf(5),
+                BigDecimal.valueOf(95), "VND", null, clock.instant());
+        SettlementLedgerEntry firstRefund = new SettlementLedgerEntry(
+                "sle-r1", "merch-1", "order-1", "pay-1", null,
+                SettlementLedgerEntry.SettlementKind.REFUND, BigDecimal.valueOf(50), BigDecimal.ZERO,
+                BigDecimal.valueOf(-48), "VND", null, clock.instant());
+        when(ledgerRepo.findByOrder("order-1"))
+                .thenReturn(java.util.List.of(sale))
+                .thenReturn(java.util.List.of(sale, firstRefund));
+        MerchantBalance balance = new MerchantBalance(
+                "merch-1", "VND", BigDecimal.ZERO, BigDecimal.valueOf(47), 0L,
+                clock.instant(), clock.instant());
+        when(balanceRepo.lockForUpdate("merch-1", "VND")).thenReturn(Optional.of(balance));
+
+        service.onPaymentRefunded("order-1", "pay-1", BigDecimal.valueOf(50), "VND");
+
+        ArgumentCaptor<SettlementLedgerEntry> entry = ArgumentCaptor.forClass(SettlementLedgerEntry.class);
+        verify(ledgerRepo).save(entry.capture());
+        assertEquals(BigDecimal.valueOf(-47), entry.getValue().getNet());
+        assertEquals(BigDecimal.ZERO, balance.getAvailable());
+    }
 }

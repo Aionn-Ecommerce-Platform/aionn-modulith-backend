@@ -17,6 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -30,8 +33,8 @@ public class CategoryService {
 
     public Category create(CreateCategoryCommand command) {
         String normalizedName = command.name() != null ? command.name().trim() : null;
-        if (command.parentId() != null && categoryRepository.findById(command.parentId()).isEmpty()) {
-            throw new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND, "Parent category not found");
+        if (command.parentId() != null) {
+            ensureUsableParent(lockRequired(command.parentId()));
         }
         if (categoryRepository.existsByParentAndName(command.parentId(), normalizedName)) {
             throw new CatalogException(CatalogErrorCode.CATEGORY_NAME_CONFLICT);
@@ -49,7 +52,12 @@ public class CategoryService {
     }
 
     public Category update(UpdateCategoryCommand command) {
-        Category category = required(command.categoryId());
+        Category snapshot = required(command.categoryId());
+        Map<String, Category> locked = lockInStableOrder(snapshot.getCategoryId(), snapshot.getParentId());
+        Category category = locked.get(snapshot.getCategoryId());
+        if (Boolean.TRUE.equals(command.active()) && category.getParentId() != null) {
+            ensureUsableParent(locked.get(category.getParentId()));
+        }
         String normalizedName = command.name() != null ? command.name().trim() : null;
         if (normalizedName != null
                 && !normalizedName.equalsIgnoreCase(category.getName())
@@ -63,14 +71,15 @@ public class CategoryService {
     }
 
     public Category move(MoveCategoryCommand command) {
-        Category category = required(command.categoryId());
+        Category snapshot = required(command.categoryId());
+        Map<String, Category> locked = lockInStableOrder(
+                snapshot.getCategoryId(), snapshot.getParentId(), command.newParentId());
+        Category category = locked.get(snapshot.getCategoryId());
         if (command.newParentId() != null) {
             if (command.newParentId().equals(category.getCategoryId())) {
                 throw new CatalogException(CatalogErrorCode.CATEGORY_CYCLE);
             }
-            categoryRepository.findById(command.newParentId())
-                    .orElseThrow(() -> new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND,
-                            "Target parent does not exist"));
+            ensureUsableParent(locked.get(command.newParentId()));
             if (categoryRepository.findDescendantIds(category.getCategoryId())
                     .contains(command.newParentId())) {
                 throw new CatalogException(CatalogErrorCode.CATEGORY_CYCLE);
@@ -86,7 +95,7 @@ public class CategoryService {
     }
 
     public void delete(String categoryId) {
-        Category category = required(categoryId);
+        Category category = lockRequired(categoryId);
         if (categoryRepository.hasProducts(categoryId)) {
             throw new CatalogException(CatalogErrorCode.CATEGORY_HAS_PRODUCTS);
         }
@@ -121,5 +130,27 @@ public class CategoryService {
     private Category required(String categoryId) {
         return categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND));
+    }
+
+    private Category lockRequired(String categoryId) {
+        return categoryRepository.lockById(categoryId)
+                .or(() -> categoryRepository.findById(categoryId))
+                .orElseThrow(() -> new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND));
+    }
+
+    private Map<String, Category> lockInStableOrder(String... categoryIds) {
+        Map<String, Category> locked = new LinkedHashMap<>();
+        java.util.Arrays.stream(categoryIds)
+                .filter(Objects::nonNull)
+                .distinct()
+                .sorted()
+                .forEach(id -> locked.put(id, lockRequired(id)));
+        return locked;
+    }
+
+    private static void ensureUsableParent(Category parent) {
+        if (parent == null || parent.getDeletedAt() != null) {
+            throw new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND, "Parent category not found");
+        }
     }
 }

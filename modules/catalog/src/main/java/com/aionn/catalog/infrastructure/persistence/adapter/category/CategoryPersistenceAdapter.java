@@ -31,6 +31,11 @@ public class CategoryPersistenceAdapter implements CategoryPersistencePort {
     }
 
     @Override
+    public Optional<Category> lockById(String categoryId) {
+        return jpa.findByIdForUpdate(categoryId).map(mapper::toDomain);
+    }
+
+    @Override
     public boolean existsByParentAndName(String parentId, String name) {
         return jpa.existsByParentIdAndNameIgnoreCase(parentId, name);
     }

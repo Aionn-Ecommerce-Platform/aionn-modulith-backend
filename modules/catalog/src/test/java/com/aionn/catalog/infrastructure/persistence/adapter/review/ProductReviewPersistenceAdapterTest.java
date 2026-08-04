@@ -57,6 +57,15 @@ class ProductReviewPersistenceAdapterTest {
                 .extracting("errorCode").isEqualTo(CatalogErrorCode.REVIEW_ALREADY_EXISTS.getCode());
     }
 
+    @Test void unrelatedIntegrityViolationIsNotMisreportedAsDuplicateReview() {
+        ProductReview domain = domainReview(); ProductReviewEntity entity = new ProductReviewEntity();
+        DataIntegrityViolationException failure = new DataIntegrityViolationException("fk_reviews_product");
+        when(mapper.toEntity(domain)).thenReturn(entity);
+        when(jpa.save(entity)).thenThrow(failure);
+
+        assertThatThrownBy(() -> adapter.save(domain)).isSameAs(failure);
+    }
+
     @Test void findByIdReturnsMappedDomain() {
         ProductReviewEntity entity = new ProductReviewEntity(); when(jpa.findById(REVIEW_ID)).thenReturn(Optional.of(entity));
         ProductReview review = domainReview(); when(mapper.toDomain(entity)).thenReturn(review);
