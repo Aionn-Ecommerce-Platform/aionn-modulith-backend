@@ -156,8 +156,7 @@ public class SettlementService {
     }
 
     private MerchantBalance loadOrCreate(String merchantId, String currency, Instant now) {
-        return balanceRepo.lockForUpdate(merchantId, currency)
-                .orElseGet(() -> MerchantBalance.empty(merchantId, currency, now));
+        return balanceRepo.createIfAbsentAndLock(merchantId, currency, now);
     }
 
     private SettlementLedgerEntry findSaleEntry(String orderId) {

@@ -75,7 +75,7 @@ class CartServiceTest {
     void addItem_addsItemToCart() {
         Cart cart = emptyCart();
         Cart saved = cartWithItem("sku-1", 2);
-        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(cart));
+        when(cartRepository.findOrCreate(anyString(), eq(USER_ID), eq(fixedInstant))).thenReturn(cart);
         when(cartRepository.save(any(Cart.class))).thenReturn(saved);
 
         Cart result = cartService.addItem(new AddItemCommand(USER_ID, "sku-1", 2));
@@ -89,7 +89,7 @@ class CartServiceTest {
     @DisplayName("addItem() creates new cart if none exists")
     void addItem_createsNewCartIfNoneExists() {
         Cart newCart = emptyCart();
-        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        when(cartRepository.findOrCreate(anyString(), eq(USER_ID), eq(fixedInstant))).thenReturn(newCart);
         when(cartRepository.save(any(Cart.class))).thenReturn(newCart);
 
         Cart result = cartService.addItem(new AddItemCommand(USER_ID, "sku-1", 1));
@@ -160,7 +160,7 @@ class CartServiceTest {
     @DisplayName("getMyCart() returns existing cart")
     void getMyCart_returnsExistingCart() {
         Cart cart = emptyCart();
-        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(cart));
+        when(cartRepository.findOrCreate(anyString(), eq(USER_ID), eq(fixedInstant))).thenReturn(cart);
 
         Cart result = cartService.getMyCart(USER_ID);
 
@@ -168,15 +168,15 @@ class CartServiceTest {
     }
 
     @Test
-    @DisplayName("getMyCart() returns a transient empty cart without writing")
-    void getMyCart_returnsTransientCartWithoutPersisting() {
-        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+    @DisplayName("getMyCart() atomically creates an empty cart when absent")
+    void getMyCart_createsPersistentCartWhenAbsent() {
+        when(cartRepository.findOrCreate(anyString(), eq(USER_ID), eq(fixedInstant))).thenReturn(emptyCart());
 
         Cart result = cartService.getMyCart(USER_ID);
 
         assertNotNull(result);
         assertTrue(result.getItems().isEmpty());
-        verify(cartRepository, never()).save(any());
+        verify(cartRepository).findOrCreate(anyString(), eq(USER_ID), eq(fixedInstant));
         verifyNoInteractions(eventPublisher);
     }
 }

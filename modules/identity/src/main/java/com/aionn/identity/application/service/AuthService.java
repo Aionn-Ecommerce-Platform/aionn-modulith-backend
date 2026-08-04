@@ -56,6 +56,11 @@ import java.util.stream.Collectors;
 @Transactional
 public class AuthService {
 
+    private static final int TOTP_LENGTH = 6;
+    private static final int BACKUP_CODE_LENGTH = 8;
+    private static final int MAX_SOCIAL_USERNAME_LENGTH = 50;
+    private static final int SOCIAL_USERNAME_SUFFIX_LENGTH = 10;
+
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final UserPersistencePort userPersistencePort;
@@ -298,13 +303,15 @@ public class AuthService {
 
         boolean matched = false;
         if (userSecurity.mfaSecret() != null && !userSecurity.mfaSecret().isBlank()) {
-            matched = mfaPersistencePort.findActiveBackupCodes(userId).stream()
-                    .filter(code -> passwordHasher.matches(mfaCode, code.codeHash()))
-                    .findFirst()
-                    .map(code -> mfaPersistencePort.markBackupCodeUsed(code.backupCodeId(), nowUtc()))
-                    .orElse(false);
-            if (!matched) {
-                matched = totpManager.verifyCode(userSecurity.mfaSecret(), mfaCode);
+            String normalizedCode = mfaCode.trim();
+            if (isNumericCode(normalizedCode, TOTP_LENGTH)) {
+                matched = totpManager.verifyCode(userSecurity.mfaSecret(), normalizedCode);
+            } else if (isNumericCode(normalizedCode, BACKUP_CODE_LENGTH)) {
+                matched = mfaPersistencePort.findActiveBackupCodes(userId).stream()
+                        .filter(code -> passwordHasher.matches(normalizedCode, code.codeHash()))
+                        .findFirst()
+                        .map(code -> mfaPersistencePort.markBackupCodeUsed(code.backupCodeId(), nowUtc()))
+                        .orElse(false);
             }
         }
 
@@ -368,18 +375,23 @@ public class AuthService {
             base = (provider.name().toLowerCase() + "_" + profile.providerUserId().replace(':', '_')
                     .replaceAll("[^a-zA-Z0-9_]", "")).toLowerCase();
         }
-        if (base.length() > 40) {
-            base = base.substring(0, 40);
+        String generatedId = IdGenerator.ulid();
+        String suffix = generatedId.substring(generatedId.length() - SOCIAL_USERNAME_SUFFIX_LENGTH).toLowerCase();
+        int maxBaseLength = MAX_SOCIAL_USERNAME_LENGTH - suffix.length() - 1;
+        String boundedBase = base.substring(0, Math.min(base.length(), maxBaseLength));
+        return boundedBase + "_" + suffix;
+    }
+
+    private static boolean isNumericCode(String value, int expectedLength) {
+        if (value.length() != expectedLength) {
+            return false;
         }
-        String candidate = base;
-        int suffix = 1;
-        while (userPersistencePort.existsByUsername(candidate)) {
-            candidate = base + "_" + suffix++;
-            if (candidate.length() > 50) {
-                candidate = candidate.substring(0, 50);
+        for (int index = 0; index < value.length(); index++) {
+            if (!Character.isDigit(value.charAt(index))) {
+                return false;
             }
         }
-        return candidate;
+        return true;
     }
 
     private String sanitizeUsernameBase(String email, String displayName) {

@@ -314,7 +314,6 @@ class AuthServiceTest {
         when(passwordHasher.matches("pw", "hash")).thenReturn(true);
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
         when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(security(true, "secret")));
-        when(mfaPersistencePort.findActiveBackupCodes(USER_ID)).thenReturn(List.of());
         when(totpManager.verifyCode("secret", "000000")).thenReturn(false);
         when(authPolicy.getMaxFailedLoginAttempts()).thenReturn(5);
 
@@ -330,7 +329,6 @@ class AuthServiceTest {
         when(passwordHasher.matches("pw", "hash")).thenReturn(true);
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
         when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(security(true, "secret")));
-        when(mfaPersistencePort.findActiveBackupCodes(USER_ID)).thenReturn(List.of());
         when(totpManager.verifyCode("secret", "123456")).thenReturn(true);
         when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
@@ -342,6 +340,7 @@ class AuthServiceTest {
 
         assertThat(result).isSameAs(expected);
         verify(userSecurityPort).resetFailedLoginAttempts(USER_ID);
+        verify(mfaPersistencePort, never()).findActiveBackupCodes(anyString());
     }
 
     @Test
@@ -354,7 +353,7 @@ class AuthServiceTest {
         when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(security(true, "secret")));
         when(mfaPersistencePort.findActiveBackupCodes(USER_ID)).thenReturn(
                 List.of(new MfaPersistencePort.BackupCodeData("bc-1", "code-hash")));
-        when(passwordHasher.matches("backup", "code-hash")).thenReturn(true);
+        when(passwordHasher.matches("12345678", "code-hash")).thenReturn(true);
         when(mfaPersistencePort.markBackupCodeUsed(eq("bc-1"), any(Instant.class))).thenReturn(true);
         when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
@@ -362,10 +361,11 @@ class AuthServiceTest {
                 any(Instant.class))).thenReturn(expected);
 
         LoginResult result = authService.login(
-                new LoginCommand("u@example.com", "pw", "backup", "ip", "ua"));
+                new LoginCommand("u@example.com", "pw", "12345678", "ip", "ua"));
 
         assertThat(result).isSameAs(expected);
         verify(mfaPersistencePort).markBackupCodeUsed(eq("bc-1"), any(Instant.class));
+        verify(totpManager, never()).verifyCode(anyString(), anyString());
     }
 
     @Test
@@ -398,7 +398,6 @@ class AuthServiceTest {
         when(socialLinkPersistencePort.findByProviderAndProviderUserId(AuthProvider.GOOGLE, "puid"))
                 .thenReturn(Optional.empty());
         when(userPersistencePort.findByIdentity("new@example.com")).thenReturn(Optional.empty());
-        when(userPersistencePort.existsByUsername(anyString())).thenReturn(false);
         when(userPersistencePort.save(any(IdentityUser.class))).thenAnswer(inv -> inv.getArgument(0));
         when(userPersistencePort.findById(anyString())).thenReturn(Optional.empty());
         when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
@@ -411,6 +410,7 @@ class AuthServiceTest {
 
         assertThat(result).isSameAs(expected);
         verify(userPersistencePort).save(any(IdentityUser.class));
+        verify(userPersistencePort, never()).existsByUsername(anyString());
         verify(socialLinkPersistencePort).save(any(SocialLink.class), anyString());
     }
 

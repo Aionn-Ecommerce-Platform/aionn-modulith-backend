@@ -54,7 +54,7 @@ class SettlementServiceTest {
         when(merchantQueryPort.findCommissionRate("merch-1")).thenReturn(Optional.of(BigDecimal.valueOf(0.05)));
 
         MerchantBalance balance = MerchantBalance.empty("merch-1", "VND", clock.instant());
-        when(balanceRepo.lockForUpdate("merch-1", "VND")).thenReturn(Optional.of(balance));
+        when(balanceRepo.createIfAbsentAndLock("merch-1", "VND", clock.instant())).thenReturn(balance);
 
         service.onOrderApproved("order-1", "pay-1");
 
@@ -69,7 +69,7 @@ class SettlementServiceTest {
         when(orderQueryPort.findOrderSummary("order-1")).thenReturn(Optional.of(summary));
         when(merchantQueryPort.findCommissionRate("merch-1")).thenReturn(Optional.of(new BigDecimal("0.05")));
         MerchantBalance balance = MerchantBalance.empty("merch-1", "VND", clock.instant());
-        when(balanceRepo.lockForUpdate("merch-1", "VND")).thenReturn(Optional.of(balance));
+        when(balanceRepo.createIfAbsentAndLock("merch-1", "VND", clock.instant())).thenReturn(balance);
 
         service.onOrderApproved("order-1", "pay-1");
 
@@ -87,7 +87,7 @@ class SettlementServiceTest {
         when(orderQueryPort.findOrderSummary("order-1")).thenReturn(Optional.of(summary));
         when(merchantQueryPort.findCommissionRate("merch-1")).thenReturn(Optional.of(new BigDecimal("0.05")));
         MerchantBalance balance = MerchantBalance.empty("merch-1", "USD", clock.instant());
-        when(balanceRepo.lockForUpdate("merch-1", "USD")).thenReturn(Optional.of(balance));
+        when(balanceRepo.createIfAbsentAndLock("merch-1", "USD", clock.instant())).thenReturn(balance);
 
         service.onOrderApproved("order-1", "pay-1");
 

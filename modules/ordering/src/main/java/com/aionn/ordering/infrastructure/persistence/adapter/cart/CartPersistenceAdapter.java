@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.time.Instant;
 
 @Repository
 @RequiredArgsConstructor
@@ -32,6 +33,14 @@ public class CartPersistenceAdapter implements CartPersistencePort {
     @Override
     public Optional<Cart> findByUserId(String userId) {
         return jpa.findByUserId(userId).map(mapper::toDomain);
+    }
+
+    @Override
+    public Cart findOrCreate(String cartId, String userId, Instant now) {
+        jpa.insertIfAbsent(cartId, userId, now);
+        return jpa.findByUserId(userId)
+                .map(mapper::toDomain)
+                .orElseThrow(() -> new IllegalStateException("Cart insert completed without a readable row"));
     }
 }
 
