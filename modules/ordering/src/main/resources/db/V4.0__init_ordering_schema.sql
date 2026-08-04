@@ -78,10 +78,17 @@ CREATE TABLE order_returns (
     version             BIGINT      NOT NULL DEFAULT 0,
     requested_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     decided_at          TIMESTAMPTZ,
-    received_at         TIMESTAMPTZ,
-    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      received_at         TIMESTAMPTZ,
+      refund_status       VARCHAR(20) NOT NULL DEFAULT 'NOT_REQUIRED',
+      refund_attempts     INTEGER     NOT NULL DEFAULT 0,
+      refund_failure_reason VARCHAR(1000),
+      next_refund_attempt_at TIMESTAMPTZ,
+      updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_order_returns_order FOREIGN KEY (order_id) REFERENCES orders(order_id)
 );
 CREATE INDEX idx_order_returns_order    ON order_returns(order_id);
 CREATE INDEX idx_order_returns_merchant ON order_returns(merchant_id);
 CREATE INDEX idx_order_returns_status   ON order_returns(status);
+CREATE INDEX idx_order_returns_refund_retry
+    ON order_returns(refund_status, next_refund_attempt_at)
+    WHERE refund_status IN ('PENDING', 'FAILED');

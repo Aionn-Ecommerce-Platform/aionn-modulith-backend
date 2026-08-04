@@ -35,6 +35,7 @@ import java.util.Objects;
 public class OrderReturnService {
 
     private static final Duration RETURN_WINDOW = Duration.ofDays(7);
+    static final int MAX_REFUND_ATTEMPTS = 5;
 
     private final OrderPersistencePort orderRepository;
     private final OrderReturnPersistencePort returnRepository;
@@ -83,8 +84,7 @@ public class OrderReturnService {
             eventPublisher.publish(r.pullEvents());
             return persisted;
         });
-        triggerRefundIfPaid(saved, "return approved");
-        return saved;
+        return attemptRefund(saved.getReturnId(), "return approved");
     }
 
     public OrderReturn reject(RejectReturnCommand command) {
@@ -201,13 +201,22 @@ public class OrderReturnService {
             eventPublisher.publish(r.pullEvents());
             return persisted;
         });
-        triggerRefundIfPaid(saved, "return approved (admin)");
-        return saved;
+        return attemptRefund(saved.getReturnId(), "return approved (admin)");
     }
 
-    private void triggerRefundIfPaid(OrderReturn r, String reason) {
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public OrderReturn retryRefund(String returnId) {
+        return attemptRefund(returnId, "return refund retry");
+    }
+
+    private OrderReturn attemptRefund(String returnId, String reason) {
+        OrderReturn r = transactionTemplate.execute(status -> returnRepository.findById(returnId)
+                .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND)));
+        if (!r.refundCanBeAttempted(clock.instant(), MAX_REFUND_ATTEMPTS)) {
+            return r;
+        }
         if (r.getRefundAmount() == null) {
-            return;
+            return r;
         }
         RefundRequest refund = transactionTemplate.execute(status -> orderRepository.findById(r.getOrderId())
                 .filter(order -> order.getPaymentId() != null)
@@ -215,15 +224,38 @@ public class OrderReturnService {
                         r.getRefundAmount().currency(), reason))
                 .orElse(null));
         if (refund == null) {
-            return;
+            return markRefunded(returnId);
         }
         try {
             paymentGateway.refund(refund.paymentId(), refund.amount(), refund.currency(), refund.reason(),
                     "return:" + r.getReturnId() + ":refund");
+            return markRefunded(returnId);
         } catch (RuntimeException ex) {
             log.error("Refund for return {} (order {}) failed", r.getReturnId(), r.getOrderId(), ex);
-            throw ex;
+            return markRefundFailed(returnId, ex);
         }
+    }
+
+    private OrderReturn markRefunded(String returnId) {
+        return transactionTemplate.execute(status -> {
+            OrderReturn current = returnRepository.findById(returnId)
+                    .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
+            if (current.getRefundStatus() == com.aionn.ordering.domain.valueobject.ReturnRefundStatus.REFUNDED) {
+                return current;
+            }
+            current.markRefunded(clock.instant());
+            return returnRepository.save(current);
+        });
+    }
+
+    private OrderReturn markRefundFailed(String returnId, RuntimeException failure) {
+        return transactionTemplate.execute(status -> {
+            OrderReturn current = returnRepository.findById(returnId)
+                    .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
+            long delaySeconds = Math.min(3600, 1L << Math.min(current.getRefundAttempts(), 12));
+            current.markRefundFailed(failure.getMessage(), clock.instant().plusSeconds(delaySeconds));
+            return returnRepository.save(current);
+        });
     }
 
     private record RefundRequest(String paymentId, java.math.BigDecimal amount, String currency, String reason) {}

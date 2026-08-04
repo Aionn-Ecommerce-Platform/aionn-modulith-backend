@@ -18,6 +18,15 @@ public interface OrderReturnRepository extends JpaRepository<OrderReturnEntity, 
     List<OrderReturnEntity> findByMerchantIdOrderByRequestedAtDesc(String merchantId, Pageable pageable);
 
     @Query("""
+        SELECT r.returnId FROM OrderReturnEntity r
+         WHERE r.refundStatus IN ('PENDING', 'FAILED')
+           AND r.refundAttempts < :maxAttempts
+           AND (r.nextRefundAttemptAt IS NULL OR r.nextRefundAttemptAt <= :now)
+         ORDER BY r.nextRefundAttemptAt ASC, r.returnId ASC
+        """)
+    List<String> findRefundRetryIds(Instant now, int maxAttempts, Pageable pageable);
+
+    @Query("""
         SELECT r.status AS status,
                r.reason AS reason,
                r.refundAmount AS refundAmount,
