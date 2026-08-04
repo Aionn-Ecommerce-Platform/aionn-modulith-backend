@@ -52,9 +52,9 @@ class ResilientPaymentAdapterTest {
 
     @Test
     void refundDelegatesAndRecordsMetricsOnSuccess() {
-        adapter.refund("pay-1", BigDecimal.TEN, "VND", "return approved");
+        adapter.refund("pay-1", BigDecimal.TEN, "VND", "return approved", "return:r-1:refund");
 
-        verify(delegate).refund("pay-1", BigDecimal.TEN, "VND", "return approved");
+        verify(delegate).refund("pay-1", BigDecimal.TEN, "VND", "return approved", "return:r-1:refund");
         verify(metrics).gatewayOutcome("payment", "success");
     }
 

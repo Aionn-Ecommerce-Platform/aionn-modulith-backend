@@ -420,7 +420,7 @@ public class OrderService {
     private void refundIfPaid(Order order, String reason) {
         if (order.getPaymentId() != null) {
             paymentGateway.refund(order.getPaymentId(), order.getTotalAmount().amount(),
-                    order.getCurrency(), reason);
+                    order.getCurrency(), reason, "order:" + order.getOrderId() + ":cancel-refund");
         }
     }
 

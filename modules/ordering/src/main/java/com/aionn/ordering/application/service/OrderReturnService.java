@@ -74,6 +74,10 @@ public class OrderReturnService {
             Money refundAmount = command.refundAmount() == null
                     ? null
                     : Money.of(command.refundAmount(), command.currency() == null ? "VND" : command.currency());
+            if (r.getStatus() == com.aionn.ordering.domain.valueobject.ReturnStatus.APPROVED) {
+                ensureSameApproval(r, refundAmount, command.returnWarehouseId());
+                return r;
+            }
             r.approve(refundAmount, command.returnWarehouseId(), clock.instant());
             OrderReturn persisted = returnRepository.save(r);
             eventPublisher.publish(r.pullEvents());
@@ -188,6 +192,10 @@ public class OrderReturnService {
             Money refund = refundAmount == null
                     ? null
                     : Money.of(refundAmount, currency == null ? "VND" : currency);
+            if (r.getStatus() == com.aionn.ordering.domain.valueobject.ReturnStatus.APPROVED) {
+                ensureSameApproval(r, refund, returnWarehouseId);
+                return r;
+            }
             r.approve(refund, returnWarehouseId, clock.instant());
             OrderReturn persisted = returnRepository.save(r);
             eventPublisher.publish(r.pullEvents());
@@ -210,7 +218,8 @@ public class OrderReturnService {
             return;
         }
         try {
-            paymentGateway.refund(refund.paymentId(), refund.amount(), refund.currency(), refund.reason());
+            paymentGateway.refund(refund.paymentId(), refund.amount(), refund.currency(), refund.reason(),
+                    "return:" + r.getReturnId() + ":refund");
         } catch (RuntimeException ex) {
             log.error("Refund for return {} (order {}) failed", r.getReturnId(), r.getOrderId(), ex);
             throw ex;
@@ -218,6 +227,16 @@ public class OrderReturnService {
     }
 
     private record RefundRequest(String paymentId, java.math.BigDecimal amount, String currency, String reason) {}
+
+    private void ensureSameApproval(OrderReturn existing, Money refund, String warehouseId) {
+        boolean sameRefund = existing.getRefundAmount() != null && refund != null
+                && existing.getRefundAmount().amount().compareTo(refund.amount()) == 0
+                && existing.getRefundAmount().currency().equalsIgnoreCase(refund.currency());
+        if (!sameRefund || !Objects.equals(existing.getReturnWarehouseId(), warehouseId)) {
+            throw new OrderingException(OrderingErrorCode.RETURN_INVALID_STATE,
+                    "Approved return cannot be retried with different refund details");
+        }
+    }
 
     public OrderReturn adminReject(String returnId, String reason) {
         OrderReturn r = returnRepository.findById(returnId)

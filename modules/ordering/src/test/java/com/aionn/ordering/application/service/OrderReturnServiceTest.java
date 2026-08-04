@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -368,7 +369,32 @@ class OrderReturnServiceTest {
 
         service.adminApprove(RETURN_ID, java.math.BigDecimal.valueOf(100), "VND", "wh-1");
 
-        verify(paymentGateway).refund("payment-123", java.math.BigDecimal.valueOf(100), "VND", "return approved (admin)");
+        verify(paymentGateway).refund("payment-123", java.math.BigDecimal.valueOf(100), "VND",
+                "return approved (admin)", "return:return-1:refund");
+    }
+
+    @Test
+    void repeatedApprovalRetriesRefundWithSameBusinessKey() {
+        OrderReturn orderReturn = requestedReturn();
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(orderReturn));
+        when(returnRepository.save(orderReturn)).thenReturn(orderReturn);
+        Order order = completedOrder();
+        try {
+            java.lang.reflect.Field field = Order.class.getDeclaredField("paymentId");
+            field.setAccessible(true);
+            field.set(order, "payment-123");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+
+        service.adminApprove(RETURN_ID, java.math.BigDecimal.valueOf(100), "VND", "wh-1");
+        service.adminApprove(RETURN_ID, java.math.BigDecimal.valueOf(100), "VND", "wh-1");
+
+        verify(paymentGateway, times(2)).refund(
+                "payment-123", java.math.BigDecimal.valueOf(100), "VND",
+                "return approved (admin)", "return:return-1:refund");
+        verify(returnRepository, times(1)).save(orderReturn);
     }
 }
 
