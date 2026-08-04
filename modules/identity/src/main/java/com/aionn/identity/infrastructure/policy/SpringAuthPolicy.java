@@ -39,4 +39,34 @@ public class SpringAuthPolicy implements AuthPolicy {
     public int getPasswordResetTokenTtlMinutes() {
         return authProperties.passwordResetTokenTtlMinutes();
     }
+
+    @Override
+    public int getLoginIpMaxAttempts() {
+        return authProperties.loginIpMaxAttempts();
+    }
+
+    @Override
+    public int getLoginIdentityMaxAttempts() {
+        return authProperties.loginIdentityMaxAttempts();
+    }
+
+    @Override
+    public int getLoginRateLimitWindowSeconds() {
+        return authProperties.loginRateLimitWindowSeconds();
+    }
+
+    @Override
+    public int getPasswordResetIpMaxAttempts() {
+        return authProperties.passwordResetIpMaxAttempts();
+    }
+
+    @Override
+    public int getPasswordResetIdentityMaxAttempts() {
+        return authProperties.passwordResetIdentityMaxAttempts();
+    }
+
+    @Override
+    public int getPasswordResetRateLimitWindowSeconds() {
+        return authProperties.passwordResetRateLimitWindowSeconds();
+    }
 }

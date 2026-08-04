@@ -6,6 +6,7 @@ import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
 import com.aionn.identity.application.port.out.integration.IdentityIntegrationEventPublisherPort;
 import com.aionn.identity.application.port.out.observability.IdentityMetricsPort;
 import com.aionn.identity.application.port.out.security.PasswordHasherPort;
+import com.aionn.identity.application.port.out.security.AbuseRateLimiterPort;
 import com.aionn.identity.application.port.out.security.PasswordResetPort;
 import com.aionn.identity.application.port.out.security.SecurityAuditPort;
 import com.aionn.identity.application.port.out.security.UserSecurityPort;
@@ -30,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -49,6 +51,7 @@ class PasswordResetServiceTest {
     @Mock private IdentityIntegrationEventPublisherPort integrationEventPublisher;
     @Mock private IdentityMetricsPort identityMetrics;
     @Mock private AuthPolicy authPolicy;
+    @Mock private AbuseRateLimiterPort abuseRateLimiter;
 
     private PasswordResetService service;
 
@@ -56,10 +59,12 @@ class PasswordResetServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(abuseRateLimiter.check(anyString(), anyString(), any(Integer.class), any(Integer.class)))
+                .thenReturn(true);
         service = new PasswordResetService(
                 userSecurityPort, passwordResetPort, securityAuditPort, passwordHasher,
                 authSessionPersistencePort, refreshTokenStore, notificationPort,
-                integrationEventPublisher, identityMetrics, authPolicy,
+                integrationEventPublisher, identityMetrics, authPolicy, abuseRateLimiter,
                 Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
     }
 
@@ -133,6 +138,18 @@ class PasswordResetServiceTest {
         verify(notificationPort).sendPasswordResetRequested(eq(USER_ID), anyString());
         verify(securityAuditPort).saveAuditLog(USER_ID,
                 SecurityAuditEventType.PASSWORD_RESET_REQUESTED, IP);
+    }
+
+    @Test
+    void passwordResetRateLimitRunsBeforeIdentityLookup() {
+        when(abuseRateLimiter.check(eq("PASSWORD_RESET_IP"), eq(IP),
+                any(Integer.class), any(Integer.class))).thenReturn(false);
+
+        assertThrows(IdentityException.class,
+                () -> service.requestPasswordReset("u@example.com", IP));
+
+        verify(userSecurityPort, never()).findByIdentity(anyString());
+        verify(passwordResetPort, never()).savePasswordResetTokenHash(any(), any(), any());
     }
 
     @Test

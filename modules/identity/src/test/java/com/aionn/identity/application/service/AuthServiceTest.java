@@ -20,6 +20,7 @@ import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
 import com.aionn.identity.application.port.out.auth.TokenBlacklistPort;
 import com.aionn.identity.application.port.out.observability.IdentityMetricsPort;
 import com.aionn.identity.application.port.out.security.MfaPersistencePort;
+import com.aionn.identity.application.port.out.security.AbuseRateLimiterPort;
 import com.aionn.identity.application.port.out.security.PasswordHasherPort;
 import com.aionn.identity.application.port.out.security.TotpManagerPort;
 import com.aionn.identity.application.port.out.security.UserSecurityPort;
@@ -53,6 +54,7 @@ import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -92,16 +94,20 @@ class AuthServiceTest {
     private TokenBlacklistPort tokenBlacklist;
     @Mock
     private IdentityMetricsPort identityMetrics;
+    @Mock
+    private AbuseRateLimiterPort abuseRateLimiter;
 
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
+        lenient().when(abuseRateLimiter.check(anyString(), anyString(), any(Integer.class), any(Integer.class)))
+                .thenReturn(true);
         authService = new AuthService(
                 userPersistencePort, userSecurityPort, authSessionPersistencePort,
                 socialLinkPersistencePort, mfaPersistencePort, passwordHasher,
                 totpManager, accessTokenIssuer, socialTokenVerifier, authPolicy,
-                refreshTokenStore, authResultMapper, tokenBlacklist, identityMetrics,
+                refreshTokenStore, authResultMapper, tokenBlacklist, identityMetrics, abuseRateLimiter,
                 Clock.systemUTC());
     }
 
@@ -230,6 +236,19 @@ class AuthServiceTest {
 
         assertErrorCode(IdentityErrorCode.INVALID_CREDENTIALS,
                 () -> authService.login(new LoginCommand("nobody", "pw", null, "ip", "ua")));
+    }
+
+    @Test
+    void loginRateLimitRunsBeforeCredentialLookup() {
+        when(abuseRateLimiter.check(eq("LOGIN_IP"), eq("127.0.0.1"), any(Integer.class), any(Integer.class)))
+                .thenReturn(false);
+
+        assertErrorCode(IdentityErrorCode.RATE_LIMIT_EXCEEDED,
+                () -> authService.login(new LoginCommand(
+                        "u@example.com", "pw", null, "127.0.0.1", "agent")));
+
+        verify(userSecurityPort, never()).findByIdentity(anyString());
+        verify(identityMetrics).loginAttempt("rate_limited");
     }
 
     @Test

@@ -20,6 +20,7 @@ import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
 import com.aionn.identity.application.port.out.auth.TokenBlacklistPort;
 import com.aionn.identity.application.port.out.observability.IdentityMetricsPort;
 import com.aionn.identity.application.port.out.security.MfaPersistencePort;
+import com.aionn.identity.application.port.out.security.AbuseRateLimiterPort;
 import com.aionn.identity.application.port.out.security.PasswordHasherPort;
 import com.aionn.identity.application.port.out.security.TotpManagerPort;
 import com.aionn.identity.application.port.out.security.UserSecurityPort;
@@ -36,6 +37,7 @@ import com.aionn.identity.domain.valueobject.AuthProvider;
 import com.aionn.identity.domain.valueobject.AuthSessionStatus;
 import com.aionn.identity.domain.valueobject.UserStatus;
 import com.aionn.sharedkernel.util.IdGenerator;
+import com.aionn.sharedkernel.util.Sha256Hasher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -48,6 +50,7 @@ import java.time.Instant;
 import java.time.Clock;
 import java.util.Base64;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -77,10 +80,12 @@ public class AuthService {
     private final AuthResultMapper authResultMapper;
     private final TokenBlacklistPort tokenBlacklist;
     private final IdentityMetricsPort identityMetrics;
+    private final AbuseRateLimiterPort abuseRateLimiter;
 
     private final Clock clock;
     public LoginResult login(LoginCommand command) {
         log.debug("Login attempt for identity: {}", command.identity());
+        enforceLoginRateLimit(command);
         IdentityUser user = validateCredentials(command.identity(), command.password());
         validateMfa(user.getUserId(), command.mfaCode());
         userSecurityPort.resetFailedLoginAttempts(user.getUserId());
@@ -380,6 +385,18 @@ public class AuthService {
         int maxBaseLength = MAX_SOCIAL_USERNAME_LENGTH - suffix.length() - 1;
         String boundedBase = base.substring(0, Math.min(base.length(), maxBaseLength));
         return boundedBase + "_" + suffix;
+    }
+
+    private void enforceLoginRateLimit(LoginCommand command) {
+        String identityKey = Sha256Hasher.hexDigest(command.identity().trim().toLowerCase(Locale.ROOT));
+        boolean ipAllowed = abuseRateLimiter.check("LOGIN_IP", command.ipAddress(),
+                authPolicy.getLoginIpMaxAttempts(), authPolicy.getLoginRateLimitWindowSeconds());
+        boolean identityAllowed = abuseRateLimiter.check("LOGIN_IDENTITY", identityKey,
+                authPolicy.getLoginIdentityMaxAttempts(), authPolicy.getLoginRateLimitWindowSeconds());
+        if (!ipAllowed || !identityAllowed) {
+            identityMetrics.loginAttempt("rate_limited");
+            throw new IdentityException(IdentityErrorCode.RATE_LIMIT_EXCEEDED);
+        }
     }
 
     private static boolean isNumericCode(String value, int expectedLength) {

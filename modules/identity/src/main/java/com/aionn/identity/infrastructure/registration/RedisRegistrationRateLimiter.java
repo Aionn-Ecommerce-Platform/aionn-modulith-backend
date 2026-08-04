@@ -1,6 +1,7 @@
 package com.aionn.identity.infrastructure.registration;
 
 import com.aionn.identity.application.port.out.registration.RegistrationRateLimiterPort;
+import com.aionn.identity.application.port.out.security.AbuseRateLimiterPort;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -15,7 +16,7 @@ import java.util.UUID;
 @Slf4j
 @Component
 @ConditionalOnProperty(prefix = "identity.registration.ratelimit", name = "provider", havingValue = "redis", matchIfMissing = true)
-public class RedisRegistrationRateLimiter implements RegistrationRateLimiterPort {
+public class RedisRegistrationRateLimiter implements RegistrationRateLimiterPort, AbuseRateLimiterPort {
 
     private static final String KEY_PREFIX = "identity:ratelimit:";
 

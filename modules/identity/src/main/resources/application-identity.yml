@@ -25,6 +25,12 @@ identity:
     max-failed-login-attempts: ${IDENTITY_AUTH_MAX_FAILED_LOGIN_ATTEMPTS:5}
     lockout-minutes: ${IDENTITY_AUTH_LOCKOUT_MINUTES:15}
     password-reset-token-ttl-minutes: ${IDENTITY_AUTH_PASSWORD_RESET_TOKEN_TTL_MINUTES:15}
+    login-ip-max-attempts: ${IDENTITY_AUTH_LOGIN_IP_MAX_ATTEMPTS:30}
+    login-identity-max-attempts: ${IDENTITY_AUTH_LOGIN_IDENTITY_MAX_ATTEMPTS:10}
+    login-rate-limit-window-seconds: ${IDENTITY_AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS:300}
+    password-reset-ip-max-attempts: ${IDENTITY_AUTH_PASSWORD_RESET_IP_MAX_ATTEMPTS:10}
+    password-reset-identity-max-attempts: ${IDENTITY_AUTH_PASSWORD_RESET_IDENTITY_MAX_ATTEMPTS:3}
+    password-reset-rate-limit-window-seconds: ${IDENTITY_AUTH_PASSWORD_RESET_RATE_LIMIT_WINDOW_SECONDS:900}
     session:
       expires-days: ${IDENTITY_AUTH_SESSION_EXPIRES_DAYS:30}
     cookie:
