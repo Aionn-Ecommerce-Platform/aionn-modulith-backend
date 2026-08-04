@@ -11,6 +11,8 @@ public interface PaymentPersistencePort {
 
     Optional<Payment> findById(String paymentId);
 
+    Optional<Payment> lockById(String paymentId);
+
     Optional<Payment> findByIdempotencyKey(String idempotencyKey);
 
     List<Payment> findByOrderId(String orderId);

@@ -10,12 +10,14 @@ import com.aionn.payment.application.port.out.PaymentMethodPersistencePort;
 import com.aionn.payment.application.port.out.PaymentPersistencePort;
 import com.aionn.payment.application.port.out.PaymentProviderClient;
 import com.aionn.payment.application.port.out.PaymentProviderRouter;
+import com.aionn.payment.application.port.out.RefundOperationPersistencePort;
 import com.aionn.payment.application.port.out.TransactionLedgerPersistencePort;
 import com.aionn.payment.application.port.out.integration.PaymentIntegrationEventPublisherPort;
 import com.aionn.payment.domain.exception.PaymentErrorCode;
 import com.aionn.payment.domain.exception.PaymentException;
 import com.aionn.payment.domain.model.Payment;
 import com.aionn.payment.domain.model.PaymentMethod;
+import com.aionn.payment.domain.model.RefundOperation;
 import com.aionn.payment.domain.valueobject.PaymentGatewayKind;
 import com.aionn.payment.domain.valueobject.PaymentStatus;
 import com.aionn.sharedkernel.application.port.EventPublisher;
@@ -56,6 +58,8 @@ class PaymentServiceTest {
         @Mock
         private TransactionLedgerPersistencePort ledgerRepository;
         @Mock
+        private RefundOperationPersistencePort refundOperationRepository;
+        @Mock
         private PaymentProviderRouter providerRouter;
         @Mock
         private InvoiceStorage invoiceStorage;
@@ -79,11 +83,17 @@ class PaymentServiceTest {
         void setUp() {
                 lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation ->
                                 ((TransactionCallback<?>) invocation.getArgument(0)).doInTransaction(null));
+                lenient().when(refundOperationRepository.findByIdempotencyKey(anyString()))
+                                .thenReturn(Optional.empty());
+                lenient().when(refundOperationRepository.sumReservedAmount(anyString()))
+                                .thenReturn(BigDecimal.ZERO);
+                lenient().when(refundOperationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
                 service = new PaymentService(
                                 paymentRepository,
                                 paymentMethodRepository,
                                 ledgerRepository,
                                 providerRouter,
+                                refundOperationRepository,
                                 invoiceStorage,
                                 eventPublisher,
                                 integrationEventPublisher,
@@ -185,19 +195,23 @@ class PaymentServiceTest {
                                 Money.of(new BigDecimal("80"), "VND"), PaymentGatewayKind.STRIPE, "idem-6",
                                 fixedInstant);
                 payment.markPaid("txn-6", fixedInstant);
-                when(paymentRepository.findById("p6")).thenReturn(Optional.of(payment));
+                when(paymentRepository.lockById("p6")).thenReturn(Optional.of(payment));
                 when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
                 when(providerRouter.route(PaymentGatewayKind.STRIPE)).thenReturn(providerClient);
                 when(providerClient.refund(any())).thenReturn(
                                 new PaymentProviderClient.Refund(true, "rf-1", null));
 
                 Payment result = service.refund(new RefundPaymentCommand(
-                                "p6", new BigDecimal("80"), "VND", "duplicate"));
+                                "p6", new BigDecimal("80"), "VND", "duplicate", "refund-key-1"));
 
                 assertThat(result.getStatus()).isEqualTo(PaymentStatus.REFUNDED);
                 verify(ledgerRepository).save(any());
                 verify(integrationEventPublisher).publishPaymentRefunded(eq("p6"), eq("o6"),
                                 eq("rf-1"), any(BigDecimal.class), eq("VND"), eq("duplicate"));
+                ArgumentCaptor<PaymentProviderClient.RefundRequest> requestCaptor =
+                                ArgumentCaptor.forClass(PaymentProviderClient.RefundRequest.class);
+                verify(providerClient).refund(requestCaptor.capture());
+                assertThat(requestCaptor.getValue().idempotencyKey()).isEqualTo("refund-key-1");
         }
 
         @Test
@@ -206,16 +220,95 @@ class PaymentServiceTest {
                                 Money.of(new BigDecimal("50"), "VND"), PaymentGatewayKind.STRIPE, "idem-7",
                                 fixedInstant);
                 payment.markPaid("txn-7", fixedInstant);
-                when(paymentRepository.findById("p7")).thenReturn(Optional.of(payment));
+                when(paymentRepository.lockById("p7")).thenReturn(Optional.of(payment));
                 when(providerRouter.route(PaymentGatewayKind.STRIPE)).thenReturn(providerClient);
                 when(providerClient.refund(any())).thenReturn(
                                 new PaymentProviderClient.Refund(false, null, "no-funds"));
 
                 assertThatThrownBy(() -> service.refund(new RefundPaymentCommand(
-                                "p7", new BigDecimal("10"), "VND", "x")))
+                                "p7", new BigDecimal("10"), "VND", "x", "refund-key-2")))
                                 .isInstanceOf(PaymentException.class)
                                 .extracting("errorCode")
                                 .isEqualTo(PaymentErrorCode.PAYMENT_GATEWAY_ERROR.getCode());
+        }
+
+        @Test
+        void refundRejectsExcessBeforeCallingProvider() {
+                Payment payment = Payment.initiate("p-limit", "o-limit", "u1", null,
+                                Money.of(new BigDecimal("50"), "VND"), PaymentGatewayKind.STRIPE, "idem-limit",
+                                fixedInstant);
+                payment.markPaid("txn-limit", fixedInstant);
+                when(paymentRepository.lockById("p-limit")).thenReturn(Optional.of(payment));
+
+                assertThatThrownBy(() -> service.refund(new RefundPaymentCommand(
+                                "p-limit", new BigDecimal("51"), "VND", "too much", "refund-limit")))
+                                .isInstanceOf(PaymentException.class)
+                                .extracting("errorCode")
+                                .isEqualTo(PaymentErrorCode.PAYMENT_AMOUNT_EXCEEDED.getCode());
+
+                verify(providerRouter, never()).route(any());
+                verify(refundOperationRepository, never()).save(any());
+        }
+
+        @Test
+        void refundIncludesPendingOperationsInCumulativeGuard() {
+                Payment payment = Payment.initiate("p-pending", "o-pending", "u1", null,
+                                Money.of(new BigDecimal("50"), "VND"), PaymentGatewayKind.STRIPE, "idem-pending",
+                                fixedInstant);
+                payment.markPaid("txn-pending", fixedInstant);
+                when(paymentRepository.lockById("p-pending")).thenReturn(Optional.of(payment));
+                when(refundOperationRepository.sumReservedAmount("p-pending")).thenReturn(new BigDecimal("40"));
+
+                assertThatThrownBy(() -> service.refund(new RefundPaymentCommand(
+                                "p-pending", new BigDecimal("20"), "VND", "second", "refund-second")))
+                                .isInstanceOf(PaymentException.class)
+                                .extracting("errorCode")
+                                .isEqualTo(PaymentErrorCode.PAYMENT_AMOUNT_EXCEEDED.getCode());
+
+                verify(providerRouter, never()).route(any());
+        }
+
+        @Test
+        void refundReplayReturnsCompletedPaymentWithoutCallingProvider() {
+                Payment payment = Payment.initiate("p-replay", "o-replay", "u1", null,
+                                Money.of(new BigDecimal("50"), "VND"), PaymentGatewayKind.STRIPE, "idem-replay",
+                                fixedInstant);
+                payment.markPaid("txn-replay", fixedInstant);
+                payment.refund("provider-refund", Money.of(new BigDecimal("50"), "VND"), "duplicate", fixedInstant);
+                RefundOperation completed = new RefundOperation("refund-replay", "p-replay",
+                                new BigDecimal("50"), "VND", "duplicate", RefundOperation.Status.SUCCEEDED,
+                                "provider-refund", null, fixedInstant, fixedInstant);
+                when(paymentRepository.lockById("p-replay")).thenReturn(Optional.of(payment));
+                when(refundOperationRepository.findByIdempotencyKey("refund-replay"))
+                                .thenReturn(Optional.of(completed));
+
+                Payment result = service.refund(new RefundPaymentCommand(
+                                "p-replay", new BigDecimal("50"), "VND", "duplicate", "refund-replay"));
+
+                assertThat(result.getStatus()).isEqualTo(PaymentStatus.REFUNDED);
+                verify(providerRouter, never()).route(any());
+        }
+
+        @Test
+        void refundRejectsReusedKeyWithDifferentPayload() {
+                Payment payment = Payment.initiate("p-conflict", "o-conflict", "u1", null,
+                                Money.of(new BigDecimal("50"), "VND"), PaymentGatewayKind.STRIPE, "idem-conflict",
+                                fixedInstant);
+                payment.markPaid("txn-conflict", fixedInstant);
+                RefundOperation pending = new RefundOperation("refund-conflict", "p-conflict",
+                                new BigDecimal("10"), "VND", "first", RefundOperation.Status.PENDING,
+                                null, null, fixedInstant, fixedInstant);
+                when(paymentRepository.lockById("p-conflict")).thenReturn(Optional.of(payment));
+                when(refundOperationRepository.findByIdempotencyKey("refund-conflict"))
+                                .thenReturn(Optional.of(pending));
+
+                assertThatThrownBy(() -> service.refund(new RefundPaymentCommand(
+                                "p-conflict", new BigDecimal("11"), "VND", "second", "refund-conflict")))
+                                .isInstanceOf(PaymentException.class)
+                                .extracting("errorCode")
+                                .isEqualTo(PaymentErrorCode.REFUND_IDEMPOTENCY_CONFLICT.getCode());
+
+                verify(providerRouter, never()).route(any());
         }
 
         @Test

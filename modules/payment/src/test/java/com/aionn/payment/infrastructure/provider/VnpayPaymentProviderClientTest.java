@@ -232,7 +232,8 @@ class VnpayPaymentProviderClientTest {
                 .thenReturn(java.util.Map.of("vnp_ResponseCode", "00", "vnp_Message", "Approve Success"));
 
         PaymentProviderClient.Refund refund = client.refund(
-                new PaymentProviderClient.RefundRequest("pay-1", "txn-001", BigDecimal.valueOf(100000), "VND", null));
+                new PaymentProviderClient.RefundRequest(
+                        "pay-1", "txn-001", BigDecimal.valueOf(100000), "VND", null, "key-1"));
 
         assertNotNull(refund);
         assertTrue(refund.accepted());
@@ -255,7 +256,8 @@ class VnpayPaymentProviderClientTest {
                 .thenReturn(java.util.Map.of("vnp_ResponseCode", "02", "vnp_Message", "Order already refunded"));
 
         PaymentProviderClient.Refund refund = client.refund(
-                new PaymentProviderClient.RefundRequest("pay-1", "txn-001", BigDecimal.valueOf(100000), "VND", "test"));
+                new PaymentProviderClient.RefundRequest(
+                        "pay-1", "txn-001", BigDecimal.valueOf(100000), "VND", "test", "key-1"));
 
         assertNotNull(refund);
         assertFalse(refund.accepted());
@@ -275,7 +277,8 @@ class VnpayPaymentProviderClientTest {
         when(objectMapper.writeValueAsString(org.mockito.ArgumentMatchers.any())).thenReturn("{}");
 
         PaymentProviderClient.Refund refund = client.refund(
-                new PaymentProviderClient.RefundRequest("pay-1", "txn-001", BigDecimal.valueOf(100000), "VND", null));
+                new PaymentProviderClient.RefundRequest(
+                        "pay-1", "txn-001", BigDecimal.valueOf(100000), "VND", null, "key-1"));
 
         assertNotNull(refund);
         assertFalse(refund.accepted());

@@ -5,6 +5,7 @@ import com.aionn.payment.domain.exception.PaymentErrorCode;
 import com.aionn.payment.domain.exception.PaymentException;
 import com.aionn.payment.domain.valueobject.PaymentGatewayKind;
 import com.aionn.payment.infrastructure.provider.config.VnpayProperties;
+import com.aionn.sharedkernel.util.Sha256Hasher;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -161,7 +162,7 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
 
         long vnpAmount = request.amount().multiply(BigDecimal.valueOf(100)).longValueExact();
         String createDate = clock.instant().atZone(VN_ZONE).format(VNP_DATE_FMT);
-        String requestId = "RF" + clock.millis();
+        String requestId = "RF" + Sha256Hasher.hexDigest(request.idempotencyKey()).substring(0, 24);
 
         Map<String, String> body = new HashMap<>();
         body.put("vnp_RequestId", requestId);

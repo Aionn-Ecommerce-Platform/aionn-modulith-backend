@@ -10,12 +10,15 @@ import com.aionn.payment.application.port.out.PaymentMethodPersistencePort;
 import com.aionn.payment.application.port.out.PaymentProviderClient;
 import com.aionn.payment.application.port.out.PaymentProviderRouter;
 import com.aionn.payment.application.port.out.PaymentPersistencePort;
+import com.aionn.payment.application.port.out.RefundOperationPersistencePort;
 import com.aionn.payment.application.port.out.TransactionLedgerPersistencePort;
 import com.aionn.payment.application.port.out.integration.PaymentIntegrationEventPublisherPort;
 import com.aionn.payment.domain.exception.PaymentErrorCode;
 import com.aionn.payment.domain.exception.PaymentException;
 import com.aionn.payment.domain.model.Payment;
 import com.aionn.payment.domain.model.PaymentMethod;
+import com.aionn.payment.domain.model.RefundOperation;
+import com.aionn.payment.domain.valueobject.PaymentStatus;
 import com.aionn.payment.domain.model.TransactionLedger;
 import com.aionn.payment.domain.valueobject.LedgerEntryType;
 import com.aionn.payment.domain.valueobject.PaymentMethodStatus;
@@ -30,6 +33,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -40,6 +44,7 @@ public class PaymentService {
     private final PaymentPersistencePort paymentRepository;
     private final PaymentMethodPersistencePort paymentMethodRepository;
     private final TransactionLedgerPersistencePort ledgerRepository;
+    private final RefundOperationPersistencePort refundOperationRepository;
     private final PaymentProviderRouter providerRouter;
     private final InvoiceStorage invoiceStorage;
     private final EventPublisher eventPublisher;
@@ -51,6 +56,7 @@ public class PaymentService {
     public PaymentService(PaymentPersistencePort paymentRepository,
             PaymentMethodPersistencePort paymentMethodRepository,
             TransactionLedgerPersistencePort ledgerRepository, PaymentProviderRouter providerRouter,
+            RefundOperationPersistencePort refundOperationRepository,
             InvoiceStorage invoiceStorage, EventPublisher eventPublisher,
             PaymentIntegrationEventPublisherPort integrationEventPublisher,
             com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort orderQueryPort, Clock clock,
@@ -58,6 +64,7 @@ public class PaymentService {
         this.paymentRepository = paymentRepository;
         this.paymentMethodRepository = paymentMethodRepository;
         this.ledgerRepository = ledgerRepository;
+        this.refundOperationRepository = refundOperationRepository;
         this.providerRouter = providerRouter;
         this.invoiceStorage = invoiceStorage;
         this.eventPublisher = eventPublisher;
@@ -207,14 +214,23 @@ public class PaymentService {
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Payment refund(RefundPaymentCommand command) {
-        Payment payment = inTransaction(() -> required(command.paymentId()));
         Money refund = Money.of(command.amount(), command.currency());
+        RefundPreparation preparation = inTransaction(() -> prepareRefund(command, refund));
+        if (preparation.completedPayment() != null) {
+            return preparation.completedPayment();
+        }
+        Payment payment = preparation.payment();
 
         PaymentProviderClient client = providerRouter.route(payment.getGateway());
         PaymentProviderClient.Refund providerRefund = client.refund(new PaymentProviderClient.RefundRequest(
                 payment.getPaymentId(), payment.getTransactionNo(), command.amount(), command.currency(),
-                command.reason()));
+                command.reason(), command.idempotencyKey()));
         if (!providerRefund.accepted()) {
+            inTransaction(() -> {
+                refundOperationRepository.save(preparation.operation().failed(
+                        providerRefund.declineReason(), clock.instant()));
+                return null;
+            });
             throw new PaymentException(PaymentErrorCode.PAYMENT_GATEWAY_ERROR,
                     "Refund declined: " + providerRefund.declineReason());
         }
@@ -222,7 +238,7 @@ public class PaymentService {
         String refundId = providerRefund.refundTransactionNo() != null
                 ? providerRefund.refundTransactionNo()
                 : "refund-" + IdGenerator.ulid();
-        Payment saved = inTransaction(() -> persistRefund(command, refund, refundId));
+        Payment saved = inTransaction(() -> persistRefund(command, refund, refundId, preparation.operation()));
 
         return saved;
     }
@@ -243,8 +259,60 @@ public class PaymentService {
         return inTransaction(() -> paymentRepository.findByOrderId(orderId));
     }
 
-    private Payment persistRefund(RefundPaymentCommand command, Money refund, String refundId) {
-        Payment payment = required(command.paymentId());
+    private RefundPreparation prepareRefund(RefundPaymentCommand command, Money refund) {
+        if (command.idempotencyKey() == null || command.idempotencyKey().isBlank()
+                || command.idempotencyKey().length() > 100) {
+            throw new PaymentException(PaymentErrorCode.INVALID_ARGUMENT, "A valid refund idempotency key is required");
+        }
+        Payment payment = paymentRepository.lockById(command.paymentId())
+                .orElseThrow(() -> new PaymentException(PaymentErrorCode.PAYMENT_NOT_FOUND));
+        RefundOperation existing = refundOperationRepository.findByIdempotencyKey(command.idempotencyKey())
+                .orElse(null);
+        if (existing != null) {
+            ensureSameRefund(existing, command);
+            if (existing.status() == RefundOperation.Status.SUCCEEDED) {
+                return new RefundPreparation(payment, existing, payment);
+            }
+            if (existing.status() == RefundOperation.Status.FAILED) {
+                throw new PaymentException(PaymentErrorCode.REFUND_FAILED, existing.failureReason());
+            }
+            return new RefundPreparation(payment, existing, null);
+        }
+        if (payment.getStatus() != PaymentStatus.PAID) {
+            throw new PaymentException(PaymentErrorCode.PAYMENT_NOT_PAID);
+        }
+        if (!payment.getAmount().currency().equalsIgnoreCase(refund.currency())) {
+            throw new PaymentException(PaymentErrorCode.INVALID_ARGUMENT,
+                    "Refund currency does not match the payment");
+        }
+        BigDecimal remaining = payment.getAmount().amount()
+                .subtract(payment.getRefundedAmount().amount())
+                .subtract(refundOperationRepository.sumReservedAmount(payment.getPaymentId()));
+        if (refund.amount().compareTo(remaining) > 0) {
+            throw new PaymentException(PaymentErrorCode.PAYMENT_AMOUNT_EXCEEDED,
+                    "Requested " + refund.amount() + " but only " + remaining + " remains");
+        }
+        Instant now = clock.instant();
+        RefundOperation operation = new RefundOperation(command.idempotencyKey(), command.paymentId(),
+                refund.amount(), refund.currency(), command.reason(), RefundOperation.Status.PENDING,
+                null, null, now, now);
+        return new RefundPreparation(payment, refundOperationRepository.save(operation), null);
+    }
+
+    private void ensureSameRefund(RefundOperation existing, RefundPaymentCommand command) {
+        boolean same = existing.paymentId().equals(command.paymentId())
+                && existing.amount().compareTo(command.amount()) == 0
+                && existing.currency().equalsIgnoreCase(command.currency())
+                && existing.reason().equals(command.reason());
+        if (!same) {
+            throw new PaymentException(PaymentErrorCode.REFUND_IDEMPOTENCY_CONFLICT);
+        }
+    }
+
+    private Payment persistRefund(RefundPaymentCommand command, Money refund, String refundId,
+            RefundOperation operation) {
+        Payment payment = paymentRepository.lockById(command.paymentId())
+                .orElseThrow(() -> new PaymentException(PaymentErrorCode.PAYMENT_NOT_FOUND));
         Instant now = clock.instant();
         payment.refund(refundId, refund, command.reason(), now);
         Payment saved = paymentRepository.save(payment);
@@ -257,7 +325,11 @@ public class PaymentService {
         eventPublisher.publish(entry.pullEvents());
         integrationEventPublisher.publishPaymentRefunded(saved.getPaymentId(), saved.getOrderId(),
                 refundId, command.amount(), command.currency(), command.reason());
+        refundOperationRepository.save(operation.succeeded(refundId, now));
         return saved;
+    }
+
+    private record RefundPreparation(Payment payment, RefundOperation operation, Payment completedPayment) {
     }
 
     private <T> T inTransaction(Supplier<T> work) {

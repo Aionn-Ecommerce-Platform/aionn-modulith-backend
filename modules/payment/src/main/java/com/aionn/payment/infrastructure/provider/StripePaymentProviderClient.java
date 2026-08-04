@@ -138,7 +138,10 @@ public class StripePaymentProviderClient implements PaymentProviderClient {
                     .putMetadata("paymentId", request.paymentId())
                     .putMetadata("reason", request.reason() == null ? "" : request.reason())
                     .build();
-            com.stripe.model.Refund stripeRefund = com.stripe.model.Refund.create(params);
+            RequestOptions options = RequestOptions.builder()
+                    .setIdempotencyKey(request.idempotencyKey())
+                    .build();
+            com.stripe.model.Refund stripeRefund = com.stripe.model.Refund.create(params, options);
             log.info("Stripe refund: paymentId={} stripeRefund={} status={}",
                     request.paymentId(), stripeRefund.getId(), stripeRefund.getStatus());
             boolean accepted = "succeeded".equals(stripeRefund.getStatus())

@@ -38,6 +38,23 @@ CREATE INDEX idx_payments_order      ON payments(order_id);
 CREATE INDEX idx_payments_status     ON payments(status);
 CREATE UNIQUE INDEX idx_payments_idem ON payments(idempotency_key);
 
+CREATE TABLE payment_refund_operations (
+    idempotency_key   VARCHAR(100) PRIMARY KEY,
+    payment_id        VARCHAR(50)   NOT NULL,
+    amount            NUMERIC(18,2) NOT NULL,
+    currency          VARCHAR(3)    NOT NULL,
+    reason            VARCHAR(500)  NOT NULL,
+    status            VARCHAR(20)   NOT NULL,
+    provider_refund_id VARCHAR(100),
+    failure_reason    VARCHAR(500),
+    created_at        TIMESTAMPTZ   NOT NULL,
+    updated_at        TIMESTAMPTZ   NOT NULL,
+    CONSTRAINT chk_refund_operations_amount CHECK (amount > 0),
+    CONSTRAINT chk_refund_operations_status CHECK (status IN ('PENDING','SUCCEEDED','FAILED'))
+);
+CREATE INDEX idx_refund_operations_payment_status
+    ON payment_refund_operations(payment_id, status);
+
 CREATE TABLE transaction_ledgers (
     ledger_id              VARCHAR(50) PRIMARY KEY,
     payment_id             VARCHAR(50) NOT NULL,

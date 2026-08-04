@@ -12,6 +12,8 @@ public enum PaymentErrorCode {
     PAYMENT_GATEWAY_ERROR("PAY_004", "Payment gateway error"),
     PAYMENT_NOT_PAID("PAY_005", "Payment must be PAID before this action"),
     PAYMENT_AMOUNT_EXCEEDED("PAY_006", "Refund amount exceeds remaining payable"),
+    REFUND_IDEMPOTENCY_CONFLICT("PAY_007", "Refund idempotency key was reused with different data"),
+    REFUND_FAILED("PAY_008", "Refund operation has already failed"),
 
     METHOD_NOT_FOUND("PAY_101", "Payment method not found"),
     METHOD_FORBIDDEN("PAY_102", "Payment method does not belong to this user"),

@@ -34,6 +34,6 @@ public class PaymentInitiateAdapter implements PaymentInitiatePort {
 
     @Override
     public void refund(String paymentId, BigDecimal amount, String currency, String reason, String idempotencyKey) {
-        paymentService.refund(new RefundPaymentCommand(paymentId, amount, currency, reason));
+        paymentService.refund(new RefundPaymentCommand(paymentId, amount, currency, reason, idempotencyKey));
     }
 }
