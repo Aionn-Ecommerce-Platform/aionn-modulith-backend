@@ -13,7 +13,6 @@ import com.aionn.identity.application.port.out.security.UserSecurityPort;
 import com.aionn.identity.domain.exception.IdentityException;
 import com.aionn.identity.domain.valueobject.SecurityAuditEventType;
 import com.aionn.identity.domain.valueobject.UserStatus;
-import com.aionn.sharedkernel.integration.port.notification.IdentityNotificationPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,7 +46,6 @@ class PasswordResetServiceTest {
     @Mock private PasswordHasherPort passwordHasher;
     @Mock private AuthSessionPersistencePort authSessionPersistencePort;
     @Mock private RefreshTokenStorePort refreshTokenStore;
-    @Mock private IdentityNotificationPort notificationPort;
     @Mock private IdentityIntegrationEventPublisherPort integrationEventPublisher;
     @Mock private IdentityMetricsPort identityMetrics;
     @Mock private AuthPolicy authPolicy;
@@ -63,7 +61,7 @@ class PasswordResetServiceTest {
                 .thenReturn(true);
         service = new PasswordResetService(
                 userSecurityPort, passwordResetPort, securityAuditPort, passwordHasher,
-                authSessionPersistencePort, refreshTokenStore, notificationPort,
+                authSessionPersistencePort, refreshTokenStore,
                 integrationEventPublisher, identityMetrics, authPolicy, abuseRateLimiter,
                 Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
     }
@@ -122,7 +120,7 @@ class PasswordResetServiceTest {
         service.requestPasswordReset("ghost@example.com", IP);
 
         verify(passwordResetPort, never()).savePasswordResetTokenHash(any(), any(), any());
-        verify(notificationPort, never()).sendPasswordResetRequested(any(), any());
+        verify(integrationEventPublisher, never()).publishPasswordResetRequested(any(), any());
     }
 
     @Test
@@ -135,7 +133,7 @@ class PasswordResetServiceTest {
 
         verify(passwordResetPort).savePasswordResetTokenHash(anyString(), eq(USER_ID),
                 any(Instant.class));
-        verify(notificationPort).sendPasswordResetRequested(eq(USER_ID), anyString());
+        verify(integrationEventPublisher).publishPasswordResetRequested(eq(USER_ID), anyString());
         verify(securityAuditPort).saveAuditLog(USER_ID,
                 SecurityAuditEventType.PASSWORD_RESET_REQUESTED, IP);
     }

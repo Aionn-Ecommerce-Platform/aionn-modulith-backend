@@ -6,7 +6,6 @@ import com.aionn.identity.application.port.out.auth.AuthSessionPersistencePort;
 import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
 import com.aionn.identity.application.port.out.integration.IdentityIntegrationEventPublisherPort;
 import com.aionn.identity.application.port.out.observability.IdentityMetricsPort;
-import com.aionn.sharedkernel.integration.port.notification.IdentityNotificationPort;
 import com.aionn.identity.application.port.out.security.PasswordHasherPort;
 import com.aionn.identity.application.port.out.security.PasswordResetPort;
 import com.aionn.identity.application.port.out.security.AbuseRateLimiterPort;
@@ -45,7 +44,6 @@ public class PasswordResetService {
     private final PasswordHasherPort passwordHasher;
     private final AuthSessionPersistencePort authSessionPersistencePort;
     private final RefreshTokenStorePort refreshTokenStore;
-    private final IdentityNotificationPort notificationPort;
     private final IdentityIntegrationEventPublisherPort integrationEventPublisher;
     private final IdentityMetricsPort identityMetrics;
     private final AuthPolicy authPolicy;
@@ -93,11 +91,7 @@ public class PasswordResetService {
                 nowUtc().plus(Duration.ofMinutes(authPolicy.getPasswordResetTokenTtlMinutes())));
         securityAuditPort.saveAuditLog(user.get().userId(), SecurityAuditEventType.PASSWORD_RESET_REQUESTED, ipAddress);
         identityMetrics.passwordResetLifecycle("requested");
-        try {
-            notificationPort.sendPasswordResetRequested(user.get().userId(), token);
-        } catch (RuntimeException ex) {
-            log.error("Failed to dispatch password reset token for user {}", user.get().userId(), ex);
-        }
+        integrationEventPublisher.publishPasswordResetRequested(user.get().userId(), token);
     }
 
     private void enforcePasswordResetRateLimit(String identity, String ipAddress) {
