@@ -7,6 +7,7 @@ import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.Instant;
 
 public interface InventoryItemPersistencePort {
 
@@ -15,6 +16,8 @@ public interface InventoryItemPersistencePort {
     Optional<InventoryItem> findByKey(InventoryItemKey key);
 
     Optional<InventoryItem> lockByKey(InventoryItemKey key);
+
+    InventoryItem createIfAbsentAndLock(InventoryItemKey key, Instant now);
 
     List<InventoryItem> findBySkuAcrossWarehouses(String skuId, List<String> warehouseIds);
 

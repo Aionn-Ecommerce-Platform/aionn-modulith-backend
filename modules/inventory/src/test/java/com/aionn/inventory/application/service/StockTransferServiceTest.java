@@ -124,6 +124,27 @@ class StockTransferServiceTest {
     }
 
     @Test
+    void completeAtomicallyCreatesAndLocksMissingDestinationItem() {
+        StockTransfer transfer = StockTransfer.initiate(
+                "T_1", "M_1", "WH_FROM", "WH_TO", "SKU_1", 5, clock);
+        transfer.pullEvents();
+        InventoryItemKey destinationKey = new InventoryItemKey("SKU_1", "WH_TO");
+        InventoryItem destination = InventoryItem.initialize(destinationKey, 0, clock);
+        destination.pullEvents();
+        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
+        when(transferRepository.findById("T_1")).thenReturn(Optional.of(transfer));
+        when(itemRepository.createIfAbsentAndLock(destinationKey, FIXED_NOW)).thenReturn(destination);
+        when(itemRepository.save(destination)).thenReturn(destination);
+        when(transferRepository.save(transfer)).thenReturn(transfer);
+
+        StockTransfer completed = service.complete(new CompleteTransferCommand("owner-1", "T_1", 5));
+
+        assertThat(completed.getStatus().name()).isEqualTo("COMPLETED");
+        assertThat(destination.getPhysicalQty()).isEqualTo(5);
+        verify(itemRepository).createIfAbsentAndLock(destinationKey, FIXED_NOW);
+    }
+
+    @Test
     void cancelRefundsSourceStock() {
         StockTransfer transfer = StockTransfer.initiate(
                 "T_1", "M_1", "WH_FROM", "WH_TO", "SKU_1", 5);

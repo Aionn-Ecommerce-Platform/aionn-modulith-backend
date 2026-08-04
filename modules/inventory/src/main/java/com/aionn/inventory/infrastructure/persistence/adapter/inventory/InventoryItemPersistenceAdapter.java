@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.Instant;
 
 @Repository
 @RequiredArgsConstructor
@@ -39,6 +40,14 @@ public class InventoryItemPersistenceAdapter implements InventoryItemPersistence
     @Override
     public Optional<InventoryItem> lockByKey(InventoryItemKey key) {
         return jpa.findForUpdate(key.skuId(), key.warehouseId()).map(mapper::toDomain);
+    }
+
+    @Override
+    public InventoryItem createIfAbsentAndLock(InventoryItemKey key, Instant now) {
+        jpa.insertIfAbsent(key.skuId(), key.warehouseId(), now);
+        return jpa.findForUpdate(key.skuId(), key.warehouseId())
+                .map(mapper::toDomain)
+                .orElseThrow(() -> new IllegalStateException("Inventory insert completed without a readable row"));
     }
 
     @Override

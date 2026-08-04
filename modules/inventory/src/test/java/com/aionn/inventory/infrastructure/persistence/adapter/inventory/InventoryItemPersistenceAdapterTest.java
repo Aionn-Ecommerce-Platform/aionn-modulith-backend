@@ -17,6 +17,7 @@ import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -105,6 +106,19 @@ class InventoryItemPersistenceAdapterTest {
         when(jpa.findForUpdate(SKU_ID, WAREHOUSE_ID)).thenReturn(Optional.empty());
 
         assertThat(adapter.lockByKey(KEY)).isEmpty();
+    }
+
+    @Test
+    void createIfAbsentThenLocksTheWinningItem() {
+        Instant now = Instant.parse("2026-08-05T00:00:00Z");
+        InventoryItemEntity entity = new InventoryItemEntity();
+        InventoryItem domain = InventoryItem.initialize(KEY, 0);
+        when(jpa.findForUpdate(SKU_ID, WAREHOUSE_ID)).thenReturn(Optional.of(entity));
+        when(mapper.toDomain(entity)).thenReturn(domain);
+
+        assertThat(adapter.createIfAbsentAndLock(KEY, now)).isSameAs(domain);
+        verify(jpa).insertIfAbsent(SKU_ID, WAREHOUSE_ID, now);
+        verify(jpa).findForUpdate(SKU_ID, WAREHOUSE_ID);
     }
 
     @Test
