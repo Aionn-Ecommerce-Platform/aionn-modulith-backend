@@ -55,11 +55,10 @@ public class WarehouseController {
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Create warehouse")
     public ResponseEntity<ApiResponse<WarehouseResponse>> create(
-            org.springframework.security.core.Authentication authentication,
             @CurrentMerchantId String merchantId,
             @Valid @RequestBody CreateWarehouseRequest request) {
         WarehouseResult result = createWarehouseInputPort.execute(
-                dtoMapper.toCreateWarehouseCommand(authentication.getName(), request));
+                dtoMapper.toCreateWarehouseCommand(merchantId, request));
         return ApiResponse.createdResponse("Warehouse created", dtoMapper.toResponse(result));
     }
 

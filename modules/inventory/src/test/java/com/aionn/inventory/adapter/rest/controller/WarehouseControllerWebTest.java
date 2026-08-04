@@ -33,6 +33,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -93,7 +94,7 @@ class WarehouseControllerWebTest {
                 .andExpect(jsonPath("$.data.warehouseId").value("WH_1"))
                 .andExpect(jsonPath("$.data.status").value("ACTIVE"));
 
-        verify(createWarehouseInputPort).execute(any(CreateWarehouseCommand.class));
+        verify(createWarehouseInputPort).execute(argThat(command -> "M_1".equals(command.merchantId())));
     }
 
     @Test

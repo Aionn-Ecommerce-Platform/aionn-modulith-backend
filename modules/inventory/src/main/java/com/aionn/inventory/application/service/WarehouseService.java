@@ -32,7 +32,7 @@ public class WarehouseService {
 
     public Warehouse create(CreateWarehouseCommand command) {
         Warehouse warehouse = Warehouse.create(IdGenerator.ulid(),
-                command.ownerId(), command.address(), command.priorityLevel(), clock);
+                command.merchantId(), command.address(), command.priorityLevel(), clock);
         Warehouse saved = warehouseRepository.save(warehouse);
         eventPublisher.publish(warehouse.pullEvents());
         return saved;

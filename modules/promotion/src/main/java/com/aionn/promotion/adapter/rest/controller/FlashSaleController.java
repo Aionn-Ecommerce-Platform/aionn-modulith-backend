@@ -23,6 +23,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -124,13 +125,17 @@ public class FlashSaleController {
         }
 
         @GetMapping("/registrations/{registrationId}")
-        @PreAuthorize("isAuthenticated()")
+        @PreAuthorize("hasAnyAuthority('ROLE_MERCHANT','ROLE_SYSTEM_ADMIN')")
         @Operation(summary = "Get flash-sale registration by id")
         public ResponseEntity<ApiResponse<FlashSaleRegistrationResponse>> get(
                         @CurrentUserId String ownerId,
+                        Authentication authentication,
                         @PathVariable String registrationId) {
+                boolean systemAdmin = authentication.getAuthorities().stream()
+                                .anyMatch(authority -> "ROLE_SYSTEM_ADMIN".equals(authority.getAuthority()));
                 return ResponseEntity.ok(ApiResponse.success(
-                                dtoMapper.toResponse(getFlashSaleRegistrationInputPort.execute(registrationId, ownerId)),
+                                dtoMapper.toResponse(getFlashSaleRegistrationInputPort.execute(
+                                                registrationId, ownerId, systemAdmin)),
                                 "Flash-sale registration fetched"));
         }
 

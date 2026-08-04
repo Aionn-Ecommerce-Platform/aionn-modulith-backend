@@ -17,7 +17,9 @@ public class GetFlashSaleRegistrationUseCase implements GetFlashSaleRegistration
 
     @Override
     @Transactional(readOnly = true)
-    public FlashSaleRegistrationResult execute(String registrationId, String ownerId) {
-        return flashSaleResultMapper.toResult(flashSaleService.getOwned(registrationId, ownerId));
+    public FlashSaleRegistrationResult execute(String registrationId, String ownerId, boolean systemAdmin) {
+        return flashSaleResultMapper.toResult(systemAdmin
+                ? flashSaleService.get(registrationId)
+                : flashSaleService.getOwned(registrationId, ownerId));
     }
 }

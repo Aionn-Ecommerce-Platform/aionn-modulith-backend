@@ -24,6 +24,9 @@ import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.support.TransactionCallback;
@@ -32,6 +35,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -334,6 +338,33 @@ class OrderServiceTest {
 
         verify(stockReservationGateway, never()).reserveAll(anyString(), any(), eq(86400));
         verify(orderRepository, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidShippingQuotes")
+    void placementRejectsInvalidShippingQuoteBeforeSideEffects(ShippingGateway.ShippingQuote quote) {
+        var command = new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand(
+                USER_ID,
+                List.of(new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand.Line("sku-1", 1)),
+                null, "COD", "VND", address());
+        var skuPricing = new CatalogPricingGateway.SkuPricing(
+                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true);
+        when(catalogPricingGateway.resolve(List.of("sku-1"))).thenReturn(java.util.Map.of("sku-1", skuPricing));
+        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND")))
+                .thenReturn(quote);
+
+        assertThrows(OrderingException.class, () -> orderService.placeOrderHeadless(command));
+
+        verify(stockReservationGateway, never()).reserveAll(anyString(), any(), eq(86400));
+        verify(orderRepository, never()).save(any());
+    }
+
+    private static Stream<Arguments> invalidShippingQuotes() {
+        return Stream.of(
+                Arguments.of((Object) null),
+                Arguments.of(new ShippingGateway.ShippingQuote(null, "VND")),
+                Arguments.of(new ShippingGateway.ShippingQuote(BigDecimal.valueOf(-1), "VND")),
+                Arguments.of(new ShippingGateway.ShippingQuote(BigDecimal.ONE, "USD")));
     }
 
     @Test
