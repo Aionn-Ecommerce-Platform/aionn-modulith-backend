@@ -2,6 +2,8 @@ package com.aionn.catalog.infrastructure.persistence.adapter.review;
 
 import com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort;
 import com.aionn.catalog.domain.model.ProductReview;
+import com.aionn.catalog.domain.exception.CatalogErrorCode;
+import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.catalog.domain.valueobject.ReviewStatus;
 import com.aionn.catalog.infrastructure.persistence.entity.ProductReviewEntity;
 import com.aionn.catalog.infrastructure.persistence.mapper.ReviewDomainMapper;
@@ -12,6 +14,7 @@ import org.springframework.data.core.TypedPropertyPath;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -27,7 +30,11 @@ public class ProductReviewPersistenceAdapter implements ProductReviewPersistence
 
     @Override
     public ProductReview save(ProductReview review) {
-        return mapper.toDomain(jpa.save(mapper.toEntity(review)));
+        try {
+            return mapper.toDomain(jpa.save(mapper.toEntity(review)));
+        } catch (DataIntegrityViolationException ex) {
+            throw new CatalogException(CatalogErrorCode.REVIEW_ALREADY_EXISTS);
+        }
     }
 
     @Override

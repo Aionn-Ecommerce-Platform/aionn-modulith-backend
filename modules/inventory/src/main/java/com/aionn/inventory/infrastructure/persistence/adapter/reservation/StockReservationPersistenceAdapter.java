@@ -33,6 +33,11 @@ public class StockReservationPersistenceAdapter implements StockReservationPersi
     }
 
     @Override
+    public Optional<StockReservation> lockForUpdate(String reservationId) {
+        return jpa.lockForUpdate(reservationId).map(mapper::toDomain);
+    }
+
+    @Override
     public List<StockReservation> findExpired(Instant now, int limit) {
         return jpa.findExpired(now, PageRequest.of(0, Math.max(1, limit))).stream()
                 .map(mapper::toDomain)

@@ -73,7 +73,7 @@ public record Money(BigDecimal amount, String currency) {
         return new Money(this.amount.divide(divisor, scale, ROUNDING), this.currency);
     }
 
-    public Money applyPercent(BigDecimal percent) {
+    public Money minusPercent(BigDecimal percent) {
         Objects.requireNonNull(percent, "percent must not be null");
         BigDecimal multiplier = BigDecimal.ONE.subtract(percent.movePointLeft(2));
         if (multiplier.signum() < 0) {

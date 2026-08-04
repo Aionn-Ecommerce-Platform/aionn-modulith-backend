@@ -5,6 +5,5 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 
 @ConfigurationProperties(prefix = "notification.defaults")
 public record NotificationDefaultsProperties(
-        @DefaultValue("vi-VN") String locale,
-        @DefaultValue("3") int maxRetryAttempts) {
+        @DefaultValue("vi-VN") String locale) {
 }

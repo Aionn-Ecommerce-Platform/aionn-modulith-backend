@@ -99,8 +99,7 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
 
         log.info("VNPay authorize: txnRef={} amount={} payUrl={}",
                 txnRef, vnpAmount, properties.payUrl());
-        log.debug("VNPay sign data: {}", hashData);
-        log.debug("VNPay signature: {}", secureHash);
+        log.debug("VNPay payment URL signed for transaction {}", request.paymentId());
 
         return new Authorization(false, txnRef, paymentUrl, null, null);
     }
@@ -124,7 +123,7 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
         String computedHash = hmacSHA512(properties.hashSecret(), hashData);
 
         if (!computedHash.equalsIgnoreCase(receivedHash)) {
-            log.warn("VNPay signature mismatch: expected={} received={}", computedHash, receivedHash);
+            log.warn("VNPay signature mismatch for transaction {}", sortedParams.get(VNP_TXN_REF));
             return errorEvent("SIGNATURE_INVALID", "HMAC-SHA512 signature mismatch");
         }
 

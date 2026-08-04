@@ -73,6 +73,17 @@ class NotificationDeliveryOrchestratorTest {
     }
 
     @Test
+    void constructorRejectsDuplicateChannelSenders() {
+        ChannelSender duplicate = org.mockito.Mockito.mock(ChannelSender.class);
+        when(emailSender.channel()).thenReturn(NotificationChannel.EMAIL);
+        when(duplicate.channel()).thenReturn(NotificationChannel.EMAIL);
+
+        assertThatThrownBy(() -> orchestrator(emailSender, duplicate))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("EMAIL");
+    }
+
+    @Test
     void sendByEventRecordsSentWhenDeliverySucceeds() {
         when(dispatchService.prepareByEvent(any())).thenReturn(List.of(pending("noti-1", NotificationChannel.EMAIL)));
         when(recipientResolver.resolve("user-1", NotificationChannel.EMAIL)).thenReturn("a@b.c");
@@ -138,7 +149,7 @@ class NotificationDeliveryOrchestratorTest {
                 .thenThrow(new IllegalStateException("no email on file"));
         when(dispatchService.recordFailed(any())).thenReturn(pending("noti-1", NotificationChannel.EMAIL));
 
-        orchestrator(emailSender).sendByEvent(byEvent());
+        orchestrator().sendByEvent(byEvent());
 
         verify(emailSender, never()).send(any());
         verify(dispatchService).recordFailed(new NotificationCommands.RecordFailed(
@@ -224,6 +235,6 @@ class NotificationDeliveryOrchestratorTest {
     void retryPendingReturnsZeroWhenNothingToRetry() {
         when(dispatchService.findRetryable(10)).thenReturn(List.of());
 
-        assertThat(orchestrator(emailSender).retryPending(10)).isZero();
+        assertThat(orchestrator().retryPending(10)).isZero();
     }
 }
