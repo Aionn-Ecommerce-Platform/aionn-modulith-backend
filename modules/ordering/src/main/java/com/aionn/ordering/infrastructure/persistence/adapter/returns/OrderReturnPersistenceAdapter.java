@@ -60,6 +60,12 @@ public class OrderReturnPersistenceAdapter implements OrderReturnPersistencePort
     }
 
     @Override
+    public List<String> findRefundRetryIds(java.time.Instant now, int maxAttempts, int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 200));
+        return jpa.findRefundRetryIds(now, maxAttempts, PageRequest.of(0, safeLimit));
+    }
+
+    @Override
     public List<ReturnAnalyticsRow> findReturnAnalyticsRows(java.time.Instant from, java.time.Instant to) {
         return jpa.findReturnAnalyticsRows(from, to).stream()
                 .map(row -> new ReturnAnalyticsRow(

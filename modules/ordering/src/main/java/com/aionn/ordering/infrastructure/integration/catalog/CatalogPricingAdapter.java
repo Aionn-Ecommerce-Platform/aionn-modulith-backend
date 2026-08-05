@@ -27,7 +27,7 @@ public class CatalogPricingAdapter implements CatalogPricingGateway {
                     .selectWarehouseForSku(p.merchantId(), p.skuId())
                     .orElse(null);
             result.put(entry.getKey(), new SkuPricing(
-                    p.skuId(), p.merchantId(), warehouseId, p.price(), p.currency(), p.active()));
+                    p.skuId(), p.merchantId(), warehouseId, p.price(), p.currency(), p.active(), p.categoryIds()));
         }
         return result;
     }

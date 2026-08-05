@@ -2,6 +2,9 @@ package com.aionn.ordering.adapter.rest.controller;
 
 import com.aionn.ordering.adapter.rest.dto.request.*;
 import com.aionn.ordering.adapter.rest.dto.response.OrderResponse;
+import com.aionn.ordering.adapter.rest.dto.response.MerchantOrderAnalyticsResponse;
+import com.aionn.ordering.adapter.rest.dto.response.PlatformOrderAnalyticsResponse;
+import com.aionn.ordering.adapter.rest.dto.response.TopProductResponse;
 import com.aionn.ordering.adapter.rest.mapper.OrderingDtoMapper;
 import com.aionn.ordering.adapter.rest.support.session.CurrentMerchantId;
 import com.aionn.ordering.adapter.rest.support.session.CurrentUserId;
@@ -10,6 +13,7 @@ import com.aionn.ordering.application.dto.order.result.PlatformOrderAnalyticsRes
 import com.aionn.ordering.application.dto.order.result.TopProductResult;
 import com.aionn.ordering.application.port.in.order.*;
 import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.sharedkernel.adapter.web.support.idempotency.IdempotentRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -25,6 +29,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -52,13 +57,16 @@ public class OrderController {
         private final OrderingDtoMapper dtoMapper;
 
         @PostMapping
+        @IdempotentRequest(ttlSeconds = 300)
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Place order")
         public ResponseEntity<ApiResponse<OrderResponse>> place(
                         @CurrentUserId String userId,
+                        @RequestHeader("Idempotency-Key") String idempotencyKey,
                         @Valid @RequestBody PlaceOrderRequest request) {
                 OrderResponse response = dtoMapper.toResponse(
-                                placeOrderInputPort.execute(dtoMapper.toPlaceOrderCommand(userId, request)));
+                                placeOrderInputPort.execute(
+                                                dtoMapper.toPlaceOrderCommand(userId, idempotencyKey, request)));
                 return ApiResponse.createdResponse("Order placed", response);
         }
 
@@ -150,34 +158,34 @@ public class OrderController {
         @GetMapping("/merchant/analytics")
         @PreAuthorize("hasAuthority('ROLE_MERCHANT')")
         @Operation(summary = "Get merchant order analytics")
-        public ResponseEntity<ApiResponse<MerchantOrderAnalyticsResult>> merchantAnalytics(
+        public ResponseEntity<ApiResponse<MerchantOrderAnalyticsResponse>> merchantAnalytics(
                         @CurrentMerchantId String ownerId,
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
                 MerchantOrderAnalyticsResult result = getMerchantOrderAnalyticsInputPort.execute(ownerId, from, to);
-                return ResponseEntity.ok(ApiResponse.success(result, "Merchant analytics fetched"));
+                return ResponseEntity.ok(ApiResponse.success(dtoMapper.toResponse(result), "Merchant analytics fetched"));
         }
 
         @GetMapping("/merchant/top-products")
         @PreAuthorize("hasAuthority('ROLE_MERCHANT')")
         @Operation(summary = "Top products by revenue for merchant")
-        public ResponseEntity<ApiResponse<List<TopProductResult>>> merchantTopProducts(
+        public ResponseEntity<ApiResponse<List<TopProductResponse>>> merchantTopProducts(
                         @CurrentMerchantId String ownerId,
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
                         @RequestParam(defaultValue = "5") @Min(1) @Max(100) int limit) {
                 List<TopProductResult> result = getTopProductsInputPort.execute(ownerId, from, to, limit);
-                return ResponseEntity.ok(ApiResponse.success(result, "Top products fetched"));
+                return ResponseEntity.ok(ApiResponse.success(dtoMapper.toTopProductResponses(result), "Top products fetched"));
         }
 
         @GetMapping("/admin/analytics")
         @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
         @Operation(summary = "Platform-wide order analytics (sysadmin)")
-        public ResponseEntity<ApiResponse<PlatformOrderAnalyticsResult>> platformAnalytics(
+        public ResponseEntity<ApiResponse<PlatformOrderAnalyticsResponse>> platformAnalytics(
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
                 PlatformOrderAnalyticsResult result = getPlatformOrderAnalyticsInputPort.execute(from, to);
-                return ResponseEntity.ok(ApiResponse.success(result, "Platform analytics fetched"));
+                return ResponseEntity.ok(ApiResponse.success(dtoMapper.toResponse(result), "Platform analytics fetched"));
         }
 
         @GetMapping("/{orderId}")

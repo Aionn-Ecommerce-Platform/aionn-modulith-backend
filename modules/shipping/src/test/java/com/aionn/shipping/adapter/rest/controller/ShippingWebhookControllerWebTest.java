@@ -66,7 +66,7 @@ class ShippingWebhookControllerWebTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validPayload()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.shipmentId").value("S_1"));
+                .andExpect(jsonPath("$.data").doesNotExist());
 
         verify(applyCarrierWebhookInputPort).execute(any(CarrierWebhookCommand.class));
     }

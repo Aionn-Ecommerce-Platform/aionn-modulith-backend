@@ -30,8 +30,11 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -205,7 +208,9 @@ class OrderReturnServiceTest {
         var result = service.approve(cmd);
 
         assertEquals(ReturnStatus.APPROVED, result.getStatus());
-        verify(returnRepository).save(r);
+        assertEquals(com.aionn.ordering.domain.valueobject.ReturnRefundStatus.REFUNDED,
+                result.getRefundStatus());
+        verify(returnRepository, times(2)).save(r);
     }
 
     @Test
@@ -368,7 +373,64 @@ class OrderReturnServiceTest {
 
         service.adminApprove(RETURN_ID, java.math.BigDecimal.valueOf(100), "VND", "wh-1");
 
-        verify(paymentGateway).refund("payment-123", java.math.BigDecimal.valueOf(100), "VND", "return approved (admin)");
+        verify(paymentGateway).refund("payment-123", java.math.BigDecimal.valueOf(100), "VND",
+                "return approved (admin)", "return:return-1:refund");
+    }
+
+    @Test
+    void repeatedApprovalDoesNotRepeatCompletedRefund() {
+        OrderReturn orderReturn = requestedReturn();
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(orderReturn));
+        when(returnRepository.save(orderReturn)).thenReturn(orderReturn);
+        Order order = completedOrder();
+        try {
+            java.lang.reflect.Field field = Order.class.getDeclaredField("paymentId");
+            field.setAccessible(true);
+            field.set(order, "payment-123");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+
+        service.adminApprove(RETURN_ID, java.math.BigDecimal.valueOf(100), "VND", "wh-1");
+        service.adminApprove(RETURN_ID, java.math.BigDecimal.valueOf(100), "VND", "wh-1");
+
+        verify(paymentGateway).refund(
+                "payment-123", java.math.BigDecimal.valueOf(100), "VND",
+                "return approved (admin)", "return:return-1:refund");
+        verify(returnRepository, times(2)).save(orderReturn);
+    }
+
+    @Test
+    void failedRefundIsPersistedAndRetriedWithTheSameBusinessKey() {
+        OrderReturn orderReturn = requestedReturn();
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(orderReturn));
+        when(returnRepository.save(orderReturn)).thenReturn(orderReturn);
+        Order order = completedOrder();
+        try {
+            java.lang.reflect.Field field = Order.class.getDeclaredField("paymentId");
+            field.setAccessible(true);
+            field.set(order, "payment-123");
+        } catch (Exception exception) {
+            throw new RuntimeException(exception);
+        }
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        doThrow(new IllegalStateException("provider timeout")).doNothing()
+                .when(paymentGateway).refund(any(), any(), any(), any(), any());
+
+        var failed = service.adminApprove(RETURN_ID, java.math.BigDecimal.valueOf(100), "VND", "wh-1");
+        assertEquals(com.aionn.ordering.domain.valueobject.ReturnRefundStatus.FAILED,
+                failed.getRefundStatus());
+        assertEquals(1, failed.getRefundAttempts());
+
+        when(clock.instant()).thenReturn(java.time.Instant.parse("2026-07-18T12:00:02Z"));
+        var retried = service.retryRefund(RETURN_ID);
+
+        assertEquals(com.aionn.ordering.domain.valueobject.ReturnRefundStatus.REFUNDED,
+                retried.getRefundStatus());
+        verify(paymentGateway, times(2)).refund(
+                eq("payment-123"), eq(java.math.BigDecimal.valueOf(100)), eq("VND"),
+                org.mockito.ArgumentMatchers.anyString(), eq("return:return-1:refund"));
     }
 }
 

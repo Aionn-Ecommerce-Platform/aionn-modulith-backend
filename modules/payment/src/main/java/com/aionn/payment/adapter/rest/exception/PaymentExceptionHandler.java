@@ -20,7 +20,7 @@ public class PaymentExceptionHandler extends AbstractModuleExceptionHandler {
 
     public PaymentExceptionHandler() {
         registerErrors(HttpStatus.NOT_FOUND, "PAY_001", "PAY_101", "PAY_201");
-        registerErrors(HttpStatus.CONFLICT, "PAY_003");
+        registerErrors(HttpStatus.CONFLICT, "PAY_003", "PAY_007", "PAY_008");
         registerErrors(HttpStatus.FORBIDDEN, "PAY_102");
         registerErrors(HttpStatus.BAD_REQUEST,
                 "PAY_002", "PAY_005", "PAY_006", "PAY_103", "PAY_900");

@@ -13,9 +13,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -107,6 +109,19 @@ class InventoryItemPersistenceAdapterTest {
     }
 
     @Test
+    void createIfAbsentThenLocksTheWinningItem() {
+        Instant now = Instant.parse("2026-08-05T00:00:00Z");
+        InventoryItemEntity entity = new InventoryItemEntity();
+        InventoryItem domain = InventoryItem.initialize(KEY, 0);
+        when(jpa.findForUpdate(SKU_ID, WAREHOUSE_ID)).thenReturn(Optional.of(entity));
+        when(mapper.toDomain(entity)).thenReturn(domain);
+
+        assertThat(adapter.createIfAbsentAndLock(KEY, now)).isSameAs(domain);
+        verify(jpa).insertIfAbsent(SKU_ID, WAREHOUSE_ID, now);
+        verify(jpa).findForUpdate(SKU_ID, WAREHOUSE_ID);
+    }
+
+    @Test
     void findBySkuAcrossWarehousesReturnsEmptyForEmptyWarehouseIds() {
         assertThat(adapter.findBySkuAcrossWarehouses(SKU_ID, List.of())).isEmpty();
         assertThat(adapter.findBySkuAcrossWarehouses(SKU_ID, null)).isEmpty();
@@ -142,7 +157,7 @@ class InventoryItemPersistenceAdapterTest {
                 .thenReturn(new PageImpl<>(List.of(entity)));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
-        assertThat(adapter.findByWarehouse(WAREHOUSE_ID, PageRequest.of(0, 10)))
+        assertThat(adapter.findByWarehouse(WAREHOUSE_ID, OffsetPagination.of(0, 10)).content())
                 .containsExactly(domain);
 
         ArgumentCaptor<PageRequest> captor = ArgumentCaptor.forClass(PageRequest.class);

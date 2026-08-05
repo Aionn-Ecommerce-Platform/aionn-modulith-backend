@@ -7,6 +7,7 @@ import com.aionn.inventory.adapter.rest.dto.inventory.request.InitializeStockReq
 import com.aionn.inventory.adapter.rest.dto.inventory.request.ManualAdjustmentRequest;
 import com.aionn.inventory.adapter.rest.dto.inventory.request.TrackBatchAndExpiryRequest;
 import com.aionn.inventory.adapter.rest.dto.inventory.response.LowStockAlertResponse;
+import com.aionn.inventory.adapter.rest.dto.inventory.response.InventoryItemResponse;
 import com.aionn.inventory.adapter.rest.mapper.inventory.InventoryItemDtoMapper;
 import com.aionn.inventory.adapter.rest.support.session.CurrentAdminId;
 import com.aionn.inventory.application.dto.common.PageResult;
@@ -14,11 +15,14 @@ import com.aionn.inventory.application.dto.inventory.command.EmergencyUnlockComm
 import com.aionn.inventory.application.dto.inventory.result.InventoryItemResult;
 import com.aionn.inventory.application.port.in.inventory.*;
 import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.sharedkernel.adapter.web.response.PageMetadata;
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -59,97 +63,98 @@ public class InventoryItemController {
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Initialize stock")
-    public ResponseEntity<ApiResponse<InventoryItemResult>> initialize(
+    public ResponseEntity<ApiResponse<InventoryItemResponse>> initialize(
             Authentication authentication,
             @Valid @RequestBody InitializeStockRequest request) {
         InventoryItemResult result = initializeStockInputPort.execute(
                 dtoMapper.toInitializeStockCommand(authentication.getName(), request));
-        return ApiResponse.createdResponse("Inventory initialized", result);
+        return ApiResponse.createdResponse("Inventory initialized", dtoMapper.toResponse(result));
     }
 
     @PutMapping("/{skuId}/{warehouseId}/safety-stock")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Configure safety stock")
-    public ResponseEntity<ApiResponse<InventoryItemResult>> configureSafetyStock(
+    public ResponseEntity<ApiResponse<InventoryItemResponse>> configureSafetyStock(
             Authentication authentication,
             @PathVariable String skuId,
             @PathVariable String warehouseId,
             @Valid @RequestBody ConfigureSafetyStockRequest request) {
         InventoryItemResult result = configureSafetyStockInputPort.execute(
                 dtoMapper.toConfigureSafetyStockCommand(authentication.getName(), skuId, warehouseId, request));
-        return ResponseEntity.ok(ApiResponse.success(result, "Safety stock configured"));
+        return ResponseEntity.ok(ApiResponse.success(dtoMapper.toResponse(result), "Safety stock configured"));
     }
 
     @PutMapping("/{skuId}/{warehouseId}/batch-expiry")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Track batch and expiry")
-    public ResponseEntity<ApiResponse<InventoryItemResult>> trackBatchAndExpiry(
+    public ResponseEntity<ApiResponse<InventoryItemResponse>> trackBatchAndExpiry(
             Authentication authentication,
             @PathVariable String skuId,
             @PathVariable String warehouseId,
             @Valid @RequestBody TrackBatchAndExpiryRequest request) {
         InventoryItemResult result = trackBatchAndExpiryInputPort.execute(
                 dtoMapper.toTrackBatchAndExpiryCommand(authentication.getName(), skuId, warehouseId, request));
-        return ResponseEntity.ok(ApiResponse.success(result, "Batch and expiry tracked"));
+        return ResponseEntity.ok(ApiResponse.success(dtoMapper.toResponse(result), "Batch and expiry tracked"));
     }
 
     @PostMapping("/{skuId}/{warehouseId}/manual-adjustment")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Manual adjustment")
-    public ResponseEntity<ApiResponse<InventoryItemResult>> manualAdjustment(
+    public ResponseEntity<ApiResponse<InventoryItemResponse>> manualAdjustment(
             Authentication authentication,
             @PathVariable String skuId,
             @PathVariable String warehouseId,
             @Valid @RequestBody ManualAdjustmentRequest request) {
         InventoryItemResult result = manualAdjustmentInputPort.execute(
                 dtoMapper.toManualAdjustmentCommand(authentication.getName(), skuId, warehouseId, request));
-        return ResponseEntity.ok(ApiResponse.success(result, "Adjustment recorded"));
+        return ResponseEntity.ok(ApiResponse.success(dtoMapper.toResponse(result), "Adjustment recorded"));
     }
 
     @PostMapping("/{skuId}/{warehouseId}/lock")
     @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
     @Operation(summary = "Emergency lock")
-    public ResponseEntity<ApiResponse<InventoryItemResult>> emergencyLock(
+    public ResponseEntity<ApiResponse<InventoryItemResponse>> emergencyLock(
             @CurrentAdminId String adminId,
             @PathVariable String skuId,
             @PathVariable String warehouseId,
             @Valid @RequestBody EmergencyLockRequest request) {
         InventoryItemResult result = emergencyLockInputPort.execute(
                 dtoMapper.toEmergencyLockCommand(adminId, skuId, warehouseId, request));
-        return ResponseEntity.ok(ApiResponse.success(result, "Inventory item locked"));
+        return ResponseEntity.ok(ApiResponse.success(dtoMapper.toResponse(result), "Inventory item locked"));
     }
 
     @PostMapping("/{skuId}/{warehouseId}/unlock")
     @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
     @Operation(summary = "Emergency unlock", description = "Lifts an emergency lock")
-    public ResponseEntity<ApiResponse<InventoryItemResult>> emergencyUnlock(
+    public ResponseEntity<ApiResponse<InventoryItemResponse>> emergencyUnlock(
             @CurrentAdminId String adminId,
             @PathVariable String skuId,
             @PathVariable String warehouseId) {
         InventoryItemResult result = emergencyUnlockInputPort.execute(new EmergencyUnlockCommand(
                 adminId, skuId, warehouseId));
-        return ResponseEntity.ok(ApiResponse.success(result, "Inventory item unlocked"));
+        return ResponseEntity.ok(ApiResponse.success(dtoMapper.toResponse(result), "Inventory item unlocked"));
     }
 
     @PostMapping("/{skuId}/{warehouseId}/audit")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Record audit", description = "Reconcile system count with physical count")
-    public ResponseEntity<ApiResponse<InventoryItemResult>> auditInventory(
+    public ResponseEntity<ApiResponse<InventoryItemResponse>> auditInventory(
             Authentication authentication,
             @PathVariable String skuId,
             @PathVariable String warehouseId,
             @Valid @RequestBody AuditInventoryRequest request) {
         InventoryItemResult result = auditInventoryInputPort.execute(
                 dtoMapper.toAuditInventoryCommand(authentication.getName(), skuId, warehouseId, request));
-        return ResponseEntity.ok(ApiResponse.success(result, "Audit recorded"));
+        return ResponseEntity.ok(ApiResponse.success(dtoMapper.toResponse(result), "Audit recorded"));
     }
 
     @GetMapping
     @Operation(summary = "List inventory items by SKU", description = "Public read for product detail stock summary")
-    public ResponseEntity<ApiResponse<List<InventoryItemResult>>> listBySku(
+    public ResponseEntity<ApiResponse<List<InventoryItemResponse>>> listBySku(
             @RequestParam("skuId") String skuId) {
         return ResponseEntity.ok(
-                ApiResponse.success(listInventoryItemsBySkuInputPort.execute(skuId), "Inventory items fetched"));
+                ApiResponse.success(dtoMapper.toResponses(listInventoryItemsBySkuInputPort.execute(skuId)),
+                        "Inventory items fetched"));
     }
 
     @GetMapping("/by-warehouse/{warehouseId}")
@@ -157,23 +162,27 @@ public class InventoryItemController {
     @Operation(summary = "List inventory items in a warehouse",
             description = "Paginated list of inventory rows for the given warehouse. "
                     + "Only the warehouse owner can read its stock.")
-    public ResponseEntity<ApiResponse<PageResult<InventoryItemResult>>> listByWarehouse(
+    public ResponseEntity<ApiResponse<List<InventoryItemResponse>>> listByWarehouse(
             Authentication authentication,
             @PathVariable String warehouseId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "50") @Min(1) @Max(100) int size) {
         PageResult<InventoryItemResult> result = listInventoryItemsByWarehouseInputPort.execute(
-                authentication.getName(), warehouseId, PageRequest.of(page, size));
-        return ResponseEntity.ok(ApiResponse.success(result, "Inventory items fetched"));
+                authentication.getName(), warehouseId, OffsetPagination.of(page, size));
+        return ResponseEntity.ok(ApiResponse.successWithPaging(
+                dtoMapper.toResponses(result.content()),
+                PageMetadata.of(result.page(), result.size(), result.totalElements()),
+                "Inventory items fetched"));
     }
 
     @GetMapping("/{skuId}/{warehouseId}")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get inventory item")
-    public ResponseEntity<ApiResponse<InventoryItemResult>> get(
+    public ResponseEntity<ApiResponse<InventoryItemResponse>> get(
             @PathVariable String skuId,
             @PathVariable String warehouseId) {
         return ResponseEntity.ok(ApiResponse.success(
-                getInventoryItemInputPort.execute(skuId, warehouseId), "Inventory item fetched"));
+                dtoMapper.toResponse(getInventoryItemInputPort.execute(skuId, warehouseId)),
+                "Inventory item fetched"));
     }
 }

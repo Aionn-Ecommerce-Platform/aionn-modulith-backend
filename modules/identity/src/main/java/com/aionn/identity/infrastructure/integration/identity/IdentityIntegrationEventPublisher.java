@@ -3,6 +3,7 @@ package com.aionn.identity.infrastructure.integration.identity;
 import com.aionn.identity.application.port.out.integration.IdentityIntegrationEventPublisherPort;
 import com.aionn.sharedkernel.integration.event.identity.EmailChangedIntegrationEvent;
 import com.aionn.sharedkernel.integration.event.identity.PasswordChangedIntegrationEvent;
+import com.aionn.sharedkernel.integration.event.identity.PasswordResetRequestedIntegrationEvent;
 import com.aionn.sharedkernel.integration.event.identity.PhoneChangedIntegrationEvent;
 import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
 import com.aionn.sharedkernel.util.IdGenerator;
@@ -19,6 +20,12 @@ public class IdentityIntegrationEventPublisher implements IdentityIntegrationEve
 
     private final IntegrationEventPublisher integrationEventPublisher;
     private final Clock clock;
+
+    @Override
+    public void publishPasswordResetRequested(String userId, String resetToken) {
+        integrationEventPublisher.publish(new PasswordResetRequestedIntegrationEvent(
+                IdGenerator.ulid(), userId, resetToken, clock.instant()));
+    }
 
     @Override
     public void publishPasswordChanged(String userId, String channelHint) {

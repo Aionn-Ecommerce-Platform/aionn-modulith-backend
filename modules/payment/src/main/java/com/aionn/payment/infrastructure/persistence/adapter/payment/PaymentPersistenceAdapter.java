@@ -30,6 +30,11 @@ public class PaymentPersistenceAdapter implements PaymentPersistencePort {
     }
 
     @Override
+    public Optional<Payment> lockById(String paymentId) {
+        return jpa.lockById(paymentId).map(mapper::toDomain);
+    }
+
+    @Override
     public Optional<Payment> findByIdempotencyKey(String idempotencyKey) {
         return jpa.findByIdempotencyKey(idempotencyKey).map(mapper::toDomain);
     }

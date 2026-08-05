@@ -76,6 +76,18 @@ public class OrderReturnEntity {
     @Column(name = "received_at")
     private Instant receivedAt;
 
+    @Column(name = "refund_status", length = 20, nullable = false)
+    private String refundStatus;
+
+    @Column(name = "refund_attempts", nullable = false)
+    private int refundAttempts;
+
+    @Column(name = "refund_failure_reason", length = 1000)
+    private String refundFailureReason;
+
+    @Column(name = "next_refund_attempt_at")
+    private Instant nextRefundAttemptAt;
+
     @UpdateTimestamp
     @Column(name = "updated_at")
     private Instant updatedAt;

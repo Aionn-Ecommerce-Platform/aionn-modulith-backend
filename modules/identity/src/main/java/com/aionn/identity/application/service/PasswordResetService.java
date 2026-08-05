@@ -6,9 +6,9 @@ import com.aionn.identity.application.port.out.auth.AuthSessionPersistencePort;
 import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
 import com.aionn.identity.application.port.out.integration.IdentityIntegrationEventPublisherPort;
 import com.aionn.identity.application.port.out.observability.IdentityMetricsPort;
-import com.aionn.sharedkernel.integration.port.notification.IdentityNotificationPort;
 import com.aionn.identity.application.port.out.security.PasswordHasherPort;
 import com.aionn.identity.application.port.out.security.PasswordResetPort;
+import com.aionn.identity.application.port.out.security.AbuseRateLimiterPort;
 import com.aionn.identity.application.port.out.security.SecurityAuditPort;
 import com.aionn.identity.application.port.out.security.UserSecurityPort;
 import com.aionn.identity.domain.valueobject.SecurityAuditEventType;
@@ -28,6 +28,7 @@ import java.time.Instant;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -43,10 +44,10 @@ public class PasswordResetService {
     private final PasswordHasherPort passwordHasher;
     private final AuthSessionPersistencePort authSessionPersistencePort;
     private final RefreshTokenStorePort refreshTokenStore;
-    private final IdentityNotificationPort notificationPort;
     private final IdentityIntegrationEventPublisherPort integrationEventPublisher;
     private final IdentityMetricsPort identityMetrics;
     private final AuthPolicy authPolicy;
+    private final AbuseRateLimiterPort abuseRateLimiter;
 
     private final Clock clock;
     public void changePassword(String userId, String currentPassword, String newPassword, String ipAddress) {
@@ -75,6 +76,7 @@ public class PasswordResetService {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void requestPasswordReset(String identity, String ipAddress) {
         log.info("Processing password reset request");
+        enforcePasswordResetRateLimit(identity, ipAddress);
         var user = userSecurityPort.findByIdentity(identity);
         if (user.isEmpty()) {
             log.debug("Password reset requested for unknown identity (silently ignored)");
@@ -89,10 +91,17 @@ public class PasswordResetService {
                 nowUtc().plus(Duration.ofMinutes(authPolicy.getPasswordResetTokenTtlMinutes())));
         securityAuditPort.saveAuditLog(user.get().userId(), SecurityAuditEventType.PASSWORD_RESET_REQUESTED, ipAddress);
         identityMetrics.passwordResetLifecycle("requested");
-        try {
-            notificationPort.sendPasswordResetRequested(user.get().userId(), token);
-        } catch (RuntimeException ex) {
-            log.error("Failed to dispatch password reset token for user {}", user.get().userId(), ex);
+        integrationEventPublisher.publishPasswordResetRequested(user.get().userId(), token);
+    }
+
+    private void enforcePasswordResetRateLimit(String identity, String ipAddress) {
+        String identityKey = Sha256Hasher.hexDigest(identity.trim().toLowerCase(Locale.ROOT));
+        boolean ipAllowed = abuseRateLimiter.check("PASSWORD_RESET_IP", ipAddress,
+                authPolicy.getPasswordResetIpMaxAttempts(), authPolicy.getPasswordResetRateLimitWindowSeconds());
+        boolean identityAllowed = abuseRateLimiter.check("PASSWORD_RESET_IDENTITY", identityKey,
+                authPolicy.getPasswordResetIdentityMaxAttempts(), authPolicy.getPasswordResetRateLimitWindowSeconds());
+        if (!ipAllowed || !identityAllowed) {
+            throw new IdentityException(IdentityErrorCode.RATE_LIMIT_EXCEEDED);
         }
     }
 

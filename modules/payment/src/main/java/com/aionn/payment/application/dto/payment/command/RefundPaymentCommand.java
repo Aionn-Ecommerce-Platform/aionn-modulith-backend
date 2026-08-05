@@ -8,5 +8,6 @@ public record RefundPaymentCommand(
         String paymentId,
         BigDecimal amount,
         String currency,
-        String reason) implements Command {
+        String reason,
+        String idempotencyKey) implements Command {
 }

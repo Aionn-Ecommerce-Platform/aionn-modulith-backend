@@ -229,6 +229,38 @@ class CategoryServiceTest {
         }
 
         @Test
+        void childCreationLocksParentBeforeCheckingIt() {
+                Category parent = Category.create(CATEGORY_ID, null, "Parent", "parent");
+                parent.pullEvents();
+                when(categoryRepository.lockById(CATEGORY_ID)).thenReturn(Optional.of(parent));
+                when(categoryRepository.existsByParentAndName(CATEGORY_ID, "Child")).thenReturn(false);
+                when(categoryRepository.existsBySlug("child")).thenReturn(false);
+                when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                categoryService.create(new CreateCategoryCommand(CATEGORY_ID, "Child", "child"));
+
+                verify(categoryRepository).lockById(CATEGORY_ID);
+        }
+
+        @Test
+        void deleteRejectsCategoryWithActiveChildren() {
+                Category parent = Category.create(CATEGORY_ID, null, "Parent", "parent");
+                parent.pullEvents();
+                Category child = Category.create("child", CATEGORY_ID, "Child", "child");
+                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(parent));
+                when(categoryRepository.hasProducts(CATEGORY_ID)).thenReturn(false);
+                when(categoryRepository.findActiveChildren(CATEGORY_ID)).thenReturn(List.of(child));
+
+                assertThatThrownBy(() -> categoryService.delete(CATEGORY_ID))
+                                .isInstanceOf(CatalogException.class)
+                                .extracting("errorCode")
+                                .isEqualTo(CatalogErrorCode.CATEGORY_HAS_CHILDREN.getCode());
+
+                verify(categoryRepository, never()).save(any());
+                verify(eventPublisher, never()).publish(anyCollection());
+        }
+
+        @Test
         void moveAppliesReparent() {
                 Category category = Category.create(CATEGORY_ID, null, "A", "a");
                 category.pullEvents();
@@ -256,6 +288,7 @@ class CategoryServiceTest {
                 assertThat(category.isActive()).isFalse();
                 verify(categoryRepository).save(category);
                 verify(eventPublisher).publish(anyCollection());
+                verify(categoryRepository).lockById(CATEGORY_ID);
         }
 
         @Test

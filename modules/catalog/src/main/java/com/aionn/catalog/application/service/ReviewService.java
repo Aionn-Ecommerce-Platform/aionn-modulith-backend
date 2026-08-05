@@ -83,7 +83,7 @@ public class ReviewService {
         if (!review.getUserId().equals(command.userId())) {
             throw new CatalogException(CatalogErrorCode.REVIEW_FORBIDDEN, "User does not own this review");
         }
-        review.adminDelete(command.userId(), clock);
+        review.withdraw(command.userId(), clock);
         reviewRepository.save(review);
         eventPublisher.publish(review.pullEvents());
     }

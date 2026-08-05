@@ -58,7 +58,7 @@ class RedisRegistrationSessionStoreTest {
         store.save(session);
 
         ArgumentCaptor<Duration> ttlCaptor = ArgumentCaptor.captor();
-        verify(valueOperations).set(eq(KEY), eq(session), ttlCaptor.capture());
+        verify(valueOperations).set(eq(KEY), eq(RegistrationSessionDocument.from(session)), ttlCaptor.capture());
         assertThat(ttlCaptor.getValue()).isPositive();
     }
 
@@ -70,7 +70,7 @@ class RedisRegistrationSessionStoreTest {
         store.save(session);
 
         ArgumentCaptor<Duration> ttlCaptor = ArgumentCaptor.captor();
-        verify(valueOperations).set(eq(KEY), eq(session), ttlCaptor.capture());
+        verify(valueOperations).set(eq(KEY), eq(RegistrationSessionDocument.from(session)), ttlCaptor.capture());
         assertThat(ttlCaptor.getValue()).isEqualTo(Duration.ofMinutes(5));
     }
 
@@ -82,7 +82,7 @@ class RedisRegistrationSessionStoreTest {
         store.save(session);
 
         ArgumentCaptor<Duration> ttlCaptor = ArgumentCaptor.captor();
-        verify(valueOperations).set(eq(KEY), eq(session), ttlCaptor.capture());
+        verify(valueOperations).set(eq(KEY), eq(RegistrationSessionDocument.from(session)), ttlCaptor.capture());
         assertThat(ttlCaptor.getValue()).isEqualTo(Duration.ofSeconds(1));
     }
 
@@ -90,11 +90,16 @@ class RedisRegistrationSessionStoreTest {
     void findReturnsSessionWhenPresent() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         RegistrationVerificationSession session = session("reg-1", Instant.now().plusSeconds(600));
-        when(valueOperations.get(KEY)).thenReturn(session);
+        when(valueOperations.get(KEY)).thenReturn(RegistrationSessionDocument.from(session));
 
         Optional<RegistrationVerificationSession> found = store.findByRegId("reg-1");
 
-        assertThat(found).contains(session);
+        assertThat(found).hasValueSatisfying(restored -> {
+            assertThat(restored.getRegId()).isEqualTo(session.getRegId());
+            assertThat(restored.getPhoneNumber()).isEqualTo(session.getPhoneNumber());
+            assertThat(restored.getOtpCode()).isEqualTo(session.getOtpCode());
+            assertThat(restored.getExpiredAt()).isEqualTo(session.getExpiredAt());
+        });
     }
 
     @Test

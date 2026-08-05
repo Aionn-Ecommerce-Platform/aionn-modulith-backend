@@ -7,7 +7,6 @@ import com.aionn.inventory.domain.exception.InventoryException;
 import com.aionn.inventory.domain.model.Warehouse;
 import com.aionn.inventory.domain.valueobject.WarehouseStatus;
 import com.aionn.sharedkernel.application.port.EventPublisher;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,8 +34,6 @@ class WarehouseServiceTest {
     @Mock
     EventPublisher eventPublisher;
     @Mock
-    MerchantQueryPort merchantQueryPort;
-    @Mock
     Clock clock;
 
     @InjectMocks
@@ -50,24 +47,11 @@ class WarehouseServiceTest {
     }
 
     @Test
-    @DisplayName("create() throws WAREHOUSE_FORBIDDEN when the authenticated user has no merchant")
-    void create_throwsWhenOwnerHasNoMerchant() {
-        when(merchantQueryPort.findMerchantIdByOwnerId("user-1")).thenReturn(Optional.empty());
-
-        InventoryException ex = assertThrows(InventoryException.class,
-                () -> warehouseService.create(new CreateWarehouseCommand("user-1", "addr", 1)));
-
-        assertEquals(InventoryErrorCode.WAREHOUSE_FORBIDDEN.getCode(), ex.getErrorCode());
-        verifyNoInteractions(warehouseRepository, eventPublisher);
-    }
-
-    @Test
-    @DisplayName("create() resolves merchantId from authenticated owner instead of trusting the client")
-    void create_resolvesMerchantIdFromOwner() {
-        when(merchantQueryPort.findMerchantIdByOwnerId("user-1")).thenReturn(Optional.of("M_1"));
+    @DisplayName("create() uses the merchant id verified by the web adapter")
+    void create_usesVerifiedMerchantId() {
         when(warehouseRepository.save(any(Warehouse.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        warehouseService.create(new CreateWarehouseCommand("user-1", "addr", 1));
+        warehouseService.create(new CreateWarehouseCommand("M_1", "addr", 1));
 
         ArgumentCaptor<Warehouse> captor = ArgumentCaptor.forClass(Warehouse.class);
         verify(warehouseRepository).save(captor.capture());
@@ -77,12 +61,11 @@ class WarehouseServiceTest {
     @Test
     @DisplayName("changeStatus() rejects an attacker acting on another merchant's warehouse")
     void changeStatus_rejectsForeignWarehouse() {
-        when(merchantQueryPort.findMerchantIdByOwnerId("attacker")).thenReturn(Optional.of("M_attacker"));
         Warehouse victim = Warehouse.create("W_1", "M_victim", "addr", 1);
         when(warehouseRepository.findById("W_1")).thenReturn(Optional.of(victim));
 
         InventoryException ex = assertThrows(InventoryException.class,
-                () -> warehouseService.changeStatus(new ChangeStatusCommand("W_1", "attacker", "ACTIVE")));
+                () -> warehouseService.changeStatus(new ChangeStatusCommand("W_1", "M_attacker", "ACTIVE")));
 
         assertEquals(InventoryErrorCode.WAREHOUSE_FORBIDDEN.getCode(), ex.getErrorCode());
         verify(warehouseRepository, never()).save(any());
@@ -91,12 +74,11 @@ class WarehouseServiceTest {
     @Test
     @DisplayName("changeStatus() throws INVALID_ARGUMENT when status value is unknown")
     void changeStatus_throwsInvalidStatus() {
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
         Warehouse warehouse = Warehouse.create("W_1", "M_1", "addr", 1);
         when(warehouseRepository.findById("W_1")).thenReturn(Optional.of(warehouse));
 
         InventoryException ex = assertThrows(InventoryException.class,
-                () -> warehouseService.changeStatus(new ChangeStatusCommand("W_1", "owner-1", "UNKNOWN_STATUS")));
+                () -> warehouseService.changeStatus(new ChangeStatusCommand("W_1", "M_1", "UNKNOWN_STATUS")));
 
         assertEquals(InventoryErrorCode.INVALID_ARGUMENT.getCode(), ex.getErrorCode());
     }
@@ -104,12 +86,11 @@ class WarehouseServiceTest {
     @Test
     @DisplayName("adjustPriority() changes warehouse priority and saves successfully")
     void adjustPriority_modifiesPriorityAndSaves() {
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
         Warehouse warehouse = Warehouse.create("W_1", "M_1", "addr", 1);
         when(warehouseRepository.findById("W_1")).thenReturn(Optional.of(warehouse));
         when(warehouseRepository.save(any(Warehouse.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        warehouseService.adjustPriority(new AdjustPriorityCommand("W_1", "owner-1", 5));
+        warehouseService.adjustPriority(new AdjustPriorityCommand("W_1", "M_1", 5));
 
         verify(warehouseRepository).save(warehouse);
         verify(eventPublisher).publish(anyCollection());
@@ -162,14 +143,24 @@ class WarehouseServiceTest {
     }
 
     @Test
+    void getOwned_rejectsForeignWarehouse() {
+        Warehouse warehouse = Warehouse.create("W_1", "M_1", "addr", 1);
+        when(warehouseRepository.findById("W_1")).thenReturn(Optional.of(warehouse));
+
+        InventoryException ex = assertThrows(InventoryException.class,
+                () -> warehouseService.getOwned("W_1", "M_2"));
+
+        assertEquals(InventoryErrorCode.WAREHOUSE_FORBIDDEN.getCode(), ex.getErrorCode());
+    }
+
+    @Test
     @DisplayName("listByOwner() returns all warehouses sorted by priority")
     void listByOwner_returnsSortedList() {
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
         Warehouse w1 = Warehouse.create("W_1", "M_1", "addr1", 1);
         Warehouse w2 = Warehouse.create("W_2", "M_1", "addr2", 2);
         when(warehouseRepository.findByMerchantOrderByPriority("M_1")).thenReturn(java.util.List.of(w1, w2));
 
-        warehouseService.listByOwner("owner-1");
+        warehouseService.listByOwner("M_1");
 
         verify(warehouseRepository).findByMerchantOrderByPriority("M_1");
     }

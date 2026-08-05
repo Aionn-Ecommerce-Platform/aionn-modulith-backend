@@ -7,6 +7,7 @@ import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.math.BigDecimal;
 
 public interface ProductPersistencePort {
 
@@ -45,4 +46,19 @@ public interface ProductPersistencePort {
     long countSearchPublished(String query);
 
     List<Product> findByIdsPreserveOrder(List<String> productIds);
+
+    FallbackPage searchFallback(FallbackFilter filter, OffsetPagination pagination);
+
+    record FallbackFilter(
+            String query,
+            String merchantId,
+            ProductStatus status,
+            List<String> brandIds,
+            List<String> categoryIds,
+            BigDecimal priceMin,
+            BigDecimal priceMax) {
+    }
+
+    record FallbackPage(List<Product> content, long totalElements) {
+    }
 }

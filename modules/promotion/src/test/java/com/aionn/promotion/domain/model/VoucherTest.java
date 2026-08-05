@@ -111,7 +111,8 @@ class VoucherTest {
     @Test
     void remainingUsesNeverGoesNegative() {
         Voucher voucher = platform(1, null, null);
-        voucher.claimSlot(CLOCK);
+        voucher.reserveSlot(CLOCK);
+        voucher.commitSlot(CLOCK);
 
         assertThat(voucher.getUsedCount()).isEqualTo(1);
         assertThat(voucher.remainingUses()).isZero();
@@ -138,7 +139,8 @@ class VoucherTest {
     @Test
     void claimSlotRejectsExhaustedVoucher() {
         Voucher voucher = platform(1, null, null);
-        voucher.claimSlot(CLOCK);
+        voucher.reserveSlot(CLOCK);
+        voucher.commitSlot(CLOCK);
 
         assertThatThrownBy(() -> voucher.claimSlot(CLOCK))
                 .isInstanceOf(PromotionException.class)
@@ -151,7 +153,7 @@ class VoucherTest {
 
         voucher.claimSlot();
 
-        assertThat(voucher.getUsedCount()).isEqualTo(1);
+        assertThat(voucher.getUsedCount()).isZero();
     }
 
     @Test
@@ -173,8 +175,9 @@ class VoucherTest {
         voucher.commitSlot(CLOCK);
         assertThat(voucher.getUpdatedAt()).isEqualTo(NOW);
 
-        voucher.releaseSlot(CLOCK);
+        voucher.releaseCommittedSlot(CLOCK);
         assertThat(voucher.getUpdatedAt()).isEqualTo(NOW);
+        assertThat(voucher.getUsedCount()).isZero();
     }
 
     @Test
@@ -183,7 +186,7 @@ class VoucherTest {
 
         voucher.reserveSlot();
         voucher.commitSlot();
-        voucher.releaseSlot();
+        voucher.releaseCommittedSlot(Clock.systemUTC());
 
         assertThat(voucher.getUpdatedAt()).isNotNull();
         assertThat(voucher.getReservedCount()).isZero();

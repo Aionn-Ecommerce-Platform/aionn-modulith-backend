@@ -67,6 +67,12 @@ class VoucherServiceTest {
                 100, NOW.minusSeconds(60), NOW.plusSeconds(86400), CLOCK);
     }
 
+    private static Voucher reservedVoucher(String campaignId) {
+        Voucher voucher = platformVoucher(campaignId);
+        voucher.reserveSlot(CLOCK);
+        return voucher;
+    }
+
     private static PromotionCampaign runningCampaign(PromotionCondition condition) {
         PromotionCampaign campaign = PromotionCampaign.create("camp-1", "Summer",
                 CampaignType.DISCOUNT, Money.of(new BigDecimal("1000000"), "VND"),
@@ -217,7 +223,7 @@ class VoucherServiceTest {
     void applyConsumesCampaignBudget() {
         mapperEchoes();
         PromotionCampaign campaign = runningCampaign(null);
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher("camp-1")));
+        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher("camp-1")));
         when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(platformVoucher("camp-1")));
         when(campaignRepository.findById("camp-1")).thenReturn(Optional.of(campaign));
         when(userVoucherRepository.findByUserAndCode("user-1", "V-1"))
@@ -236,7 +242,7 @@ class VoucherServiceTest {
     @Test
     void applyFallsBackToVoucherCurrency() {
         mapperEchoes();
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
+        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher(null)));
         when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
         when(userVoucherRepository.findByUserAndCode("user-1", "V-1"))
                 .thenReturn(Optional.of(reserved("order-1")));
@@ -251,7 +257,7 @@ class VoucherServiceTest {
 
     @Test
     void applyRejectsWhenReservedByAnotherOrder() {
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
+        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher(null)));
         when(userVoucherRepository.findByUserAndCode("user-1", "V-1"))
                 .thenReturn(Optional.of(reserved("order-other")));
 
@@ -268,7 +274,7 @@ class VoucherServiceTest {
     @Test
     void releaseClearsReservation() {
         mapperEchoes();
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
+        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher(null)));
         when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
         when(userVoucherRepository.findByUserAndCode("user-1", "V-1"))
                 .thenReturn(Optional.of(reserved("order-1")));
@@ -284,7 +290,7 @@ class VoucherServiceTest {
 
     @Test
     void releaseRejectsWhenOrderDoesNotMatch() {
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
+        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher(null)));
         when(userVoucherRepository.findByUserAndCode("user-1", "V-1"))
                 .thenReturn(Optional.of(claimed()));
 
@@ -310,7 +316,7 @@ class VoucherServiceTest {
     void releaseByOrderReleasesReservation() {
         when(userVoucherRepository.findByReservedOrderId("order-1"))
                 .thenReturn(Optional.of(reserved("order-1")));
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
+        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher(null)));
 
         assertThat(service().releaseByOrder("order-1", "cancelled")).isEqualTo(1);
         verify(voucherRepository).save(any(Voucher.class));
@@ -331,7 +337,7 @@ class VoucherServiceTest {
     void releaseExpiredReservationsSkipsFailures() {
         when(userVoucherRepository.findExpiredReservations(eq(NOW), anyInt()))
                 .thenReturn(List.of(reserved("order-1"), claimed()));
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
+        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher(null)));
 
         assertThat(service().releaseExpiredReservations(NOW, 10)).isEqualTo(1);
     }

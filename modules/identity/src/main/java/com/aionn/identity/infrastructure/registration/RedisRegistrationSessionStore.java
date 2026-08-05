@@ -24,14 +24,14 @@ public class RedisRegistrationSessionStore implements RegistrationSessionStorePo
     public void save(RegistrationVerificationSession session) {
         String key = registrationSessionKey(session.getRegId());
         Duration ttl = calculateTtl(session.getExpiredAt());
-        redisTemplate.opsForValue().set(key, session, ttl);
+        redisTemplate.opsForValue().set(key, RegistrationSessionDocument.from(session), ttl);
     }
 
     @Override
     public Optional<RegistrationVerificationSession> findByRegId(String regId) {
         Object value = redisTemplate.opsForValue().get(registrationSessionKey(regId));
-        if (value instanceof RegistrationVerificationSession session) {
-            return Optional.of(session);
+        if (value instanceof RegistrationSessionDocument document) {
+            return Optional.of(document.toDomain());
         }
         return Optional.empty();
     }

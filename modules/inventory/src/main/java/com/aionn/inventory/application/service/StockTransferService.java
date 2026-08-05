@@ -80,8 +80,7 @@ public class StockTransferService {
                 transfer.complete(command.receivedQty(), clock);
 
                 InventoryItemKey destKey = new InventoryItemKey(transfer.getSkuId(), transfer.getToWarehouseId());
-                InventoryItem dest = itemRepository.lockByKey(destKey)
-                                .orElseGet(() -> itemRepository.save(InventoryItem.initialize(destKey, 0, clock)));
+                InventoryItem dest = itemRepository.createIfAbsentAndLock(destKey, clock.instant());
                 dest.adjust(command.receivedQty(), AdjustmentType.TRANSFER_IN, "transfer-in", clock);
                 itemRepository.save(dest);
                 eventPublisher.publish(dest.pullEvents());

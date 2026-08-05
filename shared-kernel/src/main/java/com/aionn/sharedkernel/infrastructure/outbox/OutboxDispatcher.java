@@ -52,11 +52,6 @@ public class OutboxDispatcher {
 
     private void dispatch(OutboxEventRecord record) {
         try {
-            String consumerId = "spring-event-bus:" + record.eventType();
-            if (repository.wasProcessed(consumerId, record.eventId())) {
-                markPublished(record.eventId());
-                return;
-            }
             Class<?> payloadType = resolvePayloadType(record);
             Object payload = objectMapper.readValue(record.payload(), payloadType);
             Object event = "DOMAIN".equals(record.eventKind())
@@ -64,7 +59,6 @@ public class OutboxDispatcher {
                             (DomainEvent) payload, record.occurredAt())
                     : payload;
             eventPublisher.publishEvent(event);
-            repository.markProcessed(consumerId, record.eventId());
             markPublished(record.eventId());
         } catch (Exception exception) {
             boolean deadLetter = record.attempts() >= maxAttempts;

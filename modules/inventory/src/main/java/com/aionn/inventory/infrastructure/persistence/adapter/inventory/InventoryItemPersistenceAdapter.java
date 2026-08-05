@@ -1,18 +1,20 @@
 package com.aionn.inventory.infrastructure.persistence.adapter.inventory;
 
 import com.aionn.inventory.application.port.out.InventoryItemPersistencePort;
+import com.aionn.inventory.application.dto.common.PageResult;
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import com.aionn.inventory.domain.model.InventoryItem;
 import com.aionn.inventory.domain.valueobject.InventoryItemKey;
 import com.aionn.inventory.infrastructure.persistence.entity.InventoryItemEntity;
 import com.aionn.inventory.infrastructure.persistence.mapper.InventoryItemDomainMapper;
 import com.aionn.inventory.infrastructure.persistence.repository.InventoryItemRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.Instant;
 
 @Repository
 @RequiredArgsConstructor
@@ -41,6 +43,14 @@ public class InventoryItemPersistenceAdapter implements InventoryItemPersistence
     }
 
     @Override
+    public InventoryItem createIfAbsentAndLock(InventoryItemKey key, Instant now) {
+        jpa.insertIfAbsent(key.skuId(), key.warehouseId(), now);
+        return jpa.findForUpdate(key.skuId(), key.warehouseId())
+                .map(mapper::toDomain)
+                .orElseThrow(() -> new IllegalStateException("Inventory insert completed without a readable row"));
+    }
+
+    @Override
     public List<InventoryItem> findBySkuAcrossWarehouses(String skuId, List<String> warehouseIds) {
         if (warehouseIds == null || warehouseIds.isEmpty()) {
             return List.of();
@@ -58,8 +68,11 @@ public class InventoryItemPersistenceAdapter implements InventoryItemPersistence
     }
 
     @Override
-    public Page<InventoryItem> findByWarehouse(String warehouseId, Pageable pageable) {
-        return jpa.findByIdWarehouseId(warehouseId, pageable).map(mapper::toDomain);
+    public PageResult<InventoryItem> findByWarehouse(String warehouseId, OffsetPagination pagination) {
+        var page = jpa.findByIdWarehouseId(
+                warehouseId, PageRequest.of(pagination.page(), pagination.size())).map(mapper::toDomain);
+        return new PageResult<>(page.getContent(), page.getNumber(), page.getSize(),
+                page.getNumberOfElements(), page.getTotalElements());
     }
 
     @Override

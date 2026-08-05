@@ -272,11 +272,13 @@ class InventoryItemServiceTest {
                 when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
                 when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
 
-                org.springframework.data.domain.Page<InventoryItem> page = new org.springframework.data.domain.PageImpl<>(
-                                java.util.Collections.emptyList());
+                com.aionn.inventory.application.dto.common.PageResult<InventoryItem> page =
+                                new com.aionn.inventory.application.dto.common.PageResult<>(
+                                                java.util.List.of(), 0, 10, 0, 0);
                 when(itemRepository.findByWarehouse(eq("WH_1"), any())).thenReturn(page);
 
-                service.listByWarehouse("owner-1", "WH_1", org.springframework.data.domain.PageRequest.of(0, 10));
+                service.listByWarehouse("owner-1", "WH_1",
+                                com.aionn.sharedkernel.domain.vo.OffsetPagination.of(0, 10));
 
                 verify(itemRepository).findByWarehouse(eq("WH_1"), any());
         }

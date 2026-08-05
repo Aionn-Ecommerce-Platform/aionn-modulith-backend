@@ -26,7 +26,7 @@ public class OrderAutoCancelWorker {
     private final OrderingIntegrationEventPublisherPort integrationEventPublisher;
     private final java.time.Clock clock;
 
-    /** REQUIRES_NEW so a single failure does not poison the batch (audit B6). */
+    /** Uses an independent transaction so a single failure does not poison the batch. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void cancelOneExpired(String orderId) {
         Order order = orderRepository.findById(orderId)

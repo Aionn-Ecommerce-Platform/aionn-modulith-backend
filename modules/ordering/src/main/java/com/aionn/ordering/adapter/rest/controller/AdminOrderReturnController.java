@@ -4,8 +4,8 @@ import com.aionn.ordering.adapter.rest.dto.request.AdminApproveReturnRequest;
 import com.aionn.ordering.adapter.rest.dto.request.AdminConfirmReturnReceivedRequest;
 import com.aionn.ordering.adapter.rest.dto.request.AdminRejectReturnRequest;
 import com.aionn.ordering.adapter.rest.dto.response.OrderReturnResponse;
+import com.aionn.ordering.adapter.rest.dto.response.ReturnAnalyticsResponse;
 import com.aionn.ordering.adapter.rest.mapper.OrderingDtoMapper;
-import com.aionn.ordering.application.dto.returns.result.ReturnAnalyticsResult;
 import com.aionn.ordering.application.port.in.returns.AdminApproveReturnInputPort;
 import com.aionn.ordering.application.port.in.returns.AdminConfirmItemReceivedInputPort;
 import com.aionn.ordering.application.port.in.returns.AdminGetReturnInputPort;
@@ -60,11 +60,12 @@ public class AdminOrderReturnController {
 
         @GetMapping("/analytics")
         @Operation(summary = "Return analytics (admin)")
-        public ResponseEntity<ApiResponse<ReturnAnalyticsResult>> analytics(
+        public ResponseEntity<ApiResponse<ReturnAnalyticsResponse>> analytics(
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                adminReturnAnalyticsInputPort.execute(from, to), "Return analytics fetched"));
+                                dtoMapper.toResponse(adminReturnAnalyticsInputPort.execute(from, to)),
+                                "Return analytics fetched"));
         }
 
         @GetMapping("/{returnId}")

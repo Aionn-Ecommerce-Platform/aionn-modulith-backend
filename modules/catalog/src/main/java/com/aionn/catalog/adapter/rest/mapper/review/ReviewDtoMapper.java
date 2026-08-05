@@ -5,6 +5,7 @@ import com.aionn.catalog.adapter.rest.dto.review.request.ReportReviewRequest;
 import com.aionn.catalog.adapter.rest.dto.review.request.SubmitReviewRequest;
 import com.aionn.catalog.adapter.rest.dto.review.request.UpdateReviewRequest;
 import com.aionn.catalog.adapter.rest.dto.review.response.ReviewResponse;
+import com.aionn.catalog.adapter.rest.dto.review.response.ReviewEligibilityResponse;
 import com.aionn.catalog.application.dto.review.command.AdminDeleteReviewCommand;
 import com.aionn.catalog.application.dto.review.command.DeleteReviewCommand;
 import com.aionn.catalog.application.dto.review.command.HideReviewCommand;
@@ -14,6 +15,7 @@ import com.aionn.catalog.application.dto.review.command.RestoreReviewCommand;
 import com.aionn.catalog.application.dto.review.command.SubmitReviewCommand;
 import com.aionn.catalog.application.dto.review.command.UpdateReviewCommand;
 import com.aionn.catalog.application.dto.review.result.ReviewResult;
+import com.aionn.catalog.application.dto.review.result.ReviewEligibilityResult;
 import org.mapstruct.Mapper;
 
 import java.util.List;
@@ -48,4 +50,6 @@ public interface ReviewDtoMapper {
     ReviewResponse toResponse(ReviewResult result);
 
     List<ReviewResponse> toResponses(List<ReviewResult> results);
+
+    ReviewEligibilityResponse toResponse(ReviewEligibilityResult result);
 }

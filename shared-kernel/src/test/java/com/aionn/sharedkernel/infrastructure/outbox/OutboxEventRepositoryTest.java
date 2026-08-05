@@ -69,4 +69,38 @@ class OutboxEventRepositoryTest {
         verify(jdbc).update(anyString(), eq("PENDING"), any(Timestamp.class), eq("temporary"), eq("evt"), eq("worker"));
         verify(jdbc).update(anyString(), eq("DEAD_LETTER"), any(Timestamp.class), eq("x".repeat(4000)), eq("evt"), eq("worker"));
     }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void exposesDeadLettersAndRequeuesAtomically() throws Exception {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        OutboxEventRepository repository = new OutboxEventRepository(jdbc, Clock.systemUTC());
+        when(jdbc.queryForObject(anyString(), eq(Long.class))).thenReturn(3L);
+        when(jdbc.update(anyString(), eq("evt-1"))).thenReturn(1);
+
+        repository.findDeadLetters(20, 40);
+        ArgumentCaptor<RowMapper<OutboxDeadLetterService.DeadLetterEvent>> mapperCaptor =
+                ArgumentCaptor.forClass(RowMapper.class);
+        verify(jdbc).query(anyString(), mapperCaptor.capture(), eq(20), eq(40));
+
+        ResultSet result = mock(ResultSet.class);
+        Instant occurredAt = Instant.parse("2026-08-05T00:00:00Z");
+        Instant updatedAt = Instant.parse("2026-08-05T00:05:00Z");
+        when(result.getString("event_id")).thenReturn("evt-1");
+        when(result.getString("event_kind")).thenReturn("INTEGRATION");
+        when(result.getString("event_type")).thenReturn("OrderCancelled");
+        when(result.getString("aggregate_type")).thenReturn("Order");
+        when(result.getString("aggregate_id")).thenReturn("order-1");
+        when(result.getTimestamp("occurred_at")).thenReturn(Timestamp.from(occurredAt));
+        when(result.getInt("attempts")).thenReturn(8);
+        when(result.getString("last_error")).thenReturn("failure");
+        when(result.getTimestamp("updated_at")).thenReturn(Timestamp.from(updatedAt));
+
+        var event = mapperCaptor.getValue().mapRow(result, 0);
+        assertEquals("evt-1", event.eventId());
+        assertEquals("failure", event.lastError());
+        assertEquals(3L, repository.countDeadLetters());
+        assertTrue(repository.requeueDeadLetter("evt-1"));
+        verify(jdbc).update(anyString(), eq("evt-1"));
+    }
 }

@@ -16,10 +16,4 @@ public class SpringNotificationDefaultsPolicy implements NotificationDefaultsPol
         String locale = properties.locale();
         return (locale == null || locale.isBlank()) ? "vi-VN" : locale.trim();
     }
-
-    @Override
-    public int maxRetryAttempts() {
-        int attempts = properties.maxRetryAttempts();
-        return attempts <= 0 ? 3 : attempts;
-    }
 }

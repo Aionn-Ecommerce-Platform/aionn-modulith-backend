@@ -17,7 +17,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class IdentityNotificationAdapter implements IdentityNotificationPort {
 
-    private static final String EVENT_PASSWORD_RESET = "identity.password-reset-requested";
     private static final String EVENT_PASSWORD_CHANGED = "identity.password-changed";
     private static final String EVENT_EMAIL_CHANGED = "identity.email-changed";
     private static final String EVENT_PHONE_CHANGED = "identity.phone-changed";
@@ -26,14 +25,6 @@ public class IdentityNotificationAdapter implements IdentityNotificationPort {
     private static final String EVENT_REGISTRATION_OTP = "identity.registration-otp";
 
     private final NotificationDeliveryOrchestrator deliveryOrchestrator;
-
-    @Override
-    public void sendPasswordResetRequested(String userId, String resetToken) {
-        safeDispatch(() -> deliveryOrchestrator.sendByEvent(new NotificationCommands.SendByEvent(
-                userId, EVENT_PASSWORD_RESET, NotificationCategory.SECURITY,
-                List.of(NotificationChannel.EMAIL), null, null,
-                Map.of("resetToken", resetToken))));
-    }
 
     @Override
     public void sendPasswordChanged(String userId, String channelHint) {

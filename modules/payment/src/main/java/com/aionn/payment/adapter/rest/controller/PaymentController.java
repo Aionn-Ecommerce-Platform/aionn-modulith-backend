@@ -12,6 +12,7 @@ import com.aionn.payment.application.port.in.payment.InitiatePaymentInputPort;
 import com.aionn.payment.application.port.in.payment.ListPaymentsByOrderInputPort;
 import com.aionn.payment.application.port.in.payment.RefundPaymentInputPort;
 import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.sharedkernel.adapter.web.support.idempotency.IdempotentRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -52,11 +54,13 @@ public class PaymentController {
 
     @PostMapping("/{paymentId}/refund")
     @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
+    @IdempotentRequest(ttlSeconds = 300)
     @Operation(summary = "Refund payment")
     public ResponseEntity<ApiResponse<PaymentResponse>> refund(
             @PathVariable String paymentId,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody RefundRequest request) {
-        RefundPaymentCommand command = paymentDtoMapper.toCommand(paymentId, request);
+        RefundPaymentCommand command = paymentDtoMapper.toCommand(paymentId, request, idempotencyKey);
         return ResponseEntity.ok(ApiResponse.success(
                 paymentDtoMapper.toResponse(refundPaymentInputPort.execute(command)), "Payment refunded"));
     }

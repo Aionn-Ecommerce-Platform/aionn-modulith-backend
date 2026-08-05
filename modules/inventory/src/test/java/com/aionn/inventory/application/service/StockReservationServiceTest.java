@@ -35,6 +35,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -116,7 +117,7 @@ class StockReservationServiceTest {
         StockReservation reservation = StockReservation.reserve("R_1", "SKU_1", "WH_1", "ORDER_1", 3, exp);
         reservation.pullEvents();
 
-        when(reservationRepository.findById("R_1")).thenReturn(Optional.of(reservation));
+        when(reservationRepository.lockForUpdate("R_1")).thenReturn(Optional.of(reservation));
         when(itemRepository.lockByKey(KEY)).thenReturn(Optional.of(item));
         when(itemRepository.save(any(InventoryItem.class))).thenAnswer(inv -> inv.getArgument(0));
         when(reservationRepository.save(any(StockReservation.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -130,17 +131,15 @@ class StockReservationServiceTest {
     }
 
     @Test
-    void commitRejectsWhenReservationNotInReservedState() {
+    void repeatedCommitReturnsAlreadyCommittedReservationWithoutSideEffects() {
         Instant exp = Instant.now().plus(Duration.ofMinutes(5));
         StockReservation reservation = StockReservation.reserve("R_1", "SKU_1", "WH_1", "ORDER_1", 3, exp);
         reservation.commit();
         reservation.pullEvents();
-        when(reservationRepository.findById("R_1")).thenReturn(Optional.of(reservation));
+        when(reservationRepository.lockForUpdate("R_1")).thenReturn(Optional.of(reservation));
 
-        assertThatThrownBy(() -> service.commit(new CommitReservationCommand("R_1")))
-                .isInstanceOf(InventoryException.class)
-                .extracting("errorCode")
-                .isEqualTo(InventoryErrorCode.STOCK_RESERVATION_INVALID_STATE.getCode());
+        assertThat(service.commit(new CommitReservationCommand("R_1"))).isSameAs(reservation);
+        verifyNoInteractions(itemRepository, adjustmentRepository, outboundOrderNotifier);
     }
 
     @Test
@@ -152,7 +151,7 @@ class StockReservationServiceTest {
         StockReservation reservation = StockReservation.reserve("R_1", "SKU_1", "WH_1", "ORDER_1", 4, exp);
         reservation.pullEvents();
 
-        when(reservationRepository.findById("R_1")).thenReturn(Optional.of(reservation));
+        when(reservationRepository.lockForUpdate("R_1")).thenReturn(Optional.of(reservation));
         when(itemRepository.lockByKey(KEY)).thenReturn(Optional.of(item));
         when(itemRepository.save(any(InventoryItem.class))).thenAnswer(inv -> inv.getArgument(0));
         when(reservationRepository.save(any(StockReservation.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -161,5 +160,17 @@ class StockReservationServiceTest {
 
         assertThat(item.getAvailableQty()).isEqualTo(10);
         verify(eventPublisher, org.mockito.Mockito.atLeastOnce()).publish(anyCollection());
+    }
+
+    @Test
+    void repeatedReleaseReturnsAlreadyReleasedReservationWithoutSideEffects() {
+        StockReservation reservation = StockReservation.reserve(
+                "R_1", "SKU_1", "WH_1", "ORDER_1", 4, Instant.now().plus(Duration.ofMinutes(5)));
+        reservation.release("cancelled");
+        reservation.pullEvents();
+        when(reservationRepository.lockForUpdate("R_1")).thenReturn(Optional.of(reservation));
+
+        assertThat(service.release(new ReleaseReservationCommand("R_1", "retry"))).isSameAs(reservation);
+        verifyNoInteractions(itemRepository, eventPublisher);
     }
 }

@@ -70,6 +70,12 @@ public final class ReviewEvents {
         }
     }
 
+    public record ReviewWithdrawn(
+            String reviewId,
+            String userId,
+            Instant occurredAt) implements CatalogEvent {
+    }
+
     public record ReviewRestored(
             String reviewId,
             String restoredByAdminId,

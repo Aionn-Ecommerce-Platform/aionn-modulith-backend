@@ -37,7 +37,7 @@ class OrderingOrderPlacementAdapterTest {
                 OrderPlacementPort.PlaceCommand.ShippingAddress addr = new OrderPlacementPort.PlaceCommand.ShippingAddress(
                                 "a-1", "John", "+84912345678", "12 Main St", "W", "D", "P", "VN");
                 OrderPlacementPort.PlaceCommand command = new OrderPlacementPort.PlaceCommand(
-                                "usr-1", List.of(line), "VOUCHER", "pm-1", "VND", BigDecimal.TEN, addr);
+                                "usr-1", List.of(line), "VOUCHER", "pm-1", "VND", addr);
 
                 Order order = new Order("ord-1", null, "usr-1", "m-1", "prop-1",
                                 "pm-1", "VND",

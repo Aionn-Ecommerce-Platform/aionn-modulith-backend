@@ -42,6 +42,14 @@ public class MerchantBalancePersistenceAdapter implements MerchantBalancePersist
         return jpa.lockByMerchantAndCurrency(merchantId, currency).map(this::toDomain);
     }
 
+    @Override
+    public MerchantBalance createIfAbsentAndLock(String merchantId, String currency, java.time.Instant now) {
+        jpa.insertIfAbsent(merchantId, currency, now);
+        return jpa.lockByMerchantAndCurrency(merchantId, currency)
+                .map(this::toDomain)
+                .orElseThrow(() -> new IllegalStateException("Merchant balance insert completed without a readable row"));
+    }
+
     private MerchantBalance toDomain(MerchantBalanceEntity e) {
         return new MerchantBalance(e.getMerchantId(), e.getCurrency(),
                 e.getPending(), e.getAvailable(), e.getVersion(),

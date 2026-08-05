@@ -110,7 +110,7 @@ class PaymentProviderRoutersTest {
                 stripeClient, retryRegistry, cbRegistry, metrics);
 
         PaymentProviderClient.RefundRequest req = new PaymentProviderClient.RefundRequest(
-                "pay-1", "pi_123", java.math.BigDecimal.TEN, "USD", "test reason");
+                "pay-1", "pi_123", java.math.BigDecimal.TEN, "USD", "test reason", "refund-key");
         PaymentProviderClient.Refund expected = new PaymentProviderClient.Refund(true, "re_1", null);
         when(stripeClient.refund(req)).thenReturn(expected);
 
@@ -127,7 +127,7 @@ class PaymentProviderRoutersTest {
         ResilientPaymentProviderClient resilient = new ResilientPaymentProviderClient(
                 stripeClient, retryRegistry, cbRegistry, metrics);
         PaymentProviderClient.RefundRequest req = new PaymentProviderClient.RefundRequest(
-                "pay-1", "pi_123", java.math.BigDecimal.TEN, "USD", "test reason");
+                "pay-1", "pi_123", java.math.BigDecimal.TEN, "USD", "test reason", "refund-key");
         when(stripeClient.refund(req)).thenThrow(new RuntimeException("response lost"));
 
         assertThrows(RuntimeException.class, () -> resilient.refund(req));
@@ -146,7 +146,7 @@ class PaymentProviderRoutersTest {
                 "pay-1", "order-1", "user-1", null, null,
                 java.math.BigDecimal.TEN, "USD", "key-1", null);
         PaymentProviderClient.RefundRequest refundRequest = new PaymentProviderClient.RefundRequest(
-                "pay-1", "pi_123", java.math.BigDecimal.TEN, "USD", "test reason");
+                "pay-1", "pi_123", java.math.BigDecimal.TEN, "USD", "test reason", "refund-key");
         when(stripeClient.authorize(authorizationRequest)).thenReturn(
                 new PaymentProviderClient.Authorization(true, "pi_123", null, null, null));
         when(stripeClient.refund(refundRequest)).thenReturn(

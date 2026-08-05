@@ -20,9 +20,13 @@ import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +39,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
+@ConditionalOnProperty(prefix = "promotion.flash-sale", name = "enabled", havingValue = "true")
 @RequestMapping("/api/v1/promotions/flash-sales")
 @RequiredArgsConstructor
 @Tag(name = "Promotion - Flash Sale", description = "Flash sale registration + admin approval")
@@ -104,7 +109,7 @@ public class FlashSaleController {
         public ResponseEntity<ApiResponse<List<FlashSaleRegistrationResponse>>> listMine(
                         @CurrentUserId String ownerId,
                         @RequestParam(required = false) FlashSaleRegistrationStatus status,
-                        @RequestParam(defaultValue = "100") int limit) {
+                        @RequestParam(defaultValue = "100") @Min(1) @Max(100) int limit) {
                 return ResponseEntity.ok(ApiResponse.success(
                                 dtoMapper.toResponses(
                                                 listMyFlashSaleRegistrationsInputPort.execute(ownerId, status, limit)),
@@ -116,7 +121,7 @@ public class FlashSaleController {
         @Operation(summary = "Admin lists registrations by status")
         public ResponseEntity<ApiResponse<List<FlashSaleRegistrationResponse>>> listByStatus(
                         @RequestParam FlashSaleRegistrationStatus status,
-                        @RequestParam(defaultValue = "100") int limit) {
+                        @RequestParam(defaultValue = "100") @Min(1) @Max(100) int limit) {
                 return ResponseEntity.ok(ApiResponse.success(
                                 dtoMapper.toResponses(
                                                 listFlashSaleRegistrationsByStatusInputPort.execute(status, limit)),
@@ -124,19 +129,24 @@ public class FlashSaleController {
         }
 
         @GetMapping("/registrations/{registrationId}")
-        @PreAuthorize("isAuthenticated()")
+        @PreAuthorize("hasAnyAuthority('ROLE_MERCHANT','ROLE_SYSTEM_ADMIN')")
         @Operation(summary = "Get flash-sale registration by id")
         public ResponseEntity<ApiResponse<FlashSaleRegistrationResponse>> get(
+                        @CurrentUserId String ownerId,
+                        Authentication authentication,
                         @PathVariable String registrationId) {
+                boolean systemAdmin = authentication.getAuthorities().stream()
+                                .anyMatch(authority -> "ROLE_SYSTEM_ADMIN".equals(authority.getAuthority()));
                 return ResponseEntity.ok(ApiResponse.success(
-                                dtoMapper.toResponse(getFlashSaleRegistrationInputPort.execute(registrationId)),
+                                dtoMapper.toResponse(getFlashSaleRegistrationInputPort.execute(
+                                                registrationId, ownerId, systemAdmin)),
                                 "Flash-sale registration fetched"));
         }
 
         @GetMapping("/active")
         @Operation(summary = "Public — active flash sales for the storefront")
         public ResponseEntity<ApiResponse<List<ActiveFlashSaleResponse>>> active(
-                        @RequestParam(defaultValue = "5") int limit) {
+                        @RequestParam(defaultValue = "5") @Min(1) @Max(100) int limit) {
                 return ResponseEntity.ok(ApiResponse.success(
                                 dtoMapper.toActiveResponses(listActiveFlashSalesInputPort.execute(limit)),
                                 "Active flash sales fetched"));

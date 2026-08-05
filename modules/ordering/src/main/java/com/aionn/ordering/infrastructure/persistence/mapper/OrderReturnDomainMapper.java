@@ -3,6 +3,7 @@ package com.aionn.ordering.infrastructure.persistence.mapper;
 import com.aionn.ordering.domain.model.OrderReturn;
 import com.aionn.sharedkernel.domain.vo.Money;
 import com.aionn.ordering.domain.valueobject.ReturnStatus;
+import com.aionn.ordering.domain.valueobject.ReturnRefundStatus;
 import com.aionn.ordering.infrastructure.persistence.entity.OrderReturnEntity;
 import org.springframework.stereotype.Component;
 
@@ -27,7 +28,11 @@ public class OrderReturnDomainMapper {
                 ReturnStatus.valueOf(e.getStatus()),
                 e.getRequestedAt(),
                 e.getDecidedAt(),
-                e.getReceivedAt());
+                e.getReceivedAt(),
+                ReturnRefundStatus.valueOf(e.getRefundStatus()),
+                e.getRefundAttempts(),
+                e.getRefundFailureReason(),
+                e.getNextRefundAttemptAt());
     }
 
     public OrderReturnEntity toEntity(OrderReturn r, OrderReturnEntity existing) {
@@ -48,6 +53,10 @@ public class OrderReturnDomainMapper {
         entity.setStatus(r.getStatus().name());
         entity.setDecidedAt(r.getDecidedAt());
         entity.setReceivedAt(r.getReceivedAt());
+        entity.setRefundStatus(r.getRefundStatus().name());
+        entity.setRefundAttempts(r.getRefundAttempts());
+        entity.setRefundFailureReason(r.getRefundFailureReason());
+        entity.setNextRefundAttemptAt(r.getNextRefundAttemptAt());
         return entity;
     }
 }

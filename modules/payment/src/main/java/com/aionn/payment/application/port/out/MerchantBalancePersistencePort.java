@@ -2,6 +2,7 @@ package com.aionn.payment.application.port.out;
 
 import com.aionn.payment.domain.model.MerchantBalance;
 
+import java.time.Instant;
 import java.util.Optional;
 
 public interface MerchantBalancePersistencePort {
@@ -11,4 +12,6 @@ public interface MerchantBalancePersistencePort {
     Optional<MerchantBalance> find(String merchantId, String currency);
 
     Optional<MerchantBalance> lockForUpdate(String merchantId, String currency);
+
+    MerchantBalance createIfAbsentAndLock(String merchantId, String currency, Instant now);
 }

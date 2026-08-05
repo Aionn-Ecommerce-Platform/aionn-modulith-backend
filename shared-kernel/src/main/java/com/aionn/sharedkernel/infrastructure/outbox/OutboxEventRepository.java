@@ -85,6 +85,37 @@ class OutboxEventRepository {
                 truncate(error), eventId, owner) == 1;
     }
 
+    List<OutboxDeadLetterService.DeadLetterEvent> findDeadLetters(int limit, int offset) {
+        return jdbcTemplate.query("""
+                SELECT event_id, event_kind, event_type, aggregate_type, aggregate_id,
+                       occurred_at, attempts, last_error, updated_at
+                FROM outbox_events
+                WHERE status = 'DEAD_LETTER'
+                ORDER BY updated_at DESC, event_id
+                LIMIT ? OFFSET ?
+                """, (result, rowNumber) -> new OutboxDeadLetterService.DeadLetterEvent(
+                        result.getString("event_id"), result.getString("event_kind"),
+                        result.getString("event_type"), result.getString("aggregate_type"),
+                        result.getString("aggregate_id"), result.getTimestamp("occurred_at").toInstant(),
+                        result.getInt("attempts"), result.getString("last_error"),
+                        result.getTimestamp("updated_at").toInstant()), limit, offset);
+    }
+
+    long countDeadLetters() {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM outbox_events WHERE status = 'DEAD_LETTER'", Long.class);
+        return count == null ? 0 : count;
+    }
+
+    boolean requeueDeadLetter(String eventId) {
+        return jdbcTemplate.update("""
+                UPDATE outbox_events
+                SET status = 'PENDING', attempts = 0, next_attempt_at = NOW(),
+                    last_error = NULL, lease_owner = NULL, lease_until = NULL, updated_at = NOW()
+                WHERE event_id = ? AND status = 'DEAD_LETTER'
+                """, eventId) == 1;
+    }
+
     private OutboxEventRecord map(ResultSet result, int rowNumber) throws SQLException {
         return new OutboxEventRecord(result.getString("event_id"), result.getString("event_kind"),
                 result.getString("event_type"), result.getString("payload_type"),

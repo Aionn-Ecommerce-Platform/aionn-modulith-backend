@@ -2,6 +2,8 @@ package com.aionn.catalog.infrastructure.persistence.adapter.product;
 
 import com.aionn.catalog.application.port.out.product.ProductPersistencePort;
 import com.aionn.catalog.domain.model.Product;
+import com.aionn.catalog.domain.exception.CatalogErrorCode;
+import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.catalog.domain.valueobject.ProductStatus;
 import com.aionn.catalog.infrastructure.persistence.entity.ProductEntity;
 import com.aionn.catalog.infrastructure.persistence.mapper.ProductDomainMapper;
@@ -9,6 +11,7 @@ import com.aionn.catalog.infrastructure.persistence.repository.product.ProductRe
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.core.TypedPropertyPath;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
@@ -27,11 +30,16 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
     @Override
     public Product save(Product product) {
         var entity = mapper.toEntity(product);
-        jpa.findById(product.getProductId()).ifPresent(existing -> {
-            entity.setVersion(existing.getVersion());
-        });
-        var saved = jpa.save(entity);
-        return mapper.toDomain(saved);
+        try {
+            var saved = jpa.save(entity);
+            return mapper.toDomain(saved);
+        } catch (DataIntegrityViolationException ex) {
+            if (isSkuConstraintViolation(ex)) {
+                throw new CatalogException(CatalogErrorCode.PRODUCT_VARIANT_DUPLICATE,
+                        "A product variant with this SKU already exists");
+            }
+            throw ex;
+        }
     }
 
     @Override
@@ -165,5 +173,41 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
                 .map(byId::get)
                 .filter(java.util.Objects::nonNull)
                 .toList();
+    }
+
+    private static boolean isSkuConstraintViolation(DataIntegrityViolationException exception) {
+        Throwable current = exception;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null && message.toLowerCase(java.util.Locale.ROOT).contains("sku")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    @Override
+    public FallbackPage searchFallback(FallbackFilter filter, OffsetPagination pagination) {
+        String query = normalize(filter.query());
+        String merchantId = normalize(filter.merchantId());
+        String brands = csv(filter.brandIds());
+        String categories = csv(filter.categoryIds());
+        String status = (filter.status() == null ? ProductStatus.PUBLISHED : filter.status()).name();
+        List<Product> content = jpa.searchFallback(query, merchantId, status, brands, categories,
+                        filter.priceMin(), filter.priceMax(), pagination.size(), pagination.offset()).stream()
+                .map(mapper::toDomain)
+                .toList();
+        long total = jpa.countFallback(query, merchantId, status, brands, categories,
+                filter.priceMin(), filter.priceMax());
+        return new FallbackPage(content, total);
+    }
+
+    private static String normalize(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static String csv(List<String> values) {
+        return values == null || values.isEmpty() ? "" : String.join(",", values);
     }
 }

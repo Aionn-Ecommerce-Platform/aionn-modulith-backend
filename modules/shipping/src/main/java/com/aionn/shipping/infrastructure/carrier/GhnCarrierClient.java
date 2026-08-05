@@ -126,7 +126,7 @@ public class GhnCarrierClient implements CarrierClient {
         body.put("to_address", address.addressLine());
         body.put(FIELD_TO_WARD_CODE, ghn.wardCode());
         body.put(FIELD_TO_DISTRICT_ID, ghn.districtId());
-        body.put("cod_amount", codAmount == null ? 0 : codAmount.longValueExact());
+        body.put("cod_amount", toGhnCodAmount(codAmount, currency));
         putDimensions(body, dimensions);
         applyService(body);
         body.put("items", List.of(item));
@@ -148,6 +148,22 @@ public class GhnCarrierClient implements CarrierClient {
         target.put(FIELD_LENGTH, dimensions.lengthCm().intValue());
         target.put(FIELD_WIDTH, dimensions.widthCm().intValue());
         target.put(FIELD_HEIGHT, dimensions.heightCm().intValue());
+    }
+
+    private static long toGhnCodAmount(BigDecimal amount, String currency) {
+        if (amount == null) {
+            return 0;
+        }
+        if (!"VND".equalsIgnoreCase(currency) || amount.signum() < 0 || amount.stripTrailingZeros().scale() > 0) {
+            throw new ShippingException(ShippingErrorCode.INVALID_ARGUMENT,
+                    "GHN COD amount must be a non-negative whole VND amount");
+        }
+        try {
+            return amount.longValueExact();
+        } catch (ArithmeticException ex) {
+            throw new ShippingException(ShippingErrorCode.INVALID_ARGUMENT,
+                    "GHN COD amount is outside the supported range");
+        }
     }
 
     @Override

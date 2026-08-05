@@ -88,12 +88,12 @@ class IntegrationPortContractTest {
                                 "VOUCHER",
                                 "pm-1",
                                 "VND",
-                                BigDecimal.valueOf(30),
                                 new OrderPlacementPort.PlaceCommand.ShippingAddress("addr-1", "A", "0909", "123 Street",
                                                 "ward-1",
                                                 "district-1", "province-1", "VN"));
                 var placedOrder = new OrderPlacementPort.PlacedOrder("o-1", 1000L, "VND", "PENDING");
-                var orderSummary = new OrderQueryPort.OrderSummary("o-1", "m-1", BigDecimal.valueOf(100), "VND");
+                var orderSummary = new OrderQueryPort.OrderSummary(
+                                "o-1", "u-1", "m-1", BigDecimal.valueOf(100), "VND");
                 var orderSnapshot = new OrderSnapshotQueryPort.OrderSnapshot(
                                 "o-1",
                                 "u-1",
@@ -131,6 +131,10 @@ class IntegrationPortContractTest {
                 assertEquals("camp-1", campaign.campaignId());
                 assertEquals("addr-1", placeCommand.shippingAddress().addressId());
                 assertEquals(1000L, placedOrder.totalAmountMinor());
+                assertEquals("o-1", orderSummary.orderId());
+                assertEquals("u-1", orderSummary.userId());
+                assertEquals("m-1", orderSummary.merchantId());
+                assertEquals(BigDecimal.valueOf(100), orderSummary.totalAmount());
                 assertEquals("VND", orderSummary.currency());
                 assertEquals("COMPLETED", orderSnapshot.status());
                 assertEquals("track-1", shippingRegistration.trackingCode());

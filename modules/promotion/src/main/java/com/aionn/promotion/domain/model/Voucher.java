@@ -105,7 +105,7 @@ public class Voucher extends AggregateRoot {
     }
 
     public int remainingUses() {
-        return Math.max(usageLimit - usedCount, 0);
+        return Math.max(usageLimit - usedCount - reservedCount, 0);
     }
 
     public void claimSlot() {
@@ -118,7 +118,6 @@ public class Voucher extends AggregateRoot {
                 () -> new PromotionException(PromotionErrorCode.VOUCHER_EXPIRED));
         Guard.require(remainingUses() > 0,
                 () -> new PromotionException(PromotionErrorCode.VOUCHER_NO_USAGE_LEFT));
-        this.usedCount++;
         this.updatedAt = now;
     }
 
@@ -130,6 +129,9 @@ public class Voucher extends AggregateRoot {
         Instant now = clock.instant();
         Guard.require(isValidNow(now),
                 () -> new PromotionException(PromotionErrorCode.VOUCHER_EXPIRED));
+        Guard.require(remainingUses() > 0,
+                () -> new PromotionException(PromotionErrorCode.VOUCHER_NO_USAGE_LEFT));
+        this.reservedCount++;
         this.updatedAt = now;
     }
 
@@ -138,6 +140,11 @@ public class Voucher extends AggregateRoot {
     }
 
     public void commitSlot(Clock clock) {
+        Guard.require(reservedCount > 0,
+                () -> new PromotionException(PromotionErrorCode.USER_VOUCHER_INVALID_STATE,
+                        "No reserved voucher slot to commit"));
+        this.reservedCount--;
+        this.usedCount++;
         this.updatedAt = clock.instant();
     }
 
@@ -146,6 +153,18 @@ public class Voucher extends AggregateRoot {
     }
 
     public void releaseSlot(Clock clock) {
+        Guard.require(reservedCount > 0,
+                () -> new PromotionException(PromotionErrorCode.USER_VOUCHER_INVALID_STATE,
+                        "No reserved voucher slot to release"));
+        this.reservedCount--;
+        this.updatedAt = clock.instant();
+    }
+
+    public void releaseCommittedSlot(Clock clock) {
+        Guard.require(usedCount > 0,
+                () -> new PromotionException(PromotionErrorCode.USER_VOUCHER_INVALID_STATE,
+                        "No committed voucher slot to release"));
+        this.usedCount--;
         this.updatedAt = clock.instant();
     }
 

@@ -233,12 +233,30 @@ class FlashSaleControllerWebTest {
 
     @Test
     void getReturnsRegistration() throws Exception {
-        when(getFlashSaleRegistrationInputPort.execute("reg-1"))
+        when(getFlashSaleRegistrationInputPort.execute("reg-1", "owner-1", false))
                 .thenReturn(sample("reg-1", "APPROVED"));
 
-        mockMvc.perform(get("/api/v1/promotions/flash-sales/registrations/reg-1"))
+        mockMvc.perform(get("/api/v1/promotions/flash-sales/registrations/reg-1")
+                        .principal(SecurityContextHolder.getContext().getAuthentication()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.registrationId").value("reg-1"));
+    }
+
+    @Test
+    void getAllowsSystemAdminInspectionWithoutMerchantOwnership() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        "admin-1", "n/a",
+                        List.of(new SimpleGrantedAuthority("ROLE_SYSTEM_ADMIN"))));
+        when(getFlashSaleRegistrationInputPort.execute("reg-1", "admin-1", true))
+                .thenReturn(sample("reg-1", "PENDING"));
+
+        mockMvc.perform(get("/api/v1/promotions/flash-sales/registrations/reg-1")
+                        .principal(SecurityContextHolder.getContext().getAuthentication()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.registrationId").value("reg-1"));
+
+        verify(getFlashSaleRegistrationInputPort).execute("reg-1", "admin-1", true);
     }
 
     @Test

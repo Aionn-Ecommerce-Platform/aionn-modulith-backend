@@ -2,8 +2,6 @@ package com.aionn.sharedkernel.integration.port.notification;
 
 public interface IdentityNotificationPort {
 
-    void sendPasswordResetRequested(String userId, String resetToken);
-
     void sendPasswordChanged(String userId, String channelHint);
 
     void sendEmailChanged(String userId, String oldEmail, String newEmail);

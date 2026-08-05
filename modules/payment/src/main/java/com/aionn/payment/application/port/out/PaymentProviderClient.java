@@ -47,7 +47,8 @@ public interface PaymentProviderClient {
                         String transactionNo,
                         BigDecimal amount,
                         String currency,
-                        String reason) {
+                        String reason,
+                        String idempotencyKey) {
         }
 
         record Refund(boolean accepted, String refundTransactionNo, String declineReason) {

@@ -6,6 +6,8 @@ import com.aionn.promotion.adapter.rest.dto.voucher.ReleaseVoucherRequest;
 import com.aionn.promotion.adapter.rest.dto.voucher.ReserveVoucherRequest;
 import com.aionn.promotion.adapter.rest.dto.voucher.response.UserVoucherResponse;
 import com.aionn.promotion.adapter.rest.dto.voucher.response.VoucherResponse;
+import com.aionn.promotion.adapter.rest.dto.voucher.response.MerchantVoucherAnalyticsResponse;
+import com.aionn.promotion.application.dto.analytics.result.MerchantVoucherAnalyticsResult;
 import com.aionn.promotion.application.dto.voucher.command.VoucherCommands;
 import com.aionn.promotion.application.dto.voucher.result.UserVoucherResult;
 import com.aionn.promotion.application.dto.voucher.result.VoucherResult;
@@ -25,6 +27,8 @@ public interface VoucherDtoMapper {
     UserVoucherResponse toResponse(UserVoucherResult result);
 
     List<UserVoucherResponse> toUserVoucherResponses(List<UserVoucherResult> results);
+
+    MerchantVoucherAnalyticsResponse toResponse(MerchantVoucherAnalyticsResult result);
 
     default VoucherCommands.IssueShopVoucher toIssueShopVoucherCommand(String ownerId,
             IssueVoucherRequest request) {

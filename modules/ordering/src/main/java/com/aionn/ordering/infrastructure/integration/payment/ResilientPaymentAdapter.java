@@ -49,9 +49,9 @@ public class ResilientPaymentAdapter implements PaymentGateway {
     }
 
     @Override
-    public void refund(String paymentId, BigDecimal amount, String currency, String reason) {
+    public void refund(String paymentId, BigDecimal amount, String currency, String reason, String idempotencyKey) {
         execute("refund", () -> {
-            delegate.refund(paymentId, amount, currency, reason);
+            delegate.refund(paymentId, amount, currency, reason, idempotencyKey);
             return null;
         });
     }

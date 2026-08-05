@@ -124,6 +124,58 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String> 
       """, nativeQuery = true)
   long countSearchPublished(@Param("q") String q);
 
+  @Query(value = """
+      SELECT p.* FROM products p
+      WHERE p.status = :status
+        AND (:q IS NULL OR p.name ILIKE CONCAT('%', :q, '%'))
+        AND (:merchantId IS NULL OR p.merchant_id = :merchantId)
+        AND (:brandIdsCsv = '' OR p.brand_id = ANY(string_to_array(:brandIdsCsv, ',')))
+        AND (:categoryIdsCsv = '' OR EXISTS (
+          SELECT 1 FROM jsonb_array_elements_text(p.category_ids) category_id
+          WHERE category_id = ANY(string_to_array(:categoryIdsCsv, ','))))
+        AND ((:priceMin IS NULL AND :priceMax IS NULL) OR EXISTS (
+          SELECT 1 FROM product_variants variant
+          WHERE variant.product_id = p.product_id
+            AND (:priceMin IS NULL OR variant.price >= :priceMin)
+            AND (:priceMax IS NULL OR variant.price <= :priceMax)))
+      ORDER BY p.updated_at DESC, p.product_id ASC
+      LIMIT :limit OFFSET :offset
+      """, nativeQuery = true)
+  List<ProductEntity> searchFallback(
+      @Param("q") String query,
+      @Param("merchantId") String merchantId,
+      @Param("status") String status,
+      @Param("brandIdsCsv") String brandIdsCsv,
+      @Param("categoryIdsCsv") String categoryIdsCsv,
+      @Param("priceMin") java.math.BigDecimal priceMin,
+      @Param("priceMax") java.math.BigDecimal priceMax,
+      @Param("limit") int limit,
+      @Param("offset") int offset);
+
+  @Query(value = """
+      SELECT COUNT(*) FROM products p
+      WHERE p.status = :status
+        AND (:q IS NULL OR p.name ILIKE CONCAT('%', :q, '%'))
+        AND (:merchantId IS NULL OR p.merchant_id = :merchantId)
+        AND (:brandIdsCsv = '' OR p.brand_id = ANY(string_to_array(:brandIdsCsv, ',')))
+        AND (:categoryIdsCsv = '' OR EXISTS (
+          SELECT 1 FROM jsonb_array_elements_text(p.category_ids) category_id
+          WHERE category_id = ANY(string_to_array(:categoryIdsCsv, ','))))
+        AND ((:priceMin IS NULL AND :priceMax IS NULL) OR EXISTS (
+          SELECT 1 FROM product_variants variant
+          WHERE variant.product_id = p.product_id
+            AND (:priceMin IS NULL OR variant.price >= :priceMin)
+            AND (:priceMax IS NULL OR variant.price <= :priceMax)))
+      """, nativeQuery = true)
+  long countFallback(
+      @Param("q") String query,
+      @Param("merchantId") String merchantId,
+      @Param("status") String status,
+      @Param("brandIdsCsv") String brandIdsCsv,
+      @Param("categoryIdsCsv") String categoryIdsCsv,
+      @Param("priceMin") java.math.BigDecimal priceMin,
+      @Param("priceMax") java.math.BigDecimal priceMax);
+
   @Query("SELECT p.status AS status, COUNT(p) AS cnt FROM ProductEntity p GROUP BY p.status")
   List<ProductStatusCount> countGroupedByStatus();
 

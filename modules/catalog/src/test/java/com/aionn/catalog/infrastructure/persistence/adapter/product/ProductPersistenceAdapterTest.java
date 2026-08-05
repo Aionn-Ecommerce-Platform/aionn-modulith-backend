@@ -1,6 +1,7 @@
 package com.aionn.catalog.infrastructure.persistence.adapter.product;
 
 import com.aionn.catalog.domain.model.Product;
+import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.catalog.domain.valueobject.ProductStatus;
 import com.aionn.catalog.infrastructure.persistence.entity.ProductEntity;
 import com.aionn.catalog.infrastructure.persistence.mapper.ProductDomainMapper;
@@ -15,14 +16,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,6 +52,19 @@ class ProductPersistenceAdapterTest {
         when(mapper.toDomain(entity)).thenReturn(domain);
 
         assertThat(adapter.save(domain)).isSameAs(domain);
+        verify(jpa, never()).findById(PRODUCT_ID);
+    }
+
+    @Test
+    void saveTranslatesSkuConstraintViolation() {
+        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
+        ProductEntity entity = new ProductEntity();
+        when(mapper.toEntity(domain)).thenReturn(entity);
+        when(jpa.save(entity)).thenThrow(new DataIntegrityViolationException("uq_product_variants_sku"));
+
+        assertThatThrownBy(() -> adapter.save(domain))
+                .isInstanceOf(CatalogException.class)
+                .hasMessageContaining("SKU");
     }
 
     @Test
@@ -257,5 +274,26 @@ class ProductPersistenceAdapterTest {
 
         assertThat(adapter.findByIdsPreserveOrder(List.of(p2.getProductId(), p1.getProductId())))
                 .containsExactly(p2, p1);
+    }
+
+    @Test
+    void searchFallbackPushesFiltersAndPaginationToDatabase() {
+        ProductEntity entity = new ProductEntity();
+        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
+        var filter = new com.aionn.catalog.application.port.out.product.ProductPersistencePort.FallbackFilter(
+                " widget ", MERCHANT_ID, ProductStatus.PUBLISHED,
+                List.of("brand-1", "brand-2"), List.of("cat-1"),
+                new java.math.BigDecimal("10"), new java.math.BigDecimal("50"));
+        when(jpa.searchFallback("widget", MERCHANT_ID, "PUBLISHED", "brand-1,brand-2", "cat-1",
+                new java.math.BigDecimal("10"), new java.math.BigDecimal("50"), 20, 40))
+                .thenReturn(List.of(entity));
+        when(jpa.countFallback("widget", MERCHANT_ID, "PUBLISHED", "brand-1,brand-2", "cat-1",
+                new java.math.BigDecimal("10"), new java.math.BigDecimal("50"))).thenReturn(41L);
+        when(mapper.toDomain(entity)).thenReturn(domain);
+
+        var page = adapter.searchFallback(filter, OffsetPagination.of(2, 20));
+
+        assertThat(page.content()).containsExactly(domain);
+        assertThat(page.totalElements()).isEqualTo(41);
     }
 }

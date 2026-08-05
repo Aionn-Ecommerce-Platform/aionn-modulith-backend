@@ -141,6 +141,14 @@ public class Notification extends AggregateRoot {
         return status == NotificationStatus.PENDING && retryCount < MAX_RETRY;
     }
 
+    public void markDeliveryUnknown(String reason, Clock clock) {
+        ensureTransition(NotificationStatus.FAILED);
+        retryCount++;
+        lastFailureReason = "DELIVERY_OUTCOME_UNKNOWN:" + reason;
+        status = NotificationStatus.FAILED;
+        updatedAt = clock.instant();
+    }
+
     public void markRead() {
         markRead(Clock.systemUTC());
     }

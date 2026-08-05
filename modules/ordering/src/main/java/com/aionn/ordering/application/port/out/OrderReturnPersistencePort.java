@@ -20,6 +20,8 @@ public interface OrderReturnPersistencePort {
 
     List<OrderReturn> findByMerchantId(String merchantId, int limit);
 
+    List<String> findRefundRetryIds(Instant now, int maxAttempts, int limit);
+
     List<ReturnAnalyticsRow> findReturnAnalyticsRows(Instant from, Instant to);
 
     long countCompletedOrdersBetween(Instant from, Instant to);

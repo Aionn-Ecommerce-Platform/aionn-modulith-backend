@@ -2,6 +2,8 @@ package com.aionn.catalog.infrastructure.persistence.adapter.review;
 
 import com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort;
 import com.aionn.catalog.domain.model.ProductReview;
+import com.aionn.catalog.domain.exception.CatalogErrorCode;
+import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.catalog.domain.valueobject.ReviewStatus;
 import com.aionn.catalog.infrastructure.persistence.entity.ProductReviewEntity;
 import com.aionn.catalog.infrastructure.persistence.mapper.ReviewDomainMapper;
@@ -12,6 +14,7 @@ import org.springframework.data.core.TypedPropertyPath;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -27,7 +30,14 @@ public class ProductReviewPersistenceAdapter implements ProductReviewPersistence
 
     @Override
     public ProductReview save(ProductReview review) {
-        return mapper.toDomain(jpa.save(mapper.toEntity(review)));
+        try {
+            return mapper.toDomain(jpa.save(mapper.toEntity(review)));
+        } catch (DataIntegrityViolationException ex) {
+            if (isDuplicateReviewViolation(ex)) {
+                throw new CatalogException(CatalogErrorCode.REVIEW_ALREADY_EXISTS);
+            }
+            throw ex;
+        }
     }
 
     @Override
@@ -104,5 +114,21 @@ public class ProductReviewPersistenceAdapter implements ProductReviewPersistence
             distribution.put(((Number) row[0]).intValue(), ((Number) row[1]).longValue());
         }
         return distribution;
+    }
+
+    private static boolean isDuplicateReviewViolation(DataIntegrityViolationException exception) {
+        Throwable current = exception;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null) {
+                String normalized = message.toLowerCase(java.util.Locale.ROOT);
+                if (normalized.contains("uq_reviews_user_product")
+                        || (normalized.contains("user_id") && normalized.contains("product_id"))) {
+                    return true;
+                }
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }

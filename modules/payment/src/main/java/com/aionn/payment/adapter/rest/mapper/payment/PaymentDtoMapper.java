@@ -18,10 +18,11 @@ public interface PaymentDtoMapper {
 
     InitiatePaymentCommand toCommand(InitiatePaymentRequest request, String userId, String idempotencyKey);
 
-    RefundPaymentCommand toCommand(String paymentId, RefundRequest request);
+    RefundPaymentCommand toCommand(String paymentId, RefundRequest request, String idempotencyKey);
 
     default ConfirmPaymentCommand toConfirmCommand(PaymentProviderClient.WebhookEvent event) {
-        return new ConfirmPaymentCommand(event.paymentId(), event.transactionNo());
+        return new ConfirmPaymentCommand(
+                event.paymentId(), event.transactionNo(), event.amount(), event.currency());
     }
 
     default FailPaymentCommand toFailCommand(PaymentProviderClient.WebhookEvent event, String defaultErrorCode) {

@@ -10,6 +10,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -47,5 +48,25 @@ class MerchantBalancePersistenceAdapterTest {
         MerchantBalance saved = adapter.save(result.get());
         assertNotNull(saved);
         assertEquals("merch-1", saved.getMerchantId());
+    }
+
+    @Test
+    void createIfAbsentThenLocksTheWinningBalance() {
+        Instant now = Instant.parse("2026-08-05T00:00:00Z");
+        MerchantBalanceEntity entity = MerchantBalanceEntity.builder()
+                .merchantId("merch-1")
+                .currency("VND")
+                .pending(BigDecimal.ZERO)
+                .available(BigDecimal.ZERO)
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+        when(jpa.lockByMerchantAndCurrency("merch-1", "VND")).thenReturn(Optional.of(entity));
+
+        MerchantBalance result = adapter.createIfAbsentAndLock("merch-1", "VND", now);
+
+        assertEquals("merch-1", result.getMerchantId());
+        verify(jpa).insertIfAbsent("merch-1", "VND", now);
+        verify(jpa).lockByMerchantAndCurrency("merch-1", "VND");
     }
 }

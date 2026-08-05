@@ -17,7 +17,7 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface WarehouseDtoMapper {
 
-    CreateWarehouseCommand toCreateWarehouseCommand(String ownerId, CreateWarehouseRequest request);
+    CreateWarehouseCommand toCreateWarehouseCommand(String merchantId, CreateWarehouseRequest request);
 
     ChangeStatusCommand toChangeStatusCommand(String warehouseId, String ownerId, ChangeWarehouseStatusRequest request);
 
