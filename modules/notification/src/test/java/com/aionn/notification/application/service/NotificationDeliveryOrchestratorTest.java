@@ -2,6 +2,7 @@ package com.aionn.notification.application.service;
 
 import com.aionn.notification.application.dto.notification.command.NotificationCommands;
 import com.aionn.notification.application.port.out.ChannelSender;
+import com.aionn.notification.application.port.out.DeliveryAttemptPort;
 import com.aionn.notification.application.port.out.RecipientResolver;
 import com.aionn.notification.application.port.out.observability.NotificationMetricsPort;
 import com.aionn.notification.domain.exception.NotificationException;
@@ -10,6 +11,7 @@ import com.aionn.notification.domain.valueobject.NotificationCategory;
 import com.aionn.notification.domain.valueobject.NotificationChannel;
 import com.aionn.notification.domain.valueobject.NotificationStatus;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -44,11 +46,21 @@ class NotificationDeliveryOrchestratorTest {
     @Mock
     private NotificationMetricsPort metrics;
     @Mock
+    private DeliveryAttemptPort deliveryAttemptPort;
+    @Mock
     private ChannelSender emailSender;
+
+    @BeforeEach
+    void allowNewAttempts() {
+        when(deliveryAttemptPort.begin(any(), any())).thenAnswer(invocation -> {
+            String id = invocation.getArgument(0);
+            return new DeliveryAttemptPort.Attempt(id + ":attempt", DeliveryAttemptPort.Status.STARTED, true);
+        });
+    }
 
     private NotificationDeliveryOrchestrator orchestrator(ChannelSender... senders) {
         return new NotificationDeliveryOrchestrator(dispatchService, recipientResolver,
-                metrics, List.of(senders));
+                metrics, deliveryAttemptPort, List.of(senders));
     }
 
     private static Notification pending(String notiId, NotificationChannel channel) {
@@ -129,17 +141,33 @@ class NotificationDeliveryOrchestratorTest {
     }
 
     @Test
-    void senderExceptionIsTranslatedIntoRecordedFailure() {
+    void senderExceptionIsRecordedAsUnknownWithoutAutomaticResend() {
         when(dispatchService.prepareByEvent(any())).thenReturn(List.of(pending("noti-1", NotificationChannel.EMAIL)));
         when(recipientResolver.resolve("user-1", NotificationChannel.EMAIL)).thenReturn("a@b.c");
         when(emailSender.channel()).thenReturn(NotificationChannel.EMAIL);
         when(emailSender.send(any())).thenThrow(new IllegalStateException("socket closed"));
-        when(dispatchService.recordFailed(any())).thenReturn(pending("noti-1", NotificationChannel.EMAIL));
+        when(dispatchService.recordDeliveryUnknown(any(), any()))
+                .thenReturn(pending("noti-1", NotificationChannel.EMAIL));
 
         orchestrator(emailSender).sendByEvent(byEvent());
 
-        verify(dispatchService).recordFailed(
-                new NotificationCommands.RecordFailed("noti-1", "SEND_EXCEPTION:socket closed"));
+        verify(dispatchService).recordDeliveryUnknown("noti-1", "socket closed");
+    }
+
+    @Test
+    void unresolvedPreviousAttemptIsNotSentAgain() {
+        when(dispatchService.prepareByEvent(any())).thenReturn(List.of(pending("noti-1", NotificationChannel.EMAIL)));
+        when(recipientResolver.resolve("user-1", NotificationChannel.EMAIL)).thenReturn("a@b.c");
+        when(emailSender.channel()).thenReturn(NotificationChannel.EMAIL);
+        when(deliveryAttemptPort.begin("noti-1", NotificationChannel.EMAIL)).thenReturn(
+                new DeliveryAttemptPort.Attempt("attempt-1", DeliveryAttemptPort.Status.STARTED, false));
+        when(dispatchService.recordDeliveryUnknown(any(), any()))
+                .thenReturn(pending("noti-1", NotificationChannel.EMAIL));
+
+        orchestrator(emailSender).sendByEvent(byEvent());
+
+        verify(emailSender, never()).send(any());
+        verify(dispatchService).recordDeliveryUnknown(any(), any());
     }
 
     @Test

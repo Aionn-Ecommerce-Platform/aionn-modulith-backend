@@ -2,6 +2,7 @@ package com.aionn.notification.application.service;
 
 import com.aionn.notification.application.dto.notification.command.NotificationCommands;
 import com.aionn.notification.application.port.out.ChannelSender;
+import com.aionn.notification.application.port.out.DeliveryAttemptPort;
 import com.aionn.notification.application.port.out.RecipientResolver;
 import com.aionn.notification.application.port.out.observability.NotificationMetricsPort;
 import com.aionn.notification.domain.exception.NotificationErrorCode;
@@ -27,14 +28,16 @@ public class NotificationDeliveryOrchestrator {
     private final NotificationDispatchService dispatchService;
     private final RecipientResolver recipientResolver;
     private final NotificationMetricsPort metrics;
+    private final DeliveryAttemptPort deliveryAttemptPort;
     private final Map<NotificationChannel, ChannelSender> senderIndex;
 
     public NotificationDeliveryOrchestrator(NotificationDispatchService dispatchService,
             RecipientResolver recipientResolver, NotificationMetricsPort metrics,
-            List<ChannelSender> channelSenders) {
+            DeliveryAttemptPort deliveryAttemptPort, List<ChannelSender> channelSenders) {
         this.dispatchService = dispatchService;
         this.recipientResolver = recipientResolver;
         this.metrics = metrics;
+        this.deliveryAttemptPort = deliveryAttemptPort;
         EnumMap<NotificationChannel, ChannelSender> index = new EnumMap<>(NotificationChannel.class);
         for (ChannelSender candidate : channelSenders) {
             if (index.putIfAbsent(candidate.channel(), candidate) != null) {
@@ -83,19 +86,33 @@ public class NotificationDeliveryOrchestrator {
         }
 
         ChannelSender channelSender = sender(notification.getChannel());
+        DeliveryAttemptPort.Attempt attempt = deliveryAttemptPort.begin(
+                notification.getNotiId(), notification.getChannel());
+        if (attempt.status() == DeliveryAttemptPort.Status.SUCCEEDED) {
+            return dispatchService.recordSent(new NotificationCommands.RecordSent(notification.getNotiId()));
+        }
+        if (!attempt.created()) {
+            metrics.deliveryOutcome(channel, OUTCOME_FAILED);
+            return dispatchService.recordDeliveryUnknown(notification.getNotiId(),
+                    "A previous provider call did not persist a definitive outcome");
+        }
         ChannelSender.DeliveryResult delivery;
         try {
             delivery = channelSender.send(new ChannelSender.DeliveryRequest(
                     notification.getNotiId(), notification.getUserId(), recipient,
                     notification.getSubject(), notification.getContent()));
         } catch (RuntimeException ex) {
-            delivery = ChannelSender.DeliveryResult.failed("SEND_EXCEPTION", ex.getMessage());
+            metrics.deliveryOutcome(channel, OUTCOME_FAILED);
+            return dispatchService.recordDeliveryUnknown(notification.getNotiId(), ex.getMessage());
         }
 
         if (delivery.success()) {
+            deliveryAttemptPort.recordSucceeded(attempt.attemptId(), delivery.externalId());
             metrics.deliveryOutcome(channel, OUTCOME_SUCCESS);
             return dispatchService.recordSent(new NotificationCommands.RecordSent(notification.getNotiId()));
         }
+        deliveryAttemptPort.recordFailed(attempt.attemptId(),
+                delivery.errorCode() + ":" + delivery.errorReason());
         metrics.deliveryOutcome(channel, OUTCOME_FAILED);
         return dispatchService.recordFailed(new NotificationCommands.RecordFailed(
                 notification.getNotiId(), delivery.errorCode() + ":" + delivery.errorReason()));

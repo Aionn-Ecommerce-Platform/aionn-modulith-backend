@@ -39,6 +39,22 @@ CREATE INDEX idx_notifications_user_status     ON notifications(user_id, status)
 CREATE INDEX idx_notifications_campaign_status ON notifications(campaign_id, status);
 CREATE INDEX idx_notifications_status_retry    ON notifications(status, retry_count);
 
+CREATE TABLE notification_delivery_attempts (
+    attempt_id         VARCHAR(150) PRIMARY KEY,
+    notification_id    VARCHAR(50)  NOT NULL REFERENCES notifications(noti_id),
+    channel            VARCHAR(20)  NOT NULL,
+    attempt_number     INTEGER      NOT NULL,
+    status             VARCHAR(20)  NOT NULL,
+    provider_message_id VARCHAR(255),
+    error              TEXT,
+    started_at         TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    completed_at       TIMESTAMPTZ,
+    updated_at         TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_notification_delivery_attempt UNIQUE (notification_id, attempt_number)
+);
+CREATE INDEX idx_notification_delivery_attempt_status
+    ON notification_delivery_attempts(notification_id, status);
+
 CREATE TABLE device_tokens (
     token_id      VARCHAR(50) PRIMARY KEY,
     user_id       VARCHAR(50) NOT NULL,
