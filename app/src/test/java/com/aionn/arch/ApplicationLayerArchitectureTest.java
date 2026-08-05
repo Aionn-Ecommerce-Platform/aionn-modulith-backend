@@ -35,6 +35,21 @@ class ApplicationLayerArchitectureTest {
     }
 
     @Test
+    void domainLayerDoesNotDependOnFrameworksOrAdapters() {
+        noClasses()
+                .that().resideInAPackage("com.aionn..domain..")
+                .should().dependOnClassesThat().resideInAnyPackage(
+                        "org.springframework..",
+                        "jakarta.persistence..",
+                        "tools.jackson..",
+                        "com.fasterxml.jackson..",
+                        "com.aionn..application..",
+                        "com.aionn..adapter..",
+                        "com.aionn..infrastructure..")
+                .check(PRODUCTION_CLASSES);
+    }
+
+    @Test
     void controllersDoNotExposeApplicationResultTypes() {
         methods()
                 .that().areDeclaredInClassesThat().haveSimpleNameEndingWith("Controller")

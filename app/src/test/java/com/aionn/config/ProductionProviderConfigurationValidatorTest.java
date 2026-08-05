@@ -34,6 +34,8 @@ class ProductionProviderConfigurationValidatorTest {
                 .hasMessageContaining("notification.sms.provider must use a real provider")
                 .hasMessageContaining("notification.push.provider must use a real provider")
                 .hasMessageContaining("CLOUDINARY_CLOUD_NAME is required")
+                .hasMessageContaining("SECURITY_CORS_ALLOWED_ORIGINS is required")
+                .hasMessageContaining("CATALOG_SEARCH_OPENSEARCH_HOST is required")
                 .hasMessageContaining("payment.invoice.base-url must not target localhost");
     }
 
@@ -54,6 +56,18 @@ class ProductionProviderConfigurationValidatorTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("IDENTITY_JWT_SECRET must be at least ")
                 .hasMessageContaining("payment.provider.vnpay.return-url must not target localhost");
+    }
+
+    @Test
+    void rejectsLocalBrowserAndSearchEndpoints() {
+        MockEnvironment environment = completeEnvironment()
+                .withProperty("security.cors.allowed-origins", "http://localhost:3000")
+                .withProperty("catalog.search.opensearch.host", "127.0.0.1");
+
+        assertThatThrownBy(() -> new ProductionProviderConfigurationValidator(environment).validate())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("security.cors.allowed-origins must not target localhost")
+                .hasMessageContaining("catalog.search.opensearch.host must not target localhost");
     }
 
     private static MockEnvironment completeEnvironment() {
@@ -86,6 +100,9 @@ class ProductionProviderConfigurationValidatorTest {
                 .withProperty("cloudinary.api-secret", "secret")
                 .withProperty("payment.invoice.base-url", "https://api.example.com/invoices")
                 .withProperty("payment.provider.vnpay.frontend-return-url", "https://shop.example.com/payment/return")
-                .withProperty("chat.websocket.allowed-origins", "https://shop.example.com");
+                .withProperty("chat.websocket.allowed-origins", "https://shop.example.com")
+                .withProperty("security.cors.allowed-origins", "https://shop.example.com")
+                .withProperty("catalog.search.provider", "opensearch")
+                .withProperty("catalog.search.opensearch.host", "search.internal.example.com");
     }
 }

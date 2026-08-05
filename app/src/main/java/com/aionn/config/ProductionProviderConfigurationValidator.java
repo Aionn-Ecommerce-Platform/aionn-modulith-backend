@@ -63,6 +63,13 @@ public class ProductionProviderConfigurationValidator {
         rejectLocalhost(errors, "payment.provider.vnpay.return-url");
         rejectLocalhost(errors, "payment.provider.vnpay.frontend-return-url");
         rejectLocalhost(errors, "chat.websocket.allowed-origins");
+        require(errors, "SECURITY_CORS_ALLOWED_ORIGINS", "security.cors.allowed-origins");
+        rejectLocalhost(errors, "security.cors.allowed-origins");
+
+        if ("opensearch".equalsIgnoreCase(environment.getProperty("catalog.search.provider", "opensearch"))) {
+            require(errors, "CATALOG_SEARCH_OPENSEARCH_HOST", "catalog.search.opensearch.host");
+            rejectLocalhost(errors, "catalog.search.opensearch.host");
+        }
 
         if (!errors.isEmpty()) {
             throw new IllegalStateException("Invalid production provider configuration: " + String.join("; ", errors));
