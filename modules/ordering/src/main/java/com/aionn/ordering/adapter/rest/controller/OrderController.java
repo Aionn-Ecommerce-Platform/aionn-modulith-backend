@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -61,9 +62,11 @@ public class OrderController {
         @Operation(summary = "Place order")
         public ResponseEntity<ApiResponse<OrderResponse>> place(
                         @CurrentUserId String userId,
+                        @RequestHeader("Idempotency-Key") String idempotencyKey,
                         @Valid @RequestBody PlaceOrderRequest request) {
                 OrderResponse response = dtoMapper.toResponse(
-                                placeOrderInputPort.execute(dtoMapper.toPlaceOrderCommand(userId, request)));
+                                placeOrderInputPort.execute(
+                                                dtoMapper.toPlaceOrderCommand(userId, idempotencyKey, request)));
                 return ApiResponse.createdResponse("Order placed", response);
         }
 

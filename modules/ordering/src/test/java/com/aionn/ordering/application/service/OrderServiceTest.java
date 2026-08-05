@@ -8,6 +8,7 @@ import com.aionn.ordering.application.port.out.CartPersistencePort;
 import com.aionn.ordering.application.port.out.CompensationTaskPort;
 import com.aionn.ordering.application.port.out.CatalogPricingGateway;
 import com.aionn.ordering.application.port.out.OrderPersistencePort;
+import com.aionn.ordering.application.port.out.OrderPlacementOperationPort;
 import com.aionn.ordering.application.port.out.PaymentGateway;
 import com.aionn.ordering.application.port.out.ShippingGateway;
 import com.aionn.ordering.application.port.out.StockReservationGateway;
@@ -75,6 +76,7 @@ class OrderServiceTest {
     @Mock
     private ReservationPolicy reservationPolicy;
     @Mock private CompensationTaskPort compensationTaskPort;
+    @Mock private OrderPlacementOperationPort placementOperationPort;
 
     private OrderService orderService;
 
@@ -97,7 +99,10 @@ class OrderServiceTest {
                 stockReservationGateway, paymentGateway, shippingGateway,
                 catalogPricingGateway, voucherGateway, cartService, merchantQueryPort,
                 integrationEventPublisher, reservationPolicy, clock, transactionTemplate,
-                compensationTaskPort);
+                compensationTaskPort, placementOperationPort);
+        lenient().when(placementOperationPort.start(anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> new OrderPlacementOperationPort.Operation(
+                        invocation.getArgument(3), invocation.getArgument(2), false));
         lenient().when(reservationPolicy.ttlSeconds()).thenReturn(86400);
     }
 
@@ -365,6 +370,29 @@ class OrderServiceTest {
 
         verify(stockReservationGateway, never()).reserveAll(anyString(), any(), eq(86400));
         verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void completedPlacementReplayReturnsExistingOrderWithoutRepeatingSideEffects() {
+        var command = new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand(
+                USER_ID,
+                List.of(new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand.Line("sku-1", 1)),
+                null, "COD", "VND", address(), "client-order-1");
+        var skuPricing = new CatalogPricingGateway.SkuPricing(
+                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true);
+        Order existing = pendingOrder();
+        when(catalogPricingGateway.resolve(List.of("sku-1"))).thenReturn(java.util.Map.of("sku-1", skuPricing));
+        when(placementOperationPort.start(eq(USER_ID), eq("client-order-1"), anyString(), anyString()))
+                .thenAnswer(invocation -> new OrderPlacementOperationPort.Operation(
+                        ORDER_ID, invocation.getArgument(2), true));
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(existing));
+
+        Order replay = orderService.placeOrderHeadless(command);
+
+        assertEquals(ORDER_ID, replay.getOrderId());
+        verify(shippingGateway, never()).quote(any(), any(), any(), any());
+        verify(stockReservationGateway, never()).reserveAll(any(), any(), any(Integer.class));
+        verify(placementOperationPort).complete(USER_ID, "client-order-1", ORDER_ID);
     }
 
     private static Stream<Arguments> invalidShippingQuotes() {

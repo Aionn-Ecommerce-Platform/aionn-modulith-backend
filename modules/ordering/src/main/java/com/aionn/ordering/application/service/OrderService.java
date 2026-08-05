@@ -15,6 +15,7 @@ import com.aionn.ordering.application.port.out.CartPersistencePort;
 import com.aionn.ordering.application.port.out.CompensationTaskPort;
 import com.aionn.ordering.application.port.out.CatalogPricingGateway;
 import com.aionn.ordering.application.port.out.OrderPersistencePort;
+import com.aionn.ordering.application.port.out.OrderPlacementOperationPort;
 import com.aionn.ordering.application.port.out.PaymentGateway;
 import com.aionn.ordering.application.port.out.ShippingGateway;
 import com.aionn.ordering.application.port.out.StockReservationGateway;
@@ -31,6 +32,7 @@ import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.Money;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
 import com.aionn.sharedkernel.util.IdGenerator;
+import com.aionn.sharedkernel.util.Sha256Hasher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -69,6 +71,7 @@ public class OrderService {
     private final java.time.Clock clock;
     private final TransactionTemplate transactionTemplate;
     private final CompensationTaskPort compensationTaskPort;
+    private final OrderPlacementOperationPort placementOperationPort;
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order placeOrder(PlaceOrderCommand command) {
@@ -105,7 +108,7 @@ public class OrderService {
                 cart.getVoucherCode(),
                 command.paymentMethodId(),
                 command.currency(),
-                command.shippingAddressSnapshot());
+                command.shippingAddressSnapshot(), command.idempotencyKey());
 
         // Online payments stay pending until the gateway confirms them; keep
         // cart lines in that case so a failed payment can be retried.
@@ -132,7 +135,7 @@ public class OrderService {
                 command.voucherCode(),
                 command.paymentMethodId(),
                 command.currency(),
-                command.shippingAddressSnapshot());
+                command.shippingAddressSnapshot(), command.idempotencyKey());
     }
 
     /**
@@ -145,7 +148,8 @@ public class OrderService {
             String voucherCode,
             String paymentMethodId,
             String requestCurrency,
-            com.aionn.ordering.domain.valueobject.ShippingAddress shippingAddress) {
+            com.aionn.ordering.domain.valueobject.ShippingAddress shippingAddress,
+            String requestedIdempotencyKey) {
 
         List<String> skuIds = lines.stream().map(PlaceOrderHeadlessCommand.Line::skuId).toList();
         Map<String, CatalogPricingGateway.SkuPricing> pricing = catalogPricingGateway.resolve(skuIds);
@@ -178,7 +182,18 @@ public class OrderService {
                             + " does not match catalog pricing currency " + pricingCurrency);
         }
         String currency = pricingCurrency;
-        String orderId = IdGenerator.ulid();
+        String idempotencyKey = requestedIdempotencyKey == null || requestedIdempotencyKey.isBlank()
+                ? "legacy:" + IdGenerator.ulid() : requestedIdempotencyKey.trim();
+        String requestHash = placementRequestHash(userId, lines, voucherCode, paymentMethodId,
+                currency, shippingAddress);
+        OrderPlacementOperationPort.Operation operation = placementOperationPort.start(
+                userId, idempotencyKey, requestHash, IdGenerator.ulid());
+        String orderId = operation.orderId();
+        Order replay = orderRepository.findById(orderId).orElse(null);
+        if (replay != null) {
+            placementOperationPort.complete(userId, idempotencyKey, orderId);
+            return replay;
+        }
         Money shippingFee = quoteShippingFee(orderId, merchantId, shippingAddress, currency);
 
         List<StockReservationGateway.ReservationLine> reservationLines = lines.stream()
@@ -191,7 +206,7 @@ public class OrderService {
         List<StockReservationGateway.Reservation> reservations;
         int ttlSeconds = reservationPolicy.ttlSeconds();
         try {
-            reservations = stockReservationGateway.reserveAll(IdGenerator.ulid(), reservationLines, ttlSeconds);
+            reservations = stockReservationGateway.reserveAll(orderId, reservationLines, ttlSeconds);
         } catch (StockReservationGateway.ReservationException ex) {
             throw new OrderingException(OrderingErrorCode.ORDER_RESERVATION_FAILED,
                     "Reservation failed for SKU " + ex.getSkuId() + ": " + ex.getMessage());
@@ -226,7 +241,7 @@ public class OrderService {
             String proposalId = "prop-" + System.nanoTime();
             Order order = Order.place(orderId, userId, merchantId, proposalId,
                     paymentMethodId, currency, items, shippingAddress, shippingFee, lineSubtotal, clock.instant());
-            return transactionTemplate.execute(status -> {
+            Order placed = transactionTemplate.execute(status -> {
                 Order saved = orderRepository.save(order);
                 eventPublisher.publish(order.pullEvents());
                 integrationEventPublisher.publishOrderPlaced(saved);
@@ -238,6 +253,8 @@ public class OrderService {
                 }
                 return saved;
             });
+            placementOperationPort.complete(userId, idempotencyKey, orderId);
+            return placed;
         } catch (RuntimeException failure) {
             compensateFailedPlacement(userId, orderId, voucherCode, reservations);
             throw failure;
@@ -396,6 +413,18 @@ public class OrderService {
             eventPublisher.publish(order.pullEvents());
             return saved;
         });
+    }
+
+    private static String placementRequestHash(String userId,
+            List<PlaceOrderHeadlessCommand.Line> lines, String voucherCode, String paymentMethodId,
+            String currency, com.aionn.ordering.domain.valueobject.ShippingAddress address) {
+        String canonicalLines = lines.stream()
+                .sorted(java.util.Comparator.comparing(PlaceOrderHeadlessCommand.Line::skuId))
+                .map(line -> line.skuId() + ":" + line.qty())
+                .collect(java.util.stream.Collectors.joining(","));
+        return Sha256Hasher.hexDigest(String.join("|",
+                userId, canonicalLines, String.valueOf(voucherCode), String.valueOf(paymentMethodId),
+                currency, String.valueOf(address)));
     }
 
     private static void validateVoucherDiscount(VoucherGateway.Discount discount, String orderCurrency) {

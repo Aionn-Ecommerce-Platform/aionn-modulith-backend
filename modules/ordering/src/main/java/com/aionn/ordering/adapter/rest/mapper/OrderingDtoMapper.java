@@ -48,6 +48,14 @@ public interface OrderingDtoMapper {
     // Order mappings
     PlaceOrderCommand toPlaceOrderCommand(String userId, PlaceOrderRequest request);
 
+    default PlaceOrderCommand toPlaceOrderCommand(String userId, String idempotencyKey,
+            PlaceOrderRequest request) {
+        PlaceOrderCommand mapped = toPlaceOrderCommand(userId, request);
+        return new PlaceOrderCommand(mapped.userId(), mapped.addressId(), mapped.paymentMethodId(),
+                mapped.currency(), mapped.shippingAddressSnapshot(), mapped.selectedSkuIds(),
+                mapped.gateway(), idempotencyKey);
+    }
+
     default ConfirmPreparationCommand toConfirmPreparationCommand(String orderId, String ownerId) {
         return new ConfirmPreparationCommand(orderId, ownerId);
     }

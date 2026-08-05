@@ -12,5 +12,12 @@ public record PlaceOrderCommand(
         String currency,
         ShippingAddress shippingAddressSnapshot,
         List<String> selectedSkuIds,
-        String gateway) implements Command {
+        String gateway,
+        String idempotencyKey) implements Command {
+
+    public PlaceOrderCommand(String userId, String addressId, String paymentMethodId, String currency,
+            ShippingAddress shippingAddressSnapshot, List<String> selectedSkuIds, String gateway) {
+        this(userId, addressId, paymentMethodId, currency, shippingAddressSnapshot, selectedSkuIds,
+                gateway, null);
+    }
 }

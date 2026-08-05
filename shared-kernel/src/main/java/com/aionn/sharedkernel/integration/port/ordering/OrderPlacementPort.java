@@ -18,7 +18,13 @@ public interface OrderPlacementPort {
             String voucherCode,
             String paymentMethodId,
             String currency,
-            ShippingAddress shippingAddress) {
+            ShippingAddress shippingAddress,
+            String idempotencyKey) {
+
+        public PlaceCommand(String userId, List<Line> lines, String voucherCode,
+                String paymentMethodId, String currency, ShippingAddress shippingAddress) {
+            this(userId, lines, voucherCode, paymentMethodId, currency, shippingAddress, null);
+        }
 
         public record Line(String skuId, int qty) {
         }

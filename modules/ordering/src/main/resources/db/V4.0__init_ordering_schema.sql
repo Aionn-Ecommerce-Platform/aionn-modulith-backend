@@ -111,3 +111,15 @@ CREATE TABLE ordering_compensation_tasks (
 CREATE INDEX idx_ordering_compensation_retry
     ON ordering_compensation_tasks(status, next_attempt_at)
     WHERE status IN ('PENDING', 'FAILED');
+
+CREATE TABLE order_placement_operations (
+    user_id          VARCHAR(50)  NOT NULL,
+    idempotency_key  VARCHAR(150) NOT NULL,
+    request_hash     VARCHAR(64)  NOT NULL,
+    order_id         VARCHAR(50)  NOT NULL,
+    status           VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
+    created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, idempotency_key),
+    CONSTRAINT uq_order_placement_operation_order UNIQUE (order_id)
+);

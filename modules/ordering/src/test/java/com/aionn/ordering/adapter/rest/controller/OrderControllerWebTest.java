@@ -73,7 +73,7 @@ class OrderControllerWebTest {
         SecurityContextHolder.getContext().setAuthentication(auth);
         org.mockito.Mockito.lenient().when(merchantOwnershipVerifierPort.isOwnedBy(any(), any())).thenReturn(true);
 
-        lenient().when(dtoMapper.toPlaceOrderCommand(any(), any())).thenReturn(
+        lenient().when(dtoMapper.toPlaceOrderCommand(any(), any(), any())).thenReturn(
                 new PlaceOrderCommand("user-1", "addr-1", "COD", "VND", null, List.of(), "COD"));
         lenient().when(dtoMapper.toConfirmPreparationCommand(any(), any())).thenReturn(new ConfirmPreparationCommand("order-1", "merchant-1"));
         lenient().when(dtoMapper.toCancelOrderCommand(any(), any(), any())).thenReturn(new CancelOrderCommand("order-1", "user-1", "Reason"));
@@ -112,6 +112,7 @@ class OrderControllerWebTest {
         when(dtoMapper.toResponse(result)).thenReturn(sampleResponse("APPROVED"));
 
         mockMvc.perform(post("/api/v1/ordering/orders")
+                        .header("Idempotency-Key", "order-request-1")
                         .contentType(APPLICATION_JSON)
                         .content("{\"addressId\":\"addr-1\",\"paymentMethodId\":\"COD\",\"currency\":\"VND\",\"selectedSkuIds\":[],\"gateway\":\"COD\"}"))
                 .andExpect(status().isCreated())
