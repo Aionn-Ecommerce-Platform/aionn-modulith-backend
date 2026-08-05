@@ -35,6 +35,7 @@ public enum IdentityErrorCode {
 	INSUFFICIENT_PERMISSIONS("IDENTITY_220", "Insufficient permissions to perform this operation"),
 	SOCIAL_LINK_EXISTS("IDENTITY_207", "Social account is already linked"),
 	SOCIAL_LINK_NOT_FOUND("IDENTITY_208", "Social account link not found"),
+	ACCOUNT_LINK_REQUIRED("IDENTITY_228", "Sign in to the existing account and link this social provider"),
 	PROVIDER_NOT_SUPPORTED("IDENTITY_209", "Social provider is not supported"),
 	PROVIDER_TOKEN_INVALID("IDENTITY_210", "Social provider token is invalid"),
 	OTP_REQUIRED("IDENTITY_211", "OTP code is required"),

@@ -361,7 +361,7 @@ public class AuthService {
     private IdentityUser createUserForSocial(AuthProvider provider, SocialUserProfile profile) {
         String email = (profile.email() != null && !profile.email().isBlank()) ? profile.email().trim() : null;
         if (email != null && userPersistencePort.findByIdentity(email).isPresent()) {
-            email = null;
+            throw new IdentityException(IdentityErrorCode.ACCOUNT_LINK_REQUIRED);
         }
         String username = generateSocialUsername(provider, profile);
         IdentityUser user = IdentityUser.createNew(IdGenerator.ulid(), email, null, username, clock);

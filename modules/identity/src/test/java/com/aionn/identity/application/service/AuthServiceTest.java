@@ -434,6 +434,21 @@ class AuthServiceTest {
     }
 
     @Test
+    void socialLoginRequiresExplicitLinkWhenVerifiedEmailAlreadyExists() {
+        when(socialTokenVerifier.verifyAndExtract(AuthProvider.GOOGLE, "token"))
+                .thenReturn(new SocialUserProfile("puid", "existing@example.com", "Existing User"));
+        when(socialLinkPersistencePort.findByProviderAndProviderUserId(AuthProvider.GOOGLE, "puid"))
+                .thenReturn(Optional.empty());
+        when(userPersistencePort.findByIdentity("existing@example.com")).thenReturn(Optional.of(activeUser()));
+
+        assertErrorCode(IdentityErrorCode.ACCOUNT_LINK_REQUIRED,
+                () -> authService.socialLogin(new SocialLoginCommand("google", "token", "ip", "ua")));
+
+        verify(userPersistencePort, never()).save(any());
+        verify(socialLinkPersistencePort, never()).save(any(), anyString());
+    }
+
+    @Test
     void socialLoginThrowsWhenLinkedUserMissing() {
         when(socialTokenVerifier.verifyAndExtract(AuthProvider.GOOGLE, "token"))
                 .thenReturn(new SocialUserProfile("puid", "s@example.com", "Social User"));
