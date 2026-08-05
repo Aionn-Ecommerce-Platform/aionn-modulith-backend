@@ -23,6 +23,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -38,6 +39,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
+@ConditionalOnProperty(prefix = "promotion.flash-sale", name = "enabled", havingValue = "true")
 @RequestMapping("/api/v1/promotions/flash-sales")
 @RequiredArgsConstructor
 @Tag(name = "Promotion - Flash Sale", description = "Flash sale registration + admin approval")
