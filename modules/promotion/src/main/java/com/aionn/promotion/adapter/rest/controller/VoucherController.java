@@ -13,6 +13,7 @@ import com.aionn.promotion.application.port.in.voucher.ListMyVouchersInputPort;
 import com.aionn.promotion.application.port.in.voucher.ReleaseVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.ReserveVoucherInputPort;
 import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.sharedkernel.adapter.web.support.idempotency.IdempotentRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -46,6 +47,7 @@ public class VoucherController {
         private final VoucherDtoMapper dtoMapper;
 
         @PostMapping("/{voucherCode}/claim")
+        @IdempotentRequest(ttlSeconds = 300)
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Claim voucher")
         public ResponseEntity<ApiResponse<UserVoucherResponse>> claim(

@@ -13,6 +13,7 @@ import com.aionn.ordering.application.dto.order.result.PlatformOrderAnalyticsRes
 import com.aionn.ordering.application.dto.order.result.TopProductResult;
 import com.aionn.ordering.application.port.in.order.*;
 import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.sharedkernel.adapter.web.support.idempotency.IdempotentRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -55,6 +56,7 @@ public class OrderController {
         private final OrderingDtoMapper dtoMapper;
 
         @PostMapping
+        @IdempotentRequest(ttlSeconds = 300)
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Place order")
         public ResponseEntity<ApiResponse<OrderResponse>> place(
