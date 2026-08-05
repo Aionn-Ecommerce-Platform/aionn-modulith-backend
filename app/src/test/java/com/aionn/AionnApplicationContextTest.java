@@ -2,7 +2,13 @@ package com.aionn;
 
 import com.aionn.sharedkernel.testing.BaseIntegrationTest;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.TestPropertySource;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /** Boots the real application graph against PostgreSQL rather than a test-only application. */
 @TestPropertySource(properties = {
@@ -20,7 +26,17 @@ import org.springframework.test.context.TestPropertySource;
 })
 class AionnApplicationContextTest extends BaseIntegrationTest {
 
+    @Autowired
+    private MockMvc mockMvc;
+
     @Test
     void realApplicationContextStarts() {
+    }
+
+    @Test
+    @WithMockUser(username = "buyer-1", authorities = "ROLE_USER")
+    void methodSecurityRejectsBuyerFromMerchantOrderTransition() throws Exception {
+        mockMvc.perform(post("/api/v1/ordering/orders/order-1/confirm-preparation"))
+                .andExpect(status().isForbidden());
     }
 }

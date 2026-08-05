@@ -1,6 +1,7 @@
 package com.aionn.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -67,6 +68,30 @@ class FlywayMigrationIntegrationTest {
         assertThat(competingLock).isEmpty();
         firstLock.orElseThrow().unlock();
         assertThat(secondInstance.lock(configuration)).isPresent();
+    }
+
+    @Test
+    void durableOperationKeysAreEnforcedByPostgres() throws SQLException {
+        Flyway production = flyway("classpath:db");
+        production.clean();
+        production.migrate();
+
+        try (Connection connection = DriverManager.getConnection(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+                Statement statement = connection.createStatement()) {
+            statement.executeUpdate("""
+                    INSERT INTO order_placement_operations
+                        (user_id, idempotency_key, request_hash, order_id)
+                    VALUES ('user-1', 'key-1', repeat('a', 64), 'order-1')
+                    """);
+
+            assertThatThrownBy(() -> statement.executeUpdate("""
+                    INSERT INTO order_placement_operations
+                        (user_id, idempotency_key, request_hash, order_id)
+                    VALUES ('user-1', 'key-1', repeat('b', 64), 'order-2')
+                    """))
+                    .isInstanceOf(SQLException.class);
+        }
     }
 
     private static Flyway flyway(String... locations) {
