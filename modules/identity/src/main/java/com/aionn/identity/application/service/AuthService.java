@@ -123,7 +123,8 @@ public class AuthService {
                     IdGenerator.ulid(),
                     savedUser.getUserId(),
                     provider,
-                    providerUserId);
+                    providerUserId,
+                    clock);
             socialLinkPersistencePort.save(newSocialLink, savedUser.getUserId());
             user = savedUser;
             isNewUser = true;
@@ -168,7 +169,8 @@ public class AuthService {
                 IdGenerator.ulid(),
                 user.getUserId(),
                 provider,
-                providerUserId);
+                providerUserId,
+                clock);
         return socialLinkPersistencePort.save(domainSocialLink, user.getUserId());
     }
 

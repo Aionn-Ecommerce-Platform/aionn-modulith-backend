@@ -12,10 +12,14 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -40,6 +44,9 @@ class ShipmentStatusApplierTest {
 
     @Mock
     private Shipment shipment;
+
+    @Spy
+    private Clock clock = Clock.fixed(Instant.parse("2026-08-05T10:00:00Z"), ZoneOffset.UTC);
 
     @InjectMocks
     private ShipmentStatusApplier applier;
@@ -96,7 +103,7 @@ class ShipmentStatusApplierTest {
 
         applier.apply("S_1", ShipmentStatus.PICKED_UP, detail());
 
-        verify(shipment).markPickedUp("WH_1");
+        verify(shipment).markPickedUp("WH_1", clock);
         verify(shipmentRepository).save(shipment);
         verify(eventPublisher).publish(anyCollection());
         verify(integrationEventPublisher).publishDispatched(any(), any(), any());
@@ -108,7 +115,7 @@ class ShipmentStatusApplierTest {
 
         applier.apply("S_1", ShipmentStatus.IN_TRANSIT, detail());
 
-        verify(shipment).updateInTransitStatus("HUB", "PICKED_UP");
+        verify(shipment).updateInTransitStatus("HUB", "PICKED_UP", clock);
         verifyNoInteractions(integrationEventPublisher);
     }
 
@@ -118,7 +125,7 @@ class ShipmentStatusApplierTest {
 
         applier.apply("S_1", ShipmentStatus.OUT_FOR_DELIVERY, detail());
 
-        verify(shipment).markOutForDelivery("driver", "090");
+        verify(shipment).markOutForDelivery("driver", "090", clock);
         verifyNoInteractions(integrationEventPublisher);
     }
 
@@ -128,7 +135,7 @@ class ShipmentStatusApplierTest {
 
         applier.apply("S_1", ShipmentStatus.DELIVERED, detail());
 
-        verify(shipment).markDelivered("sig");
+        verify(shipment).markDelivered("sig", clock);
         verify(integrationEventPublisher).publishDelivered(any(), any(), any(), any());
     }
 
@@ -138,7 +145,7 @@ class ShipmentStatusApplierTest {
 
         applier.apply("S_1", ShipmentStatus.DELIVERY_FAILED, detail());
 
-        verify(shipment).recordDeliveryFailure("reason");
+        verify(shipment).recordDeliveryFailure("reason", clock);
         verify(integrationEventPublisher).publishDeliveryFailed(any(), any(), any(),
                 org.mockito.ArgumentMatchers.anyInt());
     }
@@ -149,7 +156,7 @@ class ShipmentStatusApplierTest {
 
         applier.apply("S_1", ShipmentStatus.RETURNED, detail());
 
-        verify(shipment).markReturned("reason");
+        verify(shipment).markReturned("reason", clock);
         verifyNoInteractions(integrationEventPublisher);
     }
 
@@ -159,7 +166,7 @@ class ShipmentStatusApplierTest {
 
         applier.apply("S_1", ShipmentStatus.CANCELLED, detail());
 
-        verify(shipment).cancel("reason");
+        verify(shipment).cancel("reason", clock);
         verifyNoInteractions(integrationEventPublisher);
     }
 

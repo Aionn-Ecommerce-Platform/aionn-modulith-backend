@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
 import java.util.Optional;
 
 @Slf4j
@@ -23,6 +24,7 @@ public class IdentityAccessTokenVerifierAdapter implements AccessTokenVerifierPo
     private final AccessTokenIssuerPort tokenIssuer;
     private final AuthSessionPersistencePort authSessionPersistencePort;
     private final TokenBlacklistPort tokenBlacklist;
+    private final Clock clock;
 
     @Override
     public Optional<String> verifyAndExtractUserId(String authorizationHeader) {
@@ -47,7 +49,7 @@ public class IdentityAccessTokenVerifierAdapter implements AccessTokenVerifierPo
         Optional<AuthSession> sessionOpt = authSessionPersistencePort.findById(sessionId);
         if (sessionOpt.isEmpty()
                 || !AuthSessionStatus.ACTIVE.equals(sessionOpt.get().getStatus())
-                || sessionOpt.get().isExpired()
+                || sessionOpt.get().isExpired(clock)
                 || !userId.equals(sessionOpt.get().getUserId())) {
             return Optional.empty();
         }

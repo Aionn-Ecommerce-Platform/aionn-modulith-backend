@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.util.Optional;
 
 @Component
@@ -17,6 +18,7 @@ import java.util.Optional;
 public class CatalogMerchantQueryAdapter implements MerchantQueryPort, MerchantCommandPort {
 
     private final MerchantPersistencePort merchantRepository;
+    private final Clock clock;
 
     @Override
     @Transactional(readOnly = true)
@@ -64,7 +66,7 @@ public class CatalogMerchantQueryAdapter implements MerchantQueryPort, MerchantC
     public void saveStripeAccountId(String merchantId, String stripeAccountId) {
         Merchant merchant = merchantRepository.findById(merchantId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.MERCHANT_NOT_FOUND));
-        merchant.linkStripeAccount(stripeAccountId);
+        merchant.linkStripeAccount(stripeAccountId, clock);
         merchantRepository.save(merchant);
     }
 
@@ -73,7 +75,7 @@ public class CatalogMerchantQueryAdapter implements MerchantQueryPort, MerchantC
     public void updateStripeCapabilities(String merchantId, boolean chargesEnabled, boolean payoutsEnabled) {
         Merchant merchant = merchantRepository.findById(merchantId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.MERCHANT_NOT_FOUND));
-        merchant.updateStripeCapabilities(chargesEnabled, payoutsEnabled);
+        merchant.updateStripeCapabilities(chargesEnabled, payoutsEnabled, clock);
         merchantRepository.save(merchant);
     }
 }

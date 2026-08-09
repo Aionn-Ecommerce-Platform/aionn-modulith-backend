@@ -225,7 +225,8 @@ public class RegistrationService {
                 IdGenerator.ulid(),
                 null,
                 phoneNumber,
-                username);
+                username,
+                clock);
         user.updatePasswordHash(passwordHasher.hash(password));
         user.updateDisplayName(username);
         user.verifyPhone(clock);

@@ -5,13 +5,16 @@ import com.aionn.catalog.application.port.out.merchant.MerchantPersistencePort;
 import com.aionn.catalog.domain.model.Merchant;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort.StripeConnectInfo;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,8 +30,14 @@ class CatalogMerchantQueryAdapterTest {
     @Mock
     private MerchantPersistencePort merchantRepository;
 
-    @InjectMocks
     private CatalogMerchantQueryAdapter adapter;
+
+    @BeforeEach
+    void setUp() {
+        adapter = new CatalogMerchantQueryAdapter(
+                merchantRepository,
+                Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC));
+    }
 
     @Test
     void findMerchantIdByOwnerIdReturnsIdWhenPresent() {

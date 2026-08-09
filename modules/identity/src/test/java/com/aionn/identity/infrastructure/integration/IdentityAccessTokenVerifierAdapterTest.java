@@ -39,15 +39,19 @@ class IdentityAccessTokenVerifierAdapterTest {
     @Mock
     private TokenBlacklistPort tokenBlacklist;
 
+    private static final Clock CLOCK =
+            Clock.fixed(Instant.parse("2026-08-05T10:00:00Z"), java.time.ZoneOffset.UTC);
+
     private IdentityAccessTokenVerifierAdapter adapter;
 
     @BeforeEach
     void setUp() {
-        adapter = new IdentityAccessTokenVerifierAdapter(tokenIssuer, authSessionPersistencePort, tokenBlacklist);
+        adapter = new IdentityAccessTokenVerifierAdapter(
+                tokenIssuer, authSessionPersistencePort, tokenBlacklist, CLOCK);
     }
 
     private static Instant utcNow() {
-        return Instant.now(Clock.systemUTC());
+        return CLOCK.instant();
     }
 
     private AuthSession session(AuthSessionStatus status, String userId, Instant expiresAt) {
