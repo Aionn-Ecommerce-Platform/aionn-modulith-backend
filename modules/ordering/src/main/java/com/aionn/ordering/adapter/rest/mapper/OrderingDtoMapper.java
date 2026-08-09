@@ -19,6 +19,7 @@ import com.aionn.ordering.application.dto.returns.command.*;
 import com.aionn.ordering.application.dto.returns.result.ReturnResult;
 import com.aionn.ordering.application.dto.returns.result.ReturnAnalyticsResult;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
@@ -46,6 +47,7 @@ public interface OrderingDtoMapper {
     }
 
     // Order mappings
+    @Mapping(target = "shippingAddressSnapshot", source = "request.shippingAddress")
     PlaceOrderCommand toPlaceOrderCommand(String userId, PlaceOrderRequest request);
 
     default PlaceOrderCommand toPlaceOrderCommand(String userId, String idempotencyKey,

@@ -42,6 +42,9 @@ jobs:
       - name: Build
         run: ./gradlew build --info
 
+      - name: Validate production image build
+        run: docker build --tag aionn-modulith-backend:${{ github.sha }} .
+
       - name: Analyze with SonarQube
         if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
         env:

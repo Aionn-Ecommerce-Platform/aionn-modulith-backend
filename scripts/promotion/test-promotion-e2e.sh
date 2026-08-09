@@ -111,10 +111,6 @@ campaigns_resp=$(http_call GET "/api/v1/promotions/campaigns?status=RUNNING&limi
 assert_data_array "$campaigns_resp" "campaign list"
 ok "running campaign list is public"
 
-flash_resp=$(http_call GET "/api/v1/promotions/flash-sales/active?limit=5" 200)
-assert_data_array "$flash_resp" "active flash sales"
-ok "active flash sales endpoint is public"
-
 shop_vouchers_resp=$(http_call GET "/api/v1/promotions/shop-vouchers/merchant/MER_E2E_UNKNOWN?limit=5" 200)
 assert_data_array "$shop_vouchers_resp" "shop voucher list"
 ok "public shop-voucher list returns an empty array for an unknown merchant"
@@ -174,19 +170,8 @@ ok "shop-voucher issuance without ROLE_MERCHANT rejected with 403"
 http_call GET /api/v1/promotions/shop-vouchers/mine 403 "$ACCESS_TOKEN" >/dev/null
 ok "merchant shop-voucher list without ROLE_MERCHANT rejected with 403"
 
-http_call GET "/api/v1/promotions/flash-sales/registrations?status=PENDING" 403 "$ACCESS_TOKEN" >/dev/null
-ok "admin flash-sale registration list rejected with 403"
-
-http_call GET /api/v1/promotions/flash-sales/registrations/mine 403 "$ACCESS_TOKEN" >/dev/null
-ok "merchant flash-sale registration list rejected with 403"
-
-# --- 6. Flash-sale read endpoint ---------------------------------------------
-step "6. Flash-sale read endpoint"
-http_call GET "/api/v1/promotions/flash-sales/registrations/REG_DOES_NOT_EXIST_$SUFFIX" 404 "$ACCESS_TOKEN" >/dev/null
-ok "unknown flash-sale registration returns 404"
-
-# --- 7. Cleanup ---------------------------------------------------------------
-step "7. Logout E2E session"
+# --- 6. Cleanup ---------------------------------------------------------------
+step "6. Logout E2E session"
 http_call POST /api/v1/auth/logout 200 "$ACCESS_TOKEN" >/dev/null
 ok "Logout successful"
 

@@ -13,6 +13,8 @@ import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
+import java.sql.Timestamp;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -30,7 +32,10 @@ class OutboxEventStoreTest {
         new OutboxEventStore(jdbc, mapper).append(
                 new EventEnvelope("evt-1", "Order", "order-1", payload, OCCURRED_AT));
 
-        verify(jdbc).update(anyString(), any(Object[].class));
+        ArgumentCaptor<Object[]> parameters = ArgumentCaptor.forClass(Object[].class);
+        verify(jdbc).update(anyString(), parameters.capture());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                Timestamp.from(OCCURRED_AT), parameters.getValue()[8]);
         verify(mapper).writeValueAsString(payload);
     }
 

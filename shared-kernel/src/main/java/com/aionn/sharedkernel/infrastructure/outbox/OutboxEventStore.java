@@ -4,6 +4,7 @@ import com.aionn.sharedkernel.domain.model.EventEnvelope;
 import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Objects;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -45,7 +46,7 @@ public class OutboxEventStore {
             String safeAggregateId = Objects.requireNonNullElse(aggregateId, eventId);
             jdbcTemplate.update(INSERT_SQL, eventId, kind, eventType, payload.getClass().getName(),
                     objectMapper.writeValueAsString(payload), safeAggregateType, safeAggregateId,
-                    safeAggregateType + ":" + safeAggregateId, occurredAt);
+                    safeAggregateType + ":" + safeAggregateId, Timestamp.from(occurredAt));
         } catch (JsonProcessingException exception) {
             throw new IllegalArgumentException("Unable to serialize event " + eventType, exception);
         }
