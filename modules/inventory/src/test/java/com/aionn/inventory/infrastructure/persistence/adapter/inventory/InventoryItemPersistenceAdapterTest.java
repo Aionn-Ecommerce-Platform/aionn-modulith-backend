@@ -164,6 +164,6 @@ class InventoryItemPersistenceAdapterTest {
         verify(jpa).findByIdWarehouseIdOrderByIdSkuIdAsc(eq(WAREHOUSE_ID), captor.capture());
         assertThat(captor.getValue().getPageNumber()).isZero();
         assertThat(captor.getValue().getPageSize()).isEqualTo(10);
-        assertThat(captor.getValue().getSort()).isUnsorted();
+        assertThat(captor.getValue().getSort().isUnsorted()).isTrue();
     }
 }
