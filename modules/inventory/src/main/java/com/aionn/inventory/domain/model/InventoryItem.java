@@ -144,10 +144,6 @@ public class InventoryItem extends AggregateRoot {
         emitBreachIfApplicable(clock);
     }
 
-    public void emitBreachIfApplicable() {
-        emitBreachIfApplicable(Clock.systemUTC());
-    }
-
     public void emitBreachIfApplicable(Clock clock) {
         if (safetyStockQty > 0 && availableQty < safetyStockQty) {
             registerEvent(new InventoryItemEvents.SafetyStockBreached(

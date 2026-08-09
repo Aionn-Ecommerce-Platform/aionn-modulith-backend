@@ -32,10 +32,6 @@ public class AgentIdentity {
         this.updatedAt = clock.instant();
     }
 
-    public void suspend() {
-        suspend(Clock.systemUTC());
-    }
-
     public void suspend(Clock clock) {
         this.status = AgentStatus.SUSPENDED;
         this.updatedAt = clock.instant();

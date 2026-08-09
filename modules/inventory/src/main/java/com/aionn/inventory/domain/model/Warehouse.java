@@ -103,10 +103,6 @@ public class Warehouse extends AggregateRoot {
         registerEvent(new WarehouseEvents.WarehouseSuspended(warehouseId, adminId, reason, updatedAt, updatedAt));
     }
 
-    public void liftSuspension() {
-        liftSuspension(Clock.systemUTC());
-    }
-
     public void liftSuspension(Clock clock) {
         Guard.require(status == WarehouseStatus.SUSPENDED,
                 () -> new InventoryException(InventoryErrorCode.WAREHOUSE_INVALID_TRANSITION,

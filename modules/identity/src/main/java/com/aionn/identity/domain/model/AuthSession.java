@@ -65,10 +65,6 @@ public class AuthSession {
                 expiresAt);
     }
 
-    public void touch() {
-        touch(Clock.systemUTC());
-    }
-
     public void touch(Clock clock) {
         this.lastActiveAt = clock.instant();
     }
