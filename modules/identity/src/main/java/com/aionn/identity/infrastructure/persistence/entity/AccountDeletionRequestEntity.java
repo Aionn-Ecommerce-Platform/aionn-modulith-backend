@@ -52,6 +52,9 @@ public class AccountDeletionRequestEntity {
 
     @Column(name = "canceled_at")
     private Instant canceledAt;
+
+    @Column(name = "completed_at")
+    private Instant completedAt;
 }
 
 

@@ -13,6 +13,8 @@ public interface AgentIdentityRepository extends JpaRepository<AgentIdentityEnti
     Optional<AgentIdentityEntity> findByKeyHash(String keyHash);
 
     Optional<AgentIdentityEntity> findByAgentIdAndOwner_UserId(String agentId, String ownerUserId);
+
+    List<AgentIdentityEntity> findByOwner_UserId(String ownerUserId);
 }
 
 

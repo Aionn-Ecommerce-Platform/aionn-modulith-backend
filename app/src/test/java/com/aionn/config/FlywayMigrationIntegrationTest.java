@@ -94,6 +94,33 @@ class FlywayMigrationIntegrationTest {
         }
     }
 
+    @Test
+    void deletedAccountIdentifiersCanBeReusedButActiveDuplicatesRemainRejected() throws SQLException {
+        Flyway production = flyway("classpath:db");
+        production.clean();
+        production.migrate();
+
+        try (Connection connection = DriverManager.getConnection(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+                Statement statement = connection.createStatement()) {
+            statement.executeUpdate("""
+                    INSERT INTO users
+                        (user_id, email, phone, username, status, deleted_at)
+                    VALUES
+                        ('deleted-user', 'reuse@example.com', '+84900000001', 'reusable', 'DELETED', NOW()),
+                        ('active-user', 'reuse@example.com', '+84900000001', 'reusable', 'ACTIVE', NULL)
+                    """);
+
+            assertThatThrownBy(() -> statement.executeUpdate("""
+                    INSERT INTO users
+                        (user_id, email, phone, username, status)
+                    VALUES
+                        ('duplicate-active', 'reuse@example.com', '+84900000001', 'reusable', 'ACTIVE')
+                    """))
+                    .isInstanceOf(SQLException.class);
+        }
+    }
+
     private static Flyway flyway(String... locations) {
         return Flyway.configure()
                 .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
