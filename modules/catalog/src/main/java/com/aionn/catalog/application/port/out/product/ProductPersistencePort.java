@@ -6,6 +6,7 @@ import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.math.BigDecimal;
 
@@ -56,8 +57,17 @@ public interface ProductPersistencePort {
             List<String> brandIds,
             List<String> categoryIds,
             BigDecimal priceMin,
-            BigDecimal priceMax) {
+            BigDecimal priceMax,
+            Map<String, List<String>> attributes,
+            FallbackSort sort,
+            Double ratingMin) {
+        public FallbackFilter {
+            attributes = attributes == null ? Map.of() : Map.copyOf(attributes);
+            sort = sort == null ? FallbackSort.RELEVANCE : sort;
+        }
     }
+
+    enum FallbackSort { RELEVANCE, NEWEST, PRICE_ASC, PRICE_DESC, BEST_SELLER }
 
     record FallbackPage(List<Product> content, long totalElements) {
     }

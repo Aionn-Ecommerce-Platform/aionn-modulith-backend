@@ -12,9 +12,11 @@ import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.core.TypedPropertyPath;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.Collection;
 import java.util.List;
@@ -26,6 +28,7 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
 
     private final ProductRepository jpa;
     private final ProductDomainMapper mapper;
+    private final JsonMapper jsonMapper;
 
     @Override
     public Product save(Product product) {
@@ -178,9 +181,8 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
     private static boolean isSkuConstraintViolation(DataIntegrityViolationException exception) {
         Throwable current = exception;
         while (current != null) {
-            String message = current.getMessage();
-            if (message != null && message.toLowerCase(java.util.Locale.ROOT).contains("sku")) {
-                return true;
+            if (current instanceof ConstraintViolationException violation) {
+                return "product_variants_pkey".equalsIgnoreCase(violation.getConstraintName());
             }
             current = current.getCause();
         }
@@ -193,13 +195,15 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
         String merchantId = normalize(filter.merchantId());
         String brands = csv(filter.brandIds());
         String categories = csv(filter.categoryIds());
+        String attributesJson = jsonMapper.writeValueAsString(filter.attributes());
         String status = (filter.status() == null ? ProductStatus.PUBLISHED : filter.status()).name();
         List<Product> content = jpa.searchFallback(query, merchantId, status, brands, categories,
-                        filter.priceMin(), filter.priceMax(), pagination.size(), pagination.offset()).stream()
+                        filter.priceMin(), filter.priceMax(), attributesJson, filter.ratingMin(), filter.sort().name(),
+                        pagination.size(), pagination.offset()).stream()
                 .map(mapper::toDomain)
                 .toList();
         long total = jpa.countFallback(query, merchantId, status, brands, categories,
-                filter.priceMin(), filter.priceMax());
+                filter.priceMin(), filter.priceMax(), attributesJson, filter.ratingMin());
         return new FallbackPage(content, total);
     }
 

@@ -52,9 +52,8 @@ public class CategoryService {
     }
 
     public Category update(UpdateCategoryCommand command) {
-        Category snapshot = required(command.categoryId());
-        Map<String, Category> locked = lockInStableOrder(snapshot.getCategoryId(), snapshot.getParentId());
-        Category category = locked.get(snapshot.getCategoryId());
+        Map<String, Category> locked = lockMutationSet(command.categoryId(), List.of());
+        Category category = requiredLocked(locked, command.categoryId());
         if (Boolean.TRUE.equals(command.active()) && category.getParentId() != null) {
             ensureUsableParent(locked.get(category.getParentId()));
         }
@@ -71,10 +70,9 @@ public class CategoryService {
     }
 
     public Category move(MoveCategoryCommand command) {
-        Category snapshot = required(command.categoryId());
-        Map<String, Category> locked = lockInStableOrder(
-                snapshot.getCategoryId(), snapshot.getParentId(), command.newParentId());
-        Category category = locked.get(snapshot.getCategoryId());
+        Map<String, Category> locked = lockMutationSet(
+                command.categoryId(), java.util.Collections.singletonList(command.newParentId()));
+        Category category = requiredLocked(locked, command.categoryId());
         if (command.newParentId() != null) {
             if (command.newParentId().equals(category.getCategoryId())) {
                 throw new CatalogException(CatalogErrorCode.CATEGORY_CYCLE);
@@ -146,6 +144,22 @@ public class CategoryService {
                 .sorted()
                 .forEach(id -> locked.put(id, lockRequired(id)));
         return locked;
+    }
+
+    private Map<String, Category> lockMutationSet(String categoryId, List<String> additionalIds) {
+        Map<String, Category> locked = new LinkedHashMap<>();
+        categoryRepository.lockMutationSet(categoryId, additionalIds).stream()
+                .sorted(java.util.Comparator.comparing(Category::getCategoryId))
+                .forEach(category -> locked.put(category.getCategoryId(), category));
+        return locked;
+    }
+
+    private static Category requiredLocked(Map<String, Category> locked, String categoryId) {
+        Category category = locked.get(categoryId);
+        if (category == null) {
+            throw new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND);
+        }
+        return category;
     }
 
     private static void ensureUsableParent(Category parent) {

@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 class VoucherApplyAdapterTest {
@@ -91,6 +92,24 @@ class VoucherApplyAdapterTest {
 
         assertThat(discount.applied()).isFalse();
         assertThat(discount.reason()).isEqualTo("campaign-condition-not-met");
+    }
+
+    @Test
+    void replayReturnsStoredDiscountAfterCampaignHasEnded() {
+        Voucher voucher = Voucher.issue("CATEGORY10", "campaign-1", Money.of(BigDecimal.TEN, "VND"),
+                2, CLOCK.instant().minusSeconds(3600), CLOCK.instant().minusSeconds(60), CLOCK);
+        UserVoucher applied = UserVoucher.claim("uv-1", "CATEGORY10", "user-1", CLOCK);
+        applied.reserve("order-1", CLOCK.instant().plusSeconds(900), CLOCK);
+        applied.apply(Money.of(BigDecimal.TEN, "VND"), CLOCK);
+        when(voucherRepository.lockByCode("CATEGORY10")).thenReturn(Optional.of(voucher));
+        when(userVoucherRepository.findByUserAndCode("user-1", "CATEGORY10")).thenReturn(Optional.of(applied));
+
+        var discount = adapter.apply("user-1", "merchant-1", "CATEGORY10", "order-1",
+                BigDecimal.valueOf(100), "VND", List.of("category-1"));
+
+        assertThat(discount.applied()).isTrue();
+        assertThat(discount.amount()).isEqualByComparingTo(BigDecimal.TEN);
+        verify(campaignRepository, never()).findById(any());
     }
 
     private static PromotionCampaign runningCampaign(List<String> categoryIds) {

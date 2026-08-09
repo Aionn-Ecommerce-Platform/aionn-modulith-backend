@@ -130,7 +130,8 @@ class CategoryServiceTest {
         void updateAppliesChangesAndPublishesEvent() {
                 Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics");
                 category.pullEvents();
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of()))
+                                .thenReturn(List.of(category));
                 when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 categoryService.update(
@@ -146,7 +147,8 @@ class CategoryServiceTest {
         void updateTrimsNameBeforeUniquenessCheck() {
                 Category category = Category.create(CATEGORY_ID, null, "Old", "old");
                 category.pullEvents();
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of()))
+                                .thenReturn(List.of(category));
                 when(categoryRepository.existsByParentAndName(null, "Zenith")).thenReturn(true);
 
                 assertThatThrownBy(() -> categoryService.update(
@@ -160,7 +162,8 @@ class CategoryServiceTest {
         void updateRejectsWhenNameCollides() {
                 Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics");
                 category.pullEvents();
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of()))
+                                .thenReturn(List.of(category));
                 when(categoryRepository.existsByParentAndName(null, "Fashion")).thenReturn(true);
 
                 assertThatThrownBy(() -> categoryService.update(
@@ -173,12 +176,60 @@ class CategoryServiceTest {
         }
 
         @Test
+        void activatingChildValidatesTheParentFromTheSameLockedSet() {
+                Category parent = Category.create("current-parent", null, "Parent", "parent");
+                Category child = Category.create(CATEGORY_ID, "current-parent", "Child", "child");
+                child.update(null, null, false, clock);
+                child.pullEvents();
+                // One statement locks the target and its current parent together, so the
+                // parent check cannot read a row that another transaction is mutating.
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of()))
+                                .thenReturn(List.of(child, parent));
+                when(categoryRepository.save(child)).thenReturn(child);
+
+                categoryService.update(new UpdateCategoryCommand(CATEGORY_ID, null, null, true));
+
+                verify(categoryRepository).lockMutationSet(CATEGORY_ID, List.of());
+                verify(categoryRepository, never()).lockById(anyString());
+                assertThat(child.isActive()).isTrue();
+        }
+
+        @Test
+        void activatingChildRejectsAParentMissingFromTheLockedSet() {
+                Category child = Category.create(CATEGORY_ID, "current-parent", "Child", "child");
+                child.update(null, null, false, clock);
+                child.pullEvents();
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of()))
+                                .thenReturn(List.of(child));
+
+                assertThatThrownBy(() -> categoryService.update(
+                                new UpdateCategoryCommand(CATEGORY_ID, null, null, true)))
+                                .isInstanceOf(CatalogException.class)
+                                .extracting("errorCode")
+                                .isEqualTo(CatalogErrorCode.CATEGORY_NOT_FOUND.getCode());
+
+                verify(categoryRepository, never()).save(any());
+        }
+
+        @Test
+        void updateRejectsWhenTheTargetIsMissingFromTheLockedSet() {
+                when(categoryRepository.lockMutationSet("missing", List.of())).thenReturn(List.of());
+
+                assertThatThrownBy(() -> categoryService.update(
+                                new UpdateCategoryCommand("missing", "Name", null, null)))
+                                .isInstanceOf(CatalogException.class)
+                                .extracting("errorCode")
+                                .isEqualTo(CatalogErrorCode.CATEGORY_NOT_FOUND.getCode());
+
+                verify(categoryRepository, never()).save(any());
+        }
+
+        @Test
         void moveRejectsCycleWhenTargetParentIsDescendant() {
                 Category root = Category.create("root", null, "A", "a");
                 root.pullEvents();
-                when(categoryRepository.findById("root")).thenReturn(Optional.of(root));
-                when(categoryRepository.findById("child"))
-                                .thenReturn(Optional.of(Category.create("child", "root", "B", "b")));
+                when(categoryRepository.lockMutationSet("root", List.of("child")))
+                                .thenReturn(List.of(root, Category.create("child", "root", "B", "b")));
                 when(categoryRepository.findDescendantIds("root")).thenReturn(List.of("child"));
 
                 assertThatThrownBy(() -> categoryService.move(new MoveCategoryCommand("root", "child")))
@@ -191,7 +242,8 @@ class CategoryServiceTest {
         void moveRejectsSelfParent() {
                 Category category = Category.create(CATEGORY_ID, null, "A", "a");
                 category.pullEvents();
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of(CATEGORY_ID)))
+                                .thenReturn(List.of(category));
 
                 assertThatThrownBy(() -> categoryService.move(new MoveCategoryCommand(CATEGORY_ID, CATEGORY_ID)))
                                 .isInstanceOf(CatalogException.class)
@@ -203,8 +255,9 @@ class CategoryServiceTest {
         void moveRejectsWhenNewParentDoesNotExist() {
                 Category category = Category.create(CATEGORY_ID, null, "A", "a");
                 category.pullEvents();
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
-                when(categoryRepository.findById("missing")).thenReturn(Optional.empty());
+                // The new parent is absent from the locked set, so it does not exist.
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of("missing")))
+                                .thenReturn(List.of(category));
 
                 assertThatThrownBy(() -> categoryService.move(new MoveCategoryCommand(CATEGORY_ID, "missing")))
                                 .isInstanceOf(CatalogException.class)
@@ -216,9 +269,8 @@ class CategoryServiceTest {
         void moveRejectsWhenSiblingWithSameNameExists() {
                 Category category = Category.create(CATEGORY_ID, null, "Duplicate", "duplicate");
                 category.pullEvents();
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
-                when(categoryRepository.findById("new-parent"))
-                                .thenReturn(Optional.of(Category.create("new-parent", null, "P", "p")));
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of("new-parent")))
+                                .thenReturn(List.of(category, Category.create("new-parent", null, "P", "p")));
                 when(categoryRepository.findDescendantIds(CATEGORY_ID)).thenReturn(List.of());
                 when(categoryRepository.existsByParentAndName("new-parent", "Duplicate")).thenReturn(true);
 
@@ -264,9 +316,8 @@ class CategoryServiceTest {
         void moveAppliesReparent() {
                 Category category = Category.create(CATEGORY_ID, null, "A", "a");
                 category.pullEvents();
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
-                when(categoryRepository.findById("new-parent"))
-                                .thenReturn(Optional.of(Category.create("new-parent", null, "P", "p")));
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of("new-parent")))
+                                .thenReturn(List.of(category, Category.create("new-parent", null, "P", "p")));
                 when(categoryRepository.findDescendantIds(CATEGORY_ID)).thenReturn(List.of());
                 when(categoryRepository.existsByParentAndName("new-parent", "A")).thenReturn(false);
                 when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -274,6 +325,35 @@ class CategoryServiceTest {
                 categoryService.move(new MoveCategoryCommand(CATEGORY_ID, "new-parent"));
 
                 assertThat(category.getParentId()).isEqualTo("new-parent");
+        }
+
+        @Test
+        void moveToRootLocksOnlyTheTargetAndItsCurrentParent() {
+                Category parent = Category.create("current-parent", null, "P", "p");
+                Category category = Category.create(CATEGORY_ID, "current-parent", "A", "a");
+                category.pullEvents();
+                // A null new parent contributes no extra identifier to the locked set.
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, java.util.Collections.singletonList(null)))
+                                .thenReturn(List.of(category, parent));
+                when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                categoryService.move(new MoveCategoryCommand(CATEGORY_ID, null));
+
+                assertThat(category.getParentId()).isNull();
+                verify(categoryRepository, never()).findDescendantIds(anyString());
+        }
+
+        @Test
+        void moveRejectsWhenTheTargetIsMissingFromTheLockedSet() {
+                when(categoryRepository.lockMutationSet("missing", List.of("new-parent")))
+                                .thenReturn(List.of(Category.create("new-parent", null, "P", "p")));
+
+                assertThatThrownBy(() -> categoryService.move(new MoveCategoryCommand("missing", "new-parent")))
+                                .isInstanceOf(CatalogException.class)
+                                .extracting("errorCode")
+                                .isEqualTo(CatalogErrorCode.CATEGORY_NOT_FOUND.getCode());
+
+                verify(categoryRepository, never()).save(any());
         }
 
         @Test

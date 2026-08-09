@@ -27,8 +27,12 @@ public class OutboxDeadLetterService {
         if (size < 1 || size > MAX_PAGE_SIZE) {
             throw new IllegalArgumentException("size must be between 1 and " + MAX_PAGE_SIZE);
         }
+        long offset = (long) page * size;
+        if (offset > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("page and size produce an unsupported offset");
+        }
         return new DeadLetterPage(
-                repository.findDeadLetters(size, Math.multiplyExact(page, size)),
+                repository.findDeadLetters(size, (int) offset),
                 page, size, repository.countDeadLetters());
     }
 

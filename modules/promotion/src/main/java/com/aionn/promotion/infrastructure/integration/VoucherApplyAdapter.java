@@ -47,6 +47,14 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
             return new Discount(BigDecimal.ZERO, currency, false, "voucher-wrong-shop");
         }
 
+        UserVoucher uv = userVoucherRepository.findByUserAndCode(userId, voucherCode).orElse(null);
+        if (uv != null && uv.getStatus() == UserVoucherStatus.APPLIED) {
+            if (orderId.equals(uv.getReservedOrderId()) && uv.getAppliedAmount() != null) {
+                return new Discount(uv.getAppliedAmount().amount(), uv.getAppliedAmount().currency(), true, null);
+            }
+            return new Discount(BigDecimal.ZERO, currency, false, "voucher-already-used");
+        }
+
         // Validate campaign conditions if platform voucher
         if (voucher.getCampaignId() != null) {
             PromotionCampaign campaign = campaignRepository.findById(voucher.getCampaignId()).orElse(null);
@@ -64,16 +72,9 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
         }
 
         // Check if user already claimed this voucher
-        UserVoucher uv = userVoucherRepository.findByUserAndCode(userId, voucherCode).orElse(null);
         if (uv != null) {
             if (!voucher.isValidNow(clock.instant())) {
                 return new Discount(BigDecimal.ZERO, currency, false, "voucher-not-usable");
-            }
-            if (uv.getStatus() == UserVoucherStatus.APPLIED) {
-                if (orderId.equals(uv.getReservedOrderId()) && uv.getAppliedAmount() != null) {
-                    return new Discount(uv.getAppliedAmount().amount(), uv.getAppliedAmount().currency(), true, null);
-                }
-                return new Discount(BigDecimal.ZERO, currency, false, "voucher-already-used");
             }
             if (uv.getStatus() == UserVoucherStatus.EXPIRED) {
                 return new Discount(BigDecimal.ZERO, currency, false, "voucher-expired");

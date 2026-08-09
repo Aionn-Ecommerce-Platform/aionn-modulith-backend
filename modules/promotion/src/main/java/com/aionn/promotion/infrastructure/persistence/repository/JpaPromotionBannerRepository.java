@@ -8,9 +8,9 @@ import org.springframework.data.domain.Pageable;
 
 public interface JpaPromotionBannerRepository extends JpaRepository<PromotionBannerEntity, String> {
 
-    @Query("SELECT b FROM PromotionBannerEntity b WHERE b.active = true ORDER BY b.displayOrder ASC")
+    @Query("SELECT b FROM PromotionBannerEntity b WHERE b.active = true ORDER BY b.displayOrder ASC, b.bannerId ASC")
     Page<PromotionBannerEntity> findAllActiveOrderByDisplayOrder(Pageable pageable);
 
-    @Query("SELECT b FROM PromotionBannerEntity b ORDER BY b.displayOrder ASC, b.createdAt ASC")
+    @Query("SELECT b FROM PromotionBannerEntity b ORDER BY b.displayOrder ASC, b.createdAt ASC, b.bannerId ASC")
     Page<PromotionBannerEntity> findAllOrdered(Pageable pageable);
 }

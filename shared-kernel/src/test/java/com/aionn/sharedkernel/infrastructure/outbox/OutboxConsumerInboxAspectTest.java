@@ -7,6 +7,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.aionn.sharedkernel.domain.model.DomainEvent;
+import com.aionn.sharedkernel.domain.model.EventEnvelope;
 import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 import java.lang.reflect.Method;
 import java.time.Instant;
@@ -69,6 +71,54 @@ class OutboxConsumerInboxAspectTest {
         verify(transactionManager).rollback(transactionStatus);
     }
 
+    @Test
+    void tracksADomainEventByItsEnvelopeIdentifier() throws Throwable {
+        Instant occurredAt = Instant.parse("2026-01-01T00:00:00Z");
+        EventEnvelope envelope = new EventEnvelope("event-4", "Order", "order-1",
+                new TestDomainEvent(occurredAt), occurredAt);
+        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+        MethodSignature signature = mock(MethodSignature.class);
+        Method method = EnvelopeListener.class.getDeclaredMethod("onEnvelope", EventEnvelope.class);
+        when(joinPoint.getArgs()).thenReturn(new Object[] { envelope });
+        when(joinPoint.getTarget()).thenReturn(new EnvelopeListener());
+        when(joinPoint.getSignature()).thenReturn(signature);
+        when(signature.getMethod()).thenReturn(method);
+        when(joinPoint.proceed()).thenReturn("handled");
+
+        assertEquals("handled", aspect.consumeOnce(joinPoint));
+
+        verify(repository).markProcessed(EnvelopeListener.class.getName() + "#onEnvelope("
+                + EventEnvelope.class.getName() + ")", "event-4");
+    }
+
+    @Test
+    void bypassesTheInboxWhenTheArgumentCarriesNoEventIdentifier() throws Throwable {
+        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+        when(joinPoint.getArgs()).thenReturn(new Object[] { "not-an-event" });
+        when(joinPoint.proceed()).thenReturn("handled");
+
+        assertEquals("handled", aspect.consumeOnce(joinPoint));
+
+        verify(joinPoint).proceed();
+        verify(repository, never()).wasProcessed(org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString());
+        verify(repository, never()).markProcessed(org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void bypassesTheInboxWhenTheListenerDoesNotTakeExactlyOneArgument() throws Throwable {
+        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+        when(joinPoint.getArgs()).thenReturn(new Object[0]);
+        when(joinPoint.proceed()).thenReturn("handled");
+
+        assertEquals("handled", aspect.consumeOnce(joinPoint));
+
+        verify(joinPoint).proceed();
+        verify(repository, never()).markProcessed(org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString());
+    }
+
     private static ProceedingJoinPoint joinPoint(TestEvent event, Object result) throws Throwable {
         ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
         MethodSignature signature = mock(MethodSignature.class);
@@ -86,6 +136,14 @@ class OutboxConsumerInboxAspectTest {
         }
     }
 
+    private static final class EnvelopeListener {
+        void onEnvelope(EventEnvelope envelope) {
+        }
+    }
+
     private record TestEvent(String eventId, Instant occurredAt) implements IntegrationEvent {
+    }
+
+    private record TestDomainEvent(Instant occurredAt) implements DomainEvent {
     }
 }

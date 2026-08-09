@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 
 import java.util.List;
@@ -164,5 +165,6 @@ class InventoryItemPersistenceAdapterTest {
         verify(jpa).findByIdWarehouseId(eq(WAREHOUSE_ID), captor.capture());
         assertThat(captor.getValue().getPageNumber()).isZero();
         assertThat(captor.getValue().getPageSize()).isEqualTo(10);
+        assertThat(captor.getValue().getSort()).isEqualTo(Sort.by(Sort.Direction.ASC, "id.skuId"));
     }
 }

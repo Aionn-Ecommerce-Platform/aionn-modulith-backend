@@ -13,6 +13,8 @@ public interface CategoryPersistencePort {
 
     Optional<Category> lockById(String categoryId);
 
+    List<Category> lockMutationSet(String categoryId, List<String> additionalCategoryIds);
+
     boolean existsByParentAndName(String parentId, String name);
 
     boolean existsBySlug(String slug);

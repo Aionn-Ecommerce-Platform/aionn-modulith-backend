@@ -16,6 +16,17 @@ public interface CategoryRepository extends JpaRepository<CategoryEntity, String
         @Query("SELECT c FROM CategoryEntity c WHERE c.categoryId = :categoryId")
         Optional<CategoryEntity> findByIdForUpdate(String categoryId);
 
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
+        @Query("""
+                        SELECT c FROM CategoryEntity c
+                         WHERE c.categoryId IN :categoryIds
+                            OR c.categoryId = (
+                                SELECT target.parentId FROM CategoryEntity target
+                                 WHERE target.categoryId = :categoryId)
+                         ORDER BY c.categoryId
+                        """)
+        List<CategoryEntity> findMutationSetForUpdate(String categoryId, List<String> categoryIds);
+
         @Query("""
                         SELECT (count(c) > 0) FROM CategoryEntity c
                           WHERE LOWER(c.name) = LOWER(:name)

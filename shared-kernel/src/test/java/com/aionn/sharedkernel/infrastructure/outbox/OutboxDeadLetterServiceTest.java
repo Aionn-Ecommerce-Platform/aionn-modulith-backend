@@ -36,6 +36,7 @@ class OutboxDeadLetterServiceTest {
     void rejectsUnboundedPagination() {
         assertThatThrownBy(() -> service.list(-1, 20)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> service.list(0, 101)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.list(21_474_837, 100)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

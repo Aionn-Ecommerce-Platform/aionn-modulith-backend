@@ -432,7 +432,8 @@ public class ProductService {
         var page = productRepository.searchFallback(
                 new ProductPersistencePort.FallbackFilter(
                         criteria.q(), criteria.merchantId(), criteria.status(), criteria.brandIds(),
-                        criteria.categoryIds(), criteria.priceMin(), criteria.priceMax()),
+                        criteria.categoryIds(), criteria.priceMin(), criteria.priceMax(), criteria.attributes(),
+                        ProductPersistencePort.FallbackSort.valueOf(criteria.sort().name()), criteria.ratingMin()),
                 OffsetPagination.of(criteria.page(), criteria.size()));
         List<ProductResult> results = page.content().stream()
                 .map(productResultMapper::toResult)

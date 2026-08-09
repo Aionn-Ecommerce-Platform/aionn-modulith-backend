@@ -17,7 +17,10 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.hibernate.exception.ConstraintViolationException;
+import tools.jackson.databind.json.JsonMapper;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,6 +42,8 @@ class ProductPersistenceAdapterTest {
     private ProductRepository jpa;
     @Mock
     private ProductDomainMapper mapper;
+    @Mock
+    private JsonMapper jsonMapper;
 
     @InjectMocks
     private ProductPersistenceAdapter adapter;
@@ -60,11 +65,24 @@ class ProductPersistenceAdapterTest {
         Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
         ProductEntity entity = new ProductEntity();
         when(mapper.toEntity(domain)).thenReturn(entity);
-        when(jpa.save(entity)).thenThrow(new DataIntegrityViolationException("uq_product_variants_sku"));
+        var cause = new ConstraintViolationException("duplicate", new SQLException(), "product_variants_pkey");
+        when(jpa.save(entity)).thenThrow(new DataIntegrityViolationException("save failed", cause));
 
         assertThatThrownBy(() -> adapter.save(domain))
                 .isInstanceOf(CatalogException.class)
                 .hasMessageContaining("SKU");
+    }
+
+    @Test
+    void saveDoesNotMislabelOtherSkuColumnViolationsAsDuplicates() {
+        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
+        ProductEntity entity = new ProductEntity();
+        when(mapper.toEntity(domain)).thenReturn(entity);
+        var cause = new ConstraintViolationException("sku_id must not be null", new SQLException(), "sku_not_null");
+        var failure = new DataIntegrityViolationException("save failed", cause);
+        when(jpa.save(entity)).thenThrow(failure);
+
+        assertThatThrownBy(() -> adapter.save(domain)).isSameAs(failure);
     }
 
     @Test
@@ -283,12 +301,17 @@ class ProductPersistenceAdapterTest {
         var filter = new com.aionn.catalog.application.port.out.product.ProductPersistencePort.FallbackFilter(
                 " widget ", MERCHANT_ID, ProductStatus.PUBLISHED,
                 List.of("brand-1", "brand-2"), List.of("cat-1"),
-                new java.math.BigDecimal("10"), new java.math.BigDecimal("50"));
+                new java.math.BigDecimal("10"), new java.math.BigDecimal("50"),
+                java.util.Map.of("color", List.of("red", "blue")),
+                com.aionn.catalog.application.port.out.product.ProductPersistencePort.FallbackSort.PRICE_ASC, 4.0);
+        when(jsonMapper.writeValueAsString(filter.attributes())).thenReturn("{\"color\":[\"red\",\"blue\"]}");
         when(jpa.searchFallback("widget", MERCHANT_ID, "PUBLISHED", "brand-1,brand-2", "cat-1",
-                new java.math.BigDecimal("10"), new java.math.BigDecimal("50"), 20, 40))
+                new java.math.BigDecimal("10"), new java.math.BigDecimal("50"),
+                "{\"color\":[\"red\",\"blue\"]}", 4.0, "PRICE_ASC", 20, 40))
                 .thenReturn(List.of(entity));
         when(jpa.countFallback("widget", MERCHANT_ID, "PUBLISHED", "brand-1,brand-2", "cat-1",
-                new java.math.BigDecimal("10"), new java.math.BigDecimal("50"))).thenReturn(41L);
+                new java.math.BigDecimal("10"), new java.math.BigDecimal("50"),
+                "{\"color\":[\"red\",\"blue\"]}", 4.0)).thenReturn(41L);
         when(mapper.toDomain(entity)).thenReturn(domain);
 
         var page = adapter.searchFallback(filter, OffsetPagination.of(2, 20));
