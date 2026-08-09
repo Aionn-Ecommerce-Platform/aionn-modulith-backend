@@ -75,7 +75,7 @@ class ShippingFulfillmentAdapterTest {
                 com.aionn.shipping.domain.model.Shipment createdShipment = com.aionn.shipping.domain.model.Shipment
                                 .request(
                                                 "S_1", "O_1", "M_1", "U_1", addressVal, dimensionsVal,
-                                                BigDecimal.ZERO, BigDecimal.valueOf(20000), "VND");
+                                                BigDecimal.ZERO, BigDecimal.valueOf(20000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 ShipmentResult registeredResult = new ShipmentResult(
                                 "S_1", "O_1", "M_1", "U_1", "TR_1", "C_1", "L_1",
                                 BigDecimal.ZERO, BigDecimal.valueOf(20000), "VND", "REGISTERED",

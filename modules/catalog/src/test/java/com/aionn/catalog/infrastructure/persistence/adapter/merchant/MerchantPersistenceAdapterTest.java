@@ -37,7 +37,7 @@ class MerchantPersistenceAdapterTest {
 
     @Test
     void saveMapsThroughEntityAndBack() {
-        Merchant domain = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"));
+        Merchant domain = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         MerchantEntity entity = new MerchantEntity();
         when(mapper.toEntity(domain)).thenReturn(entity);
         when(jpa.save(entity)).thenReturn(entity);
@@ -51,7 +51,7 @@ class MerchantPersistenceAdapterTest {
     @Test
     void findByIdReturnsMappedDomainWhenPresent() {
         MerchantEntity entity = new MerchantEntity();
-        Merchant domain = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"));
+        Merchant domain = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(jpa.findById("m-1")).thenReturn(Optional.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -68,7 +68,7 @@ class MerchantPersistenceAdapterTest {
     @Test
     void findByOwnerIdMapsResult() {
         MerchantEntity entity = new MerchantEntity();
-        Merchant domain = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"));
+        Merchant domain = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(jpa.findByOwnerId("owner-1")).thenReturn(Optional.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -84,7 +84,7 @@ class MerchantPersistenceAdapterTest {
     @Test
     void listReturnsMappedPage() {
         MerchantEntity entity = new MerchantEntity();
-        Merchant domain = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"));
+        Merchant domain = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(jpa.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of(entity)));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -98,7 +98,7 @@ class MerchantPersistenceAdapterTest {
         MerchantEntity entity = new MerchantEntity();
         when(jpa.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of(entity)));
         when(mapper.toDomain(entity)).thenReturn(
-                Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05")));
+                Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)));
 
         adapter.list(OffsetPagination.of(0, 10));
 

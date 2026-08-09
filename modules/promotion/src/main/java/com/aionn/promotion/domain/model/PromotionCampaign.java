@@ -59,11 +59,6 @@ public class PromotionCampaign extends AggregateRoot {
     }
 
     public static PromotionCampaign create(String campaignId, String name, CampaignType type,
-            Money budget, Instant startDate, Instant endDate, String createdBy) {
-        return create(campaignId, name, type, budget, startDate, endDate, createdBy, Clock.systemUTC());
-    }
-
-    public static PromotionCampaign create(String campaignId, String name, CampaignType type,
             Money budget, Instant startDate, Instant endDate, String createdBy, Clock clock) {
         if (startDate == null || endDate == null || !startDate.isBefore(endDate)) {
             throw new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
@@ -87,10 +82,6 @@ public class PromotionCampaign extends AggregateRoot {
         return c;
     }
 
-    public void activate() {
-        activate(Clock.systemUTC());
-    }
-
     public void activate(Clock clock) {
         Guard.require(status == CampaignStatus.SCHEDULED || status == CampaignStatus.DRAFT,
                 () -> new PromotionException(PromotionErrorCode.CAMPAIGN_INVALID_STATE,
@@ -105,20 +96,12 @@ public class PromotionCampaign extends AggregateRoot {
         registerEvent(new PromotionEvents.PromotionCampaignActivated(campaignId, now));
     }
 
-    public void schedule() {
-        schedule(Clock.systemUTC());
-    }
-
     public void schedule(Clock clock) {
         Guard.require(status.canTransitionTo(CampaignStatus.SCHEDULED),
                 () -> new PromotionException(PromotionErrorCode.CAMPAIGN_INVALID_STATE,
                         "Cannot schedule from " + status));
         this.status = CampaignStatus.SCHEDULED;
         this.updatedAt = clock.instant();
-    }
-
-    public void end() {
-        end(Clock.systemUTC());
     }
 
     public void end(Clock clock) {
@@ -131,10 +114,6 @@ public class PromotionCampaign extends AggregateRoot {
         registerEvent(new PromotionEvents.PromotionCampaignEnded(campaignId, now, now));
     }
 
-    public void cancel(String reason) {
-        cancel(reason, Clock.systemUTC());
-    }
-
     public void cancel(String reason, Clock clock) {
         Guard.require(status.canTransitionTo(CampaignStatus.CANCELLED),
                 () -> new PromotionException(PromotionErrorCode.CAMPAIGN_INVALID_STATE,
@@ -145,10 +124,6 @@ public class PromotionCampaign extends AggregateRoot {
         registerEvent(new PromotionEvents.PromotionCampaignCancelled(campaignId, reason, now, now));
     }
 
-    public void configureCondition(PromotionCondition condition) {
-        configureCondition(condition, Clock.systemUTC());
-    }
-
     public void configureCondition(PromotionCondition condition, Clock clock) {
         Guard.notNull(condition, "condition");
         this.condition = condition;
@@ -157,10 +132,6 @@ public class PromotionCampaign extends AggregateRoot {
         registerEvent(new PromotionEvents.PromotionConditionConfigured(campaignId,
                 condition.minOrderValue(), condition.applicableCategoryIds(),
                 condition.maxClaimsPerUser(), condition.maxUsesPerVoucher(), now, now));
-    }
-
-    public void ensureRunning() {
-        ensureRunning(Clock.systemUTC());
     }
 
     public void ensureRunning(Clock clock) {
@@ -177,19 +148,11 @@ public class PromotionCampaign extends AggregateRoot {
                         "Campaign is " + status));
     }
 
-    public void consumeBudget(Money amount) {
-        consumeBudget(amount, Clock.systemUTC());
-    }
-
     public void consumeBudget(Money amount, Clock clock) {
         Guard.require(budgetRemaining.isGreaterOrEqual(amount),
                 () -> new PromotionException(PromotionErrorCode.CAMPAIGN_OUT_OF_BUDGET));
         this.budgetRemaining = budgetRemaining.subtract(amount);
         this.updatedAt = clock.instant();
-    }
-
-    public void releaseBudget(Money amount) {
-        releaseBudget(amount, Clock.systemUTC());
     }
 
     public void releaseBudget(Money amount, Clock clock) {

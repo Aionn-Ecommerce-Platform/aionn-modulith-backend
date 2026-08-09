@@ -51,16 +51,6 @@ public class StockReservation extends AggregateRoot {
             String warehouseId,
             String orderId,
             int qty,
-            Instant expiresAt) {
-        return reserve(reservationId, skuId, warehouseId, orderId, qty, expiresAt, Clock.systemUTC());
-    }
-
-    public static StockReservation reserve(
-            String reservationId,
-            String skuId,
-            String warehouseId,
-            String orderId,
-            int qty,
             Instant expiresAt,
             Clock clock) {
         Guard.require(qty > 0,
@@ -74,11 +64,6 @@ public class StockReservation extends AggregateRoot {
     }
 
     public static StockReservation failed(
-            String reservationId, String skuId, String warehouseId, int qty, String reason) {
-        return failed(reservationId, skuId, warehouseId, qty, reason, Clock.systemUTC());
-    }
-
-    public static StockReservation failed(
             String reservationId, String skuId, String warehouseId, int qty, String reason, Clock clock) {
         Instant now = clock.instant();
         StockReservation reservation = new StockReservation(reservationId, skuId, warehouseId, null, qty,
@@ -86,10 +71,6 @@ public class StockReservation extends AggregateRoot {
         reservation.registerEvent(new StockReservationEvents.StockReservationFailed(
                 reservationId, skuId, warehouseId, qty, reason, now));
         return reservation;
-    }
-
-    public void commit() {
-        commit(Clock.systemUTC());
     }
 
     public void commit(Clock clock) {
@@ -100,10 +81,6 @@ public class StockReservation extends AggregateRoot {
         this.status = ReservationStatus.COMMITTED;
         this.decidedAt = now;
         registerEvent(new StockReservationEvents.StockCommitted(reservationId, skuId, warehouseId, orderId, qty, now));
-    }
-
-    public void release(String reason) {
-        release(reason, Clock.systemUTC());
     }
 
     public void release(String reason, Clock clock) {

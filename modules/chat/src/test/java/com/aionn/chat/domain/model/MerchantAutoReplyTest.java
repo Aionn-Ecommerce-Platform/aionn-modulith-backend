@@ -22,7 +22,7 @@ class MerchantAutoReplyTest {
 
     @Test
     void createUsesDefaultsAndIsDisabled() {
-        MerchantAutoReply ar = MerchantAutoReply.create(MERCHANT);
+        MerchantAutoReply ar = MerchantAutoReply.create(MERCHANT, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(ar.getMerchantId()).isEqualTo(MERCHANT);
         assertThat(ar.isEnabled()).isFalse();
@@ -34,21 +34,21 @@ class MerchantAutoReplyTest {
 
     @Test
     void updateRejectsStartAfterEnd() {
-        MerchantAutoReply ar = MerchantAutoReply.create(MERCHANT);
+        MerchantAutoReply ar = MerchantAutoReply.create(MERCHANT, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThatThrownBy(() -> ar.update(true, "hi", "bye",
                 LocalTime.of(20, 0), LocalTime.of(8, 0),
-                EnumSet.of(DayOfWeek.MONDAY)))
+                EnumSet.of(DayOfWeek.MONDAY), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
                 .isInstanceOf(ChatException.class)
                 .extracting("errorCode").isEqualTo(ChatErrorCode.INVALID_ARGUMENT.getCode());
     }
 
     @Test
     void updateAppliesValuesAndRecordsEvent() {
-        MerchantAutoReply ar = MerchantAutoReply.create(MERCHANT);
+        MerchantAutoReply ar = MerchantAutoReply.create(MERCHANT, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         ar.update(true, "Hello", "Away", LocalTime.of(9, 0), LocalTime.of(18, 0),
-                EnumSet.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY));
+                EnumSet.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(ar.isEnabled()).isTrue();
         assertThat(ar.getGreeting()).isEqualTo("Hello");

@@ -34,11 +34,6 @@ public class ShippingRate extends AggregateRoot {
     }
 
     public static ShippingRate configure(
-            String rateId, String zoneCode, BigDecimal baseFee, String currency, String condition) {
-        return configure(rateId, zoneCode, baseFee, currency, condition, Clock.systemUTC());
-    }
-
-    public static ShippingRate configure(
             String rateId, String zoneCode, BigDecimal baseFee, String currency, String condition, Clock clock) {
         Guard.require(zoneCode != null && !zoneCode.isBlank(),
                 () -> new ShippingException(ShippingErrorCode.INVALID_ARGUMENT, "zoneCode must not be blank"));
@@ -49,10 +44,6 @@ public class ShippingRate extends AggregateRoot {
         r.registerEvent(new ShipmentEvents.ShippingRateConfigured(rateId, zoneCode, baseFee, currency, condition,
                 now, now));
         return r;
-    }
-
-    public void update(BigDecimal baseFee, String condition) {
-        update(baseFee, condition, Clock.systemUTC());
     }
 
     public void update(BigDecimal baseFee, String condition, Clock clock) {

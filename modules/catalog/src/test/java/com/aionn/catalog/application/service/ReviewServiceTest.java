@@ -74,16 +74,16 @@ class ReviewServiceTest {
     private ReviewService reviewService;
 
     private Product productWithSku(String skuId) {
-        Product p = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
-        p.categorize(List.of("cat-1"));
-        p.defineVariant(skuId, Map.of("color", "red"), Money.of(new BigDecimal("10"), "VND"));
+        Product p = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        p.categorize(List.of("cat-1"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        p.defineVariant(skuId, Map.of("color", "red"), Money.of(new BigDecimal("10"), "VND"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         p.pullEvents();
         return p;
     }
 
     private ProductReview makeReview() {
         ProductReview review = ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, ORDER_ID,
-                5, "t", "c", List.of());
+                5, "t", "c", List.of(), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         review.pullEvents();
         return review;
     }
@@ -167,7 +167,7 @@ class ReviewServiceTest {
         Product product = productWithSku("sku-1");
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
         when(merchantRepository.findByOwnerId("stranger")).thenReturn(Optional.of(
-                Merchant.register("other-mer", "stranger", "X", new BigDecimal("0.05"))));
+                Merchant.register("other-mer", "stranger", "X", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC))));
 
         assertThatThrownBy(() -> reviewService.merchantReply(
                 new MerchantReplyCommand("stranger", REVIEW_ID, "hi")))
@@ -182,7 +182,7 @@ class ReviewServiceTest {
         when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(review));
         Product product = productWithSku("sku-1");
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-        Merchant merchant = Merchant.register(MERCHANT_ID, OWNER_ID, "Acme", new BigDecimal("0.05"));
+        Merchant merchant = Merchant.register(MERCHANT_ID, OWNER_ID, "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(merchantRepository.findByOwnerId(OWNER_ID)).thenReturn(Optional.of(merchant));
         when(reviewRepository.save(review)).thenReturn(review);
 
@@ -227,7 +227,7 @@ class ReviewServiceTest {
     @Test
     void restoreClearsReportedFields() {
         ProductReview review = makeReview();
-        review.report(MERCHANT_ID, "abuse");
+        review.report(MERCHANT_ID, "abuse", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         review.pullEvents();
         when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(review));
         when(reviewRepository.save(review)).thenReturn(review);
@@ -267,7 +267,7 @@ class ReviewServiceTest {
     @Test
     void getReportedReturnsPage() {
         ProductReview review = makeReview();
-        review.report(MERCHANT_ID, "abuse");
+        review.report(MERCHANT_ID, "abuse", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         review.pullEvents();
         when(reviewRepository.findByStatus(ReviewStatus.REPORTED, OffsetPagination.of(0, 20)))
                 .thenReturn(List.of(review));

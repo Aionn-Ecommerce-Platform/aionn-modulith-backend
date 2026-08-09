@@ -39,7 +39,7 @@ class ProductReviewPersistenceAdapterTest {
     @InjectMocks private ProductReviewPersistenceAdapter adapter;
 
     private ProductReview domainReview() {
-        return ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, "order-1", 5, "t", "c", List.of());
+        return ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, "order-1", 5, "t", "c", List.of(), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
     }
 
     @Test void saveMapsThroughEntityAndBack() {

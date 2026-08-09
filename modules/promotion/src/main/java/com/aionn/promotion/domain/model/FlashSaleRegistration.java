@@ -77,18 +77,6 @@ public class FlashSaleRegistration extends AggregateRoot {
             String productId,
             String skuId,
             Money salePrice,
-            int saleStock) {
-        return submit(registrationId, campaignId, merchantId, productId, skuId, salePrice, saleStock,
-                Clock.systemUTC());
-    }
-
-    public static FlashSaleRegistration submit(
-            String registrationId,
-            String campaignId,
-            String merchantId,
-            String productId,
-            String skuId,
-            Money salePrice,
             int saleStock,
             Clock clock) {
         Guard.notBlank(campaignId, "campaignId");
@@ -112,13 +100,10 @@ public class FlashSaleRegistration extends AggregateRoot {
     }
 
     /**
-     * Admin approval — enforces the platform minimum-discount rule against the
+     * Admin approval â€” enforces the platform minimum-discount rule against the
      * regular variant price. {@code variantPrice} comes from catalog and must
      * be in the same currency as {@code salePrice}.
      */
-    public void approve(String adminId, Money variantPrice) {
-        approve(adminId, variantPrice, Clock.systemUTC());
-    }
 
     public void approve(String adminId, Money variantPrice, Clock clock) {
         ensureTransitionAllowed(FlashSaleRegistrationStatus.APPROVED);
@@ -139,10 +124,6 @@ public class FlashSaleRegistration extends AggregateRoot {
         registerEvent(new PromotionEvents.FlashSaleApproved(registrationId, campaignId, skuId, adminId, now));
     }
 
-    public void reject(String adminId, String reason) {
-        reject(adminId, reason, Clock.systemUTC());
-    }
-
     public void reject(String adminId, String reason, Clock clock) {
         ensureTransitionAllowed(FlashSaleRegistrationStatus.REJECTED);
         Guard.notBlank(adminId, "adminId");
@@ -155,10 +136,6 @@ public class FlashSaleRegistration extends AggregateRoot {
         registerEvent(new PromotionEvents.FlashSaleRejected(registrationId, campaignId, skuId, adminId, reason, now));
     }
 
-    public void cancel(String requesterMerchantId) {
-        cancel(requesterMerchantId, Clock.systemUTC());
-    }
-
     public void cancel(String requesterMerchantId, Clock clock) {
         Guard.require(merchantId.equals(requesterMerchantId),
                 () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
@@ -166,10 +143,6 @@ public class FlashSaleRegistration extends AggregateRoot {
         ensureTransitionAllowed(FlashSaleRegistrationStatus.CANCELLED);
         this.status = FlashSaleRegistrationStatus.CANCELLED;
         this.updatedAt = clock.instant();
-    }
-
-    public void consumeStock(int qty) {
-        consumeStock(qty, Clock.systemUTC());
     }
 
     public void consumeStock(int qty, Clock clock) {

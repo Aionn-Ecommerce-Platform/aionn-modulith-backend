@@ -61,7 +61,7 @@ class WarehouseServiceTest {
     @Test
     @DisplayName("changeStatus() rejects an attacker acting on another merchant's warehouse")
     void changeStatus_rejectsForeignWarehouse() {
-        Warehouse victim = Warehouse.create("W_1", "M_victim", "addr", 1);
+        Warehouse victim = Warehouse.create("W_1", "M_victim", "addr", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(warehouseRepository.findById("W_1")).thenReturn(Optional.of(victim));
 
         InventoryException ex = assertThrows(InventoryException.class,
@@ -74,7 +74,7 @@ class WarehouseServiceTest {
     @Test
     @DisplayName("changeStatus() throws INVALID_ARGUMENT when status value is unknown")
     void changeStatus_throwsInvalidStatus() {
-        Warehouse warehouse = Warehouse.create("W_1", "M_1", "addr", 1);
+        Warehouse warehouse = Warehouse.create("W_1", "M_1", "addr", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(warehouseRepository.findById("W_1")).thenReturn(Optional.of(warehouse));
 
         InventoryException ex = assertThrows(InventoryException.class,
@@ -86,7 +86,7 @@ class WarehouseServiceTest {
     @Test
     @DisplayName("adjustPriority() changes warehouse priority and saves successfully")
     void adjustPriority_modifiesPriorityAndSaves() {
-        Warehouse warehouse = Warehouse.create("W_1", "M_1", "addr", 1);
+        Warehouse warehouse = Warehouse.create("W_1", "M_1", "addr", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(warehouseRepository.findById("W_1")).thenReturn(Optional.of(warehouse));
         when(warehouseRepository.save(any(Warehouse.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -99,7 +99,7 @@ class WarehouseServiceTest {
     @Test
     @DisplayName("suspend() changes status to SUSPENDED by admin")
     void suspend_updatesWarehouseStatus() {
-        Warehouse warehouse = Warehouse.create("W_1", "M_1", "addr", 1);
+        Warehouse warehouse = Warehouse.create("W_1", "M_1", "addr", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(warehouseRepository.findById("W_1")).thenReturn(Optional.of(warehouse));
         when(warehouseRepository.save(any(Warehouse.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -112,7 +112,7 @@ class WarehouseServiceTest {
     @Test
     @DisplayName("liftSuspension() reactivates warehouse")
     void liftSuspension_reactivatesWarehouse() {
-        Warehouse warehouse = Warehouse.create("W_1", "M_1", "addr", 1);
+        Warehouse warehouse = Warehouse.create("W_1", "M_1", "addr", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         warehouse.suspend("admin-1", "Suspended reason", clock);
         when(warehouseRepository.findById("W_1")).thenReturn(Optional.of(warehouse));
         when(warehouseRepository.save(any(Warehouse.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -126,7 +126,7 @@ class WarehouseServiceTest {
     @Test
     @DisplayName("get() returns warehouse result when found")
     void get_returnsWarehouseResult() {
-        Warehouse warehouse = Warehouse.create("W_1", "M_1", "addr", 1);
+        Warehouse warehouse = Warehouse.create("W_1", "M_1", "addr", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(warehouseRepository.findById("W_1")).thenReturn(Optional.of(warehouse));
 
         Warehouse result = warehouseService.get("W_1");
@@ -144,7 +144,7 @@ class WarehouseServiceTest {
 
     @Test
     void getOwned_rejectsForeignWarehouse() {
-        Warehouse warehouse = Warehouse.create("W_1", "M_1", "addr", 1);
+        Warehouse warehouse = Warehouse.create("W_1", "M_1", "addr", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(warehouseRepository.findById("W_1")).thenReturn(Optional.of(warehouse));
 
         InventoryException ex = assertThrows(InventoryException.class,
@@ -156,8 +156,8 @@ class WarehouseServiceTest {
     @Test
     @DisplayName("listByOwner() returns all warehouses sorted by priority")
     void listByOwner_returnsSortedList() {
-        Warehouse w1 = Warehouse.create("W_1", "M_1", "addr1", 1);
-        Warehouse w2 = Warehouse.create("W_2", "M_1", "addr2", 2);
+        Warehouse w1 = Warehouse.create("W_1", "M_1", "addr1", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Warehouse w2 = Warehouse.create("W_2", "M_1", "addr2", 2, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(warehouseRepository.findByMerchantOrderByPriority("M_1")).thenReturn(java.util.List.of(w1, w2));
 
         warehouseService.listByOwner("M_1");

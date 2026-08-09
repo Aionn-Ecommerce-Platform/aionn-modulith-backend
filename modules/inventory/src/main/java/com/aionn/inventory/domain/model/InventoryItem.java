@@ -47,10 +47,6 @@ public class InventoryItem extends AggregateRoot {
         this.updatedAt = updatedAt;
     }
 
-    public static InventoryItem initialize(InventoryItemKey key, int initialQty) {
-        return initialize(key, initialQty, Clock.systemUTC());
-    }
-
     public static InventoryItem initialize(InventoryItemKey key, int initialQty, Clock clock) {
         Guard.require(initialQty >= 0,
                 () -> new InventoryException(InventoryErrorCode.INVALID_ARGUMENT, "initialQty must be >= 0"));
@@ -66,10 +62,6 @@ public class InventoryItem extends AggregateRoot {
         return physicalQty - availableQty;
     }
 
-    public void reserve(int qty) {
-        reserve(qty, Clock.systemUTC());
-    }
-
     public void reserve(int qty, Clock clock) {
         ensurePositive(qty);
         ensureUnlocked();
@@ -78,10 +70,6 @@ public class InventoryItem extends AggregateRoot {
                         "Available " + availableQty + " < requested " + qty));
         this.availableQty -= qty;
         touch(clock);
-    }
-
-    public void commit(int qty) {
-        commit(qty, Clock.systemUTC());
     }
 
     public void commit(int qty, Clock clock) {
@@ -93,10 +81,6 @@ public class InventoryItem extends AggregateRoot {
         touch(clock);
     }
 
-    public void release(int qty) {
-        release(qty, Clock.systemUTC());
-    }
-
     public void release(int qty, Clock clock) {
         ensurePositive(qty);
         Guard.require(reservedQty() >= qty,
@@ -104,10 +88,6 @@ public class InventoryItem extends AggregateRoot {
                         "Cannot release more than reserved"));
         this.availableQty += qty;
         touch(clock);
-    }
-
-    public void adjust(int signedDelta, AdjustmentType type, String reason) {
-        adjust(signedDelta, type, reason, Clock.systemUTC());
     }
 
     public void adjust(int signedDelta, AdjustmentType type, String reason, Clock clock) {
@@ -130,10 +110,6 @@ public class InventoryItem extends AggregateRoot {
                 updatedAt));
     }
 
-    public void configureSafetyStock(int safetyQty) {
-        configureSafetyStock(safetyQty, Clock.systemUTC());
-    }
-
     public void configureSafetyStock(int safetyQty, Clock clock) {
         Guard.require(safetyQty >= 0,
                 () -> new InventoryException(InventoryErrorCode.INVALID_ARGUMENT, "safetyStockQty must be >= 0"));
@@ -151,10 +127,6 @@ public class InventoryItem extends AggregateRoot {
         }
     }
 
-    public void emergencyLock(String adminId, String reason) {
-        emergencyLock(adminId, reason, Clock.systemUTC());
-    }
-
     public void emergencyLock(String adminId, String reason, Clock clock) {
         this.locked = true;
         touch(clock);
@@ -162,19 +134,11 @@ public class InventoryItem extends AggregateRoot {
                 key.skuId(), key.warehouseId(), adminId, reason, updatedAt, updatedAt));
     }
 
-    public void emergencyUnlock(String adminId) {
-        emergencyUnlock(adminId, Clock.systemUTC());
-    }
-
     public void emergencyUnlock(String adminId, Clock clock) {
         this.locked = false;
         touch(clock);
         registerEvent(new InventoryItemEvents.StockEmergencyUnlocked(
                 key.skuId(), key.warehouseId(), adminId, updatedAt, updatedAt));
-    }
-
-    public void trackBatchAndExpiry(String batchNo, LocalDate expiryDate) {
-        trackBatchAndExpiry(batchNo, expiryDate, Clock.systemUTC());
     }
 
     public void trackBatchAndExpiry(String batchNo, LocalDate expiryDate, Clock clock) {
@@ -186,10 +150,6 @@ public class InventoryItem extends AggregateRoot {
         touch(clock);
         registerEvent(new InventoryItemEvents.BatchAndExpiryTracked(
                 key.skuId(), key.warehouseId(), batchNo, expiryDate, updatedAt));
-    }
-
-    public void recordAudit(String auditId, int actualQty) {
-        recordAudit(auditId, actualQty, Clock.systemUTC());
     }
 
     public void recordAudit(String auditId, int actualQty, Clock clock) {

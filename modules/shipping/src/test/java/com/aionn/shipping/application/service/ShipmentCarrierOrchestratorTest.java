@@ -51,12 +51,12 @@ class ShipmentCarrierOrchestratorTest {
 
     private static Shipment shipment() {
         return Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND");
+                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
     }
 
     private static Shipment registeredShipment() {
         Shipment shipment = shipment();
-        shipment.registerWithCarrier("TRACK_1", "CARRIER_O1", null);
+        shipment.registerWithCarrier("TRACK_1", "CARRIER_O1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         shipment.pullEvents();
         return shipment;
     }

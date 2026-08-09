@@ -29,7 +29,7 @@ class NotificationTemplateRenderTest {
     void createWithoutClockUsesSystemTime() {
         NotificationTemplate created = NotificationTemplate.create("tpl-2",
                 "identity.password-changed", NotificationChannel.EMAIL,
-                NotificationCategory.SECURITY, "vi-VN", "Subject", "Hello");
+                NotificationCategory.SECURITY, "vi-VN", "Subject", "Hello", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(created.getCreatedAt()).isNotNull();
     }
@@ -112,7 +112,7 @@ class NotificationTemplateRenderTest {
     void updateWithoutClockUsesSystemTime() {
         NotificationTemplate created = template("Subject", "Hello {{name}}");
 
-        created.update("New", "Hi {{other}}");
+        created.update("New", "Hi {{other}}", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(created.getVersion()).isEqualTo(2);
         assertThat(created.getPlaceholders()).containsExactly("other");

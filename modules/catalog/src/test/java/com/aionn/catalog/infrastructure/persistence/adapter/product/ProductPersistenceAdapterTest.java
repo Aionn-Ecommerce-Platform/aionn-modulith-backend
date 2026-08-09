@@ -50,7 +50,7 @@ class ProductPersistenceAdapterTest {
 
     @Test
     void saveMapsThroughEntityAndBack() {
-        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
+        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         ProductEntity entity = new ProductEntity();
         when(mapper.toEntity(domain)).thenReturn(entity);
         when(jpa.save(entity)).thenReturn(entity);
@@ -62,7 +62,7 @@ class ProductPersistenceAdapterTest {
 
     @Test
     void saveTranslatesSkuConstraintViolation() {
-        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
+        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         ProductEntity entity = new ProductEntity();
         when(mapper.toEntity(domain)).thenReturn(entity);
         var cause = new ConstraintViolationException("duplicate", new SQLException(), "product_variants_pkey");
@@ -75,7 +75,7 @@ class ProductPersistenceAdapterTest {
 
     @Test
     void saveDoesNotMislabelOtherSkuColumnViolationsAsDuplicates() {
-        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
+        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         ProductEntity entity = new ProductEntity();
         when(mapper.toEntity(domain)).thenReturn(entity);
         var cause = new ConstraintViolationException("sku_id must not be null", new SQLException(), "sku_not_null");
@@ -87,7 +87,7 @@ class ProductPersistenceAdapterTest {
 
     @Test
     void findByIdReturnsMappedDomain() {
-        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
+        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         ProductEntity entity = new ProductEntity();
         when(jpa.findById(PRODUCT_ID)).thenReturn(Optional.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
@@ -110,7 +110,7 @@ class ProductPersistenceAdapterTest {
     @Test
     void findAllByIdsMapsResults() {
         ProductEntity entity = new ProductEntity();
-        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
+        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(jpa.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -122,7 +122,7 @@ class ProductPersistenceAdapterTest {
         ProductEntity entity = new ProductEntity();
         when(jpa.findByMerchantId(eq(MERCHANT_ID), any(PageRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(entity)));
-        when(mapper.toDomain(entity)).thenReturn(Product.create(PRODUCT_ID, MERCHANT_ID, "Widget"));
+        when(mapper.toDomain(entity)).thenReturn(Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)));
 
         adapter.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 10));
 
@@ -145,7 +145,7 @@ class ProductPersistenceAdapterTest {
         ProductEntity entity = new ProductEntity();
         when(jpa.findByStatus(eq("PUBLISHED"), any(PageRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(entity)));
-        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
+        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
         assertThat(adapter.listByStatus(ProductStatus.PUBLISHED, OffsetPagination.of(0, 10)))
@@ -162,7 +162,7 @@ class ProductPersistenceAdapterTest {
     @Test
     void findAllBySkuIdsMapsResults() {
         ProductEntity entity = new ProductEntity();
-        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
+        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(jpa.findAllBySkuIdIn(List.of("sku-1"))).thenReturn(List.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -192,7 +192,7 @@ class ProductPersistenceAdapterTest {
     @Test
     void findRelatedProductsPassesEmptyCategoryPlaceholder() {
         ProductEntity entity = new ProductEntity();
-        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
+        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(jpa.findRelatedProducts(PRODUCT_ID, "brand-1", List.of(""), 5)).thenReturn(List.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -209,7 +209,7 @@ class ProductPersistenceAdapterTest {
     @Test
     void findPopularProductsMapsResults() {
         ProductEntity entity = new ProductEntity();
-        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
+        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(jpa.findPopularProducts(5)).thenReturn(List.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -226,7 +226,7 @@ class ProductPersistenceAdapterTest {
     @Test
     void findPersonalizedProductsForwardsValues() {
         ProductEntity entity = new ProductEntity();
-        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
+        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(jpa.findPersonalizedProducts(List.of("c1"), List.of("b1"), 5)).thenReturn(List.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -236,7 +236,7 @@ class ProductPersistenceAdapterTest {
     @Test
     void findPublishedClampsLimitAndOffset() {
         ProductEntity entity = new ProductEntity();
-        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
+        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(jpa.findPublishedRaw(1, 0)).thenReturn(List.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -260,7 +260,7 @@ class ProductPersistenceAdapterTest {
     @Test
     void searchPublishedTrimsQuery() {
         ProductEntity entity = new ProductEntity();
-        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
+        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(jpa.searchPublished("widget", 20, 0)).thenReturn(List.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -284,8 +284,8 @@ class ProductPersistenceAdapterTest {
     void findByIdsPreserveOrderKeepsRequestedOrder() {
         ProductEntity e1 = new ProductEntity();
         ProductEntity e2 = new ProductEntity();
-        Product p1 = Product.create("01HZPRD0000000000000000001", MERCHANT_ID, "A");
-        Product p2 = Product.create("01HZPRD0000000000000000002", MERCHANT_ID, "B");
+        Product p1 = Product.create("01HZPRD0000000000000000001", MERCHANT_ID, "A", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Product p2 = Product.create("01HZPRD0000000000000000002", MERCHANT_ID, "B", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(jpa.findAllById(List.of(p2.getProductId(), p1.getProductId()))).thenReturn(List.of(e1, e2));
         when(mapper.toDomain(e1)).thenReturn(p1);
         when(mapper.toDomain(e2)).thenReturn(p2);
@@ -297,7 +297,7 @@ class ProductPersistenceAdapterTest {
     @Test
     void searchFallbackPushesFiltersAndPaginationToDatabase() {
         ProductEntity entity = new ProductEntity();
-        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
+        Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         var filter = new com.aionn.catalog.application.port.out.product.ProductPersistencePort.FallbackFilter(
                 " widget ", MERCHANT_ID, ProductStatus.PUBLISHED,
                 List.of("brand-1", "brand-2"), List.of("cat-1"),

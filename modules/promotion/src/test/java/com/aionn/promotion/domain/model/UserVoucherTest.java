@@ -35,7 +35,7 @@ class UserVoucherTest {
 
     @Test
     void claimWithoutClockUsesSystemTime() {
-        UserVoucher uv = UserVoucher.claim("uv-2", "V-2", "user-2");
+        UserVoucher uv = UserVoucher.claim("uv-2", "V-2", "user-2", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(uv.getClaimedAt()).isNotNull();
         assertThat(uv.getStatus()).isEqualTo(UserVoucherStatus.CLAIMED);
@@ -59,7 +59,7 @@ class UserVoucherTest {
     void reserveWithoutClockUsesSystemTime() {
         UserVoucher uv = claimed();
 
-        uv.reserve("order-1", NOW.plusSeconds(900));
+        uv.reserve("order-1", NOW.plusSeconds(900), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(uv.getStatus()).isEqualTo(UserVoucherStatus.RESERVED);
     }
@@ -91,7 +91,7 @@ class UserVoucherTest {
         UserVoucher uv = claimed();
         uv.reserve("order-1", NOW.plusSeconds(900), CLOCK);
 
-        uv.apply(AMOUNT);
+        uv.apply(AMOUNT, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(uv.getStatus()).isEqualTo(UserVoucherStatus.APPLIED);
     }
@@ -125,7 +125,7 @@ class UserVoucherTest {
         UserVoucher uv = claimed();
         uv.reserve("order-1", NOW.plusSeconds(900), CLOCK);
 
-        uv.release("expired");
+        uv.release("expired", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(uv.getStatus()).isEqualTo(UserVoucherStatus.RELEASED);
     }
@@ -158,7 +158,7 @@ class UserVoucherTest {
     void expireWithoutClockUsesSystemTime() {
         UserVoucher uv = claimed();
 
-        uv.expire();
+        uv.expire(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(uv.getStatus()).isEqualTo(UserVoucherStatus.EXPIRED);
     }

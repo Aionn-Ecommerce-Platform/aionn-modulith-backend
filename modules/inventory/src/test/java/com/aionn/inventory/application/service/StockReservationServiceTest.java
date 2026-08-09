@@ -68,7 +68,7 @@ class StockReservationServiceTest {
 
     @Test
     void reserveSucceedsWhenAvailableStockSufficient() {
-        InventoryItem item = InventoryItem.initialize(KEY, 10);
+        InventoryItem item = InventoryItem.initialize(KEY, 10, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         item.pullEvents();
         when(itemRepository.lockByKey(KEY)).thenReturn(Optional.of(item));
         when(itemRepository.save(any(InventoryItem.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -84,7 +84,7 @@ class StockReservationServiceTest {
 
     @Test
     void reservePersistsFailedReservationWhenStockInsufficient() {
-        InventoryItem item = InventoryItem.initialize(KEY, 1);
+        InventoryItem item = InventoryItem.initialize(KEY, 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         item.pullEvents();
         when(itemRepository.lockByKey(KEY)).thenReturn(Optional.of(item));
         when(reservationRepository.save(any(StockReservation.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -110,11 +110,11 @@ class StockReservationServiceTest {
 
     @Test
     void commitDecrementsPhysicalAndPersistsAdjustment() {
-        InventoryItem item = InventoryItem.initialize(KEY, 10);
-        item.reserve(3);
+        InventoryItem item = InventoryItem.initialize(KEY, 10, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        item.reserve(3, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         item.pullEvents();
         Instant exp = Instant.now().plus(Duration.ofMinutes(5));
-        StockReservation reservation = StockReservation.reserve("R_1", "SKU_1", "WH_1", "ORDER_1", 3, exp);
+        StockReservation reservation = StockReservation.reserve("R_1", "SKU_1", "WH_1", "ORDER_1", 3, exp, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         reservation.pullEvents();
 
         when(reservationRepository.lockForUpdate("R_1")).thenReturn(Optional.of(reservation));
@@ -133,8 +133,8 @@ class StockReservationServiceTest {
     @Test
     void repeatedCommitReturnsAlreadyCommittedReservationWithoutSideEffects() {
         Instant exp = Instant.now().plus(Duration.ofMinutes(5));
-        StockReservation reservation = StockReservation.reserve("R_1", "SKU_1", "WH_1", "ORDER_1", 3, exp);
-        reservation.commit();
+        StockReservation reservation = StockReservation.reserve("R_1", "SKU_1", "WH_1", "ORDER_1", 3, exp, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        reservation.commit(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         reservation.pullEvents();
         when(reservationRepository.lockForUpdate("R_1")).thenReturn(Optional.of(reservation));
 
@@ -144,11 +144,11 @@ class StockReservationServiceTest {
 
     @Test
     void releaseRestoresAvailableAndPublishesEvents() {
-        InventoryItem item = InventoryItem.initialize(KEY, 10);
-        item.reserve(4);
+        InventoryItem item = InventoryItem.initialize(KEY, 10, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        item.reserve(4, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         item.pullEvents();
         Instant exp = Instant.now().plus(Duration.ofMinutes(5));
-        StockReservation reservation = StockReservation.reserve("R_1", "SKU_1", "WH_1", "ORDER_1", 4, exp);
+        StockReservation reservation = StockReservation.reserve("R_1", "SKU_1", "WH_1", "ORDER_1", 4, exp, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         reservation.pullEvents();
 
         when(reservationRepository.lockForUpdate("R_1")).thenReturn(Optional.of(reservation));
@@ -165,8 +165,8 @@ class StockReservationServiceTest {
     @Test
     void repeatedReleaseReturnsAlreadyReleasedReservationWithoutSideEffects() {
         StockReservation reservation = StockReservation.reserve(
-                "R_1", "SKU_1", "WH_1", "ORDER_1", 4, Instant.now().plus(Duration.ofMinutes(5)));
-        reservation.release("cancelled");
+                "R_1", "SKU_1", "WH_1", "ORDER_1", 4, Instant.now().plus(Duration.ofMinutes(5)), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        reservation.release("cancelled", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         reservation.pullEvents();
         when(reservationRepository.lockForUpdate("R_1")).thenReturn(Optional.of(reservation));
 

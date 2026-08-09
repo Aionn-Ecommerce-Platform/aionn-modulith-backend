@@ -37,10 +37,6 @@ public class AttributeTemplate extends AggregateRoot {
                 this.updatedAt = updatedAt;
         }
 
-        public static AttributeTemplate create(String templateId, String categoryId, List<String> attributeKeys) {
-                return create(templateId, categoryId, attributeKeys, Clock.systemUTC());
-        }
-
         public static AttributeTemplate create(String templateId, String categoryId, List<String> attributeKeys, Clock clock) {
                 Guard.require(templateId != null && !templateId.isBlank(),
                                 () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
@@ -69,10 +65,6 @@ public class AttributeTemplate extends AggregateRoot {
                 template.registerEvent(new AttributeTemplateEvents.AttributeTemplateCreated(
                                 templateId, categoryId, List.copyOf(trimmedKeys), now));
                 return template;
-        }
-
-        public void configureFilterable(String attributeKey, boolean filterable) {
-                configureFilterable(attributeKey, filterable, Clock.systemUTC());
         }
 
         public void configureFilterable(String attributeKey, boolean filterable, Clock clock) {

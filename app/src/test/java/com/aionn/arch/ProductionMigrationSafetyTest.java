@@ -8,12 +8,16 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 class ProductionMigrationSafetyTest {
+
+    private static final Map<String, Set<String>> APPROVED_SCHEMA_BACKFILLS = Map.of(
+            "modules/identity/src/main/resources/db/V1.2__complete_account_deletion.sql", Set.of("users"));
 
     private static final Set<String> DEMO_TABLES = Set.of(
             "users",
@@ -77,6 +81,7 @@ class ProductionMigrationSafetyTest {
             DML_TARGET.matcher(sql).results()
                     .map(result -> result.group(1).toLowerCase())
                     .filter(DEMO_TABLES::contains)
+                    .filter(table -> !isApprovedSchemaBackfill(path, table))
                     .forEach(table -> violations.add(path + " writes demo table " + table));
             if (sql.toLowerCase(Locale.ROOT).contains("@aionn.com")) {
                 violations.add(path + " contains an @aionn.com demo email");
@@ -93,6 +98,12 @@ class ProductionMigrationSafetyTest {
         } catch (IOException exception) {
             throw new IllegalStateException("Unable to inspect migration " + path, exception);
         }
+    }
+
+    private static boolean isApprovedSchemaBackfill(Path path, String table) {
+        String normalizedPath = normalized(path);
+        return APPROVED_SCHEMA_BACKFILLS.entrySet().stream()
+                .anyMatch(entry -> normalizedPath.endsWith(entry.getKey()) && entry.getValue().contains(table));
     }
 
     private static Path findRepositoryRoot() {

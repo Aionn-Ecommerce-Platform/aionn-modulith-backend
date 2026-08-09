@@ -54,16 +54,6 @@ public class StockTransfer extends AggregateRoot {
             String fromWarehouseId,
             String toWarehouseId,
             String skuId,
-            int qty) {
-        return initiate(transferId, merchantId, fromWarehouseId, toWarehouseId, skuId, qty, Clock.systemUTC());
-    }
-
-    public static StockTransfer initiate(
-            String transferId,
-            String merchantId,
-            String fromWarehouseId,
-            String toWarehouseId,
-            String skuId,
             int qty,
             Clock clock) {
         Guard.require(qty > 0,
@@ -78,10 +68,6 @@ public class StockTransfer extends AggregateRoot {
         return transfer;
     }
 
-    public void complete(int receivedQty) {
-        complete(receivedQty, Clock.systemUTC());
-    }
-
     public void complete(int receivedQty, Clock clock) {
         Guard.require(status.canTransitionTo(StockTransferStatus.COMPLETED),
                 () -> new InventoryException(InventoryErrorCode.STOCK_TRANSFER_INVALID,
@@ -94,10 +80,6 @@ public class StockTransfer extends AggregateRoot {
         this.completedAt = now;
         registerEvent(new StockTransferEvents.StockTransferCompleted(
                 transferId, merchantId, fromWarehouseId, toWarehouseId, skuId, receivedQty, now, now));
-    }
-
-    public void cancel(String reason) {
-        cancel(reason, Clock.systemUTC());
     }
 
     public void cancel(String reason, Clock clock) {

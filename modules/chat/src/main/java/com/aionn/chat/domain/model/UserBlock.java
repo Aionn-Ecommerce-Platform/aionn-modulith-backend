@@ -32,10 +32,6 @@ public class UserBlock extends AggregateRoot {
         this.updatedAt = updatedAt;
     }
 
-    public static UserBlock block(String blockId, String blockerId, String blockedId, String reason) {
-        return block(blockId, blockerId, blockedId, reason, Clock.systemUTC());
-    }
-
     public static UserBlock block(String blockId, String blockerId, String blockedId, String reason,
             Clock clock) {
         Guard.require(!blockerId.equals(blockedId),
@@ -44,10 +40,6 @@ public class UserBlock extends AggregateRoot {
         UserBlock b = new UserBlock(blockId, blockerId, blockedId, reason, true, now, now);
         b.registerEvent(new ChatEvents.UserBlocked(blockerId, blockedId, now));
         return b;
-    }
-
-    public void unblock() {
-        unblock(Clock.systemUTC());
     }
 
     public void unblock(Clock clock) {

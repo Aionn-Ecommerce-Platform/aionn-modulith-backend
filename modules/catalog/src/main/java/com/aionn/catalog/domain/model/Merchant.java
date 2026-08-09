@@ -64,10 +64,6 @@ public class Merchant extends AggregateRoot {
         this.updatedAt = updatedAt;
     }
 
-    public static Merchant register(String merchantId, String ownerId, String name, BigDecimal commissionRate) {
-        return register(merchantId, ownerId, name, commissionRate, Clock.systemUTC());
-    }
-
     public static Merchant register(String merchantId, String ownerId, String name, BigDecimal commissionRate, Clock clock) {
         Instant now = clock.instant();
         Merchant merchant = new Merchant(merchantId, ownerId, name, null, null, null, null,
@@ -77,27 +73,15 @@ public class Merchant extends AggregateRoot {
         return merchant;
     }
 
-    public void linkStripeAccount(String stripeAccountId) {
-        linkStripeAccount(stripeAccountId, Clock.systemUTC());
-    }
-
     public void linkStripeAccount(String stripeAccountId, Clock clock) {
         this.stripeAccountId = stripeAccountId;
         this.updatedAt = clock.instant();
-    }
-
-    public void updateStripeCapabilities(boolean chargesEnabled, boolean payoutsEnabled) {
-        updateStripeCapabilities(chargesEnabled, payoutsEnabled, Clock.systemUTC());
     }
 
     public void updateStripeCapabilities(boolean chargesEnabled, boolean payoutsEnabled, Clock clock) {
         this.stripeChargesEnabled = chargesEnabled;
         this.stripePayoutsEnabled = payoutsEnabled;
         this.updatedAt = clock.instant();
-    }
-
-    public void updateCommissionRate(BigDecimal newRate) {
-        updateCommissionRate(newRate, Clock.systemUTC());
     }
 
     public void updateCommissionRate(BigDecimal newRate, Clock clock) {
@@ -107,11 +91,6 @@ public class Merchant extends AggregateRoot {
                         "commission rate must be between 0 and 1"));
         this.commissionRate = newRate;
         this.updatedAt = clock.instant();
-    }
-
-    public void updateProfile(String name, String logoUrl, String description,
-            String provinceCode, String provinceName) {
-        updateProfile(name, logoUrl, description, provinceCode, provinceName, Clock.systemUTC());
     }
 
     public void updateProfile(String name, String logoUrl, String description,
@@ -133,10 +112,6 @@ public class Merchant extends AggregateRoot {
                 provinceCode, provinceName, provinceChanged, updatedAt));
     }
 
-    public void suspend(String adminId, String reason) {
-        suspend(adminId, reason, Clock.systemUTC());
-    }
-
     public void suspend(String adminId, String reason, Clock clock) {
         ensureTransitionAllowed(MerchantStatus.SUSPENDED);
         this.status = MerchantStatus.SUSPENDED;
@@ -144,19 +119,11 @@ public class Merchant extends AggregateRoot {
         registerEvent(new MerchantEvents.MerchantSuspended(merchantId, reason, adminId, updatedAt, updatedAt));
     }
 
-    public void activate(String adminId, String reason) {
-        activate(adminId, reason, Clock.systemUTC());
-    }
-
     public void activate(String adminId, String reason, Clock clock) {
         ensureTransitionAllowed(MerchantStatus.ACTIVE);
         this.status = MerchantStatus.ACTIVE;
         this.updatedAt = clock.instant();
         registerEvent(new MerchantEvents.MerchantActivated(merchantId, adminId, reason, updatedAt, updatedAt));
-    }
-
-    public void close(String reason) {
-        close(reason, Clock.systemUTC());
     }
 
     public void close(String reason, Clock clock) {

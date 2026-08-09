@@ -68,8 +68,8 @@ class InventoryItemServiceTest {
 
         @Test
         void initializeRejectsWhenInventoryAlreadyExists() {
-                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1);
-                InventoryItem existing = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 5);
+                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                InventoryItem existing = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 5, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
                 when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
                 when(itemRepository.findByKey(new InventoryItemKey("SKU_1", "WH_1")))
@@ -86,7 +86,7 @@ class InventoryItemServiceTest {
 
         @Test
         void initializeSavesItemAndPublishesEvents() {
-                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1);
+                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
                 when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
                 when(itemRepository.findByKey(new InventoryItemKey("SKU_1", "WH_1")))
@@ -101,8 +101,8 @@ class InventoryItemServiceTest {
 
         @Test
         void manualAdjustmentRejectsOutboundType() {
-                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1);
-                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10);
+                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
                 when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
                 when(itemRepository.lockByKey(new InventoryItemKey("SKU_1", "WH_1")))
@@ -117,7 +117,7 @@ class InventoryItemServiceTest {
 
         @Test
         void emergencyLockMarksItemLockedAndPublishesEvents() {
-                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10);
+                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 item.pullEvents();
                 when(itemRepository.lockByKey(new InventoryItemKey("SKU_1", "WH_1")))
                                 .thenReturn(Optional.of(item));
@@ -132,8 +132,8 @@ class InventoryItemServiceTest {
 
         @Test
         void configureSafetyStockNotifiesBreachWhenAvailableUnderThreshold() {
-                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1);
-                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 5);
+                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 5, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 item.pullEvents();
                 when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
                 when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
@@ -165,7 +165,7 @@ class InventoryItemServiceTest {
 
         @Test
         void initializeHandlesDataIntegrityViolationException() {
-                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1);
+                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
                 when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
                 when(itemRepository.findByKey(any())).thenReturn(Optional.empty());
@@ -181,8 +181,8 @@ class InventoryItemServiceTest {
 
         @Test
         void trackBatchAndExpiryUpdatesSuccessfully() {
-                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1);
-                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10);
+                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
                 when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
                 when(itemRepository.lockByKey(any())).thenReturn(Optional.of(item));
@@ -196,8 +196,8 @@ class InventoryItemServiceTest {
 
         @Test
         void manualAdjustmentAppliesDecreaseAndSaves() {
-                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1);
-                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 20);
+                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 20, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
                 when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
                 when(itemRepository.lockByKey(any())).thenReturn(Optional.of(item));
@@ -212,7 +212,7 @@ class InventoryItemServiceTest {
 
         @Test
         void emergencyUnlockUnlocksItemSuccessfully() {
-                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10);
+                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 item.emergencyLock("admin-1", "audit", clock);
                 when(itemRepository.lockByKey(any())).thenReturn(Optional.of(item));
                 when(itemRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -224,8 +224,8 @@ class InventoryItemServiceTest {
 
         @Test
         void auditInventoryReconcilesStockLevel() {
-                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1);
-                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10);
+                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
                 when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
                 when(itemRepository.lockByKey(any())).thenReturn(Optional.of(item));
@@ -238,7 +238,7 @@ class InventoryItemServiceTest {
 
         @Test
         void getReturnsInventoryItemWhenFound() {
-                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10);
+                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 when(itemRepository.findByKey(any())).thenReturn(Optional.of(item));
 
                 InventoryItem result = service.get("SKU_1", "WH_1");
@@ -258,7 +258,7 @@ class InventoryItemServiceTest {
 
         @Test
         void listBySkuReturnsItems() {
-                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10);
+                InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 when(itemRepository.findBySku("SKU_1")).thenReturn(java.util.List.of(item));
 
                 service.listBySku("SKU_1");
@@ -268,7 +268,7 @@ class InventoryItemServiceTest {
 
         @Test
         void listByWarehouseReturnsPaginatedPageResult() {
-                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1);
+                Warehouse warehouse = Warehouse.create("WH_1", "M_1", "addr", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
                 when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
 

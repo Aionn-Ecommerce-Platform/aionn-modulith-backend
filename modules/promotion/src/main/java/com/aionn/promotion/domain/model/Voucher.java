@@ -46,11 +46,6 @@ public class Voucher extends AggregateRoot {
     }
 
     public static Voucher issue(String voucherCode, String campaignId, Money discountAmount,
-            int usageLimit, Instant validFrom, Instant validUntil) {
-        return issue(voucherCode, campaignId, discountAmount, usageLimit, validFrom, validUntil, Clock.systemUTC());
-    }
-
-    public static Voucher issue(String voucherCode, String campaignId, Money discountAmount,
             int usageLimit, Instant validFrom, Instant validUntil, Clock clock) {
         Guard.require(usageLimit > 0,
                 () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT, "usageLimit must be > 0"));
@@ -64,12 +59,6 @@ public class Voucher extends AggregateRoot {
                 discountAmount.amount(), discountAmount.currency(),
                 usageLimit, validUntil, now));
         return v;
-    }
-
-    public static Voucher issueForShop(String voucherCode, String merchantId, Money discountAmount,
-            int usageLimit, Instant validFrom, Instant validUntil) {
-        return issueForShop(voucherCode, merchantId, discountAmount, usageLimit, validFrom, validUntil,
-                Clock.systemUTC());
     }
 
     public static Voucher issueForShop(String voucherCode, String merchantId, Money discountAmount,
@@ -108,10 +97,6 @@ public class Voucher extends AggregateRoot {
         return Math.max(usageLimit - usedCount - reservedCount, 0);
     }
 
-    public void claimSlot() {
-        claimSlot(Clock.systemUTC());
-    }
-
     public void claimSlot(Clock clock) {
         Instant now = clock.instant();
         Guard.require(isValidNow(now),
@@ -119,10 +104,6 @@ public class Voucher extends AggregateRoot {
         Guard.require(remainingUses() > 0,
                 () -> new PromotionException(PromotionErrorCode.VOUCHER_NO_USAGE_LEFT));
         this.updatedAt = now;
-    }
-
-    public void reserveSlot() {
-        reserveSlot(Clock.systemUTC());
     }
 
     public void reserveSlot(Clock clock) {
@@ -135,10 +116,6 @@ public class Voucher extends AggregateRoot {
         this.updatedAt = now;
     }
 
-    public void commitSlot() {
-        commitSlot(Clock.systemUTC());
-    }
-
     public void commitSlot(Clock clock) {
         Guard.require(reservedCount > 0,
                 () -> new PromotionException(PromotionErrorCode.USER_VOUCHER_INVALID_STATE,
@@ -146,10 +123,6 @@ public class Voucher extends AggregateRoot {
         this.reservedCount--;
         this.usedCount++;
         this.updatedAt = clock.instant();
-    }
-
-    public void releaseSlot() {
-        releaseSlot(Clock.systemUTC());
     }
 
     public void releaseSlot(Clock clock) {

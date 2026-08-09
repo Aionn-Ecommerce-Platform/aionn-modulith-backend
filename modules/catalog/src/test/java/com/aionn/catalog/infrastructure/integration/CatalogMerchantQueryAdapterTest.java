@@ -41,7 +41,7 @@ class CatalogMerchantQueryAdapterTest {
 
     @Test
     void findMerchantIdByOwnerIdReturnsIdWhenPresent() {
-        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"));
+        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(merchantRepository.findByOwnerId("owner-1")).thenReturn(Optional.of(merchant));
 
         assertThat(adapter.findMerchantIdByOwnerId("owner-1")).contains("m-1");
@@ -55,7 +55,7 @@ class CatalogMerchantQueryAdapterTest {
 
     @Test
     void findOwnerIdByMerchantIdReturnsOwner() {
-        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"));
+        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
 
         assertThat(adapter.findOwnerIdByMerchantId("m-1")).contains("owner-1");
@@ -69,7 +69,7 @@ class CatalogMerchantQueryAdapterTest {
 
     @Test
     void findCommissionRateReturnsRateWhenMerchantExists() {
-        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.0750"));
+        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.0750"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
 
         assertThat(adapter.findCommissionRate("m-1")).contains(new BigDecimal("0.0750"));
@@ -83,7 +83,7 @@ class CatalogMerchantQueryAdapterTest {
 
     @Test
     void findStripeConnectInfoReturnsEmptyWhenNoStripeAccount() {
-        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"));
+        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
 
         assertThat(adapter.findStripeConnectInfo("m-1")).isEmpty();
@@ -91,9 +91,9 @@ class CatalogMerchantQueryAdapterTest {
 
     @Test
     void findStripeConnectInfoReturnsInfoWhenLinked() {
-        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"));
-        merchant.linkStripeAccount("acct_test");
-        merchant.updateStripeCapabilities(true, false);
+        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        merchant.linkStripeAccount("acct_test", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        merchant.updateStripeCapabilities(true, false, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
 
         Optional<StripeConnectInfo> info = adapter.findStripeConnectInfo("m-1");
@@ -106,7 +106,7 @@ class CatalogMerchantQueryAdapterTest {
 
     @Test
     void saveStripeAccountIdPersistsChanges() {
-        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"));
+        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
 
         adapter.saveStripeAccountId("m-1", "acct_test");
@@ -128,8 +128,8 @@ class CatalogMerchantQueryAdapterTest {
 
     @Test
     void updateStripeCapabilitiesPersistsChanges() {
-        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"));
-        merchant.linkStripeAccount("acct_test");
+        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        merchant.linkStripeAccount("acct_test", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
 
         adapter.updateStripeCapabilities("m-1", true, true);

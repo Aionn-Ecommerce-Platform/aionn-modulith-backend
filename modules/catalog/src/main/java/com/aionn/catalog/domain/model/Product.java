@@ -87,10 +87,6 @@ public class Product extends AggregateRoot {
             this.translations.addAll(translations);
     }
 
-    public static Product create(String productId, String merchantId, String name) {
-        return create(productId, merchantId, name, Clock.systemUTC());
-    }
-
     public static Product create(String productId, String merchantId, String name, Clock clock) {
         Guard.require(name != null && !name.isBlank(),
                 () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT, "name must not be blank"));
@@ -107,10 +103,6 @@ public class Product extends AggregateRoot {
                 () -> new CatalogException(CatalogErrorCode.PRODUCT_FORBIDDEN));
     }
 
-    public void defineVariant(String skuId, Map<String, String> attributeValues, Money price) {
-        defineVariant(skuId, attributeValues, price, Clock.systemUTC());
-    }
-
     public void defineVariant(String skuId, Map<String, String> attributeValues, Money price, Clock clock) {
         for (ProductVariant existing : variants) {
             Guard.require(!existing.skuId().equals(skuId),
@@ -125,20 +117,12 @@ public class Product extends AggregateRoot {
         registerEvent(new ProductEvents.ProductVariantDefined(productId, skuId, Map.copyOf(attributeValues), updatedAt));
     }
 
-    public void removeVariant(String skuId) {
-        removeVariant(skuId, Clock.systemUTC());
-    }
-
     public void removeVariant(String skuId, Clock clock) {
         ProductVariant existing = findVariant(skuId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.PRODUCT_VARIANT_NOT_FOUND));
         variants.remove(existing);
         touch(clock);
         registerEvent(new ProductEvents.ProductVariantRemoved(productId, skuId, merchantId, updatedAt, updatedAt));
-    }
-
-    public void changeVariantPrice(String skuId, Money newPrice) {
-        changeVariantPrice(skuId, newPrice, Clock.systemUTC());
     }
 
     public void changeVariantPrice(String skuId, Money newPrice, Clock clock) {
@@ -151,10 +135,6 @@ public class Product extends AggregateRoot {
                 productId, skuId, oldAmount, newPrice.amount(), newPrice.currency(), updatedAt));
     }
 
-    public void updateMedia(List<String> images) {
-        updateMedia(images, Clock.systemUTC());
-    }
-
     public void updateMedia(List<String> images, Clock clock) {
         this.imageList.clear();
         if (images != null) {
@@ -162,10 +142,6 @@ public class Product extends AggregateRoot {
         }
         touch(clock);
         registerEvent(new ProductEvents.ProductMediaUpdated(productId, List.copyOf(this.imageList), updatedAt));
-    }
-
-    public void categorize(List<String> categoryIds) {
-        categorize(categoryIds, Clock.systemUTC());
     }
 
     public void categorize(List<String> categoryIds, Clock clock) {
@@ -177,20 +153,12 @@ public class Product extends AggregateRoot {
         registerEvent(new ProductEvents.ProductCategorized(productId, List.copyOf(this.categoryIds), updatedAt));
     }
 
-    public void assignBrand(String brandId) {
-        assignBrand(brandId, Clock.systemUTC());
-    }
-
     public void assignBrand(String brandId, Clock clock) {
         Guard.require(brandId != null && !brandId.isBlank(),
                 () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT, "brandId must not be blank"));
         this.brandId = brandId;
         touch(clock);
         registerEvent(new ProductEvents.ProductBrandAssigned(productId, brandId, updatedAt));
-    }
-
-    public void publish(String adminId) {
-        publish(adminId, Clock.systemUTC());
     }
 
     public void publish(String adminId, Clock clock) {
@@ -206,19 +174,11 @@ public class Product extends AggregateRoot {
         registerEvent(new ProductEvents.ProductPublished(productId, adminId, updatedAt, updatedAt));
     }
 
-    public void submitForReview(String ownerId) {
-        submitForReview(ownerId, Clock.systemUTC());
-    }
-
     public void submitForReview(String ownerId, Clock clock) {
         ensureTransitionAllowed(ProductStatus.PENDING_REVIEW);
         this.status = ProductStatus.PENDING_REVIEW;
         touch(clock);
         registerEvent(new ProductEvents.ProductSubmittedForReview(productId, ownerId, updatedAt));
-    }
-
-    public void reject(String adminId, String reasonCode, String feedback) {
-        reject(adminId, reasonCode, feedback, Clock.systemUTC());
     }
 
     public void reject(String adminId, String reasonCode, String feedback, Clock clock) {
@@ -228,19 +188,11 @@ public class Product extends AggregateRoot {
         registerEvent(new ProductEvents.ProductRejected(productId, adminId, reasonCode, feedback, updatedAt));
     }
 
-    public void deactivate(String reason) {
-        deactivate(reason, Clock.systemUTC());
-    }
-
     public void deactivate(String reason, Clock clock) {
         ensureTransitionAllowed(ProductStatus.HIDDEN);
         this.status = ProductStatus.HIDDEN;
         touch(clock);
         registerEvent(new ProductEvents.ProductDeactivated(productId, merchantId, reason, updatedAt, updatedAt));
-    }
-
-    public void restore() {
-        restore(Clock.systemUTC());
     }
 
     public void restore(Clock clock) {
@@ -250,19 +202,11 @@ public class Product extends AggregateRoot {
         registerEvent(new ProductEvents.ProductRestored(productId, updatedAt, updatedAt));
     }
 
-    public void emergencyTakedown(String adminId, String reason) {
-        emergencyTakedown(adminId, reason, Clock.systemUTC());
-    }
-
     public void emergencyTakedown(String adminId, String reason, Clock clock) {
         ensureTransitionAllowed(ProductStatus.TAKEN_DOWN);
         this.status = ProductStatus.TAKEN_DOWN;
         touch(clock);
         registerEvent(new ProductEvents.ProductEmergencyTakedown(productId, adminId, reason, updatedAt, updatedAt));
-    }
-
-    public void updateAiMetadata(List<String> tags, String aiDescription) {
-        updateAiMetadata(tags, aiDescription, Clock.systemUTC());
     }
 
     public void updateAiMetadata(List<String> tags, String aiDescription, Clock clock) {
@@ -278,10 +222,6 @@ public class Product extends AggregateRoot {
                 updatedAt));
     }
 
-    public void assignToCollections(List<String> collectionIds) {
-        assignToCollections(collectionIds, Clock.systemUTC());
-    }
-
     public void assignToCollections(List<String> collectionIds, Clock clock) {
         this.collectionIds.clear();
         if (collectionIds != null) {
@@ -289,10 +229,6 @@ public class Product extends AggregateRoot {
         }
         touch(clock);
         registerEvent(new ProductEvents.ProductCollectionAssigned(productId, List.copyOf(this.collectionIds), updatedAt));
-    }
-
-    public void defineAttributes(Map<String, String> attributes) {
-        defineAttributes(attributes, Clock.systemUTC());
     }
 
     public void defineAttributes(Map<String, String> attributes, Clock clock) {

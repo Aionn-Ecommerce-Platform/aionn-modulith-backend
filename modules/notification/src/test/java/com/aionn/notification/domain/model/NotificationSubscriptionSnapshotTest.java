@@ -32,7 +32,7 @@ class NotificationSubscriptionSnapshotTest {
 
     @Test
     void createDefaultWithoutClockUsesSystemTime() {
-        NotificationSubscription subscription = NotificationSubscription.createDefault("user-2");
+        NotificationSubscription subscription = NotificationSubscription.createDefault("user-2", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(subscription.getCreatedAt()).isNotNull();
         assertThat(subscription.getUpdatedAt()).isNotNull();
@@ -69,7 +69,7 @@ class NotificationSubscriptionSnapshotTest {
     void updateWithoutClockUsesSystemTime() {
         NotificationSubscription subscription = subscription();
 
-        subscription.update(optionalCategory(), NotificationChannel.EMAIL, false);
+        subscription.update(optionalCategory(), NotificationChannel.EMAIL, false, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(subscription.isEnabled(optionalCategory(), NotificationChannel.EMAIL)).isFalse();
         assertThat(subscription.getUpdatedAt()).isNotNull();
@@ -121,7 +121,7 @@ class NotificationSubscriptionSnapshotTest {
     void replaceSettingsWithoutClockUsesSystemTime() {
         NotificationSubscription subscription = subscription();
 
-        subscription.replaceSettings(new EnumMap<>(NotificationCategory.class));
+        subscription.replaceSettings(new EnumMap<>(NotificationCategory.class), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(subscription.getUpdatedAt()).isNotNull();
     }

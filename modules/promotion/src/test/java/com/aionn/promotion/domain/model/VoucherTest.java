@@ -48,14 +48,14 @@ class VoucherTest {
 
     @Test
     void issueWithoutClockUsesSystemTime() {
-        Voucher voucher = Voucher.issue("V-1", "CAMP_1", DISCOUNT, 10, null, null);
+        Voucher voucher = Voucher.issue("V-1", "CAMP_1", DISCOUNT, 10, null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(voucher.getCreatedAt()).isNotNull();
     }
 
     @Test
     void issueForShopWithoutClockUsesSystemTime() {
-        Voucher voucher = Voucher.issueForShop("V-2", "MERCHANT_1", DISCOUNT, 10, null, null);
+        Voucher voucher = Voucher.issueForShop("V-2", "MERCHANT_1", DISCOUNT, 10, null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(voucher.getCreatedAt()).isNotNull();
     }
@@ -151,7 +151,7 @@ class VoucherTest {
     void claimSlotWithoutClockUsesSystemTime() {
         Voucher voucher = platform(5, null, null);
 
-        voucher.claimSlot();
+        voucher.claimSlot(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(voucher.getUsedCount()).isZero();
     }
@@ -184,8 +184,8 @@ class VoucherTest {
     void slotOperationsWithoutClockUseSystemTime() {
         Voucher voucher = platform(5, null, null);
 
-        voucher.reserveSlot();
-        voucher.commitSlot();
+        voucher.reserveSlot(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        voucher.commitSlot(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         voucher.releaseCommittedSlot(Clock.systemUTC());
 
         assertThat(voucher.getUpdatedAt()).isNotNull();

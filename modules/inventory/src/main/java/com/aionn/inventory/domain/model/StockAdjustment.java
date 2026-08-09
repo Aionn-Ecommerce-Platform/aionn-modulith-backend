@@ -43,11 +43,6 @@ public class StockAdjustment extends AggregateRoot {
         }
 
         public static StockAdjustment manual(
-                        String adjId, String skuId, String warehouseId, int qty, AdjustmentType type, String reason) {
-                return manual(adjId, skuId, warehouseId, qty, type, reason, Clock.systemUTC());
-        }
-
-        public static StockAdjustment manual(
                         String adjId, String skuId, String warehouseId, int qty, AdjustmentType type, String reason, Clock clock) {
                 Guard.require(type != AdjustmentType.OUTBOUND,
                                 () -> new InventoryException(InventoryErrorCode.STOCK_ADJUSTMENT_INVALID,
@@ -57,11 +52,6 @@ public class StockAdjustment extends AggregateRoot {
                 adj.registerEvent(new StockAdjustmentEvents.ManualAdjustmentRecorded(
                                 adjId, skuId, warehouseId, qty, type, reason, now));
                 return adj;
-        }
-
-        public static StockAdjustment outbound(
-                        String adjId, String skuId, String warehouseId, int qty, String orderId) {
-                return outbound(adjId, skuId, warehouseId, qty, orderId, Clock.systemUTC());
         }
 
         public static StockAdjustment outbound(

@@ -94,19 +94,6 @@ public class Shipment extends AggregateRoot {
             ShipmentDimensions dimensions,
             BigDecimal codAmount,
             BigDecimal shippingFee,
-            String currency) {
-        return request(shipmentId, orderId, merchantId, userId, address, dimensions, codAmount, shippingFee, currency, Clock.systemUTC());
-    }
-
-    public static Shipment request(
-            String shipmentId,
-            String orderId,
-            String merchantId,
-            String userId,
-            ShipmentAddress address,
-            ShipmentDimensions dimensions,
-            BigDecimal codAmount,
-            BigDecimal shippingFee,
             String currency,
             Clock clock) {
         Guard.require(orderId != null && !orderId.isBlank(),
@@ -143,10 +130,6 @@ public class Shipment extends AggregateRoot {
                 () -> new ShippingException(ShippingErrorCode.SHIPMENT_FORBIDDEN));
     }
 
-    public void registerWithCarrier(String trackingCode, String carrierOrderId, Instant expectedDate) {
-        registerWithCarrier(trackingCode, carrierOrderId, expectedDate, Clock.systemUTC());
-    }
-
     public void registerWithCarrier(String trackingCode, String carrierOrderId, Instant expectedDate, Clock clock) {
         ensureTransition(ShipmentStatus.REGISTERED);
         this.trackingCode = trackingCode;
@@ -158,10 +141,6 @@ public class Shipment extends AggregateRoot {
                 updatedAt));
     }
 
-    public void fetchLabel(String labelUrl) {
-        fetchLabel(labelUrl, Clock.systemUTC());
-    }
-
     public void fetchLabel(String labelUrl, Clock clock) {
         Guard.require(status == ShipmentStatus.REGISTERED || status == ShipmentStatus.PICKED_UP,
                 () -> new ShippingException(ShippingErrorCode.SHIPMENT_INVALID_STATE,
@@ -169,10 +148,6 @@ public class Shipment extends AggregateRoot {
         this.labelUrl = labelUrl;
         touch(clock);
         registerEvent(new ShipmentEvents.ShippingLabelFetched(shipmentId, trackingCode, labelUrl, updatedAt));
-    }
-
-    public void markPickedUp(String warehouseId) {
-        markPickedUp(warehouseId, Clock.systemUTC());
     }
 
     public void markPickedUp(String warehouseId, Clock clock) {
@@ -185,10 +160,6 @@ public class Shipment extends AggregateRoot {
         this.pickedAt = now;
         this.updatedAt = now;
         registerEvent(new ShipmentEvents.ShipmentPickedUp(shipmentId, warehouseId, pickedAt, now));
-    }
-
-    public void updateInTransitStatus(String currentLocation, String statusDesc) {
-        updateInTransitStatus(currentLocation, statusDesc, Clock.systemUTC());
     }
 
     public void updateInTransitStatus(String currentLocation, String statusDesc, Clock clock) {
@@ -207,10 +178,6 @@ public class Shipment extends AggregateRoot {
                 updatedAt));
     }
 
-    public void markOutForDelivery(String shipperName, String shipperPhone) {
-        markOutForDelivery(shipperName, shipperPhone, Clock.systemUTC());
-    }
-
     public void markOutForDelivery(String shipperName, String shipperPhone, Clock clock) {
         if (status == ShipmentStatus.OUT_FOR_DELIVERY) {
             return;
@@ -221,10 +188,6 @@ public class Shipment extends AggregateRoot {
         this.status = ShipmentStatus.OUT_FOR_DELIVERY;
         touch(clock);
         registerEvent(new ShipmentEvents.ShipmentOutForDelivery(shipmentId, orderId, shipperName, shipperPhone, updatedAt));
-    }
-
-    public void markDelivered(String signatureUrl) {
-        markDelivered(signatureUrl, Clock.systemUTC());
     }
 
     public void markDelivered(String signatureUrl, Clock clock) {
@@ -240,10 +203,6 @@ public class Shipment extends AggregateRoot {
         registerEvent(new ShipmentEvents.ShipmentDelivered(shipmentId, orderId, signatureUrl, deliveredAt, now));
     }
 
-    public void recordDeliveryFailure(String reason) {
-        recordDeliveryFailure(reason, Clock.systemUTC());
-    }
-
     public void recordDeliveryFailure(String reason, Clock clock) {
         if (status == ShipmentStatus.DELIVERY_FAILED) {
             return;
@@ -256,10 +215,6 @@ public class Shipment extends AggregateRoot {
         registerEvent(new ShipmentEvents.ShipmentDeliveryFailed(shipmentId, reason, attemptCount, updatedAt));
     }
 
-    public void retryDelivery() {
-        retryDelivery(Clock.systemUTC());
-    }
-
     public void retryDelivery(Clock clock) {
         Guard.require(status == ShipmentStatus.DELIVERY_FAILED,
                 () -> new ShippingException(ShippingErrorCode.SHIPMENT_INVALID_STATE,
@@ -268,10 +223,6 @@ public class Shipment extends AggregateRoot {
         touch(clock);
         registerEvent(new ShipmentEvents.ShipmentStatusUpdated(shipmentId, status.name(), currentLocation,
                 "retry attempt " + attemptCount, updatedAt));
-    }
-
-    public void markReturned(String returnReason) {
-        markReturned(returnReason, Clock.systemUTC());
     }
 
     public void markReturned(String returnReason, Clock clock) {
@@ -284,10 +235,6 @@ public class Shipment extends AggregateRoot {
         this.returnedAt = now;
         this.updatedAt = now;
         registerEvent(new ShipmentEvents.ShipmentReturned(shipmentId, returnReason, returnedAt, now));
-    }
-
-    public void cancel(String reason) {
-        cancel(reason, Clock.systemUTC());
     }
 
     public void cancel(String reason, Clock clock) {
@@ -306,10 +253,6 @@ public class Shipment extends AggregateRoot {
 
     public boolean isCancellable() {
         return status.canTransitionTo(ShipmentStatus.CANCELLED);
-    }
-
-    public void resolveIssue(String issueType, String resolution) {
-        resolveIssue(issueType, resolution, Clock.systemUTC());
     }
 
     public void resolveIssue(String issueType, String resolution, Clock clock) {

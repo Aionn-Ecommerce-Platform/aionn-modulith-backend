@@ -14,7 +14,7 @@ class ShippingRateTest {
 
     @Test
     void configureEmitsEvent() {
-        ShippingRate r = ShippingRate.configure("r1", "HCM", new BigDecimal("30000"), "VND", "<=2kg");
+        ShippingRate r = ShippingRate.configure("r1", "HCM", new BigDecimal("30000"), "VND", "<=2kg", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(r.getRateId()).isEqualTo("r1");
         assertThat(r.getZoneCode()).isEqualTo("HCM");
@@ -23,7 +23,7 @@ class ShippingRateTest {
 
     @Test
     void configureRejectsNegativeFee() {
-        assertThatThrownBy(() -> ShippingRate.configure("r1", "HCM", new BigDecimal("-1"), "VND", null))
+        assertThatThrownBy(() -> ShippingRate.configure("r1", "HCM", new BigDecimal("-1"), "VND", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
                 .isInstanceOf(ShippingException.class)
                 .extracting("errorCode")
                 .isEqualTo(ShippingErrorCode.INVALID_ARGUMENT.getCode());
@@ -31,16 +31,16 @@ class ShippingRateTest {
 
     @Test
     void configureRejectsBlankZoneCode() {
-        assertThatThrownBy(() -> ShippingRate.configure("r1", " ", BigDecimal.ZERO, "VND", null))
+        assertThatThrownBy(() -> ShippingRate.configure("r1", " ", BigDecimal.ZERO, "VND", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
                 .isInstanceOf(ShippingException.class);
     }
 
     @Test
     void updateFeeAndConditionEmitsEvent() {
-        ShippingRate r = ShippingRate.configure("r1", "HCM", new BigDecimal("30000"), "VND", null);
+        ShippingRate r = ShippingRate.configure("r1", "HCM", new BigDecimal("30000"), "VND", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         r.pullEvents();
 
-        r.update(new BigDecimal("40000"), "<=3kg");
+        r.update(new BigDecimal("40000"), "<=3kg", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(r.getBaseFee()).isEqualByComparingTo(new BigDecimal("40000"));
         assertThat(r.getCondition()).isEqualTo("<=3kg");
@@ -49,9 +49,9 @@ class ShippingRateTest {
 
     @Test
     void updateRejectsNegativeFee() {
-        ShippingRate r = ShippingRate.configure("r1", "HCM", new BigDecimal("30000"), "VND", null);
+        ShippingRate r = ShippingRate.configure("r1", "HCM", new BigDecimal("30000"), "VND", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
-        assertThatThrownBy(() -> r.update(new BigDecimal("-5"), null))
+        assertThatThrownBy(() -> r.update(new BigDecimal("-5"), null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
                 .isInstanceOf(ShippingException.class);
     }
 }

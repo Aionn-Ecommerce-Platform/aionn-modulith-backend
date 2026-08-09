@@ -39,10 +39,6 @@ public class Warehouse extends AggregateRoot {
         this.updatedAt = updatedAt;
     }
 
-    public static Warehouse create(String warehouseId, String merchantId, String address, int priorityLevel) {
-        return create(warehouseId, merchantId, address, priorityLevel, Clock.systemUTC());
-    }
-
     public static Warehouse create(String warehouseId, String merchantId, String address, int priorityLevel, Clock clock) {
         Guard.require(merchantId != null && !merchantId.isBlank(),
                 () -> new InventoryException(InventoryErrorCode.INVALID_ARGUMENT, "merchantId must not be blank"));
@@ -61,10 +57,6 @@ public class Warehouse extends AggregateRoot {
                 () -> new InventoryException(InventoryErrorCode.WAREHOUSE_FORBIDDEN));
     }
 
-    public void changeStatus(WarehouseStatus next) {
-        changeStatus(next, Clock.systemUTC());
-    }
-
     public void changeStatus(WarehouseStatus next, Clock clock) {
         Guard.require(next != WarehouseStatus.SUSPENDED,
                 () -> new InventoryException(InventoryErrorCode.WAREHOUSE_INVALID_TRANSITION,
@@ -77,10 +69,6 @@ public class Warehouse extends AggregateRoot {
         registerEvent(new WarehouseEvents.WarehouseStatusChanged(warehouseId, next.name(), updatedAt));
     }
 
-    public void adjustPriority(int newPriority) {
-        adjustPriority(newPriority, Clock.systemUTC());
-    }
-
     public void adjustPriority(int newPriority, Clock clock) {
         Guard.require(newPriority >= 0,
                 () -> new InventoryException(InventoryErrorCode.INVALID_ARGUMENT, "priorityLevel must be >= 0"));
@@ -88,10 +76,6 @@ public class Warehouse extends AggregateRoot {
         touch(clock);
         registerEvent(new WarehouseEvents.WarehousePriorityAdjusted(warehouseId, merchantId, newPriority, updatedAt,
                 updatedAt));
-    }
-
-    public void suspend(String adminId, String reason) {
-        suspend(adminId, reason, Clock.systemUTC());
     }
 
     public void suspend(String adminId, String reason, Clock clock) {

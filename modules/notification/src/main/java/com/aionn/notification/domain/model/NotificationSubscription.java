@@ -32,10 +32,6 @@ public class NotificationSubscription extends AggregateRoot {
         this.updatedAt = updatedAt;
     }
 
-    public static NotificationSubscription createDefault(String userId) {
-        return createDefault(userId, Clock.systemUTC());
-    }
-
     public static NotificationSubscription createDefault(String userId, Clock clock) {
         Instant now = clock.instant();
         Map<String, Boolean> settings = new LinkedHashMap<>();
@@ -54,10 +50,6 @@ public class NotificationSubscription extends AggregateRoot {
         return settings.getOrDefault(key(category, channel), true);
     }
 
-    public void update(NotificationCategory category, NotificationChannel channel, boolean enabled) {
-        update(category, channel, enabled, Clock.systemUTC());
-    }
-
     public void update(NotificationCategory category, NotificationChannel channel, boolean enabled,
             Clock clock) {
         Guard.require(!category.isMandatory() || enabled,
@@ -68,10 +60,6 @@ public class NotificationSubscription extends AggregateRoot {
         this.updatedAt = now;
         registerEvent(new NotificationEvents.SubscriptionUpdated(
                 userId, category.name(), channel.name(), enabled, now));
-    }
-
-    public void replaceSettings(Map<NotificationCategory, Map<NotificationChannel, Boolean>> incoming) {
-        replaceSettings(incoming, Clock.systemUTC());
     }
 
     public void replaceSettings(Map<NotificationCategory, Map<NotificationChannel, Boolean>> incoming,
