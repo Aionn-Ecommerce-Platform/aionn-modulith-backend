@@ -42,7 +42,7 @@ public interface InventoryItemRepository
 
     List<InventoryItemEntity> findByIdSkuId(String skuId);
 
-    Page<InventoryItemEntity> findByIdWarehouseId(String warehouseId, Pageable pageable);
+    Page<InventoryItemEntity> findByIdWarehouseIdOrderByIdSkuIdAsc(String warehouseId, Pageable pageable);
 
     @Query("""
         SELECT i.id.skuId AS skuId,

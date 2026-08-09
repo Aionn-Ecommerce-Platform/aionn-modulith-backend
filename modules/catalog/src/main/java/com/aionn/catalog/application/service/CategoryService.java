@@ -19,7 +19,6 @@ import java.time.Clock;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 
 @Slf4j
 @Service
@@ -134,16 +133,6 @@ public class CategoryService {
         return categoryRepository.lockById(categoryId)
                 .or(() -> categoryRepository.findById(categoryId))
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND));
-    }
-
-    private Map<String, Category> lockInStableOrder(String... categoryIds) {
-        Map<String, Category> locked = new LinkedHashMap<>();
-        java.util.Arrays.stream(categoryIds)
-                .filter(Objects::nonNull)
-                .distinct()
-                .sorted()
-                .forEach(id -> locked.put(id, lockRequired(id)));
-        return locked;
     }
 
     private Map<String, Category> lockMutationSet(String categoryId, List<String> additionalIds) {

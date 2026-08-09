@@ -10,7 +10,6 @@ import com.aionn.inventory.infrastructure.persistence.mapper.InventoryItemDomain
 import com.aionn.inventory.infrastructure.persistence.repository.InventoryItemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -70,9 +69,8 @@ public class InventoryItemPersistenceAdapter implements InventoryItemPersistence
 
     @Override
     public PageResult<InventoryItem> findByWarehouse(String warehouseId, OffsetPagination pagination) {
-        var page = jpa.findByIdWarehouseId(
-                warehouseId, PageRequest.of(pagination.page(), pagination.size(),
-                        Sort.by(Sort.Direction.ASC, "id.skuId"))).map(mapper::toDomain);
+        var page = jpa.findByIdWarehouseIdOrderByIdSkuIdAsc(
+                warehouseId, PageRequest.of(pagination.page(), pagination.size())).map(mapper::toDomain);
         return new PageResult<>(page.getContent(), page.getNumber(), page.getSize(),
                 page.getNumberOfElements(), page.getTotalElements());
     }

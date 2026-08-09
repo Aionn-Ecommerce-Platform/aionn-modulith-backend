@@ -132,11 +132,13 @@ class OutboxConsumerInboxAspectTest {
     }
 
     private static final class TestListener {
+        @SuppressWarnings("unused") // Invoked reflectively by OutboxConsumerInboxAspect.
         void onEvent(TestEvent event) {
         }
     }
 
     private static final class EnvelopeListener {
+        @SuppressWarnings("unused") // Invoked reflectively by OutboxConsumerInboxAspect.
         void onEnvelope(EventEnvelope envelope) {
         }
     }

@@ -13,7 +13,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 
 import java.util.List;
@@ -154,7 +153,7 @@ class InventoryItemPersistenceAdapterTest {
     void findByWarehouseMapsResults() {
         InventoryItemEntity entity = new InventoryItemEntity();
         InventoryItem domain = InventoryItem.initialize(KEY, 100, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        when(jpa.findByIdWarehouseId(eq(WAREHOUSE_ID), any(PageRequest.class)))
+        when(jpa.findByIdWarehouseIdOrderByIdSkuIdAsc(eq(WAREHOUSE_ID), any(PageRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(entity)));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -162,9 +161,9 @@ class InventoryItemPersistenceAdapterTest {
                 .containsExactly(domain);
 
         ArgumentCaptor<PageRequest> captor = ArgumentCaptor.forClass(PageRequest.class);
-        verify(jpa).findByIdWarehouseId(eq(WAREHOUSE_ID), captor.capture());
+        verify(jpa).findByIdWarehouseIdOrderByIdSkuIdAsc(eq(WAREHOUSE_ID), captor.capture());
         assertThat(captor.getValue().getPageNumber()).isZero();
         assertThat(captor.getValue().getPageSize()).isEqualTo(10);
-        assertThat(captor.getValue().getSort()).isEqualTo(Sort.by(Sort.Direction.ASC, "id.skuId"));
+        assertThat(captor.getValue().getSort()).isUnsorted();
     }
 }
