@@ -12,6 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.Duration;
 import java.util.List;
@@ -30,6 +31,8 @@ class AuthSessionPersistenceAdapterTest {
 
     private static final String SESSION_ID = "01HZSES0000000000000000001";
     private static final String USER_ID = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
+    private static final Clock CLOCK = Clock.fixed(
+            Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
 
     @Mock
     private AuthSessionRepository authSessionRepository;
@@ -42,7 +45,8 @@ class AuthSessionPersistenceAdapterTest {
     private AuthSessionPersistenceAdapter adapter;
 
     private AuthSession session(String sessionId) {
-        return AuthSession.createNew(sessionId, USER_ID, "127.0.0.1", "agent", Instant.now().plus(Duration.ofHours(1)));
+        return AuthSession.createNew(sessionId, USER_ID, "127.0.0.1", "agent",
+                Instant.now(CLOCK).plus(Duration.ofHours(1)), CLOCK);
     }
 
     @Test

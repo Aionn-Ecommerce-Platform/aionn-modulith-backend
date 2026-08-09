@@ -10,6 +10,8 @@ import java.time.Instant;
 import java.time.Duration;
 import java.util.Set;
 
+import static com.aionn.identity.TestClocks.FIXED;
+import static com.aionn.identity.TestClocks.NOW;
 import static org.assertj.core.api.Assertions.*;
 
 class IdentityUserTest {
@@ -91,7 +93,7 @@ class IdentityUserTest {
 
     @Test
     void createNew_validInput_createsNewUserWithDefaults() {
-        IdentityUser user = IdentityUser.createNew("user-456", "bob@example.com", "0987654321", "bob_jones");
+        IdentityUser user = IdentityUser.createNew("user-456", "bob@example.com", "0987654321", "bob_jones", FIXED);
 
         assertThat(user.getUserId()).isEqualTo("user-456");
         assertThat(user.getEmail()).isEqualTo("bob@example.com");
@@ -110,7 +112,7 @@ class IdentityUserTest {
 
     @Test
     void updateDisplayName_validName_updatesDisplayName() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
 
         user.updateDisplayName("Alice Marie Smith");
 
@@ -119,7 +121,7 @@ class IdentityUserTest {
 
     @Test
     void updateDisplayName_withWhitespace_trimmedName() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
 
         user.updateDisplayName("  Alice Smith  ");
 
@@ -128,7 +130,7 @@ class IdentityUserTest {
 
     @Test
     void updateDisplayName_nullName_throwsException() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
 
         assertThatThrownBy(() -> user.updateDisplayName(null))
                 .isInstanceOf(IdentityException.class);
@@ -136,7 +138,7 @@ class IdentityUserTest {
 
     @Test
     void updateDisplayName_blankName_throwsException() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
 
         assertThatThrownBy(() -> user.updateDisplayName("   "))
                 .isInstanceOf(IdentityException.class);
@@ -144,7 +146,7 @@ class IdentityUserTest {
 
     @Test
     void updateAvatar_validUrl_updatesAvatar() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
 
         user.updateAvatar("https://cdn.example.com/avatar-new.jpg");
 
@@ -153,10 +155,10 @@ class IdentityUserTest {
 
     @Test
     void verifyEmail_firstTime_setsVerificationTimestamp() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
         assertThat(user.getEmailVerifiedAt()).isNull();
 
-        user.verifyEmail();
+        user.verifyEmail(FIXED);
 
         assertThat(user.getEmailVerifiedAt()).isNotNull();
         assertThat(user.getEmailVerifiedAt()).isBeforeOrEqualTo(Instant.now(Clock.systemUTC()));
@@ -180,17 +182,17 @@ class IdentityUserTest {
                 null,
                 Instant.now(Clock.systemUTC()));
 
-        user.verifyEmail();
+        user.verifyEmail(FIXED);
 
         assertThat(user.getEmailVerifiedAt()).isEqualTo(originalTimestamp);
     }
 
     @Test
     void verifyPhone_firstTime_setsVerificationTimestamp() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
         assertThat(user.getPhoneVerifiedAt()).isNull();
 
-        user.verifyPhone();
+        user.verifyPhone(FIXED);
 
         assertThat(user.getPhoneVerifiedAt()).isNotNull();
         assertThat(user.getPhoneVerifiedAt()).isBeforeOrEqualTo(Instant.now(Clock.systemUTC()));
@@ -214,14 +216,14 @@ class IdentityUserTest {
                 null,
                 Instant.now(Clock.systemUTC()));
 
-        user.verifyPhone();
+        user.verifyPhone(FIXED);
 
         assertThat(user.getPhoneVerifiedAt()).isEqualTo(originalTimestamp);
     }
 
     @Test
     void updatePasswordHash_validHash_updatesPassword() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
 
         user.updatePasswordHash("new-hashed-password");
 
@@ -230,8 +232,8 @@ class IdentityUserTest {
 
     @Test
     void updateEmail_newEmail_updatesEmailAndResetsVerification() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
-        user.verifyEmail();
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
+        user.verifyEmail(FIXED);
         assertThat(user.getEmailVerifiedAt()).isNotNull();
 
         user.updateEmail("alice.new@example.com");
@@ -242,8 +244,8 @@ class IdentityUserTest {
 
     @Test
     void updatePhone_newPhone_updatesPhoneAndResetsVerification() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
-        user.verifyPhone();
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
+        user.verifyPhone(FIXED);
         assertThat(user.getPhoneVerifiedAt()).isNotNull();
 
         user.updatePhone("0999888777");
@@ -254,7 +256,7 @@ class IdentityUserTest {
 
     @Test
     void ban_activeUser_setsStatusToBanned() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
         assertThat(user.getStatus()).isEqualTo(UserStatus.ACTIVE);
 
         user.ban();
@@ -264,7 +266,7 @@ class IdentityUserTest {
 
     @Test
     void updateStatus_newStatus_updatesStatus() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
 
         user.updateStatus(UserStatus.SUSPENDED);
 
@@ -273,7 +275,7 @@ class IdentityUserTest {
 
     @Test
     void setRoles_newRoles_replacesAllRoles() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
         assertThat(user.getRoles()).containsExactly(UserRole.BUYER);
 
         user.setRoles(Set.of(UserRole.MERCHANT, UserRole.CS_ADMIN));
@@ -283,7 +285,7 @@ class IdentityUserTest {
 
     @Test
     void setRoles_emptySet_defaultsToBuyer() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
         user.setRoles(Set.of(UserRole.SYSTEM_ADMIN, UserRole.MERCHANT));
 
         user.setRoles(Set.of());
@@ -293,7 +295,7 @@ class IdentityUserTest {
 
     @Test
     void setRoles_null_defaultsToBuyer() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
         user.setRoles(Set.of(UserRole.SYSTEM_ADMIN, UserRole.MERCHANT));
 
         user.setRoles(null);
@@ -303,7 +305,7 @@ class IdentityUserTest {
 
     @Test
     void addRole_newRole_addsRoleToExisting() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
         assertThat(user.getRoles()).containsExactly(UserRole.BUYER);
 
         user.addRole(UserRole.MERCHANT);
@@ -313,7 +315,7 @@ class IdentityUserTest {
 
     @Test
     void addRole_duplicateRole_doesNotAddDuplicate() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
         user.addRole(UserRole.BUYER);
 
         assertThat(user.getRoles()).containsExactly(UserRole.BUYER);
@@ -321,7 +323,7 @@ class IdentityUserTest {
 
     @Test
     void addRole_nullRole_doesNothing() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
 
         user.addRole(null);
 
@@ -330,7 +332,7 @@ class IdentityUserTest {
 
     @Test
     void removeRole_existingRole_removesRole() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
         user.addRole(UserRole.MERCHANT);
         assertThat(user.getRoles()).containsExactlyInAnyOrder(UserRole.BUYER, UserRole.MERCHANT);
 
@@ -341,7 +343,7 @@ class IdentityUserTest {
 
     @Test
     void removeRole_lastRole_defaultsToBuyer() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
         assertThat(user.getRoles()).containsExactly(UserRole.BUYER);
 
         user.removeRole(UserRole.BUYER);
@@ -351,7 +353,7 @@ class IdentityUserTest {
 
     @Test
     void removeRole_nullRole_doesNothing() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
 
         user.removeRole(null);
 
@@ -360,25 +362,25 @@ class IdentityUserTest {
 
     @Test
     void lockUntil_futureDate_locksUser() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
-        Instant lockTime = Instant.now(Clock.systemUTC()).plus(Duration.ofHours(2));
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
+        Instant lockTime = NOW.plus(Duration.ofHours(2));
 
         user.lockUntil(lockTime);
 
         assertThat(user.getLockedUntil()).isEqualTo(lockTime);
-        assertThat(user.isLocked()).isTrue();
+        assertThat(user.isLocked(FIXED)).isTrue();
     }
 
     @Test
     void unlock_lockedUser_removesLock() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
-        user.lockUntil(Instant.now(Clock.systemUTC()).plus(Duration.ofHours(1)));
-        assertThat(user.isLocked()).isTrue();
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
+        user.lockUntil(NOW.plus(Duration.ofHours(1)));
+        assertThat(user.isLocked(FIXED)).isTrue();
 
         user.unlock();
 
         assertThat(user.getLockedUntil()).isNull();
-        assertThat(user.isLocked()).isFalse();
+        assertThat(user.isLocked(FIXED)).isFalse();
     }
 
     @Test
@@ -395,10 +397,10 @@ class IdentityUserTest {
                 UserStatus.ACTIVE,
                 null,
                 null,
-                Instant.now(Clock.systemUTC()).minus(Duration.ofHours(1)),
-                Instant.now(Clock.systemUTC()));
+                NOW.minus(Duration.ofHours(1)),
+                NOW);
 
-        assertThat(user.isLocked()).isFalse();
+        assertThat(user.isLocked(FIXED)).isFalse();
     }
 
     @Test
@@ -415,29 +417,29 @@ class IdentityUserTest {
                 UserStatus.ACTIVE,
                 null,
                 null,
-                Instant.now(Clock.systemUTC()).plus(Duration.ofHours(1)),
-                Instant.now(Clock.systemUTC()));
+                NOW.plus(Duration.ofHours(1)),
+                NOW);
 
-        assertThat(user.isLocked()).isTrue();
+        assertThat(user.isLocked(FIXED)).isTrue();
     }
 
     @Test
     void isLocked_noLock_returnsFalse() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
 
-        assertThat(user.isLocked()).isFalse();
+        assertThat(user.isLocked(FIXED)).isFalse();
     }
 
     @Test
     void isActive_activeStatus_returnsTrue() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
 
         assertThat(user.isActive()).isTrue();
     }
 
     @Test
     void isActive_bannedStatus_returnsFalse() {
-        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
         user.ban();
 
         assertThat(user.isActive()).isFalse();
@@ -445,17 +447,17 @@ class IdentityUserTest {
 
     @Test
     void equals_sameUserId_returnsTrue() {
-        IdentityUser user1 = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user1 = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
         IdentityUser user2 = IdentityUser.createNew("user-123", "different@example.com", "0999999999",
-                "different_user");
+                "different_user", FIXED);
 
         assertThat(user1).isEqualTo(user2);
     }
 
     @Test
     void equals_differentUserId_returnsFalse() {
-        IdentityUser user1 = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith");
-        IdentityUser user2 = IdentityUser.createNew("user-456", "alice@example.com", "0912345678", "alice_smith");
+        IdentityUser user1 = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
+        IdentityUser user2 = IdentityUser.createNew("user-456", "alice@example.com", "0912345678", "alice_smith", FIXED);
 
         assertThat(user1).isNotEqualTo(user2);
     }

@@ -23,10 +23,6 @@ public class AgentIdentity {
     private final Instant createdAt;
     private Instant updatedAt;
 
-    public void updatePermissions(String permissions) {
-        updatePermissions(permissions, Clock.systemUTC());
-    }
-
     public void updatePermissions(String permissions, Clock clock) {
         this.permissions = permissions;
         this.updatedAt = clock.instant();
@@ -37,17 +33,9 @@ public class AgentIdentity {
         this.updatedAt = clock.instant();
     }
 
-    public void revoke() {
-        revoke(Clock.systemUTC());
-    }
-
     public void revoke(Clock clock) {
         this.status = AgentStatus.REVOKED;
         this.updatedAt = clock.instant();
-    }
-
-    public void activate() {
-        activate(Clock.systemUTC());
     }
 
     public void activate(Clock clock) {
@@ -57,10 +45,6 @@ public class AgentIdentity {
 
     public boolean isActive() {
         return status == AgentStatus.ACTIVE;
-    }
-
-    public boolean isExpired() {
-        return isExpired(Clock.systemUTC());
     }
 
     public boolean isExpired(Clock clock) {

@@ -58,10 +58,6 @@ public class IdentityUser {
         this.createdAt = createdAt;
     }
 
-    public static IdentityUser createNew(String userId, String email, String phone, String username) {
-        return createNew(userId, email, phone, username, Clock.systemUTC());
-    }
-
     public static IdentityUser createNew(String userId, String email, String phone, String username, Clock clock) {
         return new IdentityUser(
                 userId,
@@ -90,18 +86,10 @@ public class IdentityUser {
         this.avatarUrl = avatarUrl;
     }
 
-    public void verifyEmail() {
-        verifyEmail(Clock.systemUTC());
-    }
-
     public void verifyEmail(Clock clock) {
         if (this.emailVerifiedAt != null)
             return;
         this.emailVerifiedAt = clock.instant();
-    }
-
-    public void verifyPhone() {
-        verifyPhone(Clock.systemUTC());
     }
 
     public void verifyPhone(Clock clock) {
@@ -147,10 +135,6 @@ public class IdentityUser {
 
     public void unlock() {
         this.lockedUntil = null;
-    }
-
-    public boolean isLocked() {
-        return isLocked(Clock.systemUTC());
     }
 
     public boolean isLocked(Clock clock) {

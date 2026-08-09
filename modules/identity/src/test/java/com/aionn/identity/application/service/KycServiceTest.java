@@ -34,6 +34,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class KycServiceTest {
+    private static final Clock TEST_CLOCK = Clock.fixed(
+            Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
 
     private static final String USER_ID = "user-1";
     private static final String KYC_ID = "kyc-1";
@@ -53,11 +55,11 @@ class KycServiceTest {
     void setUp() {
         kycService = new KycService(
                 kycPersistencePort, userPersistencePort, kycPolicy, externalKycVerificationPort,
-Clock.systemUTC());
+                TEST_CLOCK);
     }
 
     private static IdentityUser activeUser() {
-        return IdentityUser.createNew(USER_ID, "u@example.com", null, "user");
+        return IdentityUser.createNew(USER_ID, "u@example.com", null, "user", com.aionn.identity.TestClocks.FIXED);
     }
 
     private static KycProfile draftProfile() {
@@ -71,7 +73,7 @@ Clock.systemUTC());
 
     private static KycProfile submittedProfile() {
         KycProfile k = draftProfile();
-        k.attachExternalProvider("SUMSUB", "applicant-1", "basic", "init", "corr-1");
+        k.attachExternalProvider("SUMSUB", "applicant-1", "basic", "init", "corr-1", TEST_CLOCK);
         return k;
     }
 
@@ -352,7 +354,7 @@ Clock.systemUTC());
     @Test
     void attachDocumentRejectsWhenProfileAlreadySubmitted() {
         KycProfile profile = draftProfile();
-        profile.submit();
+        profile.submit(TEST_CLOCK);
         when(kycPersistencePort.findByKycIdAndUserId(KYC_ID, USER_ID)).thenReturn(Optional.of(profile));
 
         IdentityException ex = assertThrows(IdentityException.class, () -> kycService.attachDocument(

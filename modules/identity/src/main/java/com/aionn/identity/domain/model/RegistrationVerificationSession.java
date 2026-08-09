@@ -46,20 +46,12 @@ public class RegistrationVerificationSession implements Serializable {
         this.verifiedAt = verifiedAt;
     }
 
-    public boolean isExpired() {
-        return isExpired(Clock.systemUTC());
-    }
-
     public boolean isExpired(Clock clock) {
         return expiredAt != null && !expiredAt.isAfter(clock.instant());
     }
 
     public boolean isLocked() {
         return attemptCount >= maxVerifyAttempts;
-    }
-
-    public void verify(String inputOtpCode) {
-        verify(inputOtpCode, Clock.systemUTC());
     }
 
     public void verify(String inputOtpCode, Clock clock) {
@@ -84,10 +76,6 @@ public class RegistrationVerificationSession implements Serializable {
         otpCode = null;
         verificationToken = IdGenerator.ulid();
         verifiedAt = clock.instant();
-    }
-
-    public void resend(String newOtpCode, Instant newResendAvailableAt, Instant newExpiredAt) {
-        resend(newOtpCode, newResendAvailableAt, newExpiredAt, Clock.systemUTC());
     }
 
     public void resend(String newOtpCode, Instant newResendAvailableAt, Instant newExpiredAt, Clock clock) {
