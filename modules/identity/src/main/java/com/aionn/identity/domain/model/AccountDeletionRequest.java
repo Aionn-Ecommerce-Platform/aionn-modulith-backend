@@ -32,10 +32,6 @@ public class AccountDeletionRequest {
         this.canceledAt = canceledAt;
     }
 
-    public static AccountDeletionRequest createPending(String requestId, String userId, int graceDays) {
-        return createPending(requestId, userId, graceDays, Clock.systemUTC());
-    }
-
     public static AccountDeletionRequest createPending(String requestId, String userId, int graceDays, Clock clock) {
         Instant now = clock.instant();
         return new AccountDeletionRequest(
@@ -45,10 +41,6 @@ public class AccountDeletionRequest {
                 now,
                 now.plus(Duration.ofDays(graceDays)),
                 null);
-    }
-
-    public void cancel() {
-        cancel(Clock.systemUTC());
     }
 
     public void cancel(Clock clock) {

@@ -31,10 +31,6 @@ public class DataExportRequest {
         this.completedAt = completedAt;
     }
 
-    public static DataExportRequest createRequested(String requestId, String userId) {
-        return createRequested(requestId, userId, Clock.systemUTC());
-    }
-
     public static DataExportRequest createRequested(String requestId, String userId, Clock clock) {
         if (requestId == null || requestId.isBlank()) {
             throw new IllegalArgumentException("requestId must not be blank");
@@ -55,10 +51,6 @@ public class DataExportRequest {
         transitionTo(DataExportStatus.PROCESSING);
     }
 
-    public void complete(String fileUrl) {
-        complete(fileUrl, Clock.systemUTC());
-    }
-
     public void complete(String fileUrl, Clock clock) {
         if (fileUrl == null || fileUrl.isBlank()) {
             throw new IllegalArgumentException("fileUrl must not be blank");
@@ -66,10 +58,6 @@ public class DataExportRequest {
         transitionTo(DataExportStatus.COMPLETED);
         this.fileUrl = fileUrl;
         this.completedAt = clock.instant();
-    }
-
-    public void fail() {
-        fail(Clock.systemUTC());
     }
 
     public void fail(Clock clock) {

@@ -18,10 +18,6 @@ public final class RegistrationOtp {
         this.expiredAt = Objects.requireNonNull(expiredAt, "Expiry time cannot be null");
     }
 
-    public static RegistrationOtp generate(int resendCooldownSeconds, int expirySeconds) {
-        return generate(resendCooldownSeconds, expirySeconds, Clock.systemUTC());
-    }
-
     public static RegistrationOtp generate(int resendCooldownSeconds, int expirySeconds, Clock clock) {
         if (resendCooldownSeconds < 0) {
             throw new IllegalArgumentException("Resend cooldown seconds cannot be negative");
@@ -48,10 +44,6 @@ public final class RegistrationOtp {
 
     public Instant getExpiredAt() {
         return expiredAt;
-    }
-
-    public boolean isExpired() {
-        return isExpired(Clock.systemUTC());
     }
 
     public boolean isExpired(Clock clock) {
