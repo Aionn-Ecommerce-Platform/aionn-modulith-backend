@@ -4,10 +4,28 @@ import com.aionn.catalog.infrastructure.persistence.entity.CategoryEntity;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
+import java.util.Optional;
 
 import java.util.List;
 
 public interface CategoryRepository extends JpaRepository<CategoryEntity, String> {
+
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
+        @Query("SELECT c FROM CategoryEntity c WHERE c.categoryId = :categoryId")
+        Optional<CategoryEntity> findByIdForUpdate(String categoryId);
+
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
+        @Query("""
+                        SELECT c FROM CategoryEntity c
+                         WHERE c.categoryId IN :categoryIds
+                            OR c.categoryId = (
+                                SELECT target.parentId FROM CategoryEntity target
+                                 WHERE target.categoryId = :categoryId)
+                         ORDER BY c.categoryId
+                        """)
+        List<CategoryEntity> findMutationSetForUpdate(String categoryId, List<String> categoryIds);
 
         @Query("""
                         SELECT (count(c) > 0) FROM CategoryEntity c

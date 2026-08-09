@@ -32,10 +32,10 @@ class PricingQueryAdapterTest {
     private PricingQueryAdapter adapter;
 
     private Product publishedProduct() {
-        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
-        product.categorize(List.of("01HZCAT0000000000000000001"));
-        product.defineVariant("sku-1", Map.of("color", "red"), Money.of(new BigDecimal("100"), "VND"));
-        product.publish(ADMIN_ID);
+        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        product.categorize(List.of("01HZCAT0000000000000000001"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        product.defineVariant("sku-1", Map.of("color", "red"), Money.of(new BigDecimal("100"), "VND"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        product.publish(ADMIN_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         product.pullEvents();
         return product;
     }

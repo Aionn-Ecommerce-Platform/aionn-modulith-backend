@@ -23,5 +23,7 @@ public interface PromotionCampaignRepository extends JpaRepository<PromotionCamp
     List<PromotionCampaignEntity> findToEnd(Instant now, Pageable pageable);
 
     List<PromotionCampaignEntity> findByStatus(String status, Pageable pageable);
+
+    List<PromotionCampaignEntity> findByTypeAndStatus(String type, String status, Pageable pageable);
 }
 

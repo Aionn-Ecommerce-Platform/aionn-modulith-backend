@@ -2,9 +2,9 @@ package com.aionn.promotion.adapter.rest.controller;
 
 import com.aionn.promotion.adapter.rest.dto.voucher.IssueVoucherRequest;
 import com.aionn.promotion.adapter.rest.dto.voucher.response.VoucherResponse;
+import com.aionn.promotion.adapter.rest.dto.voucher.response.MerchantVoucherAnalyticsResponse;
 import com.aionn.promotion.adapter.rest.mapper.voucher.VoucherDtoMapper;
 import com.aionn.promotion.adapter.rest.support.session.CurrentUserId;
-import com.aionn.promotion.application.dto.analytics.result.MerchantVoucherAnalyticsResult;
 import com.aionn.promotion.application.port.in.analytics.GetMerchantVoucherAnalyticsInputPort;
 import com.aionn.promotion.application.port.in.voucher.IssueShopVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.ListMyShopVouchersInputPort;
@@ -13,6 +13,8 @@ import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -41,9 +43,10 @@ public class ShopVoucherController {
         @GetMapping("/analytics")
         @PreAuthorize("hasAuthority('ROLE_MERCHANT')")
         @Operation(summary = "Voucher redemption analytics for the authenticated merchant")
-        public ResponseEntity<ApiResponse<MerchantVoucherAnalyticsResult>> analytics(@CurrentUserId String ownerId) {
+        public ResponseEntity<ApiResponse<MerchantVoucherAnalyticsResponse>> analytics(@CurrentUserId String ownerId) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                getMerchantVoucherAnalyticsInputPort.execute(ownerId), "Voucher analytics fetched"));
+                                dtoMapper.toResponse(getMerchantVoucherAnalyticsInputPort.execute(ownerId)),
+                                "Voucher analytics fetched"));
         }
 
         @PostMapping
@@ -62,7 +65,7 @@ public class ShopVoucherController {
         @Operation(summary = "List vouchers issued by the authenticated merchant")
         public ResponseEntity<ApiResponse<List<VoucherResponse>>> listMine(
                         @CurrentUserId String ownerId,
-                        @RequestParam(defaultValue = "50") int limit) {
+                        @RequestParam(defaultValue = "50") @Min(1) @Max(100) int limit) {
                 return ResponseEntity.ok(ApiResponse.success(
                                 dtoMapper.toResponses(listMyShopVouchersInputPort.execute(ownerId, limit)),
                                 "Shop vouchers fetched"));
@@ -72,7 +75,7 @@ public class ShopVoucherController {
         @Operation(summary = "List collectible vouchers for a public shop page")
         public ResponseEntity<ApiResponse<List<VoucherResponse>>> listByMerchant(
                         @PathVariable String merchantId,
-                        @RequestParam(defaultValue = "20") int limit) {
+                        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit) {
                 return ResponseEntity.ok(ApiResponse.success(
                                 dtoMapper.toResponses(listShopVouchersByMerchantInputPort.execute(merchantId, limit)),
                                 "Shop vouchers fetched"));

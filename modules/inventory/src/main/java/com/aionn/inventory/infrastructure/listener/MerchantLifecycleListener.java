@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.time.Clock;
 
 @Slf4j
 @Component("inventoryMerchantLifecycleListener")
@@ -23,6 +24,7 @@ public class MerchantLifecycleListener {
 
     private final WarehousePersistencePort warehouseRepository;
     private final EventPublisher eventPublisher;
+    private final Clock clock;
 
     @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -47,7 +49,7 @@ public class MerchantLifecycleListener {
         List<Warehouse> warehouses = warehouseRepository.findByMerchantOrderByPriority(event.merchantId());
         for (Warehouse warehouse : warehouses) {
             if (warehouse.getStatus() == WarehouseStatus.SUSPENDED) {
-                warehouse.liftSuspension();
+                warehouse.liftSuspension(clock);
                 warehouseRepository.save(warehouse);
                 eventPublisher.publish(warehouse.pullEvents());
             }
@@ -61,7 +63,7 @@ public class MerchantLifecycleListener {
             if (warehouse.getStatus() == targetStatus) {
                 continue;
             }
-            warehouse.suspend(adminId, reason);
+            warehouse.suspend(adminId, reason, clock);
             warehouseRepository.save(warehouse);
             eventPublisher.publish(warehouse.pullEvents());
         }

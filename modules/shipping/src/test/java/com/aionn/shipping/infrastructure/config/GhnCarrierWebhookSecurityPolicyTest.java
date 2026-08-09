@@ -13,11 +13,11 @@ class GhnCarrierWebhookSecurityPolicyTest {
     private final GhnCarrierWebhookSecurityPolicy policy = new GhnCarrierWebhookSecurityPolicy(properties);
 
     @Test
-    void allowsWebhookWhenNoSecretIsConfigured() {
+    void rejectsWebhookWhenNoSecretIsConfigured() {
         when(properties.webhookSecret()).thenReturn("  ");
 
-        assertThat(policy.isAuthorized(null)).isTrue();
-        assertThat(policy.isAuthorized("any-secret")).isTrue();
+        assertThat(policy.isAuthorized(null)).isFalse();
+        assertThat(policy.isAuthorized("any-secret")).isFalse();
     }
 
     @Test

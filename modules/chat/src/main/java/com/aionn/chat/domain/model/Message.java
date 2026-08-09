@@ -71,18 +71,6 @@ public class Message extends AggregateRoot {
             ParticipantRole senderRole,
             MessageType type,
             MessagePayload payload,
-            List<String> recipientIds) {
-        return send(messageId, conversationId, senderId, senderRole, type, payload, recipientIds,
-                Clock.systemUTC());
-    }
-
-    public static Message send(
-            String messageId,
-            String conversationId,
-            String senderId,
-            ParticipantRole senderRole,
-            MessageType type,
-            MessagePayload payload,
             List<String> recipientIds,
             Clock clock) {
         validatePayload(type, payload);
@@ -92,10 +80,6 @@ public class Message extends AggregateRoot {
         m.registerEvent(new ChatEvents.MessageSent(conversationId, messageId, senderId, senderRole,
                 List.copyOf(recipientIds), type, payload, now));
         return m;
-    }
-
-    public void markDeliveredTo(String userId) {
-        markDeliveredTo(userId, Clock.systemUTC());
     }
 
     public void markDeliveredTo(String userId, Clock clock) {
@@ -112,10 +96,6 @@ public class Message extends AggregateRoot {
         registerEvent(new ChatEvents.MessageDelivered(conversationId, messageId, userId, now));
     }
 
-    public void markReadBy(String userId) {
-        markReadBy(userId, Clock.systemUTC());
-    }
-
     public void markReadBy(String userId, Clock clock) {
         if (recalled || senderId.equals(userId))
             return;
@@ -129,10 +109,6 @@ public class Message extends AggregateRoot {
         Instant now = clock.instant();
         this.updatedAt = now;
         registerEvent(new ChatEvents.MessageRead(conversationId, messageId, userId, now));
-    }
-
-    public void recall(String userId) {
-        recall(userId, Clock.systemUTC());
     }
 
     public void recall(String userId, Clock clock) {

@@ -54,10 +54,6 @@ public class Brand extends AggregateRoot {
         }
     }
 
-    public static Brand create(String brandId, String name, String logoUrl, String description) {
-        return create(brandId, name, logoUrl, description, Clock.systemUTC());
-    }
-
     public static Brand create(String brandId, String name, String logoUrl, String description, Clock clock) {
         if (name == null || name.isBlank()) {
             throw new CatalogException(CatalogErrorCode.INVALID_ARGUMENT, "name must not be blank");
@@ -67,10 +63,6 @@ public class Brand extends AggregateRoot {
         Brand brand = new Brand(brandId, trimmedName, logoUrl, description, BrandStatus.ACTIVE, now, now, List.of());
         brand.registerEvent(new BrandEvents.BrandCreated(brandId, trimmedName, logoUrl, description, now));
         return brand;
-    }
-
-    public void update(String name, String logoUrl, String description) {
-        update(name, logoUrl, description, Clock.systemUTC());
     }
 
     public void update(String name, String logoUrl, String description, Clock clock) {
@@ -87,10 +79,6 @@ public class Brand extends AggregateRoot {
         }
         this.updatedAt = clock.instant();
         registerEvent(new BrandEvents.BrandUpdated(brandId, this.name, this.logoUrl, this.description, updatedAt));
-    }
-
-    public void softDelete(String reason) {
-        softDelete(reason, Clock.systemUTC());
     }
 
     public void softDelete(String reason, Clock clock) {

@@ -1,5 +1,6 @@
 package com.aionn.payment.adapter.rest.controller;
 
+import com.aionn.payment.adapter.rest.dto.payment.request.RefundRequest;
 import com.aionn.payment.adapter.rest.dto.payment.response.PaymentResponse;
 import com.aionn.payment.adapter.rest.exception.PaymentExceptionHandler;
 import com.aionn.payment.adapter.rest.support.session.CurrentUserIdArgumentResolver;
@@ -101,9 +102,13 @@ class PaymentControllerWebTest {
     void initiateCreatesPayment() throws Exception {
         PaymentResult result = sampleResult("pay-1", "INITIATED");
         PaymentResponse response = sampleResponse("pay-1", "INITIATED");
-        InitiatePaymentCommand command = new InitiatePaymentCommand("order-1", "user-123", null, new BigDecimal("100.00"), "VND", com.aionn.payment.domain.valueobject.PaymentGatewayKind.STRIPE, "idem-1");
+        InitiatePaymentCommand command = new InitiatePaymentCommand(
+                "order-1", "user-123", null,
+                com.aionn.payment.domain.valueobject.PaymentGatewayKind.STRIPE, "idem-1");
         
-        org.mockito.Mockito.lenient().when(paymentDtoMapper.toCommand(any(), any(), any())).thenReturn(command);
+        org.mockito.Mockito.lenient().when(paymentDtoMapper.toCommand(
+                any(com.aionn.payment.adapter.rest.dto.payment.request.InitiatePaymentRequest.class),
+                any(String.class), any(String.class))).thenReturn(command);
         when(initiatePaymentInputPort.execute(any(InitiatePaymentCommand.class))).thenReturn(result);
         when(paymentDtoMapper.toResponse(result)).thenReturn(response);
  
@@ -112,8 +117,6 @@ class PaymentControllerWebTest {
                         .content("""
                                 {
                                   "orderId": "order-1",
-                                  "amount": 100.00,
-                                  "currency": "VND",
                                   "gateway": "STRIPE",
                                   "idempotencyKey": "idem-1"
                                 }
@@ -132,8 +135,6 @@ class PaymentControllerWebTest {
                         .content("""
                                 {
                                   "orderId": "",
-                                  "amount": 100.00,
-                                  "currency": "VND",
                                   "gateway": "STRIPE",
                                   "idempotencyKey": "idem-1"
                                 }
@@ -144,8 +145,12 @@ class PaymentControllerWebTest {
 
     @Test
     void initiateMissingMethodReturnsNotFound() throws Exception {
-        InitiatePaymentCommand command = new InitiatePaymentCommand("order-1", "user-123", "missing", new BigDecimal("50.00"), "VND", com.aionn.payment.domain.valueobject.PaymentGatewayKind.STRIPE, "idem-9");
-        org.mockito.Mockito.lenient().when(paymentDtoMapper.toCommand(any(), any(), any())).thenReturn(command);
+        InitiatePaymentCommand command = new InitiatePaymentCommand(
+                "order-1", "user-123", "missing",
+                com.aionn.payment.domain.valueobject.PaymentGatewayKind.STRIPE, "idem-9");
+        org.mockito.Mockito.lenient().when(paymentDtoMapper.toCommand(
+                any(com.aionn.payment.adapter.rest.dto.payment.request.InitiatePaymentRequest.class),
+                any(String.class), any(String.class))).thenReturn(command);
         
         when(initiatePaymentInputPort.execute(any(InitiatePaymentCommand.class)))
                 .thenThrow(new PaymentException(PaymentErrorCode.METHOD_NOT_FOUND));
@@ -156,8 +161,6 @@ class PaymentControllerWebTest {
                                 {
                                   "orderId": "order-1",
                                   "paymentMethodId": "missing",
-                                  "amount": 50.00,
-                                  "currency": "VND",
                                   "gateway": "STRIPE",
                                   "idempotencyKey": "idem-9"
                                 }
@@ -170,13 +173,16 @@ class PaymentControllerWebTest {
     void refundReturnsRefundedPayment() throws Exception {
         PaymentResult result = sampleResult("pay-2", "REFUNDED");
         PaymentResponse response = sampleResponse("pay-2", "REFUNDED");
-        RefundPaymentCommand command = new RefundPaymentCommand("pay-2", new BigDecimal("100.00"), "VND", "duplicate");
-        org.mockito.Mockito.lenient().when(paymentDtoMapper.toCommand(any(), any())).thenReturn(command);
+        RefundPaymentCommand command = new RefundPaymentCommand(
+                "pay-2", new BigDecimal("100.00"), "VND", "duplicate", "refund-key-1");
+        org.mockito.Mockito.lenient().when(paymentDtoMapper.toCommand(
+                any(String.class), any(RefundRequest.class), any(String.class))).thenReturn(command);
 
         when(refundPaymentInputPort.execute(any(RefundPaymentCommand.class))).thenReturn(result);
         when(paymentDtoMapper.toResponse(result)).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/payments/pay-2/refund")
+                        .header("Idempotency-Key", "refund-key-1")
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {

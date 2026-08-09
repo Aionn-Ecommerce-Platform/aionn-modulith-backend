@@ -51,10 +51,10 @@ class MerchantSearchSyncListenerTest {
         private MerchantSearchSyncListener listener;
 
         private Product publishedProduct() {
-                Product product = Product.create("01HZPRD0000000000000000001", MERCHANT_ID, "Widget");
-                product.categorize(List.of("c1"));
-                product.defineVariant("sku-1", Map.of("color", "red"), Money.of(new BigDecimal("100"), "VND"));
-                product.publish(ADMIN_ID);
+                Product product = Product.create("01HZPRD0000000000000000001", MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                product.categorize(List.of("c1"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                product.defineVariant("sku-1", Map.of("color", "red"), Money.of(new BigDecimal("100"), "VND"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                product.publish(ADMIN_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 product.pullEvents();
                 return product;
         }
@@ -104,10 +104,10 @@ class MerchantSearchSyncListenerTest {
         @Test
         void onProfileUpdatedReindexesWhenProvinceChanged() {
                 Product product = publishedProduct();
-                product.defineAttributes(Map.of("color", "red"));
+                product.defineAttributes(Map.of("color", "red"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 product.pullEvents();
                 com.aionn.catalog.domain.model.AttributeTemplate template = com.aionn.catalog.domain.model.AttributeTemplate
-                                .create("t1", "c1", List.of("color"));
+                                .create("t1", "c1", List.of("color"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
                                 .thenReturn(List.of(product));
                 when(attributeTemplateRepository.findByCategoryId("c1")).thenReturn(java.util.Optional.of(template));

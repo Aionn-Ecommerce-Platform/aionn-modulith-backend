@@ -150,8 +150,8 @@ class MoneyPropertyTest {
         assertEquals(new BigDecimal("15.00"), tenUsd.multiply(new BigDecimal("1.5")).amount());
         assertEquals(new BigDecimal("5.00"), tenUsd.divide(2).amount());
         assertEquals(new BigDecimal("2.50"), tenUsd.divide(new BigDecimal("4")).amount());
-        assertEquals(new BigDecimal("8.00"), tenUsd.applyPercent(new BigDecimal("20")).amount());
-        assertEquals(BigDecimal.ZERO.setScale(2), tenUsd.applyPercent(new BigDecimal("120")).amount());
+        assertEquals(new BigDecimal("8.00"), tenUsd.minusPercent(new BigDecimal("20")).amount());
+        assertEquals(BigDecimal.ZERO.setScale(2), tenUsd.minusPercent(new BigDecimal("120")).amount());
 
         assertEquals(threeUsd, tenUsd.min(threeUsd));
         assertEquals(tenUsd, tenUsd.max(threeUsd));

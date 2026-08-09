@@ -5,6 +5,9 @@ import com.aionn.shipping.infrastructure.carrier.config.GhnProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+
 @Component
 @RequiredArgsConstructor
 public class GhnCarrierWebhookSecurityPolicy implements CarrierWebhookSecurityPolicy {
@@ -14,8 +17,12 @@ public class GhnCarrierWebhookSecurityPolicy implements CarrierWebhookSecurityPo
     @Override
     public boolean isAuthorized(String providedSecret) {
         String expectedSecret = properties.webhookSecret();
-        return expectedSecret == null
-                || expectedSecret.isBlank()
-                || expectedSecret.equals(providedSecret);
+        if (expectedSecret == null || expectedSecret.isBlank()
+                || providedSecret == null || providedSecret.isBlank()) {
+            return false;
+        }
+        return MessageDigest.isEqual(
+                expectedSecret.getBytes(StandardCharsets.UTF_8),
+                providedSecret.getBytes(StandardCharsets.UTF_8));
     }
 }

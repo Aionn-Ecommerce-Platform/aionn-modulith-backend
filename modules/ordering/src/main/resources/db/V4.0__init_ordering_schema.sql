@@ -78,10 +78,48 @@ CREATE TABLE order_returns (
     version             BIGINT      NOT NULL DEFAULT 0,
     requested_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     decided_at          TIMESTAMPTZ,
-    received_at         TIMESTAMPTZ,
-    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      received_at         TIMESTAMPTZ,
+      refund_status       VARCHAR(20) NOT NULL DEFAULT 'NOT_REQUIRED',
+      refund_attempts     INTEGER     NOT NULL DEFAULT 0,
+      refund_failure_reason VARCHAR(1000),
+      next_refund_attempt_at TIMESTAMPTZ,
+      updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_order_returns_order FOREIGN KEY (order_id) REFERENCES orders(order_id)
 );
 CREATE INDEX idx_order_returns_order    ON order_returns(order_id);
 CREATE INDEX idx_order_returns_merchant ON order_returns(merchant_id);
 CREATE INDEX idx_order_returns_status   ON order_returns(status);
+CREATE INDEX idx_order_returns_refund_retry
+    ON order_returns(refund_status, next_refund_attempt_at)
+    WHERE refund_status IN ('PENDING', 'FAILED');
+
+CREATE TABLE ordering_compensation_tasks (
+    task_id         VARCHAR(150) PRIMARY KEY,
+    task_type       VARCHAR(30)  NOT NULL,
+    resource_id     VARCHAR(100),
+    user_id         VARCHAR(50),
+    order_id        VARCHAR(50),
+    reason          VARCHAR(255) NOT NULL,
+    status          VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
+    attempts        INTEGER      NOT NULL DEFAULT 0,
+    next_attempt_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    last_error      VARCHAR(1000),
+    completed_at    TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_ordering_compensation_retry
+    ON ordering_compensation_tasks(status, next_attempt_at)
+    WHERE status IN ('PENDING', 'FAILED');
+
+CREATE TABLE order_placement_operations (
+    user_id          VARCHAR(50)  NOT NULL,
+    idempotency_key  VARCHAR(150) NOT NULL,
+    request_hash     VARCHAR(64)  NOT NULL,
+    order_id         VARCHAR(50)  NOT NULL,
+    status           VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
+    created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, idempotency_key),
+    CONSTRAINT uq_order_placement_operation_order UNIQUE (order_id)
+);

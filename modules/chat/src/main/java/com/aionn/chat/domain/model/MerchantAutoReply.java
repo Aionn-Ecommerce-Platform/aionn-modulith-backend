@@ -45,21 +45,11 @@ public class MerchantAutoReply extends AggregateRoot {
         this.updatedAt = updatedAt;
     }
 
-    public static MerchantAutoReply create(String merchantId) {
-        return create(merchantId, Clock.systemUTC());
-    }
-
     public static MerchantAutoReply create(String merchantId, Clock clock) {
         Instant now = clock.instant();
         Set<DayOfWeek> defaults = EnumSet.range(DayOfWeek.MONDAY, DayOfWeek.SATURDAY);
         return new MerchantAutoReply(merchantId, false, null, null,
                 LocalTime.of(8, 0), LocalTime.of(22, 0), defaults, ZoneId.of("Asia/Ho_Chi_Minh"), now, now);
-    }
-
-    public void update(boolean enabled, String greeting, String awayMessage,
-            LocalTime workingHourStart, LocalTime workingHourEnd, Set<DayOfWeek> workingDays) {
-        update(enabled, greeting, awayMessage, workingHourStart, workingHourEnd, workingDays,
-                Clock.systemUTC());
     }
 
     public void update(boolean enabled, String greeting, String awayMessage,

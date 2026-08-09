@@ -17,7 +17,7 @@ class BrandTest {
 
     @Test
     void createInitializesAsActive() {
-        Brand brand = Brand.create(BRAND_ID, "Acme", null, "desc");
+        Brand brand = Brand.create(BRAND_ID, "Acme", null, "desc", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(brand.getStatus()).isEqualTo(BrandStatus.ACTIVE);
         assertThat(brand.pullEvents()).hasSize(1);
@@ -26,7 +26,7 @@ class BrandTest {
 
     @Test
     void createRejectsBlankName() {
-        assertThatThrownBy(() -> Brand.create(BRAND_ID, " ", null, null))
+        assertThatThrownBy(() -> Brand.create(BRAND_ID, " ", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
@@ -34,10 +34,10 @@ class BrandTest {
 
     @Test
     void updateAppliesAllFieldsWhenProvided() {
-        Brand brand = Brand.create(BRAND_ID, "Acme", null, null);
+        Brand brand = Brand.create(BRAND_ID, "Acme", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         brand.pullEvents();
 
-        brand.update("New Name", "https://logo", "new desc");
+        brand.update("New Name", "https://logo", "new desc", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(brand.getName()).isEqualTo("New Name");
         assertThat(brand.getLogoUrl()).isEqualTo("https://logo");
@@ -47,20 +47,20 @@ class BrandTest {
 
     @Test
     void updateIgnoresBlankNameAndKeepsExisting() {
-        Brand brand = Brand.create(BRAND_ID, "Acme", "old", "old desc");
+        Brand brand = Brand.create(BRAND_ID, "Acme", "old", "old desc", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         brand.pullEvents();
 
-        brand.update(" ", null, null);
+        brand.update(" ", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(brand.getName()).isEqualTo("Acme");
     }
 
     @Test
     void softDeleteSetsDeletedStatus() {
-        Brand brand = Brand.create(BRAND_ID, "Acme", null, null);
+        Brand brand = Brand.create(BRAND_ID, "Acme", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         brand.pullEvents();
 
-        brand.softDelete("policy");
+        brand.softDelete("policy", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(brand.getStatus()).isEqualTo(BrandStatus.DELETED);
         assertThat(brand.pullEvents()).hasSize(1);
@@ -68,12 +68,12 @@ class BrandTest {
 
     @Test
     void softDeleteIsIdempotent() {
-        Brand brand = Brand.create(BRAND_ID, "Acme", null, null);
+        Brand brand = Brand.create(BRAND_ID, "Acme", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         brand.pullEvents();
-        brand.softDelete("policy");
+        brand.softDelete("policy", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         brand.pullEvents();
 
-        brand.softDelete("again");
+        brand.softDelete("again", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(brand.getStatus()).isEqualTo(BrandStatus.DELETED);
         assertThat(brand.pullEvents()).isEmpty();
@@ -81,10 +81,10 @@ class BrandTest {
 
     @Test
     void updateOnDeletedBrandThrows() {
-        Brand brand = Brand.create(BRAND_ID, "Acme", null, null);
-        brand.softDelete("policy");
+        Brand brand = Brand.create(BRAND_ID, "Acme", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        brand.softDelete("policy", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
-        assertThatThrownBy(() -> brand.update("Renamed", null, null))
+        assertThatThrownBy(() -> brand.update("Renamed", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.BRAND_NOT_FOUND.getCode());

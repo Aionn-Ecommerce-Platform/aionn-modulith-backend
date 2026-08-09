@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -30,8 +32,8 @@ public class CategoryService {
 
     public Category create(CreateCategoryCommand command) {
         String normalizedName = command.name() != null ? command.name().trim() : null;
-        if (command.parentId() != null && categoryRepository.findById(command.parentId()).isEmpty()) {
-            throw new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND, "Parent category not found");
+        if (command.parentId() != null) {
+            ensureUsableParent(lockRequired(command.parentId()));
         }
         if (categoryRepository.existsByParentAndName(command.parentId(), normalizedName)) {
             throw new CatalogException(CatalogErrorCode.CATEGORY_NAME_CONFLICT);
@@ -49,7 +51,11 @@ public class CategoryService {
     }
 
     public Category update(UpdateCategoryCommand command) {
-        Category category = required(command.categoryId());
+        Map<String, Category> locked = lockMutationSet(command.categoryId(), List.of());
+        Category category = requiredLocked(locked, command.categoryId());
+        if (Boolean.TRUE.equals(command.active()) && category.getParentId() != null) {
+            ensureUsableParent(locked.get(category.getParentId()));
+        }
         String normalizedName = command.name() != null ? command.name().trim() : null;
         if (normalizedName != null
                 && !normalizedName.equalsIgnoreCase(category.getName())
@@ -63,14 +69,14 @@ public class CategoryService {
     }
 
     public Category move(MoveCategoryCommand command) {
-        Category category = required(command.categoryId());
+        Map<String, Category> locked = lockMutationSet(
+                command.categoryId(), java.util.Collections.singletonList(command.newParentId()));
+        Category category = requiredLocked(locked, command.categoryId());
         if (command.newParentId() != null) {
             if (command.newParentId().equals(category.getCategoryId())) {
                 throw new CatalogException(CatalogErrorCode.CATEGORY_CYCLE);
             }
-            categoryRepository.findById(command.newParentId())
-                    .orElseThrow(() -> new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND,
-                            "Target parent does not exist"));
+            ensureUsableParent(locked.get(command.newParentId()));
             if (categoryRepository.findDescendantIds(category.getCategoryId())
                     .contains(command.newParentId())) {
                 throw new CatalogException(CatalogErrorCode.CATEGORY_CYCLE);
@@ -86,9 +92,12 @@ public class CategoryService {
     }
 
     public void delete(String categoryId) {
-        Category category = required(categoryId);
+        Category category = lockRequired(categoryId);
         if (categoryRepository.hasProducts(categoryId)) {
             throw new CatalogException(CatalogErrorCode.CATEGORY_HAS_PRODUCTS);
+        }
+        if (!categoryRepository.findActiveChildren(categoryId).isEmpty()) {
+            throw new CatalogException(CatalogErrorCode.CATEGORY_HAS_CHILDREN);
         }
         category.markDeleted(clock);
         categoryRepository.save(category);
@@ -118,5 +127,33 @@ public class CategoryService {
     private Category required(String categoryId) {
         return categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND));
+    }
+
+    private Category lockRequired(String categoryId) {
+        return categoryRepository.lockById(categoryId)
+                .or(() -> categoryRepository.findById(categoryId))
+                .orElseThrow(() -> new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND));
+    }
+
+    private Map<String, Category> lockMutationSet(String categoryId, List<String> additionalIds) {
+        Map<String, Category> locked = new LinkedHashMap<>();
+        categoryRepository.lockMutationSet(categoryId, additionalIds).stream()
+                .sorted(java.util.Comparator.comparing(Category::getCategoryId))
+                .forEach(category -> locked.put(category.getCategoryId(), category));
+        return locked;
+    }
+
+    private static Category requiredLocked(Map<String, Category> locked, String categoryId) {
+        Category category = locked.get(categoryId);
+        if (category == null) {
+            throw new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND);
+        }
+        return category;
+    }
+
+    private static void ensureUsableParent(Category parent) {
+        if (parent == null || parent.getDeletedAt() != null) {
+            throw new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND, "Parent category not found");
+        }
     }
 }

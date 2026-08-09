@@ -95,7 +95,7 @@ class StripePaymentProviderClientTest {
     @Test
     void refundWithoutTransactionNoShouldFail() {
         PaymentProviderClient.Refund refund = client.refund(
-                new PaymentProviderClient.RefundRequest("p-1", null, BigDecimal.TEN, "USD", "reason"));
+                new PaymentProviderClient.RefundRequest("p-1", null, BigDecimal.TEN, "USD", "reason", "key-1"));
         assertNotNull(refund);
         assertFalse(refund.accepted());
     }
@@ -103,7 +103,7 @@ class StripePaymentProviderClientTest {
     @Test
     void refundWithBlankTransactionNoShouldFail() {
         PaymentProviderClient.Refund refund = client.refund(
-                new PaymentProviderClient.RefundRequest("p-1", "  ", BigDecimal.TEN, "USD", "reason"));
+                new PaymentProviderClient.RefundRequest("p-1", "  ", BigDecimal.TEN, "USD", "reason", "key-1"));
         assertNotNull(refund);
         assertFalse(refund.accepted());
     }
@@ -119,7 +119,8 @@ class StripePaymentProviderClientTest {
             mockedRefund.when(() -> Refund.create(any(com.stripe.param.RefundCreateParams.class))).thenReturn(mockStripeRefund);
 
             PaymentProviderClient.Refund refund = client.refund(
-                    new PaymentProviderClient.RefundRequest("p-1", "pi_test_abc", BigDecimal.TEN, "USD", "reason"));
+                    new PaymentProviderClient.RefundRequest(
+                            "p-1", "pi_test_abc", BigDecimal.TEN, "USD", "reason", "key-1"));
             assertNotNull(refund);
             assertTrue(refund.accepted());
             assertEquals("ref_abc", refund.refundTransactionNo());
@@ -138,7 +139,7 @@ class StripePaymentProviderClientTest {
 
             PaymentProviderClient.Refund refund = client.refund(
                     new PaymentProviderClient.RefundRequest("p-1", "pi_test_abc",
-                            BigDecimal.valueOf(100000), "VND", null));
+                            BigDecimal.valueOf(100000), "VND", null, "key-1"));
             assertNotNull(refund);
             assertTrue(refund.accepted());
         }

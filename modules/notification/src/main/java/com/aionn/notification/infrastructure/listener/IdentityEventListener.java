@@ -5,6 +5,7 @@ import com.aionn.notification.application.service.NotificationDeliveryOrchestrat
 import com.aionn.notification.domain.valueobject.NotificationCategory;
 import com.aionn.sharedkernel.integration.event.identity.EmailChangedIntegrationEvent;
 import com.aionn.sharedkernel.integration.event.identity.PasswordChangedIntegrationEvent;
+import com.aionn.sharedkernel.integration.event.identity.PasswordResetRequestedIntegrationEvent;
 import com.aionn.sharedkernel.integration.event.identity.PhoneChangedIntegrationEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
@@ -18,10 +19,19 @@ import java.util.Map;
 public class IdentityEventListener {
 
     private static final String EVENT_PASSWORD_CHANGED = "identity.password-changed";
+    private static final String EVENT_PASSWORD_RESET = "identity.password-reset-requested";
     private static final String EVENT_EMAIL_CHANGED = "identity.email-changed";
     private static final String EVENT_PHONE_CHANGED = "identity.phone-changed";
 
     private final NotificationDeliveryOrchestrator deliveryOrchestrator;
+
+    @EventListener
+    public void on(PasswordResetRequestedIntegrationEvent event) {
+        dispatch(event.userId(), EVENT_PASSWORD_RESET, Map.of(
+                "eventId", event.eventId(),
+                "occurredAt", event.occurredAt().toString(),
+                "resetToken", event.resetToken()));
+    }
 
     @EventListener
     public void on(PasswordChangedIntegrationEvent event) {

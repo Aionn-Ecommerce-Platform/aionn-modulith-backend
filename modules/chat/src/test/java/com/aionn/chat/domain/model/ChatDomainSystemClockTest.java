@@ -19,14 +19,14 @@ class ChatDomainSystemClockTest {
 
     private static Conversation conversation() {
         Conversation conversation = Conversation.start("conv-1", "buyer-1", "Buyer", null,
-                "mer-1", "Shop", null, "buyer-1");
+                "mer-1", "Shop", null, "buyer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         conversation.pullEvents();
         return conversation;
     }
 
     private static Message message() {
         Message message = Message.send("msg-1", "conv-1", "buyer-1", ParticipantRole.BUYER,
-                MessageType.TEXT, MessagePayload.text("Hello"), List.of("mer-1"));
+                MessageType.TEXT, MessagePayload.text("Hello"), List.of("mer-1"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         message.pullEvents();
         return message;
     }
@@ -42,7 +42,7 @@ class ChatDomainSystemClockTest {
     @Test
     void conversationStartRejectsBuyerEqualToMerchant() {
         assertThatThrownBy(() -> Conversation.start("conv-2", "same", "A", null,
-                "same", "B", null, "same"))
+                "same", "B", null, "same", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
                 .isInstanceOf(ChatException.class);
     }
 
@@ -50,13 +50,13 @@ class ChatDomainSystemClockTest {
     void conversationMutatorsWithoutClockStampUpdatedAt() {
         Conversation conversation = conversation();
 
-        conversation.joinSupport("cs-1", "CS", null);
-        conversation.recordMessageSent("msg-1", MessageType.TEXT, "Hello", "buyer-1");
-        conversation.markRead("buyer-1");
-        conversation.archive("buyer-1");
+        conversation.joinSupport("cs-1", "CS", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        conversation.recordMessageSent("msg-1", MessageType.TEXT, "Hello", "buyer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        conversation.markRead("buyer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        conversation.archive("buyer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         assertThat(conversation.isArchived()).isTrue();
 
-        conversation.unarchive("buyer-1");
+        conversation.unarchive("buyer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         assertThat(conversation.isArchived()).isFalse();
         assertThat(conversation.getUpdatedAt()).isNotNull();
         assertThat(conversation.participants()).hasSize(3);
@@ -65,9 +65,9 @@ class ChatDomainSystemClockTest {
     @Test
     void recordMessageSentUnarchivesThread() {
         Conversation conversation = conversation();
-        conversation.archive("buyer-1");
+        conversation.archive("buyer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
-        conversation.recordMessageSent("msg-2", MessageType.TEXT, "Hi again", "buyer-1");
+        conversation.recordMessageSent("msg-2", MessageType.TEXT, "Hi again", "buyer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(conversation.isArchived()).isFalse();
         assertThat(conversation.getLastMessageId()).isEqualTo("msg-2");
@@ -83,8 +83,8 @@ class ChatDomainSystemClockTest {
     @Test
     void unreadCountForReturnsZeroWhenAlreadyRead() {
         Conversation conversation = conversation();
-        conversation.recordMessageSent("msg-1", MessageType.TEXT, "Hello", "buyer-1");
-        conversation.markRead("mer-1");
+        conversation.recordMessageSent("msg-1", MessageType.TEXT, "Hello", "buyer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        conversation.markRead("mer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(conversation.unreadCountFor("mer-1", 5, 5)).isZero();
     }
@@ -92,7 +92,7 @@ class ChatDomainSystemClockTest {
     @Test
     void unreadCountForReportsMessagesByOther() {
         Conversation conversation = conversation();
-        conversation.recordMessageSent("msg-1", MessageType.TEXT, "Hello", "buyer-1");
+        conversation.recordMessageSent("msg-1", MessageType.TEXT, "Hello", "buyer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(conversation.unreadCountFor("mer-1", 5, 3)).isEqualTo(3);
     }
@@ -113,13 +113,13 @@ class ChatDomainSystemClockTest {
     void messageMutatorsWithoutClockWork() {
         Message message = message();
 
-        message.markDeliveredTo("mer-1");
+        message.markDeliveredTo("mer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         assertThat(message.getStatus()).isEqualTo(MessageStatus.DELIVERED);
 
-        message.markReadBy("mer-1");
+        message.markReadBy("mer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         assertThat(message.getStatus()).isEqualTo(MessageStatus.READ);
 
-        message.recall("buyer-1");
+        message.recall("buyer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         assertThat(message.isRecalled()).isTrue();
     }
 
@@ -127,7 +127,7 @@ class ChatDomainSystemClockTest {
     void markDeliveredToSenderIsIgnored() {
         Message message = message();
 
-        message.markDeliveredTo("buyer-1");
+        message.markDeliveredTo("buyer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(message.getStatus()).isEqualTo(MessageStatus.SENT);
         assertThat(message.getDeliveredTo()).isEmpty();
@@ -137,9 +137,9 @@ class ChatDomainSystemClockTest {
     void markDeliveredIsIdempotent() {
         Message message = message();
 
-        message.markDeliveredTo("mer-1");
+        message.markDeliveredTo("mer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         message.pullEvents();
-        message.markDeliveredTo("mer-1");
+        message.markDeliveredTo("mer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(message.pullEvents()).isEmpty();
     }
@@ -148,7 +148,7 @@ class ChatDomainSystemClockTest {
     void markReadBySenderIsIgnored() {
         Message message = message();
 
-        message.markReadBy("buyer-1");
+        message.markReadBy("buyer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(message.getReadBy()).isEmpty();
     }
@@ -156,10 +156,10 @@ class ChatDomainSystemClockTest {
     @Test
     void recalledMessageIgnoresFurtherDelivery() {
         Message message = message();
-        message.recall("buyer-1");
+        message.recall("buyer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
-        message.markDeliveredTo("mer-1");
-        message.markReadBy("mer-1");
+        message.markDeliveredTo("mer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        message.markReadBy("mer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(message.getDeliveredTo()).isEmpty();
         assertThat(message.previewBody()).isEqualTo("(recalled)");
@@ -180,23 +180,23 @@ class ChatDomainSystemClockTest {
     @Test
     void previewBodyForTextWithoutBodyIsEmpty() {
         Message message = Message.send("msg-9", "conv-1", "buyer-1", ParticipantRole.BUYER,
-                MessageType.SYSTEM, new MessagePayload(null, java.util.Map.of()), List.of("mer-1"));
+                MessageType.SYSTEM, new MessagePayload(null, java.util.Map.of()), List.of("mer-1"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(message.previewBody()).isEmpty();
     }
 
     private static String preview(MessageType type, MessagePayload payload) {
         return Message.send("msg-x", "conv-1", "buyer-1", ParticipantRole.BUYER,
-                type, payload, List.of("mer-1")).previewBody();
+                type, payload, List.of("mer-1"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)).previewBody();
     }
 
     @Test
     void autoReplyCreateAndUpdateWithoutClock() {
-        MerchantAutoReply autoReply = MerchantAutoReply.create("mer-1");
+        MerchantAutoReply autoReply = MerchantAutoReply.create("mer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         assertThat(autoReply.getCreatedAt()).isNotNull();
 
         autoReply.update(true, "Hi", "Away", LocalTime.of(9, 0), LocalTime.of(18, 0),
-                Set.of(DayOfWeek.MONDAY));
+                Set.of(DayOfWeek.MONDAY), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(autoReply.isEnabled()).isTrue();
         assertThat(autoReply.getUpdatedAt()).isNotNull();
@@ -204,19 +204,19 @@ class ChatDomainSystemClockTest {
 
     @Test
     void autoReplyUpdateWithEmptyWorkingDaysMeansAlwaysAway() {
-        MerchantAutoReply autoReply = MerchantAutoReply.create("mer-1");
+        MerchantAutoReply autoReply = MerchantAutoReply.create("mer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
-        autoReply.update(true, null, "Away", null, null, Set.of());
+        autoReply.update(true, null, "Away", null, null, Set.of(), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(autoReply.getWorkingDays()).isEmpty();
     }
 
     @Test
     void autoReplyUpdateKeepsHoursWhenNullPassed() {
-        MerchantAutoReply autoReply = MerchantAutoReply.create("mer-1");
+        MerchantAutoReply autoReply = MerchantAutoReply.create("mer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         LocalTime start = autoReply.getWorkingHourStart();
 
-        autoReply.update(true, null, "Away", null, null, null);
+        autoReply.update(true, null, "Away", null, null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(autoReply.getWorkingHourStart()).isEqualTo(start);
     }

@@ -13,6 +13,14 @@ public interface PricingQueryPort {
             String merchantId,
             BigDecimal price,
             String currency,
-            boolean active) {
+            boolean active,
+            List<String> categoryIds) {
+        public SkuPricing(String skuId, String merchantId, BigDecimal price, String currency, boolean active) {
+            this(skuId, merchantId, price, currency, active, List.of());
+        }
+
+        public SkuPricing {
+            categoryIds = categoryIds == null ? List.of() : List.copyOf(categoryIds);
+        }
     }
 }

@@ -6,6 +6,7 @@ import com.aionn.payment.application.port.out.SettlementLedgerPersistencePort;
 import com.aionn.payment.domain.exception.PaymentException;
 import com.aionn.payment.domain.model.MerchantBalance;
 import com.aionn.payment.domain.model.MerchantPayout;
+import com.aionn.payment.domain.model.SettlementLedgerEntry;
 import com.aionn.payment.domain.valueobject.PayoutStatus;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,7 +70,10 @@ class PayoutServiceTest {
         assertEquals(PayoutStatus.PENDING, result.getStatus());
 
         verify(balanceRepo).save(balance);
-        verify(ledgerRepo).save(any());
+        org.mockito.ArgumentCaptor<SettlementLedgerEntry> entry =
+                org.mockito.ArgumentCaptor.forClass(SettlementLedgerEntry.class);
+        verify(ledgerRepo).save(entry.capture());
+        assertEquals(amount.negate(), entry.getValue().getAvailableDelta());
     }
 
     @Test
@@ -119,7 +123,10 @@ class PayoutServiceTest {
         assertEquals(PayoutStatus.FAILED, result.getStatus());
         assertEquals("Bank rejected", result.getFailureReason());
         assertEquals(new BigDecimal("100.00"), balance.getAvailable());
-        verify(ledgerRepo).save(any());
+        org.mockito.ArgumentCaptor<SettlementLedgerEntry> entry =
+                org.mockito.ArgumentCaptor.forClass(SettlementLedgerEntry.class);
+        verify(ledgerRepo).save(entry.capture());
+        assertEquals(new BigDecimal("100.00"), entry.getValue().getAvailableDelta());
     }
 
     @Test

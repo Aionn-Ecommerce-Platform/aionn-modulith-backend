@@ -15,7 +15,7 @@ class ShippingRateResultMapperTest {
 
     @Test
     void mapsAllFields() {
-        ShippingRate r = ShippingRate.configure("r1", "HCM", new BigDecimal("30000"), "VND", "<=2kg");
+        ShippingRate r = ShippingRate.configure("r1", "HCM", new BigDecimal("30000"), "VND", "<=2kg", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         ShippingRateResult result = mapper.toResult(r);
 

@@ -69,18 +69,6 @@ public class NotificationTemplate extends AggregateRoot {
             NotificationCategory category,
             String locale,
             String subject,
-            String content) {
-        return create(templateId, eventType, channel, category, locale, subject, content,
-                Clock.systemUTC());
-    }
-
-    public static NotificationTemplate create(
-            String templateId,
-            String eventType,
-            NotificationChannel channel,
-            NotificationCategory category,
-            String locale,
-            String subject,
             String content,
             Clock clock) {
         if (eventType == null || eventType.isBlank()) {
@@ -96,10 +84,6 @@ public class NotificationTemplate extends AggregateRoot {
         t.registerEvent(new NotificationEvents.TemplateCreated(templateId, eventType, content,
                 List.copyOf(extracted), now));
         return t;
-    }
-
-    public void update(String subject, String content) {
-        update(subject, content, Clock.systemUTC());
     }
 
     public void update(String subject, String content, Clock clock) {

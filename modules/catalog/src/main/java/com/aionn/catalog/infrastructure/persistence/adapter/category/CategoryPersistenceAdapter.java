@@ -31,6 +31,23 @@ public class CategoryPersistenceAdapter implements CategoryPersistencePort {
     }
 
     @Override
+    public Optional<Category> lockById(String categoryId) {
+        return jpa.findByIdForUpdate(categoryId).map(mapper::toDomain);
+    }
+
+    @Override
+    public List<Category> lockMutationSet(String categoryId, List<String> additionalCategoryIds) {
+        List<String> ids = new java.util.ArrayList<>();
+        ids.add(categoryId);
+        if (additionalCategoryIds != null) {
+            ids.addAll(additionalCategoryIds.stream().filter(java.util.Objects::nonNull).toList());
+        }
+        return jpa.findMutationSetForUpdate(categoryId, ids.stream().distinct().sorted().toList()).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
     public boolean existsByParentAndName(String parentId, String name) {
         return jpa.existsByParentIdAndNameIgnoreCase(parentId, name);
     }

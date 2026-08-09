@@ -40,6 +40,9 @@ class ApiSecurityConfigIntegrationTest {
     @org.springframework.test.context.bean.override.mockito.MockitoBean
     private com.aionn.identity.application.port.out.auth.TokenBlacklistPort tokenBlacklist;
 
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.aionn.sharedkernel.infrastructure.outbox.OutboxDeadLetterService outboxDeadLetterService;
+
     @Test
     void unmatchedRequestRequiresAuthenticationAndReceivesSecurityHeaders() throws Exception {
         mockMvc.perform(get("/test/ping"))

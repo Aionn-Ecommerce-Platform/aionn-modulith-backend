@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -15,9 +16,9 @@ public class VoucherApplyAdapter implements VoucherGateway {
 
     @Override
     public Discount apply(String userId, String merchantId, String voucherCode, String orderId,
-            BigDecimal lineSubtotal, String currency) {
+            BigDecimal lineSubtotal, String currency, List<String> orderCategoryIds) {
         VoucherApplyPort.Discount result = voucherApplyPort.apply(userId, merchantId, voucherCode,
-                orderId, lineSubtotal, currency);
+                orderId, lineSubtotal, currency, orderCategoryIds);
         return new Discount(result.amount(), result.currency(), result.applied(), result.reason());
     }
 

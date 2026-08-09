@@ -35,13 +35,13 @@ public class UserEntity {
     @Column(name = "user_id", nullable = false, length = 26)
     private String userId;
 
-    @Column(name = "email", unique = true, length = 100)
+    @Column(name = "email", length = 100)
     private String email;
 
-    @Column(name = "phone", unique = true, length = 20)
+    @Column(name = "phone", length = 20)
     private String phone;
 
-    @Column(name = "username", unique = true, length = 50)
+    @Column(name = "username", length = 50)
     private String username;
 
     @Column(name = "password_hash", length = 255)

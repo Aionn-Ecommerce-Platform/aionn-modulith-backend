@@ -73,11 +73,13 @@ class OrderControllerWebTest {
         SecurityContextHolder.getContext().setAuthentication(auth);
         org.mockito.Mockito.lenient().when(merchantOwnershipVerifierPort.isOwnedBy(any(), any())).thenReturn(true);
 
-        lenient().when(dtoMapper.toPlaceOrderCommand(any(), any())).thenReturn(new PlaceOrderCommand("user-1", "addr-1", "COD", "VND", BigDecimal.ZERO, null, List.of(), "COD"));
+        lenient().when(dtoMapper.toPlaceOrderCommand(any(), any(), any())).thenReturn(
+                new PlaceOrderCommand("user-1", "addr-1", "COD", "VND", null, List.of(), "COD"));
         lenient().when(dtoMapper.toConfirmPreparationCommand(any(), any())).thenReturn(new ConfirmPreparationCommand("order-1", "merchant-1"));
         lenient().when(dtoMapper.toCancelOrderCommand(any(), any(), any())).thenReturn(new CancelOrderCommand("order-1", "user-1", "Reason"));
         lenient().when(dtoMapper.toRejectOrderCommand(any(), any(), any())).thenReturn(new RejectOrderCommand("order-1", "merchant-1", "Reason"));
-        lenient().when(dtoMapper.toChangeShippingInfoCommand(any(), any(), any())).thenReturn(new ChangeShippingInfoCommand("order-1", "user-1", null, BigDecimal.ZERO));
+        lenient().when(dtoMapper.toChangeShippingInfoCommand(any(), any(), any())).thenReturn(
+                new ChangeShippingInfoCommand("order-1", "user-1", null));
         lenient().when(dtoMapper.toConfirmShippedCommand(any(), any())).thenReturn(new ConfirmShippedCommand("order-1", "ship-1"));
         lenient().when(dtoMapper.toConfirmDeliveredCommand(any())).thenReturn(new ConfirmDeliveredCommand("order-1"));
     }
@@ -110,8 +112,9 @@ class OrderControllerWebTest {
         when(dtoMapper.toResponse(result)).thenReturn(sampleResponse("APPROVED"));
 
         mockMvc.perform(post("/api/v1/ordering/orders")
+                        .header("Idempotency-Key", "order-request-1")
                         .contentType(APPLICATION_JSON)
-                        .content("{\"addressId\":\"addr-1\",\"paymentMethodId\":\"COD\",\"currency\":\"VND\",\"shippingFee\":0,\"selectedSkuIds\":[],\"gateway\":\"COD\"}"))
+                        .content("{\"addressId\":\"addr-1\",\"paymentMethodId\":\"COD\",\"currency\":\"VND\",\"selectedSkuIds\":[],\"gateway\":\"COD\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.statusCode").value("201"))
                 .andExpect(jsonPath("$.data.orderId").value("order-1"));
@@ -163,7 +166,7 @@ class OrderControllerWebTest {
 
         mockMvc.perform(put("/api/v1/ordering/orders/order-1/shipping-info")
                         .contentType(APPLICATION_JSON)
-                        .content("{\"newAddress\":{\"addressId\":\"addr-2\",\"recipientName\":\"Max\"},\"newShippingFee\":10}"))
+                        .content("{\"newAddress\":{\"addressId\":\"addr-2\",\"recipientName\":\"Max\"}}"))
                 .andExpect(status().isOk());
     }
 

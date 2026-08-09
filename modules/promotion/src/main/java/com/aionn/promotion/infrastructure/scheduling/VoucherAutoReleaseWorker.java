@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+
 @Component
 @RequiredArgsConstructor
 public class VoucherAutoReleaseWorker {
@@ -17,6 +19,7 @@ public class VoucherAutoReleaseWorker {
     private final VoucherPersistencePort voucherRepository;
     private final UserVoucherPersistencePort userVoucherRepository;
     private final EventPublisher eventPublisher;
+    private final Clock clock;
 
     /**
      * Releases one expired user-voucher reservation in a fresh transaction so
@@ -30,10 +33,10 @@ public class VoucherAutoReleaseWorker {
         }
         Voucher voucher = voucherRepository.lockByCode(uv.getVoucherCode()).orElse(null);
         if (voucher != null) {
-            voucher.releaseSlot();
+            voucher.releaseSlot(clock);
             voucherRepository.save(voucher);
         }
-        uv.release("expired");
+        uv.release("expired", clock);
         userVoucherRepository.save(uv);
         eventPublisher.publish(uv.pullEvents());
         return true;

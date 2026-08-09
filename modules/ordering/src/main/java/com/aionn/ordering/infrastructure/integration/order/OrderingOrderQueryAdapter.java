@@ -57,6 +57,7 @@ public class OrderingOrderQueryAdapter implements OrderQueryPort {
         return orderJpaRepository.findById(orderId)
                 .map(e -> new OrderSummary(
                         e.getOrderId(),
+                        e.getUserId(),
                         e.getMerchantId(),
                         e.getTotalAmount(),
                         e.getCurrency()));

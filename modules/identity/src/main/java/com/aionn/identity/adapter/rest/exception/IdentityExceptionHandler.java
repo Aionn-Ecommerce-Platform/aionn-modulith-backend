@@ -27,7 +27,7 @@ public class IdentityExceptionHandler extends AbstractModuleExceptionHandler {
                 registerErrors(HttpStatus.CONFLICT,
                                 "IDENTITY_001", "IDENTITY_002", "IDENTITY_005", "IDENTITY_108",
                                 "IDENTITY_110", "IDENTITY_112", "IDENTITY_207", "IDENTITY_214",
-                                "IDENTITY_216", "IDENTITY_221", "IDENTITY_303", "IDENTITY_402",
+                                "IDENTITY_216", "IDENTITY_221", "IDENTITY_228", "IDENTITY_303", "IDENTITY_402",
                                 "IDENTITY_403");
                 registerErrors(HttpStatus.UNAUTHORIZED,
                                 "IDENTITY_106", "IDENTITY_203", "IDENTITY_210", "IDENTITY_224",

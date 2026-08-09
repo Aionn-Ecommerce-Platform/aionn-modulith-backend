@@ -13,9 +13,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -40,7 +42,7 @@ class InventoryItemPersistenceAdapterTest {
 
     @Test
     void saveMapsThroughEntityAndBack() {
-        InventoryItem domain = InventoryItem.initialize(KEY, 100);
+        InventoryItem domain = InventoryItem.initialize(KEY, 100, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         InventoryItemEntity entity = new InventoryItemEntity();
         InventoryItemEntity.InventoryItemId id = new InventoryItemEntity.InventoryItemId(SKU_ID, WAREHOUSE_ID);
         when(jpa.findById(id)).thenReturn(Optional.empty());
@@ -56,7 +58,7 @@ class InventoryItemPersistenceAdapterTest {
 
     @Test
     void saveUsesExistingEntityWhenPresent() {
-        InventoryItem domain = InventoryItem.initialize(KEY, 100);
+        InventoryItem domain = InventoryItem.initialize(KEY, 100, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         InventoryItemEntity existing = new InventoryItemEntity();
         InventoryItemEntity updated = new InventoryItemEntity();
         InventoryItemEntity.InventoryItemId id = new InventoryItemEntity.InventoryItemId(SKU_ID, WAREHOUSE_ID);
@@ -73,7 +75,7 @@ class InventoryItemPersistenceAdapterTest {
     @Test
     void findByKeyReturnsMappedDomainWhenPresent() {
         InventoryItemEntity entity = new InventoryItemEntity();
-        InventoryItem domain = InventoryItem.initialize(KEY, 100);
+        InventoryItem domain = InventoryItem.initialize(KEY, 100, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         InventoryItemEntity.InventoryItemId id = new InventoryItemEntity.InventoryItemId(SKU_ID, WAREHOUSE_ID);
         when(jpa.findById(id)).thenReturn(Optional.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
@@ -92,7 +94,7 @@ class InventoryItemPersistenceAdapterTest {
     @Test
     void lockByKeyReturnsMappedDomain() {
         InventoryItemEntity entity = new InventoryItemEntity();
-        InventoryItem domain = InventoryItem.initialize(KEY, 100);
+        InventoryItem domain = InventoryItem.initialize(KEY, 100, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(jpa.findForUpdate(SKU_ID, WAREHOUSE_ID)).thenReturn(Optional.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -107,6 +109,19 @@ class InventoryItemPersistenceAdapterTest {
     }
 
     @Test
+    void createIfAbsentThenLocksTheWinningItem() {
+        Instant now = Instant.parse("2026-08-05T00:00:00Z");
+        InventoryItemEntity entity = new InventoryItemEntity();
+        InventoryItem domain = InventoryItem.initialize(KEY, 0, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        when(jpa.findForUpdate(SKU_ID, WAREHOUSE_ID)).thenReturn(Optional.of(entity));
+        when(mapper.toDomain(entity)).thenReturn(domain);
+
+        assertThat(adapter.createIfAbsentAndLock(KEY, now)).isSameAs(domain);
+        verify(jpa).insertIfAbsent(SKU_ID, WAREHOUSE_ID, now);
+        verify(jpa).findForUpdate(SKU_ID, WAREHOUSE_ID);
+    }
+
+    @Test
     void findBySkuAcrossWarehousesReturnsEmptyForEmptyWarehouseIds() {
         assertThat(adapter.findBySkuAcrossWarehouses(SKU_ID, List.of())).isEmpty();
         assertThat(adapter.findBySkuAcrossWarehouses(SKU_ID, null)).isEmpty();
@@ -115,7 +130,7 @@ class InventoryItemPersistenceAdapterTest {
     @Test
     void findBySkuAcrossWarehousesMapsResults() {
         InventoryItemEntity entity = new InventoryItemEntity();
-        InventoryItem domain = InventoryItem.initialize(KEY, 100);
+        InventoryItem domain = InventoryItem.initialize(KEY, 100, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(jpa.findByIdSkuIdAndIdWarehouseIdIn(SKU_ID, List.of(WAREHOUSE_ID)))
                 .thenReturn(List.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
@@ -127,7 +142,7 @@ class InventoryItemPersistenceAdapterTest {
     @Test
     void findBySkuMapsResults() {
         InventoryItemEntity entity = new InventoryItemEntity();
-        InventoryItem domain = InventoryItem.initialize(KEY, 100);
+        InventoryItem domain = InventoryItem.initialize(KEY, 100, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(jpa.findByIdSkuId(SKU_ID)).thenReturn(List.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -137,17 +152,18 @@ class InventoryItemPersistenceAdapterTest {
     @Test
     void findByWarehouseMapsResults() {
         InventoryItemEntity entity = new InventoryItemEntity();
-        InventoryItem domain = InventoryItem.initialize(KEY, 100);
-        when(jpa.findByIdWarehouseId(eq(WAREHOUSE_ID), any(PageRequest.class)))
+        InventoryItem domain = InventoryItem.initialize(KEY, 100, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        when(jpa.findByIdWarehouseIdOrderByIdSkuIdAsc(eq(WAREHOUSE_ID), any(PageRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(entity)));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
-        assertThat(adapter.findByWarehouse(WAREHOUSE_ID, PageRequest.of(0, 10)))
+        assertThat(adapter.findByWarehouse(WAREHOUSE_ID, OffsetPagination.of(0, 10)).content())
                 .containsExactly(domain);
 
         ArgumentCaptor<PageRequest> captor = ArgumentCaptor.forClass(PageRequest.class);
-        verify(jpa).findByIdWarehouseId(eq(WAREHOUSE_ID), captor.capture());
+        verify(jpa).findByIdWarehouseIdOrderByIdSkuIdAsc(eq(WAREHOUSE_ID), captor.capture());
         assertThat(captor.getValue().getPageNumber()).isZero();
         assertThat(captor.getValue().getPageSize()).isEqualTo(10);
+        assertThat(captor.getValue().getSort().isUnsorted()).isTrue();
     }
 }

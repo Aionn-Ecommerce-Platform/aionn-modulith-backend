@@ -47,12 +47,12 @@ class InventoryWarehouseSelectorAdapterTest {
 
     @Test
     void selectWarehouseReturnsHighestPriorityWithAvailableStock() {
-        Warehouse w1 = Warehouse.create("WH_1", "M_1", "addr-1", 1);
-        Warehouse w2 = Warehouse.create("WH_2", "M_1", "addr-2", 2);
+        Warehouse w1 = Warehouse.create("WH_1", "M_1", "addr-1", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Warehouse w2 = Warehouse.create("WH_2", "M_1", "addr-2", 2, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(warehouseRepository.findByMerchantOrderByPriority("M_1")).thenReturn(List.of(w1, w2));
 
-        InventoryItem item1 = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 0);
-        InventoryItem item2 = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_2"), 5);
+        InventoryItem item1 = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 0, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        InventoryItem item2 = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_2"), 5, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(inventoryItemRepository.findBySkuAcrossWarehouses("SKU_1", List.of("WH_1", "WH_2")))
                 .thenReturn(List.of(item1, item2));
 
@@ -63,12 +63,12 @@ class InventoryWarehouseSelectorAdapterTest {
 
     @Test
     void selectWarehouseFallsBackToFirstWarehouseWhenNoStockAvailable() {
-        Warehouse w1 = Warehouse.create("WH_1", "M_1", "addr-1", 1);
-        Warehouse w2 = Warehouse.create("WH_2", "M_1", "addr-2", 2);
+        Warehouse w1 = Warehouse.create("WH_1", "M_1", "addr-1", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Warehouse w2 = Warehouse.create("WH_2", "M_1", "addr-2", 2, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(warehouseRepository.findByMerchantOrderByPriority("M_1")).thenReturn(List.of(w1, w2));
 
-        InventoryItem item1 = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 0);
-        InventoryItem item2 = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_2"), 0);
+        InventoryItem item1 = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 0, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        InventoryItem item2 = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_2"), 0, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(inventoryItemRepository.findBySkuAcrossWarehouses("SKU_1", List.of("WH_1", "WH_2")))
                 .thenReturn(List.of(item1, item2));
 

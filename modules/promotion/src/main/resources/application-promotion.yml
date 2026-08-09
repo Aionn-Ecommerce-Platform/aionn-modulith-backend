@@ -1,4 +1,6 @@
 promotion:
+  flash-sale:
+    enabled: ${PROMOTION_FLASH_SALE_ENABLED:false}
   scheduler:
     enabled: ${PROMOTION_SCHEDULER_ENABLED:true}
     delay-ms: ${PROMOTION_SCHEDULER_DELAY_MS:30000}

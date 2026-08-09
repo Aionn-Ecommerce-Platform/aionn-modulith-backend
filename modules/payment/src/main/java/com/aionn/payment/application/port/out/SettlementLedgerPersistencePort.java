@@ -8,6 +8,8 @@ public interface SettlementLedgerPersistencePort {
 
     SettlementLedgerEntry save(SettlementLedgerEntry entry);
 
+    boolean existsById(String entryId);
+
     List<SettlementLedgerEntry> findByMerchant(String merchantId, int limit);
 
     List<SettlementLedgerEntry> findByOrder(String orderId);

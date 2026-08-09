@@ -20,6 +20,7 @@ import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
 import com.aionn.identity.application.port.out.auth.TokenBlacklistPort;
 import com.aionn.identity.application.port.out.observability.IdentityMetricsPort;
 import com.aionn.identity.application.port.out.security.MfaPersistencePort;
+import com.aionn.identity.application.port.out.security.AbuseRateLimiterPort;
 import com.aionn.identity.application.port.out.security.PasswordHasherPort;
 import com.aionn.identity.application.port.out.security.TotpManagerPort;
 import com.aionn.identity.application.port.out.security.UserSecurityPort;
@@ -53,6 +54,7 @@ import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -63,6 +65,8 @@ class AuthServiceTest {
 
     private static final String USER_ID = "user-1";
     private static final String SESSION_ID = "session-1";
+    private static final Clock TEST_CLOCK = Clock.fixed(
+            Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
 
     @Mock
     private UserPersistencePort userPersistencePort;
@@ -92,29 +96,33 @@ class AuthServiceTest {
     private TokenBlacklistPort tokenBlacklist;
     @Mock
     private IdentityMetricsPort identityMetrics;
+    @Mock
+    private AbuseRateLimiterPort abuseRateLimiter;
 
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
+        lenient().when(abuseRateLimiter.check(anyString(), anyString(), any(Integer.class), any(Integer.class)))
+                .thenReturn(true);
         authService = new AuthService(
                 userPersistencePort, userSecurityPort, authSessionPersistencePort,
                 socialLinkPersistencePort, mfaPersistencePort, passwordHasher,
                 totpManager, accessTokenIssuer, socialTokenVerifier, authPolicy,
-                refreshTokenStore, authResultMapper, tokenBlacklist, identityMetrics,
-                Clock.systemUTC());
+                refreshTokenStore, authResultMapper, tokenBlacklist, identityMetrics, abuseRateLimiter,
+                TEST_CLOCK);
     }
 
     private static AuthSession activeSession() {
         return AuthSession.createNew(SESSION_ID, USER_ID, "127.0.0.1", "agent",
-                Instant.now().plus(Duration.ofDays(7)));
+                Instant.now(TEST_CLOCK).plus(Duration.ofDays(7)), TEST_CLOCK);
     }
 
     @Test
     void logoutAllRevokesActiveSessionsAndReturnsCount() {
         AuthSession a = activeSession();
         AuthSession b = AuthSession.createNew("s2", USER_ID, "ip", "ua",
-                Instant.now().plus(Duration.ofDays(7)));
+                Instant.now(TEST_CLOCK).plus(Duration.ofDays(7)), TEST_CLOCK);
         when(userPersistencePort.existsById(USER_ID)).thenReturn(true);
         when(authSessionPersistencePort.findByUserId(USER_ID)).thenReturn(List.of(a, b));
         when(authResultMapper.toLogoutAllResult(2)).thenReturn(new LogoutAllResult(2));
@@ -176,11 +184,11 @@ class AuthServiceTest {
 
     private static AuthSession expiredSession() {
         return AuthSession.createNew(SESSION_ID, USER_ID, "127.0.0.1", "agent",
-                Instant.now(Clock.systemUTC()).minus(Duration.ofDays(1)));
+                Instant.now(TEST_CLOCK).minus(Duration.ofDays(1)), TEST_CLOCK);
     }
 
     private static IdentityUser activeUser() {
-        return IdentityUser.createNew(USER_ID, "u@example.com", null, "user");
+        return IdentityUser.createNew(USER_ID, "u@example.com", null, "user", com.aionn.identity.TestClocks.FIXED);
     }
 
     private static UserSecurityPort.UserSecurityData security(boolean mfaEnabled, String mfaSecret) {
@@ -230,6 +238,19 @@ class AuthServiceTest {
 
         assertErrorCode(IdentityErrorCode.INVALID_CREDENTIALS,
                 () -> authService.login(new LoginCommand("nobody", "pw", null, "ip", "ua")));
+    }
+
+    @Test
+    void loginRateLimitRunsBeforeCredentialLookup() {
+        when(abuseRateLimiter.check(eq("LOGIN_IP"), eq("127.0.0.1"), any(Integer.class), any(Integer.class)))
+                .thenReturn(false);
+
+        assertErrorCode(IdentityErrorCode.RATE_LIMIT_EXCEEDED,
+                () -> authService.login(new LoginCommand(
+                        "u@example.com", "pw", null, "127.0.0.1", "agent")));
+
+        verify(userSecurityPort, never()).findByIdentity(anyString());
+        verify(identityMetrics).loginAttempt("rate_limited");
     }
 
     @Test
@@ -314,7 +335,6 @@ class AuthServiceTest {
         when(passwordHasher.matches("pw", "hash")).thenReturn(true);
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
         when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(security(true, "secret")));
-        when(mfaPersistencePort.findActiveBackupCodes(USER_ID)).thenReturn(List.of());
         when(totpManager.verifyCode("secret", "000000")).thenReturn(false);
         when(authPolicy.getMaxFailedLoginAttempts()).thenReturn(5);
 
@@ -330,7 +350,6 @@ class AuthServiceTest {
         when(passwordHasher.matches("pw", "hash")).thenReturn(true);
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
         when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(security(true, "secret")));
-        when(mfaPersistencePort.findActiveBackupCodes(USER_ID)).thenReturn(List.of());
         when(totpManager.verifyCode("secret", "123456")).thenReturn(true);
         when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
@@ -342,6 +361,7 @@ class AuthServiceTest {
 
         assertThat(result).isSameAs(expected);
         verify(userSecurityPort).resetFailedLoginAttempts(USER_ID);
+        verify(mfaPersistencePort, never()).findActiveBackupCodes(anyString());
     }
 
     @Test
@@ -354,7 +374,7 @@ class AuthServiceTest {
         when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(security(true, "secret")));
         when(mfaPersistencePort.findActiveBackupCodes(USER_ID)).thenReturn(
                 List.of(new MfaPersistencePort.BackupCodeData("bc-1", "code-hash")));
-        when(passwordHasher.matches("backup", "code-hash")).thenReturn(true);
+        when(passwordHasher.matches("12345678", "code-hash")).thenReturn(true);
         when(mfaPersistencePort.markBackupCodeUsed(eq("bc-1"), any(Instant.class))).thenReturn(true);
         when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
@@ -362,10 +382,11 @@ class AuthServiceTest {
                 any(Instant.class))).thenReturn(expected);
 
         LoginResult result = authService.login(
-                new LoginCommand("u@example.com", "pw", "backup", "ip", "ua"));
+                new LoginCommand("u@example.com", "pw", "12345678", "ip", "ua"));
 
         assertThat(result).isSameAs(expected);
         verify(mfaPersistencePort).markBackupCodeUsed(eq("bc-1"), any(Instant.class));
+        verify(totpManager, never()).verifyCode(anyString(), anyString());
     }
 
     @Test
@@ -375,7 +396,7 @@ class AuthServiceTest {
         when(socialTokenVerifier.verifyAndExtract(AuthProvider.GOOGLE, "token"))
                 .thenReturn(new SocialUserProfile("puid", "s@example.com", "Social User"));
         when(socialLinkPersistencePort.findByProviderAndProviderUserId(AuthProvider.GOOGLE, "puid"))
-                .thenReturn(Optional.of(SocialLink.createNew("sl-1", USER_ID, AuthProvider.GOOGLE, "puid")));
+                .thenReturn(Optional.of(SocialLink.createNew("sl-1", USER_ID, AuthProvider.GOOGLE, "puid", TEST_CLOCK)));
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
         when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
@@ -398,7 +419,6 @@ class AuthServiceTest {
         when(socialLinkPersistencePort.findByProviderAndProviderUserId(AuthProvider.GOOGLE, "puid"))
                 .thenReturn(Optional.empty());
         when(userPersistencePort.findByIdentity("new@example.com")).thenReturn(Optional.empty());
-        when(userPersistencePort.existsByUsername(anyString())).thenReturn(false);
         when(userPersistencePort.save(any(IdentityUser.class))).thenAnswer(inv -> inv.getArgument(0));
         when(userPersistencePort.findById(anyString())).thenReturn(Optional.empty());
         when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
@@ -411,7 +431,23 @@ class AuthServiceTest {
 
         assertThat(result).isSameAs(expected);
         verify(userPersistencePort).save(any(IdentityUser.class));
+        verify(userPersistencePort, never()).existsByUsername(anyString());
         verify(socialLinkPersistencePort).save(any(SocialLink.class), anyString());
+    }
+
+    @Test
+    void socialLoginRequiresExplicitLinkWhenVerifiedEmailAlreadyExists() {
+        when(socialTokenVerifier.verifyAndExtract(AuthProvider.GOOGLE, "token"))
+                .thenReturn(new SocialUserProfile("puid", "existing@example.com", "Existing User"));
+        when(socialLinkPersistencePort.findByProviderAndProviderUserId(AuthProvider.GOOGLE, "puid"))
+                .thenReturn(Optional.empty());
+        when(userPersistencePort.findByIdentity("existing@example.com")).thenReturn(Optional.of(activeUser()));
+
+        assertErrorCode(IdentityErrorCode.ACCOUNT_LINK_REQUIRED,
+                () -> authService.socialLogin(new SocialLoginCommand("google", "token", "ip", "ua")));
+
+        verify(userPersistencePort, never()).save(any());
+        verify(socialLinkPersistencePort, never()).save(any(), anyString());
     }
 
     @Test
@@ -419,7 +455,7 @@ class AuthServiceTest {
         when(socialTokenVerifier.verifyAndExtract(AuthProvider.GOOGLE, "token"))
                 .thenReturn(new SocialUserProfile("puid", "s@example.com", "Social User"));
         when(socialLinkPersistencePort.findByProviderAndProviderUserId(AuthProvider.GOOGLE, "puid"))
-                .thenReturn(Optional.of(SocialLink.createNew("sl-1", USER_ID, AuthProvider.GOOGLE, "puid")));
+                .thenReturn(Optional.of(SocialLink.createNew("sl-1", USER_ID, AuthProvider.GOOGLE, "puid", TEST_CLOCK)));
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.empty());
 
         assertErrorCode(IdentityErrorCode.USER_NOT_FOUND,
@@ -433,7 +469,7 @@ class AuthServiceTest {
         when(socialTokenVerifier.verifyAndExtract(AuthProvider.GOOGLE, "token"))
                 .thenReturn(new SocialUserProfile("puid", "s@example.com", "Social User"));
         when(socialLinkPersistencePort.findByProviderAndProviderUserId(AuthProvider.GOOGLE, "puid"))
-                .thenReturn(Optional.of(SocialLink.createNew("sl-1", USER_ID, AuthProvider.GOOGLE, "puid")));
+                .thenReturn(Optional.of(SocialLink.createNew("sl-1", USER_ID, AuthProvider.GOOGLE, "puid", TEST_CLOCK)));
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(banned));
 
         assertErrorCode(IdentityErrorCode.USER_INACTIVE,
@@ -475,7 +511,7 @@ class AuthServiceTest {
 
     @Test
     void linkSocialCreatesLink() {
-        SocialLink saved = SocialLink.createNew("sl-1", USER_ID, AuthProvider.GOOGLE, "puid");
+        SocialLink saved = SocialLink.createNew("sl-1", USER_ID, AuthProvider.GOOGLE, "puid", TEST_CLOCK);
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
         when(socialTokenVerifier.verifyAndExtract(AuthProvider.GOOGLE, "token"))
                 .thenReturn(new SocialUserProfile("puid", "s@example.com", "Social User"));
@@ -506,7 +542,7 @@ class AuthServiceTest {
     void unlinkSocialRemovesLink() {
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
         when(socialLinkPersistencePort.findByUserIdAndProvider(USER_ID, AuthProvider.GOOGLE))
-                .thenReturn(Optional.of(SocialLink.createNew("sl-1", USER_ID, AuthProvider.GOOGLE, "puid")));
+                .thenReturn(Optional.of(SocialLink.createNew("sl-1", USER_ID, AuthProvider.GOOGLE, "puid", TEST_CLOCK)));
 
         authService.unlinkSocial(new UnlinkSocialCommand(USER_ID, "google"));
 
@@ -525,10 +561,10 @@ class AuthServiceTest {
 
     @Test
     void unlinkSocialRejectsWhenItIsTheOnlyLoginMethod() {
-        IdentityUser noCredentials = IdentityUser.createNew(USER_ID, null, null, "user");
+        IdentityUser noCredentials = IdentityUser.createNew(USER_ID, null, null, "user", com.aionn.identity.TestClocks.FIXED);
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(noCredentials));
         when(socialLinkPersistencePort.findByUserIdAndProvider(USER_ID, AuthProvider.GOOGLE))
-                .thenReturn(Optional.of(SocialLink.createNew("sl-1", USER_ID, AuthProvider.GOOGLE, "puid")));
+                .thenReturn(Optional.of(SocialLink.createNew("sl-1", USER_ID, AuthProvider.GOOGLE, "puid", TEST_CLOCK)));
 
         assertErrorCode(IdentityErrorCode.SOCIAL_LINK_NOT_FOUND,
                 () -> authService.unlinkSocial(new UnlinkSocialCommand(USER_ID, "google")));
@@ -548,7 +584,7 @@ class AuthServiceTest {
     @Test
     void revokeSessionThrowsWhenSessionBelongsToAnotherUser() {
         AuthSession other = AuthSession.createNew(SESSION_ID, "other-user", "ip", "ua",
-                Instant.now().plus(Duration.ofDays(7)));
+                Instant.now(TEST_CLOCK).plus(Duration.ofDays(7)), TEST_CLOCK);
         when(userPersistencePort.existsById(USER_ID)).thenReturn(true);
         when(authSessionPersistencePort.findById(SESSION_ID)).thenReturn(Optional.of(other));
 

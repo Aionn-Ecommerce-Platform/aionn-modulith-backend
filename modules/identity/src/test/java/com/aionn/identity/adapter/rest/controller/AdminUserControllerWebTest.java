@@ -143,25 +143,13 @@ class AdminUserControllerWebTest {
         }
 
         @Test
-        void listUsersClampsOversizedPageRequestsViaSafePagination() throws Exception {
-                // OffsetPagination.safe(...) clamps the requested page size; the
-                // controller must always pass the safe value to the mapper, never the
-                // raw user input.
-                UserListResult result = new UserListResult(List.of(), 0, 100, 0L);
-                ListUsersQuery query = new ListUsersQuery(null, null, 0, 100);
-
-                when(adminUserDtoMapper.toListUsersQuery(null, null, 0, 100)).thenReturn(query);
-                when(listUsersQueryPort.execute(query)).thenReturn(result);
-                when(adminUserDtoMapper.toUserSummaryResponses(result)).thenReturn(List.of());
-                when(adminUserDtoMapper.toUserListPaging(result)).thenReturn(new PageMetadata(0, 100, 0L, 0));
-
+        void listUsersRejectsOversizedPageRequests() throws Exception {
                 mockMvc.perform(get("/api/v1/admin/users")
                                 .param("page", "0")
                                 .param("size", "9999"))
-                                .andExpect(status().isOk());
+                                .andExpect(status().isBadRequest());
 
-                // Ensure the page size handed to the query is clamped, not the raw 9999.
-                verify(adminUserDtoMapper).toListUsersQuery(null, null, 0, 100);
+                verifyNoInteractions(listUsersQueryPort);
         }
 
         @Test

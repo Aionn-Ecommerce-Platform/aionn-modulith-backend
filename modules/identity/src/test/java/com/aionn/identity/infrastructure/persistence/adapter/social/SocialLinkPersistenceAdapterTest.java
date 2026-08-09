@@ -15,6 +15,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,6 +32,8 @@ class SocialLinkPersistenceAdapterTest {
 
     private static final String USER_ID = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
     private static final String PROVIDER_USER_ID = "google-123";
+    private static final Clock CLOCK = Clock.fixed(
+            Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
 
     @Mock
     private SocialAccountRepository socialAccountRepository;
@@ -42,7 +46,8 @@ class SocialLinkPersistenceAdapterTest {
     private SocialLinkPersistenceAdapter adapter;
 
     private SocialLink socialLink() {
-        return SocialLink.createNew("01HZSOC0000000000000000001", USER_ID, AuthProvider.GOOGLE, PROVIDER_USER_ID);
+        return SocialLink.createNew(
+                "01HZSOC0000000000000000001", USER_ID, AuthProvider.GOOGLE, PROVIDER_USER_ID, CLOCK);
     }
 
     @Test

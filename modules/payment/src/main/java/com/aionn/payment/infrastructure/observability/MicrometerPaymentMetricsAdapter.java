@@ -41,4 +41,10 @@ public class MicrometerPaymentMetricsAdapter implements PaymentMetricsPort {
         registry.counter("payment.reconciliation.matched", GATEWAY_TAG, gateway).increment(matched);
         registry.counter("payment.reconciliation.mismatched", GATEWAY_TAG, gateway).increment(mismatched);
     }
+
+    @Override
+    public void settlementReconciliation(long matched, long mismatched) {
+        registry.counter("payment.settlement.reconciliation", "result", "matched").increment(matched);
+        registry.counter("payment.settlement.reconciliation", "result", "mismatched").increment(mismatched);
+    }
 }

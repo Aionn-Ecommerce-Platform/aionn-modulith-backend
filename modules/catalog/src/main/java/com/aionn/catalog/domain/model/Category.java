@@ -59,10 +59,6 @@ public class Category extends AggregateRoot {
         }
     }
 
-    public static Category create(String categoryId, String parentId, String name, String slug) {
-        return create(categoryId, parentId, name, slug, Clock.systemUTC());
-    }
-
     public static Category create(String categoryId, String parentId, String name, String slug, Clock clock) {
         if (name == null || name.isBlank()) {
             throw new CatalogException(CatalogErrorCode.INVALID_ARGUMENT, "name must not be blank");
@@ -77,10 +73,6 @@ public class Category extends AggregateRoot {
                 List.of());
         category.registerEvent(new CategoryEvents.CategoryCreated(categoryId, parentId, trimmedName, trimmedSlug, now));
         return category;
-    }
-
-    public void update(String name, String iconUrl, Boolean active) {
-        update(name, iconUrl, active, Clock.systemUTC());
     }
 
     public void update(String name, String iconUrl, Boolean active, Clock clock) {
@@ -111,10 +103,6 @@ public class Category extends AggregateRoot {
         registerEvent(new CategoryEvents.CategoryUpdated(categoryId, this.name, this.iconUrl, this.active, updatedAt));
     }
 
-    public void moveTo(String newParentId) {
-        moveTo(newParentId, Clock.systemUTC());
-    }
-
     public void moveTo(String newParentId, Clock clock) {
         Guard.require(deletedAt == null,
                 () -> new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND, "Cannot move deleted category"));
@@ -124,10 +112,6 @@ public class Category extends AggregateRoot {
         this.parentId = newParentId;
         this.updatedAt = clock.instant();
         registerEvent(new CategoryEvents.CategoryMoved(categoryId, oldParent, newParentId, updatedAt));
-    }
-
-    public void markDeleted() {
-        markDeleted(Clock.systemUTC());
     }
 
     public void markDeleted(Clock clock) {

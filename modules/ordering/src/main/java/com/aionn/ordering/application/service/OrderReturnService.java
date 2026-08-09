@@ -35,6 +35,7 @@ import java.util.Objects;
 public class OrderReturnService {
 
     private static final Duration RETURN_WINDOW = Duration.ofDays(7);
+    static final int MAX_REFUND_ATTEMPTS = 5;
 
     private final OrderPersistencePort orderRepository;
     private final OrderReturnPersistencePort returnRepository;
@@ -74,13 +75,16 @@ public class OrderReturnService {
             Money refundAmount = command.refundAmount() == null
                     ? null
                     : Money.of(command.refundAmount(), command.currency() == null ? "VND" : command.currency());
+            if (r.getStatus() == com.aionn.ordering.domain.valueobject.ReturnStatus.APPROVED) {
+                ensureSameApproval(r, refundAmount, command.returnWarehouseId());
+                return r;
+            }
             r.approve(refundAmount, command.returnWarehouseId(), clock.instant());
             OrderReturn persisted = returnRepository.save(r);
             eventPublisher.publish(r.pullEvents());
             return persisted;
         });
-        triggerRefundIfPaid(saved, "return approved");
-        return saved;
+        return attemptRefund(saved.getReturnId(), "return approved");
     }
 
     public OrderReturn reject(RejectReturnCommand command) {
@@ -188,18 +192,31 @@ public class OrderReturnService {
             Money refund = refundAmount == null
                     ? null
                     : Money.of(refundAmount, currency == null ? "VND" : currency);
+            if (r.getStatus() == com.aionn.ordering.domain.valueobject.ReturnStatus.APPROVED) {
+                ensureSameApproval(r, refund, returnWarehouseId);
+                return r;
+            }
             r.approve(refund, returnWarehouseId, clock.instant());
             OrderReturn persisted = returnRepository.save(r);
             eventPublisher.publish(r.pullEvents());
             return persisted;
         });
-        triggerRefundIfPaid(saved, "return approved (admin)");
-        return saved;
+        return attemptRefund(saved.getReturnId(), "return approved (admin)");
     }
 
-    private void triggerRefundIfPaid(OrderReturn r, String reason) {
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public OrderReturn retryRefund(String returnId) {
+        return attemptRefund(returnId, "return refund retry");
+    }
+
+    private OrderReturn attemptRefund(String returnId, String reason) {
+        OrderReturn r = transactionTemplate.execute(status -> returnRepository.findById(returnId)
+                .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND)));
+        if (!r.refundCanBeAttempted(clock.instant(), MAX_REFUND_ATTEMPTS)) {
+            return r;
+        }
         if (r.getRefundAmount() == null) {
-            return;
+            return r;
         }
         RefundRequest refund = transactionTemplate.execute(status -> orderRepository.findById(r.getOrderId())
                 .filter(order -> order.getPaymentId() != null)
@@ -207,17 +224,51 @@ public class OrderReturnService {
                         r.getRefundAmount().currency(), reason))
                 .orElse(null));
         if (refund == null) {
-            return;
+            return markRefunded(returnId);
         }
         try {
-            paymentGateway.refund(refund.paymentId(), refund.amount(), refund.currency(), refund.reason());
+            paymentGateway.refund(refund.paymentId(), refund.amount(), refund.currency(), refund.reason(),
+                    "return:" + r.getReturnId() + ":refund");
+            return markRefunded(returnId);
         } catch (RuntimeException ex) {
             log.error("Refund for return {} (order {}) failed", r.getReturnId(), r.getOrderId(), ex);
-            throw ex;
+            return markRefundFailed(returnId, ex);
         }
     }
 
+    private OrderReturn markRefunded(String returnId) {
+        return transactionTemplate.execute(status -> {
+            OrderReturn current = returnRepository.findById(returnId)
+                    .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
+            if (current.getRefundStatus() == com.aionn.ordering.domain.valueobject.ReturnRefundStatus.REFUNDED) {
+                return current;
+            }
+            current.markRefunded(clock.instant());
+            return returnRepository.save(current);
+        });
+    }
+
+    private OrderReturn markRefundFailed(String returnId, RuntimeException failure) {
+        return transactionTemplate.execute(status -> {
+            OrderReturn current = returnRepository.findById(returnId)
+                    .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
+            long delaySeconds = Math.min(3600, 1L << Math.min(current.getRefundAttempts(), 12));
+            current.markRefundFailed(failure.getMessage(), clock.instant().plusSeconds(delaySeconds));
+            return returnRepository.save(current);
+        });
+    }
+
     private record RefundRequest(String paymentId, java.math.BigDecimal amount, String currency, String reason) {}
+
+    private void ensureSameApproval(OrderReturn existing, Money refund, String warehouseId) {
+        boolean sameRefund = existing.getRefundAmount() != null && refund != null
+                && existing.getRefundAmount().amount().compareTo(refund.amount()) == 0
+                && existing.getRefundAmount().currency().equalsIgnoreCase(refund.currency());
+        if (!sameRefund || !Objects.equals(existing.getReturnWarehouseId(), warehouseId)) {
+            throw new OrderingException(OrderingErrorCode.RETURN_INVALID_STATE,
+                    "Approved return cannot be retried with different refund details");
+        }
+    }
 
     public OrderReturn adminReject(String returnId, String reason) {
         OrderReturn r = returnRepository.findById(returnId)

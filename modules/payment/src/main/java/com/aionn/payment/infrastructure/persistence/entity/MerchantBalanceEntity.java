@@ -43,6 +43,9 @@ public class MerchantBalanceEntity {
     @Column(name = "available", nullable = false, precision = 18, scale = 2)
     private BigDecimal available;
 
+    @Column(name = "receivable", nullable = false, precision = 18, scale = 2)
+    private BigDecimal receivable;
+
     @jakarta.persistence.Version
     @Column(name = "version", nullable = false)
     private long version;

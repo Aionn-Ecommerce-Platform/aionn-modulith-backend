@@ -68,9 +68,12 @@ public class StockReservationService {
         }
 
         public StockReservation commit(CommitReservationCommand command) {
-                StockReservation reservation = reservationRepository.findById(command.reservationId())
+                StockReservation reservation = reservationRepository.lockForUpdate(command.reservationId())
                                 .orElseThrow(() -> new InventoryException(
                                                 InventoryErrorCode.STOCK_RESERVATION_NOT_FOUND));
+                if (reservation.getStatus() == ReservationStatus.COMMITTED) {
+                        return reservation;
+                }
                 if (reservation.getStatus() != ReservationStatus.RESERVED) {
                         throw new InventoryException(InventoryErrorCode.STOCK_RESERVATION_INVALID_STATE);
                 }
@@ -98,9 +101,12 @@ public class StockReservationService {
         }
 
         public StockReservation release(ReleaseReservationCommand command) {
-                StockReservation reservation = reservationRepository.findById(command.reservationId())
+                StockReservation reservation = reservationRepository.lockForUpdate(command.reservationId())
                                 .orElseThrow(() -> new InventoryException(
                                                 InventoryErrorCode.STOCK_RESERVATION_NOT_FOUND));
+                if (reservation.getStatus() == ReservationStatus.RELEASED) {
+                        return reservation;
+                }
                 if (reservation.getStatus() != ReservationStatus.RESERVED) {
                         throw new InventoryException(InventoryErrorCode.STOCK_RESERVATION_INVALID_STATE);
                 }

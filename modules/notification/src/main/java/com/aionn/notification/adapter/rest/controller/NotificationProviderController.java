@@ -3,9 +3,9 @@ package com.aionn.notification.adapter.rest.controller;
 import com.aionn.notification.adapter.rest.dto.provider.ConfigureProviderRequest;
 import com.aionn.notification.adapter.rest.dto.provider.UpdateProviderRequest;
 import com.aionn.notification.adapter.rest.dto.provider.response.ProviderResponse;
+import com.aionn.notification.adapter.rest.dto.provider.response.CampaignAnalyticsResponse;
 import com.aionn.notification.adapter.rest.mapper.provider.NotificationProviderDtoMapper;
 import com.aionn.notification.adapter.rest.support.session.CurrentAdminId;
-import com.aionn.notification.application.dto.analytics.result.AnalyticsResult;
 import com.aionn.notification.application.port.in.analytics.GetCampaignAnalyticsInputPort;
 import com.aionn.notification.application.port.in.provider.ConfigureProviderInputPort;
 import com.aionn.notification.application.port.in.provider.ListProvidersInputPort;
@@ -76,8 +76,9 @@ public class NotificationProviderController {
         @GetMapping("/analytics")
         @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
         @Operation(summary = "Campaign analytics")
-        public ResponseEntity<ApiResponse<AnalyticsResult>> analytics(@RequestParam String campaignId) {
+        public ResponseEntity<ApiResponse<CampaignAnalyticsResponse>> analytics(@RequestParam String campaignId) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                getCampaignAnalyticsInputPort.execute(campaignId), "Analytics generated"));
+                                dtoMapper.toResponse(getCampaignAnalyticsInputPort.execute(campaignId)),
+                                "Analytics generated"));
         }
 }

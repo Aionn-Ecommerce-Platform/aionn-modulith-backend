@@ -68,19 +68,6 @@ public class Conversation extends AggregateRoot {
             String merchantId,
             String merchantDisplayName,
             String merchantAvatarUrl,
-            String startedBy) {
-        return start(conversationId, buyerId, buyerDisplayName, buyerAvatarUrl, merchantId,
-                merchantDisplayName, merchantAvatarUrl, startedBy, Clock.systemUTC());
-    }
-
-    public static Conversation start(
-            String conversationId,
-            String buyerId,
-            String buyerDisplayName,
-            String buyerAvatarUrl,
-            String merchantId,
-            String merchantDisplayName,
-            String merchantAvatarUrl,
             String startedBy,
             Clock clock) {
         if (buyerId.equals(merchantId)) {
@@ -112,10 +99,6 @@ public class Conversation extends AggregateRoot {
                 .toList();
     }
 
-    public void joinSupport(String supportUserId, String displayName, String avatarUrl) {
-        joinSupport(supportUserId, displayName, avatarUrl, Clock.systemUTC());
-    }
-
     public void joinSupport(String supportUserId, String displayName, String avatarUrl, Clock clock) {
         Optional<Participant> existing = participants.stream()
                 .filter(p -> p.userId().equals(supportUserId))
@@ -126,10 +109,6 @@ public class Conversation extends AggregateRoot {
         participants.add(new Participant(supportUserId, ParticipantRole.SUPPORT,
                 displayName, avatarUrl, now, null));
         this.updatedAt = now;
-    }
-
-    public void recordMessageSent(String messageId, MessageType type, String preview, String senderId) {
-        recordMessageSent(messageId, type, preview, senderId, Clock.systemUTC());
     }
 
     public void recordMessageSent(String messageId, MessageType type, String preview, String senderId,
@@ -145,10 +124,6 @@ public class Conversation extends AggregateRoot {
         Instant now = clock.instant();
         this.lastMessageAt = now;
         this.updatedAt = now;
-    }
-
-    public void markRead(String userId) {
-        markRead(userId, Clock.systemUTC());
     }
 
     public void markRead(String userId, Clock clock) {
@@ -169,18 +144,10 @@ public class Conversation extends AggregateRoot {
         return (int) Math.max(0, messagesByOther);
     }
 
-    public void archive(String userId) {
-        archive(userId, Clock.systemUTC());
-    }
-
     public void archive(String userId, Clock clock) {
         requireParticipant(userId);
         this.archived = true;
         this.updatedAt = clock.instant();
-    }
-
-    public void unarchive(String userId) {
-        unarchive(userId, Clock.systemUTC());
     }
 
     public void unarchive(String userId, Clock clock) {

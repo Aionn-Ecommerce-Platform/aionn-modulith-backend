@@ -38,7 +38,7 @@ class FlashSaleRegistrationTest {
     @Test
     void submitWithoutClockUsesSystemTime() {
         FlashSaleRegistration reg = FlashSaleRegistration.submit("reg-2", "camp-1", "mer-1",
-                "prod-1", "sku-1", SALE_PRICE, 5);
+                "prod-1", "sku-1", SALE_PRICE, 5, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(reg.getSubmittedAt()).isNotNull();
     }
@@ -85,7 +85,7 @@ class FlashSaleRegistrationTest {
     void approveWithoutClockUsesSystemTime() {
         FlashSaleRegistration reg = pending();
 
-        reg.approve("admin-1", REGULAR_PRICE);
+        reg.approve("admin-1", REGULAR_PRICE, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(reg.getDecidedAt()).isNotNull();
     }
@@ -115,7 +115,7 @@ class FlashSaleRegistrationTest {
     void rejectWithoutClockUsesSystemTime() {
         FlashSaleRegistration reg = pending();
 
-        reg.reject("admin-1", "nope");
+        reg.reject("admin-1", "nope", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(reg.getDecidedAt()).isNotNull();
     }
@@ -135,7 +135,7 @@ class FlashSaleRegistrationTest {
     void cancelWithoutClockUsesSystemTime() {
         FlashSaleRegistration reg = pending();
 
-        reg.cancel("mer-1");
+        reg.cancel("mer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(reg.getUpdatedAt()).isNotNull();
     }
@@ -173,7 +173,7 @@ class FlashSaleRegistrationTest {
         FlashSaleRegistration reg = pending();
         reg.approve("admin-1", REGULAR_PRICE, CLOCK);
 
-        reg.consumeStock(10);
+        reg.consumeStock(10, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(reg.hasStockLeft()).isFalse();
     }

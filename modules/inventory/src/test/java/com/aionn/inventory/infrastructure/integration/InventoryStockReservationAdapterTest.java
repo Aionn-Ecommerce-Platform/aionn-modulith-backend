@@ -40,7 +40,7 @@ class InventoryStockReservationAdapterTest {
 
     private static StockReservation reserved(String reservationId, String skuId) {
         StockReservation reservation = StockReservation.reserve(
-                reservationId, skuId, "WH_1", "ORDER_1", 2, Instant.now().plusSeconds(300));
+                reservationId, skuId, "WH_1", "ORDER_1", 2, Instant.now().plusSeconds(300), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         reservation.pullEvents();
         return reservation;
     }

@@ -20,6 +20,7 @@ import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
 import com.aionn.identity.application.port.out.auth.TokenBlacklistPort;
 import com.aionn.identity.application.port.out.observability.IdentityMetricsPort;
 import com.aionn.identity.application.port.out.security.MfaPersistencePort;
+import com.aionn.identity.application.port.out.security.AbuseRateLimiterPort;
 import com.aionn.identity.application.port.out.security.PasswordHasherPort;
 import com.aionn.identity.application.port.out.security.TotpManagerPort;
 import com.aionn.identity.application.port.out.security.UserSecurityPort;
@@ -36,6 +37,7 @@ import com.aionn.identity.domain.valueobject.AuthProvider;
 import com.aionn.identity.domain.valueobject.AuthSessionStatus;
 import com.aionn.identity.domain.valueobject.UserStatus;
 import com.aionn.sharedkernel.util.IdGenerator;
+import com.aionn.sharedkernel.util.Sha256Hasher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -48,6 +50,7 @@ import java.time.Instant;
 import java.time.Clock;
 import java.util.Base64;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -55,6 +58,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional
 public class AuthService {
+
+    private static final int TOTP_LENGTH = 6;
+    private static final int BACKUP_CODE_LENGTH = 8;
+    private static final int MAX_SOCIAL_USERNAME_LENGTH = 50;
+    private static final int SOCIAL_USERNAME_SUFFIX_LENGTH = 10;
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
@@ -72,10 +80,12 @@ public class AuthService {
     private final AuthResultMapper authResultMapper;
     private final TokenBlacklistPort tokenBlacklist;
     private final IdentityMetricsPort identityMetrics;
+    private final AbuseRateLimiterPort abuseRateLimiter;
 
     private final Clock clock;
     public LoginResult login(LoginCommand command) {
         log.debug("Login attempt for identity: {}", command.identity());
+        enforceLoginRateLimit(command);
         IdentityUser user = validateCredentials(command.identity(), command.password());
         validateMfa(user.getUserId(), command.mfaCode());
         userSecurityPort.resetFailedLoginAttempts(user.getUserId());
@@ -113,7 +123,8 @@ public class AuthService {
                     IdGenerator.ulid(),
                     savedUser.getUserId(),
                     provider,
-                    providerUserId);
+                    providerUserId,
+                    clock);
             socialLinkPersistencePort.save(newSocialLink, savedUser.getUserId());
             user = savedUser;
             isNewUser = true;
@@ -158,7 +169,8 @@ public class AuthService {
                 IdGenerator.ulid(),
                 user.getUserId(),
                 provider,
-                providerUserId);
+                providerUserId,
+                clock);
         return socialLinkPersistencePort.save(domainSocialLink, user.getUserId());
     }
 
@@ -298,13 +310,15 @@ public class AuthService {
 
         boolean matched = false;
         if (userSecurity.mfaSecret() != null && !userSecurity.mfaSecret().isBlank()) {
-            matched = mfaPersistencePort.findActiveBackupCodes(userId).stream()
-                    .filter(code -> passwordHasher.matches(mfaCode, code.codeHash()))
-                    .findFirst()
-                    .map(code -> mfaPersistencePort.markBackupCodeUsed(code.backupCodeId(), nowUtc()))
-                    .orElse(false);
-            if (!matched) {
-                matched = totpManager.verifyCode(userSecurity.mfaSecret(), mfaCode);
+            String normalizedCode = mfaCode.trim();
+            if (isNumericCode(normalizedCode, TOTP_LENGTH)) {
+                matched = totpManager.verifyCode(userSecurity.mfaSecret(), normalizedCode);
+            } else if (isNumericCode(normalizedCode, BACKUP_CODE_LENGTH)) {
+                matched = mfaPersistencePort.findActiveBackupCodes(userId).stream()
+                        .filter(code -> passwordHasher.matches(normalizedCode, code.codeHash()))
+                        .findFirst()
+                        .map(code -> mfaPersistencePort.markBackupCodeUsed(code.backupCodeId(), nowUtc()))
+                        .orElse(false);
             }
         }
 
@@ -349,7 +363,7 @@ public class AuthService {
     private IdentityUser createUserForSocial(AuthProvider provider, SocialUserProfile profile) {
         String email = (profile.email() != null && !profile.email().isBlank()) ? profile.email().trim() : null;
         if (email != null && userPersistencePort.findByIdentity(email).isPresent()) {
-            email = null;
+            throw new IdentityException(IdentityErrorCode.ACCOUNT_LINK_REQUIRED);
         }
         String username = generateSocialUsername(provider, profile);
         IdentityUser user = IdentityUser.createNew(IdGenerator.ulid(), email, null, username, clock);
@@ -368,18 +382,35 @@ public class AuthService {
             base = (provider.name().toLowerCase() + "_" + profile.providerUserId().replace(':', '_')
                     .replaceAll("[^a-zA-Z0-9_]", "")).toLowerCase();
         }
-        if (base.length() > 40) {
-            base = base.substring(0, 40);
+        String generatedId = IdGenerator.ulid();
+        String suffix = generatedId.substring(generatedId.length() - SOCIAL_USERNAME_SUFFIX_LENGTH).toLowerCase();
+        int maxBaseLength = MAX_SOCIAL_USERNAME_LENGTH - suffix.length() - 1;
+        String boundedBase = base.substring(0, Math.min(base.length(), maxBaseLength));
+        return boundedBase + "_" + suffix;
+    }
+
+    private void enforceLoginRateLimit(LoginCommand command) {
+        String identityKey = Sha256Hasher.hexDigest(command.identity().trim().toLowerCase(Locale.ROOT));
+        boolean ipAllowed = abuseRateLimiter.check("LOGIN_IP", command.ipAddress(),
+                authPolicy.getLoginIpMaxAttempts(), authPolicy.getLoginRateLimitWindowSeconds());
+        boolean identityAllowed = abuseRateLimiter.check("LOGIN_IDENTITY", identityKey,
+                authPolicy.getLoginIdentityMaxAttempts(), authPolicy.getLoginRateLimitWindowSeconds());
+        if (!ipAllowed || !identityAllowed) {
+            identityMetrics.loginAttempt("rate_limited");
+            throw new IdentityException(IdentityErrorCode.RATE_LIMIT_EXCEEDED);
         }
-        String candidate = base;
-        int suffix = 1;
-        while (userPersistencePort.existsByUsername(candidate)) {
-            candidate = base + "_" + suffix++;
-            if (candidate.length() > 50) {
-                candidate = candidate.substring(0, 50);
+    }
+
+    private static boolean isNumericCode(String value, int expectedLength) {
+        if (value.length() != expectedLength) {
+            return false;
+        }
+        for (int index = 0; index < value.length(); index++) {
+            if (!Character.isDigit(value.charAt(index))) {
+                return false;
             }
         }
-        return candidate;
+        return true;
     }
 
     private String sanitizeUsernameBase(String email, String displayName) {

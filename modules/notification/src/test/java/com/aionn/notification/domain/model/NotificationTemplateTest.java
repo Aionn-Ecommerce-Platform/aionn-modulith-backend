@@ -17,7 +17,7 @@ class NotificationTemplateTest {
     void create_extractsPlaceholdersAndRecordsEvent() {
         NotificationTemplate t = NotificationTemplate.create("tpl", "evt",
                 NotificationChannel.EMAIL, NotificationCategory.SYSTEM, "vi-VN",
-                "Hi {{name}}", "Hello {{name}}, code {{code}}");
+                "Hi {{name}}", "Hello {{name}}, code {{code}}", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         assertThat(t.getPlaceholders()).containsExactly("name", "code");
         assertThat(t.pullEvents())
                 .anyMatch(env -> env.payload() instanceof NotificationEvents.TemplateCreated);
@@ -27,7 +27,7 @@ class NotificationTemplateTest {
     void render_replacesPlaceholders() {
         NotificationTemplate t = NotificationTemplate.create("tpl", "evt",
                 NotificationChannel.EMAIL, NotificationCategory.SYSTEM, "vi-VN",
-                "Hi {{name}}", "Hello {{name}}, code {{code}}");
+                "Hi {{name}}", "Hello {{name}}, code {{code}}", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         NotificationTemplate.Rendered r = t.render(Map.of("name", "Phat", "code", "123"));
         assertThat(r.subject()).isEqualTo("Hi Phat");
         assertThat(r.content()).isEqualTo("Hello Phat, code 123");
@@ -37,7 +37,7 @@ class NotificationTemplateTest {
     void render_missingPlaceholder_throws() {
         NotificationTemplate t = NotificationTemplate.create("tpl", "evt",
                 NotificationChannel.EMAIL, NotificationCategory.SYSTEM, "vi-VN",
-                null, "Hello {{name}}");
+                null, "Hello {{name}}", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         assertThatThrownBy(() -> t.render(Map.of()))
                 .isInstanceOf(NotificationException.class);
     }
@@ -46,9 +46,9 @@ class NotificationTemplateTest {
     void update_bumpsVersionAndExtractsNewPlaceholders() {
         NotificationTemplate t = NotificationTemplate.create("tpl", "evt",
                 NotificationChannel.EMAIL, NotificationCategory.SYSTEM, "vi-VN",
-                "Hi", "Hello {{name}}");
+                "Hi", "Hello {{name}}", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         t.pullEvents();
-        t.update("Subj", "Hi {{name}} from {{shop}}");
+        t.update("Subj", "Hi {{name}} from {{shop}}", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         assertThat(t.getVersion()).isEqualTo(2);
         assertThat(t.getPlaceholders()).containsExactly("name", "shop");
         assertThat(t.pullEvents())

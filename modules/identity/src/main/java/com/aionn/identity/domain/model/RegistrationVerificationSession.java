@@ -3,9 +3,6 @@ package com.aionn.identity.domain.model;
 import com.aionn.identity.domain.exception.IdentityErrorCode;
 import com.aionn.identity.domain.exception.IdentityException;
 import com.aionn.sharedkernel.util.IdGenerator;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.io.Serializable;
 import java.time.Clock;
 import java.time.Instant;
@@ -26,18 +23,17 @@ public class RegistrationVerificationSession implements Serializable {
     private String verificationToken;
     private Instant verifiedAt;
 
-    @JsonCreator
     public RegistrationVerificationSession(
-            @JsonProperty("regId") String regId,
-            @JsonProperty("phoneNumber") String phoneNumber,
-            @JsonProperty("otpCode") String otpCode,
-            @JsonProperty("attemptCount") int attemptCount,
-            @JsonProperty("maxVerifyAttempts") int maxVerifyAttempts,
-            @JsonProperty("resendAvailableAt") Instant resendAvailableAt,
-            @JsonProperty("expiredAt") Instant expiredAt,
-            @JsonProperty("verified") boolean verified,
-            @JsonProperty("verificationToken") String verificationToken,
-            @JsonProperty("verifiedAt") Instant verifiedAt) {
+            String regId,
+            String phoneNumber,
+            String otpCode,
+            int attemptCount,
+            int maxVerifyAttempts,
+            Instant resendAvailableAt,
+            Instant expiredAt,
+            boolean verified,
+            String verificationToken,
+            Instant verifiedAt) {
         this.regId = regId;
         this.phoneNumber = phoneNumber;
         this.otpCode = otpCode;
@@ -50,20 +46,12 @@ public class RegistrationVerificationSession implements Serializable {
         this.verifiedAt = verifiedAt;
     }
 
-    public boolean isExpired() {
-        return isExpired(Clock.systemUTC());
-    }
-
     public boolean isExpired(Clock clock) {
         return expiredAt != null && !expiredAt.isAfter(clock.instant());
     }
 
     public boolean isLocked() {
         return attemptCount >= maxVerifyAttempts;
-    }
-
-    public void verify(String inputOtpCode) {
-        verify(inputOtpCode, Clock.systemUTC());
     }
 
     public void verify(String inputOtpCode, Clock clock) {
@@ -88,10 +76,6 @@ public class RegistrationVerificationSession implements Serializable {
         otpCode = null;
         verificationToken = IdGenerator.ulid();
         verifiedAt = clock.instant();
-    }
-
-    public void resend(String newOtpCode, Instant newResendAvailableAt, Instant newExpiredAt) {
-        resend(newOtpCode, newResendAvailableAt, newExpiredAt, Clock.systemUTC());
     }
 
     public void resend(String newOtpCode, Instant newResendAvailableAt, Instant newExpiredAt, Clock clock) {

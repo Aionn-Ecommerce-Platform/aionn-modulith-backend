@@ -46,20 +46,12 @@ public class UserVoucher extends AggregateRoot {
         this.updatedAt = updatedAt;
     }
 
-    public static UserVoucher claim(String userVoucherId, String voucherCode, String userId) {
-        return claim(userVoucherId, voucherCode, userId, Clock.systemUTC());
-    }
-
     public static UserVoucher claim(String userVoucherId, String voucherCode, String userId, Clock clock) {
         Instant now = clock.instant();
         UserVoucher uv = new UserVoucher(userVoucherId, voucherCode, userId,
                 UserVoucherStatus.CLAIMED, null, null, now, null, null, null, null, now);
         uv.registerEvent(new PromotionEvents.VoucherClaimed(voucherCode, userId, now, now));
         return uv;
-    }
-
-    public void reserve(String orderId, Instant expiresAt) {
-        reserve(orderId, expiresAt, Clock.systemUTC());
     }
 
     public void reserve(String orderId, Instant expiresAt, Clock clock) {
@@ -75,10 +67,6 @@ public class UserVoucher extends AggregateRoot {
                 reservedAt, expiresAt, reservedAt));
     }
 
-    public void apply(Money amount) {
-        apply(amount, Clock.systemUTC());
-    }
-
     public void apply(Money amount, Clock clock) {
         Guard.require(status == UserVoucherStatus.RESERVED,
                 () -> new PromotionException(PromotionErrorCode.USER_VOUCHER_INVALID_STATE,
@@ -92,14 +80,10 @@ public class UserVoucher extends AggregateRoot {
                 amount.amount(), amount.currency(), appliedAt, appliedAt));
     }
 
-    public void release(String reason) {
-        release(reason, Clock.systemUTC());
-    }
-
     public void release(String reason, Clock clock) {
-        Guard.require(status == UserVoucherStatus.RESERVED,
+        Guard.require(status == UserVoucherStatus.RESERVED || status == UserVoucherStatus.APPLIED,
                 () -> new PromotionException(PromotionErrorCode.USER_VOUCHER_INVALID_STATE,
-                        "Only RESERVED vouchers can be released"));
+                        "Only RESERVED or APPLIED vouchers can be released"));
         String orderId = reservedOrderId;
         this.status = UserVoucherStatus.RELEASED;
         Instant now = clock.instant();
@@ -109,10 +93,6 @@ public class UserVoucher extends AggregateRoot {
         this.reservedAt = null;
         this.reservedExpiresAt = null;
         registerEvent(new PromotionEvents.VoucherReleased(voucherCode, userId, orderId, reason, now, now));
-    }
-
-    public void expire() {
-        expire(Clock.systemUTC());
     }
 
     public void expire(Clock clock) {

@@ -16,6 +16,7 @@ import com.aionn.catalog.application.dto.review.query.GetReportedReviewsQuery;
 import com.aionn.catalog.application.dto.review.query.GetReviewsByProductQuery;
 import com.aionn.catalog.application.dto.review.result.RatingSummary;
 import com.aionn.catalog.application.dto.review.result.ReviewEligibilityResult;
+import com.aionn.catalog.adapter.rest.dto.review.response.ReviewEligibilityResponse;
 import com.aionn.catalog.application.dto.review.result.ReviewResult;
 import com.aionn.catalog.application.port.in.review.AdminDeleteReviewInputPort;
 import com.aionn.catalog.application.port.in.review.CheckReviewEligibilityInputPort;
@@ -215,12 +216,12 @@ public class ReviewController {
         @GetMapping("/products/{productId}/reviews/eligibility")
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Check if authenticated user can review this product")
-        public ResponseEntity<ApiResponse<ReviewEligibilityResult>> checkEligibility(
+        public ResponseEntity<ApiResponse<ReviewEligibilityResponse>> checkEligibility(
                         @CurrentOwnerId String userId,
                         @PathVariable String productId) {
+                ReviewEligibilityResult result = checkReviewEligibilityInputPort
+                                .execute(new CheckReviewEligibilityQuery(userId, productId));
                 return ResponseEntity.ok(ApiResponse.success(
-                                checkReviewEligibilityInputPort
-                                                .execute(new CheckReviewEligibilityQuery(userId, productId)),
-                                "Eligibility checked"));
+                                reviewDtoMapper.toResponse(result), "Eligibility checked"));
         }
 }

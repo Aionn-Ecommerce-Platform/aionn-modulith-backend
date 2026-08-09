@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 class LocalDevKycVerificationAdapterTest {
 
-    private final IdentityUser user = IdentityUser.createNew("user-1", "user@example.com", "+8490", "john");
+    private final IdentityUser user = IdentityUser.createNew("user-1", "user@example.com", "+8490", "john", com.aionn.identity.TestClocks.FIXED);
 
     private LocalDevKycVerificationAdapter adapter;
 

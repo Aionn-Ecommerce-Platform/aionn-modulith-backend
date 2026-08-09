@@ -26,7 +26,7 @@ public class PaymentInitiateAdapter implements PaymentInitiatePort {
                 ? PaymentGatewayKind.STRIPE
                 : PaymentGatewayKind.valueOf(gatewayKind.toUpperCase());
         PaymentInitiation initiation = paymentService.initiate(new InitiatePaymentCommand(
-                orderId, userId, paymentMethodId, amount, currency, kind, idempotencyKey));
+                orderId, userId, paymentMethodId, kind, idempotencyKey));
         Payment payment = initiation.payment();
         boolean captured = payment.getStatus() == PaymentStatus.PAID;
         return new InitResult(payment.getPaymentId(), initiation.redirectUrl(), captured);
@@ -34,6 +34,6 @@ public class PaymentInitiateAdapter implements PaymentInitiatePort {
 
     @Override
     public void refund(String paymentId, BigDecimal amount, String currency, String reason, String idempotencyKey) {
-        paymentService.refund(new RefundPaymentCommand(paymentId, amount, currency, reason));
+        paymentService.refund(new RefundPaymentCommand(paymentId, amount, currency, reason, idempotencyKey));
     }
 }

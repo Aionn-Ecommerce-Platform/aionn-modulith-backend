@@ -18,11 +18,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.context.i18n.LocaleContextHolder;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -34,6 +36,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -163,6 +166,48 @@ class NotificationDispatchServiceTest {
     }
 
     @Test
+    void resolvesTheEnglishLocaleFromTheRequestContextWhenNoneIsRequested() {
+        LocaleContextHolder.setLocale(Locale.ENGLISH);
+        try {
+            when(subscriptionRepository.findByUserId("user-1"))
+                    .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
+            when(templateRepository.findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "en-US"))
+                    .thenReturn(Optional.of(template(NotificationChannel.EMAIL)));
+            echoSave();
+
+            List<Notification> prepared = service().prepareByEvent(new NotificationCommands.SendByEvent(
+                    "user-1", EVENT, NotificationCategory.SECURITY,
+                    List.of(NotificationChannel.EMAIL), null, null, Map.of("name", "Tran")));
+
+            assertThat(prepared).hasSize(1);
+            verify(templateRepository).findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "en-US");
+        } finally {
+            LocaleContextHolder.resetLocaleContext();
+        }
+    }
+
+    @Test
+    void fallsBackToTheDefaultLocaleForANonEnglishRequestContext() {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag("vi"));
+        try {
+            when(subscriptionRepository.findByUserId("user-1"))
+                    .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
+            when(templateRepository.findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN"))
+                    .thenReturn(Optional.of(template(NotificationChannel.EMAIL)));
+            echoSave();
+
+            List<Notification> prepared = service().prepareByEvent(new NotificationCommands.SendByEvent(
+                    "user-1", EVENT, NotificationCategory.SECURITY,
+                    List.of(NotificationChannel.EMAIL), null, null, Map.of("name", "Tran")));
+
+            assertThat(prepared).hasSize(1);
+            verify(templateRepository).findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN");
+        } finally {
+            LocaleContextHolder.resetLocaleContext();
+        }
+    }
+
+    @Test
     void prepareDirectUsesExplicitChannel() {
         when(templateRepository.findByEventChannelLocale(EVENT, NotificationChannel.SMS, "vi-VN"))
                 .thenReturn(Optional.of(template(NotificationChannel.SMS)));
@@ -228,6 +273,31 @@ class NotificationDispatchServiceTest {
 
         assertThat(notification.getStatus()).isEqualTo(NotificationStatus.FAILED);
         assertThat(notification.canRetry()).isFalse();
+    }
+
+    @Test
+    void recordDeliveryUnknownFailsTheNotificationWithoutRepublishing() {
+        when(notificationRepository.findById("noti-1")).thenReturn(Optional.of(pending("noti-1")));
+        echoSave();
+
+        Notification saved = service().recordDeliveryUnknown("noti-1", "gateway timeout");
+
+        assertThat(saved.getStatus()).isEqualTo(NotificationStatus.FAILED);
+        assertThat(saved.getRetryCount()).isEqualTo(1);
+        assertThat(saved.getLastFailureReason()).isEqualTo("DELIVERY_OUTCOME_UNKNOWN:gateway timeout");
+        // An ambiguous provider outcome must not fan out a failure event that could
+        // trigger another delivery attempt for a message that may already have been sent.
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void recordDeliveryUnknownThrowsWhenNotificationMissing() {
+        when(notificationRepository.findById("nope")).thenReturn(Optional.empty());
+
+        NotificationDispatchService service = service();
+
+        assertThatThrownBy(() -> service.recordDeliveryUnknown("nope", "gateway timeout"))
+                .isInstanceOf(NotificationException.class);
     }
 
     @Test

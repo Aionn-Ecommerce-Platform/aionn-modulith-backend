@@ -11,14 +11,14 @@ class UserBlockTest {
 
     @Test
     void blockSelfIsRejected() {
-        assertThatThrownBy(() -> UserBlock.block("blk-1", "u1", "u1", "spam"))
+        assertThatThrownBy(() -> UserBlock.block("blk-1", "u1", "u1", "spam", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
                 .isInstanceOf(ChatException.class)
                 .extracting("errorCode").isEqualTo(ChatErrorCode.BLOCK_SELF.getCode());
     }
 
     @Test
     void blockCreatesActiveRecordAndRecordsEvent() {
-        UserBlock b = UserBlock.block("blk-1", "u1", "u2", "spam");
+        UserBlock b = UserBlock.block("blk-1", "u1", "u2", "spam", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(b.isActive()).isTrue();
         assertThat(b.getBlockerId()).isEqualTo("u1");
@@ -29,11 +29,11 @@ class UserBlockTest {
 
     @Test
     void unblockMakesInactiveAndIsIdempotent() {
-        UserBlock b = UserBlock.block("blk-1", "u1", "u2", "spam");
+        UserBlock b = UserBlock.block("blk-1", "u1", "u2", "spam", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         b.pullEvents();
 
-        b.unblock();
-        b.unblock(); // idempotent
+        b.unblock(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        b.unblock(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)); // idempotent
 
         assertThat(b.isActive()).isFalse();
         assertThat(b.peekEvents()).hasSize(1);

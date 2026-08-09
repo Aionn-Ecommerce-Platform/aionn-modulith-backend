@@ -31,7 +31,7 @@ class CategoryPersistenceAdapterTest {
 
     @Test
     void saveMapsThroughEntityAndBack() {
-        Category domain = Category.create(CATEGORY_ID, null, "A", "a");
+        Category domain = Category.create(CATEGORY_ID, null, "A", "a", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         CategoryEntity entity = new CategoryEntity();
         when(mapper.toEntity(domain)).thenReturn(entity);
         when(jpa.save(entity)).thenReturn(entity);
@@ -43,7 +43,7 @@ class CategoryPersistenceAdapterTest {
     @Test
     void findByIdReturnsMappedDomainWhenPresent() {
         CategoryEntity entity = new CategoryEntity();
-        Category domain = Category.create(CATEGORY_ID, null, "A", "a");
+        Category domain = Category.create(CATEGORY_ID, null, "A", "a", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(jpa.findById(CATEGORY_ID)).thenReturn(Optional.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -81,7 +81,7 @@ class CategoryPersistenceAdapterTest {
     @Test
     void findActiveRootsMapsResults() {
         CategoryEntity entity = new CategoryEntity();
-        Category domain = Category.create(CATEGORY_ID, null, "A", "a");
+        Category domain = Category.create(CATEGORY_ID, null, "A", "a", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(jpa.findActiveRoots()).thenReturn(List.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -91,7 +91,7 @@ class CategoryPersistenceAdapterTest {
     @Test
     void findActiveChildrenMapsResults() {
         CategoryEntity entity = new CategoryEntity();
-        Category domain = Category.create(CATEGORY_ID, "parent", "A", "a");
+        Category domain = Category.create(CATEGORY_ID, "parent", "A", "a", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(jpa.findActiveByParentId("parent")).thenReturn(List.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -101,7 +101,7 @@ class CategoryPersistenceAdapterTest {
     @Test
     void findAllActiveMapsResults() {
         CategoryEntity entity = new CategoryEntity();
-        Category domain = Category.create(CATEGORY_ID, null, "A", "a");
+        Category domain = Category.create(CATEGORY_ID, null, "A", "a", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(jpa.findAllActive()).thenReturn(List.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 

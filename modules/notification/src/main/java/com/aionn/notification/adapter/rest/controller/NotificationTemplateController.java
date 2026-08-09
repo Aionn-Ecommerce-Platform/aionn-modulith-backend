@@ -12,6 +12,8 @@ import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -73,7 +75,7 @@ public class NotificationTemplateController {
     @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
     @Operation(summary = "List templates")
     public ResponseEntity<ApiResponse<List<TemplateResponse>>> list(
-            @RequestParam(defaultValue = "100") int limit) {
+            @RequestParam(defaultValue = "100") @Min(1) @Max(100) int limit) {
         return ResponseEntity.ok(ApiResponse.success(
                 dtoMapper.toResponses(listTemplatesInputPort.execute(limit)),
                 "Templates fetched"));

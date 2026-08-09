@@ -48,6 +48,7 @@ public class ProductionProviderConfigurationValidator {
 
         require(errors, "GHN_API_TOKEN", "shipping.carrier.ghn.token");
         require(errors, "GHN_SHOP_ID", "shipping.carrier.ghn.shop-id");
+        require(errors, "GHN_WEBHOOK_SECRET", "shipping.carrier.ghn.webhook-secret");
         rejectLoggingProvider(errors, "notification.email.provider");
         rejectLoggingProvider(errors, "notification.sms.provider");
         rejectLoggingProvider(errors, "notification.push.provider");
@@ -62,6 +63,13 @@ public class ProductionProviderConfigurationValidator {
         rejectLocalhost(errors, "payment.provider.vnpay.return-url");
         rejectLocalhost(errors, "payment.provider.vnpay.frontend-return-url");
         rejectLocalhost(errors, "chat.websocket.allowed-origins");
+        require(errors, "SECURITY_CORS_ALLOWED_ORIGINS", "security.cors.allowed-origins");
+        rejectLocalhost(errors, "security.cors.allowed-origins");
+
+        if ("opensearch".equalsIgnoreCase(environment.getProperty("catalog.search.provider", "opensearch"))) {
+            require(errors, "CATALOG_SEARCH_OPENSEARCH_HOST", "catalog.search.opensearch.host");
+            rejectLocalhost(errors, "catalog.search.opensearch.host");
+        }
 
         if (!errors.isEmpty()) {
             throw new IllegalStateException("Invalid production provider configuration: " + String.join("; ", errors));

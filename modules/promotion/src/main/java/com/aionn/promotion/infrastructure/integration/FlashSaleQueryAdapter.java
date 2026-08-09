@@ -11,6 +11,7 @@ import com.aionn.sharedkernel.integration.port.promotion.FlashSaleQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -82,10 +83,8 @@ public class FlashSaleQueryAdapter implements FlashSaleQueryPort {
     public List<ActiveFlashSaleCampaign> listActiveCampaigns(int limit) {
         int safe = Math.max(1, Math.min(limit, 50));
         List<ActiveFlashSaleCampaign> out = new ArrayList<>();
-        campaignJpaRepository.findAll().stream()
-                .filter(c -> CampaignType.FLASH_SALE.name().equals(c.getType()))
-                .filter(c -> CampaignStatus.RUNNING.name().equals(c.getStatus()))
-                .limit(safe)
+        campaignJpaRepository.findByTypeAndStatus(
+                        CampaignType.FLASH_SALE.name(), CampaignStatus.RUNNING.name(), PageRequest.of(0, safe)).stream()
                 .forEach(c -> {
                     List<FlashSaleRegistration> regs = registrationRepository
                             .findByCampaign(c.getCampaignId(),

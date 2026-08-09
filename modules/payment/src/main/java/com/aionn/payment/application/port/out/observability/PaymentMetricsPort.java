@@ -11,4 +11,6 @@ public interface PaymentMetricsPort {
     void providerOutcome(String gateway, String operation, String outcome);
 
     void reconciliation(String gateway, int matched, int mismatched);
+
+    void settlementReconciliation(long matched, long mismatched);
 }

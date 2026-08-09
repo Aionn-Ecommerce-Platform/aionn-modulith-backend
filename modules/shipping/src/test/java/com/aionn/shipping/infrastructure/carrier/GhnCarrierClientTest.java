@@ -245,6 +245,24 @@ class GhnCarrierClientTest {
     }
 
     @Test
+    void registerRejectsFractionalCodAsStableDomainError() {
+        assertThatThrownBy(() -> client().register("SHP1", "ORD1", address(), dimensions(),
+                new BigDecimal("1.5"), BigDecimal.ZERO, "VND"))
+                .isInstanceOf(ShippingException.class)
+                .extracting("errorCode")
+                .isEqualTo(ShippingErrorCode.INVALID_ARGUMENT.getCode());
+    }
+
+    @Test
+    void registerRejectsNonVndCodAsStableDomainError() {
+        assertThatThrownBy(() -> client().register("SHP1", "ORD1", address(), dimensions(),
+                BigDecimal.ONE, BigDecimal.ZERO, "USD"))
+                .isInstanceOf(ShippingException.class)
+                .extracting("errorCode")
+                .isEqualTo(ShippingErrorCode.INVALID_ARGUMENT.getCode());
+    }
+
+    @Test
     void registerFailsWhenOrderCodeMissing() {
         stub.stub(CREATE_PATH, "{\"code\":200,\"data\":{\"fee\":1}}");
 

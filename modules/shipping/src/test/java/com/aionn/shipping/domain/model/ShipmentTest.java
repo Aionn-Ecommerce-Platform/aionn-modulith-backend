@@ -24,7 +24,7 @@ class ShipmentTest {
 
     private Shipment newRequested() {
         return Shipment.request("S_1", "ORDER_1", "M_1", "U_1", ADDRESS, DIMENSIONS,
-                BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND");
+                BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
     }
 
     @Test
@@ -40,7 +40,7 @@ class ShipmentTest {
     @Test
     void requestRejectsBlankOrderId() {
         assertThatThrownBy(() -> Shipment.request("S_1", " ", "M_1", "U_1",
-                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND"))
+                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
                 .isInstanceOf(ShippingException.class)
                 .extracting("errorCode")
                 .isEqualTo(ShippingErrorCode.INVALID_ARGUMENT.getCode());
@@ -51,7 +51,7 @@ class ShipmentTest {
         Shipment s = newRequested();
         s.pullEvents();
 
-        s.registerWithCarrier("TRACK_1", "CARRIER_1", Instant.now().plusSeconds(86400));
+        s.registerWithCarrier("TRACK_1", "CARRIER_1", Instant.now().plusSeconds(86400), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(s.getStatus()).isEqualTo(ShipmentStatus.REGISTERED);
         assertThat(s.getTrackingCode()).isEqualTo("TRACK_1");
@@ -63,7 +63,7 @@ class ShipmentTest {
     void fetchLabelRequiresRegisteredOrPickedUpStatus() {
         Shipment s = newRequested();
 
-        assertThatThrownBy(() -> s.fetchLabel("https://label"))
+        assertThatThrownBy(() -> s.fetchLabel("https://label", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
                 .isInstanceOf(ShippingException.class)
                 .extracting("errorCode")
                 .isEqualTo(ShippingErrorCode.SHIPMENT_INVALID_STATE.getCode());
@@ -72,10 +72,10 @@ class ShipmentTest {
     @Test
     void cancelRejectedAfterPickup() {
         Shipment s = newRequested();
-        s.registerWithCarrier("TRACK_1", "CARRIER_1", null);
-        s.markPickedUp("WH_1");
+        s.registerWithCarrier("TRACK_1", "CARRIER_1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        s.markPickedUp("WH_1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
-        assertThatThrownBy(() -> s.cancel("buyer"))
+        assertThatThrownBy(() -> s.cancel("buyer", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
                 .isInstanceOf(ShippingException.class)
                 .extracting("errorCode")
                 .isEqualTo(ShippingErrorCode.SHIPMENT_ALREADY_PICKED_UP.getCode());
@@ -86,7 +86,7 @@ class ShipmentTest {
         Shipment s = newRequested();
         s.pullEvents();
 
-        s.cancel("buyer");
+        s.cancel("buyer", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(s.getStatus()).isEqualTo(ShipmentStatus.CANCELLED);
         assertThat(s.peekEvents())
@@ -114,12 +114,12 @@ class ShipmentTest {
     @Test
     void recordDeliveryFailureIncrementsAttemptCount() {
         Shipment s = newRequested();
-        s.registerWithCarrier("TRACK_1", "CARRIER_1", null);
-        s.markPickedUp("WH_1");
-        s.markOutForDelivery("Driver", "0901111222");
+        s.registerWithCarrier("TRACK_1", "CARRIER_1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        s.markPickedUp("WH_1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        s.markOutForDelivery("Driver", "0901111222", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         s.pullEvents();
 
-        s.recordDeliveryFailure("buyer-not-home");
+        s.recordDeliveryFailure("buyer-not-home", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(s.getStatus()).isEqualTo(ShipmentStatus.DELIVERY_FAILED);
         assertThat(s.getAttemptCount()).isEqualTo(1);
@@ -129,12 +129,12 @@ class ShipmentTest {
     @Test
     void markDeliveredEmitsDeliveredEvent() {
         Shipment s = newRequested();
-        s.registerWithCarrier("TRACK_1", "CARRIER_1", null);
-        s.markPickedUp("WH_1");
-        s.markOutForDelivery("Driver", "0901111222");
+        s.registerWithCarrier("TRACK_1", "CARRIER_1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        s.markPickedUp("WH_1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        s.markOutForDelivery("Driver", "0901111222", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         s.pullEvents();
 
-        s.markDelivered("https://signature");
+        s.markDelivered("https://signature", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(s.getStatus()).isEqualTo(ShipmentStatus.DELIVERED);
         assertThat(s.getDeliveredAt()).isNotNull();
@@ -161,17 +161,17 @@ class ShipmentTest {
     @Test
     void fetchLabelWorksOnRegisteredStatus() {
         Shipment s = newRequested();
-        s.registerWithCarrier("TRACK_1", "CARRIER_1", null);
-        s.fetchLabel("https://label-url");
+        s.registerWithCarrier("TRACK_1", "CARRIER_1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        s.fetchLabel("https://label-url", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         assertThat(s.getLabelUrl()).isEqualTo("https://label-url");
     }
 
     @Test
     void updateInTransitStatusWorksOnPickedUpStatus() {
         Shipment s = newRequested();
-        s.registerWithCarrier("TRACK_1", "CARRIER_1", null);
-        s.markPickedUp("WH_1");
-        s.updateInTransitStatus("HUB_1", "at hub");
+        s.registerWithCarrier("TRACK_1", "CARRIER_1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        s.markPickedUp("WH_1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        s.updateInTransitStatus("HUB_1", "at hub", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         assertThat(s.getStatus()).isEqualTo(ShipmentStatus.IN_TRANSIT);
         assertThat(s.getCurrentLocation()).isEqualTo("HUB_1");
     }
@@ -179,27 +179,27 @@ class ShipmentTest {
     @Test
     void retryDeliveryWorksOnDeliveryFailure() {
         Shipment s = newRequested();
-        s.registerWithCarrier("TRACK_1", "CARRIER_1", null);
-        s.markPickedUp("WH_1");
-        s.markOutForDelivery("Driver", "090");
-        s.recordDeliveryFailure("failed");
-        s.retryDelivery();
+        s.registerWithCarrier("TRACK_1", "CARRIER_1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        s.markPickedUp("WH_1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        s.markOutForDelivery("Driver", "090", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        s.recordDeliveryFailure("failed", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        s.retryDelivery(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         assertThat(s.getStatus()).isEqualTo(ShipmentStatus.OUT_FOR_DELIVERY);
     }
 
     @Test
     void markReturnedTransitionsToReturned() {
         Shipment s = newRequested();
-        s.registerWithCarrier("TRACK_1", "CARRIER_1", null);
-        s.markPickedUp("WH_1");
-        s.markReturned("customer rejected");
+        s.registerWithCarrier("TRACK_1", "CARRIER_1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        s.markPickedUp("WH_1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        s.markReturned("customer rejected", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         assertThat(s.getStatus()).isEqualTo(ShipmentStatus.RETURNED);
     }
 
     @Test
     void resolveIssueSavesDetails() {
         Shipment s = newRequested();
-        s.resolveIssue("DELAY", "refunded delivery fee");
+        s.resolveIssue("DELAY", "refunded delivery fee", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         assertThat(s.getIssueType()).isEqualTo("DELAY");
         assertThat(s.getIssueResolution()).isEqualTo("refunded delivery fee");
     }

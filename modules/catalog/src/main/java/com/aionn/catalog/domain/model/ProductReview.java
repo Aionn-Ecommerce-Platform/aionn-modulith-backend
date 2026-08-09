@@ -90,9 +90,9 @@ public class ProductReview extends AggregateRoot {
             int rating,
             String title,
             String content,
-            List<String> imageUrls) {
-        return create(new ReviewDraft(reviewId, productId, userId, orderId, rating, title, content, imageUrls),
-                Clock.systemUTC());
+            List<String> imageUrls,
+            Clock clock) {
+        return create(new ReviewDraft(reviewId, productId, userId, orderId, rating, title, content, imageUrls), clock);
     }
 
     public static ProductReview create(ReviewDraft draft, Clock clock) {
@@ -104,10 +104,6 @@ public class ProductReview extends AggregateRoot {
         review.registerEvent(new ReviewEvents.ReviewCreated(
                 draft.reviewId(), draft.productId(), draft.userId(), draft.rating(), now));
         return review;
-    }
-
-    public void update(int newRating, String newTitle, String newContent, List<String> newImageUrls) {
-        update(newRating, newTitle, newContent, newImageUrls, Clock.systemUTC());
     }
 
     public void update(int newRating, String newTitle, String newContent, List<String> newImageUrls, Clock clock) {
@@ -129,10 +125,6 @@ public class ProductReview extends AggregateRoot {
         registerEvent(new ReviewEvents.ReviewUpdated(reviewId, rating, this.updatedAt));
     }
 
-    public void reply(String replyContent) {
-        reply(replyContent, Clock.systemUTC());
-    }
-
     public void reply(String replyContent, Clock clock) {
         if (this.status == ReviewStatus.HIDDEN || this.status == ReviewStatus.DELETED) {
             throw new CatalogException(CatalogErrorCode.REVIEW_FORBIDDEN, "Cannot reply to a hidden or deleted review");
@@ -144,18 +136,10 @@ public class ProductReview extends AggregateRoot {
         registerEvent(new ReviewEvents.MerchantReplied(reviewId, now));
     }
 
-    public void hide() {
-        hide(Clock.systemUTC());
-    }
-
     public void hide(Clock clock) {
         this.status = ReviewStatus.HIDDEN;
         this.updatedAt = clock.instant();
         registerEvent(new ReviewEvents.ReviewHidden(reviewId, this.updatedAt));
-    }
-
-    public void report(String merchantId, String reason) {
-        report(merchantId, reason, Clock.systemUTC());
     }
 
     public void report(String merchantId, String reason, Clock clock) {
@@ -174,18 +158,19 @@ public class ProductReview extends AggregateRoot {
         registerEvent(new ReviewEvents.ReviewReported(reviewId, merchantId, reason, now));
     }
 
-    public void adminDelete(String adminId) {
-        adminDelete(adminId, Clock.systemUTC());
-    }
-
     public void adminDelete(String adminId, Clock clock) {
         this.status = ReviewStatus.DELETED;
         this.updatedAt = clock.instant();
         registerEvent(new ReviewEvents.ReviewDeleted(reviewId, adminId, this.updatedAt));
     }
 
-    public void restore(String adminId) {
-        restore(adminId, Clock.systemUTC());
+    public void withdraw(String userId, Clock clock) {
+        if (!this.userId.equals(userId)) {
+            throw new CatalogException(CatalogErrorCode.REVIEW_FORBIDDEN, "User does not own this review");
+        }
+        this.status = ReviewStatus.DELETED;
+        this.updatedAt = clock.instant();
+        registerEvent(new ReviewEvents.ReviewWithdrawn(reviewId, userId, this.updatedAt));
     }
 
     public void restore(String adminId, Clock clock) {

@@ -63,8 +63,8 @@ class StockTransferServiceTest {
 
     @Test
     void initiateRejectsWhenSourceAndDestBelongToDifferentMerchants() {
-        Warehouse from = Warehouse.create("WH_FROM", "M_1", "addr-from", 1);
-        Warehouse to = Warehouse.create("WH_TO", "M_2", "addr-to", 1);
+        Warehouse from = Warehouse.create("WH_FROM", "M_1", "addr-from", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Warehouse to = Warehouse.create("WH_TO", "M_2", "addr-to", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
         when(warehouseRepository.findById("WH_FROM")).thenReturn(Optional.of(from));
         when(warehouseRepository.findById("WH_TO")).thenReturn(Optional.of(to));
@@ -91,9 +91,9 @@ class StockTransferServiceTest {
 
     @Test
     void initiateDecrementsSourceStockAndPersistsTransfer() {
-        Warehouse from = Warehouse.create("WH_FROM", "M_1", "addr-from", 1);
-        Warehouse to = Warehouse.create("WH_TO", "M_1", "addr-to", 1);
-        InventoryItem source = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_FROM"), 10);
+        Warehouse from = Warehouse.create("WH_FROM", "M_1", "addr-from", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Warehouse to = Warehouse.create("WH_TO", "M_1", "addr-to", 1, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        InventoryItem source = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_FROM"), 10, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         source.pullEvents();
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
         when(warehouseRepository.findById("WH_FROM")).thenReturn(Optional.of(from));
@@ -112,7 +112,7 @@ class StockTransferServiceTest {
     @Test
     void completeRejectsWhenTransferBelongsToDifferentMerchant() {
         StockTransfer transfer = StockTransfer.initiate(
-                "T_1", "M_1", "WH_FROM", "WH_TO", "SKU_1", 5);
+                "T_1", "M_1", "WH_FROM", "WH_TO", "SKU_1", 5, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         transfer.pullEvents();
         when(merchantQueryPort.findMerchantIdByOwnerId("attacker")).thenReturn(Optional.of("M_attacker"));
         when(transferRepository.findById("T_1")).thenReturn(Optional.of(transfer));
@@ -124,11 +124,32 @@ class StockTransferServiceTest {
     }
 
     @Test
+    void completeAtomicallyCreatesAndLocksMissingDestinationItem() {
+        StockTransfer transfer = StockTransfer.initiate(
+                "T_1", "M_1", "WH_FROM", "WH_TO", "SKU_1", 5, clock);
+        transfer.pullEvents();
+        InventoryItemKey destinationKey = new InventoryItemKey("SKU_1", "WH_TO");
+        InventoryItem destination = InventoryItem.initialize(destinationKey, 0, clock);
+        destination.pullEvents();
+        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
+        when(transferRepository.findById("T_1")).thenReturn(Optional.of(transfer));
+        when(itemRepository.createIfAbsentAndLock(destinationKey, FIXED_NOW)).thenReturn(destination);
+        when(itemRepository.save(destination)).thenReturn(destination);
+        when(transferRepository.save(transfer)).thenReturn(transfer);
+
+        StockTransfer completed = service.complete(new CompleteTransferCommand("owner-1", "T_1", 5));
+
+        assertThat(completed.getStatus().name()).isEqualTo("COMPLETED");
+        assertThat(destination.getPhysicalQty()).isEqualTo(5);
+        verify(itemRepository).createIfAbsentAndLock(destinationKey, FIXED_NOW);
+    }
+
+    @Test
     void cancelRefundsSourceStock() {
         StockTransfer transfer = StockTransfer.initiate(
-                "T_1", "M_1", "WH_FROM", "WH_TO", "SKU_1", 5);
+                "T_1", "M_1", "WH_FROM", "WH_TO", "SKU_1", 5, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         transfer.pullEvents();
-        InventoryItem source = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_FROM"), 5);
+        InventoryItem source = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_FROM"), 5, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         source.pullEvents();
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
         when(transferRepository.findById("T_1")).thenReturn(Optional.of(transfer));

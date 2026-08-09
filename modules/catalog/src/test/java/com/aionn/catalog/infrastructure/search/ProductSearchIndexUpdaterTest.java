@@ -64,10 +64,10 @@ class ProductSearchIndexUpdaterTest {
         }
 
         private Product publishedProduct() {
-                Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
-                product.categorize(List.of("c1"));
-                product.defineVariant("sku-1", Map.of("color", "red"), Money.of(new BigDecimal("100"), "VND"));
-                product.publish(ADMIN_ID);
+                Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                product.categorize(List.of("c1"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                product.defineVariant("sku-1", Map.of("color", "red"), Money.of(new BigDecimal("100"), "VND"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                product.publish(ADMIN_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 product.pullEvents();
                 return product;
         }
@@ -121,7 +121,7 @@ class ProductSearchIndexUpdaterTest {
 
         @Test
         void onProductVariantDefinedSkipsWhenNotSearchable() {
-                Product draft = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget");
+                Product draft = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(draft));
 
                 updater.onProductVariantDefined(new ProductEvents.ProductVariantDefined(
@@ -177,10 +177,10 @@ class ProductSearchIndexUpdaterTest {
         @Test
         void buildSearchDocumentIncludesFilterableAttributes() {
                 Product product = publishedProduct();
-                product.defineAttributes(Map.of("color", "red"));
+                product.defineAttributes(Map.of("color", "red"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 product.pullEvents();
                 com.aionn.catalog.domain.model.AttributeTemplate template = com.aionn.catalog.domain.model.AttributeTemplate
-                                .create("t1", "c1", List.of("color"));
+                                .create("t1", "c1", List.of("color"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(attributeTemplateRepository.findByCategoryId("c1")).thenReturn(Optional.of(template));
                 when(searchDocumentMapper.toSearchDocument(any(), any(), anyDouble(), anyLong())).thenReturn(doc());

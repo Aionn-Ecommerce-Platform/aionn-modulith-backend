@@ -5,6 +5,7 @@ import com.aionn.payment.domain.exception.PaymentErrorCode;
 import com.aionn.payment.domain.exception.PaymentException;
 import com.aionn.payment.domain.valueobject.PaymentGatewayKind;
 import com.aionn.payment.infrastructure.provider.config.VnpayProperties;
+import com.aionn.sharedkernel.util.Sha256Hasher;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -99,8 +100,7 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
 
         log.info("VNPay authorize: txnRef={} amount={} payUrl={}",
                 txnRef, vnpAmount, properties.payUrl());
-        log.debug("VNPay sign data: {}", hashData);
-        log.debug("VNPay signature: {}", secureHash);
+        log.debug("VNPay payment URL signed for transaction {}", request.paymentId());
 
         return new Authorization(false, txnRef, paymentUrl, null, null);
     }
@@ -124,7 +124,7 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
         String computedHash = hmacSHA512(properties.hashSecret(), hashData);
 
         if (!computedHash.equalsIgnoreCase(receivedHash)) {
-            log.warn("VNPay signature mismatch: expected={} received={}", computedHash, receivedHash);
+            log.warn("VNPay signature mismatch for transaction {}", sortedParams.get(VNP_TXN_REF));
             return errorEvent("SIGNATURE_INVALID", "HMAC-SHA512 signature mismatch");
         }
 
@@ -162,7 +162,7 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
 
         long vnpAmount = request.amount().multiply(BigDecimal.valueOf(100)).longValueExact();
         String createDate = clock.instant().atZone(VN_ZONE).format(VNP_DATE_FMT);
-        String requestId = "RF" + clock.millis();
+        String requestId = "RF" + Sha256Hasher.hexDigest(request.idempotencyKey()).substring(0, 24);
 
         Map<String, String> body = new HashMap<>();
         body.put("vnp_RequestId", requestId);

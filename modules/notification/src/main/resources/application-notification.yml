@@ -26,7 +26,6 @@ management:
 notification:
   defaults:
     locale: ${NOTIFICATION_DEFAULT_LOCALE:vi-VN}
-    max-retry-attempts: ${NOTIFICATION_MAX_RETRY_ATTEMPTS:3}
 
   email:
     provider: ${NOTIFICATION_EMAIL_PROVIDER:logging}

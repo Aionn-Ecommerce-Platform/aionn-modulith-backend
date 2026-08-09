@@ -32,7 +32,7 @@ class IdentityRecipientResolverAdapterTest {
     }
 
     private IdentityUser user(String email, String phone) {
-        return IdentityUser.createNew("user-1", email, phone, "username");
+        return IdentityUser.createNew("user-1", email, phone, "username", com.aionn.identity.TestClocks.FIXED);
     }
 
     @Test

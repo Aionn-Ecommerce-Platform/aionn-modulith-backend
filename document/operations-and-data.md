@@ -57,13 +57,34 @@ Operations should monitor:
 
 Do not delete dead-letter events before preserving diagnostic evidence and defining a replay or compensation plan.
 
-## 5. Distributed schedulers
+## 5. Identity and catalog data invariants
+
+- Account deletion is completed only after its grace period. Completion tombstones direct identifiers, removes authentication material, revokes sessions, and retains the opaque user ID needed by historical business records.
+- Email, phone, and username uniqueness applies to non-deleted accounts. Once deletion completes, those identifiers may be registered again without exposing whether an older account existed.
+- `product_variants.sku_id` is a globally unique technical identifier used across catalog, inventory, pricing, and ordering integrations.
+- A future merchant-facing stock code must use a separate field such as `seller_sku`, scoped by merchant. Do not change `sku_id` into a composite identity without migrating every SKU-keyed contract.
+
+## 6. Distributed schedulers
 
 Singleton business schedulers use ShedLock and PostgreSQL database time. Lock names are globally unique. The outbox dispatcher is the exception because it already provides row-level concurrency control.
 
 Before changing an interval or lock duration, measure worst-case runtime and verify behavior during process termination, multi-instance execution, and overlapping schedules.
 
-## 6. Dependencies and security
+### Settlement reconciliation
+
+Each settlement entry records explicit `pending_delta`, `available_delta`, and `receivable_delta` values. For every merchant and currency, the authoritative equations are:
+
+```text
+merchant_balances.pending    = SUM(settlement_ledger.pending_delta)
+merchant_balances.available  = SUM(settlement_ledger.available_delta)
+merchant_balances.receivable = SUM(settlement_ledger.receivable_delta)
+```
+
+`MOVE_AVAILABLE` subtracts pending and adds the same amount to available. A refund consumes available, then pending, and records any uncovered amount as a receivable. Later sales repay receivables before crediting pending. Payout debits and reversals affect only available.
+
+The scheduled reconciliation job reports mismatches through metrics and error logs. Never repair a mismatch by editing balances or ledger rows without preserving evidence and reviewing the complete economic event chain.
+
+## 7. Dependencies and security
 
 - Read the Java and Spring baseline from the Gradle build rather than copying fixed versions into documentation.
 - Patch updates still require review and tests. Minor and major updates require a full build and E2E checks because they can alter serialization, APIs, or auto-configuration.
@@ -71,7 +92,7 @@ Before changing an interval or lock duration, measure worst-case runtime and ver
 - Dependabot version-update pull requests may be limited to reduce noise. Security alerts and security updates are managed separately in the GitHub repository settings.
 - Critical or actively exploited vulnerabilities receive immediate priority. A suppression needs an owner, evidence that the vulnerable path is unreachable, and an expiry date.
 
-## 7. Release verification
+## 8. Release verification
 
 ```powershell
 .\gradlew.bat build

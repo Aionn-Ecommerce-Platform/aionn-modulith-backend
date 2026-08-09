@@ -17,7 +17,7 @@ public class GetWarehouseUseCase implements GetWarehouseInputPort {
 
     @Override
     @Transactional(readOnly = true)
-    public WarehouseResult execute(String warehouseId) {
-        return warehouseResultMapper.toResult(warehouseService.get(warehouseId));
+    public WarehouseResult execute(String warehouseId, String merchantId) {
+        return warehouseResultMapper.toResult(warehouseService.getOwned(warehouseId, merchantId));
     }
 }

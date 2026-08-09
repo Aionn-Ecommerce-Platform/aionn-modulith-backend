@@ -1,15 +1,16 @@
 package com.aionn.promotion.application.port.out;
 
 import com.aionn.promotion.domain.model.PromotionBanner;
+import com.aionn.promotion.application.dto.common.PageResult;
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 
-import java.util.List;
 import java.util.Optional;
 
 public interface PromotionBannerPersistencePort {
 
-    List<PromotionBanner> findAllActive();
+    PageResult<PromotionBanner> findAllActive(OffsetPagination pagination);
 
-    List<PromotionBanner> findAll();
+    PageResult<PromotionBanner> findAll(OffsetPagination pagination);
 
     Optional<PromotionBanner> findById(String bannerId);
 

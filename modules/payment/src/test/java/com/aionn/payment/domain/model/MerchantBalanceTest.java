@@ -19,6 +19,7 @@ class MerchantBalanceTest {
         assertEquals("VND", balance.getCurrency());
         assertEquals(BigDecimal.ZERO, balance.getPending());
         assertEquals(BigDecimal.ZERO, balance.getAvailable());
+        assertEquals(BigDecimal.ZERO, balance.getReceivable());
         assertEquals(now, balance.getCreatedAt());
         assertEquals(now, balance.getUpdatedAt());
     }
@@ -101,5 +102,21 @@ class MerchantBalanceTest {
         
         balance.creditAvailable(new BigDecimal("50.00"), now.plusSeconds(1));
         assertEquals(new BigDecimal("50.00"), balance.getAvailable());
+    }
+
+    @Test
+    void shouldAllocateUncoveredRefundToReceivable() {
+        Instant now = Instant.now();
+        MerchantBalance balance = new MerchantBalance(
+                "m-1", "VND", new BigDecimal("20.00"), new BigDecimal("30.00"),
+                BigDecimal.ZERO, 0, now, now);
+
+        MerchantBalance.RefundAllocation allocation =
+                balance.allocateRefund(new BigDecimal("70.00"), now.plusSeconds(1));
+
+        assertEquals(new BigDecimal("30.00"), allocation.available());
+        assertEquals(new BigDecimal("20.00"), allocation.pending());
+        assertEquals(new BigDecimal("20.00"), allocation.receivable());
+        assertEquals(new BigDecimal("20.00"), balance.getReceivable());
     }
 }

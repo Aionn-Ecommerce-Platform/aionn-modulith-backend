@@ -96,6 +96,12 @@ public class NotificationDispatchService {
         return saved;
     }
 
+    public Notification recordDeliveryUnknown(String notificationId, String reason) {
+        Notification notification = required(notificationId);
+        notification.markDeliveryUnknown(reason, clock);
+        return notificationRepository.save(notification);
+    }
+
     public Notification markRead(NotificationCommands.MarkRead command) {
         Notification notification = ownedBy(command.notiId(), command.userId());
         notification.markRead(clock);

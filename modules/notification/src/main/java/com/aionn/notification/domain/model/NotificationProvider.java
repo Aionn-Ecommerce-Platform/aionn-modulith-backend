@@ -40,12 +40,6 @@ public class NotificationProvider extends AggregateRoot {
     }
 
     public static NotificationProvider configure(String providerId, NotificationChannel channel,
-            String providerType, Map<String, String> config, int rateLimitPerMinute, String configuredBy) {
-        return configure(providerId, channel, providerType, config, rateLimitPerMinute, configuredBy,
-                Clock.systemUTC());
-    }
-
-    public static NotificationProvider configure(String providerId, NotificationChannel channel,
             String providerType, Map<String, String> config, int rateLimitPerMinute, String configuredBy,
             Clock clock) {
         if (providerType == null || providerType.isBlank()) {
@@ -57,11 +51,6 @@ public class NotificationProvider extends AggregateRoot {
         p.registerEvent(
                 new NotificationEvents.ProviderConfigured(providerId, providerType, true, configuredBy, now, now));
         return p;
-    }
-
-    public void update(Map<String, String> config, Integer rateLimitPerMinute, Boolean active,
-            String configuredBy) {
-        update(config, rateLimitPerMinute, active, configuredBy, Clock.systemUTC());
     }
 
     public void update(Map<String, String> config, Integer rateLimitPerMinute, Boolean active,

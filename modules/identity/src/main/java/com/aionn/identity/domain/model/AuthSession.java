@@ -42,15 +42,6 @@ public class AuthSession {
             String userId,
             String ipAddress,
             String userAgent,
-            Instant expiresAt) {
-        return createNew(sessionId, userId, ipAddress, userAgent, expiresAt, Clock.systemUTC());
-    }
-
-    public static AuthSession createNew(
-            String sessionId,
-            String userId,
-            String ipAddress,
-            String userAgent,
             Instant expiresAt,
             Clock clock) {
         Instant now = clock.instant();
@@ -65,20 +56,12 @@ public class AuthSession {
                 expiresAt);
     }
 
-    public void touch() {
-        touch(Clock.systemUTC());
-    }
-
     public void touch(Clock clock) {
         this.lastActiveAt = clock.instant();
     }
 
     public void revoke() {
         this.status = AuthSessionStatus.REVOKED;
-    }
-
-    public void extendExpiry(Instant newExpiresAt) {
-        extendExpiry(newExpiresAt, Clock.systemUTC());
     }
 
     public void extendExpiry(Instant newExpiresAt, Clock clock) {
@@ -89,18 +72,10 @@ public class AuthSession {
         this.lastActiveAt = clock.instant();
     }
 
-    public boolean isActive() {
-        return isActive(Clock.systemUTC());
-    }
-
     public boolean isActive(Clock clock) {
         return AuthSessionStatus.ACTIVE.equals(status)
                 && expiresAt != null
                 && expiresAt.isAfter(clock.instant());
-    }
-
-    public boolean isExpired() {
-        return isExpired(Clock.systemUTC());
     }
 
     public boolean isExpired(Clock clock) {

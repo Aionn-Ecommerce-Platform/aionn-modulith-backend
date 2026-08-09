@@ -22,6 +22,8 @@ import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -132,7 +134,7 @@ public class PromotionCampaignController {
         @Operation(summary = "List campaigns", description = "Public list of promotion campaigns by status")
         public ResponseEntity<ApiResponse<List<CampaignResponse>>> list(
                         @RequestParam(defaultValue = "RUNNING") String status,
-                        @RequestParam(defaultValue = "50") int limit) {
+                        @RequestParam(defaultValue = "50") @Min(1) @Max(100) int limit) {
                 return ResponseEntity.ok(ApiResponse.success(
                                 dtoMapper.toResponses(listCampaignsByStatusInputPort.execute(status, limit)),
                                 "Campaigns fetched"));
@@ -142,7 +144,7 @@ public class PromotionCampaignController {
         @Operation(summary = "List campaign vouchers", description = "Get claimable vouchers of a specific campaign")
         public ResponseEntity<ApiResponse<List<VoucherResponse>>> listVouchers(
                         @PathVariable String campaignId,
-                        @RequestParam(defaultValue = "50") int limit) {
+                        @RequestParam(defaultValue = "50") @Min(1) @Max(100) int limit) {
                 return ResponseEntity.ok(ApiResponse.success(
                                 voucherDtoMapper.toResponses(
                                                 listCampaignVouchersInputPort.execute(campaignId, limit)),

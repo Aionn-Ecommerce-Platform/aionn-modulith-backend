@@ -34,16 +34,6 @@ public class KycProfile {
             String providerApplicantId,
             String providerLevelName,
             String providerReviewStatus,
-            String providerCorrelationId) {
-        attachExternalProvider(provider, providerApplicantId, providerLevelName,
-                providerReviewStatus, providerCorrelationId, Clock.systemUTC());
-    }
-
-    public void attachExternalProvider(
-            String provider,
-            String providerApplicantId,
-            String providerLevelName,
-            String providerReviewStatus,
             String providerCorrelationId,
             Clock clock) {
         this.provider = provider;
@@ -55,16 +45,6 @@ public class KycProfile {
         if (this.submittedAt == null) {
             this.submittedAt = clock.instant();
         }
-    }
-
-    public void syncExternalReview(
-            String providerReviewStatus,
-            String providerCorrelationId,
-            KycReviewAnswer reviewAnswer,
-            String moderationComment,
-            String clientComment) {
-        syncExternalReview(providerReviewStatus, providerCorrelationId, reviewAnswer,
-                moderationComment, clientComment, Clock.systemUTC());
     }
 
     public void syncExternalReview(
@@ -114,10 +94,6 @@ public class KycProfile {
         }
     }
 
-    public void submit() {
-        submit(Clock.systemUTC());
-    }
-
     public void submit(Clock clock) {
         transitionTo(KycStatus.SUBMITTED);
         this.submittedAt = clock.instant();
@@ -126,10 +102,6 @@ public class KycProfile {
         this.decisionAdminId = null;
         this.rejectReason = null;
         this.approvedAt = null;
-    }
-
-    public void adminApprove(String adminId, String note) {
-        adminApprove(adminId, note, Clock.systemUTC());
     }
 
     public void adminApprove(String adminId, String note, Clock clock) {

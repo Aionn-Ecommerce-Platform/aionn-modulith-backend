@@ -29,20 +29,12 @@ public class DeviceToken extends AggregateRoot {
         this.updatedAt = updatedAt;
     }
 
-    public static DeviceToken register(String tokenId, String userId, String deviceToken, String os) {
-        return register(tokenId, userId, deviceToken, os, Clock.systemUTC());
-    }
-
     public static DeviceToken register(String tokenId, String userId, String deviceToken, String os,
             Clock clock) {
         Instant now = clock.instant();
         DeviceToken dt = new DeviceToken(tokenId, userId, deviceToken, os, true, now, now);
         dt.registerEvent(new NotificationEvents.DeviceTokenRegistered(userId, deviceToken, os, now, now));
         return dt;
-    }
-
-    public void deactivate() {
-        deactivate(Clock.systemUTC());
     }
 
     public void deactivate(Clock clock) {

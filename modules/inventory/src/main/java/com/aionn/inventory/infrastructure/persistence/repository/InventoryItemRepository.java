@@ -6,11 +6,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.Instant;
 
 public interface InventoryItemRepository
         extends JpaRepository<InventoryItemEntity, InventoryItemEntity.InventoryItemId> {
@@ -25,11 +27,22 @@ public interface InventoryItemRepository
     @Query("SELECT i FROM InventoryItemEntity i WHERE i.id.skuId = :skuId AND i.id.warehouseId = :warehouseId")
     Optional<InventoryItemEntity> findForUpdate(@Param("skuId") String skuId, @Param("warehouseId") String warehouseId);
 
+    @Modifying
+    @Query(value = """
+            INSERT INTO inventory_items
+                (sku_id, warehouse_id, physical_qty, available_qty, safety_stock_qty,
+                 is_locked, version, created_at, updated_at)
+            VALUES (:skuId, :warehouseId, 0, 0, 0, false, 0, :now, :now)
+            ON CONFLICT (sku_id, warehouse_id) DO NOTHING
+            """, nativeQuery = true)
+    int insertIfAbsent(@Param("skuId") String skuId, @Param("warehouseId") String warehouseId,
+            @Param("now") Instant now);
+
     List<InventoryItemEntity> findByIdSkuIdAndIdWarehouseIdIn(String skuId, List<String> warehouseIds);
 
     List<InventoryItemEntity> findByIdSkuId(String skuId);
 
-    Page<InventoryItemEntity> findByIdWarehouseId(String warehouseId, Pageable pageable);
+    Page<InventoryItemEntity> findByIdWarehouseIdOrderByIdSkuIdAsc(String warehouseId, Pageable pageable);
 
     @Query("""
         SELECT i.id.skuId AS skuId,

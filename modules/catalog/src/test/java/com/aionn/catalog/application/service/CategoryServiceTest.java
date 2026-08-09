@@ -128,9 +128,10 @@ class CategoryServiceTest {
 
         @Test
         void updateAppliesChangesAndPublishesEvent() {
-                Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics");
+                Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 category.pullEvents();
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of()))
+                                .thenReturn(List.of(category));
                 when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 categoryService.update(
@@ -144,9 +145,10 @@ class CategoryServiceTest {
 
         @Test
         void updateTrimsNameBeforeUniquenessCheck() {
-                Category category = Category.create(CATEGORY_ID, null, "Old", "old");
+                Category category = Category.create(CATEGORY_ID, null, "Old", "old", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 category.pullEvents();
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of()))
+                                .thenReturn(List.of(category));
                 when(categoryRepository.existsByParentAndName(null, "Zenith")).thenReturn(true);
 
                 assertThatThrownBy(() -> categoryService.update(
@@ -158,9 +160,10 @@ class CategoryServiceTest {
 
         @Test
         void updateRejectsWhenNameCollides() {
-                Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics");
+                Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 category.pullEvents();
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of()))
+                                .thenReturn(List.of(category));
                 when(categoryRepository.existsByParentAndName(null, "Fashion")).thenReturn(true);
 
                 assertThatThrownBy(() -> categoryService.update(
@@ -173,12 +176,60 @@ class CategoryServiceTest {
         }
 
         @Test
+        void activatingChildValidatesTheParentFromTheSameLockedSet() {
+                Category parent = Category.create("current-parent", null, "Parent", "parent", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Category child = Category.create(CATEGORY_ID, "current-parent", "Child", "child", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                child.update(null, null, false, clock);
+                child.pullEvents();
+                // One statement locks the target and its current parent together, so the
+                // parent check cannot read a row that another transaction is mutating.
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of()))
+                                .thenReturn(List.of(child, parent));
+                when(categoryRepository.save(child)).thenReturn(child);
+
+                categoryService.update(new UpdateCategoryCommand(CATEGORY_ID, null, null, true));
+
+                verify(categoryRepository).lockMutationSet(CATEGORY_ID, List.of());
+                verify(categoryRepository, never()).lockById(anyString());
+                assertThat(child.isActive()).isTrue();
+        }
+
+        @Test
+        void activatingChildRejectsAParentMissingFromTheLockedSet() {
+                Category child = Category.create(CATEGORY_ID, "current-parent", "Child", "child", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                child.update(null, null, false, clock);
+                child.pullEvents();
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of()))
+                                .thenReturn(List.of(child));
+
+                assertThatThrownBy(() -> categoryService.update(
+                                new UpdateCategoryCommand(CATEGORY_ID, null, null, true)))
+                                .isInstanceOf(CatalogException.class)
+                                .extracting("errorCode")
+                                .isEqualTo(CatalogErrorCode.CATEGORY_NOT_FOUND.getCode());
+
+                verify(categoryRepository, never()).save(any());
+        }
+
+        @Test
+        void updateRejectsWhenTheTargetIsMissingFromTheLockedSet() {
+                when(categoryRepository.lockMutationSet("missing", List.of())).thenReturn(List.of());
+
+                assertThatThrownBy(() -> categoryService.update(
+                                new UpdateCategoryCommand("missing", "Name", null, null)))
+                                .isInstanceOf(CatalogException.class)
+                                .extracting("errorCode")
+                                .isEqualTo(CatalogErrorCode.CATEGORY_NOT_FOUND.getCode());
+
+                verify(categoryRepository, never()).save(any());
+        }
+
+        @Test
         void moveRejectsCycleWhenTargetParentIsDescendant() {
-                Category root = Category.create("root", null, "A", "a");
+                Category root = Category.create("root", null, "A", "a", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 root.pullEvents();
-                when(categoryRepository.findById("root")).thenReturn(Optional.of(root));
-                when(categoryRepository.findById("child"))
-                                .thenReturn(Optional.of(Category.create("child", "root", "B", "b")));
+                when(categoryRepository.lockMutationSet("root", List.of("child")))
+                                .thenReturn(List.of(root, Category.create("child", "root", "B", "b", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC))));
                 when(categoryRepository.findDescendantIds("root")).thenReturn(List.of("child"));
 
                 assertThatThrownBy(() -> categoryService.move(new MoveCategoryCommand("root", "child")))
@@ -189,9 +240,10 @@ class CategoryServiceTest {
 
         @Test
         void moveRejectsSelfParent() {
-                Category category = Category.create(CATEGORY_ID, null, "A", "a");
+                Category category = Category.create(CATEGORY_ID, null, "A", "a", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 category.pullEvents();
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of(CATEGORY_ID)))
+                                .thenReturn(List.of(category));
 
                 assertThatThrownBy(() -> categoryService.move(new MoveCategoryCommand(CATEGORY_ID, CATEGORY_ID)))
                                 .isInstanceOf(CatalogException.class)
@@ -201,10 +253,11 @@ class CategoryServiceTest {
 
         @Test
         void moveRejectsWhenNewParentDoesNotExist() {
-                Category category = Category.create(CATEGORY_ID, null, "A", "a");
+                Category category = Category.create(CATEGORY_ID, null, "A", "a", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 category.pullEvents();
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
-                when(categoryRepository.findById("missing")).thenReturn(Optional.empty());
+                // The new parent is absent from the locked set, so it does not exist.
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of("missing")))
+                                .thenReturn(List.of(category));
 
                 assertThatThrownBy(() -> categoryService.move(new MoveCategoryCommand(CATEGORY_ID, "missing")))
                                 .isInstanceOf(CatalogException.class)
@@ -214,11 +267,10 @@ class CategoryServiceTest {
 
         @Test
         void moveRejectsWhenSiblingWithSameNameExists() {
-                Category category = Category.create(CATEGORY_ID, null, "Duplicate", "duplicate");
+                Category category = Category.create(CATEGORY_ID, null, "Duplicate", "duplicate", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 category.pullEvents();
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
-                when(categoryRepository.findById("new-parent"))
-                                .thenReturn(Optional.of(Category.create("new-parent", null, "P", "p")));
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of("new-parent")))
+                                .thenReturn(List.of(category, Category.create("new-parent", null, "P", "p", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC))));
                 when(categoryRepository.findDescendantIds(CATEGORY_ID)).thenReturn(List.of());
                 when(categoryRepository.existsByParentAndName("new-parent", "Duplicate")).thenReturn(true);
 
@@ -229,12 +281,43 @@ class CategoryServiceTest {
         }
 
         @Test
+        void childCreationLocksParentBeforeCheckingIt() {
+                Category parent = Category.create(CATEGORY_ID, null, "Parent", "parent", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                parent.pullEvents();
+                when(categoryRepository.lockById(CATEGORY_ID)).thenReturn(Optional.of(parent));
+                when(categoryRepository.existsByParentAndName(CATEGORY_ID, "Child")).thenReturn(false);
+                when(categoryRepository.existsBySlug("child")).thenReturn(false);
+                when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                categoryService.create(new CreateCategoryCommand(CATEGORY_ID, "Child", "child"));
+
+                verify(categoryRepository).lockById(CATEGORY_ID);
+        }
+
+        @Test
+        void deleteRejectsCategoryWithActiveChildren() {
+                Category parent = Category.create(CATEGORY_ID, null, "Parent", "parent", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                parent.pullEvents();
+                Category child = Category.create("child", CATEGORY_ID, "Child", "child", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(parent));
+                when(categoryRepository.hasProducts(CATEGORY_ID)).thenReturn(false);
+                when(categoryRepository.findActiveChildren(CATEGORY_ID)).thenReturn(List.of(child));
+
+                assertThatThrownBy(() -> categoryService.delete(CATEGORY_ID))
+                                .isInstanceOf(CatalogException.class)
+                                .extracting("errorCode")
+                                .isEqualTo(CatalogErrorCode.CATEGORY_HAS_CHILDREN.getCode());
+
+                verify(categoryRepository, never()).save(any());
+                verify(eventPublisher, never()).publish(anyCollection());
+        }
+
+        @Test
         void moveAppliesReparent() {
-                Category category = Category.create(CATEGORY_ID, null, "A", "a");
+                Category category = Category.create(CATEGORY_ID, null, "A", "a", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 category.pullEvents();
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
-                when(categoryRepository.findById("new-parent"))
-                                .thenReturn(Optional.of(Category.create("new-parent", null, "P", "p")));
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of("new-parent")))
+                                .thenReturn(List.of(category, Category.create("new-parent", null, "P", "p", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC))));
                 when(categoryRepository.findDescendantIds(CATEGORY_ID)).thenReturn(List.of());
                 when(categoryRepository.existsByParentAndName("new-parent", "A")).thenReturn(false);
                 when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -245,8 +328,37 @@ class CategoryServiceTest {
         }
 
         @Test
+        void moveToRootLocksOnlyTheTargetAndItsCurrentParent() {
+                Category parent = Category.create("current-parent", null, "P", "p", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Category category = Category.create(CATEGORY_ID, "current-parent", "A", "a", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                category.pullEvents();
+                // A null new parent contributes no extra identifier to the locked set.
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, java.util.Collections.singletonList(null)))
+                                .thenReturn(List.of(category, parent));
+                when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                categoryService.move(new MoveCategoryCommand(CATEGORY_ID, null));
+
+                assertThat(category.getParentId()).isNull();
+                verify(categoryRepository, never()).findDescendantIds(anyString());
+        }
+
+        @Test
+        void moveRejectsWhenTheTargetIsMissingFromTheLockedSet() {
+                when(categoryRepository.lockMutationSet("missing", List.of("new-parent")))
+                                .thenReturn(List.of(Category.create("new-parent", null, "P", "p", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC))));
+
+                assertThatThrownBy(() -> categoryService.move(new MoveCategoryCommand("missing", "new-parent")))
+                                .isInstanceOf(CatalogException.class)
+                                .extracting("errorCode")
+                                .isEqualTo(CatalogErrorCode.CATEGORY_NOT_FOUND.getCode());
+
+                verify(categoryRepository, never()).save(any());
+        }
+
+        @Test
         void deleteSoftDeletesAndPublishesEvent() {
-                Category category = Category.create(CATEGORY_ID, null, "A", "a");
+                Category category = Category.create(CATEGORY_ID, null, "A", "a", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 category.pullEvents();
                 when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
 
@@ -256,6 +368,7 @@ class CategoryServiceTest {
                 assertThat(category.isActive()).isFalse();
                 verify(categoryRepository).save(category);
                 verify(eventPublisher).publish(anyCollection());
+                verify(categoryRepository).lockById(CATEGORY_ID);
         }
 
         @Test
@@ -270,7 +383,7 @@ class CategoryServiceTest {
 
         @Test
         void getReturnsResultWhenFound() {
-                Category category = Category.create(CATEGORY_ID, null, "A", "a");
+                Category category = Category.create(CATEGORY_ID, null, "A", "a", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
 
                 Category result = categoryService.get(CATEGORY_ID);
@@ -281,7 +394,7 @@ class CategoryServiceTest {
 
         @Test
         void listRootsMapsResults() {
-                Category category = Category.create(CATEGORY_ID, null, "A", "a");
+                Category category = Category.create(CATEGORY_ID, null, "A", "a", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 when(categoryRepository.findActiveRoots()).thenReturn(List.of(category));
 
                 List<Category> roots = categoryService.listRoots();
@@ -292,7 +405,7 @@ class CategoryServiceTest {
 
         @Test
         void listChildrenMapsResults() {
-                Category category = Category.create(CATEGORY_ID, "parent", "A", "a");
+                Category category = Category.create(CATEGORY_ID, "parent", "A", "a", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 when(categoryRepository.findActiveChildren("parent")).thenReturn(List.of(category));
 
                 List<Category> children = categoryService.listChildren("parent");
@@ -303,8 +416,8 @@ class CategoryServiceTest {
 
         @Test
         void getTreeBuildsHierarchyFromActiveCategories() {
-                Category root = Category.create("root", null, "Root", "root");
-                Category child = Category.create("child", "root", "Child", "child");
+                Category root = Category.create("root", null, "Root", "root", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Category child = Category.create("child", "root", "Child", "child", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
                 when(categoryRepository.findAllActive()).thenReturn(List.of(root, child));
 
                 List<Category> tree = categoryService.getTree();

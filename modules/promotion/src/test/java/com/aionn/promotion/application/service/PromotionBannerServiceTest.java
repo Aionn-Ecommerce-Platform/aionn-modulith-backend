@@ -4,6 +4,8 @@ import com.aionn.promotion.application.dto.banner.command.BannerCommands;
 import com.aionn.promotion.application.port.out.PromotionBannerPersistencePort;
 import com.aionn.promotion.domain.exception.PromotionException;
 import com.aionn.promotion.domain.model.PromotionBanner;
+import com.aionn.promotion.application.dto.common.PageResult;
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -37,17 +39,20 @@ class PromotionBannerServiceTest {
 
     @Test
     void listActiveDelegatesToRepository() {
-        when(bannerRepository.findAllActive()).thenReturn(List.of(banner("BAN_1", true)));
+        var pagination = OffsetPagination.of(0, 20);
+        when(bannerRepository.findAllActive(pagination))
+                .thenReturn(new PageResult<>(List.of(banner("BAN_1", true)), 0, 20, 1));
 
-        assertThat(service.listActive()).hasSize(1);
+        assertThat(service.listActive(pagination).content()).hasSize(1);
     }
 
     @Test
     void listAllDelegatesToRepository() {
-        when(bannerRepository.findAll())
-                .thenReturn(List.of(banner("BAN_1", true), banner("BAN_2", false)));
+        var pagination = OffsetPagination.of(0, 20);
+        when(bannerRepository.findAll(pagination))
+                .thenReturn(new PageResult<>(List.of(banner("BAN_1", true), banner("BAN_2", false)), 0, 20, 2));
 
-        assertThat(service.listAll()).hasSize(2);
+        assertThat(service.listAll(pagination).content()).hasSize(2);
     }
 
     @Test

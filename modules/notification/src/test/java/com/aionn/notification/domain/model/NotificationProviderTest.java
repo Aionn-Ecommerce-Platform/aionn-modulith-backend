@@ -13,7 +13,7 @@ class NotificationProviderTest {
     @Test
     void configure_setsActiveAndEmitsEvent() {
         NotificationProvider p = NotificationProvider.configure("p1",
-                NotificationChannel.EMAIL, "smtp", Map.of("host", "smtp.test"), 60, "admin");
+                NotificationChannel.EMAIL, "smtp", Map.of("host", "smtp.test"), 60, "admin", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         assertThat(p.isActive()).isTrue();
         assertThat(p.getRateLimitPerMinute()).isEqualTo(60);
         assertThat(p.pullEvents())
@@ -23,9 +23,9 @@ class NotificationProviderTest {
     @Test
     void update_appliesPartialChanges() {
         NotificationProvider p = NotificationProvider.configure("p1",
-                NotificationChannel.EMAIL, "smtp", Map.of("host", "smtp.test"), 60, "admin");
+                NotificationChannel.EMAIL, "smtp", Map.of("host", "smtp.test"), 60, "admin", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         p.pullEvents();
-        p.update(Map.of("host", "smtp.new"), 120, false, "admin");
+        p.update(Map.of("host", "smtp.new"), 120, false, "admin", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         assertThat(p.isActive()).isFalse();
         assertThat(p.getRateLimitPerMinute()).isEqualTo(120);
         assertThat(p.getConfig()).containsEntry("host", "smtp.new");

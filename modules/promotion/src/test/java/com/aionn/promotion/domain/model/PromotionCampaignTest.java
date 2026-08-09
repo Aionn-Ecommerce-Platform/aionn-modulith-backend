@@ -58,7 +58,7 @@ class PromotionCampaignTest {
     void createWithoutClockUsesSystemTime() {
         PromotionCampaign campaign = PromotionCampaign.create(CAMPAIGN_ID, NAME, CampaignType.DISCOUNT,
                 Money.of(new BigDecimal("1000"), CCY),
-                Instant.now().plus(1, ChronoUnit.DAYS), Instant.now().plus(2, ChronoUnit.DAYS), USER);
+                Instant.now().plus(1, ChronoUnit.DAYS), Instant.now().plus(2, ChronoUnit.DAYS), USER, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(campaign.getCreatedAt()).isNotNull();
     }
@@ -124,8 +124,8 @@ class PromotionCampaignTest {
     void transitionStatesWithoutClock() {
         PromotionCampaign campaign = scheduled();
 
-        campaign.activate();
-        campaign.end();
+        campaign.activate(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        campaign.end(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(campaign.getStatus()).isEqualTo(CampaignStatus.ENDED);
     }
@@ -179,7 +179,7 @@ class PromotionCampaignTest {
                 Money.of(new BigDecimal("1000"), CCY), null, START, END, USER,
                 CampaignStatus.DRAFT, null, NOW, NOW);
 
-        campaign.schedule();
+        campaign.schedule(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(campaign.getUpdatedAt()).isNotNull();
     }
@@ -209,7 +209,7 @@ class PromotionCampaignTest {
     void cancelWithoutClockUsesSystemTime() {
         PromotionCampaign campaign = scheduled();
 
-        campaign.cancel("nope");
+        campaign.cancel("nope", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(campaign.getUpdatedAt()).isNotNull();
     }
@@ -232,7 +232,7 @@ class PromotionCampaignTest {
     void configureConditionWithoutClockUsesSystemTime() {
         PromotionCampaign campaign = scheduled();
 
-        campaign.configureCondition(PromotionCondition.empty());
+        campaign.configureCondition(PromotionCondition.empty(), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(campaign.getUpdatedAt()).isNotNull();
     }
@@ -286,7 +286,7 @@ class PromotionCampaignTest {
                 Instant.now().minus(1, ChronoUnit.DAYS), Instant.now().plus(30, ChronoUnit.DAYS),
                 USER, CampaignStatus.RUNNING, null, NOW, NOW);
 
-        campaign.ensureRunning();
+        campaign.ensureRunning(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(campaign.getStatus()).isEqualTo(CampaignStatus.RUNNING);
     }
@@ -321,8 +321,8 @@ class PromotionCampaignTest {
     void budgetOperationsWithoutClockUseSystemTime() {
         PromotionCampaign campaign = scheduled(new BigDecimal("100000"));
 
-        campaign.consumeBudget(Money.of(new BigDecimal("1000"), CCY));
-        campaign.releaseBudget(Money.of(new BigDecimal("1000"), CCY));
+        campaign.consumeBudget(Money.of(new BigDecimal("1000"), CCY), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        campaign.releaseBudget(Money.of(new BigDecimal("1000"), CCY), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(campaign.getUpdatedAt()).isNotNull();
     }

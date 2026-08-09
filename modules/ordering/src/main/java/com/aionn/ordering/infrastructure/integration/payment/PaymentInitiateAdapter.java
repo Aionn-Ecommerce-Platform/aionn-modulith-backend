@@ -28,7 +28,7 @@ public class PaymentInitiateAdapter implements PaymentGateway {
     }
 
     @Override
-    public void refund(String paymentId, BigDecimal amount, String currency, String reason) {
-        paymentInitiatePort.refund(paymentId, amount, currency, reason, IdGenerator.ulid());
+    public void refund(String paymentId, BigDecimal amount, String currency, String reason, String idempotencyKey) {
+        paymentInitiatePort.refund(paymentId, amount, currency, reason, idempotencyKey);
     }
 }

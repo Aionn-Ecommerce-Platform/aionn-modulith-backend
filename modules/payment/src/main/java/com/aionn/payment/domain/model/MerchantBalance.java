@@ -18,23 +18,31 @@ public class MerchantBalance {
     private final String currency;
     private BigDecimal pending;
     private BigDecimal available;
+    private BigDecimal receivable;
     private long version;
     private final Instant createdAt;
     private Instant updatedAt;
 
     public MerchantBalance(String merchantId, String currency, BigDecimal pending, BigDecimal available,
             long version, Instant createdAt, Instant updatedAt) {
+        this(merchantId, currency, pending, available, BigDecimal.ZERO, version, createdAt, updatedAt);
+    }
+
+    public MerchantBalance(String merchantId, String currency, BigDecimal pending, BigDecimal available,
+            BigDecimal receivable, long version, Instant createdAt, Instant updatedAt) {
         this.merchantId = merchantId;
         this.currency = currency;
         this.pending = pending;
         this.available = available;
+        this.receivable = receivable;
         this.version = version;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
 
     public static MerchantBalance empty(String merchantId, String currency, Instant now) {
-        return new MerchantBalance(merchantId, currency, BigDecimal.ZERO, BigDecimal.ZERO, 0, now, now);
+        return new MerchantBalance(merchantId, currency, BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.ZERO, 0, now, now);
     }
 
     public void addPending(BigDecimal amount, Instant now) {
@@ -80,5 +88,32 @@ public class MerchantBalance {
                 () -> new PaymentException(PaymentErrorCode.INVALID_ARGUMENT, MSG_AMOUNT_MUST_BE_POSITIVE));
         this.available = this.available.add(amount);
         this.updatedAt = now;
+    }
+
+    public BigDecimal addPendingAfterReceivable(BigDecimal amount, Instant now) {
+        Guard.require(amount.signum() > 0,
+                () -> new PaymentException(PaymentErrorCode.INVALID_ARGUMENT, MSG_AMOUNT_MUST_BE_POSITIVE));
+        BigDecimal repaid = receivable.min(amount);
+        receivable = receivable.subtract(repaid);
+        pending = pending.add(amount.subtract(repaid));
+        updatedAt = now;
+        return repaid;
+    }
+
+    public RefundAllocation allocateRefund(BigDecimal amount, Instant now) {
+        Guard.require(amount.signum() > 0,
+                () -> new PaymentException(PaymentErrorCode.INVALID_ARGUMENT, MSG_AMOUNT_MUST_BE_POSITIVE));
+        BigDecimal fromAvailable = available.min(amount);
+        available = available.subtract(fromAvailable);
+        BigDecimal remainder = amount.subtract(fromAvailable);
+        BigDecimal fromPending = pending.min(remainder);
+        pending = pending.subtract(fromPending);
+        BigDecimal newReceivable = remainder.subtract(fromPending);
+        receivable = receivable.add(newReceivable);
+        updatedAt = now;
+        return new RefundAllocation(fromPending, fromAvailable, newReceivable);
+    }
+
+    public record RefundAllocation(BigDecimal pending, BigDecimal available, BigDecimal receivable) {
     }
 }

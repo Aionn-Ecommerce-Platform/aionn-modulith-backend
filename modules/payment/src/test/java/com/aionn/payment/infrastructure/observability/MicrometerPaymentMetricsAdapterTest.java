@@ -26,6 +26,7 @@ class MicrometerPaymentMetricsAdapterTest {
             adapter.ledgerEntry("CREDIT");
             adapter.providerOutcome("VNPAY", "AUTHORIZE", "SUCCESS");
             adapter.reconciliation("STRIPE", 10, 2);
+            adapter.settlementReconciliation(8, 2);
         });
     }
 }

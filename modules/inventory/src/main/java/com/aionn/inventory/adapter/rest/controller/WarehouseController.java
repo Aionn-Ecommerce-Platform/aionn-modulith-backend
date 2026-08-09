@@ -55,11 +55,10 @@ public class WarehouseController {
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Create warehouse")
     public ResponseEntity<ApiResponse<WarehouseResponse>> create(
-            org.springframework.security.core.Authentication authentication,
             @CurrentMerchantId String merchantId,
             @Valid @RequestBody CreateWarehouseRequest request) {
         WarehouseResult result = createWarehouseInputPort.execute(
-                dtoMapper.toCreateWarehouseCommand(authentication.getName(), request));
+                dtoMapper.toCreateWarehouseCommand(merchantId, request));
         return ApiResponse.createdResponse("Warehouse created", dtoMapper.toResponse(result));
     }
 
@@ -113,9 +112,11 @@ public class WarehouseController {
     @GetMapping("/{warehouseId}")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get warehouse")
-    public ResponseEntity<ApiResponse<WarehouseResponse>> get(@PathVariable String warehouseId) {
+    public ResponseEntity<ApiResponse<WarehouseResponse>> get(
+            @CurrentMerchantId String merchantId,
+            @PathVariable String warehouseId) {
         return ResponseEntity.ok(ApiResponse.success(
-                dtoMapper.toResponse(getWarehouseInputPort.execute(warehouseId)), "Warehouse fetched"));
+                dtoMapper.toResponse(getWarehouseInputPort.execute(warehouseId, merchantId)), "Warehouse fetched"));
     }
 
     @GetMapping

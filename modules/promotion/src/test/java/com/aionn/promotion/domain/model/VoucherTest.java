@@ -48,14 +48,14 @@ class VoucherTest {
 
     @Test
     void issueWithoutClockUsesSystemTime() {
-        Voucher voucher = Voucher.issue("V-1", "CAMP_1", DISCOUNT, 10, null, null);
+        Voucher voucher = Voucher.issue("V-1", "CAMP_1", DISCOUNT, 10, null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(voucher.getCreatedAt()).isNotNull();
     }
 
     @Test
     void issueForShopWithoutClockUsesSystemTime() {
-        Voucher voucher = Voucher.issueForShop("V-2", "MERCHANT_1", DISCOUNT, 10, null, null);
+        Voucher voucher = Voucher.issueForShop("V-2", "MERCHANT_1", DISCOUNT, 10, null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(voucher.getCreatedAt()).isNotNull();
     }
@@ -111,7 +111,8 @@ class VoucherTest {
     @Test
     void remainingUsesNeverGoesNegative() {
         Voucher voucher = platform(1, null, null);
-        voucher.claimSlot(CLOCK);
+        voucher.reserveSlot(CLOCK);
+        voucher.commitSlot(CLOCK);
 
         assertThat(voucher.getUsedCount()).isEqualTo(1);
         assertThat(voucher.remainingUses()).isZero();
@@ -138,7 +139,8 @@ class VoucherTest {
     @Test
     void claimSlotRejectsExhaustedVoucher() {
         Voucher voucher = platform(1, null, null);
-        voucher.claimSlot(CLOCK);
+        voucher.reserveSlot(CLOCK);
+        voucher.commitSlot(CLOCK);
 
         assertThatThrownBy(() -> voucher.claimSlot(CLOCK))
                 .isInstanceOf(PromotionException.class)
@@ -149,9 +151,9 @@ class VoucherTest {
     void claimSlotWithoutClockUsesSystemTime() {
         Voucher voucher = platform(5, null, null);
 
-        voucher.claimSlot();
+        voucher.claimSlot(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
-        assertThat(voucher.getUsedCount()).isEqualTo(1);
+        assertThat(voucher.getUsedCount()).isZero();
     }
 
     @Test
@@ -173,17 +175,18 @@ class VoucherTest {
         voucher.commitSlot(CLOCK);
         assertThat(voucher.getUpdatedAt()).isEqualTo(NOW);
 
-        voucher.releaseSlot(CLOCK);
+        voucher.releaseCommittedSlot(CLOCK);
         assertThat(voucher.getUpdatedAt()).isEqualTo(NOW);
+        assertThat(voucher.getUsedCount()).isZero();
     }
 
     @Test
     void slotOperationsWithoutClockUseSystemTime() {
         Voucher voucher = platform(5, null, null);
 
-        voucher.reserveSlot();
-        voucher.commitSlot();
-        voucher.releaseSlot();
+        voucher.reserveSlot(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        voucher.commitSlot(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        voucher.releaseCommittedSlot(Clock.systemUTC());
 
         assertThat(voucher.getUpdatedAt()).isNotNull();
         assertThat(voucher.getReservedCount()).isZero();

@@ -66,7 +66,7 @@ class SumsubKycVerificationAdapterTest {
     }
 
     private IdentityUser user() {
-        return IdentityUser.createNew("user-1", "u@example.com", "0900000000", "username");
+        return IdentityUser.createNew("user-1", "u@example.com", "0900000000", "username", com.aionn.identity.TestClocks.FIXED);
     }
 
     private static String hmacHex(String algorithm, String secret, byte[] payload) {

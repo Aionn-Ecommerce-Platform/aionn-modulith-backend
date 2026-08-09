@@ -24,7 +24,6 @@ import com.aionn.catalog.application.mapper.ProductSearchDocumentMapper;
 import com.aionn.catalog.application.policy.CatalogProductPolicy;
 import com.aionn.catalog.application.port.out.attribute.AttributeTemplatePersistencePort;
 import com.aionn.catalog.application.port.out.search.ProductSearchIndex;
-import com.aionn.catalog.application.port.out.search.ProductSearchIndexPort;
 import com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort;
 import com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort;
 import com.aionn.catalog.domain.model.AttributeTemplate;
@@ -51,7 +50,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -70,7 +68,6 @@ public class ProductService {
     private final MerchantPersistencePort merchantRepository;
     private final BrandPersistencePort brandRepository;
     private final CategoryPersistencePort categoryRepository;
-    private final ProductSearchIndexPort searchIndex;
     private final ProductSearchIndex catalogSearchIndex;
     private final ProductSearchDocumentMapper searchDocumentMapper;
     private final AttributeTemplatePersistencePort attributeTemplateRepository;
@@ -153,10 +150,23 @@ public class ProductService {
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public PageResult<Product> search(String keyword, OffsetPagination pagination) {
-        List<String> ids = searchIndex.searchIds(keyword, pagination);
-        long total = searchIndex.countMatches(keyword);
-        List<Product> products = transactionTemplate.execute(status -> productRepository.findAllByIds(ids));
-        return new PageResult<>(products, pagination.page(), pagination.size(), total);
+        ProductSearchCriteria criteria = new ProductSearchCriteria(
+                keyword, null, ProductStatus.PUBLISHED, List.of(), List.of(),
+                null, null, Map.of(), ProductSearchCriteria.Sort.RELEVANCE,
+                pagination.page(), pagination.size());
+        Optional<ProductSearchIndex.SearchHits> hits = catalogSearchIndex.search(criteria);
+        if (hits.isPresent()) {
+            ProductSearchIndex.SearchHits result = hits.get();
+            List<Product> products = transactionTemplate.execute(
+                    status -> productRepository.findByIdsPreserveOrder(result.productIds()));
+            return new PageResult<>(products, pagination.page(), pagination.size(), result.totalHits());
+        }
+        return transactionTemplate.execute(status -> {
+            int offset = pagination.page() * pagination.size();
+            List<Product> products = productRepository.searchPublished(keyword, pagination.size(), offset);
+            long total = productRepository.countSearchPublished(keyword);
+            return new PageResult<>(products, pagination.page(), pagination.size(), total);
+        });
     }
 
     public Product changeVariantPrice(ChangeVariantPriceCommand command) {
@@ -418,58 +428,16 @@ public class ProductService {
     }
 
     private PageResult<ProductResult> jpaSearchFallback(ProductSearchCriteria criteria) {
-        ProductStatus requiredStatus = criteria.status() != null ? criteria.status() : ProductStatus.PUBLISHED;
-        List<Product> filtered = fallbackCandidates(criteria).stream()
-                .filter(p -> p.getStatus() == requiredStatus)
-                .filter(p -> matchesFacets(p, criteria))
-                .toList();
-
-        long totalElements = filtered.size();
-        int from = Math.min(criteria.page() * criteria.size(), filtered.size());
-        int to = Math.min(from + criteria.size(), filtered.size());
-        List<ProductResult> results = filtered.subList(from, to).stream()
+        var page = productRepository.searchFallback(
+                new ProductPersistencePort.FallbackFilter(
+                        criteria.q(), criteria.merchantId(), criteria.status(), criteria.brandIds(),
+                        criteria.categoryIds(), criteria.priceMin(), criteria.priceMax(), criteria.attributes(),
+                        ProductPersistencePort.FallbackSort.valueOf(criteria.sort().name()), criteria.ratingMin()),
+                OffsetPagination.of(criteria.page(), criteria.size()));
+        List<ProductResult> results = page.content().stream()
                 .map(productResultMapper::toResult)
                 .toList();
-        return new PageResult<>(results, criteria.page(), criteria.size(), totalElements);
-    }
-
-    private List<Product> fallbackCandidates(ProductSearchCriteria criteria) {
-        if (criteria.merchantId() != null && !criteria.merchantId().isBlank()) {
-            return productRepository.listByMerchant(criteria.merchantId(),
-                    OffsetPagination.of(0, OffsetPagination.MAX_SIZE));
-        }
-        if (criteria.hasText()) {
-            return productRepository.searchPublished(criteria.q(), 10_000, 0);
-        }
-        return productRepository.findPublished(10_000, 0);
-    }
-
-    private static boolean matchesFacets(Product product, ProductSearchCriteria criteria) {
-        if (!criteria.brandIds().isEmpty()
-                && (product.getBrandId() == null || !criteria.brandIds().contains(product.getBrandId()))) {
-            return false;
-        }
-        if (!criteria.categoryIds().isEmpty()
-                && product.categoryIds().stream().noneMatch(criteria.categoryIds()::contains)) {
-            return false;
-        }
-        return matchesPrice(product, criteria.priceMin(), criteria.priceMax());
-    }
-
-    private static boolean matchesPrice(Product product, BigDecimal min, BigDecimal max) {
-        if (min == null && max == null) {
-            return true;
-        }
-        return product.variants().stream().anyMatch(v -> {
-            BigDecimal price = v.price() == null ? null : v.price().amount();
-            if (price == null) {
-                return false;
-            }
-            if (min != null && price.compareTo(min) < 0) {
-                return false;
-            }
-            return max == null || price.compareTo(max) <= 0;
-        });
+        return new PageResult<>(results, criteria.page(), criteria.size(), page.totalElements());
     }
 
     private static boolean isRealUser(String userId) {

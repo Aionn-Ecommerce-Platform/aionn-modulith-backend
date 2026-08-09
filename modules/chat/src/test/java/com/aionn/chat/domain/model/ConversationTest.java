@@ -23,13 +23,13 @@ class ConversationTest {
         return Conversation.start("C_1",
                 "U_buyer", "Buyer", null,
                 "M_seller", "Seller", null,
-                "U_buyer");
+                "U_buyer", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
     }
 
     @Test
     void start_sameBuyerAndMerchant_throwsInvalidArgument() {
         assertThatThrownBy(() -> Conversation.start("C_1",
-                "U_same", "X", null, "U_same", "Y", null, "U_same"))
+                "U_same", "X", null, "U_same", "Y", null, "U_same", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
                 .isInstanceOf(ChatException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "CHT_900");
     }
@@ -57,7 +57,7 @@ class ConversationTest {
     @Test
     void recipientsExcept_excludesSenderOnly() {
         Conversation c = buyerMerchantConversation();
-        c.joinSupport("U_cs", "Support", null);
+        c.joinSupport("U_cs", "Support", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(c.recipientsExcept("U_buyer")).containsExactlyInAnyOrder("M_seller", "U_cs");
         assertThat(c.recipientsExcept("M_seller")).containsExactlyInAnyOrder("U_buyer", "U_cs");
@@ -67,8 +67,8 @@ class ConversationTest {
     void joinSupport_isIdempotent() {
         Conversation c = buyerMerchantConversation();
 
-        c.joinSupport("U_cs", "Support", null);
-        c.joinSupport("U_cs", "Other", null);
+        c.joinSupport("U_cs", "Support", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        c.joinSupport("U_cs", "Other", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(c.participants()).hasSize(3);
         assertThat(c.recipientsExcept("U_buyer")).containsExactlyInAnyOrder("M_seller", "U_cs");
@@ -78,7 +78,7 @@ class ConversationTest {
     void markRead_setsLastReadAtForParticipant() {
         Conversation c = buyerMerchantConversation();
 
-        c.markRead("U_buyer");
+        c.markRead("U_buyer", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(c.participantLastReadMap().get("U_buyer")).isNotNull();
         assertThat(c.participantLastReadMap().get("M_seller")).isNull();
@@ -88,7 +88,7 @@ class ConversationTest {
     void markRead_nonParticipant_throwsForbidden() {
         Conversation c = buyerMerchantConversation();
 
-        assertThatThrownBy(() -> c.markRead("U_eavesdropper"))
+        assertThatThrownBy(() -> c.markRead("U_eavesdropper", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
                 .isInstanceOf(ChatException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "CHT_002");
     }
@@ -96,10 +96,10 @@ class ConversationTest {
     @Test
     void recordMessageSent_unarchivesAndUpdatesLastMessage() {
         Conversation c = buyerMerchantConversation();
-        c.archive("U_buyer");
+        c.archive("U_buyer", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         assertThat(c.isArchived()).isTrue();
 
-        c.recordMessageSent("M_id_1", MessageType.TEXT, "hi", "U_buyer");
+        c.recordMessageSent("M_id_1", MessageType.TEXT, "hi", "U_buyer", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
 
         assertThat(c.isArchived()).isFalse();
         assertThat(c.getLastMessageId()).isEqualTo("M_id_1");

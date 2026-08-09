@@ -65,6 +65,7 @@ class OrderingOrderQueryAdapterTest {
 
         OrderEntity entity = new OrderEntity();
         entity.setOrderId("ord-1");
+        entity.setUserId("u-1");
         entity.setMerchantId("m-1");
         entity.setTotalAmount(BigDecimal.valueOf(200));
         entity.setCurrency("VND");
@@ -75,6 +76,7 @@ class OrderingOrderQueryAdapterTest {
 
         assertTrue(summary.isPresent());
         assertEquals("ord-1", summary.get().orderId());
+        assertEquals("u-1", summary.get().userId());
         assertEquals("m-1", summary.get().merchantId());
         assertEquals(BigDecimal.valueOf(200), summary.get().totalAmount());
         assertEquals("VND", summary.get().currency());

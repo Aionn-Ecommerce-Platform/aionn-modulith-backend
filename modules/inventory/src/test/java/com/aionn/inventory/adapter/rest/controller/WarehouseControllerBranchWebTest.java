@@ -4,8 +4,10 @@ import com.aionn.inventory.adapter.rest.dto.warehouse.request.AdminReasonRequest
 import com.aionn.inventory.adapter.rest.exception.InventoryExceptionHandler;
 import com.aionn.inventory.adapter.rest.mapper.warehouse.WarehouseDtoMapperImpl;
 import com.aionn.inventory.adapter.rest.support.MockSecurityInterceptor;
+import com.aionn.inventory.adapter.rest.support.MockOwnershipVerifier;
 import com.aionn.inventory.adapter.rest.support.TestAuth;
 import com.aionn.inventory.adapter.rest.support.session.CurrentAdminIdArgumentResolver;
+import com.aionn.inventory.adapter.rest.support.session.CurrentMerchantIdArgumentResolver;
 import com.aionn.inventory.application.dto.warehouse.command.LiftSuspensionCommand;
 import com.aionn.inventory.application.dto.warehouse.result.WarehouseResult;
 import com.aionn.inventory.application.port.in.warehouse.*;
@@ -60,7 +62,8 @@ class WarehouseControllerBranchWebTest {
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new InventoryExceptionHandler())
                 .setMessageConverters(new JacksonJsonHttpMessageConverter(objectMapper))
-                .setCustomArgumentResolvers(new CurrentAdminIdArgumentResolver())
+                .setCustomArgumentResolvers(new CurrentAdminIdArgumentResolver(),
+                        new CurrentMerchantIdArgumentResolver(new MockOwnershipVerifier()))
                 .addInterceptors(new MockSecurityInterceptor())
                 .build();
     }
@@ -82,13 +85,15 @@ class WarehouseControllerBranchWebTest {
 
     @Test
     void getByIdReturnsWarehouseResult() throws Exception {
-        when(getWarehouseInputPort.execute("WH_1"))
+        when(getWarehouseInputPort.execute("WH_1", "M_1"))
                 .thenReturn(new WarehouseResult("WH_1", "M_1", "addr", 1, "ACTIVE", Instant.now(), Instant.now()));
 
-        mockMvc.perform(get("/api/v1/inventory/warehouses/WH_1"))
+        mockMvc.perform(get("/api/v1/inventory/warehouses/WH_1")
+                        .with(TestAuth.authUser("owner-1", "ROLE_MERCHANT"))
+                        .header("X-Merchant-Id", "M_1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.warehouseId").value("WH_1"));
 
-        verify(getWarehouseInputPort).execute("WH_1");
+        verify(getWarehouseInputPort).execute("WH_1", "M_1");
     }
 }

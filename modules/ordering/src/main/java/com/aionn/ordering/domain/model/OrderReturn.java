@@ -7,6 +7,7 @@ import com.aionn.ordering.domain.exception.OrderingErrorCode;
 import com.aionn.ordering.domain.exception.OrderingException;
 import com.aionn.sharedkernel.domain.vo.Money;
 import com.aionn.ordering.domain.valueobject.ReturnStatus;
+import com.aionn.ordering.domain.valueobject.ReturnRefundStatus;
 import lombok.Getter;
 
 import java.time.Instant;
@@ -28,6 +29,10 @@ public class OrderReturn extends AggregateRoot {
     private final Instant requestedAt;
     private Instant decidedAt;
     private Instant receivedAt;
+    private ReturnRefundStatus refundStatus;
+    private int refundAttempts;
+    private String refundFailureReason;
+    private Instant nextRefundAttemptAt;
 
     public OrderReturn(
             String returnId,
@@ -44,6 +49,18 @@ public class OrderReturn extends AggregateRoot {
             Instant requestedAt,
             Instant decidedAt,
             Instant receivedAt) {
+        this(returnId, orderId, userId, merchantId, reason, evidenceUrl, refundAmount,
+                returnWarehouseId, itemCondition, rejectionReason, status, requestedAt, decidedAt,
+                receivedAt, refundAmount == null ? ReturnRefundStatus.NOT_REQUIRED : ReturnRefundStatus.PENDING,
+                0, null, null);
+    }
+
+    public OrderReturn(
+            String returnId, String orderId, String userId, String merchantId, String reason,
+            String evidenceUrl, Money refundAmount, String returnWarehouseId, String itemCondition,
+            String rejectionReason, ReturnStatus status, Instant requestedAt, Instant decidedAt,
+            Instant receivedAt, ReturnRefundStatus refundStatus, int refundAttempts,
+            String refundFailureReason, Instant nextRefundAttemptAt) {
         this.returnId = returnId;
         this.orderId = orderId;
         this.userId = userId;
@@ -58,6 +75,10 @@ public class OrderReturn extends AggregateRoot {
         this.requestedAt = requestedAt;
         this.decidedAt = decidedAt;
         this.receivedAt = receivedAt;
+        this.refundStatus = refundStatus;
+        this.refundAttempts = refundAttempts;
+        this.refundFailureReason = refundFailureReason;
+        this.nextRefundAttemptAt = nextRefundAttemptAt;
     }
 
     public static OrderReturn request(
@@ -84,8 +105,36 @@ public class OrderReturn extends AggregateRoot {
         this.returnWarehouseId = returnWarehouseId;
         this.status = ReturnStatus.APPROVED;
         this.decidedAt = now;
+        this.refundStatus = ReturnRefundStatus.PENDING;
+        this.refundAttempts = 0;
+        this.refundFailureReason = null;
+        this.nextRefundAttemptAt = now;
         registerEvent(new ReturnEvents.ReturnApproved(returnId, orderId, merchantId,
                 refundAmount.amount(), refundAmount.currency(), returnWarehouseId, decidedAt, decidedAt));
+    }
+
+    public void markRefunded(Instant now) {
+        Guard.require(refundStatus == ReturnRefundStatus.PENDING || refundStatus == ReturnRefundStatus.FAILED,
+                () -> new OrderingException(OrderingErrorCode.RETURN_INVALID_STATE));
+        refundStatus = ReturnRefundStatus.REFUNDED;
+        refundFailureReason = null;
+        nextRefundAttemptAt = null;
+    }
+
+    public void markRefundFailed(String reason, Instant nextAttemptAt) {
+        Guard.require(refundStatus == ReturnRefundStatus.PENDING || refundStatus == ReturnRefundStatus.FAILED,
+                () -> new OrderingException(OrderingErrorCode.RETURN_INVALID_STATE));
+        refundStatus = ReturnRefundStatus.FAILED;
+        refundAttempts++;
+        refundFailureReason = reason;
+        this.nextRefundAttemptAt = nextAttemptAt;
+    }
+
+    public boolean refundCanBeAttempted(Instant now, int maxAttempts) {
+        return refundStatus != ReturnRefundStatus.REFUNDED
+                && refundStatus != ReturnRefundStatus.NOT_REQUIRED
+                && refundAttempts < maxAttempts
+                && (nextRefundAttemptAt == null || !nextRefundAttemptAt.isAfter(now));
     }
 
     public void confirmReceived(String itemCondition, Instant now) {

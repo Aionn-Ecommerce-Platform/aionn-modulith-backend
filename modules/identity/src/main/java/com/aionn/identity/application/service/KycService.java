@@ -87,7 +87,8 @@ public class KycService {
                 applicant.applicantId(),
                 applicant.levelName(),
                 applicant.reviewStatus(),
-                applicant.correlationId());
+                applicant.correlationId(),
+                clock);
         return kycPersistencePort.save(kyc);
     }
 
@@ -258,7 +259,8 @@ public class KycService {
                 command.correlationId(),
                 KycReviewAnswer.from(command.reviewAnswer()),
                 command.moderationComment(),
-                command.clientComment());
+                command.clientComment(),
+                clock);
         kycPersistencePort.save(kyc);
     }
 

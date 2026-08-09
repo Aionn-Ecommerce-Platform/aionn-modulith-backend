@@ -60,8 +60,9 @@ class PaymentInitiateAdapterTest {
 
     @Test
     void refundDelegatesToInitiatePort() {
-        adapter.refund("pay-100", BigDecimal.TEN, "VND", "order return");
+        adapter.refund("pay-100", BigDecimal.TEN, "VND", "order return", "return:r-1:refund");
 
-        verify(paymentInitiatePort).refund(eq("pay-100"), eq(BigDecimal.TEN), eq("VND"), eq("order return"), anyString());
+        verify(paymentInitiatePort).refund(
+                "pay-100", BigDecimal.TEN, "VND", "order return", "return:r-1:refund");
     }
 }

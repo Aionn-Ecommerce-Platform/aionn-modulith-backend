@@ -21,10 +21,12 @@ import com.aionn.catalog.application.dto.product.query.GetProductQuery;
 import com.aionn.catalog.application.dto.product.query.GetProductsBySkuIdsQuery;
 import com.aionn.catalog.application.dto.product.query.ListProductsByMerchantQuery;
 import com.aionn.catalog.application.dto.product.query.ListProductsByStatusQuery;
+import com.aionn.catalog.application.dto.product.query.SearchProductsQuery;
 import com.aionn.catalog.application.dto.product.result.BulkPriceUpdateResult;
 import com.aionn.catalog.application.dto.product.result.ProductResult;
 import com.aionn.catalog.application.port.in.product.AssignBrandInputPort;
 import com.aionn.catalog.application.port.in.product.AssignCategoriesInputPort;
+import com.aionn.catalog.application.port.in.product.AssignCollectionsInputPort;
 import com.aionn.catalog.application.port.in.product.BulkPriceUpdateInputPort;
 import com.aionn.catalog.application.port.in.product.ChangeVariantPriceInputPort;
 import com.aionn.catalog.application.port.in.product.CloneProductInputPort;
@@ -32,6 +34,7 @@ import com.aionn.catalog.application.port.in.product.CreateProductInputPort;
 import com.aionn.catalog.application.port.in.product.DeactivateProductInputPort;
 import com.aionn.catalog.application.port.in.product.DefineAttributesInputPort;
 import com.aionn.catalog.application.port.in.product.DefineVariantInputPort;
+import com.aionn.catalog.application.port.in.product.EmergencyTakedownInputPort;
 import com.aionn.catalog.application.dto.analytics.result.ProductAnalyticsResult;
 import com.aionn.catalog.application.dto.search.ProductSearchCriteria;
 import com.aionn.catalog.application.dto.search.ProductSearchResult;
@@ -52,8 +55,12 @@ import com.aionn.catalog.application.port.in.product.ListProductsByMerchantInput
 import com.aionn.catalog.application.port.in.product.ListProductsByStatusInputPort;
 import com.aionn.catalog.application.port.in.product.PublishProductInputPort;
 import com.aionn.catalog.application.port.in.product.RejectProductInputPort;
+import com.aionn.catalog.application.port.in.product.RemoveVariantInputPort;
 import com.aionn.catalog.application.port.in.product.RestoreProductInputPort;
 import com.aionn.catalog.application.port.in.product.SubmitForReviewInputPort;
+import com.aionn.catalog.application.port.in.product.SearchProductsInputPort;
+import com.aionn.catalog.application.port.in.product.UpdateAiMetadataInputPort;
+import com.aionn.catalog.application.port.in.product.UpdateMediaInputPort;
 import com.aionn.catalog.domain.valueobject.ProductStatus;
 import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
 import com.aionn.sharedkernel.adapter.web.response.PageMetadata;
@@ -100,12 +107,12 @@ public class ProductController {
         private final GetProductsBySkuIdsInputPort getProductsBySkuIdsInputPort;
         private final ListProductsByMerchantInputPort listProductsByMerchantInputPort;
         private final ListProductsByStatusInputPort listProductsByStatusInputPort;
-        private final com.aionn.catalog.application.port.in.product.RemoveVariantInputPort removeVariantInputPort;
-        private final com.aionn.catalog.application.port.in.product.UpdateMediaInputPort updateMediaInputPort;
-        private final com.aionn.catalog.application.port.in.product.UpdateAiMetadataInputPort updateAiMetadataInputPort;
-        private final com.aionn.catalog.application.port.in.product.AssignCollectionsInputPort assignCollectionsInputPort;
-        private final com.aionn.catalog.application.port.in.product.EmergencyTakedownInputPort emergencyTakedownInputPort;
-        private final com.aionn.catalog.application.port.in.product.SearchProductsInputPort searchProductsInputPort;
+        private final RemoveVariantInputPort removeVariantInputPort;
+        private final UpdateMediaInputPort updateMediaInputPort;
+        private final UpdateAiMetadataInputPort updateAiMetadataInputPort;
+        private final AssignCollectionsInputPort assignCollectionsInputPort;
+        private final EmergencyTakedownInputPort emergencyTakedownInputPort;
+        private final SearchProductsInputPort searchProductsInputPort;
         private final GetRelatedProductsInputPort getRelatedProductsInputPort;
         private final GetPopularProductsInputPort getPopularProductsInputPort;
         private final GetPersonalizedProductsInputPort getPersonalizedProductsInputPort;
@@ -381,7 +388,7 @@ public class ProductController {
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "20") int size) {
                 PageResult<ProductResult> results = searchProductsInputPort.execute(
-                                new com.aionn.catalog.application.dto.product.query.SearchProductsQuery(keyword,
+                                new SearchProductsQuery(keyword,
                                                 OffsetPagination.of(page, size)));
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
                                 productDtoMapper.toResponses(results.content()),

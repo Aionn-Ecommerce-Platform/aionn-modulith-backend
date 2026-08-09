@@ -82,19 +82,6 @@ public class Notification extends AggregateRoot {
             NotificationCategory category,
             String subject,
             String content,
-            String campaignId) {
-        return create(notiId, userId, templateId, channel, category, subject, content, campaignId,
-                Clock.systemUTC());
-    }
-
-    public static Notification create(
-            String notiId,
-            String userId,
-            String templateId,
-            NotificationChannel channel,
-            NotificationCategory category,
-            String subject,
-            String content,
             String campaignId,
             Clock clock) {
         Instant now = clock.instant();
@@ -108,10 +95,6 @@ public class Notification extends AggregateRoot {
                 () -> new NotificationException(NotificationErrorCode.NOTIFICATION_FORBIDDEN));
     }
 
-    public void markSent() {
-        markSent(Clock.systemUTC());
-    }
-
     public void markSent(Clock clock) {
         ensureTransition(NotificationStatus.SENT);
         Instant now = clock.instant();
@@ -119,10 +102,6 @@ public class Notification extends AggregateRoot {
         this.sentAt = now;
         this.updatedAt = now;
         registerEvent(new NotificationEvents.NotificationSent(notiId, userId, channel.name(), content, now));
-    }
-
-    public void markFailed(String reason) {
-        markFailed(reason, Clock.systemUTC());
     }
 
     public void markFailed(String reason, Clock clock) {
@@ -141,8 +120,12 @@ public class Notification extends AggregateRoot {
         return status == NotificationStatus.PENDING && retryCount < MAX_RETRY;
     }
 
-    public void markRead() {
-        markRead(Clock.systemUTC());
+    public void markDeliveryUnknown(String reason, Clock clock) {
+        ensureTransition(NotificationStatus.FAILED);
+        retryCount++;
+        lastFailureReason = "DELIVERY_OUTCOME_UNKNOWN:" + reason;
+        status = NotificationStatus.FAILED;
+        updatedAt = clock.instant();
     }
 
     public void markRead(Clock clock) {
@@ -154,10 +137,6 @@ public class Notification extends AggregateRoot {
         this.readAt = now;
         this.updatedAt = now;
         registerEvent(new NotificationEvents.NotificationRead(notiId, userId, readAt, now));
-    }
-
-    public void softDelete() {
-        softDelete(Clock.systemUTC());
     }
 
     public void softDelete(Clock clock) {
