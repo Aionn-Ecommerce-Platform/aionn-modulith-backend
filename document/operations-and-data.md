@@ -70,6 +70,20 @@ Singleton business schedulers use ShedLock and PostgreSQL database time. Lock na
 
 Before changing an interval or lock duration, measure worst-case runtime and verify behavior during process termination, multi-instance execution, and overlapping schedules.
 
+### Settlement reconciliation
+
+Each settlement entry records explicit `pending_delta`, `available_delta`, and `receivable_delta` values. For every merchant and currency, the authoritative equations are:
+
+```text
+merchant_balances.pending    = SUM(settlement_ledger.pending_delta)
+merchant_balances.available  = SUM(settlement_ledger.available_delta)
+merchant_balances.receivable = SUM(settlement_ledger.receivable_delta)
+```
+
+`MOVE_AVAILABLE` subtracts pending and adds the same amount to available. A refund consumes available, then pending, and records any uncovered amount as a receivable. Later sales repay receivables before crediting pending. Payout debits and reversals affect only available.
+
+The scheduled reconciliation job reports mismatches through metrics and error logs. Never repair a mismatch by editing balances or ledger rows without preserving evidence and reviewing the complete economic event chain.
+
 ## 7. Dependencies and security
 
 - Read the Java and Spring baseline from the Gradle build rather than copying fixed versions into documentation.

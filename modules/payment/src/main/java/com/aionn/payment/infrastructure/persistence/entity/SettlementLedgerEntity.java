@@ -55,6 +55,15 @@ public class SettlementLedgerEntity {
     @Column(name = "net", nullable = false, precision = 18, scale = 2)
     private BigDecimal net;
 
+    @Column(name = "pending_delta", nullable = false, precision = 18, scale = 2)
+    private BigDecimal pendingDelta;
+
+    @Column(name = "available_delta", nullable = false, precision = 18, scale = 2)
+    private BigDecimal availableDelta;
+
+    @Column(name = "receivable_delta", nullable = false, precision = 18, scale = 2)
+    private BigDecimal receivableDelta;
+
     @Column(name = "currency", length = 3, nullable = false)
     private String currency;
 

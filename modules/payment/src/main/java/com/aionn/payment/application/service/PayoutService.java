@@ -55,6 +55,7 @@ public class PayoutService {
                                 "SLE_" + IdGenerator.ulid(),
                                 merchantId, null, null, saved.getPayoutId(),
                                 SettlementKind.PAYOUT_DEBIT, amount, BigDecimal.ZERO, amount.negate(),
+                                BigDecimal.ZERO, amount.negate(), BigDecimal.ZERO,
                                 currency, "payout requested", now));
 
                 return saved;
@@ -82,7 +83,8 @@ public class PayoutService {
                                 "SLE_" + IdGenerator.ulid(),
                                 payout.getMerchantId(), null, null, payoutId,
                                 SettlementKind.PAYOUT_REVERSAL, payout.getAmount(), BigDecimal.ZERO,
-                                payout.getAmount(), payout.getCurrency(), "payout failed: " + reason, now));
+                                payout.getAmount(), BigDecimal.ZERO, payout.getAmount(), BigDecimal.ZERO,
+                                payout.getCurrency(), "payout failed: " + reason, now));
                 return payoutRepo.save(payout);
         }
 

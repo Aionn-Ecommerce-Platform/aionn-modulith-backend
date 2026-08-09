@@ -62,6 +62,7 @@ public class AutoPayoutWorker {
                 "SLE_" + IdGenerator.ulid(),
                 candidate.merchantId(), null, null, saved.getPayoutId(),
                 SettlementKind.PAYOUT_DEBIT, amount, BigDecimal.ZERO, amount.negate(),
+                BigDecimal.ZERO, amount.negate(), BigDecimal.ZERO,
                 candidate.currency(), "auto-payout", now));
         return true;
     }

@@ -2,8 +2,6 @@ package com.aionn.payment.application.service;
 
 import com.aionn.payment.application.port.out.MerchantBalancePersistencePort;
 import com.aionn.payment.application.port.out.SettlementLedgerPersistencePort;
-import com.aionn.payment.domain.exception.PaymentErrorCode;
-import com.aionn.payment.domain.exception.PaymentException;
 import com.aionn.payment.domain.model.MerchantBalance;
 import com.aionn.payment.domain.model.SettlementLedgerEntry;
 import com.aionn.payment.domain.model.SettlementLedgerEntry.SettlementKind;
@@ -50,13 +48,15 @@ public class SettlementService {
         Instant now = clock.instant();
         MerchantBalance balance = loadOrCreate(order.merchantId(), order.currency(), now);
         if (ledgerRepo.existsById(effectId)) return;
-        balance.addPending(net, now);
+        BigDecimal repaidReceivable = balance.addPendingAfterReceivable(net, now);
+        BigDecimal pendingCredit = net.subtract(repaidReceivable);
         balanceRepo.save(balance);
 
         ledgerRepo.save(new SettlementLedgerEntry(
                 effectId,
                 order.merchantId(), orderId, paymentId, null,
                 SettlementKind.SALE, order.totalAmount(), commission, net,
+                pendingCredit, BigDecimal.ZERO, repaidReceivable.negate(),
                 order.currency(), null, now));
     }
 
@@ -76,13 +76,17 @@ public class SettlementService {
             return;
         }
         if (ledgerRepo.existsById(effectId)) return;
-        balance.moveToAvailable(sale.getNet(), now);
-        balanceRepo.save(balance);
+        BigDecimal amountToMove = sale.getPendingDelta().max(BigDecimal.ZERO);
+        if (amountToMove.signum() > 0) {
+            balance.moveToAvailable(amountToMove, now);
+            balanceRepo.save(balance);
+        }
 
         ledgerRepo.save(new SettlementLedgerEntry(
                 effectId,
                 order.merchantId(), orderId, sale.getPaymentId(), null,
-                SettlementKind.MOVE_AVAILABLE, sale.getNet(), BigDecimal.ZERO, sale.getNet(),
+                SettlementKind.MOVE_AVAILABLE, amountToMove, BigDecimal.ZERO, amountToMove,
+                amountToMove.negate(), amountToMove, BigDecimal.ZERO,
                 order.currency(), null, now));
     }
 
@@ -125,25 +129,14 @@ public class SettlementService {
         if (netDeduct.signum() <= 0) return;
 
         Instant now = clock.instant();
-        BigDecimal totalBalance = balance.getAvailable().add(balance.getPending());
-        if (totalBalance.compareTo(netDeduct) < 0) {
-            throw new PaymentException(PaymentErrorCode.PAYMENT_AMOUNT_EXCEEDED,
-                    "Settlement balance cannot cover refund for order " + orderId);
-        }
-        BigDecimal availableDeduct = balance.getAvailable().min(netDeduct);
-        if (availableDeduct.signum() > 0) {
-            balance.debitAvailable(availableDeduct, now);
-        }
-        BigDecimal pendingDeduct = netDeduct.subtract(availableDeduct);
-        if (pendingDeduct.signum() > 0) {
-            balance.reversePending(pendingDeduct, now);
-        }
+        MerchantBalance.RefundAllocation allocation = balance.allocateRefund(netDeduct, now);
         balanceRepo.save(balance);
 
         ledgerRepo.save(new SettlementLedgerEntry(
                 effectId,
                 sale.getMerchantId(), orderId, paymentId, null,
                 SettlementKind.REFUND, refundAmount, BigDecimal.ZERO, netDeduct.negate(),
+                allocation.pending().negate(), allocation.available().negate(), allocation.receivable(),
                 currency, "payment refunded", now));
     }
 

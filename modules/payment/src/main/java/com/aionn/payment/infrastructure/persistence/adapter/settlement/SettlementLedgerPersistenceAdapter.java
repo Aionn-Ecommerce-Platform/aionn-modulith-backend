@@ -28,6 +28,9 @@ public class SettlementLedgerPersistenceAdapter implements SettlementLedgerPersi
                 .gross(entry.getGross())
                 .commission(entry.getCommission())
                 .net(entry.getNet())
+                .pendingDelta(entry.getPendingDelta())
+                .availableDelta(entry.getAvailableDelta())
+                .receivableDelta(entry.getReceivableDelta())
                 .currency(entry.getCurrency())
                 .note(entry.getNote())
                 .createdAt(entry.getCreatedAt())
@@ -57,6 +60,7 @@ public class SettlementLedgerPersistenceAdapter implements SettlementLedgerPersi
                 e.getOrderId(), e.getPaymentId(), e.getPayoutId(),
                 SettlementLedgerEntry.SettlementKind.valueOf(e.getKind()),
                 e.getGross(), e.getCommission(), e.getNet(),
+                e.getPendingDelta(), e.getAvailableDelta(), e.getReceivableDelta(),
                 e.getCurrency(), e.getNote(), e.getCreatedAt());
     }
 }
