@@ -66,25 +66,18 @@ if ($LASTEXITCODE -ne 0) {
 }
 $env:POSTGRES_DB = $tempDatabase
 
-# 3. Start application in the background
-Write-Host "Starting application with mock/local environment under background..."
-$logDirectory = Join-Path $PSScriptRoot "..\build\e2e"
-New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
-$stdoutLog = Join-Path $logDirectory "application.stdout.log"
-$stderrLog = Join-Path $logDirectory "application.stderr.log"
-$process = Start-Process -FilePath ".\gradlew.bat" `
-    -ArgumentList ":app:bootRun", "--no-daemon", "--console=plain" `
-    -PassThru -WindowStyle Hidden `
-    -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog
-
 # Register cleanup block to run on exit
 $cleanup = {
-    param($proc, $database, $databaseUser)
-    Write-Host "Stopping application server (PID: $($proc.Id))..."
-    Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+    param($proc, $applicationListenerPid, $database, $databaseUser)
+    if ($null -ne $proc) {
+        Write-Host "Stopping application launcher (PID: $($proc.Id))..."
+        Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+    }
     $listener = Get-NetTCPConnection -State Listen -LocalPort 8080 -ErrorAction SilentlyContinue |
+        Where-Object OwningProcess -eq $applicationListenerPid |
         Select-Object -First 1
-    if ($listener) {
+    if ($null -ne $applicationListenerPid -and $listener) {
+        Write-Host "Stopping application server (PID: $applicationListenerPid)..."
         Stop-Process -Id $listener.OwningProcess -Force -ErrorAction SilentlyContinue
     }
     $terminateConnectionsSql = "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$database' AND pid <> pg_backend_pid();"
@@ -97,7 +90,20 @@ $cleanup = {
     }
 }
 
+$process = $null
+$applicationListenerPid = $null
 try {
+    # 3. Start application in the background
+    Write-Host "Starting application with mock/local environment under background..."
+    $logDirectory = Join-Path $PSScriptRoot "..\build\e2e"
+    New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
+    $stdoutLog = Join-Path $logDirectory "application.stdout.log"
+    $stderrLog = Join-Path $logDirectory "application.stderr.log"
+    $process = Start-Process -FilePath ".\gradlew.bat" `
+        -ArgumentList ":app:bootRun", "--no-daemon", "--console=plain" `
+        -PassThru -WindowStyle Hidden `
+        -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog
+
     # 4. Wait for the app to become healthy
     Write-Host "Waiting for app to start up at $healthUrl..."
 
@@ -128,6 +134,10 @@ try {
         Get-Content $stderrLog -Tail 80 -ErrorAction SilentlyContinue
         throw "Application did not become healthy after 180 seconds."
     }
+
+    $applicationListener = Get-NetTCPConnection -State Listen -LocalPort 8080 -ErrorAction Stop |
+        Select-Object -First 1
+    $applicationListenerPid = $applicationListener.OwningProcess
 
     # Flyway has now prepared the schema. Seed only the smallest reference
     # fixture required to exercise product publication and checkout.
@@ -168,5 +178,5 @@ try {
 }
 finally {
     # 6. Ensure the app is stopped
-    & $cleanup $process $tempDatabase $env:POSTGRES_USER
+    & $cleanup $process $applicationListenerPid $tempDatabase $env:POSTGRES_USER
 }
