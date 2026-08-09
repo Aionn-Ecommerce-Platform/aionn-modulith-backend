@@ -43,6 +43,9 @@ http_call() {
             hdr+=(-H "X-Merchant-Id: $MERCHANT_ID")
         fi
     fi
+    if [ "$method" = "POST" ] && [ "$path" = "/api/v1/ordering/orders" ]; then
+        hdr+=(-H "Idempotency-Key: ordering-e2e-$SUFFIX")
+    fi
 
     local response status resp_body
     if [ -n "$body" ]; then
@@ -122,7 +125,10 @@ variant_body="{\"skuId\":\"$DYNAMIC_SKU\",\"attributeValues\":{},\"price\":15000
 http_call POST "/api/v1/catalog/products/$PRODUCT_ID/variants" 200 "$ACCESS_TOKEN" "$variant_body" >/dev/null
 ok "variant defined with sku=$DYNAMIC_SKU"
 
-category_body="{\"categoryIds\":[\"CAT_SMH\"]}"
+categories_resp=$(http_call GET "/api/v1/catalog/categories/roots" 200)
+CATEGORY_ID=$(json_field "$categories_resp" "categoryId" || true)
+[ -n "$CATEGORY_ID" ] || fail "No active root category is available for product publication"
+category_body="{\"categoryIds\":[\"$CATEGORY_ID\"]}"
 http_call PUT "/api/v1/catalog/products/$PRODUCT_ID/categories" 200 "$ACCESS_TOKEN" "$category_body" >/dev/null
 ok "category assigned to product"
 
@@ -147,7 +153,7 @@ ok "POST /api/v1/ordering/cart/items returned 200"
 
 # --- 5. Place order ------------------------------------------------------------
 step "5. Place an order"
-order_body="{\"addressId\":\"addr-1\",\"gateway\":\"COD\",\"currency\":\"VND\",\"shippingFee\":30000,\"shippingAddress\":{\"fullName\":\"Nguyen E2E\",\"phone\":\"$PHONE_LOCAL\",\"province\":\"HN\",\"district\":\"CG\",\"ward\":\"DV\",\"street\":\"DT\"},\"selectedSkuIds\":[\"$DYNAMIC_SKU\"]}"
+order_body="{\"addressId\":\"addr-1\",\"gateway\":\"COD\",\"currency\":\"VND\",\"shippingAddress\":{\"addressId\":\"addr-1\",\"fullName\":\"Nguyen E2E\",\"phone\":\"$PHONE_LOCAL\",\"addressLine\":\"12 Modulith Street\",\"provinceCode\":\"VN-HN\",\"districtCode\":\"1454\",\"wardCode\":\"21211\",\"countryCode\":\"VN\"},\"selectedSkuIds\":[\"$DYNAMIC_SKU\"]}"
 order_resp=$(http_call POST "/api/v1/ordering/orders" 201 "$ACCESS_TOKEN" "$order_body")
 ORDER_ID=$(json_field "$order_resp" "orderId")
 [ -n "$ORDER_ID" ] || fail "orderId missing"

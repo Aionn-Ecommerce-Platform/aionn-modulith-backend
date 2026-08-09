@@ -44,6 +44,7 @@ http_call() {
     local hdr=(-H 'Accept: application/json')
     [ -n "$body" ]   && hdr+=(-H 'Content-Type: application/json')
     [ -n "$bearer" ] && hdr+=(-H "Authorization: Bearer $bearer")
+    [ -n "${MERCHANT_ID:-}" ] && hdr+=(-H "X-Merchant-Id: $MERCHANT_ID")
     hdr+=(-H "X-Client-Type: mobile")
 
     local response status resp_body

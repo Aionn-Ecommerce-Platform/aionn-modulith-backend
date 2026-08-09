@@ -107,7 +107,6 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String> 
   @Query(value = "SELECT COUNT(*) FROM products p WHERE p.status = 'PUBLISHED'", nativeQuery = true)
   long countPublished();
 
-  @EntityGraph(attributePaths = { "variants", "translations" })
   @Query(value = """
       SELECT p.* FROM products p
       WHERE p.status = 'PUBLISHED'

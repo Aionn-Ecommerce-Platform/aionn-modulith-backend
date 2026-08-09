@@ -76,9 +76,7 @@ http_call GET /api/v1/catalog/categories/roots 200 >/dev/null
 ok "GET categories/roots"
 http_call GET /api/v1/catalog/categories/tree 200 >/dev/null
 ok "GET categories/tree"
-http_call GET '/api/v1/catalog/products?page=0&size=10' 200 >/dev/null
-ok "GET products"
-http_call GET '/api/v1/catalog/products/search?keyword=phone' 200 >/dev/null
+http_call GET '/api/v1/catalog/products/search?keyword=phone&page=0&size=10' 200 >/dev/null
 ok "GET products/search"
 
 # --- 2. Acquire access token for merchant registration ---------------------

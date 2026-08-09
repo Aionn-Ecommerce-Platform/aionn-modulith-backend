@@ -3,6 +3,9 @@ param(
     [string]$Module = "all"
 )
 
+$ErrorActionPreference = "Stop"
+$ProgressPreference = "SilentlyContinue"
+
 # This PowerShell script starts the application with mock configuration, runs the specified E2E module tests, and cleans up after completion.
 
 # 1. Stop any running gradle daemons first
@@ -37,6 +40,7 @@ $overrides = @{
     "IDENTITY_AUTH_FACEBOOK_PROVIDER" = "mock"
     "IDENTITY_MEDIA_PROVIDER" = "mock"
     "IDENTITY_KYC_PROVIDER" = "local"
+    "FLYWAY_ENABLED" = "true"
 }
 
 foreach ($key in $overrides.Keys) {
@@ -45,28 +49,66 @@ foreach ($key in $overrides.Keys) {
     Set-Item "env:$key" $val
 }
 
+$baseUrl = "http://127.0.0.1:8080"
+$healthUrl = "$baseUrl/actuator/health"
+$existingListener = Get-NetTCPConnection -State Listen -LocalPort 8080 -ErrorAction SilentlyContinue |
+    Select-Object -First 1
+if ($existingListener) {
+    throw "Port 8080 is already in use by PID $($existingListener.OwningProcess). Stop it before running E2E."
+}
+
+$tempDatabase = "aionn_e2e_$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
+$createDatabaseSql = "CREATE DATABASE $tempDatabase;"
+docker exec aionn-modulith-postgres psql -v ON_ERROR_STOP=1 `
+    -U $env:POSTGRES_USER -d postgres -c $createDatabaseSql
+if ($LASTEXITCODE -ne 0) {
+    throw "Unable to create isolated E2E database $tempDatabase."
+}
+$env:POSTGRES_DB = $tempDatabase
+
 # 3. Start application in the background
 Write-Host "Starting application with mock/local environment under background..."
-$process = Start-Process -FilePath "powershell.exe" -ArgumentList "-Command .\gradlew :app:bootRun --no-daemon" -PassThru -NoNewWindow
+$logDirectory = Join-Path $PSScriptRoot "..\build\e2e"
+New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
+$stdoutLog = Join-Path $logDirectory "application.stdout.log"
+$stderrLog = Join-Path $logDirectory "application.stderr.log"
+$process = Start-Process -FilePath ".\gradlew.bat" `
+    -ArgumentList ":app:bootRun", "--no-daemon", "--console=plain" `
+    -PassThru -WindowStyle Hidden `
+    -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog
 
 # Register cleanup block to run on exit
 $cleanup = {
-    param($proc)
+    param($proc, $database, $databaseUser)
     Write-Host "Stopping application server (PID: $($proc.Id))..."
     Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+    $listener = Get-NetTCPConnection -State Listen -LocalPort 8080 -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if ($listener) {
+        Stop-Process -Id $listener.OwningProcess -Force -ErrorAction SilentlyContinue
+    }
+    $terminateConnectionsSql = "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$database' AND pid <> pg_backend_pid();"
+    docker exec aionn-modulith-postgres psql -v ON_ERROR_STOP=1 `
+        -U $databaseUser -d postgres -c $terminateConnectionsSql | Out-Null
+    docker exec aionn-modulith-postgres psql -v ON_ERROR_STOP=1 `
+        -U $databaseUser -d postgres -c "DROP DATABASE IF EXISTS $database;" | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Unable to remove isolated E2E database $database."
+    }
 }
 
 try {
     # 4. Wait for the app to become healthy
-    $baseUrl = "http://127.0.0.1:8080"
-    $healthUrl = "$baseUrl/actuator/health"
     Write-Host "Waiting for app to start up at $healthUrl..."
 
     $healthy = $false
     for ($i = 1; $i -le 90; $i++) {
         if ($process.HasExited) {
-            Write-Error "Application process died during startup."
-            exit 1
+            Write-Host "--- application stderr ---"
+            Get-Content $stderrLog -Tail 80 -ErrorAction SilentlyContinue
+            Write-Host "--- application stdout ---"
+            Get-Content $stdoutLog -Tail 120 -ErrorAction SilentlyContinue
+            throw "Application process died during startup with exit code $($process.ExitCode)."
         }
 
         try {
@@ -82,57 +124,49 @@ try {
     }
 
     if (-not $healthy) {
-        Write-Error "Application did not become healthy after 90 seconds."
-        exit 1
+        Write-Host "--- application stderr ---"
+        Get-Content $stderrLog -Tail 80 -ErrorAction SilentlyContinue
+        throw "Application did not become healthy after 180 seconds."
     }
 
-    # 5. Run the requested module E2E smoke tests using bash
-    if ($Module -eq "identity" -or $Module -eq "all") {
-        Write-Host "Running E2E tests for Identity module..."
-        bash scripts/identity/test-identity-e2e.sh
-    }
-    
-    if ($Module -eq "catalog" -or $Module -eq "all") {
-        Write-Host "Running E2E tests for Catalog module..."
-        bash scripts/catalog/test-catalog-e2e.sh
-    }
-
-    if ($Module -eq "inventory" -or $Module -eq "all") {
-        Write-Host "Running E2E tests for Inventory module..."
-        bash scripts/inventory/test-inventory-e2e.sh
-    }
- 
-    if ($Module -eq "ordering" -or $Module -eq "all") {
-        Write-Host "Running E2E tests for Ordering module..."
-        bash scripts/ordering/test-ordering-e2e.sh
+    # Flyway has now prepared the schema. Seed only the smallest reference
+    # fixture required to exercise product publication and checkout.
+    $fixture = Get-Content (Join-Path $PSScriptRoot "fixtures\e2e-prerequisites.sql") -Raw
+    $fixture | docker compose -p aionn-modulith-backend `
+        -f docker/docker-compose.yml --env-file envs/common.env `
+        exec -T postgres psql -v ON_ERROR_STOP=1 `
+        -U $env:POSTGRES_USER -d $env:POSTGRES_DB
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to apply E2E prerequisite fixture to PostgreSQL."
     }
 
-    if ($Module -eq "payment" -or $Module -eq "all") {
-        Write-Host "Running E2E tests for Payment module..."
-        bash scripts/payment/test-payment-e2e.sh
+    # 5. Run requested module E2E smoke tests and retain every result.
+    $modules = @("identity", "catalog", "inventory", "ordering", "payment",
+        "shipping", "promotion", "notification", "chat")
+    $results = [System.Collections.Generic.List[object]]::new()
+    foreach ($name in $modules) {
+        if ($Module -ne "all" -and $Module -ne $name) {
+            continue
+        }
+
+        Write-Host "Running E2E tests for $name module..."
+        & bash "scripts/$name/test-$name-e2e.sh"
+        $exitCode = $LASTEXITCODE
+        $results.Add([pscustomobject]@{
+            Module = $name
+            Result = if ($exitCode -eq 0) { "PASS" } else { "FAIL" }
+            ExitCode = $exitCode
+        })
     }
 
-    if ($Module -eq "shipping" -or $Module -eq "all") {
-        Write-Host "Running E2E tests for Shipping module..."
-        bash scripts/shipping/test-shipping-e2e.sh
-    }
-
-    if ($Module -eq "promotion" -or $Module -eq "all") {
-        Write-Host "Running E2E tests for Promotion module..."
-        bash scripts/promotion/test-promotion-e2e.sh
-    }
-
-    if ($Module -eq "notification" -or $Module -eq "all") {
-        Write-Host "Running E2E tests for Notification module..."
-        bash scripts/notification/test-notification-e2e.sh
-    }
-
-    if ($Module -eq "chat" -or $Module -eq "all") {
-        Write-Host "Running E2E tests for Chat module..."
-        bash scripts/chat/test-chat-e2e.sh
+    Write-Host "`nE2E module summary:"
+    $results | Format-Table -AutoSize
+    $failed = @($results | Where-Object ExitCode -ne 0)
+    if ($failed.Count -gt 0) {
+        throw "E2E suite failed for: $($failed.Module -join ', '). Logs: $logDirectory"
     }
 }
 finally {
     # 6. Ensure the app is stopped
-    & $cleanup $process
+    & $cleanup $process $tempDatabase $env:POSTGRES_USER
 }
