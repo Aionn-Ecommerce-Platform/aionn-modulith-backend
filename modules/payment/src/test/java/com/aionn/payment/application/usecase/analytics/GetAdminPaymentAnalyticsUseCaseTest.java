@@ -42,4 +42,18 @@ class GetAdminPaymentAnalyticsUseCaseTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("from must not be after to");
     }
+
+    @Test
+    void acceptsMaximumRangeAndRejectsLongerRange() {
+        when(queryPort.getAdminAnalytics(any(), any(), any(), any(), any()))
+                .thenReturn(mock(AdminPaymentAnalyticsResult.class));
+
+        useCase.execute(new GetAdminPaymentAnalyticsQuery(
+                LocalDate.parse("2025-01-01"), LocalDate.parse("2026-01-01"), "VND"));
+
+        assertThatThrownBy(() -> useCase.execute(new GetAdminPaymentAnalyticsQuery(
+                LocalDate.parse("2025-01-01"), LocalDate.parse("2026-01-02"), "VND")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("analytics range must not exceed 366 days");
+    }
 }

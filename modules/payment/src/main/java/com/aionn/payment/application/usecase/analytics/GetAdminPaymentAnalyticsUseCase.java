@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class GetAdminPaymentAnalyticsUseCase implements GetAdminPaymentAnalyticsInputPort {
+    private static final long MAX_RANGE_DAYS = 366;
     private final PaymentAnalyticsQueryPort analyticsQueryPort;
     private final Clock clock;
 
@@ -24,6 +25,9 @@ public class GetAdminPaymentAnalyticsUseCase implements GetAdminPaymentAnalytics
         LocalDate from = query.from() == null ? to.minusDays(29) : query.from();
         if (from.isAfter(to)) {
             throw new IllegalArgumentException("from must not be after to");
+        }
+        if (java.time.temporal.ChronoUnit.DAYS.between(from, to) + 1 > MAX_RANGE_DAYS) {
+            throw new IllegalArgumentException("analytics range must not exceed 366 days");
         }
         String currency = query.currency() == null || query.currency().isBlank()
                 ? "VND"

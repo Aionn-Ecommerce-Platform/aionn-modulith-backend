@@ -71,7 +71,9 @@ public class ProductReviewPersistenceAdapter implements ProductReviewPersistence
     public List<ProductReview> findByProductId(String productId, OffsetPagination pagination) {
         return jpa.findByProductId(productId,
                 PageRequest.of(pagination.page(), pagination.size(),
-                        Sort.by(Sort.Direction.DESC, TypedPropertyPath.path(ProductReviewEntity::getCreatedAt))))
+                        Sort.by(Sort.Direction.DESC, TypedPropertyPath.path(ProductReviewEntity::getCreatedAt))
+                                .and(Sort.by(Sort.Direction.ASC,
+                                        TypedPropertyPath.path(ProductReviewEntity::getReviewId)))))
                 .stream().map(mapper::toDomain).toList();
     }
 

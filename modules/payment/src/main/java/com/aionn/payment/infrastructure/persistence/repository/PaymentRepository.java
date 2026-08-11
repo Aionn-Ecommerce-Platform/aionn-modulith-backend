@@ -21,7 +21,27 @@ public interface PaymentRepository extends JpaRepository<PaymentEntity, String> 
 
     List<PaymentEntity> findByOrderId(String orderId);
 
-    List<PaymentEntity> findByCreatedAtGreaterThanEqualAndCreatedAtLessThanAndCurrency(
-            Instant fromInclusive, Instant toExclusive, String currency);
+    @Query("SELECT COALESCE(SUM(p.refundedAmount), 0) AS refundAmount, "
+            + "SUM(CASE WHEN p.refundedAmount > 0 THEN 1 ELSE 0 END) AS refundCount, "
+            + "SUM(CASE WHEN p.status IN ('PAID', 'REFUNDED') THEN 1 ELSE 0 END) AS paidCount "
+            + "FROM PaymentEntity p WHERE p.createdAt >= :from AND p.createdAt < :to AND p.currency = :currency")
+    PaymentSummaryProjection summarize(@Param("from") Instant from, @Param("to") Instant to,
+            @Param("currency") String currency);
+
+    @Query("SELECT p.status AS status, COUNT(p) AS count FROM PaymentEntity p "
+            + "WHERE p.createdAt >= :from AND p.createdAt < :to AND p.currency = :currency GROUP BY p.status")
+    List<StatusCountProjection> countByStatus(@Param("from") Instant from, @Param("to") Instant to,
+            @Param("currency") String currency);
+
+    interface PaymentSummaryProjection {
+        java.math.BigDecimal getRefundAmount();
+        Long getRefundCount();
+        Long getPaidCount();
+    }
+
+    interface StatusCountProjection {
+        String getStatus();
+        Long getCount();
+    }
 }
 
