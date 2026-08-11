@@ -44,6 +44,10 @@ public interface InventoryItemRepository
 
     Page<InventoryItemEntity> findByIdWarehouseIdOrderByIdSkuIdAsc(String warehouseId, Pageable pageable);
 
+    @Query("SELECT i FROM InventoryItemEntity i WHERE i.availableQty < i.safetyStockQty "
+            + "ORDER BY i.availableQty ASC, i.id.warehouseId ASC, i.id.skuId ASC")
+    Page<InventoryItemEntity> findAllLowStock(Pageable pageable);
+
     @Query("""
         SELECT i.id.skuId AS skuId,
                i.id.warehouseId AS warehouseId,

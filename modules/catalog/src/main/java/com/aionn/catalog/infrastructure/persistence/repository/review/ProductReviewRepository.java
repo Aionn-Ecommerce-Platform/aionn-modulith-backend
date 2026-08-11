@@ -16,9 +16,25 @@ public interface ProductReviewRepository extends JpaRepository<ProductReviewEnti
 
     long countByProductIdAndStatus(String productId, String status);
 
+    Page<ProductReviewEntity> findByProductId(String productId, Pageable pageable);
+
+    long countByProductId(String productId);
+
     Page<ProductReviewEntity> findByUserId(String userId, Pageable pageable);
 
     long countByUserId(String userId);
+
+    @Query("SELECT r FROM ProductReviewEntity r WHERE r.productId IN "
+            + "(SELECT p.productId FROM ProductEntity p WHERE p.merchantId = :merchantId) "
+            + "AND (:replied IS NULL OR (:replied = true AND r.merchantReply IS NOT NULL) "
+            + "OR (:replied = false AND r.merchantReply IS NULL))")
+    Page<ProductReviewEntity> findByMerchantId(String merchantId, Boolean replied, Pageable pageable);
+
+    @Query("SELECT COUNT(r) FROM ProductReviewEntity r WHERE r.productId IN "
+            + "(SELECT p.productId FROM ProductEntity p WHERE p.merchantId = :merchantId) "
+            + "AND (:replied IS NULL OR (:replied = true AND r.merchantReply IS NOT NULL) "
+            + "OR (:replied = false AND r.merchantReply IS NULL))")
+    long countByMerchantId(String merchantId, Boolean replied);
 
     Page<ProductReviewEntity> findByStatus(String status, Pageable pageable);
 

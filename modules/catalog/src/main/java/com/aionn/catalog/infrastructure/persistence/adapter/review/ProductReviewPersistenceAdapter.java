@@ -68,6 +68,21 @@ public class ProductReviewPersistenceAdapter implements ProductReviewPersistence
     }
 
     @Override
+    public List<ProductReview> findByProductId(String productId, OffsetPagination pagination) {
+        return jpa.findByProductId(productId,
+                PageRequest.of(pagination.page(), pagination.size(),
+                        Sort.by(Sort.Direction.DESC, TypedPropertyPath.path(ProductReviewEntity::getCreatedAt))
+                                .and(Sort.by(Sort.Direction.ASC,
+                                        TypedPropertyPath.path(ProductReviewEntity::getReviewId)))))
+                .stream().map(mapper::toDomain).toList();
+    }
+
+    @Override
+    public long countByProductId(String productId) {
+        return jpa.countByProductId(productId);
+    }
+
+    @Override
     public List<ProductReview> findByUserId(String userId, OffsetPagination pagination) {
         return jpa.findByUserId(userId,
                 PageRequest.of(pagination.page(), pagination.size(),
@@ -81,6 +96,23 @@ public class ProductReviewPersistenceAdapter implements ProductReviewPersistence
     @Override
     public long countByUserId(String userId) {
         return jpa.countByUserId(userId);
+    }
+
+    @Override
+    public List<ProductReview> findByMerchantId(String merchantId, Boolean replied, OffsetPagination pagination) {
+        return jpa.findByMerchantId(merchantId, replied,
+                PageRequest.of(pagination.page(), pagination.size(),
+                        Sort.by(Sort.Direction.DESC, TypedPropertyPath.path(ProductReviewEntity::getCreatedAt))
+                                .and(Sort.by(Sort.Direction.ASC,
+                                        TypedPropertyPath.path(ProductReviewEntity::getReviewId)))))
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countByMerchantId(String merchantId, Boolean replied) {
+        return jpa.countByMerchantId(merchantId, replied);
     }
 
     @Override

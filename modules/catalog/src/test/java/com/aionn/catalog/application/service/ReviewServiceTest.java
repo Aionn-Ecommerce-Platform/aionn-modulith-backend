@@ -265,6 +265,60 @@ class ReviewServiceTest {
     }
 
     @Test
+    void getMerchantReviewsUsesAuthenticatedOwnersMerchantAndReplyFilter() {
+        ProductReview review = makeReview();
+        Merchant merchant = Merchant.register(MERCHANT_ID, OWNER_ID, "Acme", new BigDecimal("0.05"), clock);
+        when(merchantRepository.findByOwnerId(OWNER_ID)).thenReturn(Optional.of(merchant));
+        when(reviewRepository.findByMerchantId(MERCHANT_ID, false, OffsetPagination.of(1, 10)))
+                .thenReturn(List.of(review));
+        when(reviewRepository.countByMerchantId(MERCHANT_ID, false)).thenReturn(11L);
+
+        PageResult<ProductReview> page = reviewService.getMerchantReviews(
+                OWNER_ID, false, OffsetPagination.of(1, 10));
+
+        assertThat(page.content()).containsExactly(review);
+        assertThat(page.page()).isEqualTo(1);
+        assertThat(page.totalElements()).isEqualTo(11L);
+    }
+
+    @Test
+    void getMerchantReviewsRejectsOwnerWithoutMerchant() {
+        when(merchantRepository.findByOwnerId(OWNER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reviewService.getMerchantReviews(
+                OWNER_ID, null, OffsetPagination.of(0, 20)))
+                .isInstanceOf(CatalogException.class)
+                .extracting("errorCode")
+                .isEqualTo(CatalogErrorCode.MERCHANT_NOT_FOUND.getCode());
+    }
+
+    @Test
+    void getAdminProductReviewsReturnsEveryStatus() {
+        ProductReview review = makeReview();
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
+        when(reviewRepository.findByProductId(PRODUCT_ID, OffsetPagination.of(0, 20)))
+                .thenReturn(List.of(review));
+        when(reviewRepository.countByProductId(PRODUCT_ID)).thenReturn(1L);
+
+        PageResult<ProductReview> page = reviewService.getAdminProductReviews(
+                PRODUCT_ID, OffsetPagination.of(0, 20));
+
+        assertThat(page.content()).containsExactly(review);
+        assertThat(page.totalElements()).isEqualTo(1L);
+    }
+
+    @Test
+    void getAdminProductReviewsRejectsUnknownProduct() {
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reviewService.getAdminProductReviews(
+                PRODUCT_ID, OffsetPagination.of(0, 20)))
+                .isInstanceOf(CatalogException.class)
+                .extracting("errorCode")
+                .isEqualTo(CatalogErrorCode.PRODUCT_NOT_FOUND.getCode());
+    }
+
+    @Test
     void getReportedReturnsPage() {
         ProductReview review = makeReview();
         review.report(MERCHANT_ID, "abuse", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));

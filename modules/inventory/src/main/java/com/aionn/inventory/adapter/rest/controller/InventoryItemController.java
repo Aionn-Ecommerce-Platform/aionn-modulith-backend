@@ -47,6 +47,7 @@ public class InventoryItemController {
     private final ListInventoryItemsByWarehouseInputPort listInventoryItemsByWarehouseInputPort;
     private final GetInventoryItemInputPort getInventoryItemInputPort;
     private final GetMerchantLowStockInputPort getMerchantLowStockInputPort;
+    private final ListAdminLowStockInputPort listAdminLowStockInputPort;
 
     private final InventoryItemDtoMapper dtoMapper;
 
@@ -58,6 +59,19 @@ public class InventoryItemController {
         return ResponseEntity.ok(ApiResponse.success(
                 dtoMapper.toLowStockResponses(getMerchantLowStockInputPort.execute(authentication.getName())),
                 "Low-stock alerts fetched"));
+    }
+
+    @GetMapping("/admin/low-stock")
+    @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
+    @Operation(summary = "Paginated low-stock inventory across all merchants")
+    public ResponseEntity<ApiResponse<List<InventoryItemResponse>>> adminLowStock(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+        PageResult<InventoryItemResult> result = listAdminLowStockInputPort.execute(OffsetPagination.of(page, size));
+        return ResponseEntity.ok(ApiResponse.successWithPaging(
+                dtoMapper.toResponses(result.content()),
+                PageMetadata.of(result.page(), result.size(), result.totalElements()),
+                "Low-stock inventory fetched"));
     }
 
     @PostMapping
