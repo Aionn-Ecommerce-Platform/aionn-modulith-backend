@@ -58,7 +58,8 @@ public class ShipmentController {
 
         @PostMapping("/quote")
         @PreAuthorize("isAuthenticated()")
-        @Operation(summary = "Quote shipping fee")
+        @Operation(summary = "Quote shipping fee",
+                        description = "orderId is optional so checkout can request a quote before creating an order")
         public ResponseEntity<ApiResponse<ShippingQuoteResponse>> quote(
                         @Valid @RequestBody QuoteShippingRequest request) {
                 QuoteShippingCommand command = shippingRateDtoMapper.toCommand(request);

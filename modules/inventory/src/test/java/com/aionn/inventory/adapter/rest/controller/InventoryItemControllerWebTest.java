@@ -12,6 +12,7 @@ import com.aionn.inventory.application.dto.inventory.command.ConfigureSafetyStoc
 import com.aionn.inventory.application.dto.inventory.command.EmergencyLockCommand;
 import com.aionn.inventory.application.dto.inventory.command.InitializeStockCommand;
 import com.aionn.inventory.application.dto.inventory.result.InventoryItemResult;
+import com.aionn.inventory.application.dto.common.PageResult;
 import com.aionn.inventory.application.port.in.inventory.*;
 import com.aionn.inventory.domain.exception.InventoryErrorCode;
 import com.aionn.inventory.domain.exception.InventoryException;
@@ -52,6 +53,7 @@ class InventoryItemControllerWebTest {
     @Mock private ListInventoryItemsByWarehouseInputPort listInventoryItemsByWarehouseInputPort;
     @Mock private GetInventoryItemInputPort getInventoryItemInputPort;
     @Mock private GetMerchantLowStockInputPort getMerchantLowStockInputPort;
+    @Mock private ListAdminLowStockInputPort listAdminLowStockInputPort;
 
     private MockMvc mockMvc;
     private final JsonMapper objectMapper = JacksonMapperFactory.create();
@@ -70,6 +72,7 @@ class InventoryItemControllerWebTest {
                 listInventoryItemsByWarehouseInputPort,
                 getInventoryItemInputPort,
                 getMerchantLowStockInputPort,
+                listAdminLowStockInputPort,
                 new InventoryItemDtoMapperImpl()
         );
 
@@ -148,6 +151,17 @@ class InventoryItemControllerWebTest {
                 .andExpect(status().isOk());
 
         verify(emergencyLockInputPort).execute(any(EmergencyLockCommand.class));
+    }
+
+    @Test
+    void adminLowStockReturnsPaginatedInventory() throws Exception {
+        when(listAdminLowStockInputPort.execute(any()))
+                .thenReturn(new PageResult<>(java.util.List.of(sampleResult(10, 2)), 0, 20, 1, 1));
+
+        mockMvc.perform(get("/api/v1/inventory/items/admin/low-stock")
+                        .with(TestAuth.authAdmin("admin-1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].skuId").value("SKU_1"));
     }
 
     private InventoryItemResult sampleResult(int physical, int available) {

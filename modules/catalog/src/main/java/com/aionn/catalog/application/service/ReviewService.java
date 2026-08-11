@@ -145,6 +145,26 @@ public class ReviewService {
     }
 
     @Transactional(readOnly = true)
+    public PageResult<ProductReview> getAdminProductReviews(String productId, OffsetPagination pagination) {
+        productRepository.findById(productId)
+                .orElseThrow(() -> new CatalogException(CatalogErrorCode.PRODUCT_NOT_FOUND));
+        List<ProductReview> content = reviewRepository.findByProductId(productId, pagination);
+        return new PageResult<>(content, pagination.page(), pagination.size(),
+                reviewRepository.countByProductId(productId));
+    }
+
+    @Transactional(readOnly = true)
+    public PageResult<ProductReview> getMerchantReviews(
+            String ownerId, Boolean replied, OffsetPagination pagination) {
+        Merchant merchant = merchantRepository.findByOwnerId(ownerId)
+                .orElseThrow(() -> new CatalogException(CatalogErrorCode.MERCHANT_NOT_FOUND));
+        List<ProductReview> content = reviewRepository.findByMerchantId(
+                merchant.getMerchantId(), replied, pagination);
+        long total = reviewRepository.countByMerchantId(merchant.getMerchantId(), replied);
+        return new PageResult<>(content, pagination.page(), pagination.size(), total);
+    }
+
+    @Transactional(readOnly = true)
     public PageResult<ProductReview> getReportedReviews(OffsetPagination pagination) {
         List<ProductReview> content = reviewRepository.findByStatus(ReviewStatus.REPORTED, pagination);
         long total = reviewRepository.countByStatus(ReviewStatus.REPORTED);

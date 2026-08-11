@@ -10,6 +10,7 @@ import jakarta.persistence.LockModeType;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.Instant;
 
 public interface PaymentRepository extends JpaRepository<PaymentEntity, String> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -19,5 +20,8 @@ public interface PaymentRepository extends JpaRepository<PaymentEntity, String> 
     Optional<PaymentEntity> findByIdempotencyKey(String idempotencyKey);
 
     List<PaymentEntity> findByOrderId(String orderId);
+
+    List<PaymentEntity> findByCreatedAtGreaterThanEqualAndCreatedAtLessThanAndCurrency(
+            Instant fromInclusive, Instant toExclusive, String currency);
 }
 

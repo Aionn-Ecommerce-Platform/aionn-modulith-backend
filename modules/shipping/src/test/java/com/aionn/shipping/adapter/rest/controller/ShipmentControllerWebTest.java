@@ -116,7 +116,7 @@ class ShipmentControllerWebTest {
         mockMvc.perform(post("/api/v1/shipping/shipments/quote")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new QuoteShippingRequest("ORDER_1", address, dims, "VND"))))
+                                new QuoteShippingRequest(null, address, dims, "VND"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.fee").value(30000))
                 .andExpect(jsonPath("$.data.currency").value("VND"));

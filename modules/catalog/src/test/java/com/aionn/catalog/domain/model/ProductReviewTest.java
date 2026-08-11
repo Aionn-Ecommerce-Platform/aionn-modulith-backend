@@ -157,7 +157,7 @@ class ProductReviewTest {
     }
 
     @Test
-    void restoreOnlyFromReported() {
+    void restoreReportedReview() {
         ProductReview review = freshReview();
         review.report(MERCHANT_ID, "reason", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         review.pullEvents();
@@ -168,6 +168,17 @@ class ProductReviewTest {
         assertThat(review.getReportedByMerchantId()).isNull();
         assertThat(review.getReportReason()).isNull();
         assertThat(review.getReportedAt()).isNull();
+    }
+
+    @Test
+    void restoreHiddenReview() {
+        ProductReview review = freshReview();
+        review.hide(Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC));
+        review.pullEvents();
+
+        review.restore(ADMIN_ID, Clock.fixed(Instant.parse("2026-01-02T00:00:00Z"), ZoneOffset.UTC));
+
+        assertThat(review.getStatus()).isEqualTo(ReviewStatus.VISIBLE);
     }
 
     @Test

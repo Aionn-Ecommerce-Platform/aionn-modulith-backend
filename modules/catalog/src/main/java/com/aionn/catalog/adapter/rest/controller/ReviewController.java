@@ -11,6 +11,8 @@ import com.aionn.catalog.adapter.rest.support.session.CurrentOwnerId;
 import com.aionn.catalog.application.dto.common.PageResult;
 import com.aionn.catalog.application.dto.review.query.CheckReviewEligibilityQuery;
 import com.aionn.catalog.application.dto.review.query.GetMyReviewsQuery;
+import com.aionn.catalog.application.dto.review.query.GetMerchantReviewsQuery;
+import com.aionn.catalog.application.dto.review.query.GetAdminProductReviewsQuery;
 import com.aionn.catalog.application.dto.review.query.GetProductRatingSummaryQuery;
 import com.aionn.catalog.application.dto.review.query.GetReportedReviewsQuery;
 import com.aionn.catalog.application.dto.review.query.GetReviewsByProductQuery;
@@ -22,6 +24,8 @@ import com.aionn.catalog.application.port.in.review.AdminDeleteReviewInputPort;
 import com.aionn.catalog.application.port.in.review.CheckReviewEligibilityInputPort;
 import com.aionn.catalog.application.port.in.review.DeleteReviewInputPort;
 import com.aionn.catalog.application.port.in.review.GetMyReviewsInputPort;
+import com.aionn.catalog.application.port.in.review.GetMerchantReviewsInputPort;
+import com.aionn.catalog.application.port.in.review.GetAdminProductReviewsInputPort;
 import com.aionn.catalog.application.port.in.review.GetProductRatingSummaryInputPort;
 import com.aionn.catalog.application.port.in.review.GetReportedReviewsInputPort;
 import com.aionn.catalog.application.port.in.review.GetReviewsByProductInputPort;
@@ -37,6 +41,8 @@ import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -68,6 +74,8 @@ public class ReviewController {
         private final RestoreReviewInputPort restoreReviewInputPort;
         private final GetReviewsByProductInputPort getReviewsByProductInputPort;
         private final GetMyReviewsInputPort getMyReviewsInputPort;
+        private final GetMerchantReviewsInputPort getMerchantReviewsInputPort;
+        private final GetAdminProductReviewsInputPort getAdminProductReviewsInputPort;
         private final GetReportedReviewsInputPort getReportedReviewsInputPort;
         private final GetProductRatingSummaryInputPort getProductRatingSummaryInputPort;
         private final CheckReviewEligibilityInputPort checkReviewEligibilityInputPort;
@@ -153,7 +161,7 @@ public class ReviewController {
 
         @PostMapping("/admin/reviews/{reviewId}/restore")
         @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
-        @Operation(summary = "Admin restores a reported review")
+        @Operation(summary = "Admin restores a reported or hidden review")
         public ResponseEntity<ApiResponse<ReviewResponse>> adminRestore(
                         @CurrentAdminId String adminId,
                         @PathVariable String reviewId) {
@@ -199,6 +207,22 @@ public class ReviewController {
                                 "My reviews fetched"));
         }
 
+        @GetMapping("/merchant/reviews")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(summary = "List reviews for products owned by the authenticated merchant")
+        public ResponseEntity<ApiResponse<List<ReviewResponse>>> merchantReviews(
+                        @CurrentOwnerId String ownerId,
+                        @RequestParam(required = false) Boolean replied,
+                        @RequestParam(defaultValue = "0") @Min(0) int page,
+                        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+                PageResult<ReviewResult> result = getMerchantReviewsInputPort.execute(
+                                new GetMerchantReviewsQuery(ownerId, replied, OffsetPagination.of(page, size)));
+                return ResponseEntity.ok(ApiResponse.successWithPaging(
+                                reviewDtoMapper.toResponses(result.content()),
+                                PageMetadata.of(result.page(), result.size(), result.totalElements()),
+                                "Merchant reviews fetched"));
+        }
+
         @GetMapping("/admin/reviews/reported")
         @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
         @Operation(summary = "List reported reviews")
@@ -211,6 +235,21 @@ public class ReviewController {
                                 reviewDtoMapper.toResponses(result.content()),
                                 PageMetadata.of(result.page(), result.size(), result.totalElements()),
                                 "Reported reviews fetched"));
+        }
+
+        @GetMapping("/admin/products/{productId}/reviews")
+        @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
+        @Operation(summary = "List all review statuses for a product")
+        public ResponseEntity<ApiResponse<List<ReviewResponse>>> adminProductReviews(
+                        @PathVariable String productId,
+                        @RequestParam(defaultValue = "0") @Min(0) int page,
+                        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+                PageResult<ReviewResult> result = getAdminProductReviewsInputPort.execute(
+                                new GetAdminProductReviewsQuery(productId, OffsetPagination.of(page, size)));
+                return ResponseEntity.ok(ApiResponse.successWithPaging(
+                                reviewDtoMapper.toResponses(result.content()),
+                                PageMetadata.of(result.page(), result.size(), result.totalElements()),
+                                "Product reviews fetched for moderation"));
         }
 
         @GetMapping("/products/{productId}/reviews/eligibility")

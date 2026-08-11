@@ -20,9 +20,17 @@ public interface ProductReviewPersistencePort {
 
     long countByProductIdAndStatus(String productId, ReviewStatus status);
 
+    List<ProductReview> findByProductId(String productId, OffsetPagination pagination);
+
+    long countByProductId(String productId);
+
     List<ProductReview> findByUserId(String userId, OffsetPagination pagination);
 
     long countByUserId(String userId);
+
+    List<ProductReview> findByMerchantId(String merchantId, Boolean replied, OffsetPagination pagination);
+
+    long countByMerchantId(String merchantId, Boolean replied);
 
     List<ProductReview> findByStatus(ReviewStatus status, OffsetPagination pagination);
 

@@ -174,7 +174,7 @@ public class ProductReview extends AggregateRoot {
     }
 
     public void restore(String adminId, Clock clock) {
-        if (this.status != ReviewStatus.REPORTED) {
+        if (this.status != ReviewStatus.REPORTED && this.status != ReviewStatus.HIDDEN) {
             throw new CatalogException(CatalogErrorCode.REVIEW_NOT_REPORTED);
         }
         this.status = ReviewStatus.VISIBLE;

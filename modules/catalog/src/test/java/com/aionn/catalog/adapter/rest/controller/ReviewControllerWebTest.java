@@ -21,6 +21,8 @@ import com.aionn.catalog.application.dto.review.command.SubmitReviewCommand;
 import com.aionn.catalog.application.dto.review.command.UpdateReviewCommand;
 import com.aionn.catalog.application.dto.review.query.CheckReviewEligibilityQuery;
 import com.aionn.catalog.application.dto.review.query.GetMyReviewsQuery;
+import com.aionn.catalog.application.dto.review.query.GetMerchantReviewsQuery;
+import com.aionn.catalog.application.dto.review.query.GetAdminProductReviewsQuery;
 import com.aionn.catalog.application.dto.review.query.GetProductRatingSummaryQuery;
 import com.aionn.catalog.application.dto.review.query.GetReportedReviewsQuery;
 import com.aionn.catalog.application.dto.review.query.GetReviewsByProductQuery;
@@ -31,6 +33,8 @@ import com.aionn.catalog.application.port.in.review.AdminDeleteReviewInputPort;
 import com.aionn.catalog.application.port.in.review.CheckReviewEligibilityInputPort;
 import com.aionn.catalog.application.port.in.review.DeleteReviewInputPort;
 import com.aionn.catalog.application.port.in.review.GetMyReviewsInputPort;
+import com.aionn.catalog.application.port.in.review.GetMerchantReviewsInputPort;
+import com.aionn.catalog.application.port.in.review.GetAdminProductReviewsInputPort;
 import com.aionn.catalog.application.port.in.review.GetProductRatingSummaryInputPort;
 import com.aionn.catalog.application.port.in.review.GetReportedReviewsInputPort;
 import com.aionn.catalog.application.port.in.review.GetReviewsByProductInputPort;
@@ -93,6 +97,10 @@ class ReviewControllerWebTest {
     @Mock
     private GetMyReviewsInputPort getMyReviewsInputPort;
     @Mock
+    private GetMerchantReviewsInputPort getMerchantReviewsInputPort;
+    @Mock
+    private GetAdminProductReviewsInputPort getAdminProductReviewsInputPort;
+    @Mock
     private GetReportedReviewsInputPort getReportedReviewsInputPort;
     @Mock
     private GetProductRatingSummaryInputPort getProductRatingSummaryInputPort;
@@ -108,7 +116,8 @@ class ReviewControllerWebTest {
                 submitReviewInputPort, updateReviewInputPort, deleteReviewInputPort,
                 merchantReplyReviewInputPort, reportReviewInputPort, hideReviewInputPort,
                 adminDeleteReviewInputPort, restoreReviewInputPort,
-                getReviewsByProductInputPort, getMyReviewsInputPort, getReportedReviewsInputPort,
+                getReviewsByProductInputPort, getMyReviewsInputPort, getMerchantReviewsInputPort,
+                getAdminProductReviewsInputPort, getReportedReviewsInputPort,
                 getProductRatingSummaryInputPort, checkReviewEligibilityInputPort,
                 new ReviewDtoMapperImpl());
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
@@ -237,6 +246,28 @@ class ReviewControllerWebTest {
 
         mockMvc.perform(get("/api/v1/catalog/reviews/mine")
                 .with(TestAuth.authUser("user-1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].reviewId").value(REVIEW_ID));
+    }
+
+    @Test
+    void merchantReviewsReturnsOwnedProductReviews() throws Exception {
+        when(getMerchantReviewsInputPort.execute(any(GetMerchantReviewsQuery.class)))
+                .thenReturn(new PageResult<>(List.of(sample()), 0, 20, 1));
+
+        mockMvc.perform(get("/api/v1/catalog/merchant/reviews")
+                .with(TestAuth.authUser("owner-1", "MERCHANT")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].reviewId").value(REVIEW_ID));
+    }
+
+    @Test
+    void adminProductReviewsReturnsAllStatuses() throws Exception {
+        when(getAdminProductReviewsInputPort.execute(any(GetAdminProductReviewsQuery.class)))
+                .thenReturn(new PageResult<>(List.of(sample()), 0, 20, 1));
+
+        mockMvc.perform(get("/api/v1/catalog/admin/products/" + PRODUCT_ID + "/reviews")
+                .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].reviewId").value(REVIEW_ID));
     }

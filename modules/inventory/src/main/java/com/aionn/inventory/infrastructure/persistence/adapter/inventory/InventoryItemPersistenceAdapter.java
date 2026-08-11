@@ -87,6 +87,13 @@ public class InventoryItemPersistenceAdapter implements InventoryItemPersistence
                 .toList();
     }
 
+    @Override
+    public PageResult<InventoryItem> findAllLowStock(OffsetPagination pagination) {
+        var page = jpa.findAllLowStock(PageRequest.of(pagination.page(), pagination.size())).map(mapper::toDomain);
+        return new PageResult<>(page.getContent(), page.getNumber(), page.getSize(),
+                page.getNumberOfElements(), page.getTotalElements());
+    }
+
     private static int valueOrZero(Integer value) {
         return value == null ? 0 : value;
     }

@@ -27,6 +27,8 @@ public interface InventoryItemPersistencePort {
 
     List<LowStockItem> findLowStockForMerchant(String merchantId);
 
+    PageResult<InventoryItem> findAllLowStock(OffsetPagination pagination);
+
     record LowStockItem(
             String skuId,
             String warehouseId,
