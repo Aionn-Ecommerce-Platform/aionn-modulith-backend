@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mapstruct.factory.Mappers;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
@@ -47,6 +48,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -121,7 +123,9 @@ class ShipmentControllerWebTest {
                 .andExpect(jsonPath("$.data.fee").value(30000))
                 .andExpect(jsonPath("$.data.currency").value("VND"));
 
-        verify(quoteShippingInputPort).execute(any(QuoteShippingCommand.class));
+        ArgumentCaptor<QuoteShippingCommand> commandCaptor = ArgumentCaptor.forClass(QuoteShippingCommand.class);
+        verify(quoteShippingInputPort).execute(commandCaptor.capture());
+        assertThat(commandCaptor.getValue().orderId()).isNull();
     }
 
     @Test
