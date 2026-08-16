@@ -179,14 +179,16 @@ sequenceDiagram
 
     P->>U: GET /.well-known/ucp
     U-->>P: Services, capabilities, handlers, keys
-    P->>U: UCP request + UCP-Agent header
-    U->>U: Parse platform profile reference
-    U->>U: Fetch safely, validate and cache profile
+    P->>U: Raw UCP request + UCP-Agent + signature headers
+    U->>U: Parse platform profile reference without deep payload parsing
+    U->>U: Fetch profile and signing key safely
+    U->>U: Verify Content-Digest and HTTP Message Signature over raw request
+    U->>U: Validate signature time window and bind verified client identity
+    U->>U: Validate and cache platform profile
     U->>U: Negotiate capability intersection
     U->>S: Compose extensions and resolve operation schema
     S-->>U: Effective request schema
-    U->>U: Apply configured authentication and validate payload
-    U->>U: Verify signature when HTTP signatures are used
+    U->>U: Apply additional negotiated authentication and validate payload
     U->>U: Enforce idempotency and replay protection
     U->>C: Invoke shared integration ports
     C-->>U: Business result
@@ -197,6 +199,11 @@ sequenceDiagram
 Profile and schema fetching must enforce HTTPS, namespace authority binding,
 redirect policy, response-size/time limits, and protections against SSRF, DNS
 rebinding, private addresses, and cloud metadata endpoints.
+
+The UCP HTTP interface is server-to-server. Browser CORS is not part of this
+transport contract. Before discovery is advertised, the implementation must add
+an exact unauthenticated `GET /.well-known/ucp` matcher and a real-filter-chain
+integration test; the endpoint and matcher do not exist in the current codebase.
 
 ## 5. Checkout-to-order flow
 
@@ -209,7 +216,8 @@ sequenceDiagram
     participant S as Shipping
     participant O as Ordering
     participant Pay as Payment
-    participant PSP as Credential provider / PSP
+    participant CP as Credential provider
+    participant PSP as Backend PSP
     participant E as Outbox
 
     P->>U: Create checkout + Idempotency-Key
@@ -222,14 +230,25 @@ sequenceDiagram
     U->>U: Recalculate authoritative checkout snapshot
     U-->>P: Updated checkout
 
-    P->>PSP: Acquire opaque instrument using negotiated handler
-    PSP-->>P: Bound token / credential
+    P->>CP: Acquire opaque instrument using negotiated handler
+    CP-->>P: Bound token / credential
     P->>U: Complete checkout + opaque instrument
-    U->>O: Place headless order from validated snapshot
-    O->>Pay: Authorize or initiate via internal ordering flow
-    Pay->>PSP: Process token through backend provider integration
-    O->>E: OrderPlaced event in same transaction
-    U-->>P: Completed checkout and order confirmation
+    U->>Pay: Exchange instrument at payment boundary
+    Pay->>PSP: Resolve instrument to internal paymentMethodId
+    PSP-->>Pay: Non-sensitive payment reference
+    Pay-->>U: paymentMethodId
+    U->>O: Place headless order with paymentMethodId and stable paymentAttemptId
+    O->>Pay: Authorize(paymentMethodId, paymentAttemptId)
+    Pay->>PSP: Authorize idempotently using paymentAttemptId
+    alt Completion finishes synchronously
+        O->>E: OrderPlaced event in same transaction
+        U-->>P: Completed checkout and order confirmation
+    else Completion is accepted asynchronously
+        U-->>P: complete_in_progress checkout without order
+        E-->>U: Durable order/payment lifecycle event
+        U->>U: Transition checkout to completed with order reference
+        U-->>P: Signed webhook; subsequent GET returns completed checkout
+    end
 
     E-->>U: Order/payment/shipment lifecycle events
     U-->>P: Signed, retryable and idempotent order webhook
@@ -243,6 +262,11 @@ also invoke that orchestration, because doing so would duplicate side effects.
 The exact ordering must follow internal invariants and provider semantics.
 Non-rollbackable provider calls must not occur inside database transactions;
 failures require explicit compensation, not an assumed distributed transaction.
+A stable payment-attempt ID must be persisted before authorization and passed to
+the provider as its idempotency reference. An interrupted or timed-out attempt
+remains `unknown` until provider reconciliation establishes a definitive result;
+neither the payment attempt nor its idempotency record may be deleted or retried
+while the outcome is unknown.
 
 The current draft also permits `complete_in_progress` before the terminal
 `completed` status. A completed checkout includes the order; an in-progress
@@ -285,6 +309,11 @@ Persist only state required for correctness, auditing, retries, or protocol
 reconstruction. Product, stock, payment, and order state remains in its owning
 module.
 
+Opaque payment instruments are exchanged at the payment boundary and must never
+be written to checkout sessions or snapshots, outbox records, logs, traces, or
+integration events. UCP persistence retains only the resulting non-sensitive
+`paymentMethodId` and stable `paymentAttemptId` references.
+
 Fetched platform profiles are cache data, not business records. They should use
 a bounded cache such as Redis with HTTP cache semantics, a minimum TTL floor,
 response-size limits, and controlled refresh behavior rather than an unbounded
@@ -296,6 +325,15 @@ retained for at least 24 hours, with 48 hours recommended. Reusing a key with th
 same request returns the cached response without new side effects; reusing it
 with a different payload produces the protocol-defined mismatch error. If the
 idempotency store is unavailable, mutation requests fail closed with HTTP 503.
+
+Idempotency and replay records must be keyed by the cryptographically verified
+client identity, operation type, and idempotency key. Unverified `UCP-Agent`
+values, remote addresses, and an `anonymous` principal must not define this
+scope. Every UCP mutation must use a dedicated boundary that requires a nonblank
+key, validates at least 128 bits of entropy, retains completed responses for at
+least 24 hours, and converts both record-store and response-save failures into
+HTTP 503. The current generic `IdempotencyInterceptor` does not yet satisfy this
+UCP contract and must not be reused unchanged when the UCP module is implemented.
 
 HTTP signatures authenticate the caller and protect message integrity;
 idempotency provides safe retry and replay protection. The idempotency key must
@@ -382,7 +420,7 @@ The acceptance gate for an advertised capability is:
 
 Official implementation references:
 
-- [UCP specification](https://ucp.dev/latest/specification/overview/)
+- [UCP specification](https://ucp.dev/2026-04-08/specification/overview/)
 - [UCP source repository](https://github.com/Universal-Commerce-Protocol/ucp)
 - [Schema composition and validation tool](https://github.com/Universal-Commerce-Protocol/ucp-schema)
 - [Official conformance suite](https://github.com/Universal-Commerce-Protocol/conformance)

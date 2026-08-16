@@ -124,6 +124,10 @@ SNS optionally delivers alarm notifications by email. Application-level dashboar
 
 ## Current limitations
 
+- Terraform currently uses local state. Do not perform a shared or automated
+  apply until a separately bootstrapped, versioned and encrypted S3 backend with
+  native state locking and least-privilege access is configured.
+
 - The application tier contains one EC2 instance and has no automatic replacement or scaling group.
 - PostgreSQL is Single-AZ.
 - Redis contains one cache node.

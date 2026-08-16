@@ -1,6 +1,6 @@
-# Aionn Operational Readiness Plan — Local Working File
+# Aionn Operational Readiness Plan
 
-This checklist is local-only. Never commit it. Remove completed items and delete the file when it is empty.
+This tracked checklist records the release-readiness work that remains after the AWS deployment target is selected.
 
 ## Completed local baseline
 

@@ -40,6 +40,7 @@ document/later_check/
 *.tfstate.*
 *.tfplan
 *.tfvars
+*.tfvars.json
 !*.tfvars.example
 crash.log
 crash.*.log

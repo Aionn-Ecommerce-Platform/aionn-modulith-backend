@@ -21,8 +21,8 @@ variable "vpc_cidr" {
   default     = "10.20.0.0/16"
 
   validation {
-    condition     = can(cidrsubnet(var.vpc_cidr, 8, 11))
-    error_message = "vpc_cidr must provide enough address space for the required /24 subnets."
+    condition     = can(cidrnetmask(var.vpc_cidr)) && endswith(var.vpc_cidr, "/16")
+    error_message = "vpc_cidr must be a valid IPv4 /16 CIDR so the derived subnets are /24."
   }
 }
 
