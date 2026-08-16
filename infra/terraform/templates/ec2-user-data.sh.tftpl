@@ -1,0 +1,73 @@
+#!/bin/bash
+set -euo pipefail
+
+exec > >(tee /var/log/aionn-bootstrap.log | logger -t aionn-bootstrap -s 2>/dev/console) 2>&1
+
+dnf install -y docker jq
+systemctl enable --now docker
+
+install -d -m 700 /opt/aionn
+cat > /opt/aionn/application.env <<'ENVIRONMENT'
+${environment_lines}
+ENVIRONMENT
+chmod 600 /opt/aionn/application.env
+
+cat > /usr/local/bin/aionn-backend-run <<'SCRIPT'
+#!/bin/bash
+set -euo pipefail
+
+install -d -m 700 /opt/aionn
+aws secretsmanager get-secret-value \
+  --region "${aws_region}" \
+  --secret-id "${runtime_secret}" \
+  --query SecretString \
+  --output text > /opt/aionn/runtime.json
+
+jq -r 'to_entries[] | "\(.key)=\(.value | tostring)"' \
+  /opt/aionn/runtime.json > /opt/aionn/runtime.env
+cat /opt/aionn/application.env >> /opt/aionn/runtime.env
+rm -f /opt/aionn/runtime.json
+chmod 600 /opt/aionn/runtime.env
+
+aws ecr get-login-password --region "${aws_region}" \
+  | docker login --username AWS --password-stdin "$(echo "${container_image}" | cut -d/ -f1)"
+docker pull "${container_image}"
+docker rm -f aionn-backend 2>/dev/null || true
+
+exec docker run --rm \
+  --name aionn-backend \
+  --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=256m \
+  --env-file /opt/aionn/runtime.env \
+  --publish 8080:8080 \
+  --log-driver awslogs \
+  --log-opt awslogs-region="${aws_region}" \
+  --log-opt awslogs-group="${log_group}" \
+  --log-opt awslogs-stream=backend \
+  "${container_image}"
+SCRIPT
+chmod 700 /usr/local/bin/aionn-backend-run
+
+cat > /etc/systemd/system/aionn-backend.service <<'UNIT'
+[Unit]
+Description=Aionn backend container
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/aionn-backend-run
+ExecStop=/usr/bin/docker stop --time 30 aionn-backend
+Restart=always
+RestartSec=30
+TimeoutStartSec=0
+TimeoutStopSec=45
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable --now aionn-backend.service
