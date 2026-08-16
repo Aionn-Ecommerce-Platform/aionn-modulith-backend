@@ -33,3 +33,13 @@ docker/*.local.env
 .disabled-tests-phase4/
 
 document/later_check/
+
+# Terraform local state and generated files
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log
