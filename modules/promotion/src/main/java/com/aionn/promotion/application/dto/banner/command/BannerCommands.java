@@ -10,6 +10,7 @@ public final class BannerCommands {
     public record CreateBanner(
             String title,
             String imageUrl,
+            String imagePublicId,
             String linkUrl,
             int displayOrder,
             boolean active) implements Command {
@@ -19,6 +20,7 @@ public final class BannerCommands {
             String bannerId,
             String title,
             String imageUrl,
+            String imagePublicId,
             String linkUrl,
             Integer displayOrder,
             Boolean active) implements Command {

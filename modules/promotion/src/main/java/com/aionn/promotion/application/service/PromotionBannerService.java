@@ -37,6 +37,7 @@ public class PromotionBannerService {
                 "BAN_" + IdGenerator.ulid(),
                 command.title(),
                 command.imageUrl(),
+                command.imagePublicId(),
                 command.linkUrl(),
                 command.displayOrder(),
                 command.active());
@@ -46,7 +47,7 @@ public class PromotionBannerService {
     @Transactional
     public PromotionBanner update(BannerCommands.UpdateBanner command) {
         PromotionBanner banner = required(command.bannerId());
-        banner.update(command.title(), command.imageUrl(), command.linkUrl(),
+        banner.update(command.title(), command.imageUrl(), command.imagePublicId(), command.linkUrl(),
                 command.displayOrder(), command.active());
         return bannerRepository.save(banner);
     }

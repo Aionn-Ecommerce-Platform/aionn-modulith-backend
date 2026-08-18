@@ -33,6 +33,8 @@ public enum PromotionErrorCode {
     FLASH_SALE_FORBIDDEN("PRM_404", "Caller is not allowed to act on this registration"),
 
     BANNER_NOT_FOUND("PRM_501", "Promotion banner not found"),
+    BANNER_IMAGE_URL_INVALID("PRM_502", "Banner image URL must be an absolute HTTPS URL"),
+    BANNER_IMAGE_PUBLIC_ID_INVALID("PRM_503", "Banner image public ID is invalid"),
 
     INVALID_ARGUMENT("PRM_900", "Invalid argument");
 
