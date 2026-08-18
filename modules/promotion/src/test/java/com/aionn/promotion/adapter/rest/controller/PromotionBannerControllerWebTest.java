@@ -69,7 +69,7 @@ class PromotionBannerControllerWebTest {
 
     private static PromotionBannerResult sample(String id) {
         return new PromotionBannerResult(id, "Title " + id, "https://cdn/" + id + ".png",
-                "https://shop/" + id, 1);
+                "aionn/promotion/banners/" + id, "https://shop/" + id, 1);
     }
 
     @Test
@@ -116,6 +116,7 @@ class PromotionBannerControllerWebTest {
                         {
                           "title": "Summer",
                           "imageUrl": "https://cdn/a.png",
+                          "imagePublicId": "aionn/promotion/banners/a",
                           "linkUrl": "https://shop/sale",
                           "displayOrder": 2
                         }
@@ -136,6 +137,22 @@ class PromotionBannerControllerWebTest {
                         {
                           "title": "Summer",
                           "imageUrl": "",
+                          "imagePublicId": "aionn/promotion/banners/a",
+                          "displayOrder": 2
+                        }
+                        """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createRejectsMissingImagePublicId() throws Exception {
+        mockMvc.perform(post("/api/v1/promotions/banners")
+                .contentType(APPLICATION_JSON)
+                .content("""
+                        {
+                          "title": "Summer",
+                          "imageUrl": "https://res.cloudinary.com/demo/image/upload/banner.png",
+                          "linkUrl": "https://shop/sale",
                           "displayOrder": 2
                         }
                         """))

@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 public record CreateBannerRequest(
         @NotBlank @Size(max = 150) String title,
         @NotBlank @Size(max = 500) String imageUrl,
+        @NotBlank @Size(max = 255) String imagePublicId,
         @NotBlank @Size(max = 500) String linkUrl,
         @PositiveOrZero int displayOrder,
         Boolean active) {

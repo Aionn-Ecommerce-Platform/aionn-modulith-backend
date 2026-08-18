@@ -10,7 +10,7 @@ class PromotionBannerTest {
 
     private static PromotionBanner banner() {
         return PromotionBanner.create("BAN_1", "Summer", "https://cdn/a.png",
-                "https://shop/sale", 1, true);
+                "aionn/promotion/banners/a", "https://shop/sale", 1, true);
     }
 
     @Test
@@ -31,7 +31,7 @@ class PromotionBannerTest {
     void updateAppliesOnlyNonNullFields() {
         PromotionBanner b = banner();
 
-        b.update("Winter", null, null, 5, false);
+        b.update("Winter", null, null, null, 5, false);
 
         assertThat(b.getTitle()).isEqualTo("Winter");
         assertThat(b.getImageUrl()).isEqualTo("https://cdn/a.png");
@@ -44,7 +44,7 @@ class PromotionBannerTest {
     void updateWithAllNullsKeepsEverything() {
         PromotionBanner b = banner();
 
-        b.update(null, null, null, null, null);
+        b.update(null, null, null, null, null, null);
 
         assertThat(b.getTitle()).isEqualTo("Summer");
         assertThat(b.getDisplayOrder()).isEqualTo(1);
@@ -55,7 +55,8 @@ class PromotionBannerTest {
     void updateReplacesUrls() {
         PromotionBanner b = banner();
 
-        b.update(null, "https://cdn/b.png", "https://shop/new", null, null);
+        b.update(null, "https://cdn/b.png", "aionn/promotion/banners/b",
+                "https://shop/new", null, null);
 
         assertThat(b.getImageUrl()).isEqualTo("https://cdn/b.png");
         assertThat(b.getLinkUrl()).isEqualTo("https://shop/new");
@@ -65,7 +66,7 @@ class PromotionBannerTest {
     void createRejectsFrontendRelativeImageUrl() {
         assertThatThrownBy(() -> PromotionBanner.create(
                 "BAN_1", "Summer", "/images/banners/summer.png",
-                "https://shop/sale", 1, true))
+                "aionn/promotion/banners/summer", "https://shop/sale", 1, true))
                 .isInstanceOfSatisfying(PromotionException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo("PRM_502"));
     }
@@ -74,9 +75,18 @@ class PromotionBannerTest {
     void createRejectsInsecureImageUrl() {
         assertThatThrownBy(() -> PromotionBanner.create(
                 "BAN_1", "Summer", "http://cdn.example.com/summer.png",
-                "https://shop/sale", 1, true))
+                "aionn/promotion/banners/summer", "https://shop/sale", 1, true))
                 .isInstanceOfSatisfying(PromotionException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo("PRM_502"));
+    }
+
+    @Test
+    void createRejectsMissingCloudinaryPublicId() {
+        assertThatThrownBy(() -> PromotionBanner.create(
+                "BAN_1", "Summer", "https://res.cloudinary.com/demo/image/upload/banner.png",
+                "", "https://shop/sale", 1, true))
+                .isInstanceOfSatisfying(PromotionException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo("PRM_503"));
     }
 
     @Test
@@ -84,9 +94,22 @@ class PromotionBannerTest {
         PromotionBanner b = banner();
 
         assertThatThrownBy(() -> b.update(
-                null, "not a URL", null, null, null))
+                null, "not a URL", "aionn/promotion/banners/new", null, null, null))
                 .isInstanceOfSatisfying(PromotionException.class,
                         exception -> assertThat(exception.getErrorCode()).isEqualTo("PRM_502"));
         assertThat(b.getImageUrl()).isEqualTo("https://cdn/a.png");
+    }
+
+    @Test
+    void updateRequiresUrlAndPublicIdTogether() {
+        PromotionBanner b = banner();
+
+        assertThatThrownBy(() -> b.update(
+                null, "https://res.cloudinary.com/demo/image/upload/new.png",
+                null, null, null, null))
+                .isInstanceOfSatisfying(PromotionException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo("PRM_503"));
+        assertThat(b.getImageUrl()).isEqualTo("https://cdn/a.png");
+        assertThat(b.getImagePublicId()).isEqualTo("aionn/promotion/banners/a");
     }
 }
