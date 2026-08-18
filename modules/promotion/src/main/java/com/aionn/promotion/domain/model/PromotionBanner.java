@@ -1,7 +1,11 @@
 package com.aionn.promotion.domain.model;
 
+import com.aionn.promotion.domain.exception.PromotionErrorCode;
+import com.aionn.promotion.domain.exception.PromotionException;
 import lombok.Getter;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Instant;
 
 @Getter
@@ -18,6 +22,7 @@ public class PromotionBanner {
 
     public PromotionBanner(String bannerId, String title, String imageUrl, String linkUrl,
             int displayOrder, boolean active, Instant createdAt, Instant updatedAt) {
+        validateImageUrl(imageUrl);
         this.bannerId = bannerId;
         this.title = title;
         this.imageUrl = imageUrl;
@@ -40,6 +45,7 @@ public class PromotionBanner {
             this.title = title;
         }
         if (imageUrl != null) {
+            validateImageUrl(imageUrl);
             this.imageUrl = imageUrl;
         }
         if (linkUrl != null) {
@@ -50,6 +56,22 @@ public class PromotionBanner {
         }
         if (active != null) {
             this.active = active;
+        }
+    }
+
+    private static void validateImageUrl(String imageUrl) {
+        if (imageUrl == null || imageUrl.isBlank()) {
+            throw new PromotionException(PromotionErrorCode.BANNER_IMAGE_URL_INVALID);
+        }
+        try {
+            URI uri = new URI(imageUrl.trim());
+            if (!"https".equalsIgnoreCase(uri.getScheme())
+                    || uri.getHost() == null
+                    || uri.getHost().isBlank()) {
+                throw new PromotionException(PromotionErrorCode.BANNER_IMAGE_URL_INVALID);
+            }
+        } catch (URISyntaxException ex) {
+            throw new PromotionException(PromotionErrorCode.BANNER_IMAGE_URL_INVALID);
         }
     }
 }
