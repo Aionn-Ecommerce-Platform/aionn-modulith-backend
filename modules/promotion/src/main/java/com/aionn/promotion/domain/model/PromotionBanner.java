@@ -98,7 +98,9 @@ public class PromotionBanner {
         }
         try {
             URI uri = new URI(normalized);
-            if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null || uri.getHost().isBlank()) {
+            boolean httpScheme = "http".equalsIgnoreCase(uri.getScheme())
+                    || "https".equalsIgnoreCase(uri.getScheme());
+            if (!httpScheme || uri.getHost() == null || uri.getHost().isBlank()) {
                 throw new PromotionException(PromotionErrorCode.BANNER_LINK_URL_INVALID);
             }
         } catch (URISyntaxException ex) {

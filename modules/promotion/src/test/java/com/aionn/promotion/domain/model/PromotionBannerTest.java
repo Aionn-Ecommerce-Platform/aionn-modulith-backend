@@ -81,6 +81,15 @@ class PromotionBannerTest {
     }
 
     @Test
+    void createAllowsHttpLinkForLocalDevelopment() {
+        PromotionBanner banner = PromotionBanner.create(
+                "BAN_1", "Local", "https://cdn/a.png", "aionn/promotion/banners/a",
+                "http://localhost:3000/products", 1, true);
+
+        assertThat(banner.getLinkUrl()).isEqualTo("http://localhost:3000/products");
+    }
+
+    @Test
     void createRejectsFrontendRelativeImageUrl() {
         assertThatThrownBy(() -> PromotionBanner.create(
                 "BAN_1", "Summer", "/images/banners/summer.png",
