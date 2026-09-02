@@ -1,5 +1,7 @@
 package com.aionn.identity.application.dto.admin.result;
 
+import com.aionn.identity.domain.valueobject.UserRole;
+import com.aionn.identity.domain.valueobject.UserStatus;
 import java.util.List;
 
 public record UserListResult(
@@ -12,8 +14,8 @@ public record UserListResult(
                         String userId,
                         String email,
                         String displayName,
-                        String status,
-                        String primaryRole) {
+                        UserStatus status,
+                        List<UserRole> roles) {
         }
 }
 
