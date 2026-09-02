@@ -33,7 +33,6 @@ public class CloudinaryPromotionMediaUploadSignatureProvider
                 Map<String, String> params = new TreeMap<>();
                 params.put("folder", folder);
                 params.put("timestamp", String.valueOf(timestamp));
-                params.put("eager", "c_fill,w_1600,h_600");
 
                 String signature = CloudinarySigner.sign(params, credentials.apiSecret());
 

@@ -40,7 +40,7 @@ public class PromotionBannerEntity {
     @Column(name = "image_public_id", length = 255)
     private String imagePublicId;
 
-    @Column(name = "link_url", length = 500, nullable = false)
+    @Column(name = "link_url", length = 500)
     private String linkUrl;
 
     @Column(name = "display_order", nullable = false)

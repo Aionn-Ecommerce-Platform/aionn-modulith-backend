@@ -106,7 +106,7 @@ class PromotionBannerControllerWebTest {
     }
 
     @Test
-    void createDefaultsActiveToTrueWhenOmitted() throws Exception {
+    void createDefaultsActiveToTrueAndAllowsMissingLinkWhenOmitted() throws Exception {
         when(createBannerInputPort.execute(any(BannerCommands.CreateBanner.class)))
                 .thenReturn(sample("BAN_1"));
 
@@ -117,7 +117,6 @@ class PromotionBannerControllerWebTest {
                           "title": "Summer",
                           "imageUrl": "https://cdn/a.png",
                           "imagePublicId": "aionn/promotion/banners/a",
-                          "linkUrl": "https://shop/sale",
                           "displayOrder": 2
                         }
                         """))
@@ -127,6 +126,7 @@ class PromotionBannerControllerWebTest {
         ArgumentCaptor<BannerCommands.CreateBanner> captor = ArgumentCaptor.forClass(BannerCommands.CreateBanner.class);
         verify(createBannerInputPort).execute(captor.capture());
         assertThat(captor.getValue().active()).isTrue();
+        assertThat(captor.getValue().linkUrl()).isNull();
     }
 
     @Test

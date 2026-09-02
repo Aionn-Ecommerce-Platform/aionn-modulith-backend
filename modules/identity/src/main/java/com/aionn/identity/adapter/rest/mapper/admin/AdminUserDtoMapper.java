@@ -33,7 +33,9 @@ public interface AdminUserDtoMapper {
 
     UpdateUserStatusCommand toUpdateStatusCommand(String userId, UpdateUserStatusRequest request);
 
-    ListUsersQuery toListUsersQuery(UserStatus status, UserRole role, int page, int size);
+    default ListUsersQuery toListUsersQuery(UserStatus status, UserRole role, int page, int size) {
+        return new ListUsersQuery(status, role, page, size);
+    }
 
     default GetUserQuery toGetUserQuery(String userId) {
         return new GetUserQuery(userId);

@@ -9,6 +9,8 @@ public interface FlashSaleQueryPort {
 
     Map<String, ProductFlashSale> findActiveByProductIds(List<String> productIds);
 
+    Map<String, SkuFlashSale> findActiveBySkuIds(List<String> skuIds);
+
     List<ActiveFlashSaleCampaign> listActiveCampaigns(int limit);
 
     record ProductFlashSale(
@@ -39,6 +41,15 @@ public interface FlashSaleQueryPort {
             String currency,
             int saleStock,
             int soldCount) {
+    }
+
+    record SkuFlashSale(
+            String skuId,
+            String campaignId,
+            BigDecimal salePrice,
+            String currency,
+            Instant endAt,
+            int remainingStock) {
     }
 
     record ActiveFlashSaleCampaign(

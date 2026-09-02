@@ -32,6 +32,34 @@ public class FlashSaleQueryAdapter implements FlashSaleQueryPort {
 
     @Override
     @Transactional(readOnly = true)
+    public Map<String, SkuFlashSale> findActiveBySkuIds(List<String> skuIds) {
+        if (skuIds == null || skuIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, SkuFlashSale> result = new HashMap<>();
+        Map<String, PromotionCampaign> campaigns = new HashMap<>();
+        for (FlashSaleRegistration registration : registrationRepository.findApprovedRunningBySkuIds(skuIds)) {
+            if (!registration.hasStockLeft()) {
+                continue;
+            }
+            PromotionCampaign campaign = campaigns.computeIfAbsent(registration.getCampaignId(),
+                    id -> campaignRepository.findById(id).orElse(null));
+            if (campaign == null || campaign.getStatus() != CampaignStatus.RUNNING) {
+                continue;
+            }
+            result.put(registration.getSkuId(), new SkuFlashSale(
+                    registration.getSkuId(),
+                    registration.getCampaignId(),
+                    registration.getSalePrice().amount(),
+                    registration.getSalePrice().currency(),
+                    campaign.getEndDate(),
+                    registration.getSaleStock() - registration.getSoldCount()));
+        }
+        return result;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Map<String, ProductFlashSale> findActiveByProductIds(List<String> productIds) {
         if (productIds == null || productIds.isEmpty()) {
             return Map.of();

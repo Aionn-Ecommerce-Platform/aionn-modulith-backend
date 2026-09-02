@@ -3,12 +3,14 @@ package com.aionn.promotion.infrastructure.media;
 import com.aionn.promotion.application.dto.media.result.UploadSignatureResult;
 import com.aionn.promotion.infrastructure.config.properties.PromotionCloudinaryProperties;
 import com.aionn.sharedkernel.media.CloudinaryCredentialsProperties;
+import com.aionn.sharedkernel.media.CloudinarySigner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -36,7 +38,9 @@ class CloudinaryPromotionMediaUploadSignatureProviderTest {
         assertThat(result.cloudName()).isEqualTo("demo-cloud");
         assertThat(result.uploadUrl()).isEqualTo("https://api.cloudinary.com/v1_1/demo-cloud/image/upload");
         assertThat(result.timestamp()).isEqualTo(String.valueOf(NOW.getEpochSecond()));
-        assertThat(result.signature()).isNotBlank();
+        assertThat(result.signature()).isEqualTo(CloudinarySigner.sign(Map.of(
+                "folder", "aionn/promotion/banners",
+                "timestamp", String.valueOf(NOW.getEpochSecond())), "api-secret"));
     }
 
     @Test
