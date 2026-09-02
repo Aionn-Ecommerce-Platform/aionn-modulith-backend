@@ -16,5 +16,7 @@ public interface PromotionBannerPersistencePort {
 
     PromotionBanner save(PromotionBanner banner);
 
+    int nextDisplayOrder();
+
     void deleteById(String bannerId);
 }

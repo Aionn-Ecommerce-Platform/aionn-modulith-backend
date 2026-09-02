@@ -17,14 +17,13 @@ public interface PromotionBannerDtoMapper {
     List<PromotionBannerResponse> toResponses(List<PromotionBannerResult> results);
 
     default BannerCommands.CreateBanner toCreateCommand(CreateBannerRequest request) {
-        boolean active = request.active() == null || request.active();
         return new BannerCommands.CreateBanner(request.title(), request.imageUrl(), request.imagePublicId(),
-                request.linkUrl(), request.displayOrder(), active);
+                request.linkUrl());
     }
 
     default BannerCommands.UpdateBanner toUpdateCommand(String bannerId, UpdateBannerRequest request) {
         return new BannerCommands.UpdateBanner(bannerId, request.title(), request.imageUrl(), request.imagePublicId(),
-                request.linkUrl(), request.displayOrder(), request.active());
+                request.linkUrl(), request.displayOrder());
     }
 
     default BannerCommands.DeleteBanner toDeleteCommand(String bannerId) {

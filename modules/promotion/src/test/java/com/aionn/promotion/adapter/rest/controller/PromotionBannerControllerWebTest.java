@@ -106,7 +106,7 @@ class PromotionBannerControllerWebTest {
     }
 
     @Test
-    void createDefaultsActiveToTrueAndAllowsMissingLinkWhenOmitted() throws Exception {
+    void createAllowsMissingLinkWhenOmitted() throws Exception {
         when(createBannerInputPort.execute(any(BannerCommands.CreateBanner.class)))
                 .thenReturn(sample("BAN_1"));
 
@@ -116,8 +116,7 @@ class PromotionBannerControllerWebTest {
                         {
                           "title": "Summer",
                           "imageUrl": "https://cdn/a.png",
-                          "imagePublicId": "aionn/promotion/banners/a",
-                          "displayOrder": 2
+                          "imagePublicId": "aionn/promotion/banners/a"
                         }
                         """))
                 .andExpect(status().isCreated())
@@ -125,7 +124,6 @@ class PromotionBannerControllerWebTest {
 
         ArgumentCaptor<BannerCommands.CreateBanner> captor = ArgumentCaptor.forClass(BannerCommands.CreateBanner.class);
         verify(createBannerInputPort).execute(captor.capture());
-        assertThat(captor.getValue().active()).isTrue();
         assertThat(captor.getValue().linkUrl()).isNull();
     }
 
@@ -137,8 +135,7 @@ class PromotionBannerControllerWebTest {
                         {
                           "title": "Summer",
                           "imageUrl": "",
-                          "imagePublicId": "aionn/promotion/banners/a",
-                          "displayOrder": 2
+                          "imagePublicId": "aionn/promotion/banners/a"
                         }
                         """))
                 .andExpect(status().isBadRequest());
@@ -152,8 +149,7 @@ class PromotionBannerControllerWebTest {
                         {
                           "title": "Summer",
                           "imageUrl": "https://res.cloudinary.com/demo/image/upload/banner.png",
-                          "linkUrl": "https://shop/sale",
-                          "displayOrder": 2
+                          "linkUrl": "https://shop/sale"
                         }
                         """))
                 .andExpect(status().isBadRequest());

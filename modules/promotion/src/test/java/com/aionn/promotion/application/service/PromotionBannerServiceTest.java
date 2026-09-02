@@ -73,10 +73,11 @@ class PromotionBannerServiceTest {
     void createGeneratesIdAndSaves() {
         when(bannerRepository.save(any(PromotionBanner.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
+        when(bannerRepository.nextDisplayOrder()).thenReturn(3);
 
         PromotionBanner saved = service.create(new BannerCommands.CreateBanner(
                 "Summer", "https://cdn/a.png", "aionn/promotion/banners/a",
-                "https://shop/sale", 3, true));
+                "https://shop/sale"));
 
         ArgumentCaptor<PromotionBanner> captor = ArgumentCaptor.forClass(PromotionBanner.class);
         verify(bannerRepository).save(captor.capture());
@@ -93,11 +94,11 @@ class PromotionBannerServiceTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         PromotionBanner saved = service.update(new BannerCommands.UpdateBanner(
-                "BAN_1", "Winter", null, null, null, 9, false));
+                "BAN_1", "Winter", null, null, null, 9));
 
         assertThat(saved.getTitle()).isEqualTo("Winter");
         assertThat(saved.getDisplayOrder()).isEqualTo(9);
-        assertThat(saved.isActive()).isFalse();
+        assertThat(saved.isActive()).isTrue();
     }
 
     @Test
@@ -105,7 +106,7 @@ class PromotionBannerServiceTest {
         when(bannerRepository.findById("nope")).thenReturn(Optional.empty());
 
         BannerCommands.UpdateBanner command = new BannerCommands.UpdateBanner(
-                "nope", "x", null, null, null, null, null);
+                "nope", "x", null, null, null, null);
 
         assertThatThrownBy(() -> service.update(command))
                 .isInstanceOf(PromotionException.class);

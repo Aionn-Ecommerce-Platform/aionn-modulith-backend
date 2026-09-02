@@ -47,6 +47,11 @@ public class PromotionBannerPersistenceAdapter implements PromotionBannerPersist
     }
 
     @Override
+    public int nextDisplayOrder() {
+        return jpa.nextDisplayOrder();
+    }
+
+    @Override
     public void deleteById(String bannerId) {
         jpa.deleteById(bannerId);
     }

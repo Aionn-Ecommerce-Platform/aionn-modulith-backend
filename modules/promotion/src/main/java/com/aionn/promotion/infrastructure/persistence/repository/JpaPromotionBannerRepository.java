@@ -13,4 +13,7 @@ public interface JpaPromotionBannerRepository extends JpaRepository<PromotionBan
 
     @Query("SELECT b FROM PromotionBannerEntity b ORDER BY b.displayOrder ASC, b.createdAt ASC, b.bannerId ASC")
     Page<PromotionBannerEntity> findAllOrdered(Pageable pageable);
+
+    @Query("SELECT COALESCE(MAX(b.displayOrder), 0) + 1 FROM PromotionBannerEntity b")
+    int nextDisplayOrder();
 }

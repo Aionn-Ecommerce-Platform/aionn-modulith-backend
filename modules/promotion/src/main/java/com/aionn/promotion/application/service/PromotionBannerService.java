@@ -39,8 +39,8 @@ public class PromotionBannerService {
                 command.imageUrl(),
                 command.imagePublicId(),
                 command.linkUrl(),
-                command.displayOrder(),
-                command.active());
+                bannerRepository.nextDisplayOrder(),
+                true);
         return bannerRepository.save(banner);
     }
 
@@ -48,7 +48,7 @@ public class PromotionBannerService {
     public PromotionBanner update(BannerCommands.UpdateBanner command) {
         PromotionBanner banner = required(command.bannerId());
         banner.update(command.title(), command.imageUrl(), command.imagePublicId(), command.linkUrl(),
-                command.displayOrder(), command.active());
+                command.displayOrder(), null);
         return bannerRepository.save(banner);
     }
 
