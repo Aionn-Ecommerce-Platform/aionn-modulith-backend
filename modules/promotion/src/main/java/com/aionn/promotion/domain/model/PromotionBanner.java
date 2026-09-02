@@ -25,11 +25,12 @@ public class PromotionBanner {
             int displayOrder, boolean active, Instant createdAt, Instant updatedAt) {
         validateImageUrl(imageUrl);
         validateImagePublicId(imagePublicId);
+        validateLinkUrl(linkUrl);
         this.bannerId = bannerId;
         this.title = title;
         this.imageUrl = imageUrl;
         this.imagePublicId = imagePublicId;
-        this.linkUrl = linkUrl;
+        this.linkUrl = normalizeLinkUrl(linkUrl);
         this.displayOrder = displayOrder;
         this.active = active;
         this.createdAt = createdAt;
@@ -54,7 +55,8 @@ public class PromotionBanner {
             this.imagePublicId = imagePublicId;
         }
         if (linkUrl != null) {
-            this.linkUrl = linkUrl;
+            validateLinkUrl(linkUrl);
+            this.linkUrl = normalizeLinkUrl(linkUrl);
         }
         if (displayOrder != null) {
             this.displayOrder = displayOrder;
@@ -84,5 +86,27 @@ public class PromotionBanner {
         if (imagePublicId == null || imagePublicId.isBlank()) {
             throw new PromotionException(PromotionErrorCode.BANNER_IMAGE_PUBLIC_ID_INVALID);
         }
+    }
+
+    private static void validateLinkUrl(String linkUrl) {
+        if (linkUrl == null || linkUrl.isBlank()) {
+            return;
+        }
+        String normalized = linkUrl.trim();
+        if (normalized.startsWith("/") && !normalized.startsWith("//") && !normalized.contains("\\")) {
+            return;
+        }
+        try {
+            URI uri = new URI(normalized);
+            if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null || uri.getHost().isBlank()) {
+                throw new PromotionException(PromotionErrorCode.BANNER_LINK_URL_INVALID);
+            }
+        } catch (URISyntaxException ex) {
+            throw new PromotionException(PromotionErrorCode.BANNER_LINK_URL_INVALID);
+        }
+    }
+
+    private static String normalizeLinkUrl(String linkUrl) {
+        return linkUrl == null || linkUrl.isBlank() ? null : linkUrl.trim();
     }
 }

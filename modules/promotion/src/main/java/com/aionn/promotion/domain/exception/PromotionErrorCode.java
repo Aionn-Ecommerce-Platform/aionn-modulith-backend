@@ -35,6 +35,7 @@ public enum PromotionErrorCode {
     BANNER_NOT_FOUND("PRM_501", "Promotion banner not found"),
     BANNER_IMAGE_URL_INVALID("PRM_502", "Banner image URL must be an absolute HTTPS URL"),
     BANNER_IMAGE_PUBLIC_ID_INVALID("PRM_503", "Banner image public ID is invalid"),
+    BANNER_LINK_URL_INVALID("PRM_504", "Banner link must be an internal path or an absolute HTTPS URL"),
 
     INVALID_ARGUMENT("PRM_900", "Invalid argument");
 

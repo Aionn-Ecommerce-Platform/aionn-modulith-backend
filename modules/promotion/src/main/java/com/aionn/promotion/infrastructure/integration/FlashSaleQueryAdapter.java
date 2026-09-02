@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,6 +30,67 @@ public class FlashSaleQueryAdapter implements FlashSaleQueryPort {
     private final FlashSaleRegistrationPersistencePort registrationRepository;
     private final PromotionCampaignPersistencePort campaignRepository;
     private final PromotionCampaignRepository campaignJpaRepository;
+    private final JdbcTemplate jdbcTemplate;
+
+    @Override
+    @Transactional
+    public void reserve(String orderId, List<Allocation> allocations) {
+        for (Allocation allocation : allocations) {
+            Integer existingQuantity = jdbcTemplate.query(
+                    "SELECT quantity FROM flash_sale_allocations WHERE order_id = ? AND registration_id = ?",
+                    rs -> rs.next() ? rs.getInt(1) : null,
+                    orderId, allocation.registrationId());
+            if (existingQuantity != null) {
+                if (existingQuantity != allocation.quantity()) {
+                    throw new IllegalStateException("Flash-sale allocation does not match the original order request");
+                }
+                continue;
+            }
+            int updated = jdbcTemplate.update("""
+                    UPDATE flash_sale_registrations r
+                       SET sold_count = sold_count + ?, version = version + 1, updated_at = CURRENT_TIMESTAMP
+                     WHERE r.registration_id = ?
+                       AND r.status = 'APPROVED'
+                       AND r.sold_count + ? <= r.sale_stock
+                       AND EXISTS (
+                           SELECT 1 FROM promotion_campaigns c
+                            WHERE c.campaign_id = r.campaign_id
+                              AND c.status = 'RUNNING'
+                              AND c.start_date <= CURRENT_TIMESTAMP
+                              AND c.end_date > CURRENT_TIMESTAMP)
+                    """, allocation.quantity(), allocation.registrationId(), allocation.quantity());
+            if (updated != 1) {
+                throw new CapacityExceededException(allocation.registrationId());
+            }
+            jdbcTemplate.update("""
+                    INSERT INTO flash_sale_allocations(order_id, registration_id, quantity, created_at)
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                    """, orderId, allocation.registrationId(), allocation.quantity());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void release(String orderId) {
+        List<Allocation> allocations = jdbcTemplate.query("""
+                SELECT registration_id, quantity
+                  FROM flash_sale_allocations
+                 WHERE order_id = ? AND released_at IS NULL
+                 FOR UPDATE
+                """, (rs, row) -> new Allocation(rs.getString(1), rs.getInt(2)), orderId);
+        for (Allocation allocation : allocations) {
+            jdbcTemplate.update("""
+                    UPDATE flash_sale_registrations
+                       SET sold_count = GREATEST(0, sold_count - ?), version = version + 1,
+                           updated_at = CURRENT_TIMESTAMP
+                     WHERE registration_id = ?
+                    """, allocation.quantity(), allocation.registrationId());
+        }
+        jdbcTemplate.update("""
+                UPDATE flash_sale_allocations SET released_at = CURRENT_TIMESTAMP
+                 WHERE order_id = ? AND released_at IS NULL
+                """, orderId);
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -49,6 +111,7 @@ public class FlashSaleQueryAdapter implements FlashSaleQueryPort {
             }
             result.put(registration.getSkuId(), new SkuFlashSale(
                     registration.getSkuId(),
+                    registration.getRegistrationId(),
                     registration.getCampaignId(),
                     registration.getSalePrice().amount(),
                     registration.getSalePrice().currency(),

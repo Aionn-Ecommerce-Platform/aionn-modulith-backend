@@ -19,10 +19,16 @@ public interface CatalogPricingGateway {
             BigDecimal price,
             String currency,
             boolean active,
-            List<String> categoryIds) {
+            List<String> categoryIds,
+            String flashSaleRegistrationId) {
         public SkuPricing(String skuId, String merchantId, String warehouseId,
                 BigDecimal price, String currency, boolean active) {
-            this(skuId, merchantId, warehouseId, price, currency, active, List.of());
+            this(skuId, merchantId, warehouseId, price, currency, active, List.of(), null);
+        }
+
+        public SkuPricing(String skuId, String merchantId, String warehouseId,
+                BigDecimal price, String currency, boolean active, List<String> categoryIds) {
+            this(skuId, merchantId, warehouseId, price, currency, active, categoryIds, null);
         }
 
         public SkuPricing {

@@ -30,11 +30,11 @@ public class CatalogPricingAdapter implements CatalogPricingGateway {
                     .selectWarehouseForSku(p.merchantId(), p.skuId())
                     .orElse(null);
             FlashSaleQueryPort.SkuFlashSale flashSale = flashSales.get(p.skuId());
-            var effectivePrice = flashSale != null && p.currency().equals(flashSale.currency())
-                    ? flashSale.salePrice()
-                    : p.price();
+            boolean usesFlashSale = flashSale != null && p.currency().equals(flashSale.currency());
+            var effectivePrice = usesFlashSale ? flashSale.salePrice() : p.price();
             result.put(entry.getKey(), new SkuPricing(
-                    p.skuId(), p.merchantId(), warehouseId, effectivePrice, p.currency(), p.active(), p.categoryIds()));
+                    p.skuId(), p.merchantId(), warehouseId, effectivePrice, p.currency(), p.active(), p.categoryIds(),
+                    usesFlashSale ? flashSale.registrationId() : null));
         }
         return result;
     }

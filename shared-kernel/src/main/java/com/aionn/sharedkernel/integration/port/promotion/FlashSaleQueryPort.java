@@ -11,6 +11,10 @@ public interface FlashSaleQueryPort {
 
     Map<String, SkuFlashSale> findActiveBySkuIds(List<String> skuIds);
 
+    void reserve(String orderId, List<Allocation> allocations);
+
+    void release(String orderId);
+
     List<ActiveFlashSaleCampaign> listActiveCampaigns(int limit);
 
     record ProductFlashSale(
@@ -45,11 +49,25 @@ public interface FlashSaleQueryPort {
 
     record SkuFlashSale(
             String skuId,
+            String registrationId,
             String campaignId,
             BigDecimal salePrice,
             String currency,
             Instant endAt,
             int remainingStock) {
+        public SkuFlashSale(String skuId, String campaignId, BigDecimal salePrice,
+                String currency, Instant endAt, int remainingStock) {
+            this(skuId, null, campaignId, salePrice, currency, endAt, remainingStock);
+        }
+    }
+
+    record Allocation(String registrationId, int quantity) {
+    }
+
+    final class CapacityExceededException extends RuntimeException {
+        public CapacityExceededException(String registrationId) {
+            super("Flash-sale capacity exceeded for registration " + registrationId);
+        }
     }
 
     record ActiveFlashSaleCampaign(

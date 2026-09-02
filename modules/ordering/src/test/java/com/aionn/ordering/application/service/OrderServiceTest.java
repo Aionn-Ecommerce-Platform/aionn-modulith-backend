@@ -23,6 +23,7 @@ import com.aionn.ordering.application.policy.ReservationPolicy;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.Money;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.sharedkernel.integration.port.promotion.FlashSaleQueryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -77,6 +78,7 @@ class OrderServiceTest {
     private ReservationPolicy reservationPolicy;
     @Mock private CompensationTaskPort compensationTaskPort;
     @Mock private OrderPlacementOperationPort placementOperationPort;
+    @Mock private FlashSaleQueryPort flashSaleQueryPort;
 
     private OrderService orderService;
 
@@ -99,7 +101,7 @@ class OrderServiceTest {
                 stockReservationGateway, paymentGateway, shippingGateway,
                 catalogPricingGateway, voucherGateway, cartService, merchantQueryPort,
                 integrationEventPublisher, reservationPolicy, clock, transactionTemplate,
-                compensationTaskPort, placementOperationPort);
+                compensationTaskPort, placementOperationPort, flashSaleQueryPort);
         lenient().when(placementOperationPort.start(anyString(), anyString(), anyString(), anyString()))
                 .thenAnswer(invocation -> new OrderPlacementOperationPort.Operation(
                         invocation.getArgument(3), invocation.getArgument(2), false));
@@ -262,7 +264,8 @@ class OrderServiceTest {
                 );
 
         CatalogPricingGateway.SkuPricing skuPricing = new CatalogPricingGateway.SkuPricing(
-                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true
+                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true,
+                List.of(), "registration-1"
         );
         when(catalogPricingGateway.resolve(List.of("sku-1"))).thenReturn(java.util.Map.of("sku-1", skuPricing));
 
@@ -281,6 +284,8 @@ class OrderServiceTest {
 
         assertEquals(OrderStatus.APPROVED, result.getStatus());
         assertEquals(BigDecimal.valueOf(30000), result.getShippingFee().amount());
+        verify(flashSaleQueryPort).reserve(anyString(), eq(List.of(
+                new FlashSaleQueryPort.Allocation("registration-1", 2))));
     }
 
     @Test

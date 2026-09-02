@@ -64,12 +64,13 @@ class CatalogPricingAdapterTest {
         when(pricingQueryPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of("sku-1", pricing));
         when(flashSaleQueryPort.findActiveBySkuIds(List.of("sku-1"))).thenReturn(Map.of(
                 "sku-1", new FlashSaleQueryPort.SkuFlashSale(
-                        "sku-1", "campaign-1", BigDecimal.valueOf(75), "VND",
+                        "sku-1", "registration-1", "campaign-1", BigDecimal.valueOf(75), "VND",
                         java.time.Instant.parse("2026-09-03T00:00:00Z"), 10)));
         when(warehouseSelector.selectWarehouseForSku("m-1", "sku-1")).thenReturn(Optional.of("wh-1"));
 
         CatalogPricingGateway.SkuPricing result = adapter.resolve(List.of("sku-1")).get("sku-1");
 
         assertEquals(BigDecimal.valueOf(75), result.price());
+        assertEquals("registration-1", result.flashSaleRegistrationId());
     }
 }

@@ -63,6 +63,24 @@ class PromotionBannerTest {
     }
 
     @Test
+    void updateClearsOptionalLinkWhenBlank() {
+        PromotionBanner b = banner();
+
+        b.update(null, null, null, "  ", null, null);
+
+        assertThat(b.getLinkUrl()).isNull();
+    }
+
+    @Test
+    void createRejectsUnsafeLinkUrl() {
+        assertThatThrownBy(() -> PromotionBanner.create(
+                "BAN_1", "Summer", "https://cdn/a.png", "aionn/promotion/banners/a",
+                "javascript:alert(1)", 1, true))
+                .isInstanceOfSatisfying(PromotionException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo("PRM_504"));
+    }
+
+    @Test
     void createRejectsFrontendRelativeImageUrl() {
         assertThatThrownBy(() -> PromotionBanner.create(
                 "BAN_1", "Summer", "/images/banners/summer.png",
