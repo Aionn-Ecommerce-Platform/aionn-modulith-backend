@@ -139,4 +139,25 @@ class PromotionBannerTest {
         assertThat(b.getImageUrl()).isEqualTo("https://cdn/a.png");
         assertThat(b.getImagePublicId()).isEqualTo("aionn/promotion/banners/a");
     }
+
+    @Test
+    void updateDoesNotMutateTitleWhenImageUrlIsInvalid() {
+        PromotionBanner b = banner();
+
+        assertThatThrownBy(() -> b.update(
+                "New Title", "invalid-url", "aionn/promotion/banners/new", null, null, null))
+                .isInstanceOfSatisfying(PromotionException.class,
+                        exception -> assertThat(exception.getErrorCode()).isEqualTo("PRM_502"));
+        assertThat(b.getTitle()).isEqualTo("Summer");
+    }
+
+    @Test
+    void createsAndUpdatesWithTrimmedImageUrl() {
+        PromotionBanner b = PromotionBanner.create("BAN_2", "Title", "  https://cdn/spaced.png  ",
+                "aionn/promotion/banners/b", null, 1, true);
+        assertThat(b.getImageUrl()).isEqualTo("https://cdn/spaced.png");
+
+        b.update(null, "  https://cdn/updated.png  ", "aionn/promotion/banners/c", null, null, null);
+        assertThat(b.getImageUrl()).isEqualTo("https://cdn/updated.png");
+    }
 }

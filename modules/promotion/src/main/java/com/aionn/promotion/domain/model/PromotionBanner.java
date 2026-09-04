@@ -23,12 +23,12 @@ public class PromotionBanner {
 
     public PromotionBanner(String bannerId, String title, String imageUrl, String imagePublicId, String linkUrl,
             int displayOrder, boolean active, Instant createdAt, Instant updatedAt) {
-        validateImageUrl(imageUrl);
+        String normalizedImageUrl = validateImageUrl(imageUrl);
         validateImagePublicId(imagePublicId);
         validateLinkUrl(linkUrl);
         this.bannerId = bannerId;
         this.title = title;
-        this.imageUrl = imageUrl;
+        this.imageUrl = normalizedImageUrl;
         this.imagePublicId = imagePublicId;
         this.linkUrl = normalizeLinkUrl(linkUrl);
         this.displayOrder = displayOrder;
@@ -45,17 +45,23 @@ public class PromotionBanner {
 
     public void update(String title, String imageUrl, String imagePublicId, String linkUrl, Integer displayOrder,
             Boolean active) {
+        String validatedImageUrl = null;
+        if (imageUrl != null || imagePublicId != null) {
+            validatedImageUrl = validateImageUrl(imageUrl);
+            validateImagePublicId(imagePublicId);
+        }
+        if (linkUrl != null) {
+            validateLinkUrl(linkUrl);
+        }
+
         if (title != null) {
             this.title = title;
         }
         if (imageUrl != null || imagePublicId != null) {
-            validateImageUrl(imageUrl);
-            validateImagePublicId(imagePublicId);
-            this.imageUrl = imageUrl;
+            this.imageUrl = validatedImageUrl;
             this.imagePublicId = imagePublicId;
         }
         if (linkUrl != null) {
-            validateLinkUrl(linkUrl);
             this.linkUrl = normalizeLinkUrl(linkUrl);
         }
         if (displayOrder != null) {
@@ -66,17 +72,19 @@ public class PromotionBanner {
         }
     }
 
-    private static void validateImageUrl(String imageUrl) {
+    private static String validateImageUrl(String imageUrl) {
         if (imageUrl == null || imageUrl.isBlank()) {
             throw new PromotionException(PromotionErrorCode.BANNER_IMAGE_URL_INVALID);
         }
+        String normalized = imageUrl.trim();
         try {
-            URI uri = new URI(imageUrl.trim());
+            URI uri = new URI(normalized);
             if (!"https".equalsIgnoreCase(uri.getScheme())
                     || uri.getHost() == null
                     || uri.getHost().isBlank()) {
                 throw new PromotionException(PromotionErrorCode.BANNER_IMAGE_URL_INVALID);
             }
+            return normalized;
         } catch (URISyntaxException ex) {
             throw new PromotionException(PromotionErrorCode.BANNER_IMAGE_URL_INVALID);
         }
