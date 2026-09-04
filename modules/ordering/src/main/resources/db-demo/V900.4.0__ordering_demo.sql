@@ -1478,3 +1478,20 @@ INSERT INTO order_items (order_id, sku_id, qty, unit_price, warehouse_id) VALUES
 ('ORD_0499', 'SKU_00024', 2, 500000.0, 'WH_005'),
 ('ORD_0500', 'SKU_01469', 2, 200000.0, 'WH_005'),
 ('ORD_0500', 'SKU_01100', 2, 520000.0, 'WH_005');
+
+UPDATE product_sold_counters
+SET sold_count = 0,
+    updated_at = NOW();
+
+INSERT INTO product_sold_counters (product_id, sold_count, updated_at)
+SELECT pv.product_id,
+       SUM(oi.qty)::BIGINT,
+       NOW()
+FROM order_items oi
+JOIN orders o ON o.order_id = oi.order_id
+JOIN product_variants pv ON pv.sku_id = oi.sku_id
+WHERE o.status = 'COMPLETED'
+GROUP BY pv.product_id
+ON CONFLICT (product_id) DO UPDATE
+SET sold_count = EXCLUDED.sold_count,
+    updated_at = EXCLUDED.updated_at;

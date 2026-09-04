@@ -2841,7 +2841,7 @@ WHERE length(sku_id) % 2 = 0;
 
 INSERT INTO product_sold_counters (product_id, sold_count, updated_at)
 SELECT p.product_id,
-       50 + (ABS(('x' || substring(md5(p.product_id), 1, 8))::bit(32)::int) % 4950),
+       0,
        NOW()
 FROM products p
 ON CONFLICT (product_id) DO NOTHING;

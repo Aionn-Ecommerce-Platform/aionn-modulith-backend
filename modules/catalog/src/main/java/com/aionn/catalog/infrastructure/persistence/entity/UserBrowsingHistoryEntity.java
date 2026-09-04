@@ -40,6 +40,11 @@ public class UserBrowsingHistoryEntity {
     @Builder.Default
     private List<String> brandIds = new ArrayList<>();
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "recent_searches", columnDefinition = "jsonb")
+    @Builder.Default
+    private List<String> recentSearches = new ArrayList<>();
+
     @UpdateTimestamp
     @Column(name = "updated_at")
     private Instant updatedAt;

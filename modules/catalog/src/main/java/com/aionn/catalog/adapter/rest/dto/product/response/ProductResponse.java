@@ -18,7 +18,8 @@ public record ProductResponse(
         String aiDescription,
         String status,
         Instant createdAt,
-        Instant updatedAt) {
+        Instant updatedAt,
+        long soldCount) {
 
     public record Variant(String skuId, Map<String, String> attributeValues, BigDecimal price, String currency) {
     }
