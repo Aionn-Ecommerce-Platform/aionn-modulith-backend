@@ -189,6 +189,5 @@ CREATE TABLE user_browsing_history (
     user_id      VARCHAR(50) PRIMARY KEY,
     category_ids JSONB       NOT NULL DEFAULT '[]'::jsonb,
     brand_ids    JSONB       NOT NULL DEFAULT '[]'::jsonb,
-    recent_searches JSONB    NOT NULL DEFAULT '[]'::jsonb,
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

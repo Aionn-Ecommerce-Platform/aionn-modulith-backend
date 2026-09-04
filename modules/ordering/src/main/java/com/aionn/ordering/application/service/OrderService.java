@@ -228,11 +228,11 @@ public class OrderService {
         try {
             reservations = stockReservationGateway.reserveAll(orderId, reservationLines, ttlSeconds);
         } catch (StockReservationGateway.ReservationException ex) {
-            flashSaleQueryPort.release(orderId);
+            releaseFlashSaleBestEffort(orderId);
             throw new OrderingException(OrderingErrorCode.ORDER_RESERVATION_FAILED,
                     "Reservation failed for SKU " + ex.getSkuId() + ": " + ex.getMessage());
         } catch (RuntimeException ex) {
-            flashSaleQueryPort.release(orderId);
+            releaseFlashSaleBestEffort(orderId);
             throw ex;
         }
 
@@ -818,6 +818,10 @@ public class OrderService {
             flashSaleQueryPort.release(orderId);
         } catch (RuntimeException ex) {
             log.error("Failed to release flash-sale allocation for order {}", orderId, ex);
+            enqueueCompensation(new CompensationTaskPort.Task(
+                    "flash-sale-release:" + orderId,
+                    CompensationTaskPort.Type.FLASH_SALE_RELEASE,
+                    orderId, null, orderId, "order-placement-failed", 0));
         }
     }
 

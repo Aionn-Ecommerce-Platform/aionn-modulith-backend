@@ -17,7 +17,9 @@ import org.junit.jupiter.api.Test;
 class ProductionMigrationSafetyTest {
 
     private static final Map<String, Set<String>> APPROVED_SCHEMA_BACKFILLS = Map.of(
-            "modules/identity/src/main/resources/db/V1.2__complete_account_deletion.sql", Set.of("users"));
+            "modules/identity/src/main/resources/db/V1.2__complete_account_deletion.sql", Set.of("users"),
+            "modules/promotion/src/main/resources/db/V8.5__harden_banner_assets_and_ordering.sql",
+            Set.of("promotion_banners"));
 
     private static final Set<String> DEMO_TABLES = Set.of(
             "users",

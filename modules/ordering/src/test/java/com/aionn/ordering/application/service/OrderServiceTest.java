@@ -31,6 +31,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -286,6 +287,34 @@ class OrderServiceTest {
         assertEquals(BigDecimal.valueOf(30000), result.getShippingFee().amount());
         verify(flashSaleQueryPort).reserve(anyString(), eq(List.of(
                 new FlashSaleQueryPort.Allocation("registration-1", 2))));
+    }
+
+    @Test
+    void reservationFailurePersistsFlashSaleReleaseWhenImmediateReleaseFails() {
+        var command = new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand(
+                USER_ID,
+                List.of(new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand.Line(
+                        "sku-1", 2)),
+                null, "COD", "VND", address());
+        var skuPricing = new CatalogPricingGateway.SkuPricing(
+                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true,
+                List.of(), "registration-1");
+        when(catalogPricingGateway.resolve(List.of("sku-1")))
+                .thenReturn(java.util.Map.of("sku-1", skuPricing));
+        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND")))
+                .thenReturn(new ShippingGateway.ShippingQuote(BigDecimal.TEN, "VND"));
+        when(stockReservationGateway.reserveAll(anyString(), anyList(), eq(86400)))
+                .thenThrow(new StockReservationGateway.ReservationException("sku-1", "out of stock"));
+        doThrow(new RuntimeException("promotion unavailable"))
+                .when(flashSaleQueryPort).release(anyString());
+
+        assertThrows(OrderingException.class, () -> orderService.placeOrderHeadless(command));
+
+        ArgumentCaptor<CompensationTaskPort.Task> taskCaptor =
+                ArgumentCaptor.forClass(CompensationTaskPort.Task.class);
+        verify(compensationTaskPort).enqueue(taskCaptor.capture());
+        assertEquals(CompensationTaskPort.Type.FLASH_SALE_RELEASE, taskCaptor.getValue().type());
+        assertEquals(taskCaptor.getValue().orderId(), taskCaptor.getValue().resourceId());
     }
 
     @Test
