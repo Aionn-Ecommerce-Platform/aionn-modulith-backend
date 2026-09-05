@@ -27,12 +27,10 @@ class ProductionMigrationSafetyTest {
     private static final Map<String, List<ApprovedBackfill>> APPROVED_SCHEMA_BACKFILLS = Map.of(
             "modules/identity/src/main/resources/db/V1.2__complete_account_deletion.sql", List.of(
                     new ApprovedBackfill("users",
-                            stmt -> stmt.startsWith("update") && stmt.contains("where status = 'deleted'"))),
+                            stmt -> stmt.equals("update users set email = null, phone = null, username = 'deleted_' || user_id, password_hash = null, display_name = 'deleted user', avatar_url = null, email_verified_at = null, phone_verified_at = null, mfa_enabled = false, mfa_secret = null, failed_login_attempts = 0, locked_until = null, deleted_at = coalesce(deleted_at, now()) where status = 'deleted'"))),
             "modules/promotion/src/main/resources/db/V8.5__harden_banner_assets_and_ordering.sql", List.of(
                     new ApprovedBackfill("promotion_banners",
-                            stmt -> stmt.startsWith("update")
-                                    && stmt.contains("image_public_id = 'legacy/promotion/banners/' || banner_id")
-                                    && stmt.contains("where image_public_id is null or btrim(image_public_id) = ''"))));
+                            stmt -> stmt.equals("update promotion_banners set image_public_id = 'legacy/promotion/banners/' || banner_id where image_public_id is null or btrim(image_public_id) = ''"))));
 
     private static final Set<String> DEMO_TABLES = Set.of(
             "users",
@@ -92,7 +90,8 @@ class ProductionMigrationSafetyTest {
 
     private static void inspect(Path path, List<String> violations) {
         try {
-            String sql = Files.readString(path);
+            String rawSql = Files.readString(path);
+            String sql = stripSqlComments(rawSql);
             var matcher = DML_TARGET.matcher(sql);
             while (matcher.find()) {
                 String table = matcher.group(1).toLowerCase(Locale.ROOT);
@@ -118,6 +117,10 @@ class ProductionMigrationSafetyTest {
         } catch (IOException exception) {
             throw new IllegalStateException("Unable to inspect migration " + path, exception);
         }
+    }
+
+    private static String stripSqlComments(String sql) {
+        return sql.replaceAll("--[^\\r\\n]*", "").replaceAll("/\\*[\\s\\S]*?\\*/", "");
     }
 
     private static String extractStatementAt(String sql, int matchStart) {
