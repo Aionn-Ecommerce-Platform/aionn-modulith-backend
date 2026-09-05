@@ -49,6 +49,9 @@ public class PromotionBannerService {
         PromotionBanner banner = required(command.bannerId());
         banner.update(command.title(), command.imageUrl(), command.imagePublicId(), command.linkUrl(),
                 command.displayOrder(), null);
+        if (command.displayOrder() != null) {
+            bannerRepository.syncDisplayOrderSequence(command.displayOrder());
+        }
         return bannerRepository.save(banner);
     }
 

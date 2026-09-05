@@ -16,10 +16,23 @@ import org.junit.jupiter.api.Test;
 
 class ProductionMigrationSafetyTest {
 
-    private static final Map<String, Set<String>> APPROVED_SCHEMA_BACKFILLS = Map.of(
-            "modules/identity/src/main/resources/db/V1.2__complete_account_deletion.sql", Set.of("users"),
-            "modules/promotion/src/main/resources/db/V8.5__harden_banner_assets_and_ordering.sql",
-            Set.of("promotion_banners"));
+    @FunctionalInterface
+    private interface StatementPredicate {
+        boolean matches(String statement);
+    }
+
+    private record ApprovedBackfill(String table, StatementPredicate predicate) {
+    }
+
+    private static final Map<String, List<ApprovedBackfill>> APPROVED_SCHEMA_BACKFILLS = Map.of(
+            "modules/identity/src/main/resources/db/V1.2__complete_account_deletion.sql", List.of(
+                    new ApprovedBackfill("users",
+                            stmt -> stmt.startsWith("update") && stmt.contains("where status = 'deleted'"))),
+            "modules/promotion/src/main/resources/db/V8.5__harden_banner_assets_and_ordering.sql", List.of(
+                    new ApprovedBackfill("promotion_banners",
+                            stmt -> stmt.startsWith("update")
+                                    && stmt.contains("image_public_id = 'legacy/promotion/banners/' || banner_id")
+                                    && stmt.contains("where image_public_id is null or btrim(image_public_id) = ''"))));
 
     private static final Set<String> DEMO_TABLES = Set.of(
             "users",
@@ -80,11 +93,16 @@ class ProductionMigrationSafetyTest {
     private static void inspect(Path path, List<String> violations) {
         try {
             String sql = Files.readString(path);
-            DML_TARGET.matcher(sql).results()
-                    .map(result -> result.group(1).toLowerCase())
-                    .filter(DEMO_TABLES::contains)
-                    .filter(table -> !isApprovedSchemaBackfill(path, table))
-                    .forEach(table -> violations.add(path + " writes demo table " + table));
+            var matcher = DML_TARGET.matcher(sql);
+            while (matcher.find()) {
+                String table = matcher.group(1).toLowerCase(Locale.ROOT);
+                if (DEMO_TABLES.contains(table)) {
+                    String statement = extractStatementAt(sql, matcher.start());
+                    if (!isApprovedSchemaBackfill(path, table, statement)) {
+                        violations.add(path + " writes demo table " + table + " via statement: " + statement);
+                    }
+                }
+            }
             if (sql.toLowerCase(Locale.ROOT).contains("@aionn.com")) {
                 violations.add(path + " contains an @aionn.com demo email");
             }
@@ -102,10 +120,18 @@ class ProductionMigrationSafetyTest {
         }
     }
 
-    private static boolean isApprovedSchemaBackfill(Path path, String table) {
+    private static String extractStatementAt(String sql, int matchStart) {
+        int semicolonIndex = sql.indexOf(';', matchStart);
+        String raw = (semicolonIndex >= 0) ? sql.substring(matchStart, semicolonIndex) : sql.substring(matchStart);
+        return raw.replaceAll("\\s+", " ").trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static boolean isApprovedSchemaBackfill(Path path, String table, String statement) {
         String normalizedPath = normalized(path);
         return APPROVED_SCHEMA_BACKFILLS.entrySet().stream()
-                .anyMatch(entry -> normalizedPath.endsWith(entry.getKey()) && entry.getValue().contains(table));
+                .filter(entry -> normalizedPath.endsWith(entry.getKey()))
+                .flatMap(entry -> entry.getValue().stream())
+                .anyMatch(backfill -> backfill.table().equals(table) && backfill.predicate().matches(statement));
     }
 
     private static Path findRepositoryRoot() {

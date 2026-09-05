@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.repository.query.Param;
 
 public interface JpaPromotionBannerRepository extends JpaRepository<PromotionBannerEntity, String> {
 
@@ -16,4 +17,7 @@ public interface JpaPromotionBannerRepository extends JpaRepository<PromotionBan
 
     @Query(value = "SELECT nextval('promotion_banner_display_order_seq')::int", nativeQuery = true)
     int nextDisplayOrder();
+
+    @Query(value = "SELECT setval('promotion_banner_display_order_seq', GREATEST(COALESCE((SELECT last_value FROM promotion_banner_display_order_seq), 1), :displayOrder), true)::int", nativeQuery = true)
+    int advanceDisplayOrderSequence(@Param("displayOrder") int displayOrder);
 }

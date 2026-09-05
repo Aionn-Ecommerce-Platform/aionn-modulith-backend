@@ -99,6 +99,7 @@ class PromotionBannerServiceTest {
         assertThat(saved.getTitle()).isEqualTo("Winter");
         assertThat(saved.getDisplayOrder()).isEqualTo(9);
         assertThat(saved.isActive()).isTrue();
+        verify(bannerRepository).syncDisplayOrderSequence(9);
     }
 
     @Test

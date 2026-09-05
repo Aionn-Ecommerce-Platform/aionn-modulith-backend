@@ -18,5 +18,7 @@ public interface PromotionBannerPersistencePort {
 
     int nextDisplayOrder();
 
+    void syncDisplayOrderSequence(int displayOrder);
+
     void deleteById(String bannerId);
 }
