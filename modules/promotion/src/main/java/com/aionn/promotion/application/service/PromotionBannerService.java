@@ -37,17 +37,21 @@ public class PromotionBannerService {
                 "BAN_" + IdGenerator.ulid(),
                 command.title(),
                 command.imageUrl(),
+                command.imagePublicId(),
                 command.linkUrl(),
-                command.displayOrder(),
-                command.active());
+                bannerRepository.nextDisplayOrder(),
+                true);
         return bannerRepository.save(banner);
     }
 
     @Transactional
     public PromotionBanner update(BannerCommands.UpdateBanner command) {
         PromotionBanner banner = required(command.bannerId());
-        banner.update(command.title(), command.imageUrl(), command.linkUrl(),
-                command.displayOrder(), command.active());
+        banner.update(command.title(), command.imageUrl(), command.imagePublicId(), command.linkUrl(),
+                command.displayOrder(), null);
+        if (command.displayOrder() != null) {
+            bannerRepository.syncDisplayOrderSequence(command.displayOrder());
+        }
         return bannerRepository.save(banner);
     }
 

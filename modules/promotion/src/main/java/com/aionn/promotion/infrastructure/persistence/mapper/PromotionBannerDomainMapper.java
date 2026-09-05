@@ -12,6 +12,7 @@ public class PromotionBannerDomainMapper {
                 e.getBannerId(),
                 e.getTitle(),
                 e.getImageUrl(),
+                e.getImagePublicId(),
                 e.getLinkUrl(),
                 e.getDisplayOrder(),
                 e.isActive(),
@@ -27,6 +28,7 @@ public class PromotionBannerDomainMapper {
                         .build();
         entity.setTitle(b.getTitle());
         entity.setImageUrl(b.getImageUrl());
+        entity.setImagePublicId(b.getImagePublicId());
         entity.setLinkUrl(b.getLinkUrl());
         entity.setDisplayOrder(b.getDisplayOrder());
         entity.setActive(b.isActive());

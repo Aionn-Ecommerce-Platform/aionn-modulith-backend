@@ -16,7 +16,8 @@ public class UserBrowsingHistoryDomainMapper {
         return new UserBrowsingHistory(
                 entity.getUserId(),
                 new ArrayList<>(entity.getCategoryIds()),
-                new ArrayList<>(entity.getBrandIds()));
+                new ArrayList<>(entity.getBrandIds()),
+                new ArrayList<>(entity.getRecentSearches()));
     }
 
     public UserBrowsingHistoryEntity toEntity(UserBrowsingHistory domain) {
@@ -27,6 +28,7 @@ public class UserBrowsingHistoryDomainMapper {
                 .userId(domain.getUserId())
                 .categoryIds(new ArrayList<>(domain.getCategoryIds()))
                 .brandIds(new ArrayList<>(domain.getBrandIds()))
+                .recentSearches(new ArrayList<>(domain.getRecentSearches()))
                 .build();
     }
 }

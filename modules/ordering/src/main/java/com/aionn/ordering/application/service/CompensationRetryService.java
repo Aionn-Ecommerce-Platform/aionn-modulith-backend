@@ -3,6 +3,7 @@ package com.aionn.ordering.application.service;
 import com.aionn.ordering.application.port.out.CompensationTaskPort;
 import com.aionn.ordering.application.port.out.StockReservationGateway;
 import com.aionn.ordering.application.port.out.VoucherGateway;
+import com.aionn.sharedkernel.integration.port.promotion.FlashSaleQueryPort;
 import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ public class CompensationRetryService {
     private final CompensationTaskPort taskPort;
     private final StockReservationGateway stockGateway;
     private final VoucherGateway voucherGateway;
+    private final FlashSaleQueryPort flashSaleQueryPort;
     private final Clock clock;
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -27,6 +29,7 @@ public class CompensationRetryService {
             switch (task.type()) {
                 case RESERVATION_RELEASE -> stockGateway.release(task.resourceId(), task.reason());
                 case VOUCHER_RELEASE -> voucherGateway.release(task.userId(), task.orderId(), task.reason());
+                case FLASH_SALE_RELEASE -> flashSaleQueryPort.release(task.resourceId());
             }
             taskPort.markCompleted(task.taskId());
         } catch (RuntimeException failure) {

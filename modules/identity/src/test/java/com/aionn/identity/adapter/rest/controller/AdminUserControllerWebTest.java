@@ -94,15 +94,19 @@ class AdminUserControllerWebTest {
         @Test
         void listUsersWithoutFiltersReturnsPagedUsers() throws Exception {
                 UserListResult.UserSummary u1 = new UserListResult.UserSummary(
-                                "user-1", "alice@example.com", "alice_smith", "ACTIVE", "BUYER");
+                                "user-1", "alice@example.com", "alice_smith", UserStatus.ACTIVE,
+                                List.of(UserRole.BUYER, UserRole.MERCHANT));
                 UserListResult.UserSummary u2 = new UserListResult.UserSummary(
-                                "user-2", "bob@example.com", "bob_jones", "ACTIVE", "MERCHANT");
+                                "user-2", "bob@example.com", "bob_jones", UserStatus.ACTIVE,
+                                List.of(UserRole.MERCHANT));
                 UserListResult result = new UserListResult(List.of(u1, u2), 0, 20, 2L);
 
                 UserSummaryResponse r1 = new UserSummaryResponse(
-                                "user-1", "alice@example.com", "alice_smith", UserStatus.ACTIVE, UserRole.BUYER);
+                                "user-1", "alice@example.com", "alice_smith", UserStatus.ACTIVE,
+                                List.of(UserRole.BUYER, UserRole.MERCHANT));
                 UserSummaryResponse r2 = new UserSummaryResponse(
-                                "user-2", "bob@example.com", "bob_jones", UserStatus.ACTIVE, UserRole.MERCHANT);
+                                "user-2", "bob@example.com", "bob_jones", UserStatus.ACTIVE,
+                                List.of(UserRole.MERCHANT));
                 PageMetadata page = new PageMetadata(0, 20, 2L, 1);
 
                 ListUsersQuery query = new ListUsersQuery(null, null, 0, 20);
@@ -115,6 +119,8 @@ class AdminUserControllerWebTest {
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.data").isArray())
                                 .andExpect(jsonPath("$.data[0].userId").value("user-1"))
+                                .andExpect(jsonPath("$.data[0].roles[0]").value("BUYER"))
+                                .andExpect(jsonPath("$.data[0].roles[1]").value("MERCHANT"))
                                 .andExpect(jsonPath("$.data[1].displayName").value("bob_jones"))
                                 .andExpect(jsonPath("$.paging.totalElements").value(2));
 

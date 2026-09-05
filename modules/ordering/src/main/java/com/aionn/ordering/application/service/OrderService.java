@@ -31,6 +31,7 @@ import com.aionn.ordering.domain.valueobject.OrderStatus;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.Money;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.sharedkernel.integration.port.promotion.FlashSaleQueryPort;
 import com.aionn.sharedkernel.util.IdGenerator;
 import com.aionn.sharedkernel.util.Sha256Hasher;
 import lombok.RequiredArgsConstructor;
@@ -72,6 +73,7 @@ public class OrderService {
     private final TransactionTemplate transactionTemplate;
     private final CompensationTaskPort compensationTaskPort;
     private final OrderPlacementOperationPort placementOperationPort;
+    private final FlashSaleQueryPort flashSaleQueryPort;
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order placeOrder(PlaceOrderCommand command) {
@@ -194,8 +196,26 @@ public class OrderService {
             placementOperationPort.complete(userId, idempotencyKey, orderId);
             return replay;
         }
-        Money shippingFee = quoteShippingFee(orderId, merchantId, shippingAddress, currency);
 
+        Money shippingFee = quoteShippingFee(orderId, merchantId, shippingAddress, currency);
+        Map<String, Integer> flashSaleQuantities = new LinkedHashMap<>();
+        for (PlaceOrderHeadlessCommand.Line line : lines) {
+            String registrationId = pricing.get(line.skuId()).flashSaleRegistrationId();
+            if (registrationId != null) {
+                flashSaleQuantities.merge(registrationId, line.qty(), Integer::sum);
+            }
+        }
+        List<FlashSaleQueryPort.Allocation> flashSaleAllocations = flashSaleQuantities.entrySet().stream()
+                .map(entry -> new FlashSaleQueryPort.Allocation(entry.getKey(), entry.getValue()))
+                .toList();
+        try {
+            if (!flashSaleAllocations.isEmpty()) {
+                flashSaleQueryPort.reserve(orderId, flashSaleAllocations);
+            }
+        } catch (FlashSaleQueryPort.CapacityExceededException ex) {
+            throw new OrderingException(OrderingErrorCode.ORDER_RESERVATION_FAILED,
+                    "Flash-sale stock is no longer available");
+        }
         List<StockReservationGateway.ReservationLine> reservationLines = lines.stream()
                 .map(line -> {
                     CatalogPricingGateway.SkuPricing p = pricing.get(line.skuId());
@@ -208,8 +228,12 @@ public class OrderService {
         try {
             reservations = stockReservationGateway.reserveAll(orderId, reservationLines, ttlSeconds);
         } catch (StockReservationGateway.ReservationException ex) {
+            releaseFlashSaleBestEffort(orderId);
             throw new OrderingException(OrderingErrorCode.ORDER_RESERVATION_FAILED,
                     "Reservation failed for SKU " + ex.getSkuId() + ": " + ex.getMessage());
+        } catch (RuntimeException ex) {
+            releaseFlashSaleBestEffort(orderId);
+            throw ex;
         }
 
         List<OrderItem> items = new ArrayList<>(reservations.size());
@@ -387,6 +411,7 @@ public class OrderService {
     }
 
     private void releaseReservationsBestEffort(Order order, String reason) {
+        releaseFlashSaleBestEffort(order.getOrderId());
         for (OrderItem item : order.items()) {
             if (item.reservationId() == null) {
                 continue;
@@ -773,6 +798,7 @@ public class OrderService {
 
     private void compensateFailedPlacement(String userId, String orderId, String voucherCode,
             List<StockReservationGateway.Reservation> reservations) {
+        releaseFlashSaleBestEffort(orderId);
         if (voucherCode != null) {
             try {
                 voucherGateway.release(userId, orderId, "order-placement-failed");
@@ -785,6 +811,18 @@ public class OrderService {
             }
         }
         releaseReservations(reservations, "order-placement-failed");
+    }
+
+    private void releaseFlashSaleBestEffort(String orderId) {
+        try {
+            flashSaleQueryPort.release(orderId);
+        } catch (RuntimeException ex) {
+            log.error("Failed to release flash-sale allocation for order {}", orderId, ex);
+            enqueueCompensation(new CompensationTaskPort.Task(
+                    "flash-sale-release:" + orderId,
+                    CompensationTaskPort.Type.FLASH_SALE_RELEASE,
+                    orderId, null, orderId, "order-placement-failed", 0));
+        }
     }
 
     private void enqueueReservationRelease(String reservationId, String reason) {

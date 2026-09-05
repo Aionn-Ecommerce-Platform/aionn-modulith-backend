@@ -69,7 +69,7 @@ class PromotionBannerControllerWebTest {
 
     private static PromotionBannerResult sample(String id) {
         return new PromotionBannerResult(id, "Title " + id, "https://cdn/" + id + ".png",
-                "https://shop/" + id, 1);
+                "aionn/promotion/banners/" + id, "https://shop/" + id, 1);
     }
 
     @Test
@@ -106,7 +106,7 @@ class PromotionBannerControllerWebTest {
     }
 
     @Test
-    void createDefaultsActiveToTrueWhenOmitted() throws Exception {
+    void createAllowsMissingLinkWhenOmitted() throws Exception {
         when(createBannerInputPort.execute(any(BannerCommands.CreateBanner.class)))
                 .thenReturn(sample("BAN_1"));
 
@@ -116,8 +116,7 @@ class PromotionBannerControllerWebTest {
                         {
                           "title": "Summer",
                           "imageUrl": "https://cdn/a.png",
-                          "linkUrl": "https://shop/sale",
-                          "displayOrder": 2
+                          "imagePublicId": "aionn/promotion/banners/a"
                         }
                         """))
                 .andExpect(status().isCreated())
@@ -125,7 +124,7 @@ class PromotionBannerControllerWebTest {
 
         ArgumentCaptor<BannerCommands.CreateBanner> captor = ArgumentCaptor.forClass(BannerCommands.CreateBanner.class);
         verify(createBannerInputPort).execute(captor.capture());
-        assertThat(captor.getValue().active()).isTrue();
+        assertThat(captor.getValue().linkUrl()).isNull();
     }
 
     @Test
@@ -136,7 +135,21 @@ class PromotionBannerControllerWebTest {
                         {
                           "title": "Summer",
                           "imageUrl": "",
-                          "displayOrder": 2
+                          "imagePublicId": "aionn/promotion/banners/a"
+                        }
+                        """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createRejectsMissingImagePublicId() throws Exception {
+        mockMvc.perform(post("/api/v1/promotions/banners")
+                .contentType(APPLICATION_JSON)
+                .content("""
+                        {
+                          "title": "Summer",
+                          "imageUrl": "https://res.cloudinary.com/demo/image/upload/banner.png",
+                          "linkUrl": "https://shop/sale"
                         }
                         """))
                 .andExpect(status().isBadRequest());

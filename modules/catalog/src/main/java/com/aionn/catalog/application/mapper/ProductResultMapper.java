@@ -2,23 +2,33 @@ package com.aionn.catalog.application.mapper;
 
 import com.aionn.catalog.application.dto.common.PageResult;
 import com.aionn.catalog.application.dto.product.result.ProductResult;
+import com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort;
 import com.aionn.catalog.domain.model.Product;
 import com.aionn.catalog.domain.model.ProductVariant;
 import com.aionn.sharedkernel.domain.vo.Money;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @Component
+@RequiredArgsConstructor
 public class ProductResultMapper {
+
+    private final ProductSoldCounterPersistencePort soldCounterRepository;
 
     public ProductResult toResult(Product product) {
         if (product == null) {
             return null;
         }
+        return toResult(product, soldCounterRepository.getSoldCount(product.getProductId()));
+    }
+
+    private ProductResult toResult(Product product, long soldCount) {
         Locale locale = LocaleContextHolder.getLocale();
         String fullTag = locale.toLanguageTag();
         String language = locale.getLanguage();
@@ -56,15 +66,18 @@ public class ProductResultMapper {
                 aiDescription,
                 product.getStatus() != null ? product.getStatus().name() : null,
                 product.getCreatedAt(),
-                product.getUpdatedAt());
+                product.getUpdatedAt(),
+                soldCount);
     }
 
     public List<ProductResult> toResults(List<Product> products) {
         if (products == null) {
             return List.of();
         }
+        Map<String, Long> soldCounts = soldCounterRepository.getSoldCountsByProductIds(
+                products.stream().map(Product::getProductId).toList());
         return products.stream()
-                .map(this::toResult)
+                .map(product -> toResult(product, soldCounts.getOrDefault(product.getProductId(), 0L)))
                 .toList();
     }
 

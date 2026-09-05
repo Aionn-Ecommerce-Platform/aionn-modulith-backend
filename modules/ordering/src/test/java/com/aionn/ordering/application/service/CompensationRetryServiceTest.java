@@ -5,6 +5,7 @@ import com.aionn.ordering.application.port.out.CompensationTaskPort.Task;
 import com.aionn.ordering.application.port.out.CompensationTaskPort.Type;
 import com.aionn.ordering.application.port.out.StockReservationGateway;
 import com.aionn.ordering.application.port.out.VoucherGateway;
+import com.aionn.sharedkernel.integration.port.promotion.FlashSaleQueryPort;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -29,10 +30,11 @@ class CompensationRetryServiceTest {
     private final CompensationTaskPort taskPort = mock(CompensationTaskPort.class);
     private final StockReservationGateway stockGateway = mock(StockReservationGateway.class);
     private final VoucherGateway voucherGateway = mock(VoucherGateway.class);
+    private final FlashSaleQueryPort flashSaleQueryPort = mock(FlashSaleQueryPort.class);
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
 
     private final CompensationRetryService service =
-            new CompensationRetryService(taskPort, stockGateway, voucherGateway, clock);
+            new CompensationRetryService(taskPort, stockGateway, voucherGateway, flashSaleQueryPort, clock);
 
     @Test
     void ignoresATaskThatIsNoLongerPending() {
@@ -40,7 +42,7 @@ class CompensationRetryServiceTest {
 
         service.retry("missing");
 
-        verifyNoInteractions(stockGateway, voucherGateway);
+        verifyNoInteractions(stockGateway, voucherGateway, flashSaleQueryPort);
         verify(taskPort, never()).markCompleted(anyString());
         verify(taskPort, never()).markFailed(anyString(), anyString(), any(), anyBoolean());
     }
@@ -67,6 +69,19 @@ class CompensationRetryServiceTest {
         verify(voucherGateway).release("user-1", "order-1", "placement-aborted");
         verify(taskPort).markCompleted("task-2");
         verifyNoInteractions(stockGateway);
+    }
+
+    @Test
+    void releasesTheFlashSaleAllocationAndCompletesTheTask() {
+        when(taskPort.findById("task-flash-sale")).thenReturn(Optional.of(new Task(
+                "task-flash-sale", Type.FLASH_SALE_RELEASE, "order-1", null, "order-1",
+                "placement-aborted", 0)));
+
+        service.retry("task-flash-sale");
+
+        verify(flashSaleQueryPort).release("order-1");
+        verify(taskPort).markCompleted("task-flash-sale");
+        verifyNoInteractions(stockGateway, voucherGateway);
     }
 
     @Test

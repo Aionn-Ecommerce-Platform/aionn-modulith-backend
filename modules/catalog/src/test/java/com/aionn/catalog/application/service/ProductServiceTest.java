@@ -506,7 +506,7 @@ class ProductServiceTest {
         @Test
         void getPersonalizedProductsUsesBrowsingHistoryForRealUser() {
                 com.aionn.catalog.domain.model.UserBrowsingHistory history = new com.aionn.catalog.domain.model.UserBrowsingHistory(
-                                "user-1", List.of(CATEGORY_ID), List.of(BRAND_ID));
+                                "user-1", List.of(CATEGORY_ID), List.of(BRAND_ID), List.of());
                 when(userBrowsingHistoryRepository.findByUserId("user-1")).thenReturn(Optional.of(history));
                 Product product = publishableProduct();
                 when(productRepository.findPersonalizedProducts(List.of(CATEGORY_ID), List.of(BRAND_ID), 5))

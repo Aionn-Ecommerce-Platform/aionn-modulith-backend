@@ -9,11 +9,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ResultSetExtractor;
 
 import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -24,6 +29,7 @@ class FlashSaleQueryAdapterTest {
     @Mock FlashSaleRegistrationPersistencePort registrationRepository;
     @Mock PromotionCampaignPersistencePort campaignRepository;
     @Mock PromotionCampaignRepository campaignJpaRepository;
+    @Mock JdbcTemplate jdbcTemplate;
 
     @Test
     void activeCampaignLookupFiltersAndLimitsInDatabase() {
@@ -45,7 +51,7 @@ class FlashSaleQueryAdapterTest {
                 .thenReturn(List.of());
 
         var result = new FlashSaleQueryAdapter(
-                registrationRepository, campaignRepository, campaignJpaRepository)
+                registrationRepository, campaignRepository, campaignJpaRepository, jdbcTemplate)
                 .listActiveCampaigns(500);
 
         assertThat(result).hasSize(1);
@@ -53,5 +59,25 @@ class FlashSaleQueryAdapterTest {
                 org.mockito.ArgumentMatchers.eq("FLASH_SALE"),
                 org.mockito.ArgumentMatchers.eq("RUNNING"),
                 argThat(page -> page.getPageSize() == 50));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void reserveRejectsAnAllocationWhenTheAtomicCapacityUpdateDoesNotMatch() {
+        when(jdbcTemplate.query(anyString(), any(ResultSetExtractor.class),
+                org.mockito.ArgumentMatchers.<Object>any(), org.mockito.ArgumentMatchers.<Object>any()))
+                .thenReturn(null);
+        when(jdbcTemplate.update(anyString(),
+                org.mockito.ArgumentMatchers.<Object>any(), org.mockito.ArgumentMatchers.<Object>any(),
+                org.mockito.ArgumentMatchers.<Object>any()))
+                .thenReturn(0);
+        var adapter = new FlashSaleQueryAdapter(
+                registrationRepository, campaignRepository, campaignJpaRepository, jdbcTemplate);
+
+        assertThatThrownBy(() -> adapter.reserve("order-1", List.of(
+                new com.aionn.sharedkernel.integration.port.promotion.FlashSaleQueryPort.Allocation(
+                        "registration-1", 2))))
+                .isInstanceOf(com.aionn.sharedkernel.integration.port.promotion.FlashSaleQueryPort
+                        .CapacityExceededException.class);
     }
 }

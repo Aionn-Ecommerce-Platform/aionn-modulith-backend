@@ -4,6 +4,7 @@ public record PromotionBannerResponse(
         String bannerId,
         String title,
         String imageUrl,
+        String imagePublicId,
         String linkUrl,
         int displayOrder) {
 }

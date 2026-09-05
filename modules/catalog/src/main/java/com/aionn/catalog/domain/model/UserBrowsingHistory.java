@@ -15,9 +15,20 @@ public class UserBrowsingHistory {
     private final String userId;
     private final List<String> categoryIds;
     private final List<String> brandIds;
+    private final List<String> recentSearches;
 
     public static UserBrowsingHistory create(String userId) {
-        return new UserBrowsingHistory(userId, new ArrayList<>(), new ArrayList<>());
+        return new UserBrowsingHistory(userId, new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+    }
+
+    public void recordSearch(String query) {
+        String normalized = query == null ? "" : query.trim().replaceAll("\\s+", " ");
+        if (normalized.isEmpty()) {
+            return;
+        }
+        recentSearches.removeIf(existing -> existing.equalsIgnoreCase(normalized));
+        recentSearches.add(0, normalized);
+        trim(recentSearches);
     }
 
     public void trackView(List<String> productCategoryIds, String brandId) {

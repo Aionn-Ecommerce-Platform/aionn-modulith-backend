@@ -50,7 +50,7 @@ class AdminUserServiceTest {
 
     @Test
     void updateRolesReplacesExistingRoleSet() {
-        IdentityUser user = newUser(Set.of(UserRole.BUYER));
+        IdentityUser user = newUser(Set.of(UserRole.BUYER, UserRole.MERCHANT));
         when(adminUserPersistencePort.findById(USER_ID)).thenReturn(Optional.of(user));
         when(adminUserPersistencePort.save(any(IdentityUser.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -136,12 +136,13 @@ class AdminUserServiceTest {
 
     @Test
     void listUsersUsesOffsetPaginationAndDelegatesToPort() {
-        IdentityUser user = newUser(Set.of(UserRole.BUYER));
+        IdentityUser user = newUser(Set.of(UserRole.BUYER, UserRole.MERCHANT));
         PageResult<IdentityUser> page = new PageResult<>(List.of(user), 0, 10, 1L);
         when(adminUserPersistencePort.findUsersWithFilters(eq(UserStatus.ACTIVE), eq(UserRole.BUYER),
                 any(OffsetPagination.class))).thenReturn(page);
         UserListResult expected = new UserListResult(
-                List.of(new UserListResult.UserSummary(USER_ID, "alice@example.com", "Alice", "ACTIVE", "BUYER")),
+                List.of(new UserListResult.UserSummary(USER_ID, "alice@example.com", "Alice", UserStatus.ACTIVE,
+                        List.of(UserRole.BUYER, UserRole.MERCHANT))),
                 0, 10, 1);
         when(adminResultMapper.toUserListResult(any(), eq(0), eq(10), eq(1))).thenReturn(expected);
 

@@ -15,6 +15,40 @@ class UserBrowsingHistoryTest {
         assertThat(history.getUserId()).isEqualTo("user-1");
         assertThat(history.getCategoryIds()).isEmpty();
         assertThat(history.getBrandIds()).isEmpty();
+        assertThat(history.getRecentSearches()).isEmpty();
+    }
+
+    @Test
+    void recordSearchNormalizesDeduplicatesAndMovesQueryToFront() {
+        UserBrowsingHistory history = UserBrowsingHistory.create("user-1");
+
+        history.recordSearch("  wireless   headphones ");
+        history.recordSearch("phone");
+        history.recordSearch("WIRELESS HEADPHONES");
+
+        assertThat(history.getRecentSearches()).containsExactly("WIRELESS HEADPHONES", "phone");
+    }
+
+    @Test
+    void recordSearchKeepsOnlyFiveMostRecentQueries() {
+        UserBrowsingHistory history = UserBrowsingHistory.create("user-1");
+
+        for (int index = 0; index < 8; index++) {
+            history.recordSearch("query-" + index);
+        }
+
+        assertThat(history.getRecentSearches())
+                .containsExactly("query-7", "query-6", "query-5", "query-4", "query-3");
+    }
+
+    @Test
+    void recordSearchIgnoresNullAndBlankQueries() {
+        UserBrowsingHistory history = UserBrowsingHistory.create("user-1");
+
+        history.recordSearch(null);
+        history.recordSearch("   ");
+
+        assertThat(history.getRecentSearches()).isEmpty();
     }
 
     @Test

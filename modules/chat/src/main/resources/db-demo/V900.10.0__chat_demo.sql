@@ -14,6 +14,26 @@ INSERT INTO chat_conversations (
  'MSG_DEMO_012', 'Đơn sẽ được bàn giao cho đơn vị vận chuyển trong hôm nay.', 'TEXT', 'MER_003', NOW() - INTERVAL '30 minutes', FALSE, 0,
  NOW() - INTERVAL '1 day', NOW() - INTERVAL '30 minutes');
 
+UPDATE chat_conversations
+SET participants = jsonb_build_array(
+    jsonb_build_object(
+        'userId', buyer_id,
+        'role', 'BUYER',
+        'displayName', NULL,
+        'avatarUrl', NULL,
+        'joinedAt', to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') || 'T' || to_char(created_at AT TIME ZONE 'UTC', 'HH24:MI:SS.US') || 'Z',
+        'lastReadAt', to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') || 'T' || to_char(created_at AT TIME ZONE 'UTC', 'HH24:MI:SS.US') || 'Z'
+    ),
+    jsonb_build_object(
+        'userId', merchant_id,
+        'role', 'MERCHANT',
+        'displayName', NULL,
+        'avatarUrl', NULL,
+        'joinedAt', to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') || 'T' || to_char(created_at AT TIME ZONE 'UTC', 'HH24:MI:SS.US') || 'Z',
+        'lastReadAt', to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') || 'T' || to_char(created_at AT TIME ZONE 'UTC', 'HH24:MI:SS.US') || 'Z'
+    )
+);
+
 INSERT INTO chat_messages (
     message_id, conversation_id, sender_id, sender_role, type, body,
     status, delivered_to, read_by, is_recalled, version, sent_at, updated_at

@@ -82,11 +82,10 @@ public class AdminUserService {
                         user.getUserId(),
                         user.getEmail(),
                         user.getDisplayName(),
-                        user.getStatus() != null ? user.getStatus().name() : null,
+                        user.getStatus(),
                         user.getRoles().stream()
-                                .map(Enum::name)
                                 .sorted()
-                                .collect(Collectors.joining(","))))
+                                .toList()))
                 .toList();
 
         return adminResultMapper.toUserListResult(users, pagination.page(), pagination.size(),

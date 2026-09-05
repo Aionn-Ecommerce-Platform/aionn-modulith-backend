@@ -10,18 +10,17 @@ public final class BannerCommands {
     public record CreateBanner(
             String title,
             String imageUrl,
-            String linkUrl,
-            int displayOrder,
-            boolean active) implements Command {
+            String imagePublicId,
+            String linkUrl) implements Command {
     }
 
     public record UpdateBanner(
             String bannerId,
             String title,
             String imageUrl,
+            String imagePublicId,
             String linkUrl,
-            Integer displayOrder,
-            Boolean active) implements Command {
+            Integer displayOrder) implements Command {
     }
 
     public record DeleteBanner(String bannerId) implements Command {
