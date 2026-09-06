@@ -39,8 +39,12 @@ public class InteractionPruneScheduler {
     @SchedulerLock(name = "recommendation-interaction-prune", lockAtMostFor = "PT1H", lockAtLeastFor = "PT1M")
     public void run() {
         try {
-            Duration maxAge = Duration.ofDays(jobProperties.retention().interactionMaxAgeDays());
             int batchSize = schedulingProperties.prune().batchSize();
+            if (batchSize <= 0) {
+                log.warn("Interaction prune skipped: batchSize must be greater than 0, got {}", batchSize);
+                return;
+            }
+            Duration maxAge = Duration.ofDays(jobProperties.retention().interactionMaxAgeDays());
             int totalDeleted = 0;
             int batches = 0;
             int deleted;

@@ -11,7 +11,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Duration;
 
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -19,27 +21,31 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class InteractionPruneSchedulerTest {
 
-    @Mock private InteractionRetentionService retentionService;
-    @Mock private RecommendationJobProperties jobProperties;
-    @Mock private RecommendationSchedulingProperties schedulingProperties;
-    @Mock private RecommendationJobProperties.Retention retention;
-    @Mock private RecommendationSchedulingProperties.Job pruneJob;
+    @Mock
+    private InteractionRetentionService retentionService;
+    @Mock
+    private RecommendationJobProperties jobProperties;
+    @Mock
+    private RecommendationSchedulingProperties schedulingProperties;
+    @Mock
+    private RecommendationJobProperties.Retention retention;
+    @Mock
+    private RecommendationSchedulingProperties.Job pruneJob;
 
     private InteractionPruneScheduler scheduler;
 
     @BeforeEach
     void setUp() {
-        when(jobProperties.retention()).thenReturn(retention);
-        when(retention.interactionMaxAgeDays()).thenReturn(180L);
-        when(schedulingProperties.prune()).thenReturn(pruneJob);
-        when(pruneJob.batchSize()).thenReturn(100);
-
         scheduler = new InteractionPruneScheduler(retentionService, jobProperties, schedulingProperties);
     }
 
     @Test
     void runsSingleBatchWhenDeletedIsLessThanBatchSize() {
-        when(retentionService.prune(eq(Duration.ofDays(180)), eq(100))).thenReturn(42);
+        when(schedulingProperties.prune()).thenReturn(pruneJob);
+        when(pruneJob.batchSize()).thenReturn(100);
+        when(jobProperties.retention()).thenReturn(retention);
+        when(retention.interactionMaxAgeDays()).thenReturn(180L);
+        when(retentionService.prune(Duration.ofDays(180), 100)).thenReturn(42);
 
         scheduler.run();
 
@@ -48,7 +54,11 @@ class InteractionPruneSchedulerTest {
 
     @Test
     void loopsUntilExpiredRowsAreDrained() {
-        when(retentionService.prune(eq(Duration.ofDays(180)), eq(100)))
+        when(schedulingProperties.prune()).thenReturn(pruneJob);
+        when(pruneJob.batchSize()).thenReturn(100);
+        when(jobProperties.retention()).thenReturn(retention);
+        when(retention.interactionMaxAgeDays()).thenReturn(180L);
+        when(retentionService.prune(Duration.ofDays(180), 100))
                 .thenReturn(100)
                 .thenReturn(100)
                 .thenReturn(35);
@@ -56,5 +66,15 @@ class InteractionPruneSchedulerTest {
         scheduler.run();
 
         verify(retentionService, times(3)).prune(Duration.ofDays(180), 100);
+    }
+
+    @Test
+    void skipsPruneWhenBatchSizeIsZeroOrNegative() {
+        when(schedulingProperties.prune()).thenReturn(pruneJob);
+        when(pruneJob.batchSize()).thenReturn(0);
+
+        scheduler.run();
+
+        verify(retentionService, never()).prune(any(Duration.class), anyInt());
     }
 }
