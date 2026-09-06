@@ -19,8 +19,10 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Exposes product classification to other modules without leaking catalog's domain types. Only
- * published products surface: recommending an unpublished or taken-down product would let a user
+ * Exposes product classification to other modules without leaking catalog's
+ * domain types. Only
+ * published products surface: recommending an unpublished or taken-down product
+ * would let a user
  * follow a link to something they cannot buy.
  */
 @Component
@@ -129,9 +131,12 @@ public class CatalogProductAttributeQueryAdapter implements CatalogProductAttrib
             if (price == null) {
                 continue;
             }
-            if (cheapest == null || price.amount().compareTo(cheapest) < 0) {
+            if (cheapest == null) {
                 cheapest = price.amount();
                 currency = price.currency();
+            } else if (currency != null && currency.equalsIgnoreCase(price.currency())
+                    && price.amount().compareTo(cheapest) < 0) {
+                cheapest = price.amount();
             }
         }
         List<String> images = product.imageList();

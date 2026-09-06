@@ -427,7 +427,7 @@ public class ProductController {
         }
 
         @GetMapping("/recommendations/personalized")
-        @Operation(summary = "Get personalized products", deprecated = true, description = "Deprecated - use GET /api/v1/recommendations/home, which derives category and brand affinity from the user's own behaviour instead of taking them as request parameters")
+        @Operation(summary = "Get personalized products", deprecated = true, description = "Deprecated - use GET /api/v1/recommendations/home, which serves authenticated callers personalized recommendations based on their own behaviour, and serves unauthenticated callers anonymous/trending recommendations.")
         public ResponseEntity<ApiResponse<List<ProductResponse>>> getPersonalized(
                         Authentication authentication,
                         @RequestParam(required = false) List<String> categoryIds,

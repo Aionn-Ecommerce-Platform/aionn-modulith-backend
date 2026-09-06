@@ -1,5 +1,6 @@
 package com.aionn.sharedkernel.infrastructure.outbox;
 
+import com.aionn.sharedkernel.domain.model.DomainEvent;
 import com.aionn.sharedkernel.domain.model.EventEnvelope;
 import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 import java.lang.reflect.Method;
@@ -74,7 +75,10 @@ class OutboxConsumerInboxAspect {
         if (arguments[0] instanceof EventEnvelope envelope) {
             return envelope.eventId();
         }
-        return OutboxEventContext.currentEventId();
+        if (arguments[0] instanceof DomainEvent) {
+            return OutboxEventContext.currentEventId();
+        }
+        return null;
     }
 
     private static String consumerId(ProceedingJoinPoint joinPoint) {
