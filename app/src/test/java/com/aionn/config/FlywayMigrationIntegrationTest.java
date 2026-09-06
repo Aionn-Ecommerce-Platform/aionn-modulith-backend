@@ -38,6 +38,7 @@ class FlywayMigrationIntegrationTest {
         assertThat(rowCount("users")).isZero();
         assertThat(rowCount("orders")).isZero();
         assertThat(rowCount("payments")).isZero();
+        assertThat(rowCount("recommendation_interactions")).isZero();
         assertThat(rowCount("provinces")).isPositive();
         assertThat(rowCount("notification_templates")).isPositive();
 
@@ -48,6 +49,7 @@ class FlywayMigrationIntegrationTest {
         assertThat(rowCount("orders")).isPositive();
         assertThat(rowCount("payments")).isPositive();
         assertThat(rowCount("products")).isPositive();
+        assertThat(rowCount("recommendation_interactions")).isPositive();
         assertThat(rowCount("promotion_banners")).isZero();
     }
 

@@ -18,6 +18,7 @@ spring:
       - classpath:application-payment.yml
       - classpath:application-shipping.yml
       - classpath:application-promotion.yml
+      - classpath:application-recommendation.yml
       - classpath:application-notification.yml
       - classpath:application-chat.yml
 
