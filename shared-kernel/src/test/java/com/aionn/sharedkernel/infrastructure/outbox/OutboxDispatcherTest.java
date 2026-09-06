@@ -65,6 +65,7 @@ class OutboxDispatcherTest {
         new OutboxDispatcher(repository, mapper, publisher, 10, 3, 300, Clock.systemUTC()).dispatch();
 
         verify(publisher).publishEvent(any(com.aionn.sharedkernel.domain.model.EventEnvelope.class));
+        verify(publisher).publishEvent(payload);
 
         org.mockito.Mockito.doThrow(new IllegalStateException("temporary"))
                 .when(publisher).publishEvent(any(Object.class));

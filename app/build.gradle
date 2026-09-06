@@ -13,6 +13,7 @@ dependencies {
     implementation project(':modules:shipping')
     implementation project(':modules:notification')
     implementation project(':modules:promotion')
+    implementation project(':modules:recommendation')
     implementation project(':modules:chat')
 
     implementation 'org.springframework.boot:spring-boot-starter-actuator'

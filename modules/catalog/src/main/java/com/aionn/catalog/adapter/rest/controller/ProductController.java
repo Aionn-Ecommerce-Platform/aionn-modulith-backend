@@ -406,7 +406,7 @@ public class ProductController {
         }
 
         @GetMapping("/{productId}/recommendations")
-        @Operation(summary = "Get related products")
+        @Operation(summary = "Get related products", deprecated = true, description = "Deprecated - use GET /api/v1/recommendations/products/{productId}/similar, which ranks on observed co-interaction instead of shared category")
         public ResponseEntity<ApiResponse<List<ProductResponse>>> getRelated(
                         @PathVariable String productId,
                         @RequestParam(defaultValue = "5") int limit) {
@@ -417,7 +417,7 @@ public class ProductController {
         }
 
         @GetMapping("/recommendations/popular")
-        @Operation(summary = "Get popular products")
+        @Operation(summary = "Get popular products", deprecated = true, description = "Deprecated - use GET /api/v1/recommendations/home, which an anonymous caller receives as trending; this variant sorts on rating rather than on what is selling")
         public ResponseEntity<ApiResponse<List<ProductResponse>>> getPopular(
                         @RequestParam(defaultValue = "5") int limit) {
                 return ResponseEntity.ok(ApiResponse.success(
@@ -427,7 +427,7 @@ public class ProductController {
         }
 
         @GetMapping("/recommendations/personalized")
-        @Operation(summary = "Get personalized products")
+        @Operation(summary = "Get personalized products", deprecated = true, description = "Deprecated - use GET /api/v1/recommendations/home, which derives category and brand affinity from the user's own behaviour instead of taking them as request parameters")
         public ResponseEntity<ApiResponse<List<ProductResponse>>> getPersonalized(
                         Authentication authentication,
                         @RequestParam(required = false) List<String> categoryIds,

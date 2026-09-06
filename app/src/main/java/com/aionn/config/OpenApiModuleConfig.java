@@ -70,6 +70,11 @@ public class OpenApiModuleConfig {
         return moduleApi("Chat", "com.aionn.chat.adapter.rest");
     }
 
+    @Bean
+    public GroupedOpenApi recommendationApi() {
+        return moduleApi("Recommendation", "com.aionn.recommendation.adapter.rest");
+    }
+
     private GroupedOpenApi moduleApi(String groupName, String controllerPackage) {
         return GroupedOpenApi.builder()
                 .group(groupName)

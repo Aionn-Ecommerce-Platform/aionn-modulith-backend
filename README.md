@@ -13,6 +13,7 @@ Aionn is a Spring Boot modular monolith for an e-commerce platform. The reposito
 - `notification`
 - `promotion`
 - `chat`
+- `recommendation`
 
 `app` starts Spring Boot and wires the modules. Business rules stay inside their owning module. `shared-kernel` contains only contracts and primitives that are genuinely shared.
 
