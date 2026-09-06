@@ -27,8 +27,7 @@ class OutboxConsumerInboxAspectTest {
     private final OutboxEventRepository repository = mock(OutboxEventRepository.class);
     private final PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
     private final TransactionStatus transactionStatus = mock(TransactionStatus.class);
-    private final OutboxConsumerInboxAspect aspect =
-            new OutboxConsumerInboxAspect(repository, transactionManager);
+    private final OutboxConsumerInboxAspect aspect = new OutboxConsumerInboxAspect(repository, transactionManager);
 
     @BeforeEach
     void configureTransaction() {
@@ -92,6 +91,27 @@ class OutboxConsumerInboxAspectTest {
     }
 
     @Test
+    void tracksDomainEventViaContextualEventId() throws Throwable {
+        Instant occurredAt = Instant.parse("2026-01-01T00:00:00Z");
+        TestDomainEvent domainEvent = new TestDomainEvent(occurredAt);
+        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+        MethodSignature signature = mock(MethodSignature.class);
+        Method method = DomainEventListener.class.getDeclaredMethod("onDomainEvent", TestDomainEvent.class);
+        when(joinPoint.getArgs()).thenReturn(new Object[] { domainEvent });
+        when(joinPoint.getTarget()).thenReturn(new DomainEventListener());
+        when(joinPoint.getSignature()).thenReturn(signature);
+        when(signature.getMethod()).thenReturn(method);
+        when(joinPoint.proceed()).thenReturn("handled");
+
+        try (var ignored = OutboxEventContext.open("event-ctx-1")) {
+            assertEquals("handled", aspect.consumeOnce(joinPoint));
+        }
+
+        verify(repository).markProcessed(DomainEventListener.class.getName() + "#onDomainEvent("
+                + TestDomainEvent.class.getName() + ")", "event-ctx-1");
+    }
+
+    @Test
     void bypassesTheInboxWhenTheArgumentCarriesNoEventIdentifier() throws Throwable {
         ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
         when(joinPoint.getArgs()).thenReturn(new Object[] { "not-an-event" });
@@ -140,6 +160,14 @@ class OutboxConsumerInboxAspectTest {
     private static final class EnvelopeListener {
         @SuppressWarnings("unused") // Invoked reflectively by OutboxConsumerInboxAspect.
         void onEnvelope(EventEnvelope envelope) {
+        }
+    }
+
+    private static final class DomainEventListener {
+        @SuppressWarnings("unused") // Invoked reflectively by OutboxConsumerInboxAspect.
+        void onDomainEvent(TestDomainEvent event) {
+            // Intentionally empty: used only for aspect pointcut and reflective invocation
+            // in unit test
         }
     }
 

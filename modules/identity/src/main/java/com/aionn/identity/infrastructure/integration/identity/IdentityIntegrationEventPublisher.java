@@ -1,6 +1,7 @@
 package com.aionn.identity.infrastructure.integration.identity;
 
 import com.aionn.identity.application.port.out.integration.IdentityIntegrationEventPublisherPort;
+import com.aionn.sharedkernel.integration.event.identity.AccountDeletedIntegrationEvent;
 import com.aionn.sharedkernel.integration.event.identity.EmailChangedIntegrationEvent;
 import com.aionn.sharedkernel.integration.event.identity.PasswordChangedIntegrationEvent;
 import com.aionn.sharedkernel.integration.event.identity.PasswordResetRequestedIntegrationEvent;
@@ -46,5 +47,12 @@ public class IdentityIntegrationEventPublisher implements IdentityIntegrationEve
         log.debug("Publishing PhoneChangedIntegrationEvent for user: {}", userId);
         integrationEventPublisher.publish(new PhoneChangedIntegrationEvent(
                 IdGenerator.ulid(), userId, oldPhone, newPhone, clock.instant()));
+    }
+
+    @Override
+    public void publishAccountDeleted(String userId) {
+        log.debug("Publishing AccountDeletedIntegrationEvent for user: {}", userId);
+        integrationEventPublisher.publish(new AccountDeletedIntegrationEvent(
+                IdGenerator.ulid(), userId, clock.instant()));
     }
 }

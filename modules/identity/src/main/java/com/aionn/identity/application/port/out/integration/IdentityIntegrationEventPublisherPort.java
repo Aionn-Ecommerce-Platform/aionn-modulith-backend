@@ -9,4 +9,11 @@ public interface IdentityIntegrationEventPublisherPort {
     void publishEmailChanged(String userId, String oldEmail, String newEmail);
 
     void publishPhoneChanged(String userId, String oldPhone, String newPhone);
+
+    /**
+     * Announces that a deletion request has completed its grace period and the account is tombstoned.
+     * Consumers holding personal data keyed by this user ID must erase it; historical business records
+     * keep the opaque ID.
+     */
+    void publishAccountDeleted(String userId);
 }

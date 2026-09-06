@@ -94,6 +94,8 @@ class ProductServiceTest {
         private CatalogProductPolicy productPolicy;
         @Mock
         private EventPublisher eventPublisher;
+        @Mock
+        private com.aionn.catalog.application.port.out.integration.CatalogIntegrationEventPublisherPort integrationEventPublisher;
 
         @Spy
         private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
@@ -551,6 +553,12 @@ class ProductServiceTest {
 
                 verify(userBrowsingHistoryRepository).save(any(
                                 com.aionn.catalog.domain.model.UserBrowsingHistory.class));
+                verify(integrationEventPublisher).publishProductViewed(
+                                PRODUCT_ID,
+                                "user-1",
+                                BRAND_ID,
+                                java.util.List.of(CATEGORY_ID),
+                                java.time.Instant.parse("2026-01-01T00:00:00Z"));
         }
 
         @Test

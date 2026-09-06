@@ -43,6 +43,7 @@ public class AccountDeletionProcessor {
         var requests = deletionRequestRepository.findDueForUpdate(
                 AccountDeletionStatus.PENDING, now, PageRequest.of(0, BATCH_SIZE));
         List<String> revokedSessionIds = new ArrayList<>();
+        List<String> deletedUserIds = new ArrayList<>();
         int completed = 0;
 
         for (var request : requests) {
@@ -60,9 +61,10 @@ public class AccountDeletionProcessor {
             revokeSessions(user.getUserId(), revokedSessionIds);
             request.setStatus(AccountDeletionStatus.COMPLETED);
             request.setCompletedAt(now);
+            deletedUserIds.add(user.getUserId());
             completed++;
         }
-        return new Result(completed, List.copyOf(revokedSessionIds));
+        return new Result(completed, List.copyOf(revokedSessionIds), List.copyOf(deletedUserIds));
     }
 
     private static void tombstone(UserEntity user, Instant now) {
@@ -91,6 +93,11 @@ public class AccountDeletionProcessor {
         }
     }
 
-    public record Result(int completedAccounts, List<String> revokedSessionIds) {
+    /**
+     * @param deletedUserIds accounts tombstoned by this batch. The scheduler announces them after the
+     *                       transaction commits so consumers never act on a deletion that rolls back.
+     */
+    public record Result(
+            int completedAccounts, List<String> revokedSessionIds, List<String> deletedUserIds) {
     }
 }
