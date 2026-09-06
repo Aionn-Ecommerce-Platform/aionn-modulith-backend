@@ -75,6 +75,7 @@ spring:
           writetimeout: ${SMTP_WRITE_TIMEOUT_MS:15000}
           starttls:
             enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:true}
+            required: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED:true}
 
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME:}
