@@ -67,6 +67,9 @@ class ControllerAuthorizationArchitectureTest {
             "com.aionn.promotion.adapter.rest.controller.PromotionCampaignController#list",
             "com.aionn.promotion.adapter.rest.controller.PromotionCampaignController#listVouchers",
             "com.aionn.promotion.adapter.rest.controller.ShopVoucherController#listByMerchant",
+            "com.aionn.recommendation.adapter.rest.controller.RecommendationController#getAlsoBought",
+            "com.aionn.recommendation.adapter.rest.controller.RecommendationController#getHomeFeed",
+            "com.aionn.recommendation.adapter.rest.controller.RecommendationController#getSimilarProducts",
             "com.aionn.shipping.adapter.rest.controller.ShippingWebhookController#carrierWebhook");
 
     @Test

@@ -37,7 +37,7 @@ Direct `bootRun` requires environment variables to be loaded in the current proc
 - Never edit a migration already applied to a shared environment. Add a new migration with a higher version.
 - Do not duplicate a migration under both `db` and `db/migration`; duplicate versions prevent startup.
 - Timestamp columns use `TIMESTAMPTZ`.
-- Production migrations must not insert sample users, credentials, merchants, products, inventory, orders, payments, promotion claims, notification inbox entries, or chat messages.
+- Production migrations must not insert sample users, credentials, merchants, products, inventory, orders, payments, promotion claims, notification inbox entries, chat messages, or recommendation interactions.
 - Acceptable reference data is stable system data such as geography or approved default configuration.
 - Do not run `flyway repair` against production without a reviewed recovery plan.
 
@@ -64,7 +64,14 @@ Do not delete dead-letter events before preserving diagnostic evidence and defin
 - `product_variants.sku_id` is a globally unique technical identifier used across catalog, inventory, pricing, and ordering integrations.
 - A future merchant-facing stock code must use a separate field such as `seller_sku`, scoped by merchant. Do not change `sku_id` into a composite identity without migrating every SKU-keyed contract.
 
-## 6. Distributed schedulers
+## 6. Behavioural data
+
+- Interaction rows are personal data. They are deleted outright when an account is deleted rather than retained against a tombstoned user ID, because unlike historical business records there is no obligation behind them. The derived affinity profile goes with them; the aggregate similarity and popularity tables do not identify anyone and stay.
+- Interactions are stored with their base weight and decayed at read time. A stored decayed value would be wrong the moment the row aged.
+- Never log which product a user interacted with above debug level. Browsing history can reveal sensitive interests and is not needed for operational diagnosis; log counts instead.
+- Availability is applied to a recommendation slate after ranking and outside the cache. Caching the availability decision would serve unbuyable products for the life of the entry.
+
+## 7. Distributed schedulers
 
 Singleton business schedulers use ShedLock and PostgreSQL database time. Lock names are globally unique. The outbox dispatcher is the exception because it already provides row-level concurrency control.
 
@@ -84,7 +91,7 @@ merchant_balances.receivable = SUM(settlement_ledger.receivable_delta)
 
 The scheduled reconciliation job reports mismatches through metrics and error logs. Never repair a mismatch by editing balances or ledger rows without preserving evidence and reviewing the complete economic event chain.
 
-## 7. Dependencies and security
+## 8. Dependencies and security
 
 - Read the Java and Spring baseline from the Gradle build rather than copying fixed versions into documentation.
 - Patch updates still require review and tests. Minor and major updates require a full build and E2E checks because they can alter serialization, APIs, or auto-configuration.
@@ -92,7 +99,7 @@ The scheduled reconciliation job reports mismatches through metrics and error lo
 - Dependabot version-update pull requests may be limited to reduce noise. Security alerts and security updates are managed separately in the GitHub repository settings.
 - Critical or actively exploited vulnerabilities receive immediate priority. A suppression needs an owner, evidence that the vulnerable path is unreachable, and an expiry date.
 
-## 8. Release verification
+## 9. Release verification
 
 ```powershell
 .\gradlew.bat build

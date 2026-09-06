@@ -37,11 +37,12 @@ class OpenApiModuleConfigTest {
                 config.shippingApi(),
                 config.notificationApi(),
                 config.promotionApi(),
-                config.chatApi());
+                config.chatApi(),
+                config.recommendationApi());
 
         assertEquals(
                 List.of("Identity", "Catalog", "Inventory", "Ordering", "Payment", "Shipping", "Notification",
-                        "Promotion", "Chat"),
+                        "Promotion", "Chat", "Recommendation"),
                 groups.stream().map(GroupedOpenApi::getGroup).toList());
     }
 }

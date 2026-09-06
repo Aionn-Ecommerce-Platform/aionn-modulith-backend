@@ -55,7 +55,8 @@ class ProductionMigrationSafetyTest {
             "flash_sale_registrations",
             "notifications",
             "chat_conversations",
-            "chat_messages");
+            "chat_messages",
+            "recommendation_interactions");
 
     private static final Pattern DML_TARGET = Pattern.compile(
             "(?i)\\b(?:insert\\s+into|update|delete\\s+from|truncate(?:\\s+table)?)\\s+"
