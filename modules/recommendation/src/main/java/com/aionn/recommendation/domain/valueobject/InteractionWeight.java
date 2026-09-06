@@ -57,7 +57,9 @@ public record InteractionWeight(BigDecimal baseWeight, Duration halfLife) {
         if (age.isNegative() || age.isZero()) {
             return baseWeight;
         }
-        double exponent = -((double) age.toNanos()) / halfLife.toNanos();
+        double ageSec = age.getSeconds() + (age.getNano() / 1_000_000_000.0);
+        double halfLifeSec = halfLife.getSeconds() + (halfLife.getNano() / 1_000_000_000.0);
+        double exponent = -ageSec / halfLifeSec;
         BigDecimal factor = BigDecimal.valueOf(Math.pow(2, exponent));
         return baseWeight.multiply(factor, DECAY_PRECISION);
     }

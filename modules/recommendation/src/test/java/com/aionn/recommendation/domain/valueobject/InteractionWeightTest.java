@@ -79,6 +79,17 @@ class InteractionWeightTest {
     }
 
     @Test
+    void largeDurationDoesNotOverflow() {
+        // Duration of 400 years exceeds Long.MAX_VALUE nanoseconds (~292 years)
+        Duration largeDuration = Duration.ofDays(365 * 400L);
+        InteractionWeight weight = InteractionWeight.of(BigDecimal.valueOf(4), largeDuration);
+        BigDecimal decayed = weight.decayedAt(NOW.minus(largeDuration), NOW);
+
+        assertThat(decayed).isCloseTo(BigDecimal.valueOf(2), org.assertj.core.data.Offset.offset(
+                BigDecimal.valueOf(0.0001)));
+    }
+
+    @Test
     void nonPositiveHalfLifeIsRejected() {
         assertThatThrownBy(() -> InteractionWeight.of(BigDecimal.ONE, Duration.ZERO))
                 .hasMessageContaining("halfLife must be positive");
