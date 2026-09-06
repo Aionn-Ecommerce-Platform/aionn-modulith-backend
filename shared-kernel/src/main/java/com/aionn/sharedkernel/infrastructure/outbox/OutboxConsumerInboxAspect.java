@@ -1,5 +1,6 @@
 package com.aionn.sharedkernel.infrastructure.outbox;
 
+import com.aionn.sharedkernel.domain.model.DomainEvent;
 import com.aionn.sharedkernel.domain.model.EventEnvelope;
 import com.aionn.sharedkernel.integration.event.IntegrationEvent;
 import java.lang.reflect.Method;
@@ -14,8 +15,14 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Gives every Spring event-listener its own durable inbox entry. A successful listener and its
- * marker commit atomically; if another listener fails, retrying the outbox event skips only the
+ * Gives every Spring event-listener its own durable inbox entry. A successful
+ * listener and its
+ * marker commit atomically; if another listener fails, retrying the outbox
+ * event skips only the
+ * Gives every Spring event-listener its own durable inbox entry. A successful
+ * listener and its
+ * marker commit atomically; if another listener fails, retrying the outbox
+ * event skips only the
  * listeners that already committed.
  */
 @Aspect
@@ -67,6 +74,9 @@ class OutboxConsumerInboxAspect {
         }
         if (arguments[0] instanceof EventEnvelope envelope) {
             return envelope.eventId();
+        }
+        if (arguments[0] instanceof DomainEvent) {
+            return OutboxEventContext.currentEventId();
         }
         return null;
     }

@@ -61,7 +61,7 @@ public class MessageSentListener {
             }
 
             MessageSentIntegrationEvent integrationEvent = new MessageSentIntegrationEvent(
-                    null,
+                    com.aionn.sharedkernel.util.IdGenerator.ulid(),
                     event.conversationId(),
                     event.messageId(),
                     event.senderId(),

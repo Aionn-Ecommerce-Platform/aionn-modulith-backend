@@ -54,11 +54,16 @@ public class OutboxDispatcher {
         try {
             Class<?> payloadType = resolvePayloadType(record);
             Object payload = objectMapper.readValue(record.payload(), payloadType);
-            Object event = "DOMAIN".equals(record.eventKind())
-                    ? new EventEnvelope(record.eventId(), record.aggregateType(), record.aggregateId(),
-                            (DomainEvent) payload, record.occurredAt())
-                    : payload;
-            eventPublisher.publishEvent(event);
+            if ("DOMAIN".equals(record.eventKind())) {
+                EventEnvelope envelope = new EventEnvelope(record.eventId(), record.aggregateType(),
+                        record.aggregateId(), (DomainEvent) payload, record.occurredAt());
+                try (var ignored = OutboxEventContext.open(record.eventId())) {
+                    eventPublisher.publishEvent(envelope);
+                    eventPublisher.publishEvent(envelope.payload());
+                }
+            } else {
+                eventPublisher.publishEvent(payload);
+            }
             markPublished(record.eventId());
         } catch (Exception exception) {
             boolean deadLetter = record.attempts() >= maxAttempts;

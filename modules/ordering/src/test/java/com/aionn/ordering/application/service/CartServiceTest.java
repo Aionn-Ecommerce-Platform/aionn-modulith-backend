@@ -2,6 +2,7 @@ package com.aionn.ordering.application.service;
 
 import com.aionn.ordering.application.dto.cart.command.*;
 import com.aionn.ordering.application.port.out.CartPersistencePort;
+import com.aionn.ordering.application.port.out.integration.CartIntegrationEventPublisherPort;
 import com.aionn.ordering.domain.exception.OrderingException;
 import com.aionn.ordering.domain.model.Cart;
 import com.aionn.sharedkernel.application.port.EventPublisher;
@@ -33,6 +34,7 @@ class CartServiceTest {
 
     @Mock private CartPersistencePort cartRepository;
     @Mock private EventPublisher eventPublisher;
+    @Mock private CartIntegrationEventPublisherPort integrationEventPublisher;
     @Mock private Clock clock;
 
     @InjectMocks
@@ -83,6 +85,8 @@ class CartServiceTest {
         assertNotNull(result);
         verify(cartRepository).save(any());
         verify(eventPublisher).publish(anyCollection());
+        verify(integrationEventPublisher)
+                .publishCartItemAdded(CART_ID, USER_ID, "sku-1", 2, fixedInstant);
     }
 
     @Test

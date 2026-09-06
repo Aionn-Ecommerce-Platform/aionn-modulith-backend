@@ -23,6 +23,7 @@ import com.aionn.catalog.application.mapper.ProductResultMapper;
 import com.aionn.catalog.application.mapper.ProductSearchDocumentMapper;
 import com.aionn.catalog.application.policy.CatalogProductPolicy;
 import com.aionn.catalog.application.port.out.attribute.AttributeTemplatePersistencePort;
+import com.aionn.catalog.application.port.out.integration.CatalogIntegrationEventPublisherPort;
 import com.aionn.catalog.application.port.out.search.ProductSearchIndex;
 import com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort;
 import com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort;
@@ -76,6 +77,7 @@ public class ProductService {
     private final ProductResultMapper productResultMapper;
     private final CatalogProductPolicy productPolicy;
     private final EventPublisher eventPublisher;
+    private final CatalogIntegrationEventPublisherPort integrationEventPublisher;
     private final Clock clock;
     private final TransactionTemplate transactionTemplate;
 
@@ -359,6 +361,14 @@ public class ProductService {
                 .orElseGet(() -> UserBrowsingHistory.create(userId));
         history.trackView(product.categoryIds(), product.getBrandId());
         userBrowsingHistoryRepository.save(history);
+        // Appended to the outbox in this same transaction, so the view signal and the history update
+        // commit or roll back as one.
+        integrationEventPublisher.publishProductViewed(
+                product.getProductId(),
+                userId,
+                product.getBrandId(),
+                product.categoryIds(),
+                clock.instant());
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
