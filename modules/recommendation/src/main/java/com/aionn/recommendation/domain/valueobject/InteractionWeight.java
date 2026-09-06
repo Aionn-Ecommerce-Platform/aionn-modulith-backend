@@ -12,8 +12,11 @@ import java.time.Instant;
 /**
  * Base weight of an interaction plus the half-life over which it fades.
  *
- * <p>Decay is what separates this module from catalog's browsing history, which treats a view from
- * six months ago exactly like one from this morning. A purchase stays meaningful for months; a view
+ * <p>
+ * Decay is what separates this module from catalog's browsing history, which
+ * treats a view from
+ * six months ago exactly like one from this morning. A purchase stays
+ * meaningful for months; a view
  * stops meaning much within a fortnight.
  */
 public record InteractionWeight(BigDecimal baseWeight, Duration halfLife) {
@@ -36,10 +39,13 @@ public record InteractionWeight(BigDecimal baseWeight, Duration halfLife) {
     }
 
     /**
-     * Exponential decay: {@code base * 2^(-age / halfLife)}. The caller supplies {@code now} because
+     * Exponential decay: {@code base * 2^(-age / halfLife)}. The caller supplies
+     * {@code now} because
      * domain code must not read the system clock.
      *
-     * <p>Interactions dated in the future (clock skew between instances) keep their full weight
+     * <p>
+     * Interactions dated in the future (clock skew between instances) keep their
+     * full weight
      * rather than being amplified.
      */
     public BigDecimal decayedAt(Instant occurredAt, Instant now) {
@@ -47,11 +53,11 @@ public record InteractionWeight(BigDecimal baseWeight, Duration halfLife) {
             throw new RecommendationException(RecommendationErrorCode.INTERACTION_INVALID,
                     "occurredAt and now must not be null");
         }
-        long ageSeconds = Duration.between(occurredAt, now).getSeconds();
-        if (ageSeconds <= 0) {
+        Duration age = Duration.between(occurredAt, now);
+        if (age.isNegative() || age.isZero()) {
             return baseWeight;
         }
-        double exponent = -((double) ageSeconds) / halfLife.getSeconds();
+        double exponent = -((double) age.toNanos()) / halfLife.toNanos();
         BigDecimal factor = BigDecimal.valueOf(Math.pow(2, exponent));
         return baseWeight.multiply(factor, DECAY_PRECISION);
     }

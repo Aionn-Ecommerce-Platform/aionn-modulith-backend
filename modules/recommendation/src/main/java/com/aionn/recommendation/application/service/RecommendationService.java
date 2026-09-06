@@ -25,13 +25,20 @@ import java.util.Set;
 /**
  * Produces a ranked, hydrated slate for each surface.
  *
- * <p>Returns the full over-fetched list rather than the requested page: availability filtering happens
- * downstream in {@link RecommendationReadService}, and filtering a list of exactly N would leave fewer
+ * <p>
+ * Returns the full over-fetched list rather than the requested page:
+ * availability filtering happens
+ * downstream in {@link RecommendationReadService}, and filtering a list of
+ * exactly N would leave fewer
  * than N.
  *
- * <p>{@code NOT_SUPPORTED} because each collaborator below opens its own short read-only transaction.
- * Holding one across the whole request would keep a connection busy for the duration, and would stay
- * open across the catalog call - which becomes a network hop once this module is split out.
+ * <p>
+ * {@code NOT_SUPPORTED} because each collaborator below opens its own short
+ * read-only transaction.
+ * Holding one across the whole request would keep a connection busy for the
+ * duration, and would stay
+ * open across the catalog call - which becomes a network hop once this module
+ * is split out.
  */
 @Slf4j
 @Service
@@ -66,7 +73,8 @@ public class RecommendationService {
                 : Map.of();
         Map<String, BigDecimal> popularity = candidateGeneration.popularityScores(candidateLimit);
 
-        // Owning something is a reason not to be sold it again. Views and cart adds are not excluded:
+        // Owning something is a reason not to be sold it again. Views and cart adds are
+        // not excluded:
         // resurfacing a product the user browsed is exactly what the feed is for.
         Set<String> excluded = new HashSet<>(candidateGeneration.purchasedProductIds(userId));
 
@@ -76,7 +84,7 @@ public class RecommendationService {
                 signalWeights,
                 excluded,
                 candidateLimit);
-        return results.isEmpty() ? trending(limit) : results;
+        return results.isEmpty() ? trending(limit, excluded) : results;
     }
 
     public List<RecommendationItemResult> similarProducts(String productId, int limit) {
@@ -95,8 +103,7 @@ public class RecommendationService {
             return homeFeed(userId, limit);
         }
 
-        Map<String, BigDecimal> collaborative =
-                candidateGeneration.collaborativeScores(seedProductIds, candidateLimit);
+        Map<String, BigDecimal> collaborative = candidateGeneration.collaborativeScores(seedProductIds, candidateLimit);
         Map<String, BigDecimal> popularity = candidateGeneration.popularityScores(candidateLimit);
 
         // Nothing already in the basket, and nothing the user has bought before.
@@ -111,14 +118,19 @@ public class RecommendationService {
                 coldStartPolicy.forProductSurface(),
                 excluded,
                 candidateLimit);
-        return results.isEmpty() ? trending(limit) : results;
+        return results.isEmpty() ? trending(limit, excluded) : results;
     }
 
     /**
-     * Cold-start answer: recent momentum, topped up with new arrivals when momentum data is thin -
+     * Cold-start answer: recent momentum, topped up with new arrivals when momentum
+     * data is thin -
      * which is the normal state of a freshly seeded catalog.
      */
     public List<RecommendationItemResult> trending(int limit) {
+        return trending(limit, Set.of());
+    }
+
+    public List<RecommendationItemResult> trending(int limit, Set<String> excluded) {
         int candidateLimit = candidateLimit(limit);
         Map<String, BigDecimal> popularity = candidateGeneration.popularityScores(candidateLimit);
         Map<String, BigDecimal> newArrivals = popularity.size() >= candidateLimit
@@ -129,7 +141,7 @@ public class RecommendationService {
                 RecommendationSurface.HOME,
                 new HybridRankingPolicy.SignalScores(Map.of(), newArrivals, popularity),
                 ColdStartPolicy.SignalWeights.trendingWithNewArrivals(),
-                Set.of(),
+                excluded == null ? Set.of() : excluded,
                 candidateLimit);
     }
 
@@ -137,13 +149,15 @@ public class RecommendationService {
             RecommendationSurface surface, String productId, int limit) {
         int candidateLimit = candidateLimit(limit);
         if (!candidateGeneration.productExists(productId)) {
-            return trending(limit);
+            return trending(limit, Set.of(productId));
         }
 
-        Map<String, BigDecimal> collaborative =
-                candidateGeneration.collaborativeScores(List.of(productId), candidateLimit);
-        // With no co-occurrence data yet, fall back to the global popularity pool; otherwise score only
-        // the neighbours so popularity breaks ties rather than introducing unrelated products.
+        Map<String, BigDecimal> collaborative = candidateGeneration.collaborativeScores(List.of(productId),
+                candidateLimit);
+        // With no co-occurrence data yet, fall back to the global popularity pool;
+        // otherwise score only
+        // the neighbours so popularity breaks ties rather than introducing unrelated
+        // products.
         Map<String, BigDecimal> popularity = collaborative.isEmpty()
                 ? candidateGeneration.popularityScores(candidateLimit)
                 : candidateGeneration.popularityScoresFor(collaborative.keySet());
@@ -154,12 +168,14 @@ public class RecommendationService {
                 coldStartPolicy.forProductSurface(),
                 Set.of(productId),
                 candidateLimit);
-        return results.isEmpty() ? trending(limit) : results;
+        return results.isEmpty() ? trending(limit, Set.of(productId)) : results;
     }
 
     /**
-     * Ranks, then attaches the display fields. Products catalog no longer exposes - unpublished, taken
-     * down, deleted - drop out here, because the interaction log keeps IDs that catalog may have retired.
+     * Ranks, then attaches the display fields. Products catalog no longer exposes -
+     * unpublished, taken
+     * down, deleted - drop out here, because the interaction log keeps IDs that
+     * catalog may have retired.
      */
     private List<RecommendationItemResult> rankAndHydrate(
             RecommendationSurface surface,
@@ -168,14 +184,13 @@ public class RecommendationService {
             Set<String> excluded,
             int candidateLimit) {
 
-        RecommendationSlate slate =
-                rankingPolicy.rank(surface, signals, signalWeights, excluded, candidateLimit);
+        RecommendationSlate slate = rankingPolicy.rank(surface, signals, signalWeights, excluded, candidateLimit);
         if (slate.isEmpty()) {
             return List.of();
         }
 
-        Map<String, ProductAttributeQueryPort.ProductAttributes> attributes =
-                candidateGeneration.hydrate(slate.productIds());
+        Map<String, ProductAttributeQueryPort.ProductAttributes> attributes = candidateGeneration
+                .hydrate(slate.productIds());
         if (attributes.isEmpty()) {
             return List.of();
         }

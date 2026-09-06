@@ -53,7 +53,8 @@ class InteractionWeightTest {
 
     @Test
     void futureDatedInteractionIsNotAmplified() {
-        // Clock skew between instances can date an interaction ahead of now; a negative age would
+        // Clock skew between instances can date an interaction ahead of now; a negative
+        // age would
         // otherwise raise the weight above its base.
         InteractionWeight weight = InteractionWeight.of(BigDecimal.valueOf(3), Duration.ofDays(30));
 
@@ -66,6 +67,15 @@ class InteractionWeightTest {
     void nonPositiveBaseWeightIsRejected() {
         assertThatThrownBy(() -> InteractionWeight.of(BigDecimal.ZERO, Duration.ofDays(1)))
                 .hasMessageContaining("baseWeight must be positive");
+    }
+
+    @Test
+    void subSecondHalfLifeIsPreserved() {
+        InteractionWeight weight = InteractionWeight.of(BigDecimal.valueOf(2), Duration.ofMillis(500));
+        BigDecimal decayed = weight.decayedAt(NOW.minus(Duration.ofMillis(500)), NOW);
+
+        assertThat(decayed).isCloseTo(BigDecimal.ONE, org.assertj.core.data.Offset.offset(
+                BigDecimal.valueOf(0.0001)));
     }
 
     @Test

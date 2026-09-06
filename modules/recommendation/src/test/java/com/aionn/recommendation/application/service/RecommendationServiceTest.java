@@ -33,8 +33,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Wired with the real ranking and cold-start policies rather than mocks of them: what is worth testing
- * here is which signals the orchestrator asks for and what it does when a surface comes back empty,
+ * Wired with the real ranking and cold-start policies rather than mocks of
+ * them: what is worth testing
+ * here is which signals the orchestrator asks for and what it does when a
+ * surface comes back empty,
  * and both depend on the scoring arithmetic actually running.
  */
 @ExtendWith(MockitoExtension.class)
@@ -44,8 +46,10 @@ class RecommendationServiceTest {
     private static final int LIMIT = 10;
     private static final int CANDIDATE_LIMIT = LIMIT * 3;
 
-    @Mock private CandidateGenerationService candidateGeneration;
-    @Mock private ProfileRefreshService profileRefreshService;
+    @Mock
+    private CandidateGenerationService candidateGeneration;
+    @Mock
+    private ProfileRefreshService profileRefreshService;
 
     private RecommendationService service() {
         return serviceWith(weights(3, 200));
@@ -62,7 +66,8 @@ class RecommendationServiceTest {
 
     @Test
     void anEstablishedUserGetsABlendOfAllThreeSignalsMinusWhatTheyAlreadyOwn() {
-        // Owning something is a reason not to be sold it again, even when it scores highest.
+        // Owning something is a reason not to be sold it again, even when it scores
+        // highest.
         establishedProfile();
         when(candidateGeneration.recentSeedProductIds(anyString(), any(), anyInt()))
                 .thenReturn(List.of("p-seed"));
@@ -96,7 +101,8 @@ class RecommendationServiceTest {
 
     @Test
     void aSlateWhoseProductsCatalogNoLongerExposesFallsBackToTrending() {
-        // The interaction log keeps IDs catalog may have retired, so a ranked slate can hydrate to
+        // The interaction log keeps IDs catalog may have retired, so a ranked slate can
+        // hydrate to
         // nothing. Returning that empty list would show a signed-in user a blank feed.
         establishedProfile();
         when(candidateGeneration.recentSeedProductIds(anyString(), any(), anyInt()))
@@ -115,8 +121,56 @@ class RecommendationServiceTest {
     }
 
     @Test
+    void homeFeedFallbackPreservesPurchasedExclusions() {
+        establishedProfile();
+        when(candidateGeneration.recentSeedProductIds(anyString(), any(), anyInt()))
+                .thenReturn(List.of("p-seed"));
+        when(candidateGeneration.collaborativeScores(anyCollection(), anyInt()))
+                .thenReturn(Map.of("p-retired", score(0.9)));
+        when(candidateGeneration.contentScores(any(), anyInt())).thenReturn(Map.of());
+        when(candidateGeneration.purchasedProductIds("user-1")).thenReturn(List.of("p-bought"));
+        when(candidateGeneration.popularityScores(anyInt()))
+                .thenReturn(Map.of("p-bought", score(10), "p-fresh", score(5)));
+        hydrationEchoesEveryProductExcept("p-retired");
+
+        assertThat(service().homeFeed("user-1", LIMIT))
+                .extracting(RecommendationItemResult::productId)
+                .containsExactly("p-fresh");
+    }
+
+    @Test
+    void cartFallbackPreservesCartAndPurchasedExclusions() {
+        when(candidateGeneration.resolveProductIds(List.of("sku-1"))).thenReturn(List.of("p-cart"));
+        when(candidateGeneration.collaborativeScores(anyCollection(), anyInt()))
+                .thenReturn(Map.of("p-retired", score(0.9)));
+        when(candidateGeneration.purchasedProductIds("user-1")).thenReturn(List.of("p-bought"));
+        when(candidateGeneration.popularityScores(anyInt()))
+                .thenReturn(Map.of("p-cart", score(10), "p-bought", score(8), "p-fresh", score(5)));
+        hydrationEchoesEveryProductExcept("p-retired");
+
+        assertThat(service().cartSuggestions("user-1", List.of("sku-1"), LIMIT))
+                .extracting(RecommendationItemResult::productId)
+                .containsExactly("p-fresh");
+    }
+
+    @Test
+    void productSurfaceFallbackPreservesSeedExclusion() {
+        when(candidateGeneration.productExists("p-seed")).thenReturn(true);
+        when(candidateGeneration.collaborativeScores(anyCollection(), anyInt()))
+                .thenReturn(Map.of("p-retired", score(0.9)));
+        when(candidateGeneration.popularityScores(anyInt()))
+                .thenReturn(Map.of("p-seed", score(10), "p-fresh", score(5)));
+        hydrationEchoesEveryProductExcept("p-retired");
+
+        assertThat(service().similarProducts("p-seed", LIMIT))
+                .extracting(RecommendationItemResult::productId)
+                .containsExactly("p-fresh");
+    }
+
+    @Test
     void aProductSurfaceRestrictsPopularityToTheNeighbourSet() {
-        // Popularity is there to break ties between neighbours. Drawing it from the global pool would
+        // Popularity is there to break ties between neighbours. Drawing it from the
+        // global pool would
         // put unrelated best-sellers on a "similar products" shelf.
         when(candidateGeneration.productExists("p-1")).thenReturn(true);
         when(candidateGeneration.collaborativeScores(eq(List.of("p-1")), anyInt()))
@@ -133,7 +187,8 @@ class RecommendationServiceTest {
 
     @Test
     void aProductWithNoCoOccurrenceDataYetDrawsOnTheGlobalPopularityPool() {
-        // A freshly seeded catalog has no similarity rows at all, and an empty shelf is worse than a
+        // A freshly seeded catalog has no similarity rows at all, and an empty shelf is
+        // worse than a
         // popular one.
         when(candidateGeneration.productExists("p-1")).thenReturn(true);
         when(candidateGeneration.collaborativeScores(anyCollection(), anyInt())).thenReturn(Map.of());
@@ -159,7 +214,8 @@ class RecommendationServiceTest {
 
     @Test
     void theSameArithmeticIsExplainedDifferentlyOnTheAlsoBoughtSurface() {
-        // Identical inputs to the similar-products case; only the surface differs, and co-occurrence
+        // Identical inputs to the similar-products case; only the surface differs, and
+        // co-occurrence
         // has a more specific name there.
         when(candidateGeneration.productExists("p-1")).thenReturn(true);
         when(candidateGeneration.collaborativeScores(anyCollection(), anyInt()))
@@ -191,7 +247,8 @@ class RecommendationServiceTest {
 
     @Test
     void anAnonymousBasketIsNotCheckedAgainstPurchaseHistory() {
-        // There is no history to check, and a null user ID would query across every user's purchases.
+        // There is no history to check, and a null user ID would query across every
+        // user's purchases.
         when(candidateGeneration.resolveProductIds(anyCollection())).thenReturn(List.of("p-in-cart"));
         when(candidateGeneration.collaborativeScores(anyCollection(), anyInt()))
                 .thenReturn(Map.of("p-complement", score(0.5)));
@@ -227,7 +284,8 @@ class RecommendationServiceTest {
 
     @Test
     void aFullPopularityPoolNeedsNoNewArrivals() {
-        // Catalog is queried only when behaviour cannot fill the slate; once it can, the extra read is
+        // Catalog is queried only when behaviour cannot fill the slate; once it can,
+        // the extra read is
         // pure cost.
         when(candidateGeneration.popularityScores(anyInt())).thenReturn(popularityPool(CANDIDATE_LIMIT));
         hydrationEchoesEveryProduct();
