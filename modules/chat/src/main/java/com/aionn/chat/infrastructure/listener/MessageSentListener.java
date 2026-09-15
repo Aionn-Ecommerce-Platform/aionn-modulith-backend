@@ -31,7 +31,8 @@ public class MessageSentListener {
     private final Clock clock;
 
     @EventListener
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    // Publishing notifications appends to the transactional outbox, so this is a write transaction.
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onMessageSent(ChatEvents.MessageSent event) {
         if (event.recipientIds() == null || event.recipientIds().isEmpty()) {
             return;
