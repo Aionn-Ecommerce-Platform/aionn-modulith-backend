@@ -42,7 +42,7 @@ public record RecommendationJobProperties(
      * Bounds for the offline rebuilds.
      *
      * <p>{@code computeTimeoutSeconds} overrides the application-wide
-     * {@code spring.transaction.default-timeout} for the heavy read phase only. The co-occurrence
+     * {@code spring.transaction.default-timeout} for the heavy read and each batched write. The co-occurrence
      * self-join and the decayed-popularity aggregate both scan the interaction log, so at volume they
      * legitimately need longer than a request-scoped transaction; leaving them on the 30s default
      * makes the job fail as soon as the data is worth computing.
@@ -50,13 +50,12 @@ public record RecommendationJobProperties(
      * <p>{@code upsertBatchSize} bounds each write transaction, so the rebuild commits progressively
      * instead of holding one transaction open across the whole result set.
      *
-     * <p>Raising {@code computeTimeoutSeconds} above a job's ShedLock {@code lockAtMostFor} is a
-     * misconfiguration, not a tuning choice: the lock expires while the run is still inside its
-     * transaction and a second instance starts the same rebuild against it. Both rebuild schedulers
-     * therefore hold their lock for thirty minutes, twice the default timeout.
+     * <p>The timeout is per transaction, not a whole-rebuild deadline. The scheduler's JDBC lease
+     * is renewed independently throughout the run, including between batches. The 29-minute ceiling
+     * keeps an individual transaction below the initial thirty-minute lease with a safety margin.
      */
     public record Execution(
-            @Min(1) @Max(7200) @DefaultValue("900") int computeTimeoutSeconds,
+            @Min(1) @Max(1740) @DefaultValue("900") int computeTimeoutSeconds,
             @Min(1) @Max(10_000) @DefaultValue("500") int upsertBatchSize) {
     }
 }

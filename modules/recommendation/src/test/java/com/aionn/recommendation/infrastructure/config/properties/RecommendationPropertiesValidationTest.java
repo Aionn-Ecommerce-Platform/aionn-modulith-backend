@@ -45,15 +45,10 @@ class RecommendationPropertiesValidationTest {
             .withInitializer(shippedYaml());
 
     @Test
-    void theShippedConfigurationStartsAndCarriesTheDocumentedValues() {
+    void theShippedWeightAndRankingConfigurationStartsWithDocumentedValues() {
         runner.run(context -> {
             assertThat(context).hasNotFailed();
-
-            // The values below are the ones published in .env.example and envs/recommendation.env. A
-            // silent divergence between the YAML and the operator-facing list is what this pins: the env
-            // file is how an operator learns what the knobs are, so it must not drift.
-            RecommendationWeightProperties weights =
-                    context.getBean(RecommendationWeightProperties.class);
+            RecommendationWeightProperties weights = context.getBean(RecommendationWeightProperties.class);
             assertThat(weights.view().base()).isEqualByComparingTo("1.0");
             assertThat(weights.view().halfLifeDays()).isEqualTo(14);
             assertThat(weights.cartAdd().base()).isEqualByComparingTo("4.0");
@@ -61,8 +56,7 @@ class RecommendationPropertiesValidationTest {
             assertThat(weights.purchase().base()).isEqualByComparingTo("5.0");
             assertThat(weights.purchase().halfLifeDays()).isEqualTo(180);
 
-            RecommendationRankingProperties ranking =
-                    context.getBean(RecommendationRankingProperties.class);
+            RecommendationRankingProperties ranking = context.getBean(RecommendationRankingProperties.class);
             assertThat(ranking.collaborativeWeight()).isEqualByComparingTo("0.50");
             assertThat(ranking.contentWeight()).isEqualByComparingTo("0.35");
             assertThat(ranking.popularityWeight()).isEqualByComparingTo("0.15");
@@ -72,11 +66,16 @@ class RecommendationPropertiesValidationTest {
             assertThat(ranking.candidateOverFetchFactor()).isEqualTo(3);
             assertThat(ranking.maxCandidates()).isEqualTo(200);
 
-            RecommendationColdStartProperties coldStart =
-                    context.getBean(RecommendationColdStartProperties.class);
+            RecommendationColdStartProperties coldStart = context.getBean(RecommendationColdStartProperties.class);
             assertThat(coldStart.contentOnlyThreshold()).isEqualTo(1);
             assertThat(coldStart.fullHybridThreshold()).isEqualTo(5);
+        });
+    }
 
+    @Test
+    void theShippedJobScheduleAndCacheConfigurationStartsWithDocumentedValues() {
+        runner.run(context -> {
+            assertThat(context).hasNotFailed();
             RecommendationJobProperties jobs = context.getBean(RecommendationJobProperties.class);
             assertThat(jobs.profile().maxAffinities()).isEqualTo(10);
             assertThat(jobs.profile().lookbackDays()).isEqualTo(180);
@@ -88,8 +87,7 @@ class RecommendationPropertiesValidationTest {
             assertThat(jobs.execution().computeTimeoutSeconds()).isEqualTo(900);
             assertThat(jobs.execution().upsertBatchSize()).isEqualTo(500);
 
-            RecommendationSchedulingProperties scheduling =
-                    context.getBean(RecommendationSchedulingProperties.class);
+            RecommendationSchedulingProperties scheduling = context.getBean(RecommendationSchedulingProperties.class);
             assertThat(scheduling.profileRefresh().enabled()).isTrue();
             assertThat(scheduling.profileRefresh().delayMs()).isEqualTo(900_000L);
             assertThat(scheduling.profileRefresh().batchSize()).isEqualTo(500);
@@ -105,6 +103,16 @@ class RecommendationPropertiesValidationTest {
             assertThat(cache.similar().l2TtlSeconds()).isEqualTo(3600);
             assertThat(cache.trending().l1MaxSize()).isEqualTo(10);
         });
+    }
+
+    @Test
+    void theMaximumTransactionTimeoutRemainsBelowTheInitialLease() {
+        runner.withPropertyValues("RECOMMENDATION_EXECUTION_COMPUTE_TIMEOUT_SECONDS=1740")
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean(RecommendationJobProperties.class)
+                            .execution().computeTimeoutSeconds()).isEqualTo(1740);
+                });
     }
 
     /**
@@ -129,6 +137,8 @@ class RecommendationPropertiesValidationTest {
             "RECOMMENDATION_POPULARITY_LOOKBACK_DAYS=0",
             "RECOMMENDATION_RETENTION_INTERACTION_MAX_AGE_DAYS=0",
             "RECOMMENDATION_EXECUTION_COMPUTE_TIMEOUT_SECONDS=0",
+            "RECOMMENDATION_EXECUTION_COMPUTE_TIMEOUT_SECONDS=1741",
+            "RECOMMENDATION_EXECUTION_COMPUTE_TIMEOUT_SECONDS=7200",
             "RECOMMENDATION_EXECUTION_UPSERT_BATCH_SIZE=0",
             "RECOMMENDATION_SCHEDULING_PROFILE_REFRESH_DELAY_MS=10",
             "RECOMMENDATION_SCHEDULING_PRUNE_BATCH_SIZE=0",

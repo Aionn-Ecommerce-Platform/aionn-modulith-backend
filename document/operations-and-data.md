@@ -76,7 +76,7 @@ Do not delete dead-letter events before preserving diagnostic evidence and defin
 
 ## 7. Distributed schedulers
 
-Singleton business schedulers use ShedLock and PostgreSQL database time. Lock names are globally unique. The outbox dispatcher is the exception because it already provides row-level concurrency control.
+Singleton business schedulers use ShedLock and PostgreSQL database time. A dedicated `schedulerLockExtensionExecutor` renews leases halfway through `lockAtMostFor` using `KeepAliveLockProvider`, independently of the business scheduler threads. Renewal stops on unlock; after process termination the last lease expires normally. Lock names are globally unique. The outbox dispatcher is the exception because it already provides row-level concurrency control.
 
 Business jobs that do not name a scheduler share the pool bean named `taskScheduler`, sized by `SCHEDULER_POOL_SIZE`. The pool needs one thread per such job: a slow job that takes the only free thread stalls every other background job, including the outbox dispatcher if it were sharing the pool. `ApplicationSchedulingConfigTest` counts `@Scheduled` methods off the classpath bytecode and fails the build when the pool is smaller than the number of jobs, so the invariant cannot rot silently when a job is added. The outbox dispatcher names its own single-threaded `outboxTaskScheduler` and is excluded from that count.
 
@@ -91,11 +91,11 @@ Before changing an interval or lock duration, measure worst-case runtime and ver
 | `recommendation-popularity` | 15 min | PT30M | PT30S |
 | `recommendation-interaction-prune` | 24 h | PT1H | PT1M |
 
-`RECOMMENDATION_EXECUTION_COMPUTE_TIMEOUT_SECONDS` overrides the application-wide transaction timeout for the heavy read and batched-write phases of the two rebuilds, which scan the interaction log and legitimately need longer than a request budget. It must stay below the `lockAtMostFor` of every job that uses it - item similarity and popularity, both PT30M against a default timeout of 900s. A lock that expires mid-run lets a second instance start the same rebuild against the first one's writes, which no uniqueness constraint will catch because both writers upsert the same rows.
+`RECOMMENDATION_EXECUTION_COMPUTE_TIMEOUT_SECONDS` overrides the application-wide transaction timeout for the heavy read and batched-write phases of the two rebuilds, which scan the interaction log and legitimately need longer than a request budget. Its validated range is 1–1740 seconds (default 900), below the initial PT30M lease. This is not a whole-rebuild deadline: the lease is automatically renewed for the entire read/write/cleanup sequence, so a large number of batches does not alone cause lease expiry. Monitor renewal failures and job runtime: a prolonged database outage or process pause can still prevent lease extension.
 
 `RECOMMENDATION_EXECUTION_UPSERT_BATCH_SIZE` bounds each write transaction so a rebuild commits progressively instead of holding one transaction open across the whole result set. Lowering it shortens the blast radius of a failed run at the cost of more commits; raising it does the reverse.
 
-The remaining knobs - signal weights and half-lives, hybrid ranking weights, cold-start thresholds, per-job lookback windows and batch sizes, and cache TTLs - are listed with their defaults in `.env.example` and `envs/recommendation.env`. The module holds no credentials and calls no external provider, so none of them are secret. Two of them fail the application at startup rather than degrading quietly: a ranking weight sum that is not positive, and any value outside the bounds declared on the `@ConfigurationProperties` records.
+The remaining knobs - signal weights and half-lives, hybrid ranking weights, cold-start thresholds, per-job lookback windows and batch sizes, and cache TTLs - are listed as commented examples in `.env.example`, with authoritative defaults in `application-recommendation.yml`. The module holds no credentials and calls no external provider, so none of them are secret. Two of them fail the application at startup rather than degrading quietly: a ranking weight sum that is not positive, and any value outside the bounds declared on the `@ConfigurationProperties` records.
 
 ### Settlement reconciliation
 
