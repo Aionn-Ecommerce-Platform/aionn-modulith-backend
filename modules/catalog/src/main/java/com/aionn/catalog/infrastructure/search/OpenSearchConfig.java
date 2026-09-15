@@ -48,7 +48,16 @@ public class OpenSearchConfig {
                         .setDefaultRequestConfig(RequestConfig.custom()
                         .setConnectionRequestTimeout(Timeout.of(config.connectTimeout()))
                         .setResponseTimeout(Timeout.of(config.responseTimeout()))
-                        .build()))
+                        .build())
+                        // HttpClient 5.6 added ContentCompressionAsyncExec to the async chain: it advertises
+                        // "Accept-Encoding: gzip" itself and inflates the response, but leaves the
+                        // Content-Encoding header on the message. opensearch-java 2.13 was written against 5.3,
+                        // whose async chain had no compression handling, so its transport reads that header and
+                        // wraps the body in a second GzipDecompressingEntity - inflating plain JSON and failing
+                        // every write with "ZipException: Not in GZIP format". Handing compression back to the
+                        // transport is the only side that can opt out, and it only asks for gzip when
+                        // setCompressionEnabled(true) is set, which we do not.
+                        .disableContentCompression())
                 .setMapper(new JacksonJsonpMapper(objectMapper))
                 .build();
         return new OpenSearchClient(transport);
