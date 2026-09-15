@@ -143,9 +143,12 @@ step "3. Validation and authorization guards"
 http_call POST /api/v1/shipping/shipments/quote 403 "" "$(quote_body "$ORDER_ID" 'VN-HN')" >/dev/null
 ok "unauthenticated quote rejected with 403"
 
-invalid_body='{"address":{"provinceCode":"VN-HN"},"dimensions":{"weightGram":500}}'
+# The endpoint quotes from an address alone - orderId carries no constraint and an address-only quote
+# is a supported shape - so "missing orderId" is not a malformed request and used to come back 200.
+# Omit a field that IS constrained instead: address and dimensions are both @NotNull.
+invalid_body="{\"orderId\":\"$ORDER_ID\",\"dimensions\":{\"weightGram\":500}}"
 http_call POST /api/v1/shipping/shipments/quote 400 "$ACCESS_TOKEN" "$invalid_body" >/dev/null
-ok "quote without orderId rejected with 400"
+ok "quote without an address rejected with 400"
 
 create_body=$(cat <<JSON
 {"orderId":"$ORDER_ID","userId":"e2e-buyer",
