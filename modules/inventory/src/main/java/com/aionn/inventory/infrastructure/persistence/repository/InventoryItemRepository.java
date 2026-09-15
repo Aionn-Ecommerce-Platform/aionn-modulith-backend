@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.time.Instant;
@@ -41,6 +42,18 @@ public interface InventoryItemRepository
     List<InventoryItemEntity> findByIdSkuIdAndIdWarehouseIdIn(String skuId, List<String> warehouseIds);
 
     List<InventoryItemEntity> findByIdSkuId(String skuId);
+
+    /**
+     * SKUs from the given set that can currently be shipped from at least one warehouse.
+     *
+     * <p>A projection rather than a per-SKU entity lookup: listing surfaces ask about hundreds of SKUs
+     * at once, and resolving them one query each turns a single availability filter into hundreds of
+     * round trips. Which warehouse serves an order is decided later by the warehouse selector, so only
+     * the SKU set is needed here.
+     */
+    @Query("SELECT DISTINCT i.id.skuId FROM InventoryItemEntity i "
+            + "WHERE i.id.skuId IN :skuIds AND i.availableQty > 0 AND i.locked = false")
+    List<String> findAvailableSkuIds(@Param("skuIds") Collection<String> skuIds);
 
     Page<InventoryItemEntity> findByIdWarehouseIdOrderByIdSkuIdAsc(String warehouseId, Pageable pageable);
 
