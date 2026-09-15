@@ -104,17 +104,22 @@ public class Product extends AggregateRoot {
     }
 
     public void defineVariant(String skuId, Map<String, String> attributeValues, Money price, Clock clock) {
+        // A variant with no attributes is a legitimate shape - a single-SKU item - and callers express it
+        // either as an empty map or by omitting the field altogether. ProductVariant normalises null for
+        // storage, but the event payload below copies the raw argument, so without this the omitted form
+        // stored the variant fine and then failed the request while publishing its event.
+        Map<String, String> attributes = attributeValues == null ? Map.of() : attributeValues;
         for (ProductVariant existing : variants) {
             Guard.require(!existing.skuId().equals(skuId),
                     () -> new CatalogException(CatalogErrorCode.PRODUCT_VARIANT_DUPLICATE,
                             "Variant id already exists"));
-            Guard.require(!existing.matches(attributeValues),
+            Guard.require(!existing.matches(attributes),
                     () -> new CatalogException(CatalogErrorCode.PRODUCT_VARIANT_DUPLICATE,
                             "Variant attribute combination already exists"));
         }
-        variants.add(new ProductVariant(skuId, attributeValues, price));
+        variants.add(new ProductVariant(skuId, attributes, price));
         touch(clock);
-        registerEvent(new ProductEvents.ProductVariantDefined(productId, skuId, Map.copyOf(attributeValues), updatedAt));
+        registerEvent(new ProductEvents.ProductVariantDefined(productId, skuId, Map.copyOf(attributes), updatedAt));
     }
 
     public void removeVariant(String skuId, Clock clock) {
