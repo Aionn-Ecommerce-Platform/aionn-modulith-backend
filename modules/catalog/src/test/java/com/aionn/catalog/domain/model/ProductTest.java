@@ -4,6 +4,7 @@ import com.aionn.catalog.domain.event.ProductEvents;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.catalog.domain.valueobject.ProductStatus;
+import com.aionn.sharedkernel.domain.model.EventEnvelope;
 import com.aionn.sharedkernel.domain.vo.Money;
 import org.junit.jupiter.api.Test;
 
@@ -82,7 +83,7 @@ class ProductTest {
         assertThat(product.pullEvents())
                 .hasSize(1)
                 .first()
-                .extracting(envelope -> envelope.payload())
+                .extracting(EventEnvelope::payload)
                 .isInstanceOf(ProductEvents.ProductVariantDefined.class)
                 .extracting(event -> ((ProductEvents.ProductVariantDefined) event).attributeValues())
                 .isEqualTo(Map.of());

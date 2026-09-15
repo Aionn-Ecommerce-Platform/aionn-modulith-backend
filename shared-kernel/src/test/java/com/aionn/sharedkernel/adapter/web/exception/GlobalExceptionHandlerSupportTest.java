@@ -1,6 +1,7 @@
 package com.aionn.sharedkernel.adapter.web.exception;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.aionn.sharedkernel.common.exception.ConflictException;
@@ -11,12 +12,14 @@ import com.aionn.sharedkernel.common.exception.UnauthorizedException;
 import com.aionn.sharedkernel.common.exception.ValidationException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.MethodParameter;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.mock.http.MockHttpInputMessage;
 import org.springframework.security.access.AccessDeniedException;
@@ -129,7 +132,7 @@ class GlobalExceptionHandlerSupportTest {
         assertTrue(fieldErrors.containsValue("must be greater than or equal to 1"));
         // Either the retained parameter name or its positional fallback; both identify the argument, and
         // a blank key would collapse every violation in a multi-parameter method onto one entry.
-        assertTrue(fieldErrors.keySet().iterator().next().toString().length() > 0);
+        assertFalse(fieldErrors.keySet().iterator().next().toString().isEmpty());
     }
 
     @Test
@@ -154,6 +157,21 @@ class GlobalExceptionHandlerSupportTest {
         assertEquals(405, response.getStatusCode().value());
         assertEquals("METHOD_NOT_ALLOWED", response.getBody().data().get("errorCode"));
         assertTrue(response.getBody().message().contains("PUT"));
+        assertTrue(response.getBody().message().contains("POST"));
+    }
+
+    @Test
+    void globalExceptionHandlerMapsUnsupportedRequestMethodAndReturnsAllowHeader() {
+        HttpRequestMethodNotSupportedException exception = new HttpRequestMethodNotSupportedException(
+                "PUT", Set.of("GET", "POST"));
+
+        var response = handler.handleMethodNotSupported(exception);
+
+        assertEquals(405, response.getStatusCode().value());
+        assertEquals(Set.of(HttpMethod.GET, HttpMethod.POST), response.getHeaders().getAllow());
+        assertEquals("METHOD_NOT_ALLOWED", response.getBody().data().get("errorCode"));
+        assertTrue(response.getBody().message().contains("PUT"));
+        assertTrue(response.getBody().message().contains("GET"));
         assertTrue(response.getBody().message().contains("POST"));
     }
 

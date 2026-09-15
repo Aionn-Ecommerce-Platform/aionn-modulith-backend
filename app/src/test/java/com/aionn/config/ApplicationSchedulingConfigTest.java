@@ -63,8 +63,7 @@ class ApplicationSchedulingConfigTest {
         // ScheduledAnnotationBeanPostProcessor asks for a unique TaskScheduler first; with the outbox one
         // also present that lookup is ambiguous, and it then falls back to exactly this bean name. The
         // registration below is that fallback path, exercised rather than asserted from reflection.
-        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
-        try {
+        try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
             context.register(OutboxSchedulerStub.class, ApplicationSchedulingConfig.class);
             context.refresh();
 
@@ -80,8 +79,6 @@ class ApplicationSchedulingConfigTest {
             assertThat(context.getBeanProvider(ThreadPoolTaskScheduler.class).getIfUnique())
                     .as("ambiguous by type, so the name fallback is what selects the business pool")
                     .isNull();
-        } finally {
-            context.close();
         }
     }
 

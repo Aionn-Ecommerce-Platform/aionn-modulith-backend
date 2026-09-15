@@ -108,18 +108,18 @@ public class Product extends AggregateRoot {
         // either as an empty map or by omitting the field altogether. ProductVariant normalises null for
         // storage, but the event payload below copies the raw argument, so without this the omitted form
         // stored the variant fine and then failed the request while publishing its event.
-        Map<String, String> attributes = attributeValues == null ? Map.of() : attributeValues;
+        Map<String, String> normalizedAttributes = attributeValues == null ? Map.of() : attributeValues;
         for (ProductVariant existing : variants) {
             Guard.require(!existing.skuId().equals(skuId),
                     () -> new CatalogException(CatalogErrorCode.PRODUCT_VARIANT_DUPLICATE,
                             "Variant id already exists"));
-            Guard.require(!existing.matches(attributes),
+            Guard.require(!existing.matches(normalizedAttributes),
                     () -> new CatalogException(CatalogErrorCode.PRODUCT_VARIANT_DUPLICATE,
                             "Variant attribute combination already exists"));
         }
-        variants.add(new ProductVariant(skuId, attributes, price));
+        variants.add(new ProductVariant(skuId, normalizedAttributes, price));
         touch(clock);
-        registerEvent(new ProductEvents.ProductVariantDefined(productId, skuId, Map.copyOf(attributes), updatedAt));
+        registerEvent(new ProductEvents.ProductVariantDefined(productId, skuId, Map.copyOf(normalizedAttributes), updatedAt));
     }
 
     public void removeVariant(String skuId, Clock clock) {

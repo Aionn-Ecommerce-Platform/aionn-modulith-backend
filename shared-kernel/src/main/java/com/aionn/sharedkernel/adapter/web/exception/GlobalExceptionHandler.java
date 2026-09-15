@@ -194,7 +194,10 @@ public class GlobalExceptionHandler {
 				: "none";
 		String message = "Method %s is not supported; supported: %s".formatted(ex.getMethod(), supported);
 		log.debug("Unsupported request method: {}", message);
-		return buildErrorResponse(HttpStatus.METHOD_NOT_ALLOWED, message, "METHOD_NOT_ALLOWED", null, null);
+		var response = buildErrorResponse(HttpStatus.METHOD_NOT_ALLOWED, message, "METHOD_NOT_ALLOWED", null, null);
+		return ResponseEntity.status(response.getStatusCode())
+				.headers(ex.getHeaders())
+				.body(response.getBody());
 	}
 
 	@ExceptionHandler(NoHandlerFoundException.class)

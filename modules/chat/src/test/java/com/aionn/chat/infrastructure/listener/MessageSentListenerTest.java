@@ -69,14 +69,17 @@ class MessageSentListenerTest {
 
         @Override
         protected void doBegin(Object transaction, TransactionDefinition definition) {
+            // No resources to open; the superclass manages the transaction state asserted by this test.
         }
 
         @Override
         protected void doCommit(DefaultTransactionStatus status) {
+            // No backing resource to commit; this test only checks the transaction surrounding publication.
         }
 
         @Override
         protected void doRollback(DefaultTransactionStatus status) {
+            // No backing resource to roll back; the superclass still clears the thread-bound transaction state.
         }
     }
 }
