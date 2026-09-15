@@ -3,6 +3,7 @@ package com.aionn.recommendation.application.service;
 import com.aionn.recommendation.application.dto.result.RecommendationItemResult;
 import com.aionn.recommendation.application.port.out.RecommendationCachePort;
 import com.aionn.recommendation.application.port.out.StockAvailabilityQueryPort;
+import com.aionn.recommendation.application.port.out.observability.RecommendationMetricsPort;
 import com.aionn.recommendation.domain.valueobject.RecommendationReason;
 import com.aionn.recommendation.domain.valueobject.RecommendationSurface;
 import org.junit.jupiter.api.Test;
@@ -18,8 +19,10 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -32,9 +35,11 @@ class RecommendationReadServiceTest {
     @Mock private RecommendationService recommendationService;
     @Mock private RecommendationCachePort cache;
     @Mock private StockAvailabilityQueryPort stockAvailability;
+    @Mock private RecommendationMetricsPort metrics;
 
     private RecommendationReadService service() {
-        return new RecommendationReadService(recommendationService, cache, stockAvailability);
+        return new RecommendationReadService(
+                recommendationService, cache, stockAvailability, metrics);
     }
 
     @Test
@@ -213,6 +218,76 @@ class RecommendationReadServiceTest {
         service().homeFeed("   ", 10);
 
         verify(cache, never()).getOrLoad(eq(RecommendationSurface.HOME), anyString(), any());
+    }
+
+    @Test
+    void eachSurfaceReportsItsOwnLatency() {
+        // The surface is the dimension worth graphing: similar and also-bought share a cache instance
+        // but are separate products with separate budgets, and cart is uncached so it is the one that
+        // regresses when the inventory hop gets slower.
+        when(cache.getOrLoad(any(), anyString(), any())).thenReturn(List.of());
+
+        RecommendationReadService service = service();
+        service.homeFeed("user-1", 10);
+        service.similarProducts("p-1", 10);
+        service.alsoBought("p-1", 10);
+        service.cartSuggestions("user-1", List.of("sku-1"), 10);
+
+        verify(metrics).recordLatency(eq(RecommendationSurface.HOME), anyLong());
+        verify(metrics).recordLatency(eq(RecommendationSurface.SIMILAR), anyLong());
+        verify(metrics).recordLatency(eq(RecommendationSurface.ALSO_BOUGHT), anyLong());
+        verify(metrics).recordLatency(eq(RecommendationSurface.CART), anyLong());
+    }
+
+    @Test
+    void latencyIsReportedForTheWholeRequestPathNotJustTheRanking() {
+        // Availability filtering runs on every request by design, so it is part of what the caller waits
+        // for. Measuring only the ranking would hide a slow inventory lookup behind a healthy cache hit
+        // rate.
+        cacheReturnsSlate(RecommendationSurface.HOME, List.of(item("p-1", "sku-1")));
+        when(stockAvailability.filterAvailableSkus(any())).thenAnswer(invocation -> {
+            Thread.sleep(20);
+            return Set.of("sku-1");
+        });
+
+        service().homeFeed("user-1", 10);
+
+        ArgumentCaptor<Long> latency = ArgumentCaptor.forClass(Long.class);
+        verify(metrics).recordLatency(eq(RecommendationSurface.HOME), latency.capture());
+        assertThat(latency.getValue()).isGreaterThanOrEqualTo(20);
+    }
+
+    @Test
+    void latencyIsStillReportedWhenTheSurfaceFails() {
+        // A surface that throws is the one whose latency matters most, and a metric recorded only on
+        // success would drop exactly the requests that need investigating.
+        when(cache.getOrLoad(eq(RecommendationSurface.SIMILAR), anyString(), any()))
+                .thenThrow(new IllegalStateException("boom"));
+
+        assertThatThrownBy(() -> service().similarProducts("p-1", 10))
+                .isInstanceOf(IllegalStateException.class);
+
+        verify(metrics).recordLatency(eq(RecommendationSurface.SIMILAR), anyLong());
+    }
+
+    @Test
+    void aNonPositivePageSizeYieldsAnEmptyPageRatherThanAFailure() {
+        // This is reachable from a public endpoint. An unclamped negative limit goes straight into
+        // new ArrayList<>(capacity) and comes back as a 500 on an anonymous request.
+        cacheReturnsSlate(RecommendationSurface.HOME, List.of(item("p-1", "sku-1")));
+
+        assertThat(service().homeFeed("user-1", -1)).isEmpty();
+        assertThat(service().homeFeed("user-1", 0)).isEmpty();
+        verify(stockAvailability, never()).filterAvailableSkus(any());
+    }
+
+    @Test
+    void aPageSizeBeyondTheSlateReturnsTheWholeSlate() {
+        cacheReturnsSlate(RecommendationSurface.HOME, List.of(
+                item("p-1", "sku-1"), item("p-2", "sku-2")));
+        when(stockAvailability.filterAvailableSkus(any())).thenReturn(Set.of("sku-1", "sku-2"));
+
+        assertThat(service().homeFeed("user-1", Integer.MAX_VALUE)).hasSize(2);
     }
 
     private void cacheReturnsSlate(

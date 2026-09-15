@@ -6,9 +6,11 @@ import com.aionn.recommendation.application.policy.ColdStartThresholdPolicy;
 import com.aionn.recommendation.application.policy.HybridRankingPolicy;
 import com.aionn.recommendation.application.policy.RankingWeightPolicy;
 import com.aionn.recommendation.application.port.out.ProductAttributeQueryPort;
+import com.aionn.recommendation.application.port.out.observability.RecommendationMetricsPort;
 import com.aionn.recommendation.domain.model.UserAffinityProfile;
 import com.aionn.recommendation.domain.valueobject.AffinityScore;
 import com.aionn.recommendation.domain.valueobject.RecommendationReason;
+import com.aionn.recommendation.domain.valueobject.RecommendationSurface;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -50,6 +52,8 @@ class RecommendationServiceTest {
     private CandidateGenerationService candidateGeneration;
     @Mock
     private ProfileRefreshService profileRefreshService;
+    @Mock
+    private RecommendationMetricsPort metrics;
 
     private RecommendationService service() {
         return serviceWith(weights(3, 200));
@@ -61,7 +65,8 @@ class RecommendationServiceTest {
                 profileRefreshService,
                 new HybridRankingPolicy(),
                 new ColdStartPolicy(thresholds(1, 5), weights),
-                weights);
+                weights,
+                metrics);
     }
 
     @Test
@@ -312,6 +317,113 @@ class RecommendationServiceTest {
         serviceWith(weights(3, 25)).trending(LIMIT);
 
         verify(candidateGeneration).popularityScores(25);
+    }
+
+    @Test
+    void aColdStartHomeFeedCountsAsATrendingFallback() {
+        // Counting cold starts too is deliberate: a profile pipeline that stopped building profiles looks
+        // identical to a catalogue of brand-new users from the response alone, and this counter is the
+        // only place the difference shows up.
+        when(profileRefreshService.profileOf("user-1"))
+                .thenReturn(UserAffinityProfile.empty("user-1"));
+        when(candidateGeneration.popularityScores(anyInt())).thenReturn(Map.of("p-pop", score(50)));
+        when(candidateGeneration.newArrivalScores(anyInt())).thenReturn(Map.of());
+        hydrationEchoesEveryProduct();
+
+        service().homeFeed("user-1", LIMIT);
+
+        verify(metrics).recordTrendingFallback(RecommendationSurface.HOME);
+    }
+
+    @Test
+    void anEmptyPersonalisedSlateCountsAsATrendingFallback() {
+        establishedProfile();
+        when(candidateGeneration.recentSeedProductIds(anyString(), any(), anyInt()))
+                .thenReturn(List.of("p-seed"));
+        when(candidateGeneration.collaborativeScores(anyCollection(), anyInt()))
+                .thenReturn(Map.of("p-retired", score(0.9)));
+        when(candidateGeneration.contentScores(any(), anyInt())).thenReturn(Map.of());
+        when(candidateGeneration.popularityScores(anyInt())).thenReturn(Map.of());
+        when(candidateGeneration.purchasedProductIds("user-1")).thenReturn(List.of());
+        when(candidateGeneration.newArrivalScores(anyInt())).thenReturn(Map.of("p-new", score(1)));
+        hydrationEchoesEveryProductExcept("p-retired");
+
+        service().homeFeed("user-1", LIMIT);
+
+        verify(metrics).recordTrendingFallback(RecommendationSurface.HOME);
+    }
+
+    @Test
+    void aFallbackIsCountedAgainstTheSurfaceBeingServedNotAlwaysTheHomeFeed() {
+        // The tag is what makes the counter actionable: "trending fallbacks went up" is useless if it
+        // cannot say whether similar-products or the home feed stopped producing results.
+        when(candidateGeneration.productExists("p-missing")).thenReturn(false);
+        when(candidateGeneration.popularityScores(anyInt())).thenReturn(Map.of("p-pop", score(5)));
+        when(candidateGeneration.newArrivalScores(anyInt())).thenReturn(Map.of());
+        hydrationEchoesEveryProduct();
+
+        service().alsoBought("p-missing", LIMIT);
+
+        verify(metrics).recordTrendingFallback(RecommendationSurface.ALSO_BOUGHT);
+        verify(metrics, never()).recordTrendingFallback(RecommendationSurface.HOME);
+    }
+
+    @Test
+    void aSurfaceThatProducesResultsIsNotCountedAsAFallback() {
+        when(candidateGeneration.productExists("p-1")).thenReturn(true);
+        when(candidateGeneration.collaborativeScores(anyCollection(), anyInt()))
+                .thenReturn(Map.of("p-2", score(0.9)));
+        when(candidateGeneration.popularityScoresFor(anyCollection())).thenReturn(Map.of());
+        hydrationEchoesEveryProduct();
+
+        assertThat(service().similarProducts("p-1", LIMIT)).isNotEmpty();
+
+        verify(metrics, never()).recordTrendingFallback(any());
+    }
+
+    @Test
+    void anExtremePageSizeDoesNotOverflowTheCandidateLimit() {
+        // limit * overFetchFactor overflows int for a large enough page and comes back negative, which
+        // then fails every ArrayList built from it. Clamping to the largest page any surface builds keeps
+        // the product positive: 50 * 3 rather than something near Integer.MIN_VALUE.
+        when(candidateGeneration.productExists("p-1")).thenReturn(true);
+        when(candidateGeneration.collaborativeScores(anyCollection(), anyInt()))
+                .thenReturn(Map.of("p-2", score(0.9)));
+        when(candidateGeneration.popularityScoresFor(anyCollection())).thenReturn(Map.of());
+        hydrationEchoesEveryProduct();
+
+        serviceWith(weights(3, 200)).similarProducts("p-1", Integer.MAX_VALUE);
+
+        verify(candidateGeneration).collaborativeScores(anyCollection(), eq(150));
+    }
+
+    @Test
+    void theOverFetchIsStillCappedAtTheConfiguredMaximum() {
+        // The cap is what stops a full-size page from scanning the whole catalogue: 50 * 5 candidates is
+        // more than the configured ceiling, so the ceiling wins.
+        when(candidateGeneration.productExists("p-1")).thenReturn(true);
+        when(candidateGeneration.collaborativeScores(anyCollection(), anyInt()))
+                .thenReturn(Map.of("p-2", score(0.9)));
+        when(candidateGeneration.popularityScoresFor(anyCollection())).thenReturn(Map.of());
+        hydrationEchoesEveryProduct();
+
+        serviceWith(weights(5, 200)).similarProducts("p-1", 50);
+
+        verify(candidateGeneration).collaborativeScores(anyCollection(), eq(200));
+    }
+
+    @Test
+    void aNonPositivePageSizeStillAsksForAtLeastOneCandidate() {
+        when(candidateGeneration.productExists("p-1")).thenReturn(true);
+        when(candidateGeneration.collaborativeScores(anyCollection(), anyInt()))
+                .thenReturn(Map.of("p-2", score(0.9)));
+        when(candidateGeneration.popularityScoresFor(anyCollection())).thenReturn(Map.of());
+        hydrationEchoesEveryProduct();
+
+        serviceWith(weights(3, 200)).similarProducts("p-1", -5);
+
+        // One page times the over-fetch factor, not a negative candidate count.
+        verify(candidateGeneration).collaborativeScores(anyCollection(), eq(3));
     }
 
     private void establishedProfile() {
