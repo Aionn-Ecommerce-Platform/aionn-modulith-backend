@@ -8,12 +8,22 @@ $ProgressPreference = "SilentlyContinue"
 
 # This PowerShell script starts the application with mock configuration, runs the specified E2E module tests, and cleans up after completion.
 
+# Check every required file before any Gradle or infrastructure side effects.
+$envFiles = @("envs/common.env", "envs/identity.env", "envs/catalog.env",
+    "envs/inventory.env", "envs/ordering.env", "envs/payment.env", "envs/shipping.env",
+    "envs/promotion.env", "envs/notification.env", "envs/chat.env", "envs/recommendation.env")
+$missingEnvFiles = @($envFiles | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) })
+if ($missingEnvFiles.Count -gt 0) {
+    throw ("Missing local environment files:`n" + ($missingEnvFiles -join "`n") +
+        "`nRun powershell -File scripts/init-local-env.ps1 from the repository root, then fill local placeholders before retrying.")
+}
+
 # 1. Stop any running gradle daemons first
 Write-Host "Stopping any running gradle daemons..."
 .\gradlew --stop
 
 # 2. Load env files
-Get-Content envs/common.env, envs/identity.env, envs/catalog.env, envs/inventory.env, envs/ordering.env, envs/payment.env, envs/shipping.env, envs/promotion.env, envs/notification.env, envs/chat.env, envs/recommendation.env | ForEach-Object {
+Get-Content $envFiles | ForEach-Object {
     $line = $_.Trim()
     if ($line -and -not $line.StartsWith("#")) {
         if ($line -match "^([^=]+)=(.*)$") {
