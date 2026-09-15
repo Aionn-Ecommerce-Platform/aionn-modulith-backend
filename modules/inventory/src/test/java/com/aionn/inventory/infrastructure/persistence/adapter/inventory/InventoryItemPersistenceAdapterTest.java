@@ -22,6 +22,8 @@ import java.time.Instant;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -165,5 +167,87 @@ class InventoryItemPersistenceAdapterTest {
         assertThat(captor.getValue().getPageNumber()).isZero();
         assertThat(captor.getValue().getPageSize()).isEqualTo(10);
         assertThat(captor.getValue().getSort().isUnsorted()).isTrue();
+    }
+
+    @Test
+    void availabilityIsAskedForInOneQueryRatherThanPerSku() {
+        // This runs on the recommendation read path outside the cache, over every SKU of an overfetched
+        // slate, so a per-SKU lookup turns one request into a few hundred round trips.
+        when(jpa.findAvailableSkuIds(any())).thenReturn(List.of("SKU_1", "SKU_2"));
+
+        assertThat(adapter.findAvailableSkus(List.of("SKU_1", "SKU_2", "SKU_3")))
+                .containsExactly("SKU_1", "SKU_2");
+
+        verify(jpa, times(1)).findAvailableSkuIds(any());
+    }
+
+    @Test
+    void anEmptyOrAbsentSkuSetNeverReachesTheDatabase() {
+        assertThat(adapter.findAvailableSkus(List.of())).isEmpty();
+        assertThat(adapter.findAvailableSkus(null)).isEmpty();
+
+        verify(jpa, never()).findAvailableSkuIds(any());
+    }
+
+    @Test
+    void blankSkuIdsAreDroppedBeforeBinding() {
+        // A slate can carry a null SKU where a product has no variant; binding it would match nothing and
+        // only spend a parameter.
+        when(jpa.findAvailableSkuIds(any())).thenReturn(List.of("SKU_1"));
+
+        java.util.List<String> requested = new java.util.ArrayList<>();
+        requested.add("SKU_1");
+        requested.add(null);
+        requested.add("   ");
+
+        assertThat(adapter.findAvailableSkus(requested)).containsExactly("SKU_1");
+
+        ArgumentCaptor<java.util.Collection<String>> captor = ArgumentCaptor.captor();
+        verify(jpa).findAvailableSkuIds(captor.capture());
+        assertThat(captor.getValue()).containsExactly("SKU_1");
+    }
+
+    @Test
+    void aSkuRequestedTwiceIsBoundOnce() {
+        // Several products in one slate can share a SKU, and repeats only waste the parameter budget.
+        when(jpa.findAvailableSkuIds(any())).thenReturn(List.of("SKU_1"));
+
+        adapter.findAvailableSkus(List.of("SKU_1", "SKU_1", "SKU_1"));
+
+        ArgumentCaptor<java.util.Collection<String>> captor = ArgumentCaptor.captor();
+        verify(jpa).findAvailableSkuIds(captor.capture());
+        assertThat(captor.getValue()).containsExactly("SKU_1");
+    }
+
+    @Test
+    void aSkuSetLargerThanTheParameterBudgetIsSplitAcrossQueries() {
+        // Postgres caps bind parameters at 65535; a large page must not be allowed to approach it.
+        List<String> skuIds = new java.util.ArrayList<>();
+        for (int index = 0; index < 2500; index++) {
+            skuIds.add("SKU_" + index);
+        }
+        when(jpa.findAvailableSkuIds(any())).thenReturn(List.of());
+
+        adapter.findAvailableSkus(skuIds);
+
+        ArgumentCaptor<java.util.Collection<String>> captor = ArgumentCaptor.captor();
+        verify(jpa, times(3)).findAvailableSkuIds(captor.capture());
+        assertThat(captor.getAllValues()).extracting(java.util.Collection::size)
+                .containsExactly(1000, 1000, 500);
+        assertThat(captor.getAllValues().stream()
+                .flatMap(java.util.Collection::stream).distinct().count()).isEqualTo(2500);
+    }
+
+    @Test
+    void availabilityFromEveryChunkIsCombined() {
+        List<String> skuIds = new java.util.ArrayList<>();
+        for (int index = 0; index < 1200; index++) {
+            skuIds.add("SKU_" + index);
+        }
+        when(jpa.findAvailableSkuIds(any()))
+                .thenReturn(List.of("SKU_0"))
+                .thenReturn(List.of("SKU_1199"));
+
+        assertThat(adapter.findAvailableSkus(skuIds)).containsExactly("SKU_0", "SKU_1199");
     }
 }
