@@ -32,6 +32,17 @@ public class RecommendationPolicyConfig {
 
     @Bean
     public RankingWeightPolicy rankingWeightPolicy(RecommendationRankingProperties properties) {
+        BigDecimal weightSum = properties.collaborativeWeight()
+                .add(properties.contentWeight())
+                .add(properties.popularityWeight());
+        // Fail at startup rather than at the first request. A non-positive sum makes
+        // HybridRankingPolicy return an empty slate for every surface, which reads as "the catalog is
+        // empty" rather than as a configuration error.
+        if (weightSum.signum() <= 0) {
+            throw new IllegalStateException(
+                    "recommendation.ranking collaborative/content/popularity weights must sum to a "
+                            + "positive value, got " + weightSum.toPlainString());
+        }
         return new PropertyBackedRankingWeightPolicy(properties);
     }
 

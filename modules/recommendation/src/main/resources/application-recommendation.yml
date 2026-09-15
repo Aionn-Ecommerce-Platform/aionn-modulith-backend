@@ -32,6 +32,11 @@ recommendation:
     lookback-days: ${RECOMMENDATION_POPULARITY_LOOKBACK_DAYS:30}
   retention:
     interaction-max-age-days: ${RECOMMENDATION_RETENTION_INTERACTION_MAX_AGE_DAYS:180}
+  execution:
+    # Overrides spring.transaction.default-timeout for the heavy read phase of the offline rebuilds.
+    compute-timeout-seconds: ${RECOMMENDATION_EXECUTION_COMPUTE_TIMEOUT_SECONDS:900}
+    # Rows per write transaction, so a rebuild commits progressively instead of holding one open.
+    upsert-batch-size: ${RECOMMENDATION_EXECUTION_UPSERT_BATCH_SIZE:500}
   scheduling:
     profile-refresh:
       enabled: ${RECOMMENDATION_SCHEDULING_PROFILE_REFRESH_ENABLED:true}
