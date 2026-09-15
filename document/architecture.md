@@ -112,7 +112,7 @@ An in-process cross-module adapter is not automatically external I/O. Classify i
 - Events requiring durable delivery use the transactional outbox so the mutation and event commit or roll back together.
 - Integration events have a stable `eventId`, an explicit aggregate scope or ordering key, and backward-compatible payloads.
 - Consumers are idempotent because delivery is at least once.
-- A listener consuming another module's event declares its parameter as an integration event type. The dispatcher publishes integration payloads directly but wraps domain events in an `EventEnvelope`, so a listener declared against a domain type never fires; the integration payload is also what lets the inbox aspect read the event ID that makes the listener idempotent.
+- A listener consuming another module's event declares its parameter as an integration event type. The dispatcher publishes integration payloads directly; for a domain event it publishes both the `EventEnvelope` and the bare payload. A listener declared against the domain type therefore does fire, but it receives an event with no `eventId`, so the inbox aspect has nothing to record a receipt against and the listener is not idempotent under at-least-once delivery. Declaring the integration type is what makes the event ID available.
 - Non-rollbackable provider effects use an idempotency key derived from the `eventId` or a stable business-operation identifier.
 
 ## 7. Schedulers
