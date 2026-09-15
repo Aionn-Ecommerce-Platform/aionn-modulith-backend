@@ -22,7 +22,9 @@ public class NotificationPersistenceAdapter implements NotificationPersistencePo
     @Override
     public Notification save(Notification notification) {
         NotificationEntity existing = jpa.findById(notification.getNotiId()).orElse(null);
-        return mapper.toDomain(jpa.save(mapper.toEntity(notification, existing)));
+        // Delivery attempts use JDBC in the same transaction, which does not flush pending JPA inserts.
+        // Flush the parent row before returning so its foreign key is visible without an early commit.
+        return mapper.toDomain(jpa.saveAndFlush(mapper.toEntity(notification, existing)));
     }
 
     @Override
