@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -90,7 +91,7 @@ class ProfileRefreshSchedulerTest {
         scheduler(180).run();
 
         ArgumentCaptor<Instant> since = ArgumentCaptor.forClass(Instant.class);
-        verify(interactionRepository, org.mockito.Mockito.times(3))
+        verify(interactionRepository, times(3))
                 .findUserIdsWithInteractionsSince(since.capture(), eq(BATCH_SIZE));
         List<Instant> windows = since.getAllValues();
         assertThat(windows.get(0)).isEqualTo(NOW.minus(Duration.ofMinutes(45)));

@@ -9,6 +9,7 @@ import com.aionn.recommendation.domain.valueobject.RecommendationSurface;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -20,13 +21,17 @@ import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -241,20 +246,22 @@ class RecommendationReadServiceTest {
 
     @Test
     void latencyIsReportedForTheWholeRequestPathNotJustTheRanking() {
-        // Availability filtering runs on every request by design, so it is part of what the caller waits
-        // for. Measuring only the ranking would hide a slow inventory lookup behind a healthy cache hit
-        // rate.
+        // Check the boundary directly instead of relying on elapsed wall-clock time: the latency must
+        // not be published until the availability lookup has returned.
         cacheReturnsSlate(RecommendationSurface.HOME, List.of(item("p-1", "sku-1")));
         when(stockAvailability.filterAvailableSkus(any())).thenAnswer(invocation -> {
-            Thread.sleep(20);
+            verifyNoInteractions(metrics);
             return Set.of("sku-1");
         });
 
         service().homeFeed("user-1", 10);
 
+        InOrder order = inOrder(cache, stockAvailability, metrics);
+        order.verify(cache).getOrLoad(eq(RecommendationSurface.HOME), eq("user-1"), any());
+        order.verify(stockAvailability).filterAvailableSkus(any());
         ArgumentCaptor<Long> latency = ArgumentCaptor.forClass(Long.class);
-        verify(metrics).recordLatency(eq(RecommendationSurface.HOME), latency.capture());
-        assertThat(latency.getValue()).isGreaterThanOrEqualTo(20);
+        order.verify(metrics).recordLatency(eq(RecommendationSurface.HOME), latency.capture());
+        assertThat(latency.getValue()).isGreaterThanOrEqualTo(0L);
     }
 
     @Test
@@ -264,10 +271,38 @@ class RecommendationReadServiceTest {
         when(cache.getOrLoad(eq(RecommendationSurface.SIMILAR), anyString(), any()))
                 .thenThrow(new IllegalStateException("boom"));
 
-        assertThatThrownBy(() -> service().similarProducts("p-1", 10))
+        RecommendationReadService service = service();
+        assertThatThrownBy(() -> service.similarProducts("p-1", 10))
                 .isInstanceOf(IllegalStateException.class);
 
         verify(metrics).recordLatency(eq(RecommendationSurface.SIMILAR), anyLong());
+    }
+
+    @Test
+    void aLatencyMetricFailureDoesNotReplaceASuccessfulResult() {
+        cacheReturnsSlate(RecommendationSurface.HOME, List.of(item("p-1", "sku-1")));
+        when(stockAvailability.filterAvailableSkus(any())).thenReturn(Set.of("sku-1"));
+        doThrow(new IllegalStateException("metrics down"))
+                .when(metrics).recordLatency(eq(RecommendationSurface.HOME), anyLong());
+
+        assertThat(service().homeFeed("user-1", 10))
+                .extracting(RecommendationItemResult::productId)
+                .containsExactly("p-1");
+    }
+
+    @Test
+    void aLatencyMetricFailureDoesNotReplaceTheOriginalBusinessError() {
+        IllegalStateException businessError = new IllegalStateException("ranking failed");
+        when(cache.getOrLoad(eq(RecommendationSurface.SIMILAR), anyString(), any()))
+                .thenThrow(businessError);
+        doThrow(new IllegalStateException("metrics down"))
+                .when(metrics).recordLatency(eq(RecommendationSurface.SIMILAR), anyLong());
+
+        RecommendationReadService service = service();
+        Throwable thrown = assertThrows(
+                IllegalStateException.class, () -> service.similarProducts("p-1", 10));
+
+        assertThat(thrown).isSameAs(businessError);
     }
 
     @Test

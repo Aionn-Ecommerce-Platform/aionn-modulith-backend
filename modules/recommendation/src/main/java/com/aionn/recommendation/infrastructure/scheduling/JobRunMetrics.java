@@ -1,6 +1,7 @@
 package com.aionn.recommendation.infrastructure.scheduling;
 
 import com.aionn.recommendation.application.port.out.observability.RecommendationMetricsPort;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
 
@@ -13,6 +14,7 @@ import java.time.Duration;
  * every run looks identical to a job that has nothing to do. Routing both outcomes through here means
  * {@code recommendation.scheduler.runtime{job=...,success=false}} is a rate that can be alerted on.
  */
+@Slf4j
 final class JobRunMetrics {
 
     private final RecommendationMetricsPort metrics;
@@ -30,15 +32,20 @@ final class JobRunMetrics {
     }
 
     void succeeded() {
-        record(true);
+        recordOutcome(true);
     }
 
     void failed() {
-        record(false);
+        recordOutcome(false);
     }
 
-    private void record(boolean success) {
+    private void recordOutcome(boolean success) {
         long elapsedMillis = Duration.ofNanos(System.nanoTime() - startedAtNanos).toMillis();
-        metrics.recordSchedulerExecution(jobName, elapsedMillis, success);
+        try {
+            metrics.recordSchedulerExecution(jobName, elapsedMillis, success);
+        } catch (RuntimeException exception) {
+            // Observability must never alter scheduler control flow or hide the original job failure.
+            log.warn("Could not record recommendation scheduler metrics for {}", jobName, exception);
+        }
     }
 }

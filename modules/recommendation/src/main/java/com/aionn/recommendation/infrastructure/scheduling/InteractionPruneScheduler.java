@@ -64,10 +64,9 @@ public class InteractionPruneScheduler {
             if (totalDeleted > 0) {
                 log.info("Pruned {} total interaction(s) across {} batch(es)", totalDeleted, batches);
             }
-            if (batches >= MAX_BATCHES_PER_RUN) {
-                // More rows aged out than one run is allowed to delete. Not an error, but the backlog
-                // grows if this repeats, so it is worth seeing.
-                log.warn("Interaction prune reached the {} batch cap with rows still to delete",
+            if (batches >= MAX_BATCHES_PER_RUN && deleted >= batchSize) {
+                // A full final batch may leave a backlog; only the next run can confirm it.
+                log.warn("Interaction prune reached the {} batch cap with rows possibly remaining",
                         MAX_BATCHES_PER_RUN);
             }
         } catch (Exception exception) {

@@ -6,6 +6,7 @@ import com.aionn.recommendation.application.port.out.StockAvailabilityQueryPort;
 import com.aionn.recommendation.application.port.out.observability.RecommendationMetricsPort;
 import com.aionn.recommendation.domain.valueobject.RecommendationSurface;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,7 @@ import java.util.function.Supplier;
  * in-process adapter today but becomes a network call when this module is split out, and per
  * {@code document/architecture.md} a read-only transaction is still a transaction.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -107,8 +109,17 @@ public class RecommendationReadService {
         try {
             return work.get();
         } finally {
+            recordLatencySafely(surface, startedAt);
+        }
+    }
+
+    private void recordLatencySafely(RecommendationSurface surface, long startedAt) {
+        try {
             metrics.recordLatency(
                     surface, Duration.ofNanos(System.nanoTime() - startedAt).toMillis());
+        } catch (RuntimeException exception) {
+            // Metrics must not replace a successful result or the original failure.
+            log.warn("Could not record recommendation latency for {}", surface, exception);
         }
     }
 
