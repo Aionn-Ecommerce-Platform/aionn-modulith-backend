@@ -3,10 +3,13 @@ package com.aionn.recommendation.infrastructure.persistence.adapter;
 import com.aionn.recommendation.application.port.out.InteractionPersistencePort;
 import com.aionn.recommendation.domain.model.UserInteraction;
 import com.aionn.recommendation.domain.valueobject.InteractionType;
+import com.aionn.recommendation.infrastructure.config.properties.RecommendationJobProperties;
 import com.aionn.recommendation.infrastructure.persistence.mapper.InteractionDomainMapper;
 import com.aionn.recommendation.infrastructure.persistence.repository.InteractionRepository;
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -17,8 +20,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Component
-@RequiredArgsConstructor
 public class InteractionPersistenceAdapter implements InteractionPersistencePort {
 
     /**
@@ -31,9 +34,50 @@ public class InteractionPersistenceAdapter implements InteractionPersistencePort
     private final InteractionDomainMapper mapper;
     private final Clock clock;
 
+    /**
+     * Read-only phase of the offline rebuilds. Built here rather than declared as a bean so Boot's
+     * {@code TransactionAutoConfiguration} still supplies the unqualified {@code TransactionTemplate}
+     * that other modules inject - registering a second one would back that auto-configuration off and
+     * make every unqualified injection ambiguous.
+     *
+     * <p>The timeout overrides the application-wide {@code spring.transaction.default-timeout}, which
+     * is sized for a request. Both rebuilds scan the interaction log, so at volume they legitimately
+     * need longer; leaving them on the request budget makes the job start failing exactly when the
+     * data becomes worth computing.
+     */
+    private final TransactionTemplate computeReads;
+
+    public InteractionPersistenceAdapter(
+            InteractionRepository jpa,
+            InteractionDomainMapper mapper,
+            Clock clock,
+            PlatformTransactionManager transactionManager,
+            RecommendationJobProperties jobProperties) {
+        this.jpa = jpa;
+        this.mapper = mapper;
+        this.clock = clock;
+        this.computeReads = new TransactionTemplate(transactionManager);
+        this.computeReads.setReadOnly(true);
+        this.computeReads.setTimeout(jobProperties.execution().computeTimeoutSeconds());
+    }
+
     @Override
     public void append(UserInteraction interaction) {
-        jpa.save(mapper.toEntity(interaction, clock.instant()));
+        int written = jpa.appendIdempotent(
+                interaction.getInteractionId(),
+                interaction.getUserId(),
+                interaction.getProductId(),
+                interaction.getType().name(),
+                interaction.getWeight(),
+                interaction.getOccurredAt(),
+                clock.instant(),
+                interaction.getSourceEventId());
+        if (written == 0) {
+            // A replay of an event already ingested. Not an error, and not worth a row in the log at
+            // info level: under a retry storm this is the common case.
+            log.debug("Ignored duplicate interaction from source event {}",
+                    interaction.getSourceEventId());
+        }
     }
 
     @Override
@@ -58,14 +102,19 @@ public class InteractionPersistenceAdapter implements InteractionPersistencePort
     public Map<String, PopularityAggregate> aggregatePopularity(
             Instant since, Instant now, Map<InteractionType, Long> halfLifeSeconds) {
 
-        List<InteractionRepository.PopularityProjection> rows = jpa.aggregatePopularity(
-                since,
-                now,
-                halfLifeSeconds.get(InteractionType.VIEW),
-                halfLifeSeconds.get(InteractionType.CART_ADD),
-                halfLifeSeconds.get(InteractionType.PURCHASE));
+        List<InteractionRepository.PopularityProjection> rows = computeReads.execute(status ->
+                jpa.aggregatePopularity(
+                        since,
+                        now,
+                        halfLifeSeconds.get(InteractionType.VIEW),
+                        halfLifeSeconds.get(InteractionType.CART_ADD),
+                        halfLifeSeconds.get(InteractionType.PURCHASE)));
 
-        Map<String, PopularityAggregate> aggregates = LinkedHashMap.newLinkedHashMap(rows.size());
+        Map<String, PopularityAggregate> aggregates =
+                LinkedHashMap.newLinkedHashMap(rows == null ? 0 : rows.size());
+        if (rows == null) {
+            return aggregates;
+        }
         for (InteractionRepository.PopularityProjection row : rows) {
             BigDecimal score = row.getDecayedScore() == null ? BigDecimal.ZERO : row.getDecayedScore();
             aggregates.put(row.getProductId(), new PopularityAggregate(
@@ -76,14 +125,22 @@ public class InteractionPersistenceAdapter implements InteractionPersistencePort
 
     @Override
     public List<SimilarityRow> computeItemSimilarity(
-            Instant since, Collection<InteractionType> strongTypes, int minCoOccurrence) {
+            Instant since,
+            Collection<InteractionType> strongTypes,
+            int minCoOccurrence,
+            int maxNeighboursPerProduct) {
         if (strongTypes == null || strongTypes.isEmpty()) {
             return List.of();
         }
         List<String> typeNames = strongTypes.stream().map(InteractionType::name).toList();
-        List<InteractionRepository.SimilarityProjection> rows = jpa.computeItemSimilarity(since, typeNames,
-                Math.max(1, minCoOccurrence));
+        List<InteractionRepository.SimilarityProjection> rows = computeReads.execute(status ->
+                jpa.computeItemSimilarity(
+                        since, typeNames, Math.max(1, minCoOccurrence),
+                        Math.max(1, maxNeighboursPerProduct)));
 
+        if (rows == null) {
+            return List.of();
+        }
         List<SimilarityRow> similarities = new ArrayList<>(rows.size());
         for (InteractionRepository.SimilarityProjection row : rows) {
             similarities.add(new SimilarityRow(
@@ -100,5 +157,20 @@ public class InteractionPersistenceAdapter implements InteractionPersistencePort
     @Override
     public int deleteByUser(String userId) {
         return jpa.deleteByUserId(userId);
+    }
+
+    @Override
+    public void lockUser(String userId) {
+        jpa.lockUser(userId);
+    }
+
+    @Override
+    public void markUserErased(String userId, Instant erasedAt) {
+        jpa.markUserErased(userId, erasedAt);
+    }
+
+    @Override
+    public boolean isUserErased(String userId) {
+        return userId != null && jpa.isUserErased(userId);
     }
 }

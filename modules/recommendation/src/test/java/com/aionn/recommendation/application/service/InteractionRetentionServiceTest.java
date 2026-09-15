@@ -85,4 +85,28 @@ class InteractionRetentionServiceTest {
 
         verify(cache).evictUserFeed("user-1");
     }
+
+    @Test
+    void erasingLeavesAMarkSoTheDataCannotBeWrittenBack() {
+        // Deleting the rows is not enough: afterwards nothing distinguishes an erased account from one
+        // that never had any behavioural data, so a replayed event or a stale refresh sweep recreates
+        // what was just erased.
+        service().eraseUser("user-1");
+
+        verify(interactionRepository).markUserErased("user-1", NOW);
+    }
+
+    @Test
+    void theLockIsTakenBeforeAnythingIsReadOrWritten() {
+        // A profile refresh part-way through reading this user's interactions would otherwise commit the
+        // profile back after the delete, and an ingest that checked for the mark a moment earlier would
+        // append a row the erasure has already finished removing.
+        service().eraseUser("user-1");
+
+        InOrder order = inOrder(interactionRepository, profileRepository);
+        order.verify(interactionRepository).lockUser("user-1");
+        order.verify(interactionRepository).markUserErased("user-1", NOW);
+        order.verify(interactionRepository).deleteByUser("user-1");
+        order.verify(profileRepository).deleteByUserId("user-1");
+    }
 }

@@ -23,6 +23,11 @@ public class UserAffinityProfilePersistenceAdapter implements UserAffinityProfil
     }
 
     @Override
+    public boolean existsByUserId(String userId) {
+        return userId != null && jpa.existsById(userId);
+    }
+
+    @Override
     public void save(UserAffinityProfile profile, Instant refreshedAt) {
         jpa.save(mapper.toEntity(profile, refreshedAt));
     }

@@ -17,7 +17,9 @@ import java.time.Instant;
 @Entity
 @Table(name = "recommendation_interactions", indexes = {
         @Index(name = "idx_rec_interactions_user_time", columnList = "user_id, occurred_at"),
-        @Index(name = "idx_rec_interactions_product_time", columnList = "product_id, occurred_at")
+        @Index(name = "idx_rec_interactions_product_time", columnList = "product_id, occurred_at"),
+        @Index(name = "idx_rec_interactions_type_user", columnList = "interaction_type, user_id"),
+        @Index(name = "idx_rec_interactions_occurred_at", columnList = "occurred_at")
 })
 @Getter
 @Setter
@@ -47,4 +49,11 @@ public class InteractionEntity {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+
+    /**
+     * Integration event that produced this row, for idempotent ingest under at-least-once delivery.
+     * Nullable: seeded fixtures and backfills have no originating event.
+     */
+    @Column(name = "source_event_id", length = 100)
+    private String sourceEventId;
 }

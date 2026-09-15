@@ -18,7 +18,8 @@ public class InteractionDomainMapper {
                 entity.getProductId(),
                 InteractionType.valueOf(entity.getInteractionType()),
                 entity.getWeight(),
-                entity.getOccurredAt());
+                entity.getOccurredAt(),
+                entity.getSourceEventId());
     }
 
     public InteractionEntity toEntity(UserInteraction domain, java.time.Instant createdAt) {
@@ -33,6 +34,7 @@ public class InteractionDomainMapper {
                 .weight(domain.getWeight())
                 .occurredAt(domain.getOccurredAt())
                 .createdAt(createdAt)
+                .sourceEventId(domain.getSourceEventId())
                 .build();
     }
 }
