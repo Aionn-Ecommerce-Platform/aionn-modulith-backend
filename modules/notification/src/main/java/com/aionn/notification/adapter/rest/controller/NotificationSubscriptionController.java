@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/notifications/subscriptions")
+@RequestMapping("/api/v1/notifications/subscriptions/me")
 @RequiredArgsConstructor
 @Tag(name = "Notification - Subscription", description = "Per-user subscription / device tokens")
 public class NotificationSubscriptionController {
@@ -42,7 +42,7 @@ public class NotificationSubscriptionController {
         private final ListMyDeviceTokensInputPort listMyDeviceTokensInputPort;
         private final NotificationSubscriptionDtoMapper dtoMapper;
 
-        @GetMapping("/me")
+        @GetMapping
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Get my subscription")
         public ResponseEntity<ApiResponse<SubscriptionResponse>> getMine(@CurrentUserId String userId) {
@@ -51,7 +51,7 @@ public class NotificationSubscriptionController {
                                 "Subscription fetched"));
         }
 
-        @PutMapping("/me")
+        @PutMapping
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Update channel")
         public ResponseEntity<ApiResponse<SubscriptionResponse>> updateChannel(
@@ -63,7 +63,7 @@ public class NotificationSubscriptionController {
                                 "Subscription updated"));
         }
 
-        @PostMapping("/me/device-tokens")
+        @PostMapping("/device-tokens")
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Register device token")
         public ResponseEntity<ApiResponse<DeviceTokenResponse>> registerDevice(
@@ -74,7 +74,7 @@ public class NotificationSubscriptionController {
                                                 dtoMapper.toRegisterDeviceTokenCommand(userId, request))));
         }
 
-        @DeleteMapping("/me/device-tokens/{tokenId}")
+        @DeleteMapping("/device-tokens/{tokenId}")
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Remove device token")
         public ResponseEntity<Void> removeDevice(
@@ -84,7 +84,7 @@ public class NotificationSubscriptionController {
                 return ResponseEntity.noContent().build();
         }
 
-        @GetMapping("/me/device-tokens")
+        @GetMapping("/device-tokens")
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "List my device tokens")
         public ResponseEntity<ApiResponse<List<DeviceTokenResponse>>> listDevices(

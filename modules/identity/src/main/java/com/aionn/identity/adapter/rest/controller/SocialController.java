@@ -18,7 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/api/v1/auth/social-links")
 @RequiredArgsConstructor
 @Tag(name = "Identity - Social Auth", description = "Identity module: social account linking endpoints")
 public class SocialController {
@@ -27,7 +27,7 @@ public class SocialController {
 	private final UnlinkSocialInputPort unlinkSocialInputPort;
 	private final AuthDtoMapper authDtoMapper;
 
-	@PostMapping("/social-links")
+	@PostMapping
 	@PreAuthorize("isAuthenticated()")
 	@IdempotentRequest(ttlSeconds = 300)
 	@Operation(summary = "Link social account", description = "Link a social provider account to the authenticated user")
@@ -40,7 +40,7 @@ public class SocialController {
 		return ApiResponse.createdResponse("Social account linked successfully!", response);
 	}
 
-	@DeleteMapping("/social-links/{provider}")
+	@DeleteMapping("/{provider}")
 	@PreAuthorize("isAuthenticated()")
 	@Operation(summary = "Unlink social account", description = "Unlink one social provider account from the authenticated user")
 	public ResponseEntity<ApiResponse<Void>> unlinkSocial(
