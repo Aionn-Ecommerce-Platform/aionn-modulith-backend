@@ -8,7 +8,7 @@ ENV_FILE := envs/common.env
 PROJECT := aionn-modulith-backend
 COMPOSE := $(CONTAINER) compose -p $(PROJECT) -f $(COMPOSE_FILE) --env-file $(ENV_FILE)
 
-LOAD_ENV := set -a; . envs/common.env; . envs/identity.env; . envs/catalog.env; . envs/inventory.env; . envs/ordering.env; . envs/payment.env; . envs/shipping.env; . envs/promotion.env; . envs/notification.env; . envs/chat.env; set +a
+LOAD_ENV := set -a; . envs/common.env; . envs/identity.env; . envs/catalog.env; . envs/inventory.env; . envs/ordering.env; . envs/payment.env; . envs/shipping.env; . envs/promotion.env; . envs/notification.env; . envs/chat.env; . envs/recommendation.env; set +a
 
 .PHONY: build test smoke e2e image-build image-run clean infra-up infra-down infra-restart infra-logs infra-ps infra-config reset-db
 
@@ -40,6 +40,7 @@ image-run:
 		--env-file envs/promotion.env \
 		--env-file envs/notification.env \
 		--env-file envs/chat.env \
+		--env-file envs/recommendation.env \
 		-e POSTGRES_HOST=host.docker.internal \
 		-e REDIS_HOST=host.docker.internal \
 		-e CATALOG_SEARCH_OPENSEARCH_HOST=host.docker.internal \

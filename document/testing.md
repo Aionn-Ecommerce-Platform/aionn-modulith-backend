@@ -23,7 +23,7 @@ The Sonar configuration in the root `build.gradle` is the source of truth for co
 
 - Tests are deterministic. Use fixed clocks and stable identifiers when contracts assert exact values.
 - Tests never call the public internet.
-- Injectable HTTP clients use an appropriate mock server. Clients owning a JDK `HttpClient` use a loopback server on an ephemeral port.
+- Injectable HTTP clients use an appropriate mock server. Clients owning their own HTTP transport - a JDK `HttpClient`, or a library client built on Apache HttpClient 5 - use a loopback server on an ephemeral port, because wire-level behaviour such as content-encoding negotiation cannot be reproduced by a mock.
 - Provider tests cover at least success, a business error in a successful HTTP response, non-2xx status, malformed response, and connection failure.
 - Controller authorization tests send otherwise valid input because validation may run before method security.
 - Use typed mocks and captors for generic APIs. Do not hide raw `Collection` or raw `Class` warnings with `@SuppressWarnings`.
