@@ -2,11 +2,9 @@ package com.aionn.recommendation.infrastructure.persistence.repository;
 
 import com.aionn.recommendation.infrastructure.persistence.entity.ItemSimilarityEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
@@ -38,28 +36,6 @@ public interface ItemSimilarityRepository
     List<ItemSimilarityEntity> findNeighboursForAll(
             @Param("productIds") String[] productIds,
             @Param("limitPerProduct") int limitPerProduct);
-
-    @Modifying
-    @Query(value = """
-            INSERT INTO recommendation_item_similarity
-                (product_id, similar_product_id, score, co_occurrence, computed_at)
-            VALUES (:productId, :similarProductId, :score, :coOccurrence, :computedAt)
-            ON CONFLICT (product_id, similar_product_id) DO UPDATE SET
-                score         = EXCLUDED.score,
-                co_occurrence = EXCLUDED.co_occurrence,
-                computed_at   = EXCLUDED.computed_at
-            """, nativeQuery = true)
-    void upsert(
-            @Param("productId") String productId,
-            @Param("similarProductId") String similarProductId,
-            @Param("score") java.math.BigDecimal score,
-            @Param("coOccurrence") int coOccurrence,
-            @Param("computedAt") Instant computedAt);
-
-    @Modifying
-    @Query(value = "DELETE FROM recommendation_item_similarity WHERE computed_at < :cutoff",
-            nativeQuery = true)
-    int deleteComputedBefore(@Param("cutoff") Instant cutoff);
 
     List<ItemSimilarityEntity> findByIdProductIdIn(Collection<String> productIds);
 }

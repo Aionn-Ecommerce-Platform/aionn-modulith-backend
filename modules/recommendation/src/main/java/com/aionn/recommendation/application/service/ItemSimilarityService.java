@@ -8,7 +8,6 @@ import com.aionn.recommendation.domain.valueobject.InteractionType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -39,18 +38,36 @@ public class ItemSimilarityService {
     private final ItemSimilarityPersistencePort similarityRepository;
     private final Clock clock;
 
-    @Transactional
-    public int refresh(Duration lookback, int minCoOccurrence) {
+    /**
+     * Rebuilds the matrix.
+     *
+     * <p>Deliberately not {@code @Transactional}. The compute phase and each write batch open their own
+     * short transaction in the persistence adapter, which is what keeps the rebuild inside a
+     * transaction budget at all: one transaction spanning the self-join plus every upsert exceeds the
+     * application-wide default timeout as soon as the catalogue is large, and the whole refresh then
+     * rolls back having achieved nothing. A partially applied matrix is recovered by the next run,
+     * since every pair upserts on its natural key.
+     *
+     * @param maxNeighboursPerProduct caps the stored matrix so a popular product does not accumulate
+     *                                more neighbours than any reader will page through
+     */
+    public int refresh(Duration lookback, int minCoOccurrence, int maxNeighboursPerProduct) {
         Instant now = clock.instant();
         Instant since = now.minus(lookback);
         Collection<InteractionType> strongTypes = Arrays.stream(InteractionType.values())
                 .filter(InteractionType::isStrongSignal)
                 .toList();
 
-        List<InteractionPersistencePort.SimilarityRow> rows =
-                interactionRepository.computeItemSimilarity(since, strongTypes, minCoOccurrence);
+        List<InteractionPersistencePort.SimilarityRow> rows = interactionRepository
+                .computeItemSimilarity(since, strongTypes, minCoOccurrence, maxNeighboursPerProduct);
         if (rows.isEmpty()) {
             log.debug("No product pairs met the co-occurrence threshold of {}", minCoOccurrence);
+            // Still sweep: pairs that fell below the threshold since the last run must disappear, and
+            // returning early would leave them recommending each other indefinitely.
+            int stale = similarityRepository.deleteComputedBefore(now);
+            if (stale > 0) {
+                log.info("Dropped {} stale similarity pair(s)", stale);
+            }
             return 0;
         }
 
