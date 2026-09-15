@@ -5,6 +5,7 @@ import com.aionn.recommendation.application.policy.ColdStartPolicy;
 import com.aionn.recommendation.application.policy.HybridRankingPolicy;
 import com.aionn.recommendation.application.policy.RankingWeightPolicy;
 import com.aionn.recommendation.application.port.out.ProductAttributeQueryPort;
+import com.aionn.recommendation.application.port.out.observability.RecommendationMetricsPort;
 import com.aionn.recommendation.domain.model.RecommendationSlate;
 import com.aionn.recommendation.domain.model.UserAffinityProfile;
 import com.aionn.recommendation.domain.valueobject.RecommendationSurface;
@@ -49,18 +50,22 @@ public class RecommendationService {
     private static final Duration SEED_LOOKBACK = Duration.ofDays(30);
     private static final int SEED_LIMIT = 20;
 
+    /** Largest page any surface will build. Mirrors the {@code @Max} on the controller's limit. */
+    private static final int MAX_PAGE_SIZE = 50;
+
     private final CandidateGenerationService candidateGeneration;
     private final ProfileRefreshService profileRefreshService;
     private final HybridRankingPolicy rankingPolicy;
     private final ColdStartPolicy coldStartPolicy;
     private final RankingWeightPolicy weights;
+    private final RecommendationMetricsPort metrics;
 
     public List<RecommendationItemResult> homeFeed(String userId, int limit) {
         int candidateLimit = candidateLimit(limit);
         UserAffinityProfile profile = profileRefreshService.profileOf(userId);
         ColdStartPolicy.SignalWeights signalWeights = coldStartPolicy.resolve(profile);
         if (signalWeights.isPopularityOnly()) {
-            return trending(limit);
+            return fallbackToTrending(RecommendationSurface.HOME, limit, Set.of());
         }
 
         Map<String, BigDecimal> collaborative = signalWeights.usesCollaborative()
@@ -84,7 +89,9 @@ public class RecommendationService {
                 signalWeights,
                 excluded,
                 candidateLimit);
-        return results.isEmpty() ? trending(limit, excluded) : results;
+        return results.isEmpty()
+                ? fallbackToTrending(RecommendationSurface.HOME, limit, excluded)
+                : results;
     }
 
     public List<RecommendationItemResult> similarProducts(String productId, int limit) {
@@ -118,7 +125,9 @@ public class RecommendationService {
                 coldStartPolicy.forProductSurface(),
                 excluded,
                 candidateLimit);
-        return results.isEmpty() ? trending(limit, excluded) : results;
+        return results.isEmpty()
+                ? fallbackToTrending(RecommendationSurface.CART, limit, excluded)
+                : results;
     }
 
     /**
@@ -149,7 +158,7 @@ public class RecommendationService {
             RecommendationSurface surface, String productId, int limit) {
         int candidateLimit = candidateLimit(limit);
         if (!candidateGeneration.productExists(productId)) {
-            return trending(limit, Set.of(productId));
+            return fallbackToTrending(surface, limit, Set.of(productId));
         }
 
         Map<String, BigDecimal> collaborative = candidateGeneration.collaborativeScores(List.of(productId),
@@ -168,7 +177,22 @@ public class RecommendationService {
                 coldStartPolicy.forProductSurface(),
                 Set.of(productId),
                 candidateLimit);
-        return results.isEmpty() ? trending(limit, Set.of(productId)) : results;
+        return results.isEmpty() ? fallbackToTrending(surface, limit, Set.of(productId)) : results;
+    }
+
+    /**
+     * Serves trending in place of a surface that produced nothing, and says so.
+     *
+     * <p>The counter is the only visible difference between "this catalogue has no co-purchase data yet"
+     * and "personalisation quietly stopped working": both render a perfectly reasonable-looking slate of
+     * popular products, so neither the caller nor the log can tell them apart. Counting cold starts too
+     * is deliberate - a profile pipeline that broke shows up here as a sustained spike, which is exactly
+     * when it needs to show up.
+     */
+    private List<RecommendationItemResult> fallbackToTrending(
+            RecommendationSurface surface, int limit, Set<String> excluded) {
+        metrics.recordTrendingFallback(surface);
+        return trending(limit, excluded);
     }
 
     /**
@@ -214,9 +238,19 @@ public class RecommendationService {
         return results;
     }
 
-    /** Over-fetch so availability filtering downstream still leaves a full page. */
+    /**
+     * Over-fetch so availability filtering downstream still leaves a full page.
+     *
+     * <p>The page size is clamped and the product taken in {@code long} because this is reachable from a
+     * public endpoint. An unclamped {@code limit * factor} overflows {@code int} for a large enough page
+     * size and comes back negative, and a negative capacity then fails the {@code ArrayList} the caller
+     * builds with it - a 500 on an anonymous request rather than a rejected parameter. Clamping here
+     * rather than relying on the controller keeps the invariant inside the service that depends on it.
+     * Must stay in step with the {@code @Max} on the controller's limit parameter.
+     */
     private int candidateLimit(int limit) {
-        return Math.min(limit * weights.candidateOverFetchFactor(), weights.maxCandidates());
+        int page = Math.clamp(limit, 1, MAX_PAGE_SIZE);
+        return (int) Math.min((long) page * weights.candidateOverFetchFactor(), weights.maxCandidates());
     }
 
     private static boolean isRealUser(String userId) {
