@@ -12,6 +12,37 @@ import java.util.List;
 
 public interface InteractionRepository extends JpaRepository<InteractionEntity, String> {
 
+    /**
+     * Append that tolerates its own retry.
+     *
+     * <p>{@code ON CONFLICT DO NOTHING} is what makes ingest idempotent under at-least-once outbox
+     * delivery: a redelivered event carries the same {@code sourceEventId}, hits the partial unique
+     * index, and is dropped by the database instead of adding a second row that every popularity and
+     * affinity sum would then count twice. Returns the number of rows actually written, so the caller
+     * can tell a fresh signal from a replay.
+     *
+     * <p>Written as a statement rather than {@code save()} because a JPA persist turns the conflict
+     * into a {@code DataIntegrityViolationException} that aborts the surrounding transaction.
+     */
+    @Modifying
+    @Query(value = """
+            INSERT INTO recommendation_interactions
+                (interaction_id, user_id, product_id, interaction_type, weight,
+                 occurred_at, created_at, source_event_id)
+            VALUES (:interactionId, :userId, :productId, :interactionType, :weight,
+                    :occurredAt, :createdAt, :sourceEventId)
+            ON CONFLICT DO NOTHING
+            """, nativeQuery = true)
+    int appendIdempotent(
+            @Param("interactionId") String interactionId,
+            @Param("userId") String userId,
+            @Param("productId") String productId,
+            @Param("interactionType") String interactionType,
+            @Param("weight") java.math.BigDecimal weight,
+            @Param("occurredAt") Instant occurredAt,
+            @Param("createdAt") Instant createdAt,
+            @Param("sourceEventId") String sourceEventId);
+
     @Query(value = """
             SELECT * FROM recommendation_interactions
             WHERE user_id = :userId
@@ -31,10 +62,24 @@ public interface InteractionRepository extends JpaRepository<InteractionEntity, 
             """, nativeQuery = true)
     List<String> findPurchasedProductIds(@Param("userId") String userId);
 
+    /**
+     * Users whose profile is stale relative to their own activity, most recently active first.
+     *
+     * <p>Joining the profile table is what makes the sweep fair. Selecting the first N user IDs in
+     * lexicographic order - which is what a plain {@code ORDER BY user_id LIMIT} does - returns the
+     * same N users on every run, so once active users in a window exceed the batch size everyone past
+     * that fixed prefix is never refreshed. Here a user leaves the result set as soon as their profile
+     * is newer than their last interaction, which lets the batch rotate through the whole population,
+     * and users with no profile row at all always qualify.
+     */
     @Query(value = """
-            SELECT DISTINCT user_id FROM recommendation_interactions
-            WHERE occurred_at >= :since
-            ORDER BY user_id
+            SELECT i.user_id
+            FROM recommendation_interactions i
+            LEFT JOIN recommendation_user_profiles p ON p.user_id = i.user_id
+            WHERE i.occurred_at >= :since
+            GROUP BY i.user_id, p.refreshed_at
+            HAVING MAX(i.occurred_at) > COALESCE(p.refreshed_at, '-infinity'::timestamptz)
+            ORDER BY MAX(i.occurred_at) DESC, i.user_id
             LIMIT :limit
             """, nativeQuery = true)
     List<String> findUserIdsWithInteractionsSince(
@@ -77,6 +122,14 @@ public interface InteractionRepository extends JpaRepository<InteractionEntity, 
      * <p>{@code a.product_id < b.product_id} yields each unordered pair once. The
      * {@code minCoOccurrence} floor removes pairs that share a single user, where cosine is high by
      * arithmetic but meaningless as a signal.
+     *
+     * <p>The cap is applied to the symmetric expansion and then intersected, so a pair is returned
+     * only when it is in the top N of <em>both</em> endpoints. Capping one direction alone would not
+     * bound the stored table, because the caller writes each returned pair both ways. Ties break on
+     * the partner ID so repeated runs over unchanged data produce the same matrix.
+     *
+     * <p>The expansion CTE is named {@code expanded} rather than {@code symmetric} because the latter is
+     * a reserved word in Postgres ({@code BETWEEN SYMMETRIC}), which the parser rejects in that position.
      */
     @Query(value = """
             WITH strong AS (
@@ -98,20 +151,52 @@ public interface InteractionRepository extends JpaRepository<InteractionEntity, 
                 JOIN strong b ON a.user_id = b.user_id AND a.product_id < b.product_id
                 GROUP BY a.product_id, b.product_id
                 HAVING COUNT(*) >= :minCoOccurrence
+            ),
+            scored AS (
+                SELECT p.product_id,
+                       p.similar_product_id,
+                       p.co_occurrence,
+                       (p.co_occurrence / SQRT(CAST(c1.user_count AS double precision)
+                                               * CAST(c2.user_count AS double precision))) AS score
+                FROM pairs p
+                JOIN counts c1 ON c1.product_id = p.product_id
+                JOIN counts c2 ON c2.product_id = p.similar_product_id
+            ),
+            expanded AS (
+                SELECT product_id, similar_product_id, score FROM scored
+                UNION ALL
+                SELECT similar_product_id AS product_id, product_id AS similar_product_id, score
+                FROM scored
+            ),
+            kept AS (
+                SELECT product_id, similar_product_id
+                FROM (
+                    SELECT e.product_id,
+                           e.similar_product_id,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY e.product_id
+                               ORDER BY e.score DESC, e.similar_product_id) AS neighbour_rank
+                    FROM expanded e
+                ) ranked
+                WHERE ranked.neighbour_rank <= :maxNeighboursPerProduct
             )
-            SELECT p.product_id         AS productId,
-                   p.similar_product_id AS similarProductId,
-                   p.co_occurrence      AS coOccurrence,
-                   (p.co_occurrence / SQRT(CAST(c1.user_count AS double precision)
-                                           * CAST(c2.user_count AS double precision))) AS score
-            FROM pairs p
-            JOIN counts c1 ON c1.product_id = p.product_id
-            JOIN counts c2 ON c2.product_id = p.similar_product_id
+            SELECT s.product_id         AS productId,
+                   s.similar_product_id AS similarProductId,
+                   s.co_occurrence      AS coOccurrence,
+                   s.score              AS score
+            FROM scored s
+            WHERE EXISTS (SELECT 1 FROM kept k
+                          WHERE k.product_id = s.product_id
+                            AND k.similar_product_id = s.similar_product_id)
+              AND EXISTS (SELECT 1 FROM kept k
+                          WHERE k.product_id = s.similar_product_id
+                            AND k.similar_product_id = s.product_id)
             """, nativeQuery = true)
     List<SimilarityProjection> computeItemSimilarity(
             @Param("since") Instant since,
             @Param("strongTypes") Collection<String> strongTypes,
-            @Param("minCoOccurrence") int minCoOccurrence);
+            @Param("minCoOccurrence") int minCoOccurrence,
+            @Param("maxNeighboursPerProduct") int maxNeighboursPerProduct);
 
     /**
      * Deletes in bounded batches so the sweep never holds a long lock on a table that the ingest
@@ -132,6 +217,42 @@ public interface InteractionRepository extends JpaRepository<InteractionEntity, 
     @Modifying
     @Query(value = "DELETE FROM recommendation_interactions WHERE user_id = :userId", nativeQuery = true)
     int deleteByUserId(@Param("userId") String userId);
+
+    /**
+     * Serialises everything this module does to one user's behavioural data.
+     *
+     * <p>Held until the calling transaction ends, which is what makes the erasure check in ingest and in
+     * the profile refresh authoritative rather than a race: without it, a refresh that read the user's
+     * interactions before an erasure committed would write the profile straight back afterwards, and an
+     * ingest that checked the mark before the erasure would append a row the erasure had already
+     * finished deleting.
+     *
+     * <p>An advisory lock rather than a row lock because the thing being protected is often the absence
+     * of a row. {@code hashtext} collisions between two user IDs are harmless - they only serialise two
+     * unrelated users against each other for the length of one short transaction.
+     *
+     * <p>Returns a value only because Spring Data needs a result type for a native query; the lock
+     * function itself returns {@code void}, so the expression is a constant.
+     */
+    @Query(value = "SELECT pg_advisory_xact_lock(hashtext(:userId)) IS NOT NULL", nativeQuery = true)
+    boolean lockUser(@Param("userId") String userId);
+
+    /**
+     * Records that an account's behavioural data was erased, so a late event or a stale sweep cannot
+     * recreate it. Idempotent: erasure is delivered at least once like every other integration event.
+     */
+    @Modifying
+    @Query(value = """
+            INSERT INTO recommendation_erased_users (user_id, erased_at)
+            VALUES (:userId, :erasedAt)
+            ON CONFLICT (user_id) DO NOTHING
+            """, nativeQuery = true)
+    int markUserErased(@Param("userId") String userId, @Param("erasedAt") Instant erasedAt);
+
+    @Query(value = """
+            SELECT EXISTS (SELECT 1 FROM recommendation_erased_users WHERE user_id = :userId)
+            """, nativeQuery = true)
+    boolean isUserErased(@Param("userId") String userId);
 
     interface PopularityProjection {
         String getProductId();

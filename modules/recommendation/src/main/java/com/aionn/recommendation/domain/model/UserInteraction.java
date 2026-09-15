@@ -25,6 +25,16 @@ public class UserInteraction {
     private final BigDecimal weight;
     private final Instant occurredAt;
 
+    /**
+     * Identifier of the integration event that produced this signal, or null when the interaction was
+     * written by something other than an event (seeded fixtures, a manual backfill).
+     *
+     * <p>This is what makes ingest idempotent. Outbox delivery is at-least-once, so the same event can
+     * arrive twice; a unique index over this identifier and the signal's natural key lets the second
+     * arrival be dropped by the database instead of inflating every score that sums over the log.
+     */
+    private final String sourceEventId;
+
     public UserInteraction(
             String interactionId,
             String userId,
@@ -32,12 +42,26 @@ public class UserInteraction {
             InteractionType type,
             BigDecimal weight,
             Instant occurredAt) {
+        this(interactionId, userId, productId, type, weight, occurredAt, null);
+    }
+
+    public UserInteraction(
+            String interactionId,
+            String userId,
+            String productId,
+            InteractionType type,
+            BigDecimal weight,
+            Instant occurredAt,
+            String sourceEventId) {
         this.interactionId = required(interactionId, "interactionId");
         this.userId = required(userId, "userId");
         this.productId = required(productId, "productId");
         this.type = requireType(type);
         this.weight = requireWeight(weight);
         this.occurredAt = requireOccurredAt(occurredAt);
+        this.sourceEventId = sourceEventId == null || sourceEventId.isBlank()
+                ? null
+                : sourceEventId.trim();
     }
 
     public static UserInteraction create(
@@ -48,6 +72,23 @@ public class UserInteraction {
             BigDecimal weight,
             Instant occurredAt) {
         return new UserInteraction(interactionId, userId, productId, type, weight, occurredAt);
+    }
+
+    public static UserInteraction create(
+            String interactionId,
+            String userId,
+            String productId,
+            InteractionType type,
+            BigDecimal weight,
+            Instant occurredAt,
+            String sourceEventId) {
+        return new UserInteraction(
+                interactionId, userId, productId, type, weight, occurredAt, sourceEventId);
+    }
+
+    /** Whether a retry of the producing event can be recognised and dropped. */
+    public boolean hasSourceEventId() {
+        return sourceEventId != null;
     }
 
     public boolean isStrongSignal() {

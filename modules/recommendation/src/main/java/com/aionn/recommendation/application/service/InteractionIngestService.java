@@ -51,13 +51,25 @@ public class InteractionIngestService {
         }
 
         InteractionType type = command.type();
+        // Taken after the catalog lookup so the lock is held only across the check and the write, and
+        // checked under the lock because an erasure landing in between would otherwise delete the
+        // account's history a moment before this appends a new row to it. Outbox delivery is at-least-once
+        // and an account deletion event can be replayed after the erasure it caused, so this is not a
+        // theoretical ordering.
+        interactionRepository.lockUser(command.userId());
+        if (interactionRepository.isUserErased(command.userId())) {
+            log.debug("Skipping {} interaction for an erased account", type);
+            return;
+        }
+
         UserInteraction interaction = UserInteraction.create(
                 IdGenerator.ulid(),
                 command.userId(),
                 productId.get(),
                 type,
                 weightPolicy.weightFor(type).baseWeight(),
-                command.occurredAt() != null ? command.occurredAt() : clock.instant());
+                command.occurredAt() != null ? command.occurredAt() : clock.instant(),
+                command.sourceEventId());
 
         interactionRepository.append(interaction);
     }
