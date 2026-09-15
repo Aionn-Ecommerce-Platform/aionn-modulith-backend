@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.MutablePropertyValues;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.MethodParameter;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -21,8 +23,13 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
+import org.springframework.validation.method.MethodValidationResult;
+import org.springframework.validation.method.ParameterValidationResult;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
@@ -90,8 +97,72 @@ class GlobalExceptionHandlerSupportTest {
         assertTrue(handler.handleNoHandler(noHandler).getBody().message().contains("/missing"));
     }
 
+    /**
+     * Constraints on {@code @RequestParam} arguments are enforced by Spring's own method validator and
+     * surface as {@link HandlerMethodValidationException}, not as {@link MethodArgumentNotValidException}
+     * - which only ever covers a {@code @Valid @RequestBody}. Without a mapping of its own this exception
+     * reached {@code handleUnexpected}, so every module answered a malformed query parameter with 500 and
+     * logged a stack trace at ERROR for what is ordinary bad input.
+     */
+    @Test
+    void globalExceptionHandlerMapsControllerMethodValidation() throws Exception {
+        var search = SampleController.class.getDeclaredMethod("search", int.class);
+        MethodParameter parameter = new MethodParameter(search, 0);
+        parameter.initParameterNameDiscovery(new DefaultParameterNameDiscoverer());
+        ParameterValidationResult violation = new ParameterValidationResult(
+                parameter,
+                0,
+                List.of(new DefaultMessageSourceResolvable(
+                        new String[] { "Min.search.limit" }, "must be greater than or equal to 1")),
+                null,
+                null,
+                null,
+                (resolvable, targetType) -> null);
+
+        var response = handler.handleHandlerMethodValidation(new HandlerMethodValidationException(
+                MethodValidationResult.create(new SampleController(), search, List.of(violation))));
+
+        assertEquals(400, response.getStatusCode().value());
+        assertEquals("VALIDATION_FAILED", response.getBody().data().get("errorCode"));
+        Map<?, ?> fieldErrors = (Map<?, ?>) response.getBody().data().get("fieldErrors");
+        assertEquals(1, fieldErrors.size());
+        assertTrue(fieldErrors.containsValue("must be greater than or equal to 1"));
+        // Either the retained parameter name or its positional fallback; both identify the argument, and
+        // a blank key would collapse every violation in a multi-parameter method onto one entry.
+        assertTrue(fieldErrors.keySet().iterator().next().toString().length() > 0);
+    }
+
+    @Test
+    void globalExceptionHandlerMapsMissingRequestParameter() {
+        var response = handler.handleMissingParameter(
+                new MissingServletRequestParameterException("skuIds", "List"));
+
+        assertEquals(400, response.getStatusCode().value());
+        assertEquals("MISSING_PARAMETER", response.getBody().data().get("errorCode"));
+        assertTrue(response.getBody().message().contains("skuIds"));
+    }
+
+    /**
+     * The right path with the wrong verb. Reported as a 500 this sends whoever is debugging looking for
+     * a server fault that does not exist - the response has to say which verbs the endpoint accepts.
+     */
+    @Test
+    void globalExceptionHandlerMapsUnsupportedRequestMethod() {
+        var response = handler.handleMethodNotSupported(
+                new HttpRequestMethodNotSupportedException("PUT", List.of("POST")));
+
+        assertEquals(405, response.getStatusCode().value());
+        assertEquals("METHOD_NOT_ALLOWED", response.getBody().data().get("errorCode"));
+        assertTrue(response.getBody().message().contains("PUT"));
+        assertTrue(response.getBody().message().contains("POST"));
+    }
+
     static class SampleController {
         void submit(String body) {
+            // Empty on purpose; only reflective method metadata is needed in this test.
+        }
+
+        void search(int limit) {
             // Empty on purpose; only reflective method metadata is needed in this test.
         }
     }

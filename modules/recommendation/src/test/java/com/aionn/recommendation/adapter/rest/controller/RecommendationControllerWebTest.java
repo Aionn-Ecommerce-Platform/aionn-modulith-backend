@@ -15,6 +15,7 @@ import com.aionn.recommendation.application.port.in.GetCartSuggestionsInputPort;
 import com.aionn.recommendation.application.port.in.GetHomeFeedInputPort;
 import com.aionn.recommendation.application.port.in.GetSimilarProductsInputPort;
 import com.aionn.recommendation.domain.valueobject.RecommendationReason;
+import com.aionn.sharedkernel.adapter.web.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +30,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -59,8 +61,15 @@ class RecommendationControllerWebTest {
                                 getAlsoBoughtInputPort,
                                 getCartSuggestionsInputPort,
                                 Mappers.getMapper(RecommendationDtoMapper.class));
+                // The global advice must be registered too, not just the module one. It carries an
+                // @ExceptionHandler(Exception.class) catch-all, so in production it is what an exception
+                // the module advice does not claim actually lands on - and standalone MockMvc otherwise
+                // falls back to the framework's own resolvers, which answer 400 where the application
+                // answers 500. Ordering is the production ordering: the module advice is
+                // HIGHEST_PRECEDENCE, the global one LOWEST_PRECEDENCE.
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
-                                .setControllerAdvice(new RecommendationExceptionHandler())
+                                .setControllerAdvice(new RecommendationExceptionHandler(),
+                                                new GlobalExceptionHandler())
                                 .addInterceptors(new MockSecurityInterceptor())
                                 .build();
         }
@@ -161,6 +170,69 @@ class RecommendationControllerWebTest {
                 mockMvc.perform(get("/api/v1/recommendations/home"))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.data[0].skuIds").doesNotExist());
+        }
+
+        @Test
+        void aLimitBelowTheDocumentedMinimumIsRejected() throws Exception {
+                // Verifies rather than assumes that @Min/@Max on a @RequestParam are enforced. Spring
+                // Framework 6.1+ validates controller method parameters natively, with no class-level
+                // @Validated, so an earlier claim that these annotations were inert here was wrong - but
+                // it is worth a test, because if it ever stops being true the failure is a 500 from deep
+                // inside the read service rather than a rejected parameter.
+                mockMvc.perform(get("/api/v1/recommendations/home").param("limit", "0"))
+                                .andExpect(status().isBadRequest());
+                mockMvc.perform(get("/api/v1/recommendations/home").param("limit", "-1"))
+                                .andExpect(status().isBadRequest());
+
+                verify(getHomeFeedInputPort, never()).execute(any());
+        }
+
+        @Test
+        void aLimitAboveTheDocumentedMaximumIsRejected() throws Exception {
+                // The maximum is what keeps the cached slate size and the over-fetch bound honest; a
+                // larger page would ask the ranking for more candidates than the configuration allows.
+                mockMvc.perform(get("/api/v1/recommendations/home").param("limit", "51"))
+                                .andExpect(status().isBadRequest());
+
+                verify(getHomeFeedInputPort, never()).execute(any());
+        }
+
+        @Test
+        void anUnparsableLimitIsRejected() throws Exception {
+                mockMvc.perform(get("/api/v1/recommendations/home").param("limit", "ten"))
+                                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        void aHugeLimitIsRejectedRatherThanOverflowingDownstream() throws Exception {
+                // Even with the service clamping its candidate arithmetic, an absurd page size should be
+                // turned away at the boundary rather than accepted and silently reduced.
+                mockMvc.perform(get("/api/v1/recommendations/home").param("limit", "2147483647"))
+                                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        void theLimitBoundsApplyToEverySurfaceNotJustTheHomeFeed() throws Exception {
+                mockMvc.perform(get("/api/v1/recommendations/products/" + PRODUCT_ID + "/similar")
+                                .param("limit", "0"))
+                                .andExpect(status().isBadRequest());
+                mockMvc.perform(get("/api/v1/recommendations/products/" + PRODUCT_ID + "/also-bought")
+                                .param("limit", "999"))
+                                .andExpect(status().isBadRequest());
+
+                verify(getSimilarProductsInputPort, never()).execute(any());
+                verify(getAlsoBoughtInputPort, never()).execute(any());
+        }
+
+        @Test
+        void cartSuggestionsNeedABasket() throws Exception {
+                // An empty basket has nothing to seed from, so the request is meaningless rather than
+                // merely small.
+                mockMvc.perform(get("/api/v1/recommendations/cart/suggestions")
+                                .with(TestAuth.authUser("user-1")))
+                                .andExpect(status().isBadRequest());
+
+                verify(getCartSuggestionsInputPort, never()).execute(any());
         }
 
         private static RecommendationItemResult item(String productId, RecommendationReason reason) {
