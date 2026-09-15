@@ -47,6 +47,18 @@ spring:
   transaction:
     default-timeout: ${DB_TRANSACTION_TIMEOUT:30s}
 
+  # Business jobs run on this pool; the outbox dispatcher keeps its own single-threaded scheduler.
+  # Without an explicit taskScheduler bean Boot's auto-configuration backs off (the outbox already
+  # registers a TaskScheduler) and every job would share one thread. See ApplicationSchedulingConfig.
+  #
+  # Sized at one thread per scheduled job so none can ever queue behind another: a slow offline
+  # rebuild then delays nothing, including the operational jobs that release reservations and cancel
+  # stale orders. ApplicationSchedulingConfigTest fails if a job is added without raising this.
+  task:
+    scheduling:
+      pool:
+        size: ${SCHEDULER_POOL_SIZE:20}
+
   jpa:
     hibernate:
       ddl-auto: none

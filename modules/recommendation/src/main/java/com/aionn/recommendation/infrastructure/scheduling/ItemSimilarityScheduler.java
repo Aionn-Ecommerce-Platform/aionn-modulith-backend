@@ -1,5 +1,6 @@
 package com.aionn.recommendation.infrastructure.scheduling;
 
+import com.aionn.recommendation.application.port.out.observability.RecommendationMetricsPort;
 import com.aionn.recommendation.application.service.ItemSimilarityService;
 import com.aionn.recommendation.infrastructure.config.properties.RecommendationJobProperties;
 import lombok.RequiredArgsConstructor;
@@ -25,18 +26,26 @@ import java.time.Duration;
         prefix = "recommendation.scheduling.item-similarity", name = "enabled", havingValue = "true")
 public class ItemSimilarityScheduler {
 
+    static final String JOB_NAME = "item-similarity";
+
     private final ItemSimilarityService itemSimilarityService;
     private final RecommendationJobProperties properties;
+    private final RecommendationMetricsPort metrics;
 
     @Scheduled(fixedDelayString = "${recommendation.scheduling.item-similarity.delay-ms:3600000}")
     @SchedulerLock(
             name = "recommendation-item-similarity", lockAtMostFor = "PT30M", lockAtLeastFor = "PT1M")
     public void run() {
+        JobRunMetrics run = JobRunMetrics.start(metrics, JOB_NAME);
         try {
-            itemSimilarityService.refresh(
+            int refreshed = itemSimilarityService.refresh(
                     Duration.ofDays(properties.similarity().lookbackDays()),
-                    properties.similarity().minCoOccurrence());
+                    properties.similarity().minCoOccurrence(),
+                    properties.similarity().maxNeighboursPerProduct());
+            run.succeeded();
+            log.debug("Item similarity refresh completed with {} pair(s)", refreshed);
         } catch (Exception exception) {
+            run.failed();
             log.error("Item similarity refresh failed", exception);
         }
     }
