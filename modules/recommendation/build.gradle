@@ -20,4 +20,11 @@ dependencies {
     testImplementation(testFixtures(project(':shared-kernel')))
     testRuntimeOnly 'org.postgresql:postgresql'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // The persistence slice tests run against the Flyway schema rather than Hibernate-generated DDL:
+    // the ingest idempotency guard is a partial unique index and the signal tables carry CHECK
+    // constraints, and ddl-auto cannot express either. Production supplies these through :app.
+    testRuntimeOnly 'org.flywaydb:flyway-core'
+    testRuntimeOnly 'org.flywaydb:flyway-database-postgresql'
+    testRuntimeOnly 'org.springframework.boot:spring-boot-flyway'
 }
