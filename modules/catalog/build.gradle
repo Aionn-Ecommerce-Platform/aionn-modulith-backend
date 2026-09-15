@@ -17,8 +17,11 @@ dependencies {
 
     implementation 'org.opensearch.client:opensearch-rest-high-level-client:2.11.1'
     implementation 'org.opensearch.client:opensearch-java:2.13.0'
-    // HttpClient 5 transport for opensearch-java
-    implementation 'org.apache.httpcomponents.client5:httpclient5:5.3.1'
+    // HttpClient 5 transport for opensearch-java. Version deliberately unmanaged-by-us: Spring Boot's BOM
+    // already decides it (5.6.4), and the pinned 5.3.1 was silently overridden - which is how
+    // ContentCompressionAsyncExec arrived and broke response decoding. OpenSearchConfig calls
+    // disableContentCompression(), available since 5.6, so the floor now matches what actually resolves.
+    implementation 'org.apache.httpcomponents.client5:httpclient5'
 
     // Mapping / annotation processing
     implementation 'org.mapstruct:mapstruct:1.6.3'
