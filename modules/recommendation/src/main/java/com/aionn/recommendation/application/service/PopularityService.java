@@ -35,7 +35,14 @@ public class PopularityService {
     private final InteractionWeightPolicy weightPolicy;
     private final Clock clock;
 
-    @Transactional
+    /**
+     * Recomputes the table.
+     *
+     * <p>Not {@code @Transactional}: the aggregate read and each write batch open their own short
+     * transaction in the persistence adapter. Wrapping the whole sweep in one transaction put it on the
+     * application-wide request-sized timeout, which the aggregate plus a per-product upsert exceeds
+     * once the interaction log is worth aggregating.
+     */
     public int refresh(Duration lookback) {
         Instant now = clock.instant();
         Instant since = now.minus(lookback);
@@ -48,7 +55,14 @@ public class PopularityService {
         Map<String, InteractionPersistencePort.PopularityAggregate> aggregates =
                 interactionRepository.aggregatePopularity(since, now, halfLives);
         if (aggregates.isEmpty()) {
-            log.debug("No interactions in the popularity window; leaving previous scores in place");
+            log.debug("No interactions in the popularity window");
+            // Still sweep. An empty window is a statement that nothing has momentum, and returning early
+            // would leave the previous scores ranking products that stopped selling, indefinitely, for
+            // want of a single new interaction anywhere in the catalogue.
+            int stale = popularityRepository.deleteComputedBefore(now);
+            if (stale > 0) {
+                log.info("Dropped {} stale popularity row(s)", stale);
+            }
             return 0;
         }
 
