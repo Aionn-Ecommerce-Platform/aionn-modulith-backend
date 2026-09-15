@@ -63,15 +63,7 @@ public class InteractionPersistenceAdapter implements InteractionPersistencePort
 
     @Override
     public void append(UserInteraction interaction) {
-        int written = jpa.appendIdempotent(
-                interaction.getInteractionId(),
-                interaction.getUserId(),
-                interaction.getProductId(),
-                interaction.getType().name(),
-                interaction.getWeight(),
-                interaction.getOccurredAt(),
-                clock.instant(),
-                interaction.getSourceEventId());
+        int written = jpa.appendIdempotent(mapper.toEntity(interaction, clock.instant()));
         if (written == 0) {
             // A replay of an event already ingested. Not an error, and not worth a row in the log at
             // info level: under a retry storm this is the common case.
@@ -110,11 +102,7 @@ public class InteractionPersistenceAdapter implements InteractionPersistencePort
                         halfLifeSeconds.get(InteractionType.CART_ADD),
                         halfLifeSeconds.get(InteractionType.PURCHASE)));
 
-        Map<String, PopularityAggregate> aggregates =
-                LinkedHashMap.newLinkedHashMap(rows == null ? 0 : rows.size());
-        if (rows == null) {
-            return aggregates;
-        }
+        Map<String, PopularityAggregate> aggregates = LinkedHashMap.newLinkedHashMap(rows.size());
         for (InteractionRepository.PopularityProjection row : rows) {
             BigDecimal score = row.getDecayedScore() == null ? BigDecimal.ZERO : row.getDecayedScore();
             aggregates.put(row.getProductId(), new PopularityAggregate(
@@ -138,9 +126,6 @@ public class InteractionPersistenceAdapter implements InteractionPersistencePort
                         since, typeNames, Math.max(1, minCoOccurrence),
                         Math.max(1, maxNeighboursPerProduct)));
 
-        if (rows == null) {
-            return List.of();
-        }
         List<SimilarityRow> similarities = new ArrayList<>(rows.size());
         for (InteractionRepository.SimilarityProjection row : rows) {
             similarities.add(new SimilarityRow(

@@ -71,6 +71,11 @@ public class ProfileRefreshService {
             return;
         }
 
+        profileRepository.save(buildProfile(userId, interactions, now, maxAffinities), now);
+    }
+
+    private UserAffinityProfile buildProfile(
+            String userId, List<UserInteraction> interactions, Instant now, int maxAffinities) {
         Map<String, ProductAttributeQueryPort.ProductAttributes> attributes =
                 productAttributeQuery.findByProductIds(
                         interactions.stream().map(UserInteraction::getProductId).distinct().toList());
@@ -104,7 +109,7 @@ public class ProfileRefreshService {
             }
         }
 
-        UserAffinityProfile profile = new UserAffinityProfile(
+        return new UserAffinityProfile(
                 userId,
                 normalizeTop(categoryWeights, maxAffinities),
                 normalizeTop(brandWeights, maxAffinities),
@@ -112,8 +117,6 @@ public class ProfileRefreshService {
                 percentile(prices, PRICE_BAND_UPPER_PERCENTILE),
                 interactions.size(),
                 lastInteractionAt);
-
-        profileRepository.save(profile, now);
     }
 
     @Transactional(readOnly = true)

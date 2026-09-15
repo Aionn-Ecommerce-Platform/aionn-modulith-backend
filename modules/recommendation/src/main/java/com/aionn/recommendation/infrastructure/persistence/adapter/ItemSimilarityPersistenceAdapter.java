@@ -137,8 +137,7 @@ public class ItemSimilarityPersistenceAdapter implements ItemSimilarityPersisten
 
     @Override
     public int deleteComputedBefore(Instant cutoff) {
-        Integer deleted = writeBatch.execute(status ->
+        return writeBatch.execute(status ->
                 jdbcTemplate.update(DELETE_STALE_SQL, Timestamp.from(cutoff)));
-        return deleted == null ? 0 : deleted;
     }
 }

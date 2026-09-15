@@ -295,11 +295,42 @@ class InteractionPersistenceAdapterIntegrationTest {
     }
 
     @Test
-    void aProfileNewerThanTheUsersLastInteractionDropsOutOfTheSweep() {
+    void delayedIngestionStillRefreshesWhenBusinessTimePredatesTheProfile() {
+        // A delayed outbox delivery can carry an old business timestamp but is new behavioural data.
+        // Staleness must therefore use ingestion time while the lookback still uses occurred_at.
+        saveProfile("user-delayed", NOW.minus(Duration.ofHours(1)));
+        adapter.append(UserInteraction.create(
+                IdGenerator.ulid(), "user-delayed", "p-1", InteractionType.VIEW, BigDecimal.ONE,
+                NOW.minus(Duration.ofHours(2)), "evt-delayed"));
+
+        assertThat(adapter.findUserIdsWithInteractionsSince(NOW.minus(Duration.ofDays(1)), 100))
+                .containsExactly("user-delayed");
+
+        jdbcTemplate.update("UPDATE recommendation_user_profiles SET refreshed_at = ? WHERE user_id = ?",
+                Timestamp.from(NOW), "user-delayed");
+        assertThat(adapter.findUserIdsWithInteractionsSince(NOW.minus(Duration.ofDays(1)), 100))
+                .isEmpty();
+    }
+
+    @Test
+    void delayedIngestionOutsideTheBusinessTimeLookbackDoesNotRefreshTheProfile() {
+        saveProfile("user-delayed", NOW.minus(Duration.ofHours(1)));
+        adapter.append(UserInteraction.create(
+                IdGenerator.ulid(), "user-delayed", "p-1", InteractionType.VIEW, BigDecimal.ONE,
+                NOW.minus(Duration.ofDays(2)), "evt-too-old"));
+
+        assertThat(adapter.findUserIdsWithInteractionsSince(NOW.minus(Duration.ofDays(1)), 100))
+                .isEmpty();
+    }
+
+    @Test
+    void aProfileNewerThanTheUsersLatestIngestionDropsOutOfTheSweep() {
         // This is what makes the batch rotate. A plain ORDER BY user_id LIMIT returns the same prefix
         // every run, so once active users exceed the batch size everyone past it is never refreshed.
-        persist("user-current", "p-1", InteractionType.VIEW, 1, NOW.minus(Duration.ofHours(2)));
-        persist("user-stale", "p-1", InteractionType.VIEW, 1, NOW.minus(Duration.ofHours(2)));
+        persist("user-current", "p-1", InteractionType.VIEW, 1,
+                NOW.minus(Duration.ofHours(2)), NOW.minus(Duration.ofHours(2)));
+        persist("user-stale", "p-1", InteractionType.VIEW, 1,
+                NOW.minus(Duration.ofHours(2)), NOW.minus(Duration.ofHours(2)));
         saveProfile("user-current", NOW.minus(Duration.ofHours(1)));
         saveProfile("user-stale", NOW.minus(Duration.ofHours(3)));
 
@@ -322,13 +353,14 @@ class InteractionPersistenceAdapterIntegrationTest {
     @Test
     void theBatchLimitIsAppliedAfterStaleUsersAreSelected() {
         for (int index = 0; index < 5; index++) {
-            persist("user-" + index, "p-1", InteractionType.VIEW, 1, NOW.minus(Duration.ofMinutes(index)));
+            persist("user-" + index, "p-1", InteractionType.VIEW, 1,
+                    NOW.minus(Duration.ofHours(1)), NOW.minus(Duration.ofMinutes(4 - index)));
         }
 
-        // Most recently active first, so a limited sweep serves the freshest profiles rather than an
-        // arbitrary slice of the population.
+        // Order by ingestion time rather than business time or the user ID. Most recent ingestion
+        // wins even when all events occurred together.
         assertThat(adapter.findUserIdsWithInteractionsSince(NOW.minus(Duration.ofDays(1)), 2))
-                .containsExactly("user-0", "user-1");
+                .containsExactly("user-4", "user-3");
     }
 
     @Test
@@ -404,6 +436,12 @@ class InteractionPersistenceAdapterIntegrationTest {
 
     private void persist(
             String userId, String productId, InteractionType type, double weight, Instant occurredAt) {
+        persist(userId, productId, type, weight, occurredAt, NOW);
+    }
+
+    private void persist(
+            String userId, String productId, InteractionType type, double weight,
+            Instant occurredAt, Instant createdAt) {
         repository.save(com.aionn.recommendation.infrastructure.persistence.entity.InteractionEntity
                 .builder()
                 .interactionId(IdGenerator.ulid())
@@ -412,7 +450,7 @@ class InteractionPersistenceAdapterIntegrationTest {
                 .interactionType(type.name())
                 .weight(BigDecimal.valueOf(weight))
                 .occurredAt(occurredAt)
-                .createdAt(NOW)
+                .createdAt(createdAt)
                 .build());
     }
 

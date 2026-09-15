@@ -29,19 +29,12 @@ public interface InteractionRepository extends JpaRepository<InteractionEntity, 
             INSERT INTO recommendation_interactions
                 (interaction_id, user_id, product_id, interaction_type, weight,
                  occurred_at, created_at, source_event_id)
-            VALUES (:interactionId, :userId, :productId, :interactionType, :weight,
-                    :occurredAt, :createdAt, :sourceEventId)
+            VALUES (:#{#entity.interactionId}, :#{#entity.userId}, :#{#entity.productId},
+                    :#{#entity.interactionType}, :#{#entity.weight}, :#{#entity.occurredAt},
+                    :#{#entity.createdAt}, :#{#entity.sourceEventId})
             ON CONFLICT DO NOTHING
             """, nativeQuery = true)
-    int appendIdempotent(
-            @Param("interactionId") String interactionId,
-            @Param("userId") String userId,
-            @Param("productId") String productId,
-            @Param("interactionType") String interactionType,
-            @Param("weight") java.math.BigDecimal weight,
-            @Param("occurredAt") Instant occurredAt,
-            @Param("createdAt") Instant createdAt,
-            @Param("sourceEventId") String sourceEventId);
+    int appendIdempotent(@Param("entity") InteractionEntity entity);
 
     @Query(value = """
             SELECT * FROM recommendation_interactions
@@ -63,14 +56,18 @@ public interface InteractionRepository extends JpaRepository<InteractionEntity, 
     List<String> findPurchasedProductIds(@Param("userId") String userId);
 
     /**
-     * Users whose profile is stale relative to their own activity, most recently active first.
+     * Users whose profile is stale relative to ingested activity, most recently ingested first.
      *
      * <p>Joining the profile table is what makes the sweep fair. Selecting the first N user IDs in
      * lexicographic order - which is what a plain {@code ORDER BY user_id LIMIT} does - returns the
      * same N users on every run, so once active users in a window exceed the batch size everyone past
      * that fixed prefix is never refreshed. Here a user leaves the result set as soon as their profile
-     * is newer than their last interaction, which lets the batch rotate through the whole population,
-     * and users with no profile row at all always qualify.
+     * covers their latest ingested interaction, which lets the batch rotate through the whole
+     * population, and users with no profile row at all always qualify within the lookback.
+     *
+     * <p>Staleness uses ingestion time ({@code created_at}), not business time ({@code occurred_at}):
+     * delayed events may arrive after a refresh even though they occurred before it. Business time
+     * still determines which interactions fall within the lookback.
      */
     @Query(value = """
             SELECT i.user_id
@@ -78,8 +75,8 @@ public interface InteractionRepository extends JpaRepository<InteractionEntity, 
             LEFT JOIN recommendation_user_profiles p ON p.user_id = i.user_id
             WHERE i.occurred_at >= :since
             GROUP BY i.user_id, p.refreshed_at
-            HAVING MAX(i.occurred_at) > COALESCE(p.refreshed_at, '-infinity'::timestamptz)
-            ORDER BY MAX(i.occurred_at) DESC, i.user_id
+            HAVING MAX(i.created_at) > COALESCE(p.refreshed_at, '-infinity'::timestamptz)
+            ORDER BY MAX(i.created_at) DESC, i.user_id
             LIMIT :limit
             """, nativeQuery = true)
     List<String> findUserIdsWithInteractionsSince(

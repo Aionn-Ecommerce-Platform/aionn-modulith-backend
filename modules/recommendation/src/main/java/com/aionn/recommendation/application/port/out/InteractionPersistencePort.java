@@ -19,12 +19,13 @@ public interface InteractionPersistencePort {
     List<String> findPurchasedProductIds(String userId);
 
     /**
-     * Users whose profile is stale relative to their own activity, most recently active first.
+     * Users whose profile is stale relative to ingested activity, most recently ingested first.
      *
-     * <p>Stale means the user has interacted since their profile was last refreshed, or has no profile
-     * row at all. Comparing against the profile rather than returning the first {@code limit} user IDs
-     * is what keeps the sweep fair: a lexicographic prefix is the same set of users on every run, so
-     * once activity exceeds the batch size everyone past that prefix is never refreshed.
+     * <p>Stale means an interaction within the business-time lookback was ingested after the profile
+     * was last refreshed, or the user has no profile row at all. Comparing against the profile rather
+     * than returning the first {@code limit} user IDs is what keeps the sweep fair: a lexicographic
+     * prefix is the same set of users on every run, so once activity exceeds the batch size everyone
+     * past that prefix is never refreshed.
      */
     List<String> findUserIdsWithInteractionsSince(Instant since, int limit);
 
