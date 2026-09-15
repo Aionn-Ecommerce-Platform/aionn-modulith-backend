@@ -153,7 +153,9 @@ JSON
 http_call POST /api/v1/promotions/campaigns 403 "$ACCESS_TOKEN" "$admin_campaign_body" >/dev/null
 ok "campaign creation without ROLE_SYSTEM_ADMIN rejected with 403"
 
-admin_banner_body='{"title":"E2E","imageUrl":"https://cdn/e2e.png","linkUrl":"https://shop/e2e","displayOrder":1}'
+# imagePublicId is @NotBlank on CreateBannerRequest, and body validation runs before @PreAuthorize.
+# Leaving it out made this assertion measure validation (400) instead of authorization (403).
+admin_banner_body='{"title":"E2E","imageUrl":"https://cdn/e2e.png","imagePublicId":"e2e-banner","linkUrl":"https://shop/e2e","displayOrder":1}'
 http_call POST /api/v1/promotions/banners 403 "$ACCESS_TOKEN" "$admin_banner_body" >/dev/null
 ok "banner creation without admin role rejected with 403"
 

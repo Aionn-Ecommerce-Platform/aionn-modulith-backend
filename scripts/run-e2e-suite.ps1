@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("all", "identity", "catalog", "inventory", "ordering", "payment", "shipping", "promotion", "notification", "chat")]
+    [ValidateSet("all", "identity", "catalog", "inventory", "ordering", "payment", "shipping", "promotion", "notification", "chat", "recommendation")]
     [string]$Module = "all"
 )
 
@@ -13,7 +13,7 @@ Write-Host "Stopping any running gradle daemons..."
 .\gradlew --stop
 
 # 2. Load env files
-Get-Content envs/common.env, envs/identity.env, envs/catalog.env, envs/inventory.env, envs/ordering.env, envs/payment.env, envs/shipping.env, envs/promotion.env, envs/notification.env, envs/chat.env | ForEach-Object {
+Get-Content envs/common.env, envs/identity.env, envs/catalog.env, envs/inventory.env, envs/ordering.env, envs/payment.env, envs/shipping.env, envs/promotion.env, envs/notification.env, envs/chat.env, envs/recommendation.env | ForEach-Object {
     $line = $_.Trim()
     if ($line -and -not $line.StartsWith("#")) {
         if ($line -match "^([^=]+)=(.*)$") {
@@ -41,6 +41,31 @@ $overrides = @{
     "IDENTITY_MEDIA_PROVIDER" = "mock"
     "IDENTITY_KYC_PROVIDER" = "local"
     "FLYWAY_ENABLED" = "true"
+
+    # The suite creates an isolated database per run, but the dev profile adds classpath:db-demo to the
+    # Flyway locations and seeds it with hundreds of demo orders. An order-expiry job then auto-cancels
+    # them at startup, and the outbox dispatcher spends the whole run working through that backlog ahead
+    # of anything the E2E scripts actually produce - so a script waiting on an integration event times
+    # out while the queue is still full of data nobody asked for. application-dev.yml contains nothing
+    # but those locations, and the only profile-gated bean in the codebase is @Profile("prod"), so
+    # running without dev changes nothing except the absence of demo data.
+    "SPRING_PROFILES_ACTIVE" = "e2e"
+
+    # Shorten the recommendation offline-job cadence so a behavioural E2E can observe a profile refresh
+    # inside one run instead of waiting the production fifteen minutes. ShedLock's lockAtLeastFor still
+    # floors the effective period at thirty seconds, so the E2E script polls rather than sleeping once.
+    "RECOMMENDATION_SCHEDULING_PROFILE_REFRESH_DELAY_MS" = "10000"
+    "RECOMMENDATION_SCHEDULING_POPULARITY_DELAY_MS" = "10000"
+    "RECOMMENDATION_SCHEDULING_ITEM_SIMILARITY_DELAY_MS" = "10000"
+
+    # Shorten the recommendation cache TTLs for the same reason. The home slate is cached per user in
+    # Redis for fifteen minutes, so a script that polls for a newly rebuilt profile would keep being
+    # served the slate it cached before the refresh existed. Redis is shared across runs rather than
+    # isolated with the database, which is also why trending - a single shared key - is shortened.
+    "RECOMMENDATION_CACHE_HOME_L1_TTL_SECONDS" = "5"
+    "RECOMMENDATION_CACHE_HOME_L2_TTL_SECONDS" = "5"
+    "RECOMMENDATION_CACHE_TRENDING_L1_TTL_SECONDS" = "5"
+    "RECOMMENDATION_CACHE_TRENDING_L2_TTL_SECONDS" = "5"
 }
 
 foreach ($key in $overrides.Keys) {
@@ -152,7 +177,7 @@ try {
 
     # 5. Run requested module E2E smoke tests and retain every result.
     $modules = @("identity", "catalog", "inventory", "ordering", "payment",
-        "shipping", "promotion", "notification", "chat")
+        "shipping", "promotion", "notification", "chat", "recommendation")
     $results = [System.Collections.Generic.List[object]]::new()
     foreach ($name in $modules) {
         if ($Module -ne "all" -and $Module -ne $name) {
