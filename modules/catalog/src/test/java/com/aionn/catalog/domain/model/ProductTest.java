@@ -90,6 +90,25 @@ class ProductTest {
     }
 
     @Test
+    void defineVariantRejectsNullAttributeValueBeforeMutatingProduct() {
+        Product product = publishableProduct();
+        var originalVariants = List.copyOf(product.variants());
+        var originalUpdatedAt = product.getUpdatedAt();
+        Map<String, String> attributeValues = new java.util.HashMap<>();
+        attributeValues.put("color", null);
+        Money price = Money.of(new BigDecimal("12.00"), "VND");
+        var laterClock = java.time.Clock.fixed(
+                originalUpdatedAt.plusSeconds(60), java.time.ZoneOffset.UTC);
+
+        assertThatThrownBy(() -> product.defineVariant("sku-2", attributeValues, price, laterClock))
+                .isInstanceOf(NullPointerException.class);
+
+        assertThat(product.variants()).containsExactlyElementsOf(originalVariants);
+        assertThat(product.getUpdatedAt()).isEqualTo(originalUpdatedAt);
+        assertThat(product.pullEvents()).isEmpty();
+    }
+
+    @Test
     void defineVariantRejectsDuplicateSkuId() {
         Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
         product.defineVariant("sku-1", Map.of("color", "red"),

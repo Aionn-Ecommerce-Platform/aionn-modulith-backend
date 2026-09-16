@@ -108,7 +108,8 @@ public class Product extends AggregateRoot {
         // either as an empty map or by omitting the field altogether. ProductVariant normalises null for
         // storage, but the event payload below copies the raw argument, so without this the omitted form
         // stored the variant fine and then failed the request while publishing its event.
-        Map<String, String> normalizedAttributes = attributeValues == null ? Map.of() : attributeValues;
+        Map<String, String> normalizedAttributes =
+                attributeValues == null ? Map.of() : Map.copyOf(attributeValues);
         for (ProductVariant existing : variants) {
             Guard.require(!existing.skuId().equals(skuId),
                     () -> new CatalogException(CatalogErrorCode.PRODUCT_VARIANT_DUPLICATE,
