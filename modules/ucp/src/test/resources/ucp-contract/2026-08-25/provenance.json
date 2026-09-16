@@ -1,0 +1,16 @@
+{
+  "protocol_version": "2026-08-25",
+  "source_repository": "https://github.com/Universal-Commerce-Protocol/ucp",
+  "source_tag": "v2026-08-25",
+  "source_commit": "cd78fb38e819de77d9b527d110476eccb876f1bd",
+  "license_file": "LICENSE",
+  "source_directories": [
+    "source/schemas",
+    "source/services/common/rest.openapi.json",
+    "source/services/shopping/rest.openapi.json",
+    "scripts/scaffolds"
+  ],
+  "reference_validator_repository": "https://github.com/Universal-Commerce-Protocol/ucp-schema",
+  "reference_validator_commit": "a0fc4fc189add7da533c981bdb3d8a36950e0602",
+  "scope": "Offline contract and fixture inventory only. These resources are not registered with the discovery runtime validator and do not advertise or implement any UCP commerce capability."
+}

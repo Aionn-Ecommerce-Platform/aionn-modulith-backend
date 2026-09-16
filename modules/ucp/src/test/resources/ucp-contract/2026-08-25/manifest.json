@@ -1,0 +1,735 @@
+{
+  "protocol_version": "2026-08-25",
+  "source_repository": "https://github.com/Universal-Commerce-Protocol/ucp",
+  "source_tag": "v2026-08-25",
+  "source_commit": "cd78fb38e819de77d9b527d110476eccb876f1bd",
+  "license_file": "LICENSE",
+  "files": [
+    {
+      "path": "LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "source_path": "LICENSE"
+    },
+    {
+      "path": "scaffolds/common_location_lookup_request.json",
+      "sha256": "4d60e6bdca25bf607fb3f96c39097725f31237a5cc68fab2c8df640403b33990",
+      "source_path": "scripts/scaffolds/common_location_lookup_request.json"
+    },
+    {
+      "path": "scaffolds/common_location_lookup_response.json",
+      "sha256": "1cd64356351f76294e67d7a663fd28f61ebb64937669ba2d8a4d274ecdf1a690",
+      "source_path": "scripts/scaffolds/common_location_lookup_response.json"
+    },
+    {
+      "path": "scaffolds/common_location_search_request.json",
+      "sha256": "80850df9c2d50c95b4bd4f2bdedd99e577130278a7e5550d6a9e74653449e309",
+      "source_path": "scripts/scaffolds/common_location_search_request.json"
+    },
+    {
+      "path": "scaffolds/common_location_search_response.json",
+      "sha256": "1cd64356351f76294e67d7a663fd28f61ebb64937669ba2d8a4d274ecdf1a690",
+      "source_path": "scripts/scaffolds/common_location_search_response.json"
+    },
+    {
+      "path": "scaffolds/common_payment_authentication_response.json",
+      "sha256": "0efe22f1da0f9143d926bbe30509b2b1bc45faae29b1b3d1b5b0a179241b1c41",
+      "source_path": "scripts/scaffolds/common_payment_authentication_response.json"
+    },
+    {
+      "path": "scaffolds/profile_response.json",
+      "sha256": "e0e21f9c77ee216fddb6eeefe988a2ce906743b2153d28f544d9889d7c035265",
+      "source_path": "scripts/scaffolds/profile_response.json"
+    },
+    {
+      "path": "scaffolds/shopping_cart_request_create.json",
+      "sha256": "8a71ab58b1ea2eb991dc691b16bf42f97adbe509b1f5e1a654b689e13856365d",
+      "source_path": "scripts/scaffolds/shopping_cart_request_create.json"
+    },
+    {
+      "path": "scaffolds/shopping_cart_request_update.json",
+      "sha256": "8a71ab58b1ea2eb991dc691b16bf42f97adbe509b1f5e1a654b689e13856365d",
+      "source_path": "scripts/scaffolds/shopping_cart_request_update.json"
+    },
+    {
+      "path": "scaffolds/shopping_cart_response.json",
+      "sha256": "c812929762e8303de71f6403f809e7065601b79d7c9f98c3fa21384779dfe157",
+      "source_path": "scripts/scaffolds/shopping_cart_response.json"
+    },
+    {
+      "path": "scaffolds/shopping_catalog_lookup_request.json",
+      "sha256": "4d60e6bdca25bf607fb3f96c39097725f31237a5cc68fab2c8df640403b33990",
+      "source_path": "scripts/scaffolds/shopping_catalog_lookup_request.json"
+    },
+    {
+      "path": "scaffolds/shopping_catalog_lookup_request_get_product.json",
+      "sha256": "4b775555fda882f6d4f50e3fe1b7b0fb1d15548a96639d8e3a335aa78d4e61cd",
+      "source_path": "scripts/scaffolds/shopping_catalog_lookup_request_get_product.json"
+    },
+    {
+      "path": "scaffolds/shopping_catalog_lookup_response.json",
+      "sha256": "2a1984d288c9e0728afa1dd8e556a30b9ebdc81b43cde5fc256c538d9da60f49",
+      "source_path": "scripts/scaffolds/shopping_catalog_lookup_response.json"
+    },
+    {
+      "path": "scaffolds/shopping_catalog_lookup_response_get_product.json",
+      "sha256": "d00597ae760d387c684d46d8ebb6026cb198331640fd2ce46e622db9a670ed0b",
+      "source_path": "scripts/scaffolds/shopping_catalog_lookup_response_get_product.json"
+    },
+    {
+      "path": "scaffolds/shopping_catalog_search_request.json",
+      "sha256": "80850df9c2d50c95b4bd4f2bdedd99e577130278a7e5550d6a9e74653449e309",
+      "source_path": "scripts/scaffolds/shopping_catalog_search_request.json"
+    },
+    {
+      "path": "scaffolds/shopping_catalog_search_response.json",
+      "sha256": "2a1984d288c9e0728afa1dd8e556a30b9ebdc81b43cde5fc256c538d9da60f49",
+      "source_path": "scripts/scaffolds/shopping_catalog_search_response.json"
+    },
+    {
+      "path": "scaffolds/shopping_checkout_request_complete.json",
+      "sha256": "203f08e6670488d948c1bbb7bbcca89a1536d9b527924980f5594f73dbec502f",
+      "source_path": "scripts/scaffolds/shopping_checkout_request_complete.json"
+    },
+    {
+      "path": "scaffolds/shopping_checkout_request_create.json",
+      "sha256": "8a71ab58b1ea2eb991dc691b16bf42f97adbe509b1f5e1a654b689e13856365d",
+      "source_path": "scripts/scaffolds/shopping_checkout_request_create.json"
+    },
+    {
+      "path": "scaffolds/shopping_checkout_request_update.json",
+      "sha256": "8a71ab58b1ea2eb991dc691b16bf42f97adbe509b1f5e1a654b689e13856365d",
+      "source_path": "scripts/scaffolds/shopping_checkout_request_update.json"
+    },
+    {
+      "path": "scaffolds/shopping_checkout_response.json",
+      "sha256": "02c38f4284bde5c082cb594d59fe48865d4d33dd8009063264ba4e49719e6c15",
+      "source_path": "scripts/scaffolds/shopping_checkout_response.json"
+    },
+    {
+      "path": "scaffolds/shopping_order_response.json",
+      "sha256": "4f394178a3f82329d68f7c6f44fa3c736e9b7d51fd8771981da618038e82ea1b",
+      "source_path": "scripts/scaffolds/shopping_order_response.json"
+    },
+    {
+      "path": "scaffolds/shopping_types_error_response_response.json",
+      "sha256": "140c7510295100fc455dd8defb50b9b1eafd66132a7552069d9ac5e8afdad620",
+      "source_path": "scripts/scaffolds/shopping_types_error_response_response.json"
+    },
+    {
+      "path": "scaffolds/shopping_types_order_line_item_response.json",
+      "sha256": "52624751154046d8b9092536a18b3911f23a1040665f703db7783cb0cd799b4e",
+      "source_path": "scripts/scaffolds/shopping_types_order_line_item_response.json"
+    },
+    {
+      "path": "scaffolds/ucp_response.json",
+      "sha256": "7036d8c136dd6dae632beeb15488c879464447d8fc549071b6c6dcfb792628ac",
+      "source_path": "scripts/scaffolds/ucp_response.json"
+    },
+    {
+      "path": "schemas/capability.json",
+      "sha256": "2bbed66b5adbc3d77d3b5e0c9e87687da3d8bf159755ba95d89e88cd3420ef39",
+      "source_path": "source/schemas/capability.json"
+    },
+    {
+      "path": "schemas/common/identity_linking.json",
+      "sha256": "b5f5c94ab9643e316b70c9fa5667a479d2175a380d043e34186df650eb9edaf0",
+      "source_path": "source/schemas/common/identity_linking.json"
+    },
+    {
+      "path": "schemas/common/location_lookup.json",
+      "sha256": "3f2e9a0b0a8a30177313be9010c9b363afecc53c91c9a98ccd49345f74da15cb",
+      "source_path": "source/schemas/common/location_lookup.json"
+    },
+    {
+      "path": "schemas/common/location_search.json",
+      "sha256": "9c6f3719c7e4f8e4653b8a843aac810bf1aaac06a8e1142326f79adc8aac215b",
+      "source_path": "source/schemas/common/location_search.json"
+    },
+    {
+      "path": "schemas/common/loyalty.json",
+      "sha256": "cdb57bc7ef34ca24915ee5da695cf517e0adaf4a72b8614eede35d688f073c8a",
+      "source_path": "source/schemas/common/loyalty.json"
+    },
+    {
+      "path": "schemas/common/payment_ap2_mandate.json",
+      "sha256": "538db950d4220033ae7af654654aa6f7f45af17718119ddb10af551b2461fccd",
+      "source_path": "source/schemas/common/payment_ap2_mandate.json"
+    },
+    {
+      "path": "schemas/common/payment_authentication.json",
+      "sha256": "8fc89641bb98be5d6fdbb25840f5240422937d6def66c6bf1b2ef6b9383599bd",
+      "source_path": "source/schemas/common/payment_authentication.json"
+    },
+    {
+      "path": "schemas/common/payment_split_payments.json",
+      "sha256": "2b03fae6d4659dddd0b8235ac3b423d36dd078d28b1c05eff592eeb28bced77b",
+      "source_path": "source/schemas/common/payment_split_payments.json"
+    },
+    {
+      "path": "schemas/common/payment_terms.json",
+      "sha256": "50cc696e2f57274863138948d72ecbcd231f999e275085f2e3fc697ec1f9507a",
+      "source_path": "source/schemas/common/payment_terms.json"
+    },
+    {
+      "path": "schemas/common/types/actions.json",
+      "sha256": "7cf21d6c8652893b5d2865062a487f1818e81733fc030f6628479a257e3f8a82",
+      "source_path": "source/schemas/common/types/actions.json"
+    },
+    {
+      "path": "schemas/common/types/amenity_type.json",
+      "sha256": "98c9408f7a2ac7f9642e8ffb0021f5f5114a11130a537651e6b87b3d016d5251",
+      "source_path": "source/schemas/common/types/amenity_type.json"
+    },
+    {
+      "path": "schemas/common/types/amount.json",
+      "sha256": "787b78fad4d3c7456b834b4d5d068676ab3c3110ea857b02b6ad5c8ef8a9f179",
+      "source_path": "source/schemas/common/types/amount.json"
+    },
+    {
+      "path": "schemas/common/types/available_payment_instrument.json",
+      "sha256": "d32ca30a463a647a53c806d8ee236be739741f015db9ba0ab13f4b67003f6507",
+      "source_path": "source/schemas/common/types/available_payment_instrument.json"
+    },
+    {
+      "path": "schemas/common/types/binding.json",
+      "sha256": "3fdbd27215b630ca62b9681cb51a790a5bfaeea101c4b77440198adbf410cd43",
+      "source_path": "source/schemas/common/types/binding.json"
+    },
+    {
+      "path": "schemas/common/types/business_split_payments_config.json",
+      "sha256": "6c5a765a06f39bb0d23637084deba0198db13a02804ef7da2cf8193325a2bf7f",
+      "source_path": "source/schemas/common/types/business_split_payments_config.json"
+    },
+    {
+      "path": "schemas/common/types/card_credential.json",
+      "sha256": "82813fd87b3f5f35dc9dcf3db613ab56c4c2dcb95b9c26ddadaf5db6926baaff",
+      "source_path": "source/schemas/common/types/card_credential.json"
+    },
+    {
+      "path": "schemas/common/types/card_payment_instrument.json",
+      "sha256": "2105d8e7b1affeae909dc5c4a827d19b772e6c31be0c667c812f26d88865317e",
+      "source_path": "source/schemas/common/types/card_payment_instrument.json"
+    },
+    {
+      "path": "schemas/common/types/constraint_expression.json",
+      "sha256": "8c0fcbfabc3f8038c89a86b7f6b9fa32c2754eba727328c6d90062584855ade2",
+      "source_path": "source/schemas/common/types/constraint_expression.json"
+    },
+    {
+      "path": "schemas/common/types/context.json",
+      "sha256": "ebb18d8833e1a1e9c24bd578999d5c8cd730c277f9f0b29495cc3ee34535d0b3",
+      "source_path": "source/schemas/common/types/context.json"
+    },
+    {
+      "path": "schemas/common/types/daily_hour.json",
+      "sha256": "a093fa938ac0662c84c8975573f2a83fbabee8a5a612d99a72fa43cf2a0ee3df",
+      "source_path": "source/schemas/common/types/daily_hour.json"
+    },
+    {
+      "path": "schemas/common/types/description.json",
+      "sha256": "9c509e8ecc47ad408ee36b940cf836cd16525f773b3eb2b4a37d0ddcbaeb6380",
+      "source_path": "source/schemas/common/types/description.json"
+    },
+    {
+      "path": "schemas/common/types/error_code.json",
+      "sha256": "9368a4ad6d9a2a448c05b97baf7aa4a73a04efcf40d624a5d373ecc3f67a530c",
+      "source_path": "source/schemas/common/types/error_code.json"
+    },
+    {
+      "path": "schemas/common/types/error_response.json",
+      "sha256": "76a5b9a643132c33dc4bca947a7b0c26a8523ab6c8fd1a43141d5aeac0be2b94",
+      "source_path": "source/schemas/common/types/error_response.json"
+    },
+    {
+      "path": "schemas/common/types/exception_hour.json",
+      "sha256": "6c127e81823917833f4d9b853c03bb90be7bb52390cd61a574e9449d7930c933",
+      "source_path": "source/schemas/common/types/exception_hour.json"
+    },
+    {
+      "path": "schemas/common/types/geo.json",
+      "sha256": "75bf6c526e71da3d08ac8d4b53becf5be8312fa0f6b399922e6662690276d893",
+      "source_path": "source/schemas/common/types/geo.json"
+    },
+    {
+      "path": "schemas/common/types/info_code.json",
+      "sha256": "6ed9aec01e8fc597dc676e38dbd240684d120c831a2398648c6bd5d6e73fe38c",
+      "source_path": "source/schemas/common/types/info_code.json"
+    },
+    {
+      "path": "schemas/common/types/instrument_group.json",
+      "sha256": "2f8f7913399c5e40a850c68d6cb256cc0148732466f086e83d4bf2ba423765d3",
+      "source_path": "source/schemas/common/types/instrument_group.json"
+    },
+    {
+      "path": "schemas/common/types/link.json",
+      "sha256": "a2bf68aa18f036c1b03b31ee77ddd2448f5ac2a4251b62a2e6db42daba62eaa8",
+      "source_path": "source/schemas/common/types/link.json"
+    },
+    {
+      "path": "schemas/common/types/locality.json",
+      "sha256": "f2062b6c3ca6991682000f4f4c5f40457c36056a19d5aafcd2de1d9a5daa74eb",
+      "source_path": "source/schemas/common/types/locality.json"
+    },
+    {
+      "path": "schemas/common/types/location.json",
+      "sha256": "40787cbaea7020a14a4bfa4493c1850d86f01eb7d27c98d265ca89da442e0a17",
+      "source_path": "source/schemas/common/types/location.json"
+    },
+    {
+      "path": "schemas/common/types/location_distance.json",
+      "sha256": "8a80f4a39e4486f21ba9cfb9075243ab613c2968b47c656452331a379983cc67",
+      "source_path": "source/schemas/common/types/location_distance.json"
+    },
+    {
+      "path": "schemas/common/types/location_filter.json",
+      "sha256": "1251b25e6493dbe4e2d854e3f6bdbf0e79cae629c1495e55c1d0cef1c72ec336",
+      "source_path": "source/schemas/common/types/location_filter.json"
+    },
+    {
+      "path": "schemas/common/types/location_serves.json",
+      "sha256": "0166f92abaf979f6cda8dd3c1f76280a35672de295ca2534cf3150cd507d8d28",
+      "source_path": "source/schemas/common/types/location_serves.json"
+    },
+    {
+      "path": "schemas/common/types/location_summary.json",
+      "sha256": "03fe88751f500d242fe50ecb80b1486b6bf466f39eead60ea22d04552aeb6425",
+      "source_path": "source/schemas/common/types/location_summary.json"
+    },
+    {
+      "path": "schemas/common/types/measure.json",
+      "sha256": "dfcbe1ada0d058ea95459e59a08056a1f613550023c15d5182beaba685f82a47",
+      "source_path": "source/schemas/common/types/measure.json"
+    },
+    {
+      "path": "schemas/common/types/media.json",
+      "sha256": "d277e2c4f26a6d8f86d57066397b14cb9d78c9ff098b308ab2140f90c027c3fc",
+      "source_path": "source/schemas/common/types/media.json"
+    },
+    {
+      "path": "schemas/common/types/message.json",
+      "sha256": "a66251758e5646743b0a3986434b277da6f52e181d21671bd3ad7fd75ab34339",
+      "source_path": "source/schemas/common/types/message.json"
+    },
+    {
+      "path": "schemas/common/types/message_error.json",
+      "sha256": "de0a584b67405c3b608ec4426c0badfda7be97e0419a60b9100abf67d04c74eb",
+      "source_path": "source/schemas/common/types/message_error.json"
+    },
+    {
+      "path": "schemas/common/types/message_info.json",
+      "sha256": "56894c75128861b2fc696757fb0193ee9cd4d9bfcdcdb18902c4cdb41e04796b",
+      "source_path": "source/schemas/common/types/message_info.json"
+    },
+    {
+      "path": "schemas/common/types/message_warning.json",
+      "sha256": "0a479161db91d35bc6c20b9db389188c3d7b298a643cb4f8e3079dc67c5aefbf",
+      "source_path": "source/schemas/common/types/message_warning.json"
+    },
+    {
+      "path": "schemas/common/types/network_token_credential.json",
+      "sha256": "9e31dfaa27aa3a05080b40960effd975d104b905b836bcb91ca89d1b392ee499",
+      "source_path": "source/schemas/common/types/network_token_credential.json"
+    },
+    {
+      "path": "schemas/common/types/pagination.json",
+      "sha256": "8e86e9d65cce61b049ba5d32e674706e64eabc9e3658dd8ef101efadaba8a9a8",
+      "source_path": "source/schemas/common/types/pagination.json"
+    },
+    {
+      "path": "schemas/common/types/pan_credential.json",
+      "sha256": "091ae8ee0221162466fea5ef90d009c7fb6538290755b35c9266f23e6cbf5ae1",
+      "source_path": "source/schemas/common/types/pan_credential.json"
+    },
+    {
+      "path": "schemas/common/types/payment.json",
+      "sha256": "b6543bbdd4ecce91e1a5192fce4af1910570811901b755eebdcbf227dbdd0579",
+      "source_path": "source/schemas/common/types/payment.json"
+    },
+    {
+      "path": "schemas/common/types/payment_credential.json",
+      "sha256": "47af578c9af0d585b2225c03037c116c880a1539826e77e6c9cdf741494392d3",
+      "source_path": "source/schemas/common/types/payment_credential.json"
+    },
+    {
+      "path": "schemas/common/types/payment_identity.json",
+      "sha256": "ddc7ee23ddfa054a218fed706abf2a516a40a6394d4ed77f5ccf2531e402da0b",
+      "source_path": "source/schemas/common/types/payment_identity.json"
+    },
+    {
+      "path": "schemas/common/types/payment_instrument.json",
+      "sha256": "d005c3ccb38afa7fab7e0d72e125fcf7f78b7b6b196d4096d6c558f6f3174222",
+      "source_path": "source/schemas/common/types/payment_instrument.json"
+    },
+    {
+      "path": "schemas/common/types/payment_schedule.json",
+      "sha256": "b144fc47b3f0a07391482427544e120d8efb0dd3f121f60b5820aa6a46f34bee",
+      "source_path": "source/schemas/common/types/payment_schedule.json"
+    },
+    {
+      "path": "schemas/common/types/payment_term.json",
+      "sha256": "7840ac5e206bbd5077b0c3e7e74219dba8a5a09512b504a4f20739d60a2335a9",
+      "source_path": "source/schemas/common/types/payment_term.json"
+    },
+    {
+      "path": "schemas/common/types/policy.json",
+      "sha256": "bd2ace0b58b81b25f3d98f527237e2de72412db65fb218a5f41c9fae748e8c71",
+      "source_path": "source/schemas/common/types/policy.json"
+    },
+    {
+      "path": "schemas/common/types/postal_address.json",
+      "sha256": "6ee3504a2a53a16df406e80c62d80b7353dff088dd3de5b770292c89bc5137ca",
+      "source_path": "source/schemas/common/types/postal_address.json"
+    },
+    {
+      "path": "schemas/common/types/price.json",
+      "sha256": "a625ac12ece594ceb36009bb5bbdef4a57f7620c21a8df3f50fc1930f84906a1",
+      "source_path": "source/schemas/common/types/price.json"
+    },
+    {
+      "path": "schemas/common/types/price_filter.json",
+      "sha256": "f3add5694735f5845759767de30ea0f5a3876d5975f8e6f7f382f29c2eec5e81",
+      "source_path": "source/schemas/common/types/price_filter.json"
+    },
+    {
+      "path": "schemas/common/types/price_range.json",
+      "sha256": "1b225321ebd52b9c206c03a80d256ce9dccffee727e542eb0c3da00b0d5a0db1",
+      "source_path": "source/schemas/common/types/price_range.json"
+    },
+    {
+      "path": "schemas/common/types/quantity_unit.json",
+      "sha256": "a314c84ebcf8b12b10cf3f15c067fe164a3eeb13a57b5769b5c50e69f20494da",
+      "source_path": "source/schemas/common/types/quantity_unit.json"
+    },
+    {
+      "path": "schemas/common/types/request_constraints.json",
+      "sha256": "987eaa192930a0ea8d1c7b6a7cc947153e1d9da32b46d61aa49eaf782c166edf",
+      "source_path": "source/schemas/common/types/request_constraints.json"
+    },
+    {
+      "path": "schemas/common/types/reverse_domain_name.json",
+      "sha256": "a5d616402d47c602196e6e455053ee3683bc9a6e90192330297bb13abd3326eb",
+      "source_path": "source/schemas/common/types/reverse_domain_name.json"
+    },
+    {
+      "path": "schemas/common/types/signals.json",
+      "sha256": "47c8bbee51fcfbb9f029656881126dda036830206eb8d41f37be0c257e7a87d2",
+      "source_path": "source/schemas/common/types/signals.json"
+    },
+    {
+      "path": "schemas/common/types/signed_amount.json",
+      "sha256": "b892a84dbefd07204d251c2546c638d5a376a8ca673f3e422b913ba22b3d64c9",
+      "source_path": "source/schemas/common/types/signed_amount.json"
+    },
+    {
+      "path": "schemas/common/types/time_interval.json",
+      "sha256": "4d196d96cfbca6dc29f9268aeb5f55399ad151b8f4a578239e466505312fd557",
+      "source_path": "source/schemas/common/types/time_interval.json"
+    },
+    {
+      "path": "schemas/common/types/token_credential.json",
+      "sha256": "d46f57502f02075dc3beef25834babff9b80b7ada4cff6fbf5f5ae070baaa92c",
+      "source_path": "source/schemas/common/types/token_credential.json"
+    },
+    {
+      "path": "schemas/common/types/total.json",
+      "sha256": "2d8618d61f31ca03a9a59362bae9c56744906d9db447b73a6222909b0e1850e4",
+      "source_path": "source/schemas/common/types/total.json"
+    },
+    {
+      "path": "schemas/common/types/totals.json",
+      "sha256": "488a51268c0cf02de1b02e53219b542a695c7c1e239ca66db77c3916dfa0b449",
+      "source_path": "source/schemas/common/types/totals.json"
+    },
+    {
+      "path": "schemas/common/types/unit.json",
+      "sha256": "dc516d36c80edfb44347f4d5d6f39c40b1a14ebbba40ee5dc73ec3394397db82",
+      "source_path": "source/schemas/common/types/unit.json"
+    },
+    {
+      "path": "schemas/common/types/warning_code.json",
+      "sha256": "4246be713f15be3e8adfb0ffd9ebb984a216f1db2c1c9c059466e5b49ecb97d9",
+      "source_path": "source/schemas/common/types/warning_code.json"
+    },
+    {
+      "path": "schemas/payment_handler.json",
+      "sha256": "5ea09bb44a6dd5a7696150e220eae2b3b4a8eacda176793fb816a9f8240a50a6",
+      "source_path": "source/schemas/payment_handler.json"
+    },
+    {
+      "path": "schemas/profile.json",
+      "sha256": "720a4e676bd4aaa5cbdcef2f89a4d0b776c4f0e141f1911da7514227ecb5c239",
+      "source_path": "source/schemas/profile.json"
+    },
+    {
+      "path": "schemas/service.json",
+      "sha256": "4f8453ee67d82d53f05b06fb7ea03dec0e0600faea1098b3184b71cdf0fc2423",
+      "source_path": "source/schemas/service.json"
+    },
+    {
+      "path": "schemas/shopping/buyer_consent.json",
+      "sha256": "eb8bd57886305d1a48d53c8757f613550050cbc0f9f1cad632905b8821dc41b0",
+      "source_path": "source/schemas/shopping/buyer_consent.json"
+    },
+    {
+      "path": "schemas/shopping/cart.json",
+      "sha256": "327170d810076424a925b400cb6c14f2fbc52088d76185badff5dc046e658aec",
+      "source_path": "source/schemas/shopping/cart.json"
+    },
+    {
+      "path": "schemas/shopping/catalog_lookup.json",
+      "sha256": "79c685132dcbf09b66e60535e372bb36acc75fede9a32c49aa0e1cc263a7f8df",
+      "source_path": "source/schemas/shopping/catalog_lookup.json"
+    },
+    {
+      "path": "schemas/shopping/catalog_search.json",
+      "sha256": "3cf62e8d2330480400ea99d139bd4986f65743bc618247ab8e9d14da00a30e9d",
+      "source_path": "source/schemas/shopping/catalog_search.json"
+    },
+    {
+      "path": "schemas/shopping/checkout.json",
+      "sha256": "1a856fabbe86e031baab0c35745cb0b44481da29a2075ee1e73f720e6337204d",
+      "source_path": "source/schemas/shopping/checkout.json"
+    },
+    {
+      "path": "schemas/shopping/discount.json",
+      "sha256": "e0bb3853781e04f4874b3dc2e8ca4c49215c54e487769c1450898150909b52fc",
+      "source_path": "source/schemas/shopping/discount.json"
+    },
+    {
+      "path": "schemas/shopping/fulfillment.json",
+      "sha256": "d0306c8d47d4bee95889d2fc043de0d6086e34303a52ae00b9d42546a6d99a6f",
+      "source_path": "source/schemas/shopping/fulfillment.json"
+    },
+    {
+      "path": "schemas/shopping/order.json",
+      "sha256": "1bd0951273ba69ab40e91f12c3e2d74652e190d339282292efab3593cca123ed",
+      "source_path": "source/schemas/shopping/order.json"
+    },
+    {
+      "path": "schemas/shopping/permalink.json",
+      "sha256": "ff7cd079d018b0eb409e8a0138f4c5b343518e9d7d1d612d26e7589405d7def7",
+      "source_path": "source/schemas/shopping/permalink.json"
+    },
+    {
+      "path": "schemas/shopping/types/adjustment.json",
+      "sha256": "06bb707c736fd20643a35e1df4200bd5069d4ceeca731302c288f8bcd64a338a",
+      "source_path": "source/schemas/shopping/types/adjustment.json"
+    },
+    {
+      "path": "schemas/shopping/types/attribution.json",
+      "sha256": "c65756a97aef7b9c61b1ed4364c347f278a765242777bbf42515f83ac14db0ea",
+      "source_path": "source/schemas/shopping/types/attribution.json"
+    },
+    {
+      "path": "schemas/shopping/types/availability.json",
+      "sha256": "268f1e083ea2f933f61472985ced4cfa91265c9548f69fafc3a76d914906c4a6",
+      "source_path": "source/schemas/shopping/types/availability.json"
+    },
+    {
+      "path": "schemas/shopping/types/business_fulfillment_config.json",
+      "sha256": "815d92809de00c90551a9d56bf755e6532aa04b6ca1698522272cbe015615fa0",
+      "source_path": "source/schemas/shopping/types/business_fulfillment_config.json"
+    },
+    {
+      "path": "schemas/shopping/types/buyer.json",
+      "sha256": "24075ff053a9bc87f1b8b27fd2125df2035a7a22a35a784a58fe9b95a66d8cdb",
+      "source_path": "source/schemas/shopping/types/buyer.json"
+    },
+    {
+      "path": "schemas/shopping/types/category.json",
+      "sha256": "13e7629270c910c77bfe328f158adc0899ad0636289ea9429805d7422112cdf8",
+      "source_path": "source/schemas/shopping/types/category.json"
+    },
+    {
+      "path": "schemas/shopping/types/detail_option_value.json",
+      "sha256": "cc2deac3ec8c8c18249241e1a37cb0791221759fdee582c68069a0424979e403",
+      "source_path": "source/schemas/shopping/types/detail_option_value.json"
+    },
+    {
+      "path": "schemas/shopping/types/expectation.json",
+      "sha256": "2da205e383d582c345513d082ef9cd82799f95bce5416674dc7231a068349709",
+      "source_path": "source/schemas/shopping/types/expectation.json"
+    },
+    {
+      "path": "schemas/shopping/types/fulfillment.json",
+      "sha256": "bc27ac093d47902f2b884e59f1fd01ccf64e8bc4b0c4e48b4afebe7999325d49",
+      "source_path": "source/schemas/shopping/types/fulfillment.json"
+    },
+    {
+      "path": "schemas/shopping/types/fulfillment_available_method.json",
+      "sha256": "1fd7eb09ea6a04a67fcd9cff091bf9c6cf5b3869f76a45c9c057314fd20003ce",
+      "source_path": "source/schemas/shopping/types/fulfillment_available_method.json"
+    },
+    {
+      "path": "schemas/shopping/types/fulfillment_destination.json",
+      "sha256": "f39d0b5269b52dda5ee04b3bda4b23f1ccb2259d6208df9c8b2ba543551e5df9",
+      "source_path": "source/schemas/shopping/types/fulfillment_destination.json"
+    },
+    {
+      "path": "schemas/shopping/types/fulfillment_destination_filter.json",
+      "sha256": "3c217586884f9ff1aab26d1f0ccf33a662e4908ab257c7000d92dc02fb4185ce",
+      "source_path": "source/schemas/shopping/types/fulfillment_destination_filter.json"
+    },
+    {
+      "path": "schemas/shopping/types/fulfillment_event.json",
+      "sha256": "ea135343c71569bf18468a4dcede5f4f50b0055e5bd062bb36326b34fdc0faeb",
+      "source_path": "source/schemas/shopping/types/fulfillment_event.json"
+    },
+    {
+      "path": "schemas/shopping/types/fulfillment_group.json",
+      "sha256": "23f74d66b15f7f43312c7c3bb09c5fbbaa7b6cd62d173bbbb1a27cc6c001a4fc",
+      "source_path": "source/schemas/shopping/types/fulfillment_group.json"
+    },
+    {
+      "path": "schemas/shopping/types/fulfillment_method.json",
+      "sha256": "5cf7b01b56ab3ed584c54d9bcf995b7ae01e85de6b11ba9d4526a57a8f536927",
+      "source_path": "source/schemas/shopping/types/fulfillment_method.json"
+    },
+    {
+      "path": "schemas/shopping/types/fulfillment_option.json",
+      "sha256": "e075730334e41549af1c7cd3846943ad1bd3f94cb4c40bba5bc5ad5aaff014df",
+      "source_path": "source/schemas/shopping/types/fulfillment_option.json"
+    },
+    {
+      "path": "schemas/shopping/types/fulfillment_option_base.json",
+      "sha256": "6f9d8ae9d79cd3d5dc0ae20a1d75761f53054c3fab265527bedaececaded7cca",
+      "source_path": "source/schemas/shopping/types/fulfillment_option_base.json"
+    },
+    {
+      "path": "schemas/shopping/types/input_correlation.json",
+      "sha256": "27a7da5dd86ce92b778591379bc8c9fc4376f123ea0b139cc55883221fb31b22",
+      "source_path": "source/schemas/shopping/types/input_correlation.json"
+    },
+    {
+      "path": "schemas/shopping/types/item.json",
+      "sha256": "0c5ef0d419484ade4a07d4e4193754ee7ab46ffebe4cb6ccfb70ca4afc8c7dab",
+      "source_path": "source/schemas/shopping/types/item.json"
+    },
+    {
+      "path": "schemas/shopping/types/line_item.json",
+      "sha256": "0c968bf0360f1c6b753e4ae45f4ae18bb6fd29aa24e50cfbb117151f18d0adbf",
+      "source_path": "source/schemas/shopping/types/line_item.json"
+    },
+    {
+      "path": "schemas/shopping/types/location_destination.json",
+      "sha256": "6ca78514d2258a7b4a62ba6403526177277467ccbe5625124f7d8e160eefd9cc",
+      "source_path": "source/schemas/shopping/types/location_destination.json"
+    },
+    {
+      "path": "schemas/shopping/types/option_value.json",
+      "sha256": "8c128790c5604c1d38b10290e5fe29571018ce891476b9644c680dfff96634e0",
+      "source_path": "source/schemas/shopping/types/option_value.json"
+    },
+    {
+      "path": "schemas/shopping/types/order_confirmation.json",
+      "sha256": "6f030ce24e438760ae8db0decbfe7ddd9ce6c9b0254c6b81956151a5042f4027",
+      "source_path": "source/schemas/shopping/types/order_confirmation.json"
+    },
+    {
+      "path": "schemas/shopping/types/order_line_item.json",
+      "sha256": "ad9dd2f4fea9f04077c990aa3548b8aed77179ee990538be9adc707ffb04f0c3",
+      "source_path": "source/schemas/shopping/types/order_line_item.json"
+    },
+    {
+      "path": "schemas/shopping/types/platform_fulfillment_config.json",
+      "sha256": "d5276726200e2fcebad60394cbd97314f59a335cd044fde3b1c981b52103edc3",
+      "source_path": "source/schemas/shopping/types/platform_fulfillment_config.json"
+    },
+    {
+      "path": "schemas/shopping/types/product.json",
+      "sha256": "a3a4174515e050ed1ddf273c2fb4b1c72e36336c1bbcff05976f9245408c488c",
+      "source_path": "source/schemas/shopping/types/product.json"
+    },
+    {
+      "path": "schemas/shopping/types/product_option.json",
+      "sha256": "30c7ebe59f9d49e8a259e2aecc4f6b814fdfbd755a8abdcc5524f4940aa85180",
+      "source_path": "source/schemas/shopping/types/product_option.json"
+    },
+    {
+      "path": "schemas/shopping/types/rating.json",
+      "sha256": "3d9ea28f3b90edefe7b3aa042ccf559643e88e0efe1843b78fa30dea174214af",
+      "source_path": "source/schemas/shopping/types/rating.json"
+    },
+    {
+      "path": "schemas/shopping/types/search_filters.json",
+      "sha256": "18d73e8c3ca57306ded19d425aae45cd38eff150e2abe5cd2ccaada32a5abba3",
+      "source_path": "source/schemas/shopping/types/search_filters.json"
+    },
+    {
+      "path": "schemas/shopping/types/selected_option.json",
+      "sha256": "6b677befedce83b4203800166536d842744267500b3425379267aad8111d298b",
+      "source_path": "source/schemas/shopping/types/selected_option.json"
+    },
+    {
+      "path": "schemas/shopping/types/shipping_destination.json",
+      "sha256": "c7907026ef03a1dca9ebbbb3d6161cb5048a6930c9e09988d1d980ed245d8a9a",
+      "source_path": "source/schemas/shopping/types/shipping_destination.json"
+    },
+    {
+      "path": "schemas/shopping/types/unit_price.json",
+      "sha256": "85a40131603889a5aa3807c67a252e556845a274283cd684e09e89dd5604a3b0",
+      "source_path": "source/schemas/shopping/types/unit_price.json"
+    },
+    {
+      "path": "schemas/shopping/types/variant.json",
+      "sha256": "7f742fcacae92a5ccbfb6c04e1ca22815d1864f7c32599f76d12bcd2ed26544c",
+      "source_path": "source/schemas/shopping/types/variant.json"
+    },
+    {
+      "path": "schemas/transports/a2a_message.json",
+      "sha256": "be476c5b247a5c37daf8da83184ffbaf83e255631a99f3d2870edb278f43e438",
+      "source_path": "source/schemas/transports/a2a_message.json"
+    },
+    {
+      "path": "schemas/transports/embedded_config.json",
+      "sha256": "00381600d1d5b6ce832499c00712f6192b12674b3c2c833420c0e9d3f8f196a2",
+      "source_path": "source/schemas/transports/embedded_config.json"
+    },
+    {
+      "path": "schemas/transports/embedded_message.json",
+      "sha256": "dc23be38b0c7bb791bd3a59cafc9b69e207ae53942e0144bf4a0773990e92a6c",
+      "source_path": "source/schemas/transports/embedded_message.json"
+    },
+    {
+      "path": "schemas/transports/jsonrpc.json",
+      "sha256": "70ede824a7550d31ee417481b4e0a1c221d9bfaa4464f6b909d3a3919d4d68da",
+      "source_path": "source/schemas/transports/jsonrpc.json"
+    },
+    {
+      "path": "schemas/transports/mcp_tool_call.json",
+      "sha256": "7a4501a723b231df8ad1cb3b26a739d0a3d48985a22caeca4f7dedb6da2f50d1",
+      "source_path": "source/schemas/transports/mcp_tool_call.json"
+    },
+    {
+      "path": "schemas/ucp.json",
+      "sha256": "05329a3ae4546f97efcf381c3b0cb279d21063e351bcf4edd00950dc14d67c9c",
+      "source_path": "source/schemas/ucp.json"
+    },
+    {
+      "path": "services/common/rest.openapi.json",
+      "sha256": "dd92fc6bc8c844c0f3c7b509f8522309d6a690dc2ac88e0d73922494f29d5070",
+      "source_path": "source/services/common/rest.openapi.json"
+    },
+    {
+      "path": "services/shopping/rest.openapi.json",
+      "sha256": "75b73d5081f88c2e58dcfb4a87f5bf8b4eaafa130f27036fc020074d2b4b0252",
+      "source_path": "source/services/shopping/rest.openapi.json"
+    }
+  ],
+  "contract_roots": [
+    "schemas/shopping/cart.json",
+    "schemas/shopping/checkout.json",
+    "schemas/shopping/catalog_lookup.json",
+    "schemas/shopping/catalog_search.json",
+    "schemas/shopping/order.json",
+    "schemas/common/identity_linking.json",
+    "schemas/shopping/buyer_consent.json",
+    "schemas/shopping/discount.json",
+    "schemas/shopping/fulfillment.json"
+  ],
+  "service_descriptions": [
+    "services/common/rest.openapi.json",
+    "services/shopping/rest.openapi.json"
+  ],
+  "scope": "Offline contract and fixture inventory only. These resources are not registered with the discovery runtime validator and do not advertise or implement any UCP commerce capability."
+}
