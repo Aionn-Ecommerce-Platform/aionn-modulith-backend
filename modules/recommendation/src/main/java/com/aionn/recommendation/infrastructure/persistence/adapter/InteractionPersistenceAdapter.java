@@ -63,6 +63,9 @@ public class InteractionPersistenceAdapter implements InteractionPersistencePort
 
     @Override
     public void append(UserInteraction interaction) {
+        if (interaction == null) {
+            throw new IllegalArgumentException("interaction must not be null");
+        }
         int written = jpa.appendIdempotent(mapper.toEntity(interaction, clock.instant()));
         if (written == 0) {
             // A replay of an event already ingested. Not an error, and not worth a row in the log at
