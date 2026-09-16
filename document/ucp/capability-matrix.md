@@ -1,0 +1,58 @@
+# UCP Capability Matrix — Phase 0 Inventory
+
+**Protocol baseline:** `2026-08-25` (`v2026-08-25`, commit
+`cd78fb38e819de77d9b527d110476eccb876f1bd`). Canonical contracts, REST
+service descriptions, fixtures, hashes, license, and provenance are in
+[`modules/ucp/src/test/resources/ucp-contract/2026-08-25/`](../../modules/ucp/src/test/resources/ucp-contract/2026-08-25/).
+
+This is an evidence inventory, not an implementation claim. Every capability
+below is **`advertised=false`**. The discovery profile remains discovery-only;
+these test resources are not registered in its runtime schema allow-list.
+
+| Capability / pinned artifact | Existing owner and evidence | Semantic mismatch / missing UCP use case | Target phase | Advertised |
+| --- | --- | --- | --- | --- |
+| Cart — `schemas/shopping/cart.json`; REST `POST /carts`, `GET/PUT /carts/{id}`, `POST /carts/{id}/cancel` | Ordering cart CRUD: `modules/ordering/src/main/java/com/aionn/ordering/application/service/CartService.java`; authenticated routes in `adapter/rest/controller/CartController.java`; persistence in `application/port/out/CartPersistencePort.java` | Internal cart is one user-keyed aggregate and has no external session/token model, protocol state/expiry/cancel semantics, stable UCP mapping, protocol idempotency, or UCP concurrency response mapping. JPA `@Version` alone is insufficient. | 2 | false |
+| Checkout and payment-handler coordination — `schemas/shopping/checkout.json`; pinned REST checkout operations require Phase 1 operation resolution before exact routing is exposed | Ordering can commit headless line items through `shared-kernel/src/main/java/com/aionn/sharedkernel/integration/port/ordering/OrderPlacementPort.java`; implementation `OrderingOrderPlacementAdapter.java`. Candidate internal payment routes: `modules/payment/src/main/java/com/aionn/payment/adapter/rest/controller/PaymentController.java` and `PaymentMethodController.java`. | No checkout-session aggregate/persistence or create/read/update/complete lifecycle was found. Missing statuses, expiry, payment actions, recovery, cart-to-checkout conversion, incomplete-checkout reuse, and configured UCP payment-handler mapping. Internal payment routes are not UCP handlers or action mappings. | 3 | false |
+| Catalog lookup — `schemas/shopping/catalog_lookup.json`; REST `POST /catalog/lookup` and `GET /catalog/product` | Catalog read ports: `application/port/in/product/GetProductInputPort.java`, `GetProductsBySkuIdsInputPort.java`; use cases in `application/usecase/product/`. | Candidate data source only. Need pinned operation mapping, identity/authorization rules, UCP product and price/availability representation, response validation, and endpoint implementation. | 4 | false |
+| Catalog search — `schemas/shopping/catalog_search.json`; REST `POST /catalog/search` | `application/port/in/product/SearchProductCatalogInputPort.java`; `SearchProductCatalogUseCase.java`; search indexes include `ProductSearchIndex.java`. | Candidate read port only. Need UCP query/filter/pagination semantics, canonical item and availability mapping, validation, and endpoint implementation. | 4 | false |
+| Identity linking — `schemas/common/identity_linking.json` | Identity social linking: `application/port/in/auth/LinkSocialInputPort.java`, `UnlinkSocialInputPort.java`; `LinkSocialUseCase.java`; authentication sessions in `domain/model/AuthSession.java`. | Social-provider linking and app authentication sessions are not UCP identity linking. Missing platform subject binding, OAuth-compatible authorization/scopes, consent, expiry/revocation semantics, audit model, canonical operation mapping, and endpoint. | 5 | false |
+| Order — `schemas/shopping/order.json` | Existing placement boundary: `OrderPlacementPort.placeHeadless(PlaceCommand)`; ordering idempotency record in `application/port/out/OrderPlacementOperationPort.java`. | Placement support is not UCP order lifecycle exposure. Missing canonical order lookup/status mapping, authenticated UCP order access, lifecycle events/webhooks, response validation, and replay-delivery semantics. | 5 | false |
+| Buyer consent extension — `schemas/shopping/buyer_consent.json` | Identity consent storage/service exists, including `identity/domain/model/UserConsent.java` and `identity/application/service/ConsentService.java`. | No proof that its consent purpose, subject binding, lifecycle, or serialization matches the pinned UCP extension. Missing canonical extension composition and validation. | 4 | false |
+| Discount extension — `schemas/shopping/discount.json` | Ordering cart can apply/remove vouchers in `CartService.java`; promotion ownership and operational flows include `modules/promotion/src/main/java/com/aionn/promotion/adapter/rest/controller/VoucherController.java`, `PromotionCampaignController.java`, and voucher reserve/release/apply adapters. | Voucher CRUD does not establish UCP discount extension semantics, authoritative recalculation, eligibility handling, canonical messages, or composed-schema validation. | 4 | false |
+| Fulfillment extension — `schemas/shopping/fulfillment.json` | Shipping domain routes are `modules/shipping/src/main/java/com/aionn/shipping/adapter/rest/controller/ShipmentController.java` (quote/create/register/label/cancel/issue/get/by-order), `ShippingRateController.java` (administrative rate configuration), and carrier-only `ShippingWebhookController.java`; inventory owns reservation/availability integrations. | These domain routes are not UCP fulfillment operations. Missing UCP fulfillment-option selection, address/context mapping, checkout action flow, authoritative recalculation, extension composition, and canonical response/failure mapping. The carrier webhook is not a UCP outbound order webhook. | 4 | false |
+| Payment terms extension — `schemas/common/payment_terms.json` | Candidate payment ownership only: `modules/payment/src/main/java/com/aionn/payment/adapter/rest/controller/PaymentController.java` and `PaymentMethodController.java` manage internal payment/payment-method flows. | No verified UCP payment-terms owner, term/eligibility mapping, checkout action binding, composed-schema validation, canonical errors, or replay handling. Internal payment APIs are not UCP payment terms. | 4 | false |
+| Location lookup — `schemas/common/location_lookup.json`; REST `POST /locations/lookup` | Candidate geography/address evidence: `modules/identity/src/main/java/com/aionn/identity/adapter/rest/controller/GeographyController.java`, `AddressController.java`, `application/service/GeographyService.java`, and `infrastructure/integration/address/IdentityAddressLookupAdapter.java`. | Geography reference data and address CRUD do not implement UCP lookup. Missing canonical identifiers/address context, authority/privacy rules, request/response mapping and validation, and fulfillment/checkout integration. | 4 | false |
+| Location search — `schemas/common/location_search.json`; REST `POST /locations/search` | Same candidate geography/address evidence as location lookup. | Missing UCP search input, matching/pagination semantics, authority/privacy rules, canonical mapping and validation; local geography APIs are not UCP location search. | 4 | false |
+| Loyalty extension — `schemas/common/loyalty.json` | No verified local loyalty owner, balance/membership model, or operation path was established by this Phase 0 inventory. | Must identify authoritative owner and implement subject binding, benefit/earning/redemption/eligibility lifecycle, checkout integration, composition/validation, authorization, replay, and canonical errors. | 4 | false |
+
+## Validation boundary
+
+The offline checker proves imported-artifact provenance and byte identity to the pinned local UCP Git object. The Java test proves JSON parseability and offline `$ref` closure for declared contract roots, including canonical `https://ucp.dev/schemas/...` references and JSON Pointer fragments, while deliberately not treating `examples`, `example`, `default`, or `const` instance data as schemas. Neither check performs operation resolution, direction-aware validation, extension composition, nor protocol conformance. The pinned `ucp-schema` CLI was built and tested through Docker on 2026-09-16: all 361 upstream tests passed (163 library, 81 CLI, 27 conformance, 19 container, 70 resolution, 1 documentation). Separately, `scripts/ucp/check-ucp-reference-fixtures.py` validated 18 unchanged released scaffolds against the imported schemas with explicit operation/direction and `--network none`: cart create/update/read, checkout create/update/complete/read, catalog lookup/search/get_product requests and responses, location lookup/search requests and responses, and order read. These positive fixture checks do not establish application conformance, extension coverage against the released bundle, or end-to-end capability support. Identity linking and other unlisted shapes are not claimed as fixture-validated.
+
+To reproduce (PowerShell, replace the checkout path):
+
+```powershell
+docker run --rm -v "D:/mix-of-ucp-ecommerce/ucp-schema:/work" -w /work rust:1.89 cargo test --locked
+python scripts/ucp/check-ucp-reference-fixtures.py --validator D:/mix-of-ucp-ecommerce/ucp-schema
+python scripts/ucp/check-ucp-contract-bundle.py --upstream D:/mix-of-ucp-ecommerce/ucp
+```
+
+Use a clean validator checkout at the commit below and rebuild its binary before the fixture check; the script checks source revision/cleanliness, not binary provenance. Build dependencies require network access; fixture execution does not. The tested image resolved to `rust@sha256:57407b378b2b6e07b48a6135a20c87cc22ea6e249c0acf6cb1833ead3cf116e9`.
+
+
+The normal UCP lifecycle is `cart session -> checkout session -> order`. The
+current ordering cart supports authenticated internal CRUD and has a unique
+cart per user. It does **not** establish a UCP cart session. No dedicated
+checkout session persistence or conversion/reuse behavior was found in the
+ordering module. Phase 2 must add protocol-session coordination without
+creating a duplicate commerce aggregate; Phase 3 must reuse ordering's
+existing `OrderPlacementPort` for final completion.
+
+## Phase 1 prerequisites retained
+
+Imported schemas alone do not enable commerce validation. Before any capability
+is advertised, Phase 1 must implement canonical operation resolution,
+direction-aware request/response validation, authority binding, extension
+composition, runtime resource protection, protocol errors, authentication, and
+correlation. The `ucp-schema` pinned reference commit is
+`a0fc4fc189add7da533c981bdb3d8a36950e0602`.
