@@ -47,14 +47,35 @@ public class ProfileRefreshService {
     @Transactional
     public void refresh(String userId, Duration lookback, int maxAffinities) {
         Instant now = clock.instant();
+        // The sweep reads its whole batch of user IDs before processing any of them, so an account can be
+        // erased between the two. Locking and checking under the lock is what stops this method from
+        // writing back the profile that erasure just deleted; without the lock the check is a race, since
+        // the interactions read below and the save at the end straddle it.
+        interactionRepository.lockUser(userId);
+        if (interactionRepository.isUserErased(userId)) {
+            log.debug("Skipping profile refresh for an erased account");
+            return;
+        }
+
         List<UserInteraction> interactions = interactionRepository.findByUser(
                 userId, now.minus(lookback), Integer.MAX_VALUE);
 
         if (interactions.isEmpty()) {
-            profileRepository.save(UserAffinityProfile.empty(userId), now);
+            // Only clear a profile that already exists. There is nothing to correct for a user this module
+            // holds nothing on, and writing a row would create personal data where there was none.
+            if (profileRepository.existsByUserId(userId)) {
+                profileRepository.save(UserAffinityProfile.empty(userId), now);
+            } else {
+                log.debug("No interactions and no stored profile for user; nothing to refresh");
+            }
             return;
         }
 
+        profileRepository.save(buildProfile(userId, interactions, now, maxAffinities), now);
+    }
+
+    private UserAffinityProfile buildProfile(
+            String userId, List<UserInteraction> interactions, Instant now, int maxAffinities) {
         Map<String, ProductAttributeQueryPort.ProductAttributes> attributes =
                 productAttributeQuery.findByProductIds(
                         interactions.stream().map(UserInteraction::getProductId).distinct().toList());
@@ -88,7 +109,7 @@ public class ProfileRefreshService {
             }
         }
 
-        UserAffinityProfile profile = new UserAffinityProfile(
+        return new UserAffinityProfile(
                 userId,
                 normalizeTop(categoryWeights, maxAffinities),
                 normalizeTop(brandWeights, maxAffinities),
@@ -96,8 +117,6 @@ public class ProfileRefreshService {
                 percentile(prices, PRICE_BAND_UPPER_PERCENTILE),
                 interactions.size(),
                 lastInteractionAt);
-
-        profileRepository.save(profile, now);
     }
 
     @Transactional(readOnly = true)

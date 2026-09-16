@@ -16,10 +16,13 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Ingests behavioural signals from other modules.
  *
- * <p>Every handler takes an integration event, never a domain event: the outbox dispatcher wraps domain
- * events in an {@code EventEnvelope} before publishing, so a handler declared against a domain type
- * would never fire. It also means {@code OutboxConsumerInboxAspect} can read the event ID and give
- * each handler its own inbox row, which is what makes at-least-once delivery safe here.
+ * <p>Every handler takes an integration event, never a domain event. The dispatcher publishes a domain
+ * event twice - once as an {@code EventEnvelope} and once as the bare payload - so a handler declared
+ * against a domain type does fire; it just receives a payload carrying no event ID.
+ * {@code OutboxConsumerInboxAspect} reads an ID only from an {@code IntegrationEvent} or an
+ * {@code EventEnvelope}, so such a handler would run again on every redelivery and apply its side effect
+ * twice. Declaring the integration type is what gives each handler its own inbox row, which is what makes
+ * at-least-once delivery safe here.
  *
  * <p>{@code REQUIRES_NEW} keeps a failed ingest from rolling back whatever else the dispatch triggered:
  * losing one interaction must not fail an order.

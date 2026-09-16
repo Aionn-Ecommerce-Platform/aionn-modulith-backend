@@ -3,6 +3,8 @@ package com.aionn.sharedkernel.adapter.web.exception;
 import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
 import com.aionn.sharedkernel.common.exception.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.MessageSourceResolvable;
+import org.springframework.core.MethodParameter;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -11,10 +13,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.validation.method.ParameterValidationResult;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
@@ -110,6 +116,37 @@ public class GlobalExceptionHandler {
 				fieldMap);
 	}
 
+	/**
+	 * Native controller-method validation, available since Spring Framework 6.1.
+	 *
+	 * <p>Constraints declared on {@code @RequestParam} and {@code @PathVariable} arguments are enforced by
+	 * {@code HandlerMethodValidator} without needing a class-level {@code @Validated}, and the failure
+	 * arrives as this exception rather than as {@link MethodArgumentNotValidException}, which only covers
+	 * {@code @Valid @RequestBody}. Without an explicit mapping it falls through to
+	 * {@link #handleUnexpected}, so a caller sending {@code ?limit=0} is told the server broke instead of
+	 * that the request was invalid - and the server logs a stack trace at ERROR for ordinary bad input.
+	 */
+	@ExceptionHandler(HandlerMethodValidationException.class)
+	public ResponseEntity<ApiResponse<Map<String, Object>>> handleHandlerMethodValidation(
+			HandlerMethodValidationException ex) {
+		Map<String, String> fieldMap = new LinkedHashMap<>();
+		for (ParameterValidationResult result : ex.getParameterValidationResults()) {
+			String parameter = parameterName(result);
+			for (MessageSourceResolvable error : result.getResolvableErrors()) {
+				String message = error.getDefaultMessage() != null ? error.getDefaultMessage() : "Invalid value";
+				fieldMap.merge(parameter, message, (existing, added) -> existing + "; " + added);
+			}
+		}
+
+		log.debug("Request parameter validation failed: {} parameter(s)", fieldMap.size());
+		return buildErrorResponse(
+				HttpStatus.BAD_REQUEST,
+				"Request validation failed",
+				"VALIDATION_FAILED",
+				"Request",
+				fieldMap);
+	}
+
 	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
 	public ResponseEntity<ApiResponse<Map<String, Object>>> handleTypeMismatch(
 			MethodArgumentTypeMismatchException ex) {
@@ -131,6 +168,36 @@ public class GlobalExceptionHandler {
 		return buildErrorResponse(HttpStatus.BAD_REQUEST,
 				"Missing required header: " + ex.getHeaderName(),
 				"MISSING_HEADER", null, null);
+	}
+
+	@ExceptionHandler(MissingServletRequestParameterException.class)
+	public ResponseEntity<ApiResponse<Map<String, Object>>> handleMissingParameter(
+			MissingServletRequestParameterException ex) {
+		log.debug("Missing parameter: {}", ex.getParameterName());
+		return buildErrorResponse(HttpStatus.BAD_REQUEST,
+				"Missing required parameter: " + ex.getParameterName(),
+				"MISSING_PARAMETER", null, null);
+	}
+
+	/**
+	 * A request to the right path with the wrong verb.
+	 *
+	 * <p>Reported as 405 with the verbs the endpoint does accept. Left to {@link #handleUnexpected} it
+	 * becomes a 500, which sends whoever is debugging - a client author or an E2E script - looking for a
+	 * server fault that does not exist, when the only thing wrong is the method on the request line.
+	 */
+	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+	public ResponseEntity<ApiResponse<Map<String, Object>>> handleMethodNotSupported(
+			HttpRequestMethodNotSupportedException ex) {
+		String supported = ex.getSupportedMethods() != null
+				? String.join(", ", ex.getSupportedMethods())
+				: "none";
+		String message = "Method %s is not supported; supported: %s".formatted(ex.getMethod(), supported);
+		log.debug("Unsupported request method: {}", message);
+		var response = buildErrorResponse(HttpStatus.METHOD_NOT_ALLOWED, message, "METHOD_NOT_ALLOWED", null, null);
+		return ResponseEntity.status(response.getStatusCode())
+				.headers(ex.getHeaders())
+				.body(response.getBody());
 	}
 
 	@ExceptionHandler(NoHandlerFoundException.class)
@@ -163,6 +230,19 @@ public class GlobalExceptionHandler {
 				"INTERNAL_ERROR",
 				null,
 				null);
+	}
+
+	/**
+	 * Names the offending parameter for the {@code fieldErrors} payload.
+	 *
+	 * <p>{@code getParameterName()} is only populated when a {@code ParameterNameDiscoverer} resolved it,
+	 * which needs {@code -parameters} at compile time. Falling back to the positional index keeps the
+	 * response honest about which argument failed instead of collapsing every violation onto one key.
+	 */
+	private static String parameterName(ParameterValidationResult result) {
+		MethodParameter parameter = result.getMethodParameter();
+		String name = parameter.getParameterName();
+		return name != null && !name.isBlank() ? name : "arg" + parameter.getParameterIndex();
 	}
 
 	protected ResponseEntity<ApiResponse<Map<String, Object>>> buildErrorResponse(

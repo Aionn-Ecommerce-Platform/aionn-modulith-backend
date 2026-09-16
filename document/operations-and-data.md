@@ -67,15 +67,35 @@ Do not delete dead-letter events before preserving diagnostic evidence and defin
 ## 6. Behavioural data
 
 - Interaction rows are personal data. They are deleted outright when an account is deleted rather than retained against a tombstoned user ID, because unlike historical business records there is no obligation behind them. The derived affinity profile goes with them; the aggregate similarity and popularity tables do not identify anyone and stay.
+- Erasure leaves one row per erased account in `recommendation_erased_users`, holding only the opaque user ID and the erasure timestamp. Deleting rows alone cannot distinguish "this account was erased" from "this account never had any behaviour", so an event still in flight through the outbox would rebuild a profile from nothing and silently resurrect the data. This is a deliberate retention decision, not an oversight: the table is never pruned, because pruning it reopens exactly the hole it closes.
+- Erasure and ingest take a per-user PostgreSQL advisory transaction lock (`pg_advisory_xact_lock(hashtext(user_id))`), so the check for an erasure mark and the write that follows it cannot interleave with a concurrent erasure. Without it the two are a check-then-act race and the losing order writes a row for an account that no longer exists.
+- Ingest is idempotent on `source_event_id`, enforced by a partial unique index and an `INSERT ... ON CONFLICT DO NOTHING`. Delivery is at least once, so the same business action can arrive twice; the index makes the second arrival a no-op rather than a doubled signal. Interactions with no source event are excluded from the index and are never deduplicated, because two genuine repeat actions have nothing to collide on.
 - Interactions are stored with their base weight and decayed at read time. A stored decayed value would be wrong the moment the row aged.
 - Never log which product a user interacted with above debug level. Browsing history can reveal sensitive interests and is not needed for operational diagnosis; log counts instead.
 - Availability is applied to a recommendation slate after ranking and outside the cache. Caching the availability decision would serve unbuyable products for the life of the entry.
 
 ## 7. Distributed schedulers
 
-Singleton business schedulers use ShedLock and PostgreSQL database time. Lock names are globally unique. The outbox dispatcher is the exception because it already provides row-level concurrency control.
+Singleton business schedulers use ShedLock and PostgreSQL database time. A dedicated `schedulerLockExtensionExecutor` renews leases halfway through `lockAtMostFor` using `KeepAliveLockProvider`, independently of the business scheduler threads. Renewal stops on unlock; after process termination the last lease expires normally. Lock names are globally unique. The outbox dispatcher is the exception because it already provides row-level concurrency control.
+
+Business jobs that do not name a scheduler share the pool bean named `taskScheduler`, sized by `SCHEDULER_POOL_SIZE`. The pool needs one thread per such job: a slow job that takes the only free thread stalls every other background job, including the outbox dispatcher if it were sharing the pool. `ApplicationSchedulingConfigTest` counts `@Scheduled` methods off the classpath bytecode and fails the build when the pool is smaller than the number of jobs, so the invariant cannot rot silently when a job is added. The outbox dispatcher names its own single-threaded `outboxTaskScheduler` and is excluded from that count.
 
 Before changing an interval or lock duration, measure worst-case runtime and verify behavior during process termination, multi-instance execution, and overlapping schedules.
+
+### Recommendation offline jobs
+
+| Lock name | Default cadence | `lockAtMostFor` | `lockAtLeastFor` |
+| --- | --- | --- | --- |
+| `recommendation-profile-refresh` | 15 min | PT10M | PT30S |
+| `recommendation-item-similarity` | 1 h | PT30M | PT1M |
+| `recommendation-popularity` | 15 min | PT30M | PT30S |
+| `recommendation-interaction-prune` | 24 h | PT1H | PT1M |
+
+`RECOMMENDATION_EXECUTION_COMPUTE_TIMEOUT_SECONDS` overrides the application-wide transaction timeout for the heavy read and batched-write phases of the two rebuilds, which scan the interaction log and legitimately need longer than a request budget. Its validated range is 1 to 1740 seconds inclusive (default 900), below the initial PT30M lease. This is not a whole-rebuild deadline: the lease is automatically renewed for the entire read/write/cleanup sequence, so a large number of batches does not alone cause lease expiry. Monitor renewal failures and job runtime: a prolonged database outage or process pause can still prevent lease extension.
+
+`RECOMMENDATION_EXECUTION_UPSERT_BATCH_SIZE` bounds each write transaction so a rebuild commits progressively instead of holding one transaction open across the whole result set. Lowering it shortens the blast radius of a failed run at the cost of more commits; raising it does the reverse.
+
+The remaining knobs - signal weights and half-lives, hybrid ranking weights, cold-start thresholds, per-job lookback windows and batch sizes, and cache TTLs - are listed as commented examples in `.env.example`, with authoritative defaults in `application-recommendation.yml`. The module holds no credentials and calls no external provider, so none of them are secret. Two of them fail the application at startup rather than degrading quietly: a ranking weight sum that is not positive, and any value outside the bounds declared on the `@ConfigurationProperties` records.
 
 ### Settlement reconciliation
 
@@ -105,6 +125,8 @@ The scheduled reconciliation job reports mismatches through metrics and error lo
 .\gradlew.bat build
 powershell -ExecutionPolicy Bypass -File scripts/run-e2e-suite.ps1 -Module all
 ```
+
+`-Module all` runs every module script under `scripts/<module>/test-<module>-e2e.sh`, including `scripts/recommendation/`. A single module can be run on its own with `-Module recommendation`, which is faster when iterating but is not a substitute for the full suite before a release. The runner starts the application against an isolated database, applies `scripts/fixtures/e2e-prerequisites.sql`, and shortens the recommendation offline-job cadence so the behavioural chain can be observed inside one run; the recommendation script therefore depends on being launched by the runner rather than against a default-configured application.
 
 In addition to green tests, verify that:
 

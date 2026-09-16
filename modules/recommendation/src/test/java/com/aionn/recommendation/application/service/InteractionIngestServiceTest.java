@@ -10,6 +10,7 @@ import com.aionn.recommendation.domain.valueobject.InteractionWeight;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -23,6 +24,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -129,6 +131,49 @@ class InteractionIngestServiceTest {
                 "user-1", PRODUCT_ID, InteractionType.VIEW, null, "evt-8", List.of(), null));
 
         assertThat(captureRecorded().getOccurredAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    void theSourceEventIdIsCarriedOntoTheStoredInteraction() {
+        // It is the only thing that lets the database recognise a replay: each attempt generates a fresh
+        // interaction ID, so without the source event a redelivered event is indistinguishable from
+        // genuine repeat behaviour and every score summing over the log is inflated permanently.
+        stubWeight(InteractionType.PURCHASE, 5.0, 180);
+
+        service().ingestInteraction(RecordInteractionCommand.forProduct(
+                "user-1", PRODUCT_ID, InteractionType.PURCHASE, NOW, "evt-order-9",
+                List.of(), null));
+
+        assertThat(captureRecorded().getSourceEventId()).isEqualTo("evt-order-9");
+    }
+
+    @Test
+    void aSignalForAnErasedAccountIsDropped() {
+        // Outbox delivery is at-least-once, so a view or purchase event can arrive after the account
+        // deletion that erased it. Recording it would restart the interaction log the erasure just
+        // emptied.
+        when(interactionRepository.isUserErased("user-1")).thenReturn(true);
+        stubWeight(InteractionType.VIEW, 1.0, 14);
+
+        service().ingestInteraction(RecordInteractionCommand.forProduct(
+                "user-1", PRODUCT_ID, InteractionType.VIEW, NOW, "evt-late", List.of(), null));
+
+        verify(interactionRepository, never()).append(any());
+    }
+
+    @Test
+    void theErasureCheckHappensUnderTheUserLock() {
+        // Checking without the lock is a race: an erasure committing between this check and the append
+        // would delete the account's history a moment before this adds a row to it.
+        stubWeight(InteractionType.VIEW, 1.0, 14);
+
+        service().ingestInteraction(RecordInteractionCommand.forProduct(
+                "user-1", PRODUCT_ID, InteractionType.VIEW, NOW, "evt-10", List.of(), null));
+
+        InOrder order = inOrder(interactionRepository);
+        order.verify(interactionRepository).lockUser("user-1");
+        order.verify(interactionRepository).isUserErased("user-1");
+        order.verify(interactionRepository).append(any());
     }
 
     private void stubWeight(InteractionType type, double base, long halfLifeDays) {

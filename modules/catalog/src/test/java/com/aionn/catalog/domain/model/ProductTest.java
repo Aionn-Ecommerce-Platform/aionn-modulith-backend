@@ -1,8 +1,10 @@
 package com.aionn.catalog.domain.model;
 
+import com.aionn.catalog.domain.event.ProductEvents;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.catalog.domain.valueobject.ProductStatus;
+import com.aionn.sharedkernel.domain.model.EventEnvelope;
 import com.aionn.sharedkernel.domain.vo.Money;
 import org.junit.jupiter.api.Test;
 
@@ -63,6 +65,47 @@ class ProductTest {
 
         assertThat(product.variants()).hasSize(1);
         assertThat(product.findVariant("sku-1")).isPresent();
+    }
+
+    @Test
+    void defineVariantTreatsMissingAttributesAsEmptyInsteadOfFailingWhilePublishing() {
+        // A single-SKU item has no attributes, and callers express that either as an empty map or by
+        // omitting the field. The variant stored fine but the event copied the raw argument, so the
+        // omitted form threw halfway through: the write succeeded and the request still came back 500.
+        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        product.pullEvents();
+
+        product.defineVariant("sku-1", null,
+                Money.of(new BigDecimal("10.00"), "VND"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+
+        assertThat(product.findVariant("sku-1")).isPresent();
+        assertThat(product.findVariant("sku-1").orElseThrow().attributeValues()).isEmpty();
+        assertThat(product.pullEvents())
+                .hasSize(1)
+                .first()
+                .extracting(EventEnvelope::payload)
+                .isInstanceOf(ProductEvents.ProductVariantDefined.class)
+                .extracting(event -> ((ProductEvents.ProductVariantDefined) event).attributeValues())
+                .isEqualTo(Map.of());
+    }
+
+    @Test
+    void defineVariantRejectsNullAttributeValueBeforeMutatingProduct() {
+        Product product = publishableProduct();
+        var originalVariants = List.copyOf(product.variants());
+        var originalUpdatedAt = product.getUpdatedAt();
+        Map<String, String> attributeValues = new java.util.HashMap<>();
+        attributeValues.put("color", null);
+        Money price = Money.of(new BigDecimal("12.00"), "VND");
+        var laterClock = java.time.Clock.fixed(
+                originalUpdatedAt.plusSeconds(60), java.time.ZoneOffset.UTC);
+
+        assertThatThrownBy(() -> product.defineVariant("sku-2", attributeValues, price, laterClock))
+                .isInstanceOf(NullPointerException.class);
+
+        assertThat(product.variants()).containsExactlyElementsOf(originalVariants);
+        assertThat(product.getUpdatedAt()).isEqualTo(originalUpdatedAt);
+        assertThat(product.pullEvents()).isEmpty();
     }
 
     @Test

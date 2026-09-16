@@ -88,15 +88,18 @@ class PopularityServiceTest {
     }
 
     @Test
-    void anEmptyWindowLeavesPreviousScoresUntouched() {
-        // Wiping every score because one window happened to be quiet would empty the home feed for all
-        // users, so the previous run's data is deliberately kept.
+    void anEmptyWindowSweepsTheStaleScoresToo() {
+        // A window with no interactions at all means nothing has momentum, which is a different answer
+        // from the one the table currently holds. Keeping the previous scores would present momentum
+        // from beyond the lookback as current, indefinitely, until some product sells again. The home
+        // feed does not go empty as a result: trending tops itself up with new arrivals once popularity
+        // is thin.
         stubHalfLives();
         when(interactionRepository.aggregatePopularity(any(), eq(NOW), anyMap())).thenReturn(Map.of());
 
         assertThat(service().refresh(Duration.ofDays(30))).isZero();
         verify(popularityRepository, never()).upsertAll(any());
-        verify(popularityRepository, never()).deleteComputedBefore(any());
+        verify(popularityRepository).deleteComputedBefore(NOW);
     }
 
     @Test

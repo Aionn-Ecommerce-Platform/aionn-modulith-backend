@@ -20,6 +20,7 @@ class SchedulerLockArchitectureTest {
                     "com.aionn.ordering.infrastructure.scheduling",
                     "com.aionn.payment.infrastructure.scheduling",
                     "com.aionn.promotion.infrastructure.scheduling",
+                    "com.aionn.recommendation.infrastructure.scheduling",
                     "com.aionn.shipping.infrastructure.scheduling");
 
     @Test

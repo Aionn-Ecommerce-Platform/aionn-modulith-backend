@@ -12,13 +12,23 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.time.Instant;
 
 @Repository
 @RequiredArgsConstructor
 public class InventoryItemPersistenceAdapter implements InventoryItemPersistencePort {
+
+    /**
+     * SKUs per availability query. Postgres caps bind parameters at 65535; this stays far under it
+     * while still resolving a whole recommendation slate in one round trip.
+     */
+    private static final int AVAILABILITY_QUERY_CHUNK = 1_000;
 
     private final InventoryItemRepository jpa;
     private final InventoryItemDomainMapper mapper;
@@ -65,6 +75,28 @@ public class InventoryItemPersistenceAdapter implements InventoryItemPersistence
         return jpa.findByIdSkuId(skuId).stream()
                 .map(mapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    public Set<String> findAvailableSkus(Collection<String> skuIds) {
+        if (skuIds == null || skuIds.isEmpty()) {
+            return Set.of();
+        }
+        // Deduplicate before binding: a slate can carry the same SKU through several products, and
+        // repeated bind parameters waste the statement's parameter budget for nothing.
+        Set<String> distinct = new LinkedHashSet<>(skuIds);
+        distinct.removeIf(id -> id == null || id.isBlank());
+        if (distinct.isEmpty()) {
+            return Set.of();
+        }
+        Set<String> available = new LinkedHashSet<>();
+        // Chunked so a large page cannot exceed the driver's bind-parameter limit.
+        List<String> all = new ArrayList<>(distinct);
+        for (int from = 0; from < all.size(); from += AVAILABILITY_QUERY_CHUNK) {
+            List<String> chunk = all.subList(from, Math.min(from + AVAILABILITY_QUERY_CHUNK, all.size()));
+            available.addAll(jpa.findAvailableSkuIds(chunk));
+        }
+        return available;
     }
 
     @Override
