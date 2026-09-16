@@ -70,6 +70,7 @@ class ControllerAuthorizationArchitectureTest {
             "com.aionn.recommendation.adapter.rest.controller.RecommendationController#getAlsoBought",
             "com.aionn.recommendation.adapter.rest.controller.RecommendationController#getHomeFeed",
             "com.aionn.recommendation.adapter.rest.controller.RecommendationController#getSimilarProducts",
+            "com.aionn.ucp.adapter.rest.controller.DiscoveryController#getProfile",
             "com.aionn.shipping.adapter.rest.controller.ShippingWebhookController#carrierWebhook");
 
     @Test

@@ -15,6 +15,7 @@ dependencies {
     implementation project(':modules:promotion')
     implementation project(':modules:recommendation')
     implementation project(':modules:chat')
+    implementation project(':modules:ucp')
 
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework:spring-aop'

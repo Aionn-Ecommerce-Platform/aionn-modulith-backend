@@ -2,6 +2,8 @@ package com.aionn.config;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.mockito.Mockito.when;
@@ -59,6 +61,18 @@ class ApiSecurityConfigIntegrationTest {
     }
 
     @Test
+    void ucpDiscoveryIsPublicButCommerceRoutesRemainProtected() throws Exception {
+        mockMvc.perform(get("/.well-known/ucp"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ucp.version").value("2026-08-25"))
+                .andExpect(jsonPath("$.ucp.payment_handlers").isMap());
+        mockMvc.perform(get("/ucp/v1/carts/cart-1"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/.well-known/ucp"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void actuatorEndpointsOutsideAllowListAreDenied() throws Exception {
         mockMvc.perform(get("/actuator/env"))
                 .andExpect(status().isForbidden());
@@ -105,7 +119,9 @@ class ApiSecurityConfigIntegrationTest {
             FlywayAutoConfiguration.class,
             DataRedisAutoConfiguration.class
     })
-    @Import({ApiSecurityConfig.class, com.aionn.identity.infrastructure.security.web.BearerAuthenticationFilter.class})
+    @Import({ApiSecurityConfig.class, com.aionn.identity.infrastructure.security.web.BearerAuthenticationFilter.class,
+            com.aionn.ucp.adapter.rest.controller.DiscoveryController.class,
+            com.aionn.ucp.infrastructure.schema.PinnedBusinessProfileValidator.class})
     static class TestApplication {
     }
 }
