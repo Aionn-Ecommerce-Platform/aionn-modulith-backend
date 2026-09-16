@@ -1,0 +1,12 @@
+{
+  "protocol_version": "2026-08-25",
+  "source_repository": "https://github.com/Universal-Commerce-Protocol/ucp",
+  "source_tag": "v2026-08-25",
+  "source_commit": "cd78fb38e819de77d9b527d110476eccb876f1bd",
+  "source_directory": "source/schemas",
+  "entrypoint": "profile.json#/$defs/business_schema",
+  "license_file": "LICENSE",
+  "reference_validator_repository": "https://github.com/Universal-Commerce-Protocol/ucp-schema",
+  "reference_validator_commit": "a0fc4fc189add7da533c981bdb3d8a36950e0602",
+  "scope": "Unmodified discovery schema reference closure only. JSON Schema validation does not implement UCP operation resolution, direction annotations, authority binding or extension composition."
+}

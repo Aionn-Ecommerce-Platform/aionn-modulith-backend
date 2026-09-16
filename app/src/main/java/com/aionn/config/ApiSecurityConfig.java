@@ -66,6 +66,7 @@ public class ApiSecurityConfig {
                                 "/api/v1/shipping/webhooks/carrier")
                         .permitAll()
                         .requestMatchers(HttpMethod.GET,
+                                "/.well-known/ucp",
                                 "/api/v1/geography/**",
                                 "/api/v1/catalog/**",
                                 "/api/v1/inventory/items",
