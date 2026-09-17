@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.aionn.ucp.adapter.rest.dto.UcpErrorResponse;
 import com.aionn.ucp.infrastructure.config.UcpProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.util.Set;
