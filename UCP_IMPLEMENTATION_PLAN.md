@@ -69,15 +69,14 @@ UCP runs within the existing `app`; the external route is `/ucp/v1` and discover
 
 ### Phase 1: remaining shared protocol foundation
 
-Implement:
+1. [x] Discovery service endpoint configuration (`UcpProperties` & `application-ucp.yml`) with business identity, HTTPS policy, allowed schema prefixes, and capability advertisement flags (`advertised=false` by default).
+2. [x] Request correlation (`X-Request-Id`) propagation and generation, MDC context tracking, `UCP-Agent` header sanitization, JSON content-type enforcement for mutating requests, and HTTPS enforcement via `UcpHeaderFilter`.
+3. [x] Canonical UCP structured error response modeling (`UcpErrorResponse`, `UcpMessage`, `UcpProtocolException`) conforming to canonical `error_response.json` schema specifications.
+4. [x] Centralized REST exception handling via `UcpControllerAdvice` translating protocol exceptions, validation errors, bad JSON, 404, 405, and 415 errors to standard UCP JSON responses with error codes and JSON pointer paths.
+5. [x] Extensible offline JSON schema validation port (`UcpSchemaValidationPort`) and implementation (`PinnedUcpSchemaValidator`) with strict authority binding, traversal protection (`..`), offline-only resolution (preventing network SSRF), and schema caching.
+6. [x] Full test suite coverage for filter, advice, properties, validator, discovery, and architecture compliance with zero test regressions across modulith modules.
 
-- Populate discovery service transport metadata, capability versions, schema/spec URLs, REST endpoint, and payment handlers only as their complete implementations become available. The discovery-only profile intentionally has empty registries.
-- Stable business identity and endpoint configuration.
-- Request correlation (`X-Request-Id`), UCP agent metadata, content type enforcement, HTTPS deployment requirements, and structured protocol errors.
-- Extend schema validation beyond discovery to commerce requests/responses using pinned canonical resources. Verify composition and operation-resolution behavior against `ucp-schema` through build/test tooling rather than silently approximating those rules in Java. No runtime sidecar or separate validation service is required.
-- Authority-binding and schema URL allow-list checks; never dereference arbitrary schemas from an untrusted request.
-
-Discovery must return only capabilities enabled by configuration and backed by a complete implementation. Malformed profile/configuration is a deployment failure; upstream discovery dependency failures must map according to the REST specification rather than being hidden as generic 500 responses.
+Discovery returns only capabilities enabled by configuration and backed by a complete implementation. Malformed profile/configuration is a deployment failure; upstream discovery dependency failures map according to the REST specification rather than being hidden as generic 500 responses.
 
 ### Phase 2: Cart
 

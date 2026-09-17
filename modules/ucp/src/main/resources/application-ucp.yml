@@ -1,0 +1,13 @@
+aionn:
+  ucp:
+    version: "2026-08-25"
+    rest-endpoint: "${UCP_REST_ENDPOINT:http://localhost:8080/ucp/v1}"
+    business-name: "${UCP_BUSINESS_NAME:Aionn Commerce}"
+    allowed-schema-prefixes:
+      - "https://ucp.dev/schemas/"
+    require-https: "${UCP_REQUIRE_HTTPS:false}"
+    capabilities:
+      cart: false
+      checkout: false
+      catalog: false
+      order: false
