@@ -31,6 +31,11 @@ public class CartPersistenceAdapter implements CartPersistencePort {
     }
 
     @Override
+    public Optional<Cart> findByIdForUpdate(String cartId) {
+        return jpa.findByIdForUpdate(cartId).map(mapper::toDomain);
+    }
+
+    @Override
     public Optional<Cart> findByUserId(String userId) {
         return jpa.findByUserId(userId).map(mapper::toDomain);
     }
@@ -43,4 +48,3 @@ public class CartPersistenceAdapter implements CartPersistencePort {
                 .orElseThrow(() -> new IllegalStateException("Cart insert completed without a readable row"));
     }
 }
-

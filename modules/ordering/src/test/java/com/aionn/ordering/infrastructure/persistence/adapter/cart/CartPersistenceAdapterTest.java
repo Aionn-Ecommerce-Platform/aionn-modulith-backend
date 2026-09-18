@@ -88,6 +88,18 @@ class CartPersistenceAdapterTest {
     }
 
     @Test
+    void findsCartByIdForUpdateWhenExists() {
+        CartEntity entity = mock(CartEntity.class);
+        Cart cart = mock(Cart.class);
+        when(jpa.findByIdForUpdate("cart-1")).thenReturn(Optional.of(entity));
+        when(mapper.toDomain(entity)).thenReturn(cart);
+
+        assertThat(adapter.findByIdForUpdate("cart-1")).contains(cart);
+        verify(jpa).findByIdForUpdate("cart-1");
+        verify(mapper).toDomain(entity);
+    }
+
+    @Test
     void findsCartByUserIdWhenExists() {
         CartEntity entity = mock(CartEntity.class);
         Cart cart = mock(Cart.class);

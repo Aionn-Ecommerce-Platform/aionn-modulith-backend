@@ -50,6 +50,7 @@ public class CartEntity {
     private Instant updatedAt;
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @org.hibernate.annotations.OptimisticLock(excluded = false)
     @Builder.Default
     private List<CartItemEntity> items = new ArrayList<>();
 
