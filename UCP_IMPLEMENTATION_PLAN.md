@@ -95,7 +95,7 @@ Discovery returns only capabilities enabled by configuration and backed by a com
 
 Expose the canonical checkout operations from the current UCP REST spec, including create/read/update/complete and any cancel/recover operation required by the pinned version. Map them to ordering, inventory, shipping, promotion, identity, and payment ports.
 
-1. [x] Expose `POST /ucp/checkout`, `GET /ucp/checkout/{id}`, `PUT /ucp/checkout/{id}`, `POST /ucp/checkout/{id}/complete`, `POST /ucp/checkout/{id}/cancel`.
+1. [x] Expose discovered `/ucp/v1` endpoint with canonical `/checkout-sessions` paths: `POST /ucp/v1/checkout-sessions`, `GET /ucp/v1/checkout-sessions/{id}`, `PUT /ucp/v1/checkout-sessions/{id}`, `POST /ucp/v1/checkout-sessions/{id}/complete`, `POST /ucp/v1/checkout-sessions/{id}/cancel`.
 2. [x] Support checkout session creation from direct line items or existing cart ID, reusing incomplete sessions for the same cart to prevent duplicate conflicts.
 3. [x] Store protocol-only session state via thread-safe `UcpCheckoutSessionPort` without duplicating business database tables.
 4. [x] Delegate final order completion to ordering's `OrderPlacementPort.placeHeadless(...)` with idempotent replay safety and session state machine updates.

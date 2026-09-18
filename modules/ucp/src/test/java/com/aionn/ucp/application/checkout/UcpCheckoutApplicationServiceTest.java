@@ -61,7 +61,7 @@ class UcpCheckoutApplicationServiceTest {
         @BeforeEach
         void setUp() {
                 clock = Clock.fixed(now, ZoneId.of("UTC"));
-                sessionPort = new InMemoryUcpCheckoutSessionAdapter();
+                sessionPort = new InMemoryUcpCheckoutSessionAdapter(clock);
                 service = new UcpCheckoutApplicationService(
                                 sessionPort,
                                 cartPort,
@@ -101,6 +101,23 @@ class UcpCheckoutApplicationServiceTest {
         }
 
         @Test
+        void createCheckoutWithGuestUserSuccessfully() {
+                UcpCheckoutRequest request = new UcpCheckoutRequest(
+                                null,
+                                List.of(new UcpLineItemRequest("li_1", new UcpItemRequest("sku-1"), 1)),
+                                null, null);
+
+                PricingQueryPort.SkuPricing pricing = new PricingQueryPort.SkuPricing(
+                                "sku-1", "m-1", BigDecimal.valueOf(10.00), "USD", true);
+                when(pricingPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of("sku-1", pricing));
+
+                UcpCheckoutResponse response = service.createCheckout(request, null);
+
+                assertThat(response).isNotNull();
+                assertThat(response.id()).startsWith("chk_");
+        }
+
+        @Test
         void createCheckoutFromCartIdConversionSuccessfully() {
                 CartOperationsPort.CartSnapshot cart = new CartOperationsPort.CartSnapshot(
                                 "cart-100", "user-1", Map.of("sku-1", 1), null, now, now);
@@ -129,23 +146,32 @@ class UcpCheckoutApplicationServiceTest {
                                 "sku-1", "m-1", BigDecimal.valueOf(15.00), "USD", true);
                 when(pricingPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of("sku-1", pricing));
 
-                // Create first session
-                UcpCheckoutResponse first = service.createCheckout(new UcpCheckoutRequest("cart-200", null, null, null),
-                                "user-2");
+                UcpCheckoutRequest request1 = new UcpCheckoutRequest("cart-200", null, null, null);
+                UcpCheckoutResponse first = service.createCheckout(request1, "user-2");
 
-                // Second creation for same cart should reuse incomplete session
-                UcpCheckoutResponse second = service
-                                .createCheckout(new UcpCheckoutRequest("cart-200", null, null, null), "user-2");
+                UcpCheckoutRequest request2 = new UcpCheckoutRequest("cart-200", null, null, null);
+                UcpCheckoutResponse second = service.createCheckout(request2, "user-2");
 
                 assertThat(second.id()).isEqualTo(first.id());
         }
 
         @Test
+        void createCheckoutThrowsWhenRequestIsNull() {
+                assertThatThrownBy(() -> service.createCheckout(null, "user-1"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> {
+                                        UcpProtocolException ucpEx = (UcpProtocolException) ex;
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(400);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("invalid_request");
+                                });
+        }
+
+        @Test
         void createCheckoutThrowsWhenCartNotFound() {
                 when(cartPort.findCartById("cart-none")).thenReturn(Optional.empty());
+                UcpCheckoutRequest request = new UcpCheckoutRequest("cart-none", null, null, null);
 
-                assertThatThrownBy(() -> service.createCheckout(new UcpCheckoutRequest("cart-none", null, null, null),
-                                "user-1"))
+                assertThatThrownBy(() -> service.createCheckout(request, "user-1"))
                                 .isInstanceOf(UcpProtocolException.class)
                                 .satisfies(ex -> {
                                         UcpProtocolException ucpEx = (UcpProtocolException) ex;
@@ -159,9 +185,9 @@ class UcpCheckoutApplicationServiceTest {
                 CartOperationsPort.CartSnapshot cart = new CartOperationsPort.CartSnapshot(
                                 "cart-owned", "user-owner", Map.of("sku-1", 1), null, now, now);
                 when(cartPort.findCartById("cart-owned")).thenReturn(Optional.of(cart));
+                UcpCheckoutRequest request = new UcpCheckoutRequest("cart-owned", null, null, null);
 
-                assertThatThrownBy(() -> service.createCheckout(new UcpCheckoutRequest("cart-owned", null, null, null),
-                                "user-intruder"))
+                assertThatThrownBy(() -> service.createCheckout(request, "user-intruder"))
                                 .isInstanceOf(UcpProtocolException.class)
                                 .satisfies(ex -> {
                                         UcpProtocolException ucpEx = (UcpProtocolException) ex;
@@ -175,14 +201,59 @@ class UcpCheckoutApplicationServiceTest {
                 CartOperationsPort.CartSnapshot cart = new CartOperationsPort.CartSnapshot(
                                 "cart-empty", "user-1", Map.of(), null, now, now);
                 when(cartPort.findCartById("cart-empty")).thenReturn(Optional.of(cart));
+                UcpCheckoutRequest request = new UcpCheckoutRequest("cart-empty", null, null, null);
 
-                assertThatThrownBy(() -> service.createCheckout(new UcpCheckoutRequest("cart-empty", null, null, null),
-                                "user-1"))
+                assertThatThrownBy(() -> service.createCheckout(request, "user-1"))
                                 .isInstanceOf(UcpProtocolException.class)
                                 .satisfies(ex -> {
                                         UcpProtocolException ucpEx = (UcpProtocolException) ex;
                                         assertThat(ucpEx.getStatusCode()).isEqualTo(400);
                                         assertThat(ucpEx.getErrorCode()).isEqualTo("cart_empty");
+                                });
+        }
+
+        @Test
+        void createCheckoutThrowsWhenDirectLineItemsEmpty() {
+                UcpCheckoutRequest request = new UcpCheckoutRequest(null, List.of(), null, null);
+
+                assertThatThrownBy(() -> service.createCheckout(request, "user-1"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> {
+                                        UcpProtocolException ucpEx = (UcpProtocolException) ex;
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(400);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("invalid_request");
+                                });
+        }
+
+        @Test
+        void createCheckoutThrowsWhenLineItemIdBlank() {
+                UcpCheckoutRequest request = new UcpCheckoutRequest(
+                                null,
+                                List.of(new UcpLineItemRequest("li_1", new UcpItemRequest(" "), 1)),
+                                null, null);
+
+                assertThatThrownBy(() -> service.createCheckout(request, "user-1"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> {
+                                        UcpProtocolException ucpEx = (UcpProtocolException) ex;
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(400);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("invalid_item");
+                                });
+        }
+
+        @Test
+        void createCheckoutThrowsWhenQuantityLessThanOne() {
+                UcpCheckoutRequest request = new UcpCheckoutRequest(
+                                null,
+                                List.of(new UcpLineItemRequest("li_1", new UcpItemRequest("sku-1"), 0)),
+                                null, null);
+
+                assertThatThrownBy(() -> service.createCheckout(request, "user-1"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> {
+                                        UcpProtocolException ucpEx = (UcpProtocolException) ex;
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(400);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("invalid_quantity");
                                 });
         }
 
@@ -250,6 +321,17 @@ class UcpCheckoutApplicationServiceTest {
         }
 
         @Test
+        void getCheckoutThrowsWhenNotFound() {
+                assertThatThrownBy(() -> service.getCheckout("chk-unknown", "user-1"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> {
+                                        UcpProtocolException ucpEx = (UcpProtocolException) ex;
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(404);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("checkout_not_found");
+                                });
+        }
+
+        @Test
         void getCheckoutThrowsWhenAccessDenied() {
                 UcpCheckoutSession session = new UcpCheckoutSession(
                                 "chk-1", "user-1", null, "incomplete", "USD", Map.of(), null, null, null, now, now,
@@ -290,6 +372,27 @@ class UcpCheckoutApplicationServiceTest {
         }
 
         @Test
+        void updateCheckoutThrowsWhenCompleted() {
+                UcpCheckoutSession session = new UcpCheckoutSession(
+                                "chk-comp", "user-1", null, "completed", "USD", Map.of("sku-1", 1), null, null, "ord-1",
+                                now, now, now.plusSeconds(3600));
+                sessionPort.save(session);
+
+                UcpCheckoutRequest request = new UcpCheckoutRequest(
+                                null,
+                                List.of(new UcpLineItemRequest("li_1", new UcpItemRequest("sku-1"), 1)),
+                                null, null);
+
+                assertThatThrownBy(() -> service.updateCheckout("chk-comp", request, "user-1"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> {
+                                        UcpProtocolException ucpEx = (UcpProtocolException) ex;
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(400);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("invalid_state");
+                                });
+        }
+
+        @Test
         void completeCheckoutPlacesOrderAndReturnsCompletedSession() {
                 UcpCheckoutSession session = new UcpCheckoutSession(
                                 "chk-complete", "user-1", null, "incomplete", "USD", Map.of("sku-1", 2), null, null,
@@ -312,6 +415,59 @@ class UcpCheckoutApplicationServiceTest {
         }
 
         @Test
+        void completeCheckoutReplaysAlreadyCompletedSessionIdempotently() {
+                UcpCheckoutSession completed = new UcpCheckoutSession(
+                                "chk-done", "user-1", null, "completed", "USD", Map.of("sku-1", 1), null, null,
+                                "order-existing", now, now, now.plusSeconds(3600));
+                sessionPort.save(completed);
+
+                PricingQueryPort.SkuPricing pricing = new PricingQueryPort.SkuPricing(
+                                "sku-1", "m-1", BigDecimal.valueOf(10.00), "USD", true);
+                when(pricingPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of("sku-1", pricing));
+
+                UcpCheckoutResponse response = service.completeCheckout("chk-done", "user-1");
+
+                assertThat(response.status()).isEqualTo("completed");
+                assertThat(response.order().id()).isEqualTo("order-existing");
+        }
+
+        @Test
+        void completeCheckoutThrowsWhenSessionCanceled() {
+                UcpCheckoutSession canceled = new UcpCheckoutSession(
+                                "chk-canc", "user-1", null, "canceled", "USD", Map.of("sku-1", 1), null, null,
+                                null, now, now, now.plusSeconds(3600));
+                sessionPort.save(canceled);
+
+                assertThatThrownBy(() -> service.completeCheckout("chk-canc", "user-1"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> {
+                                        UcpProtocolException ucpEx = (UcpProtocolException) ex;
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(400);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("invalid_state");
+                                });
+        }
+
+        @Test
+        void completeCheckoutThrowsWhenItemInactiveBeforeOrderPlacement() {
+                UcpCheckoutSession session = new UcpCheckoutSession(
+                                "chk-inactive", "user-1", null, "incomplete", "USD", Map.of("sku-inact", 1), null, null,
+                                null, now, now, now.plusSeconds(3600));
+                sessionPort.save(session);
+
+                PricingQueryPort.SkuPricing inactivePricing = new PricingQueryPort.SkuPricing(
+                                "sku-inact", "m-1", BigDecimal.valueOf(10.00), "USD", false);
+                when(pricingPort.resolvePricing(List.of("sku-inact"))).thenReturn(Map.of("sku-inact", inactivePricing));
+
+                assertThatThrownBy(() -> service.completeCheckout("chk-inactive", "user-1"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> {
+                                        UcpProtocolException ucpEx = (UcpProtocolException) ex;
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(400);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("item_not_found");
+                                });
+        }
+
+        @Test
         void cancelCheckoutTransitionsStatusToCanceled() {
                 UcpCheckoutSession session = new UcpCheckoutSession(
                                 "chk-cancel", "user-1", null, "incomplete", "USD", Map.of("sku-1", 1), null, null, null,
@@ -325,5 +481,39 @@ class UcpCheckoutApplicationServiceTest {
                 UcpCheckoutResponse response = service.cancelCheckout("chk-cancel", "user-1");
 
                 assertThat(response.status()).isEqualTo("canceled");
+        }
+
+        @Test
+        void cancelCheckoutThrowsWhenAlreadyCompleted() {
+                UcpCheckoutSession session = new UcpCheckoutSession(
+                                "chk-already-done", "user-1", null, "completed", "USD", Map.of("sku-1", 1), null, null, "ord-1",
+                                now, now, now.plusSeconds(3600));
+                sessionPort.save(session);
+
+                assertThatThrownBy(() -> service.cancelCheckout("chk-already-done", "user-1"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> {
+                                        UcpProtocolException ucpEx = (UcpProtocolException) ex;
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(400);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("invalid_state");
+                                });
+        }
+
+        @Test
+        void buildCheckoutResponseThrowsWhenPricingMissing() {
+                UcpCheckoutSession session = new UcpCheckoutSession(
+                                "chk-missing-price", "user-1", null, "incomplete", "USD", Map.of("sku-missing", 1), null, null, null,
+                                now, now, now.plusSeconds(3600));
+                sessionPort.save(session);
+
+                when(pricingPort.resolvePricing(List.of("sku-missing"))).thenReturn(Map.of());
+
+                assertThatThrownBy(() -> service.getCheckout("chk-missing-price", "user-1"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> {
+                                        UcpProtocolException ucpEx = (UcpProtocolException) ex;
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(409);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("item_not_found");
+                                });
         }
 }

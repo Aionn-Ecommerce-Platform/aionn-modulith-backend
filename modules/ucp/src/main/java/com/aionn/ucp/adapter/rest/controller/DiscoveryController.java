@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class DiscoveryController {
 
+    private static final String KEY_VERSION = "version";
     private final BusinessProfileResponse profile;
 
     @Autowired
@@ -32,7 +33,7 @@ public class DiscoveryController {
                     : "http://localhost:8080/ucp/v1";
             services.put("dev.ucp.shopping", java.util.List.of(
                     Map.of(
-                            "version", version,
+                            KEY_VERSION, version,
                             "transport", "rest",
                             "endpoint", endpoint)));
         }
@@ -40,14 +41,14 @@ public class DiscoveryController {
         if (cartEnabled) {
             capabilities.put("dev.ucp.shopping.cart", java.util.List.of(
                     Map.of(
-                            "version", version,
+                            KEY_VERSION, version,
                             "schema", "https://ucp.dev/schemas/shopping/cart.json")));
         }
 
         if (checkoutEnabled) {
             capabilities.put("dev.ucp.shopping.checkout", java.util.List.of(
                     Map.of(
-                            "version", version,
+                            KEY_VERSION, version,
                             "schema", "https://ucp.dev/schemas/shopping/checkout.json")));
         }
 

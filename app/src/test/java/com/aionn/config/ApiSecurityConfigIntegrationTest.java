@@ -68,6 +68,10 @@ class ApiSecurityConfigIntegrationTest {
                 .andExpect(jsonPath("$.ucp.payment_handlers").isMap());
         mockMvc.perform(get("/ucp/v1/carts/cart-1"))
                 .andExpect(status().isForbidden());
+        mockMvc.perform(get("/ucp/v1/checkout-sessions/chk-1"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/ucp/v1/checkout-sessions"))
+                .andExpect(status().isForbidden());
         mockMvc.perform(post("/.well-known/ucp"))
                 .andExpect(status().isForbidden());
     }
