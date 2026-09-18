@@ -22,7 +22,10 @@ public class DiscoveryController {
         Map<String, Object> services = new java.util.LinkedHashMap<>();
         Map<String, Object> capabilities = new java.util.LinkedHashMap<>();
 
-        if (properties != null && properties.capabilities() != null && properties.capabilities().cart()) {
+        boolean cartEnabled = properties != null && properties.capabilities() != null && properties.capabilities().cart();
+        boolean checkoutEnabled = properties != null && properties.capabilities() != null && properties.capabilities().checkout();
+
+        if (cartEnabled || checkoutEnabled) {
             String endpoint = properties.restEndpoint() != null ? properties.restEndpoint()
                     : "http://localhost:8080/ucp/v1";
             services.put("dev.ucp.shopping", java.util.List.of(
@@ -30,10 +33,20 @@ public class DiscoveryController {
                             "version", version,
                             "transport", "rest",
                             "endpoint", endpoint)));
+        }
+
+        if (cartEnabled) {
             capabilities.put("dev.ucp.shopping.cart", java.util.List.of(
                     Map.of(
                             "version", version,
                             "schema", "https://ucp.dev/schemas/shopping/cart.json")));
+        }
+
+        if (checkoutEnabled) {
+            capabilities.put("dev.ucp.shopping.checkout", java.util.List.of(
+                    Map.of(
+                            "version", version,
+                            "schema", "https://ucp.dev/schemas/shopping/checkout.json")));
         }
 
         profile = BusinessProfileResponse.of(version, services, capabilities, Map.of());
