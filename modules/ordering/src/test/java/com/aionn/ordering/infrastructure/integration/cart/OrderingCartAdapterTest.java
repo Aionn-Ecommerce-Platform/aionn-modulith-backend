@@ -90,7 +90,7 @@ class OrderingCartAdapterTest {
     void saveCartItemsReplacesItemsAndSaves() {
         Cart cart = Cart.create("cart-4", "user-4", now);
         cart.addItem("old-sku", 1, now);
-        when(cartRepository.findById("cart-4")).thenReturn(Optional.of(cart));
+        when(cartRepository.findByIdForUpdate("cart-4")).thenReturn(Optional.of(cart));
         when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         CartOperationsPort.CartSnapshot snapshot = adapter.saveCartItems("cart-4", "user-4", Map.of("new-sku", 3));
@@ -105,7 +105,7 @@ class OrderingCartAdapterTest {
     void clearCartRemovesAllItems() {
         Cart cart = Cart.create("cart-5", "user-5", now);
         cart.addItem("sku-1", 5, now);
-        when(cartRepository.findById("cart-5")).thenReturn(Optional.of(cart));
+        when(cartRepository.findByIdForUpdate("cart-5")).thenReturn(Optional.of(cart));
         when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         CartOperationsPort.CartSnapshot snapshot = adapter.clearCart("cart-5", "user-5");

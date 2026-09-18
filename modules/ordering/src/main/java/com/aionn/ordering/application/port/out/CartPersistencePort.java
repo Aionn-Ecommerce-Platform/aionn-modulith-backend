@@ -14,5 +14,8 @@ public interface CartPersistencePort {
     Optional<Cart> findByUserId(String userId);
 
     Cart findOrCreate(String cartId, String userId, Instant now);
-}
 
+    default Optional<Cart> findByIdForUpdate(String cartId) {
+        return findById(cartId);
+    }
+}

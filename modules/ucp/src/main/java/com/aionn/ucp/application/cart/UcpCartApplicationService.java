@@ -72,6 +72,7 @@ public class UcpCartApplicationService {
         CartOperationsPort.CartSnapshot snapshot = cartPort.findCartById(cartId)
                 .orElseThrow(() -> new UcpProtocolException(404, "cart_not_found", "Cart not found: " + cartId, "error",
                         "$.id"));
+        verifyOwnership(snapshot, authenticatedUserId);
 
         UcpCartResponse response = buildCartResponse(snapshot);
         validateResponseSchema(response);
@@ -82,6 +83,7 @@ public class UcpCartApplicationService {
         CartOperationsPort.CartSnapshot existing = cartPort.findCartById(cartId)
                 .orElseThrow(() -> new UcpProtocolException(404, "cart_not_found", "Cart not found: " + cartId, "error",
                         "$.id"));
+        verifyOwnership(existing, authenticatedUserId);
 
         validateLineItems(request.lineItems());
 
@@ -97,12 +99,25 @@ public class UcpCartApplicationService {
         CartOperationsPort.CartSnapshot existing = cartPort.findCartById(cartId)
                 .orElseThrow(() -> new UcpProtocolException(404, "cart_not_found", "Cart not found: " + cartId, "error",
                         "$.id"));
+        verifyOwnership(existing, authenticatedUserId);
 
         CartOperationsPort.CartSnapshot cleared = cartPort.clearCart(cartId, existing.userId());
 
         UcpCartResponse response = buildCartResponse(cleared);
         validateResponseSchema(response);
         return response;
+    }
+
+    private void verifyOwnership(CartOperationsPort.CartSnapshot snapshot, String authenticatedUserId) {
+        if (authenticatedUserId != null && !authenticatedUserId.isBlank()) {
+            if (!authenticatedUserId.equals(snapshot.userId())) {
+                throw new UcpProtocolException(403, "access_denied", "You are not authorized to access this cart",
+                        "error", "$.id");
+            }
+        } else if (!snapshot.userId().startsWith("ucp:guest:")) {
+            throw new UcpProtocolException(403, "access_denied", "You are not authorized to access this cart", "error",
+                    "$.id");
+        }
     }
 
     private void validateLineItems(List<UcpLineItemRequest> lineItems) {
@@ -126,6 +141,7 @@ public class UcpCartApplicationService {
         }
 
         Map<String, PricingQueryPort.SkuPricing> pricingMap = pricingPort.resolvePricing(skuIds);
+        String commonCurrency = null;
         for (int i = 0; i < skuIds.size(); i++) {
             String skuId = skuIds.get(i);
             PricingQueryPort.SkuPricing pricing = pricingMap.get(skuId);
@@ -133,13 +149,35 @@ public class UcpCartApplicationService {
                 throw new UcpProtocolException(400, "item_not_found", "Item not found or inactive: " + skuId, "error",
                         "$.line_items[" + i + "].item.id");
             }
+            if (pricing.currency() != null) {
+                if (commonCurrency != null && !commonCurrency.equalsIgnoreCase(pricing.currency())) {
+                    throw new UcpProtocolException(400, "mixed_currency_not_supported",
+                            "All cart items must use the same currency. Found: " + commonCurrency + " and "
+                                    + pricing.currency(),
+                            "error", "$.line_items[" + i + "]");
+                }
+                commonCurrency = pricing.currency();
+            }
         }
     }
 
     private Map<String, Integer> extractSkuQuantities(List<UcpLineItemRequest> lineItems) {
         Map<String, Integer> quantities = new LinkedHashMap<>();
         for (UcpLineItemRequest item : lineItems) {
-            quantities.merge(item.item().id(), item.quantity(), Integer::sum);
+            String skuId = item.item().id();
+            int qty = item.quantity();
+            quantities.compute(skuId, (k, current) -> {
+                if (current == null) {
+                    return qty;
+                }
+                long sum = (long) current + (long) qty;
+                if (sum > Integer.MAX_VALUE) {
+                    throw new UcpProtocolException(400, "invalid_quantity",
+                            "Aggregated quantity for item " + skuId + " exceeds maximum allowed",
+                            "error", "$.line_items");
+                }
+                return (int) sum;
+            });
         }
         return quantities;
     }
@@ -150,6 +188,7 @@ public class UcpCartApplicationService {
                 : pricingPort.resolvePricing(skuIds);
 
         String currency = "USD";
+        String resolvedCurrency = null;
         List<UcpLineItemResponse> lineItemResponses = new ArrayList<>();
         long calculatedSubtotal = 0;
         int itemIndex = 1;
@@ -173,9 +212,15 @@ public class UcpCartApplicationService {
             long unitPriceMinor = 0;
             if (pricing != null) {
                 if (pricing.currency() != null) {
-                    currency = pricing.currency();
+                    if (resolvedCurrency != null && !resolvedCurrency.equalsIgnoreCase(pricing.currency())) {
+                        throw new UcpProtocolException(400, "mixed_currency_not_supported",
+                                "Cart contains items with mixed currencies: " + resolvedCurrency + " and "
+                                        + pricing.currency(),
+                                "error", "$.line_items");
+                    }
+                    resolvedCurrency = pricing.currency();
                 }
-                unitPriceMinor = toMinorUnits(pricing.price(), currency);
+                unitPriceMinor = toMinorUnits(pricing.price(), resolvedCurrency != null ? resolvedCurrency : "USD");
             }
 
             long itemTotal = unitPriceMinor * qty;
@@ -201,6 +246,10 @@ public class UcpCartApplicationService {
 
         Instant expiresAtInstant = (snapshot.createdAt() != null ? snapshot.createdAt() : clock.instant())
                 .plus(CART_EXPIRY_DAYS, ChronoUnit.DAYS);
+
+        if (resolvedCurrency != null) {
+            currency = resolvedCurrency;
+        }
 
         return new UcpCartResponse(
                 ucpMetadata,

@@ -250,4 +250,68 @@ class UcpCartApplicationServiceTest {
                 assertThat(response.lineItems()).isEmpty();
                 assertThat(response.totals().get(0).amount()).isEqualTo(0L);
         }
+
+        @Test
+        void getCartThrowsWhenAccessDeniedForDifferentUser() {
+                CartOperationsPort.CartSnapshot existing = new CartOperationsPort.CartSnapshot(
+                                "cart-owned", "user-owner", Map.of("sku-1", 1), null, now, now);
+                when(cartPort.findCartById("cart-owned")).thenReturn(Optional.of(existing));
+
+                assertThatThrownBy(() -> service.getCart("cart-owned", "user-other"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> {
+                                        UcpProtocolException ucpEx = (UcpProtocolException) ex;
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(403);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("access_denied");
+                                });
+        }
+
+        @Test
+        void createCartThrowsWhenMixedCurrenciesEncountered() {
+                UcpCartRequest request = new UcpCartRequest(
+                                List.of(
+                                                new UcpLineItemRequest("li_1", new UcpItemRequest("sku-usd"), 1),
+                                                new UcpLineItemRequest("li_2", new UcpItemRequest("sku-vnd"), 1)),
+                                null,
+                                null);
+
+                PricingQueryPort.SkuPricing pricingUsd = new PricingQueryPort.SkuPricing(
+                                "sku-usd", "m-1", BigDecimal.valueOf(10.00), "USD", true);
+                PricingQueryPort.SkuPricing pricingVnd = new PricingQueryPort.SkuPricing(
+                                "sku-vnd", "m-1", BigDecimal.valueOf(250000), "VND", true);
+                when(pricingPort.resolvePricing(List.of("sku-usd", "sku-vnd")))
+                                .thenReturn(Map.of("sku-usd", pricingUsd, "sku-vnd", pricingVnd));
+
+                assertThatThrownBy(() -> service.createCart(request, "user-1"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> {
+                                        UcpProtocolException ucpEx = (UcpProtocolException) ex;
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(400);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("mixed_currency_not_supported");
+                                });
+        }
+
+        @Test
+        void createCartThrowsWhenAggregatedQuantityOverflows() {
+                UcpCartRequest request = new UcpCartRequest(
+                                List.of(
+                                                new UcpLineItemRequest("li_1", new UcpItemRequest("sku-1"),
+                                                                Integer.MAX_VALUE),
+                                                new UcpLineItemRequest("li_2", new UcpItemRequest("sku-1"), 1)),
+                                null,
+                                null);
+
+                PricingQueryPort.SkuPricing pricing = new PricingQueryPort.SkuPricing(
+                                "sku-1", "m-1", BigDecimal.valueOf(10.00), "USD", true);
+                when(pricingPort.resolvePricing(List.of("sku-1", "sku-1")))
+                                .thenReturn(Map.of("sku-1", pricing));
+
+                assertThatThrownBy(() -> service.createCart(request, "user-1"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> {
+                                        UcpProtocolException ucpEx = (UcpProtocolException) ex;
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(400);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("invalid_quantity");
+                                });
+        }
 }

@@ -47,7 +47,7 @@ public class OrderingCartAdapter implements CartOperationsPort {
     @Override
     public CartSnapshot saveCartItems(String cartId, String userId, Map<String, Integer> skuQuantities) {
         Instant now = clock.instant();
-        Cart cart = cartRepository.findById(cartId)
+        Cart cart = cartRepository.findByIdForUpdate(cartId)
                 .orElseGet(() -> cartRepository.findOrCreate(cartId, userId, now));
 
         cart.clear("ucp_cart_update", now);
@@ -66,7 +66,7 @@ public class OrderingCartAdapter implements CartOperationsPort {
     @Override
     public CartSnapshot clearCart(String cartId, String userId) {
         Instant now = clock.instant();
-        Cart cart = cartRepository.findById(cartId)
+        Cart cart = cartRepository.findByIdForUpdate(cartId)
                 .orElseGet(() -> cartRepository.findOrCreate(cartId, userId, now));
 
         cart.clear("ucp_cart_cancel", now);

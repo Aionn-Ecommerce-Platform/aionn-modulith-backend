@@ -4,12 +4,7 @@
   "title": "Fulfillment Event",
   "description": "Append-only fulfillment event representing an actual shipment. References line items by ID.",
   "type": "object",
-  "required": [
-    "id",
-    "occurred_at",
-    "type",
-    "line_items"
-  ],
+  "required": ["id", "occurred_at", "type", "line_items"],
   "properties": {
     "id": {
       "type": "string",
@@ -61,5 +56,19 @@
       "type": "string",
       "description": "Human-readable description of the shipment status or delivery information (e.g., 'Delivered to front door', 'Out for delivery')."
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "not": { "const": "processing" }
+          }
+        }
+      },
+      "then": {
+        "required": ["tracking_number", "tracking_url"]
+      }
+    }
+  ]
 }
