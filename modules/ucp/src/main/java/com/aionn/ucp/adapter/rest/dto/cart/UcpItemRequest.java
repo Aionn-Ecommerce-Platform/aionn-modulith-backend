@@ -8,5 +8,5 @@ import jakarta.validation.constraints.NotBlank;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record UcpItemRequest(
-                @NotBlank(message = "Item ID is required") @JsonProperty("id") String id) {
+        @NotBlank(message = "Item ID is required") @JsonProperty("id") String id) {
 }

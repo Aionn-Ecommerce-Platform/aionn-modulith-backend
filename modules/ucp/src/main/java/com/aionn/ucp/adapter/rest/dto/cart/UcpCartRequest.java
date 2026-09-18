@@ -11,7 +11,7 @@ import java.util.Map;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record UcpCartRequest(
-                @NotEmpty(message = "line_items cannot be empty") @Valid @JsonProperty("line_items") List<UcpLineItemRequest> lineItems,
-                @JsonProperty("context") Map<String, Object> context,
-                @JsonProperty("buyer") Map<String, Object> buyer) {
+        @NotEmpty(message = "line_items cannot be empty") @Valid @JsonProperty("line_items") List<UcpLineItemRequest> lineItems,
+        @JsonProperty("context") Map<String, Object> context,
+        @JsonProperty("buyer") Map<String, Object> buyer) {
 }

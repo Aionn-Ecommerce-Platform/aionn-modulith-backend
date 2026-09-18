@@ -10,7 +10,7 @@ import jakarta.validation.constraints.NotNull;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record UcpLineItemRequest(
-                @JsonProperty("id") String id,
-                @NotNull(message = "Item is required") @Valid @JsonProperty("item") UcpItemRequest item,
-                @NotNull(message = "Quantity is required") @Min(value = 1, message = "Quantity must be at least 1") @JsonProperty("quantity") Integer quantity) {
+        @JsonProperty("id") String id,
+        @NotNull(message = "Item is required") @Valid @JsonProperty("item") UcpItemRequest item,
+        @NotNull(message = "Quantity is required") @Min(value = 1, message = "Quantity must be at least 1") @JsonProperty("quantity") Integer quantity) {
 }

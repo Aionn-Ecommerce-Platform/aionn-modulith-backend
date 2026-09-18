@@ -9,7 +9,6 @@ import com.aionn.ucp.adapter.rest.dto.cart.UcpResponseMetadata;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpTotalResponse;
 import com.aionn.ucp.application.cart.UcpCartApplicationService;
 import com.aionn.ucp.domain.exception.UcpProtocolException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,7 +35,6 @@ class UcpCartControllerTest {
   private UcpCartApplicationService cartService;
 
   private MockMvc mockMvc;
-  private final ObjectMapper objectMapper = new ObjectMapper();
 
   @BeforeEach
   void setUp() {

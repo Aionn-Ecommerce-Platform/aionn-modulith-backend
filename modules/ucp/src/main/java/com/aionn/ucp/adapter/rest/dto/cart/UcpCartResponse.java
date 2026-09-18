@@ -7,11 +7,11 @@ import java.util.List;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record UcpCartResponse(
-                @JsonProperty("ucp") UcpResponseMetadata ucp,
-                @JsonProperty("id") String id,
-                @JsonProperty("currency") String currency,
-                @JsonProperty("line_items") List<UcpLineItemResponse> lineItems,
-                @JsonProperty("totals") List<UcpTotalResponse> totals,
-                @JsonProperty("expires_at") String expiresAt,
-                @JsonProperty("messages") List<UcpMessage> messages) {
+        @JsonProperty("ucp") UcpResponseMetadata ucp,
+        @JsonProperty("id") String id,
+        @JsonProperty("currency") String currency,
+        @JsonProperty("line_items") List<UcpLineItemResponse> lineItems,
+        @JsonProperty("totals") List<UcpTotalResponse> totals,
+        @JsonProperty("expires_at") String expiresAt,
+        @JsonProperty("messages") List<UcpMessage> messages) {
 }

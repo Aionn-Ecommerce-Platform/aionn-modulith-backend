@@ -5,8 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record UcpItemResponse(
-                @JsonProperty("id") String id,
-                @JsonProperty("title") String title,
-                @JsonProperty("price") long price,
-                @JsonProperty("image_url") String imageUrl) {
+        @JsonProperty("id") String id,
+        @JsonProperty("title") String title,
+        @JsonProperty("price") long price,
+        @JsonProperty("image_url") String imageUrl) {
 }
