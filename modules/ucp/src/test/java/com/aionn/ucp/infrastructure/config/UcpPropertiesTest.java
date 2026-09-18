@@ -47,7 +47,8 @@ class UcpPropertiesTest {
                 new UcpProperties.Capabilities(false, false, false, false));
 
         Set<ConstraintViolation<UcpProperties>> violations = validator.validate(properties);
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("version"));
+        assertThat(violations)
+                .isNotEmpty()
+                .anyMatch(v -> v.getPropertyPath().toString().equals("version"));
     }
 }

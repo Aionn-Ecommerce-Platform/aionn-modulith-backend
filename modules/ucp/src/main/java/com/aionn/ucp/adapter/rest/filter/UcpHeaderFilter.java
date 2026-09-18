@@ -34,6 +34,10 @@ public class UcpHeaderFilter extends OncePerRequestFilter {
     private final UcpProperties properties;
     private final ObjectMapper objectMapper;
 
+    public UcpHeaderFilter() {
+        this(null);
+    }
+
     public UcpHeaderFilter(UcpProperties properties) {
         this.properties = properties;
         this.objectMapper = new ObjectMapper();

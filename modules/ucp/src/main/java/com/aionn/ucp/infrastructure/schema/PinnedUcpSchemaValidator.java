@@ -13,6 +13,7 @@ import java.net.URI;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -29,7 +30,8 @@ public class PinnedUcpSchemaValidator implements UcpSchemaValidationPort {
         this(null);
     }
 
-    public PinnedUcpSchemaValidator(UcpProperties properties) {
+    @Autowired
+    public PinnedUcpSchemaValidator(@Autowired(required = false) UcpProperties properties) {
         this.allowedPrefixes = (properties != null && properties.allowedSchemaPrefixes() != null
                 && !properties.allowedSchemaPrefixes().isEmpty())
                         ? Set.copyOf(properties.allowedSchemaPrefixes())
@@ -81,6 +83,7 @@ public class PinnedUcpSchemaValidator implements UcpSchemaValidationPort {
         try {
             is.close();
         } catch (Exception ignored) {
+            // Resource presence probe stream closed; ignore secondary close exception
         }
 
         final String path = finalResource;

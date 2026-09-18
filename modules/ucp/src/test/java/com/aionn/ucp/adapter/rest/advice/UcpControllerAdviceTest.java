@@ -110,4 +110,42 @@ class UcpControllerAdviceTest {
                 .doesNotContain("database")
                 .isEqualTo("An unexpected internal error occurred while processing the UCP operation");
     }
+
+    @Test
+    void translatesValidationExceptionWithFieldErrors() {
+        org.springframework.validation.BeanPropertyBindingResult bindingResult = new org.springframework.validation.BeanPropertyBindingResult(
+                new Object(), "target");
+        bindingResult.addError(new org.springframework.validation.FieldError("target", "field1", "Field1 is required"));
+
+        org.springframework.web.bind.MethodArgumentNotValidException ex = new org.springframework.web.bind.MethodArgumentNotValidException(
+                null, bindingResult);
+
+        ResponseEntity<UcpErrorResponse> response = advice.handleValidationException(ex);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody().messages()).hasSize(1);
+        assertThat(response.getBody().messages().get(0).code()).isEqualTo("invalid_request");
+        assertThat(response.getBody().messages().get(0).path()).isEqualTo("$.field1");
+    }
+
+    @Test
+    void translatesValidationExceptionWithoutFieldErrors() {
+        org.springframework.validation.BeanPropertyBindingResult bindingResult = new org.springframework.validation.BeanPropertyBindingResult(
+                new Object(), "target");
+
+        org.springframework.web.bind.MethodArgumentNotValidException ex = new org.springframework.web.bind.MethodArgumentNotValidException(
+                null, bindingResult);
+
+        ResponseEntity<UcpErrorResponse> response = advice.handleValidationException(ex);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody().messages()).hasSize(1);
+        assertThat(response.getBody().messages().get(0).code()).isEqualTo("invalid_request");
+        assertThat(response.getBody().messages().get(0).content()).isEqualTo("Request validation failed");
+    }
+
+    @Test
+    void defaultConstructorUsesDefaultVersion() {
+        UcpControllerAdvice defaultAdvice = new UcpControllerAdvice();
+        ResponseEntity<UcpErrorResponse> response = defaultAdvice.handleGenericException(new RuntimeException());
+        assertThat(response.getBody().ucp().version()).isEqualTo("2026-08-25");
+    }
 }

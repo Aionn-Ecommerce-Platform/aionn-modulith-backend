@@ -25,6 +25,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 public class UcpControllerAdvice {
 
         private static final Logger log = LoggerFactory.getLogger(UcpControllerAdvice.class);
+        private static final String CODE_INVALID_REQUEST = "invalid_request";
 
         private final String version;
 
@@ -64,12 +65,12 @@ public class UcpControllerAdvice {
                         String path = "$." + fieldError.getField();
                         String content = fieldError.getDefaultMessage() != null ? fieldError.getDefaultMessage()
                                         : "Invalid field value";
-                        messages.add(UcpMessage.error("invalid_request", content, UcpMessage.SEVERITY_UNRECOVERABLE,
+                        messages.add(UcpMessage.error(CODE_INVALID_REQUEST, content, UcpMessage.SEVERITY_UNRECOVERABLE,
                                         path));
                 }
 
                 if (messages.isEmpty()) {
-                        messages.add(UcpMessage.error("invalid_request", "Request validation failed",
+                        messages.add(UcpMessage.error(CODE_INVALID_REQUEST, "Request validation failed",
                                         UcpMessage.SEVERITY_UNRECOVERABLE));
                 }
 
@@ -85,7 +86,7 @@ public class UcpControllerAdvice {
 
                 UcpErrorResponse response = UcpErrorResponse.of(
                                 version,
-                                "invalid_request",
+                                CODE_INVALID_REQUEST,
                                 "Malformed or unreadable JSON payload",
                                 UcpMessage.SEVERITY_UNRECOVERABLE);
 

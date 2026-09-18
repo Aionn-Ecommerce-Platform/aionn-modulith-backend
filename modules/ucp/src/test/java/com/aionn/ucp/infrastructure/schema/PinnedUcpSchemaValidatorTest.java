@@ -99,4 +99,28 @@ class PinnedUcpSchemaValidatorTest {
                 assertThatThrownBy(() -> validator.loadSchema(uri))
                                 .isInstanceOf(IllegalArgumentException.class);
         }
+
+        @Test
+        void rejectsNullPayload() {
+                assertThatThrownBy(() -> validator.validate("https://ucp.dev/schemas/common/types/error_response.json",
+                                null))
+                                .isInstanceOf(IllegalArgumentException.class)
+                                .hasMessageContaining("Payload cannot be null");
+        }
+
+        @Test
+        void defaultConstructorInitializesSuccessfully() {
+                PinnedUcpSchemaValidator defaultValidator = new PinnedUcpSchemaValidator();
+                UcpErrorResponse error = UcpErrorResponse.of("2026-08-25", "err", "msg", "recoverable");
+                JsonNode jsonNode = mapper.valueToTree(error);
+                org.junit.jupiter.api.Assertions
+                                .assertDoesNotThrow(() -> defaultValidator.validateErrorResponse(jsonNode));
+        }
+
+        @Test
+        void rejectsNonExistentSchemaUnderValidPrefix() {
+                assertThatThrownBy(() -> validator.loadSchema("https://ucp.dev/schemas/non_existent_schema.json"))
+                                .isInstanceOf(IllegalArgumentException.class)
+                                .hasMessageContaining("not in the pinned contract registry");
+        }
 }

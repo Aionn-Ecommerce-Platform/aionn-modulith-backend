@@ -155,4 +155,40 @@ class UcpHeaderFilterTest {
 
         assertThat(response.getStatus()).isEqualTo(200);
     }
+
+    @Test
+    void rejectsMalformedContentTypeOnMutatingOperations() throws ServletException, IOException {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/ucp/v1/carts");
+        request.setContentType("invalid/;;;");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(415);
+    }
+
+    @Test
+    void rejectsMissingContentTypeOnMutatingOperations() throws ServletException, IOException {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/ucp/v1/carts");
+        request.setContentType(null);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(415);
+    }
+
+    @Test
+    void defaultConstructorInitializes() throws ServletException, IOException {
+        UcpHeaderFilter defaultFilter = new UcpHeaderFilter();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/.well-known/ucp");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        defaultFilter.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+    }
 }
