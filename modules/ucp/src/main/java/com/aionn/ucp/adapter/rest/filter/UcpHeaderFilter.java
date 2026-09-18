@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import org.slf4j.MDC;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -35,7 +34,6 @@ public class UcpHeaderFilter extends OncePerRequestFilter {
     private final UcpProperties properties;
     private final ObjectMapper objectMapper;
 
-    @Autowired
     public UcpHeaderFilter(UcpProperties properties) {
         this.properties = properties;
         this.objectMapper = new ObjectMapper();
