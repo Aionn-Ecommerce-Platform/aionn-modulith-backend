@@ -18,7 +18,6 @@ import com.aionn.ucp.application.port.out.UcpCheckoutSessionPort;
 import com.aionn.ucp.application.port.out.UcpSchemaValidationPort;
 import com.aionn.ucp.domain.exception.UcpProtocolException;
 import com.aionn.ucp.domain.model.UcpCheckoutSession;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
@@ -26,7 +25,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,20 +77,24 @@ public class UcpCheckoutApplicationService {
         if (request != null && request.cartId() != null && !request.cartId().isBlank()) {
             cartId = request.cartId();
             CartOperationsPort.CartSnapshot cart = cartPort.findCartById(cartId)
-                    .orElseThrow(() -> new UcpProtocolException(404, "cart_not_found", "Cart not found: " + request.cartId(), "error", "$.cart_id"));
+                    .orElseThrow(() -> new UcpProtocolException(404, "cart_not_found",
+                            "Cart not found: " + request.cartId(), "error", "$.cart_id"));
             verifyOwnership(cart.userId(), authenticatedUserId, "$.cart_id");
 
             if (cart.items() == null || cart.items().isEmpty()) {
-                throw new UcpProtocolException(400, "cart_empty", "Cannot convert empty cart to checkout", "error", "$.cart_id");
+                throw new UcpProtocolException(400, "cart_empty", "Cannot convert empty cart to checkout", "error",
+                        "$.cart_id");
             }
 
-            // Reuse existing incomplete checkout session for the same cart to prevent duplicate conflicting sessions
+            // Reuse existing incomplete checkout session for the same cart to prevent
+            // duplicate conflicting sessions
             Optional<UcpCheckoutSession> existingSession = sessionPort.findIncompleteByCartId(cartId);
             if (existingSession.isPresent() && !existingSession.get().isExpired(now)) {
                 UcpCheckoutSession session = existingSession.get();
                 verifyOwnership(session.userId(), authenticatedUserId, "$.cart_id");
                 String resolvedCurrency = validateItemsAndDetermineCurrency(cart.items());
-                UcpCheckoutSession updated = session.withUpdatedItems(cart.items(), request.buyer(), request.context(), resolvedCurrency, now);
+                UcpCheckoutSession updated = session.withUpdatedItems(cart.items(), request.buyer(), request.context(),
+                        resolvedCurrency, now);
                 sessionPort.save(updated);
                 UcpCheckoutResponse response = buildCheckoutResponse(updated);
                 validateResponseSchema(response);
@@ -102,7 +104,8 @@ public class UcpCheckoutApplicationService {
             items = cart.items();
         } else {
             if (request == null || request.lineItems() == null || request.lineItems().isEmpty()) {
-                throw new UcpProtocolException(400, "invalid_request", "Checkout must contain line_items or a valid cart_id", "error", "$.line_items");
+                throw new UcpProtocolException(400, "invalid_request",
+                        "Checkout must contain line_items or a valid cart_id", "error", "$.line_items");
             }
             items = extractSkuQuantities(request.lineItems());
         }
@@ -135,7 +138,8 @@ public class UcpCheckoutApplicationService {
 
     public UcpCheckoutResponse getCheckout(String checkoutId, String authenticatedUserId) {
         UcpCheckoutSession session = sessionPort.findById(checkoutId)
-                .orElseThrow(() -> new UcpProtocolException(404, "checkout_not_found", "Checkout session not found: " + checkoutId, "error", "$.id"));
+                .orElseThrow(() -> new UcpProtocolException(404, "checkout_not_found",
+                        "Checkout session not found: " + checkoutId, "error", "$.id"));
         verifyOwnership(session.userId(), authenticatedUserId, "$.id");
 
         UcpCheckoutResponse response = buildCheckoutResponse(session);
@@ -143,10 +147,12 @@ public class UcpCheckoutApplicationService {
         return response;
     }
 
-    public UcpCheckoutResponse updateCheckout(String checkoutId, UcpCheckoutRequest request, String authenticatedUserId) {
+    public UcpCheckoutResponse updateCheckout(String checkoutId, UcpCheckoutRequest request,
+            String authenticatedUserId) {
         Instant now = clock.instant();
         UcpCheckoutSession existing = sessionPort.findById(checkoutId)
-                .orElseThrow(() -> new UcpProtocolException(404, "checkout_not_found", "Checkout session not found: " + checkoutId, "error", "$.id"));
+                .orElseThrow(() -> new UcpProtocolException(404, "checkout_not_found",
+                        "Checkout session not found: " + checkoutId, "error", "$.id"));
         verifyOwnership(existing.userId(), authenticatedUserId, "$.id");
 
         if (existing.isCompleted() || existing.isCanceled() || existing.isExpired(now)) {
@@ -155,7 +161,8 @@ public class UcpCheckoutApplicationService {
         }
 
         if (request == null || request.lineItems() == null || request.lineItems().isEmpty()) {
-            throw new UcpProtocolException(400, "invalid_request", "Checkout must contain at least one line item", "error", "$.line_items");
+            throw new UcpProtocolException(400, "invalid_request", "Checkout must contain at least one line item",
+                    "error", "$.line_items");
         }
 
         Map<String, Integer> items = extractSkuQuantities(request.lineItems());
@@ -178,7 +185,8 @@ public class UcpCheckoutApplicationService {
     public UcpCheckoutResponse completeCheckout(String checkoutId, String authenticatedUserId) {
         Instant now = clock.instant();
         UcpCheckoutSession existing = sessionPort.findById(checkoutId)
-                .orElseThrow(() -> new UcpProtocolException(404, "checkout_not_found", "Checkout session not found: " + checkoutId, "error", "$.id"));
+                .orElseThrow(() -> new UcpProtocolException(404, "checkout_not_found",
+                        "Checkout session not found: " + checkoutId, "error", "$.id"));
         verifyOwnership(existing.userId(), authenticatedUserId, "$.id");
 
         if (existing.isCompleted()) {
@@ -218,11 +226,13 @@ public class UcpCheckoutApplicationService {
     public UcpCheckoutResponse cancelCheckout(String checkoutId, String authenticatedUserId) {
         Instant now = clock.instant();
         UcpCheckoutSession existing = sessionPort.findById(checkoutId)
-                .orElseThrow(() -> new UcpProtocolException(404, "checkout_not_found", "Checkout session not found: " + checkoutId, "error", "$.id"));
+                .orElseThrow(() -> new UcpProtocolException(404, "checkout_not_found",
+                        "Checkout session not found: " + checkoutId, "error", "$.id"));
         verifyOwnership(existing.userId(), authenticatedUserId, "$.id");
 
         if (existing.isCompleted()) {
-            throw new UcpProtocolException(400, "invalid_state", "Cannot cancel completed checkout session", "error", "$.status");
+            throw new UcpProtocolException(400, "invalid_state", "Cannot cancel completed checkout session", "error",
+                    "$.status");
         }
 
         UcpCheckoutSession canceled = existing.withCanceled(now);
@@ -236,10 +246,12 @@ public class UcpCheckoutApplicationService {
     private void verifyOwnership(String resourceUserId, String authenticatedUserId, String path) {
         if (authenticatedUserId != null && !authenticatedUserId.isBlank()) {
             if (!authenticatedUserId.equals(resourceUserId)) {
-                throw new UcpProtocolException(403, "access_denied", "You are not authorized to access this checkout session", "error", path);
+                throw new UcpProtocolException(403, "access_denied",
+                        "You are not authorized to access this checkout session", "error", path);
             }
         } else if (!resourceUserId.startsWith("ucp:guest:")) {
-            throw new UcpProtocolException(403, "access_denied", "You are not authorized to access this checkout session", "error", path);
+            throw new UcpProtocolException(403, "access_denied",
+                    "You are not authorized to access this checkout session", "error", path);
         }
     }
 
@@ -262,7 +274,8 @@ public class UcpCheckoutApplicationService {
             if (pricing.currency() != null) {
                 if (commonCurrency != null && !commonCurrency.equalsIgnoreCase(pricing.currency())) {
                     throw new UcpProtocolException(400, "mixed_currency_not_supported",
-                            "All checkout items must use the same currency. Found: " + commonCurrency + " and " + pricing.currency(),
+                            "All checkout items must use the same currency. Found: " + commonCurrency + " and "
+                                    + pricing.currency(),
                             "error", "$.line_items[" + i + "]");
                 }
                 commonCurrency = pricing.currency();

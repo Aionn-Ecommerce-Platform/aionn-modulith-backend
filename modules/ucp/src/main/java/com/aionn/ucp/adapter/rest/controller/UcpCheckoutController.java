@@ -20,7 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Controller exposing canonical UCP Checkout REST endpoints.
- * Handles create, read, update, complete, and cancel operations for checkout sessions.
+ * Handles create, read, update, complete, and cancel operations for checkout
+ * sessions.
  */
 @RestController
 @RequestMapping("/ucp/v1/checkout-sessions")

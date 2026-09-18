@@ -22,8 +22,10 @@ public class DiscoveryController {
         Map<String, Object> services = new java.util.LinkedHashMap<>();
         Map<String, Object> capabilities = new java.util.LinkedHashMap<>();
 
-        boolean cartEnabled = properties != null && properties.capabilities() != null && properties.capabilities().cart();
-        boolean checkoutEnabled = properties != null && properties.capabilities() != null && properties.capabilities().checkout();
+        boolean cartEnabled = properties != null && properties.capabilities() != null
+                && properties.capabilities().cart();
+        boolean checkoutEnabled = properties != null && properties.capabilities() != null
+                && properties.capabilities().checkout();
 
         if (cartEnabled || checkoutEnabled) {
             String endpoint = properties.restEndpoint() != null ? properties.restEndpoint()

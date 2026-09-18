@@ -12,8 +12,8 @@ import java.util.Map;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record UcpCheckoutRequest(
-        @JsonProperty("cart_id") String cartId,
-        @Valid @JsonProperty("line_items") List<UcpLineItemRequest> lineItems,
-        @JsonProperty("buyer") Map<String, Object> buyer,
-        @JsonProperty("context") Map<String, Object> context) {
+                @JsonProperty("cart_id") String cartId,
+                @Valid @JsonProperty("line_items") List<UcpLineItemRequest> lineItems,
+                @JsonProperty("buyer") Map<String, Object> buyer,
+                @JsonProperty("context") Map<String, Object> context) {
 }
