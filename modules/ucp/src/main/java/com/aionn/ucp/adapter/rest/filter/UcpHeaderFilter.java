@@ -115,7 +115,7 @@ public class UcpHeaderFilter extends OncePerRequestFilter {
     }
 
     private boolean isSecure(HttpServletRequest request) {
-        return request.isSecure() || "https".equalsIgnoreCase(request.getHeader("X-Forwarded-Proto"));
+        return request.isSecure();
     }
 
     private void writeErrorResponse(HttpServletResponse response, HttpStatus status, String code, String message)

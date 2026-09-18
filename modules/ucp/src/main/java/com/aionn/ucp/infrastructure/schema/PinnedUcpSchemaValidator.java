@@ -100,7 +100,9 @@ public class PinnedUcpSchemaValidator implements UcpSchemaValidationPort {
         }
 
         JsonSchema jsonSchema = schemaCache.computeIfAbsent(schemaUri, uri -> factory.getSchema(URI.create(uri)));
-        Set<ValidationMessage> errors = jsonSchema.validate(payload);
+        Set<ValidationMessage> errors = jsonSchema.validate(
+                payload,
+                context -> context.getExecutionConfig().setFormatAssertionsEnabled(true));
 
         if (!errors.isEmpty()) {
             throw new IllegalStateException("UCP payload failed validation against schema: " + schemaUri);

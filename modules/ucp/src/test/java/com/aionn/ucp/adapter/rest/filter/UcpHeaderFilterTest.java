@@ -133,4 +133,26 @@ class UcpHeaderFilterTest {
         UcpErrorResponse error = mapper.readValue(response.getContentAsString(), UcpErrorResponse.class);
         assertThat(error.messages().get(0).code()).isEqualTo("https_required");
     }
+
+    @Test
+    void allowsHttpsWhenConfiguredAndSecure() throws ServletException, IOException {
+        UcpProperties secureProperties = new UcpProperties(
+                "2026-08-25",
+                "https://api.aionn.com/ucp/v1",
+                "Aionn Prod",
+                Set.of("https://ucp.dev/schemas/"),
+                true,
+                new UcpProperties.Capabilities(false, false, false, false));
+
+        UcpHeaderFilter secureFilter = new UcpHeaderFilter(secureProperties);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/.well-known/ucp");
+        request.setSecure(true);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        secureFilter.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+    }
 }

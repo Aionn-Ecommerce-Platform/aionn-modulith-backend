@@ -75,6 +75,19 @@ class PinnedUcpSchemaValidatorTest {
                                 .hasMessageContaining("failed validation");
         }
 
+        @Test
+        void rejectsErrorResponseWithInvalidContinueUrl() {
+                UcpErrorResponse error = new UcpErrorResponse(
+                                new UcpErrorResponse.Metadata("2026-08-25", "error"),
+                                java.util.List.of(UcpMessage.error("code", "msg", "unrecoverable")),
+                                "not-a-valid-uri");
+
+                JsonNode jsonNode = mapper.valueToTree(error);
+                assertThatThrownBy(() -> validator.validateErrorResponse(jsonNode))
+                                .isInstanceOf(IllegalStateException.class)
+                                .hasMessageContaining("failed validation");
+        }
+
         @ParameterizedTest
         @ValueSource(strings = {
                         "https://evil.com/schema.json",
