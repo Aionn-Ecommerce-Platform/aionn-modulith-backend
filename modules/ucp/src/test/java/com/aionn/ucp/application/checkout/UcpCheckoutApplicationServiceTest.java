@@ -552,4 +552,63 @@ class UcpCheckoutApplicationServiceTest {
                                         assertThat(ucpEx.getErrorCode()).isEqualTo("item_not_found");
                                 });
         }
+
+        @Test
+        void completeCheckoutCapturesPlacedOrderLinePricesInSnapshot() {
+                UcpCheckoutSession session = new UcpCheckoutSession(
+                                "chk-placed-prices", "user-1", null, "incomplete", "USD", Map.of("sku-1", 2),
+                                null, null, null, now, now, now.plusSeconds(3600), Map.of("sku-1", 1000L));
+                sessionPort.save(session);
+
+                PricingQueryPort.SkuPricing pricing = new PricingQueryPort.SkuPricing(
+                                "sku-1", "m-1", BigDecimal.valueOf(10.00), "USD", true);
+                when(pricingPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of("sku-1", pricing));
+
+                // Placed order returns actual line price (e.g. 10.50 due to minor shift or promotion)
+                OrderPlacementPort.PlacedOrder placed = new OrderPlacementPort.PlacedOrder(
+                                "ord-placed-1", 2100L, "USD", "PENDING",
+                                Map.of("sku-1", BigDecimal.valueOf(10.50)));
+                when(orderPlacementPort.placeHeadless(any())).thenReturn(placed);
+
+                UcpCheckoutResponse response = service.completeCheckout("chk-placed-prices", "user-1");
+
+                assertThat(response.status()).isEqualTo("completed");
+                assertThat(response.order().id()).isEqualTo("ord-placed-1");
+                UcpCheckoutSession updatedSession = sessionPort.findById("chk-placed-prices").orElseThrow();
+                // Check that the snapshot matches the placed order's 10.50 -> 1050L
+                assertThat(updatedSession.priceSnapshot().get("sku-1")).isEqualTo(1050L);
+        }
+
+        @Test
+        void updateCheckoutThrowsConflictWhenConcurrentModificationOccurs() {
+                UcpCheckoutSessionPort mockPort = org.mockito.Mockito.mock(UcpCheckoutSessionPort.class);
+                UcpCheckoutApplicationService mockService = new UcpCheckoutApplicationService(
+                                mockPort, cartPort, pricingPort, catalogQueryPort, orderPlacementPort, schemaValidator, clock);
+
+                UcpCheckoutSession session = new UcpCheckoutSession(
+                                "chk-conflict", "user-1", null, "incomplete", "USD", Map.of("sku-1", 1),
+                                null, null, null, now, now, now.plusSeconds(3600), Map.of(), 1L);
+                when(mockPort.findById("chk-conflict")).thenReturn(Optional.of(session));
+
+                PricingQueryPort.SkuPricing pricing = new PricingQueryPort.SkuPricing(
+                                "sku-1", "m-1", BigDecimal.valueOf(10.00), "USD", true);
+                when(pricingPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of("sku-1", pricing));
+
+                // CAS update fails due to concurrent modification
+                when(mockPort.updateIfMatches(any(), anyLong(), any())).thenReturn(false);
+
+                UcpCheckoutRequest request = new UcpCheckoutRequest(
+                                null,
+                                List.of(new UcpLineItemRequest("li_1", new UcpItemRequest("sku-1"), 2)),
+                                null, null);
+
+                assertThatThrownBy(() -> mockService.updateCheckout("chk-conflict", request, "user-1"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> {
+                                        UcpProtocolException ucpEx = (UcpProtocolException) ex;
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(409);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("conflict");
+                                });
+        }
 }
+

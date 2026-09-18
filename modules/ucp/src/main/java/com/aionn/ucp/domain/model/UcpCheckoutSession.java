@@ -21,7 +21,8 @@ public record UcpCheckoutSession(
         Instant createdAt,
         Instant updatedAt,
         Instant expiresAt,
-        Map<String, Long> priceSnapshot) {
+        Map<String, Long> priceSnapshot,
+        long version) {
 
     public UcpCheckoutSession {
         items = items != null ? Collections.unmodifiableMap(new LinkedHashMap<>(items)) : Map.of();
@@ -42,8 +43,25 @@ public record UcpCheckoutSession(
             String orderId,
             Instant createdAt,
             Instant updatedAt,
+            Instant expiresAt,
+            Map<String, Long> priceSnapshot) {
+        this(id, userId, cartId, status, currency, items, buyer, context, orderId, createdAt, updatedAt, expiresAt, priceSnapshot, 1L);
+    }
+
+    public UcpCheckoutSession(
+            String id,
+            String userId,
+            String cartId,
+            String status,
+            String currency,
+            Map<String, Integer> items,
+            Map<String, Object> buyer,
+            Map<String, Object> context,
+            String orderId,
+            Instant createdAt,
+            Instant updatedAt,
             Instant expiresAt) {
-        this(id, userId, cartId, status, currency, items, buyer, context, orderId, createdAt, updatedAt, expiresAt, Map.of());
+        this(id, userId, cartId, status, currency, items, buyer, context, orderId, createdAt, updatedAt, expiresAt, Map.of(), 1L);
     }
 
     public boolean isExpired(Instant now) {
@@ -78,7 +96,8 @@ public record UcpCheckoutSession(
                 createdAt,
                 now,
                 expiresAt,
-                newPriceSnapshot != null ? newPriceSnapshot : priceSnapshot);
+                newPriceSnapshot != null ? newPriceSnapshot : priceSnapshot,
+                version + 1);
     }
 
     public UcpCheckoutSession withCompleted(String placedOrderId, Instant now) {
@@ -99,7 +118,8 @@ public record UcpCheckoutSession(
                 createdAt,
                 now,
                 expiresAt,
-                completedPriceSnapshot != null ? completedPriceSnapshot : priceSnapshot);
+                completedPriceSnapshot != null ? completedPriceSnapshot : priceSnapshot,
+                version + 1);
     }
 
     public UcpCheckoutSession withCanceled(Instant now) {
@@ -120,6 +140,7 @@ public record UcpCheckoutSession(
                 createdAt,
                 now,
                 expiresAt,
-                canceledPriceSnapshot != null ? canceledPriceSnapshot : priceSnapshot);
+                canceledPriceSnapshot != null ? canceledPriceSnapshot : priceSnapshot,
+                version + 1);
     }
 }

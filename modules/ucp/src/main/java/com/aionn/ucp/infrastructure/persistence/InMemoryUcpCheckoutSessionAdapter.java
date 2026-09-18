@@ -34,12 +34,49 @@ public class InMemoryUcpCheckoutSessionAdapter implements UcpCheckoutSessionPort
     }
 
     @Override
-    public UcpCheckoutSession save(UcpCheckoutSession session) {
+    public synchronized UcpCheckoutSession save(UcpCheckoutSession session) {
         if (session != null && session.id() != null) {
             evictIfNecessary();
-            store.put(session.id(), session);
+            if (store.size() >= MAX_CAPACITY && !store.containsKey(session.id())) {
+                store.entrySet().stream()
+                        .min((e1, e2) -> {
+                            Instant exp1 = e1.getValue().expiresAt() != null ? e1.getValue().expiresAt() : Instant.MAX;
+                            Instant exp2 = e2.getValue().expiresAt() != null ? e2.getValue().expiresAt() : Instant.MAX;
+                            int cmp = exp1.compareTo(exp2);
+                            if (cmp != 0) {
+                                return cmp;
+                            }
+                            Instant cr1 = e1.getValue().createdAt() != null ? e1.getValue().createdAt() : Instant.MAX;
+                            Instant cr2 = e2.getValue().createdAt() != null ? e2.getValue().createdAt() : Instant.MAX;
+                            return cr1.compareTo(cr2);
+                        })
+                        .map(Map.Entry::getKey)
+                        .ifPresent(store::remove);
+            }
+            if (store.size() < MAX_CAPACITY || store.containsKey(session.id())) {
+                store.put(session.id(), session);
+            }
         }
         return session;
+    }
+
+    @Override
+    public synchronized boolean updateIfMatches(UcpCheckoutSession session, long expectedVersion, String expectedStatus) {
+        if (session == null || session.id() == null) {
+            return false;
+        }
+        UcpCheckoutSession current = store.get(session.id());
+        if (current == null) {
+            return false;
+        }
+        if (current.version() != expectedVersion) {
+            return false;
+        }
+        if (expectedStatus != null && !expectedStatus.equalsIgnoreCase(current.status())) {
+            return false;
+        }
+        store.put(session.id(), session);
+        return true;
     }
 
     @Override

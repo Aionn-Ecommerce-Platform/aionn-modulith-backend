@@ -130,4 +130,69 @@ class InMemoryUcpCheckoutSessionAdapterTest {
         adapter.clear();
         assertThat(adapter.size()).isZero();
     }
+
+    @Test
+    void updateIfMatchesSucceedsWhenVersionAndStatusMatch() {
+        UcpCheckoutSession session = new UcpCheckoutSession(
+                "chk-1", "user-1", "cart-1", "incomplete", "USD", Map.of("sku-1", 1),
+                null, null, null, now, now, now.plusSeconds(3600), Map.of(), 1L);
+        adapter.save(session);
+
+        UcpCheckoutSession updated = session.withUpdatedItems(Map.of("sku-1", 2), null, null, "USD", now);
+        assertThat(updated.version()).isEqualTo(2L);
+
+        boolean ok = adapter.updateIfMatches(updated, 1L, "incomplete");
+        assertThat(ok).isTrue();
+
+        Optional<UcpCheckoutSession> found = adapter.findById("chk-1");
+        assertThat(found).isPresent();
+        assertThat(found.get().version()).isEqualTo(2L);
+        assertThat(found.get().items().get("sku-1")).isEqualTo(2);
+    }
+
+    @Test
+    void updateIfMatchesFailsWhenVersionOrStatusMismatch() {
+        UcpCheckoutSession session = new UcpCheckoutSession(
+                "chk-1", "user-1", "cart-1", "incomplete", "USD", Map.of("sku-1", 1),
+                null, null, null, now, now, now.plusSeconds(3600), Map.of(), 1L);
+        adapter.save(session);
+
+        UcpCheckoutSession updated = session.withUpdatedItems(Map.of("sku-1", 2), null, null, "USD", now);
+
+        // Wrong version
+        assertThat(adapter.updateIfMatches(updated, 99L, "incomplete")).isFalse();
+
+        // Wrong status
+        assertThat(adapter.updateIfMatches(updated, 1L, "completed")).isFalse();
+
+        // Not found / null
+        assertThat(adapter.updateIfMatches(null, 1L, "incomplete")).isFalse();
+        UcpCheckoutSession nonexistent = new UcpCheckoutSession("chk-unknown", "user-1", null, "incomplete", "USD",
+                Map.of(), null, null, null, now, now, now.plusSeconds(3600));
+        assertThat(adapter.updateIfMatches(nonexistent, 1L, "incomplete")).isFalse();
+    }
+
+    @Test
+    void saveEnforcesMaxCapacityByEvictingEarliestExpiringSession() {
+        // Insert 5000 sessions with future expiration
+        for (int i = 0; i < 5000; i++) {
+            UcpCheckoutSession s = new UcpCheckoutSession(
+                    "chk-" + i, "user-1", null, "incomplete", "USD", Map.of(),
+                    null, null, null, now, now, now.plusSeconds(1000 + i));
+            adapter.save(s);
+        }
+        assertThat(adapter.size()).isEqualTo(5000);
+        assertThat(adapter.findById("chk-0")).isPresent();
+
+        // Insert 5001st session
+        UcpCheckoutSession s5001 = new UcpCheckoutSession(
+                "chk-5001", "user-1", null, "incomplete", "USD", Map.of(),
+                null, null, null, now, now, now.plusSeconds(99999));
+        adapter.save(s5001);
+
+        // Size must not exceed 5000 and chk-0 (earliest expiring) must be evicted
+        assertThat(adapter.size()).isEqualTo(5000);
+        assertThat(adapter.findById("chk-0")).isEmpty();
+        assertThat(adapter.findById("chk-5001")).isPresent();
+    }
 }

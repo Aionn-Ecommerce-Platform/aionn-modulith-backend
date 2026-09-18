@@ -56,7 +56,7 @@ public class UcpCheckoutApplicationService {
     private final UcpSchemaValidationPort schemaValidator;
     private final Clock clock;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final ConcurrentHashMap<String, Object> completionLocks = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Object> sessionLocks = new ConcurrentHashMap<>();
 
     public UcpCheckoutApplicationService(
             UcpCheckoutSessionPort sessionPort,
@@ -195,42 +195,53 @@ public class UcpCheckoutApplicationService {
 
     public UcpCheckoutResponse updateCheckout(String checkoutId, UcpCheckoutRequest request,
             String authenticatedUserId) {
-        Instant now = clock.instant();
-        UcpCheckoutSession existing = sessionPort.findById(checkoutId)
-                .orElseThrow(() -> new UcpProtocolException(404, CODE_CHECKOUT_NOT_FOUND,
-                        MSG_CHECKOUT_NOT_FOUND + checkoutId, SEVERITY_ERROR, PATH_ID));
-        verifyOwnership(existing.userId(), authenticatedUserId, PATH_ID);
+        Object lock = sessionLocks.computeIfAbsent(checkoutId, k -> new Object());
+        synchronized (lock) {
+            try {
+                Instant now = clock.instant();
+                UcpCheckoutSession existing = sessionPort.findById(checkoutId)
+                        .orElseThrow(() -> new UcpProtocolException(404, CODE_CHECKOUT_NOT_FOUND,
+                                MSG_CHECKOUT_NOT_FOUND + checkoutId, SEVERITY_ERROR, PATH_ID));
+                verifyOwnership(existing.userId(), authenticatedUserId, PATH_ID);
 
-        if (existing.isCompleted() || existing.isCanceled() || existing.isExpired(now)) {
-            throw new UcpProtocolException(400, "invalid_state",
-                    "Cannot update checkout session in status: " + existing.status(), SEVERITY_ERROR, PATH_STATUS);
+                if (existing.isCompleted() || existing.isCanceled() || existing.isExpired(now)) {
+                    throw new UcpProtocolException(400, "invalid_state",
+                            "Cannot update checkout session in status: " + existing.status(), SEVERITY_ERROR, PATH_STATUS);
+                }
+
+                if (request == null || request.lineItems() == null || request.lineItems().isEmpty()) {
+                    throw new UcpProtocolException(400, "invalid_request", "Checkout must contain at least one line item",
+                            SEVERITY_ERROR, PATH_LINE_ITEMS);
+                }
+
+                Map<String, Integer> items = extractSkuQuantities(request.lineItems());
+                ValidatedPricing validated = validateItemsAndDeterminePricing(items);
+
+                UcpCheckoutSession updated = existing.withUpdatedItems(
+                        items,
+                        request.buyer() != null ? request.buyer() : existing.buyer(),
+                        request.context() != null ? request.context() : existing.context(),
+                        validated.currency(),
+                        now,
+                        validated.priceSnapshot());
+
+                boolean saved = sessionPort.updateIfMatches(updated, existing.version(), existing.status());
+                if (!saved) {
+                    throw new UcpProtocolException(409, "conflict",
+                            "Checkout session was modified concurrently", SEVERITY_ERROR, PATH_STATUS);
+                }
+
+                UcpCheckoutResponse response = buildCheckoutResponse(updated);
+                validateResponseSchema(response);
+                return response;
+            } finally {
+                sessionLocks.remove(checkoutId);
+            }
         }
-
-        if (request == null || request.lineItems() == null || request.lineItems().isEmpty()) {
-            throw new UcpProtocolException(400, "invalid_request", "Checkout must contain at least one line item",
-                    SEVERITY_ERROR, PATH_LINE_ITEMS);
-        }
-
-        Map<String, Integer> items = extractSkuQuantities(request.lineItems());
-        ValidatedPricing validated = validateItemsAndDeterminePricing(items);
-
-        UcpCheckoutSession updated = existing.withUpdatedItems(
-                items,
-                request.buyer() != null ? request.buyer() : existing.buyer(),
-                request.context() != null ? request.context() : existing.context(),
-                validated.currency(),
-                now,
-                validated.priceSnapshot());
-
-        sessionPort.save(updated);
-
-        UcpCheckoutResponse response = buildCheckoutResponse(updated);
-        validateResponseSchema(response);
-        return response;
     }
 
     public UcpCheckoutResponse completeCheckout(String checkoutId, String authenticatedUserId) {
-        Object lock = completionLocks.computeIfAbsent(checkoutId, k -> new Object());
+        Object lock = sessionLocks.computeIfAbsent(checkoutId, k -> new Object());
         synchronized (lock) {
             try {
                 Instant now = clock.instant();
@@ -268,42 +279,78 @@ public class UcpCheckoutApplicationService {
 
                 OrderPlacementPort.PlacedOrder placedOrder = orderPlacementPort.placeHeadless(command);
 
-                UcpCheckoutSession completed = existing.withCompleted(placedOrder.orderId(), now, validated.priceSnapshot());
-                sessionPort.save(completed);
+                Map<String, Long> completedPriceSnapshot = placedOrder.linePrices() != null && !placedOrder.linePrices().isEmpty()
+                        ? placedOrder.linePrices().entrySet().stream()
+                                .collect(java.util.stream.Collectors.toMap(
+                                        Map.Entry::getKey,
+                                        e -> UcpCurrencyUtil.toMinorUnits(e.getValue(), placedOrder.currency()),
+                                        (k1, k2) -> k1,
+                                        java.util.LinkedHashMap::new))
+                        : validated.priceSnapshot();
+
+                UcpCheckoutSession completed = existing.withCompleted(placedOrder.orderId(), now, completedPriceSnapshot);
+                boolean saved = sessionPort.updateIfMatches(completed, existing.version(), existing.status());
+                if (!saved) {
+                    UcpCheckoutSession latest = sessionPort.findById(checkoutId).orElse(completed);
+                    if (latest.isCompleted()) {
+                        UcpCheckoutResponse response = buildCheckoutResponse(latest);
+                        validateResponseSchema(response);
+                        return response;
+                    }
+                    throw new UcpProtocolException(409, "conflict",
+                            "Checkout session was modified concurrently during completion", SEVERITY_ERROR, PATH_STATUS);
+                }
 
                 UcpCheckoutResponse response = buildCheckoutResponse(completed);
                 validateResponseSchema(response);
                 return response;
             } finally {
-                completionLocks.remove(checkoutId);
+                sessionLocks.remove(checkoutId);
             }
         }
     }
 
     public UcpCheckoutResponse cancelCheckout(String checkoutId, String authenticatedUserId) {
-        Instant now = clock.instant();
-        UcpCheckoutSession existing = sessionPort.findById(checkoutId)
-                .orElseThrow(() -> new UcpProtocolException(404, CODE_CHECKOUT_NOT_FOUND,
-                        MSG_CHECKOUT_NOT_FOUND + checkoutId, SEVERITY_ERROR, PATH_ID));
-        verifyOwnership(existing.userId(), authenticatedUserId, PATH_ID);
+        Object lock = sessionLocks.computeIfAbsent(checkoutId, k -> new Object());
+        synchronized (lock) {
+            try {
+                Instant now = clock.instant();
+                UcpCheckoutSession existing = sessionPort.findById(checkoutId)
+                        .orElseThrow(() -> new UcpProtocolException(404, CODE_CHECKOUT_NOT_FOUND,
+                                MSG_CHECKOUT_NOT_FOUND + checkoutId, SEVERITY_ERROR, PATH_ID));
+                verifyOwnership(existing.userId(), authenticatedUserId, PATH_ID);
 
-        if (existing.isCompleted()) {
-            throw new UcpProtocolException(400, "invalid_state", "Cannot cancel completed checkout session",
-                    SEVERITY_ERROR, PATH_STATUS);
+                if (existing.isCompleted()) {
+                    throw new UcpProtocolException(400, "invalid_state", "Cannot cancel completed checkout session",
+                            SEVERITY_ERROR, PATH_STATUS);
+                }
+
+                if (existing.isCanceled()) {
+                    UcpCheckoutResponse response = buildCheckoutResponse(existing);
+                    validateResponseSchema(response);
+                    return response;
+                }
+
+                Map<String, Long> priceSnapshot = existing.priceSnapshot();
+                if (priceSnapshot == null || priceSnapshot.isEmpty()) {
+                    ValidatedPricing validated = validateItemsAndDeterminePricing(existing.items());
+                    priceSnapshot = validated.priceSnapshot();
+                }
+
+                UcpCheckoutSession canceled = existing.withCanceled(now, priceSnapshot);
+                boolean saved = sessionPort.updateIfMatches(canceled, existing.version(), existing.status());
+                if (!saved) {
+                    throw new UcpProtocolException(409, "conflict",
+                            "Checkout session was modified concurrently", SEVERITY_ERROR, PATH_STATUS);
+                }
+
+                UcpCheckoutResponse response = buildCheckoutResponse(canceled);
+                validateResponseSchema(response);
+                return response;
+            } finally {
+                sessionLocks.remove(checkoutId);
+            }
         }
-
-        Map<String, Long> priceSnapshot = existing.priceSnapshot();
-        if (priceSnapshot == null || priceSnapshot.isEmpty()) {
-            ValidatedPricing validated = validateItemsAndDeterminePricing(existing.items());
-            priceSnapshot = validated.priceSnapshot();
-        }
-
-        UcpCheckoutSession canceled = existing.withCanceled(now, priceSnapshot);
-        sessionPort.save(canceled);
-
-        UcpCheckoutResponse response = buildCheckoutResponse(canceled);
-        validateResponseSchema(response);
-        return response;
     }
 
     private void verifyOwnership(String resourceUserId, String authenticatedUserId, String path) {

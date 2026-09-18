@@ -53,5 +53,6 @@ class OrderingOrderPlacementAdapterTest {
 
                 assertEquals("ord-1", placed.orderId());
                 assertEquals(200L, placed.totalAmountMinor());
+                assertEquals(BigDecimal.valueOf(95), placed.linePrices().get("sku-1"));
         }
 }
