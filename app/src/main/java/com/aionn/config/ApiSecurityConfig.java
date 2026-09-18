@@ -28,112 +28,112 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableConfigurationProperties(SecurityIpProperties.class)
 public class ApiSecurityConfig {
 
-    private final String allowedOrigins;
-    private final BearerAuthenticationFilter bearerAuthenticationFilter;
+        private final String allowedOrigins;
+        private final BearerAuthenticationFilter bearerAuthenticationFilter;
 
-    public ApiSecurityConfig(
-            @Value("${SECURITY_CORS_ALLOWED_ORIGINS:}") String allowedOrigins,
-            BearerAuthenticationFilter bearerAuthenticationFilter) {
-        this.allowedOrigins = allowedOrigins;
-        this.bearerAuthenticationFilter = bearerAuthenticationFilter;
-    }
-
-    @Bean
-    @SuppressWarnings("java:S4502")
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(AbstractHttpConfigurer::disable)
-                .headers(headers -> headers
-                        .contentTypeOptions(opt -> {
-                        })
-                        .frameOptions(frame -> frame.deny())
-                        .referrerPolicy(ref -> ref.policy(
-                                ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN)))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(HttpMethod.POST,
-                                "/api/v1/auth/login",
-                                "/api/v1/auth/social-login",
-                                "/api/v1/auth/refresh",
-                                "/api/v1/registrations/**",
-                                "/api/v1/security/password-reset-requests",
-                                "/api/v1/security/password-reset",
-                                "/api/v1/feedbacks",
-                                "/api/v1/kyc/webhooks/sumsub",
-                                "/api/v1/payments/webhooks/**",
-                                "/api/v1/payments/vnpay/ipn",
-                                "/api/v1/shipping/webhooks/carrier")
-                        .permitAll()
-                        .requestMatchers(HttpMethod.GET,
-                                "/.well-known/ucp",
-                                "/api/v1/geography/**",
-                                "/api/v1/catalog/**",
-                                "/api/v1/inventory/items",
-                                "/api/v1/recommendations/home",
-                                "/api/v1/recommendations/products/*/similar",
-                                "/api/v1/recommendations/products/*/also-bought",
-                                "/api/v1/promotions/flash-sales/active",
-                                "/api/v1/promotions/banners",
-                                "/api/v1/promotions/campaigns",
-                                "/api/v1/promotions/campaigns/*",
-                                "/api/v1/promotions/campaigns/*/vouchers",
-                                "/api/v1/promotions/shop-vouchers/merchant/*",
-                                "/api/v1/payments/vnpay/return")
-                        .permitAll()
-                        .requestMatchers(
-                                "/swagger-ui.html",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/actuator/health",
-                                "/actuator/health/**",
-                                "/actuator/info")
-                        .permitAll()
-                        .requestMatchers("/actuator/**").denyAll()
-                        .anyRequest().authenticated())
-                .addFilterBefore(bearerAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .httpBasic(AbstractHttpConfigurer::disable)
-                .formLogin(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-
-        return http.build();
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration cfg = new CorsConfiguration();
-        List<String> origins = resolveAllowedOrigins();
-        if (origins.isEmpty()) {
-            log.warn("No CORS allowed origins configured; defaulting to http://localhost:3000");
-            cfg.setAllowedOrigins(List.of("http://localhost:3000"));
-        } else {
-            cfg.setAllowedOrigins(origins);
+        public ApiSecurityConfig(
+                        @Value("${SECURITY_CORS_ALLOWED_ORIGINS:}") String allowedOrigins,
+                        BearerAuthenticationFilter bearerAuthenticationFilter) {
+                this.allowedOrigins = allowedOrigins;
+                this.bearerAuthenticationFilter = bearerAuthenticationFilter;
         }
-        cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        cfg.setAllowedHeaders(List.of(
-                "Authorization",
-                "Content-Type",
-                "Accept",
-                "X-Client-Type",
-                "X-Request-Id",
-                "Idempotency-Key",
-                "X-Idempotency-Key",
-                "X-Forwarded-For",
-                "Origin"));
-        cfg.setExposedHeaders(List.of("X-Request-Id", "Idempotent-Replay"));
-        cfg.setAllowCredentials(true);
-        cfg.setMaxAge(3600L);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", cfg);
-        return source;
-    }
+        @Bean
+        @SuppressWarnings("java:S4502")
+        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+                http
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                                .csrf(AbstractHttpConfigurer::disable)
+                                .headers(headers -> headers
+                                                .contentTypeOptions(opt -> {
+                                                })
+                                                .frameOptions(frame -> frame.deny())
+                                                .referrerPolicy(ref -> ref.policy(
+                                                                ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN)))
+                                .authorizeHttpRequests(auth -> auth
+                                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                                                .requestMatchers(HttpMethod.POST,
+                                                                "/api/v1/auth/login",
+                                                                "/api/v1/auth/social-login",
+                                                                "/api/v1/auth/refresh",
+                                                                "/api/v1/registrations/**",
+                                                                "/api/v1/security/password-reset-requests",
+                                                                "/api/v1/security/password-reset",
+                                                                "/api/v1/feedbacks",
+                                                                "/api/v1/kyc/webhooks/sumsub",
+                                                                "/api/v1/payments/webhooks/**",
+                                                                "/api/v1/payments/vnpay/ipn",
+                                                                "/api/v1/shipping/webhooks/carrier")
+                                                .permitAll()
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/.well-known/ucp",
+                                                                "/api/v1/geography/**",
+                                                                "/api/v1/catalog/**",
+                                                                "/api/v1/inventory/items",
+                                                                "/api/v1/recommendations/home",
+                                                                "/api/v1/recommendations/products/*/similar",
+                                                                "/api/v1/recommendations/products/*/also-bought",
+                                                                "/api/v1/promotions/flash-sales/active",
+                                                                "/api/v1/promotions/banners",
+                                                                "/api/v1/promotions/campaigns",
+                                                                "/api/v1/promotions/campaigns/*",
+                                                                "/api/v1/promotions/campaigns/*/vouchers",
+                                                                "/api/v1/promotions/shop-vouchers/merchant/*",
+                                                                "/api/v1/payments/vnpay/return")
+                                                .permitAll()
+                                                .requestMatchers(
+                                                                "/swagger-ui.html",
+                                                                "/swagger-ui/**",
+                                                                "/v3/api-docs/**",
+                                                                "/actuator/health",
+                                                                "/actuator/health/**",
+                                                                "/actuator/info")
+                                                .permitAll()
+                                                .requestMatchers("/actuator/**").denyAll()
+                                                .anyRequest().authenticated())
+                                .addFilterBefore(bearerAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                                .httpBasic(AbstractHttpConfigurer::disable)
+                                .formLogin(AbstractHttpConfigurer::disable)
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-    private List<String> resolveAllowedOrigins() {
-        return Arrays.stream(allowedOrigins.split(","))
-                .map(String::trim)
-                .filter(value -> !value.isBlank())
-                .toList();
-    }
+                return http.build();
+        }
+
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration cfg = new CorsConfiguration();
+                List<String> origins = resolveAllowedOrigins();
+                if (origins.isEmpty()) {
+                        log.warn("No CORS allowed origins configured; defaulting to http://localhost:3000");
+                        cfg.setAllowedOrigins(List.of("http://localhost:3000"));
+                } else {
+                        cfg.setAllowedOrigins(origins);
+                }
+                cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+                cfg.setAllowedHeaders(List.of(
+                                "Authorization",
+                                "Content-Type",
+                                "Accept",
+                                "X-Client-Type",
+                                "X-Request-Id",
+                                "Idempotency-Key",
+                                "X-Idempotency-Key",
+                                "X-Forwarded-For",
+                                "Origin"));
+                cfg.setExposedHeaders(List.of("X-Request-Id", "Idempotent-Replay"));
+                cfg.setAllowCredentials(true);
+                cfg.setMaxAge(3600L);
+
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", cfg);
+                return source;
+        }
+
+        private List<String> resolveAllowedOrigins() {
+                return Arrays.stream(allowedOrigins.split(","))
+                                .map(String::trim)
+                                .filter(value -> !value.isBlank())
+                                .toList();
+        }
 }

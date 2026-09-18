@@ -19,8 +19,24 @@ public class DiscoveryController {
     public DiscoveryController(BusinessProfileValidationPort validator,
             @Autowired(required = false) UcpProperties properties) {
         String version = properties != null ? properties.version() : BusinessProfileResponse.PROTOCOL_VERSION;
-        // In Phase 1, only advertise capabilities that are implemented and verified.
-        profile = BusinessProfileResponse.of(version, Map.of(), Map.of(), Map.of());
+        Map<String, Object> services = new java.util.LinkedHashMap<>();
+        Map<String, Object> capabilities = new java.util.LinkedHashMap<>();
+
+        if (properties != null && properties.capabilities() != null && properties.capabilities().cart()) {
+            String endpoint = properties.restEndpoint() != null ? properties.restEndpoint()
+                    : "http://localhost:8080/ucp/v1";
+            services.put("dev.ucp.shopping", java.util.List.of(
+                    Map.of(
+                            "version", version,
+                            "transport", "rest",
+                            "endpoint", endpoint)));
+            capabilities.put("dev.ucp.shopping.cart", java.util.List.of(
+                    Map.of(
+                            "version", version,
+                            "schema", "https://ucp.dev/schemas/shopping/cart.json")));
+        }
+
+        profile = BusinessProfileResponse.of(version, services, capabilities, Map.of());
         validator.validate(new ObjectMapper().valueToTree(profile));
     }
 
