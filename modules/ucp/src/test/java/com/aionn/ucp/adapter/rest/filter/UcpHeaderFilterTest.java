@@ -181,13 +181,13 @@ class UcpHeaderFilterTest {
     }
 
     @Test
-    void defaultConstructorInitializes() throws ServletException, IOException {
-        UcpHeaderFilter defaultFilter = new UcpHeaderFilter();
+    void filterInitializesWithNullProperties() throws ServletException, IOException {
+        UcpHeaderFilter filterWithNullProperties = new UcpHeaderFilter(null);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/.well-known/ucp");
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain();
 
-        defaultFilter.doFilter(request, response, chain);
+        filterWithNullProperties.doFilter(request, response, chain);
 
         assertThat(response.getStatus()).isEqualTo(200);
     }
