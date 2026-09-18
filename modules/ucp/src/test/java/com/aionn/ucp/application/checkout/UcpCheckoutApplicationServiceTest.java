@@ -611,5 +611,68 @@ class UcpCheckoutApplicationServiceTest {
                                         assertThat(ucpEx.getErrorCode()).isEqualTo("conflict");
                                 });
         }
+
+        @Test
+        void completeCheckoutThrowsConflictWhenSessionAbsentAfterFailedUpdate() {
+                UcpCheckoutSessionPort mockPort = org.mockito.Mockito.mock(UcpCheckoutSessionPort.class);
+                UcpCheckoutApplicationService mockService = new UcpCheckoutApplicationService(
+                                mockPort, cartPort, pricingPort, catalogQueryPort, orderPlacementPort, schemaValidator, clock);
+
+                UcpCheckoutSession session = new UcpCheckoutSession(
+                                "chk-disappeared", "user-1", null, "incomplete", "USD", Map.of("sku-1", 1),
+                                null, null, null, now, now, now.plusSeconds(3600), Map.of(), 1L);
+                when(mockPort.findById("chk-disappeared"))
+                                .thenReturn(Optional.of(session)) // initial lookup
+                                .thenReturn(Optional.empty());     // reread after failed update
+
+                PricingQueryPort.SkuPricing pricing = new PricingQueryPort.SkuPricing(
+                                "sku-1", "m-1", BigDecimal.valueOf(10.00), "USD", true);
+                when(pricingPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of("sku-1", pricing));
+
+                OrderPlacementPort.PlacedOrder placed = new OrderPlacementPort.PlacedOrder(
+                                "ord-1", 1000L, "USD", "PENDING", Map.of("sku-1", BigDecimal.valueOf(10.00)));
+                when(orderPlacementPort.placeHeadless(any())).thenReturn(placed);
+
+                when(mockPort.updateIfMatches(any(), anyLong(), any())).thenReturn(false);
+
+                assertThatThrownBy(() -> mockService.completeCheckout("chk-disappeared", "user-1"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> {
+                                        UcpProtocolException ucpEx = (UcpProtocolException) ex;
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(409);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("conflict");
+                                });
+        }
+
+        @Test
+        void createOrReuseFromCartThrowsConflictWhenConcurrentModificationOccurs() {
+                UcpCheckoutSessionPort mockPort = org.mockito.Mockito.mock(UcpCheckoutSessionPort.class);
+                UcpCheckoutApplicationService mockService = new UcpCheckoutApplicationService(
+                                mockPort, cartPort, pricingPort, catalogQueryPort, orderPlacementPort, schemaValidator, clock);
+
+                when(cartPort.findCartById("cart-conflict")).thenReturn(Optional.of(
+                                new CartOperationsPort.CartSnapshot("cart-conflict", "user-1", Map.of("sku-1", 1))));
+
+                UcpCheckoutSession session = new UcpCheckoutSession(
+                                "chk-c1", "user-1", "cart-conflict", "incomplete", "USD", Map.of("sku-1", 1),
+                                null, null, null, now, now, now.plusSeconds(3600), Map.of(), 1L);
+                when(mockPort.findIncompleteByCartId("cart-conflict")).thenReturn(Optional.of(session));
+
+                PricingQueryPort.SkuPricing pricing = new PricingQueryPort.SkuPricing(
+                                "sku-1", "m-1", BigDecimal.valueOf(10.00), "USD", true);
+                when(pricingPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of("sku-1", pricing));
+
+                when(mockPort.updateIfMatches(any(), anyLong(), any())).thenReturn(false);
+
+                UcpCheckoutRequest request = new UcpCheckoutRequest("cart-conflict", null, null, null);
+
+                assertThatThrownBy(() -> mockService.createCheckout(request, "user-1"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> {
+                                        UcpProtocolException ucpEx = (UcpProtocolException) ex;
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(409);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("conflict");
+                                });
+        }
 }
 

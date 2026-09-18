@@ -195,4 +195,17 @@ class InMemoryUcpCheckoutSessionAdapterTest {
         assertThat(adapter.findById("chk-0")).isEmpty();
         assertThat(adapter.findById("chk-5001")).isPresent();
     }
+
+    @Test
+    void evictIfNecessaryPreservesNonExpiredTerminalSessions() {
+        UcpCheckoutSession completed = new UcpCheckoutSession(
+                "chk-terminal", "user-1", null, "completed", "USD", Map.of(),
+                null, null, "ord-1", now, now, now.plusSeconds(3600));
+        adapter.save(completed);
+
+        adapter.evictExpired();
+
+        assertThat(adapter.findById("chk-terminal")).isPresent();
+        assertThat(adapter.findById("chk-terminal").get().isCompleted()).isTrue();
+    }
 }

@@ -84,12 +84,20 @@ public class InMemoryUcpCheckoutSessionAdapter implements UcpCheckoutSessionPort
         if (id == null) {
             return Optional.empty();
         }
-        UcpCheckoutSession session = store.get(id);
-        if (session != null && session.isExpired(clock.instant())) {
-            store.remove(id);
-            return Optional.empty();
+        while (true) {
+            UcpCheckoutSession session = store.get(id);
+            if (session == null) {
+                return Optional.empty();
+            }
+            if (session.isExpired(clock.instant())) {
+                if (store.remove(id, session)) {
+                    return Optional.empty();
+                }
+                // If conditional removal returned false, a newer session was stored concurrently; retry lookup
+                continue;
+            }
+            return Optional.of(session);
         }
-        return Optional.ofNullable(session);
     }
 
     @Override
@@ -114,9 +122,6 @@ public class InMemoryUcpCheckoutSessionAdapter implements UcpCheckoutSessionPort
     private void evictIfNecessary() {
         if (store.size() >= MAX_CAPACITY) {
             evictExpired();
-            if (store.size() >= MAX_CAPACITY) {
-                store.entrySet().removeIf(entry -> entry.getValue().isCompleted() || entry.getValue().isCanceled());
-            }
         }
     }
 
