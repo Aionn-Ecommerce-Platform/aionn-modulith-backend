@@ -20,12 +20,30 @@ public record UcpCheckoutSession(
         String orderId,
         Instant createdAt,
         Instant updatedAt,
-        Instant expiresAt) {
+        Instant expiresAt,
+        Map<String, Long> priceSnapshot) {
 
     public UcpCheckoutSession {
         items = items != null ? Collections.unmodifiableMap(new LinkedHashMap<>(items)) : Map.of();
         buyer = buyer != null ? Collections.unmodifiableMap(new LinkedHashMap<>(buyer)) : null;
         context = context != null ? Collections.unmodifiableMap(new LinkedHashMap<>(context)) : null;
+        priceSnapshot = priceSnapshot != null ? Collections.unmodifiableMap(new LinkedHashMap<>(priceSnapshot)) : Map.of();
+    }
+
+    public UcpCheckoutSession(
+            String id,
+            String userId,
+            String cartId,
+            String status,
+            String currency,
+            Map<String, Integer> items,
+            Map<String, Object> buyer,
+            Map<String, Object> context,
+            String orderId,
+            Instant createdAt,
+            Instant updatedAt,
+            Instant expiresAt) {
+        this(id, userId, cartId, status, currency, items, buyer, context, orderId, createdAt, updatedAt, expiresAt, Map.of());
     }
 
     public boolean isExpired(Instant now) {
@@ -42,6 +60,11 @@ public record UcpCheckoutSession(
 
     public UcpCheckoutSession withUpdatedItems(Map<String, Integer> newItems, Map<String, Object> newBuyer,
             Map<String, Object> newContext, String newCurrency, Instant now) {
+        return withUpdatedItems(newItems, newBuyer, newContext, newCurrency, now, priceSnapshot);
+    }
+
+    public UcpCheckoutSession withUpdatedItems(Map<String, Integer> newItems, Map<String, Object> newBuyer,
+            Map<String, Object> newContext, String newCurrency, Instant now, Map<String, Long> newPriceSnapshot) {
         return new UcpCheckoutSession(
                 id,
                 userId,
@@ -54,10 +77,15 @@ public record UcpCheckoutSession(
                 orderId,
                 createdAt,
                 now,
-                expiresAt);
+                expiresAt,
+                newPriceSnapshot != null ? newPriceSnapshot : priceSnapshot);
     }
 
     public UcpCheckoutSession withCompleted(String placedOrderId, Instant now) {
+        return withCompleted(placedOrderId, now, priceSnapshot);
+    }
+
+    public UcpCheckoutSession withCompleted(String placedOrderId, Instant now, Map<String, Long> completedPriceSnapshot) {
         return new UcpCheckoutSession(
                 id,
                 userId,
@@ -70,10 +98,15 @@ public record UcpCheckoutSession(
                 placedOrderId,
                 createdAt,
                 now,
-                expiresAt);
+                expiresAt,
+                completedPriceSnapshot != null ? completedPriceSnapshot : priceSnapshot);
     }
 
     public UcpCheckoutSession withCanceled(Instant now) {
+        return withCanceled(now, priceSnapshot);
+    }
+
+    public UcpCheckoutSession withCanceled(Instant now, Map<String, Long> canceledPriceSnapshot) {
         return new UcpCheckoutSession(
                 id,
                 userId,
@@ -86,6 +119,7 @@ public record UcpCheckoutSession(
                 orderId,
                 createdAt,
                 now,
-                expiresAt);
+                expiresAt,
+                canceledPriceSnapshot != null ? canceledPriceSnapshot : priceSnapshot);
     }
 }

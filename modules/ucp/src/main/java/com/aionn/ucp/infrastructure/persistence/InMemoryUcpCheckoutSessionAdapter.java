@@ -13,7 +13,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Thread-safe in-memory adapter implementing UcpCheckoutSessionPort.
- * Isolates protocol-session state without introducing unnecessary database tables.
+ * Isolates protocol-session state without introducing unnecessary database
+ * tables.
  * Includes bounded-size and TTL-based eviction for expired sessions.
  */
 @Component

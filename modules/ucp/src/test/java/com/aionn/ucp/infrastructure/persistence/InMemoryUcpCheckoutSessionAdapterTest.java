@@ -47,7 +47,8 @@ class InMemoryUcpCheckoutSessionAdapterTest {
     @Test
     void saveIgnoresNullSessionOrNullId() {
         adapter.save(null);
-        adapter.save(new UcpCheckoutSession(null, "user-1", null, "incomplete", "USD", Map.of(), null, null, null, now, now, now.plusSeconds(3600)));
+        adapter.save(new UcpCheckoutSession(null, "user-1", null, "incomplete", "USD", Map.of(), null, null, null, now,
+                now, now.plusSeconds(3600)));
         assertThat(adapter.size()).isZero();
     }
 

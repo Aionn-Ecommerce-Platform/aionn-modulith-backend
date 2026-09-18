@@ -158,7 +158,7 @@ public class OrderService {
 
         for (PlaceOrderHeadlessCommand.Line line : lines) {
             CatalogPricingGateway.SkuPricing skuInfo = pricing.get(line.skuId());
-            if (skuInfo == null || !skuInfo.active()) {
+            if (skuInfo == null || !skuInfo.active() || skuInfo.price() == null) {
                 throw new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
                         "SKU " + line.skuId() + " is not available for sale");
             }

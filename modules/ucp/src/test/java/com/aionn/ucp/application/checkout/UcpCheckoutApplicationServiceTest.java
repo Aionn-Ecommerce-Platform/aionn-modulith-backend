@@ -486,7 +486,8 @@ class UcpCheckoutApplicationServiceTest {
         @Test
         void cancelCheckoutThrowsWhenAlreadyCompleted() {
                 UcpCheckoutSession session = new UcpCheckoutSession(
-                                "chk-already-done", "user-1", null, "completed", "USD", Map.of("sku-1", 1), null, null, "ord-1",
+                                "chk-already-done", "user-1", null, "completed", "USD", Map.of("sku-1", 1), null, null,
+                                "ord-1",
                                 now, now, now.plusSeconds(3600));
                 sessionPort.save(session);
 
@@ -502,7 +503,8 @@ class UcpCheckoutApplicationServiceTest {
         @Test
         void buildCheckoutResponseThrowsWhenPricingMissing() {
                 UcpCheckoutSession session = new UcpCheckoutSession(
-                                "chk-missing-price", "user-1", null, "incomplete", "USD", Map.of("sku-missing", 1), null, null, null,
+                                "chk-missing-price", "user-1", null, "incomplete", "USD", Map.of("sku-missing", 1),
+                                null, null, null,
                                 now, now, now.plusSeconds(3600));
                 sessionPort.save(session);
 
@@ -513,6 +515,40 @@ class UcpCheckoutApplicationServiceTest {
                                 .satisfies(ex -> {
                                         UcpProtocolException ucpEx = (UcpProtocolException) ex;
                                         assertThat(ucpEx.getStatusCode()).isEqualTo(409);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("item_not_found");
+                                });
+        }
+
+        @Test
+        void getCheckoutForCompletedSessionUsesSnapshotEvenIfLivePricingUnavailable() {
+                UcpCheckoutSession completed = new UcpCheckoutSession(
+                                "chk-terminal", "user-1", null, "completed", "USD", Map.of("sku-discontinued", 2),
+                                null, null, "ord-history", now, now, now.plusSeconds(3600),
+                                Map.of("sku-discontinued", 1500L));
+                sessionPort.save(completed);
+
+                UcpCheckoutResponse response = service.getCheckout("chk-terminal", "user-1");
+
+                assertThat(response.status()).isEqualTo("completed");
+                assertThat(response.totals().get(0).amount()).isEqualTo(3000L);
+        }
+
+        @Test
+        void createCheckoutThrowsWhenPriceIsNull() {
+                UcpCheckoutRequest request = new UcpCheckoutRequest(
+                                null,
+                                List.of(new UcpLineItemRequest("li_1", new UcpItemRequest("sku-noprice"), 1)),
+                                null, null);
+
+                PricingQueryPort.SkuPricing pricing = new PricingQueryPort.SkuPricing(
+                                "sku-noprice", "m-1", null, "USD", true);
+                when(pricingPort.resolvePricing(List.of("sku-noprice"))).thenReturn(Map.of("sku-noprice", pricing));
+
+                assertThatThrownBy(() -> service.createCheckout(request, "user-1"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> {
+                                        UcpProtocolException ucpEx = (UcpProtocolException) ex;
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(400);
                                         assertThat(ucpEx.getErrorCode()).isEqualTo("item_not_found");
                                 });
         }
