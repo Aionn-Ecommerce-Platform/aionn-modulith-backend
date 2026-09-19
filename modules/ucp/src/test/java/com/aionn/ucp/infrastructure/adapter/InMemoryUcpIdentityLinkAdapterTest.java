@@ -72,6 +72,25 @@ class InMemoryUcpIdentityLinkAdapterTest {
     }
 
     @Test
+    void distinctKeysWhenDelimitersMatch() {
+        UcpIdentityLinkRequest req1 = new UcpIdentityLinkRequest(
+                "a::b", "c", "cust_1", List.of(), Map.of());
+        UcpIdentityLinkRequest req2 = new UcpIdentityLinkRequest(
+                "a", "b::c", "cust_2", List.of(), Map.of());
+
+        adapter.saveLink(req1);
+        adapter.saveLink(req2);
+
+        Optional<UcpIdentityLinkResponse> found1 = adapter.findByPlatformAndSubject("a::b", "c");
+        Optional<UcpIdentityLinkResponse> found2 = adapter.findByPlatformAndSubject("a", "b::c");
+
+        assertThat(found1).isPresent();
+        assertThat(found1.get().customerId()).isEqualTo("cust_1");
+        assertThat(found2).isPresent();
+        assertThat(found2.get().customerId()).isEqualTo("cust_2");
+    }
+
+    @Test
     void findByPlatformAndSubjectReturnsEmptyWhenNotFoundOrNull() {
         assertThat(adapter.findByPlatformAndSubject(null, "sub")).isEmpty();
         assertThat(adapter.findByPlatformAndSubject("plat", null)).isEmpty();

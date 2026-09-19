@@ -16,12 +16,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * In-memory thread-safe adapter implementation for UcpIdentityLinkPort.
- * Keys identity links by composite key (platformId::platformSubject).
+ * Keys identity links by a collision-free structured key (platformId,
+ * platformSubject).
  */
 @Component
 public class InMemoryUcpIdentityLinkAdapter implements UcpIdentityLinkPort {
 
-    private final Map<String, UcpIdentityLinkResponse> linksByKey = new ConcurrentHashMap<>();
+    private record PlatformSubjectKey(String platformId, String platformSubject) {
+        PlatformSubjectKey {
+            platformId = platformId != null ? platformId : "";
+            platformSubject = platformSubject != null ? platformSubject : "";
+        }
+    }
+
+    private final Map<PlatformSubjectKey, UcpIdentityLinkResponse> linksByKey = new ConcurrentHashMap<>();
     private final Clock clock;
 
     @Autowired
@@ -33,13 +41,9 @@ public class InMemoryUcpIdentityLinkAdapter implements UcpIdentityLinkPort {
         this(Clock.systemUTC());
     }
 
-    private static String compositeKey(String platformId, String platformSubject) {
-        return (platformId != null ? platformId : "") + "::" + (platformSubject != null ? platformSubject : "");
-    }
-
     @Override
     public UcpIdentityLinkResponse saveLink(UcpIdentityLinkRequest request) {
-        String key = compositeKey(request.platformId(), request.platformSubject());
+        PlatformSubjectKey key = new PlatformSubjectKey(request.platformId(), request.platformSubject());
         return linksByKey.compute(key, (k, existing) -> {
             String linkId = existing != null ? existing.linkId()
                     : "idlink_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
@@ -61,7 +65,7 @@ public class InMemoryUcpIdentityLinkAdapter implements UcpIdentityLinkPort {
         if (platformId == null || platformSubject == null) {
             return Optional.empty();
         }
-        return Optional.ofNullable(linksByKey.get(compositeKey(platformId, platformSubject)));
+        return Optional.ofNullable(linksByKey.get(new PlatformSubjectKey(platformId, platformSubject)));
     }
 
     @Override
@@ -79,7 +83,7 @@ public class InMemoryUcpIdentityLinkAdapter implements UcpIdentityLinkPort {
         if (platformId == null || platformSubject == null) {
             return false;
         }
-        String key = compositeKey(platformId, platformSubject);
+        PlatformSubjectKey key = new PlatformSubjectKey(platformId, platformSubject);
         AtomicBoolean wasRevoked = new AtomicBoolean(false);
         linksByKey.computeIfPresent(key, (k, existing) -> {
             wasRevoked.set(true);

@@ -24,17 +24,19 @@ public class RestClientUcpWebhookDispatcher implements UcpWebhookDispatcherPort 
 
     @Autowired
     public RestClientUcpWebhookDispatcher(
-            @Autowired(required = false) RestClient.Builder restClientBuilder,
-            @Autowired(required = false) com.aionn.ucp.application.port.out.UcpMetricsPort metricsPort) {
+            java.util.Optional<RestClient.Builder> restClientBuilder,
+            java.util.Optional<com.aionn.ucp.application.port.out.UcpMetricsPort> metricsPort) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(3));
         requestFactory.setReadTimeout(Duration.ofSeconds(5));
 
-        RestClient.Builder builder = restClientBuilder != null ? restClientBuilder : RestClient.builder();
+        RestClient.Builder builder = (restClientBuilder != null && restClientBuilder.isPresent())
+                ? restClientBuilder.get()
+                : RestClient.builder();
         this.restClient = builder
                 .requestFactory(requestFactory)
                 .build();
-        this.metricsPort = metricsPort;
+        this.metricsPort = metricsPort != null ? metricsPort.orElse(null) : null;
     }
 
     public RestClientUcpWebhookDispatcher(RestClient restClient) {
@@ -121,15 +123,19 @@ public class RestClientUcpWebhookDispatcher implements UcpWebhookDispatcherPort 
                 return false;
             }
             try {
-                java.net.InetAddress addr = java.net.InetAddress.getByName(host);
-                if (addr.isLoopbackAddress() || addr.isSiteLocalAddress()
-                        || addr.isLinkLocalAddress() || addr.isMulticastAddress()
-                        || addr.isAnyLocalAddress()) {
+                java.net.InetAddress[] addresses = java.net.InetAddress.getAllByName(host);
+                if (addresses == null || addresses.length == 0) {
                     return false;
                 }
-            } catch (java.net.UnknownHostException ignored) {
-                // If offline in test/CI environment, string-based prefix rejection above
-                // handles SSRF protection
+                for (java.net.InetAddress addr : addresses) {
+                    if (addr.isLoopbackAddress() || addr.isSiteLocalAddress()
+                            || addr.isLinkLocalAddress() || addr.isMulticastAddress()
+                            || addr.isAnyLocalAddress()) {
+                        return false;
+                    }
+                }
+            } catch (java.net.UnknownHostException e) {
+                return false;
             }
             return true;
         } catch (Exception e) {
