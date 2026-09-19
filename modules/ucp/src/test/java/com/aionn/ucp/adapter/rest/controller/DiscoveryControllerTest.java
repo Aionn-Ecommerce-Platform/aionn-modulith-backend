@@ -59,7 +59,7 @@ class DiscoveryControllerTest {
                                 java.util.Set.of("https://ucp.dev/schemas/"),
                                 false,
                                 new com.aionn.ucp.infrastructure.config.UcpProperties.Capabilities(true, false, false,
-                                                false));
+                                                false, false));
 
                 DiscoveryController controller = new DiscoveryController(new PinnedBusinessProfileValidator(),
                                 properties);
@@ -82,7 +82,7 @@ class DiscoveryControllerTest {
                                 java.util.Set.of("https://ucp.dev/schemas/"),
                                 false,
                                 new com.aionn.ucp.infrastructure.config.UcpProperties.Capabilities(false, true, false,
-                                                false));
+                                                false, false));
 
                 DiscoveryController controller = new DiscoveryController(new PinnedBusinessProfileValidator(),
                                 properties);
@@ -105,7 +105,7 @@ class DiscoveryControllerTest {
                                 java.util.Set.of("https://ucp.dev/schemas/"),
                                 false,
                                 new com.aionn.ucp.infrastructure.config.UcpProperties.Capabilities(false, false, true,
-                                                false));
+                                                false, false));
 
                 DiscoveryController controller = new DiscoveryController(new PinnedBusinessProfileValidator(),
                                 properties);
@@ -131,7 +131,7 @@ class DiscoveryControllerTest {
                                 java.util.Set.of("https://ucp.dev/schemas/"),
                                 false,
                                 new com.aionn.ucp.infrastructure.config.UcpProperties.Capabilities(false, false, false,
-                                                true));
+                                                true, false));
 
                 DiscoveryController controller = new DiscoveryController(new PinnedBusinessProfileValidator(),
                                 properties);
@@ -142,6 +142,29 @@ class DiscoveryControllerTest {
                 assertThat(profile.at("/ucp/capabilities/dev.ucp.shopping.order/0/schema").asText())
                                 .isEqualTo("https://ucp.dev/schemas/shopping/order.json");
                 assertThat(profile.at("/ucp/services/dev.ucp.shopping/0/endpoint").asText())
+                                .isEqualTo("http://localhost:8080/ucp/v1");
+        }
+
+        @Test
+        void discoveryAdvertisesIdentityLinkingCapabilityWhenConfigured() {
+                com.aionn.ucp.infrastructure.config.UcpProperties properties = new com.aionn.ucp.infrastructure.config.UcpProperties(
+                                "2026-08-25",
+                                "http://localhost:8080/ucp/v1",
+                                "Aionn Commerce",
+                                java.util.Set.of("https://ucp.dev/schemas/"),
+                                false,
+                                new com.aionn.ucp.infrastructure.config.UcpProperties.Capabilities(false, false, false,
+                                                false, true));
+
+                DiscoveryController controller = new DiscoveryController(new PinnedBusinessProfileValidator(),
+                                properties);
+                ObjectNode profile = mapper.valueToTree(controller.getProfile());
+
+                assertThat(schema.validate(profile)).isEmpty();
+                assertThat(profile.at("/ucp/capabilities/dev.ucp.common.identity_linking").isArray()).isTrue();
+                assertThat(profile.at("/ucp/capabilities/dev.ucp.common.identity_linking/0/schema").asText())
+                                .isEqualTo("https://ucp.dev/schemas/common/identity_linking.json");
+                assertThat(profile.at("/ucp/services/dev.ucp.common/0/endpoint").asText())
                                 .isEqualTo("http://localhost:8080/ucp/v1");
         }
 }
