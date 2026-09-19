@@ -27,7 +27,7 @@ class UcpControllerAdviceTest {
                 "Aionn Test",
                 Set.of("https://ucp.dev/schemas/"),
                 false,
-                new UcpProperties.Capabilities(false, false, false, false));
+                new UcpProperties.Capabilities(false, false, false, false, false));
         advice = new UcpControllerAdvice(properties);
     }
 

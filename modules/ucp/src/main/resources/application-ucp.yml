@@ -11,3 +11,4 @@ aionn:
       checkout: false
       catalog: false
       order: false
+      identity-linking: false

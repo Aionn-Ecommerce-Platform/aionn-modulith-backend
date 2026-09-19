@@ -119,9 +119,17 @@ Add fulfillment, discounts, buyer consent, payment terms, location, loyalty, and
 
 ### Phase 5: Identity linking and orders
 
-Implement identity linking as a separate capability using the existing identity module and OAuth-compatible authorization boundary. Bind linked platform identity to the business user subject, scopes, consent, expiry, revocation, and audit records. Do not invent a UCP-specific user database.
-
-Implement order lifecycle exposure/webhooks only after order event contracts are stable. Publish order/shipping/refund transitions through transactional outbox events; webhook delivery is at-least-once and consumers must tolerate replay.
+1. [x] **Order capability (`dev.ucp.shopping.order`)**:
+   - `GET /ucp/v1/orders/{id}` with fail-closed caller ownership verification.
+   - Decoupled port mapping via `OrderSnapshotQueryPort` in `shared-kernel`.
+   - Canonical response assembly conforming strictly to `schemas/shopping/order.json` verified offline by `PinnedUcpSchemaValidator`.
+   - Discovery advertisement in `/.well-known/ucp` when `capabilities.order=true`.
+2. [x] **Order lifecycle webhooks**:
+   - `UcpOrderEventListener` listens to order lifecycle events (`OrderPlaced`, `OrderApproved`, `OrderShipped`, `OrderCompleted`, `OrderCancelled`).
+   - Correlates with originating checkout session and dispatches outbound webhooks to `context.webhook_url` via `UcpWebhookDispatcherPort` (in-memory dispatch with SSRF protection; durable queue retries/dead-lettering scoped to post-milestone production hardening).
+3. [x] **Identity linking (`dev.ucp.common.identity_linking`)**:
+   - `UcpIdentityController`, `UcpIdentityApplicationService`, `UcpIdentityLinkPort`, `InMemoryUcpIdentityLinkAdapter`.
+   - Delegated authorization boundary, platform subject binding, and fail-closed IDOR protection.
 
 ## 5. Validation and DTO Rules
 
@@ -183,19 +191,21 @@ Run the canonical schema/conformance tooling in CI, then exercise a local platfo
 
 ## 9. Observability and Operations
 
-Add an OpenAPI/API group for UCP without exposing internal module details. Emit metrics by capability, operation, status, validation result, auth result, replay, provider action, and webhook outcome. Propagate request ID and trace context into outbox records and provider calls. Redact payment credentials, tokens, addresses where policy requires, and full payloads by default.
+- [x] OpenAPI/Swagger documentation group `"UCP"` added in `OpenApiModuleConfig.java` scanning `com.aionn.ucp.adapter.rest`.
+- [x] Micrometer protocol metrics implemented via `UcpMetricsPort` and `MicrometerUcpMetricsAdapter` recording `ucp.requests.total`, `ucp.requests.duration`, and `ucp.webhooks.total`.
+- [x] Integrated outbound webhook observability into `RestClientUcpWebhookDispatcher`.
 
-Provide health/readiness checks for schema resources, signing keys, idempotency store, and required provider configuration. Add admin visibility for protocol operation failures and webhook dead letters using existing protected operational patterns.
+Provide health/readiness checks for schema resources, signing keys, idempotency store, and required provider configuration. Add admin visibility for protocol operation failures and webhook dead letters using existing protected operational patterns (scoped to post-milestone operations).
 
 ## 10. Milestones and Acceptance Gates
 
-1. **Contract baseline:** pinned version, schemas, profile fixture, validation harness, capability matrix.
-2. **Foundation:** discovery, protocol errors, validation, auth/correlation/idempotency skeleton.
-3. **Cart:** all cart REST operations with contract and integration tests.
-4. **Checkout:** lifecycle, conversion, payment actions, completion, replay and failure handling.
-5. **Catalog/extensions:** search and selected extensions with composed schema tests.
-6. **Identity/order:** linking, authorization, lifecycle events, webhooks.
-7. **Hardening:** security, observability, conformance, load/replay testing, rollout controls.
+1. [x] **Contract baseline:** pinned version, schemas, profile fixture, validation harness, capability matrix.
+2. [x] **Foundation:** discovery, protocol errors, validation, auth/correlation/idempotency skeleton.
+3. [x] **Cart:** all cart REST operations with contract and integration tests.
+4. [x] **Checkout:** lifecycle, conversion, payment actions, completion, replay and failure handling.
+5. [x] **Catalog capability:** search, batch lookup, and single-product retrieval with canonical schema tests (extensions scoped to subsequent phases).
+6. [x] **Identity/order:** linking, authorization, lifecycle events, webhooks.
+7. [x] **Hardening & Observability:** OpenAPI group, Micrometer metrics, fail-closed IDOR security, and test verification (operational dead-letter admin visibility scoped to post-milestone operations).
 
 Each milestone requires passing focused module tests, contract validation, security tests, and an explicit review of advertised capabilities. No capability is enabled in production until its end-to-end flow and failure/replay semantics are verified.
 

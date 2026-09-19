@@ -75,6 +75,11 @@ public class OpenApiModuleConfig {
         return moduleApi("Recommendation", "com.aionn.recommendation.adapter.rest");
     }
 
+    @Bean
+    public GroupedOpenApi ucpApi() {
+        return moduleApi("UCP", "com.aionn.ucp.adapter.rest");
+    }
+
     private GroupedOpenApi moduleApi(String groupName, String controllerPackage) {
         return GroupedOpenApi.builder()
                 .group(groupName)
