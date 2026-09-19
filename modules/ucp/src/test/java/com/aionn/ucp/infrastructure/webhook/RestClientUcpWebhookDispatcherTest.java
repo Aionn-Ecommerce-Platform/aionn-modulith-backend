@@ -28,12 +28,14 @@ class RestClientUcpWebhookDispatcherTest {
     private RestClient.RequestBodySpec requestBodySpec;
     @Mock
     private RestClient.ResponseSpec responseSpec;
+    @Mock
+    private com.aionn.ucp.application.port.out.UcpMetricsPort metricsPort;
 
     private RestClientUcpWebhookDispatcher dispatcher;
 
     @BeforeEach
     void setUp() {
-        dispatcher = new RestClientUcpWebhookDispatcher(restClient);
+        dispatcher = new RestClientUcpWebhookDispatcher(restClient, metricsPort);
     }
 
     @Test
@@ -51,6 +53,7 @@ class RestClientUcpWebhookDispatcherTest {
 
         boolean result = dispatcher.dispatch("https://example.com/webhook", event);
         assertThat(result).isTrue();
+        org.mockito.Mockito.verify(metricsPort).recordWebhookDispatch("order.shipped", true);
     }
 
     @Test
@@ -76,5 +79,6 @@ class RestClientUcpWebhookDispatcherTest {
 
         boolean result = dispatcher.dispatch("https://example.com/webhook", event);
         assertThat(result).isFalse();
+        org.mockito.Mockito.verify(metricsPort).recordWebhookDispatch("order.completed", false);
     }
 }

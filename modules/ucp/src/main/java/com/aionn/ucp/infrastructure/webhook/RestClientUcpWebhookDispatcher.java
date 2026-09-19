@@ -20,9 +20,11 @@ import java.time.Duration;
 public class RestClientUcpWebhookDispatcher implements UcpWebhookDispatcherPort {
 
     private final RestClient restClient;
+    private final com.aionn.ucp.application.port.out.UcpMetricsPort metricsPort;
 
     @Autowired
-    public RestClientUcpWebhookDispatcher(RestClient.Builder restClientBuilder) {
+    public RestClientUcpWebhookDispatcher(RestClient.Builder restClientBuilder,
+            @Autowired(required = false) com.aionn.ucp.application.port.out.UcpMetricsPort metricsPort) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(3));
         requestFactory.setReadTimeout(Duration.ofSeconds(5));
@@ -30,10 +32,17 @@ public class RestClientUcpWebhookDispatcher implements UcpWebhookDispatcherPort 
         this.restClient = restClientBuilder
                 .requestFactory(requestFactory)
                 .build();
+        this.metricsPort = metricsPort;
     }
 
     public RestClientUcpWebhookDispatcher(RestClient restClient) {
+        this(restClient, null);
+    }
+
+    public RestClientUcpWebhookDispatcher(RestClient restClient,
+            com.aionn.ucp.application.port.out.UcpMetricsPort metricsPort) {
         this.restClient = restClient;
+        this.metricsPort = metricsPort;
     }
 
     @Override
@@ -55,6 +64,9 @@ public class RestClientUcpWebhookDispatcher implements UcpWebhookDispatcherPort 
                     .toBodilessEntity();
 
             boolean success = response.getStatusCode().is2xxSuccessful();
+            if (metricsPort != null) {
+                metricsPort.recordWebhookDispatch(event.eventType(), success);
+            }
             if (success) {
                 log.debug("Successfully delivered UCP webhook event '{}' to {}", event.eventId(), webhookUrl);
             } else {
@@ -65,6 +77,9 @@ public class RestClientUcpWebhookDispatcher implements UcpWebhookDispatcherPort 
         } catch (Exception e) {
             log.warn("Failed to deliver UCP webhook event '{}' to {}: {}",
                     event.eventId(), webhookUrl, e.getMessage());
+            if (metricsPort != null) {
+                metricsPort.recordWebhookDispatch(event.eventType(), false);
+            }
             return false;
         }
     }
