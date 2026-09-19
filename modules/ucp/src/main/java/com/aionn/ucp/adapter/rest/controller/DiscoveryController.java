@@ -32,6 +32,8 @@ public class DiscoveryController {
                                 && properties.capabilities().catalog();
                 boolean orderEnabled = properties != null && properties.capabilities() != null
                                 && properties.capabilities().order();
+                boolean identityLinkingEnabled = properties != null && properties.capabilities() != null
+                                && properties.capabilities().identityLinking();
 
                 if (cartEnabled || checkoutEnabled || catalogEnabled || orderEnabled) {
                         String endpoint = properties != null && properties.restEndpoint() != null
@@ -42,6 +44,22 @@ public class DiscoveryController {
                                                         KEY_VERSION, version,
                                                         "transport", "rest",
                                                         "endpoint", endpoint)));
+                }
+
+                if (identityLinkingEnabled) {
+                        String endpoint = properties != null && properties.restEndpoint() != null
+                                        ? properties.restEndpoint()
+                                        : "http://localhost:8080/ucp/v1";
+                        services.put("dev.ucp.common", java.util.List.of(
+                                        Map.of(
+                                                        KEY_VERSION, version,
+                                                        "transport", "rest",
+                                                        "endpoint", endpoint)));
+                        capabilities.put("dev.ucp.common.identity_linking", java.util.List.of(
+                                        Map.of(
+                                                        KEY_VERSION, version,
+                                                        KEY_SCHEMA,
+                                                        "https://ucp.dev/schemas/common/identity_linking.json")));
                 }
 
                 if (cartEnabled) {

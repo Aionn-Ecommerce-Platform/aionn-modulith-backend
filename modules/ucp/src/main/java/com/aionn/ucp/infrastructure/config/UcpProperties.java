@@ -23,6 +23,11 @@ public record UcpProperties(
                         @DefaultValue("false") boolean cart,
                         @DefaultValue("false") boolean checkout,
                         @DefaultValue("false") boolean catalog,
-                        @DefaultValue("false") boolean order) {
+                        @DefaultValue("false") boolean order,
+                        @DefaultValue("false") boolean identityLinking) {
+
+                public Capabilities(boolean cart, boolean checkout, boolean catalog, boolean order) {
+                        this(cart, checkout, catalog, order, false);
+                }
         }
 }

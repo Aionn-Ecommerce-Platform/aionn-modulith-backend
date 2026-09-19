@@ -127,8 +127,9 @@ Add fulfillment, discounts, buyer consent, payment terms, location, loyalty, and
 2. [x] **Order lifecycle webhooks**:
    - `UcpOrderEventListener` listens to order lifecycle events (`OrderPlaced`, `OrderApproved`, `OrderShipped`, `OrderCompleted`, `OrderCancelled`).
    - Correlates with originating checkout session and dispatches outbound webhooks to `context.webhook_url` via `UcpWebhookDispatcherPort`.
-3. [ ] **Identity linking (`dev.ucp.common.identity_linking`)**:
-   - Delegated OAuth-compatible authorization boundary and linked platform identity records.
+3. [x] **Identity linking (`dev.ucp.common.identity_linking`)**:
+   - `UcpIdentityController`, `UcpIdentityApplicationService`, `UcpIdentityLinkPort`, `InMemoryUcpIdentityLinkAdapter`.
+   - Delegated authorization boundary, platform subject binding, and fail-closed IDOR protection.
 
 ## 5. Validation and DTO Rules
 
