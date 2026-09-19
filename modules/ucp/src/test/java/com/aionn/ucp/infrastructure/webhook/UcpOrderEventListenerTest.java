@@ -94,7 +94,7 @@ class UcpOrderEventListenerTest {
 
         UcpWebhookEvent dispatched = captor.getValue();
         assertThat(dispatched.eventType()).isEqualTo("order.shipped");
-        assertThat(dispatched.data().get("shipment_id")).isEqualTo("shipment_99");
+        assertThat(dispatched.data()).containsEntry("shipment_id", "shipment_99");
     }
 
     @Test
@@ -127,7 +127,7 @@ class UcpOrderEventListenerTest {
         ArgumentCaptor<UcpWebhookEvent> captor = ArgumentCaptor.forClass(UcpWebhookEvent.class);
         verify(webhookDispatcher).dispatch(eq(webhookUrl), captor.capture());
         assertThat(captor.getValue().eventType()).isEqualTo("order.cancelled");
-        assertThat(captor.getValue().data().get("reason_code")).isEqualTo("USER_CANCELLED");
+        assertThat(captor.getValue().data()).containsEntry("reason_code", "USER_CANCELLED");
     }
 
     @Test

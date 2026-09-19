@@ -59,4 +59,37 @@ class MicrometerUcpMetricsAdapterTest {
 
         assertThat(count).isEqualTo(1.0);
     }
+
+    @Test
+    void recordWithNullParametersUsesDefaults() {
+        adapter.recordRequest(null, null, null);
+
+        double count = registry.get("ucp.requests.total")
+                .tag("capability", "unknown")
+                .tag("operation", "unknown")
+                .tag("status", "unknown")
+                .counter()
+                .count();
+
+        assertThat(count).isEqualTo(1.0);
+
+        adapter.recordLatency(null, null, Duration.ofMillis(50));
+        double latencyCount = registry.get("ucp.requests.duration")
+                .tag("capability", "unknown")
+                .tag("operation", "unknown")
+                .timer()
+                .count();
+        assertThat(latencyCount).isEqualTo(1L);
+
+        // Null duration should do nothing
+        adapter.recordLatency("cart", "create", null);
+
+        adapter.recordWebhookDispatch(null, false);
+        double webhookCount = registry.get("ucp.webhooks.total")
+                .tag("event_type", "unknown")
+                .tag("success", "false")
+                .counter()
+                .count();
+        assertThat(webhookCount).isEqualTo(1.0);
+    }
 }

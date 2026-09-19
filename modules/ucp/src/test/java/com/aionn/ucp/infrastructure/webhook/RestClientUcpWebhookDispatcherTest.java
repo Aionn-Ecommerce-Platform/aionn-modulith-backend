@@ -4,7 +4,6 @@ import com.aionn.ucp.application.port.out.UcpWebhookEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +13,7 @@ import java.time.Instant;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,7 +52,7 @@ class RestClientUcpWebhookDispatcherTest {
 
                 boolean result = dispatcher.dispatch("https://example.com/webhook", event);
                 assertThat(result).isTrue();
-                org.mockito.Mockito.verify(metricsPort).recordWebhookDispatch("order.shipped", true);
+                verify(metricsPort).recordWebhookDispatch("order.shipped", true);
         }
 
         @Test
@@ -79,7 +78,7 @@ class RestClientUcpWebhookDispatcherTest {
 
                 boolean result = dispatcher.dispatch("https://example.com/webhook", event);
                 assertThat(result).isFalse();
-                org.mockito.Mockito.verify(metricsPort).recordWebhookDispatch("order.completed", false);
+                verify(metricsPort).recordWebhookDispatch("order.completed", false);
         }
 
         @Test
@@ -112,11 +111,6 @@ class RestClientUcpWebhookDispatcherTest {
                                 java.util.Optional.empty(),
                                 java.util.Optional.empty());
                 assertThat(emptyOptionalArg).isNotNull();
-
-                RestClientUcpWebhookDispatcher nullOptionalArg = new RestClientUcpWebhookDispatcher(
-                                (java.util.Optional<RestClient.Builder>) null,
-                                null);
-                assertThat(nullOptionalArg).isNotNull();
         }
 
         @Test
@@ -134,6 +128,6 @@ class RestClientUcpWebhookDispatcherTest {
 
                 boolean result = dispatcher.dispatch("https://example.com/webhook", event);
                 assertThat(result).isFalse();
-                org.mockito.Mockito.verify(metricsPort).recordWebhookDispatch("order.completed", false);
+                verify(metricsPort).recordWebhookDispatch("order.completed", false);
         }
 }

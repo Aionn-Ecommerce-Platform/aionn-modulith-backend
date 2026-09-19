@@ -30,6 +30,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class UcpOrderEventListener {
 
+    private static final String KEY_STATUS = "status";
+
     private final UcpCheckoutSessionPort sessionPort;
     private final UcpWebhookDispatcherPort webhookDispatcher;
     private final Clock clock;
@@ -37,7 +39,7 @@ public class UcpOrderEventListener {
     @EventListener
     public void onOrderPlaced(OrderPlacedIntegrationEvent event) {
         dispatchIfWebhookRegistered(event.orderId(), "order.placed", Map.of(
-                "status", "PLACED",
+                KEY_STATUS, "PLACED",
                 "total_amount", event.totalAmount() != null ? event.totalAmount() : 0,
                 "currency", event.currency() != null ? event.currency() : ""));
     }
@@ -45,27 +47,27 @@ public class UcpOrderEventListener {
     @EventListener
     public void onOrderApproved(OrderApprovedIntegrationEvent event) {
         dispatchIfWebhookRegistered(event.orderId(), "order.approved", Map.of(
-                "status", "APPROVED",
+                KEY_STATUS, "APPROVED",
                 "payment_id", event.paymentId() != null ? event.paymentId() : ""));
     }
 
     @EventListener
     public void onOrderShipped(OrderShippedIntegrationEvent event) {
         dispatchIfWebhookRegistered(event.orderId(), "order.shipped", Map.of(
-                "status", "SHIPPED",
+                KEY_STATUS, "SHIPPED",
                 "shipment_id", event.shipmentId() != null ? event.shipmentId() : ""));
     }
 
     @EventListener
     public void onOrderCompleted(OrderCompletedIntegrationEvent event) {
         dispatchIfWebhookRegistered(event.orderId(), "order.completed", Map.of(
-                "status", "COMPLETED"));
+                KEY_STATUS, "COMPLETED"));
     }
 
     @EventListener
     public void onOrderCancelled(OrderCancelledIntegrationEvent event) {
         dispatchIfWebhookRegistered(event.orderId(), "order.cancelled", Map.of(
-                "status", "CANCELLED",
+                KEY_STATUS, "CANCELLED",
                 "reason_code", event.reasonCode() != null ? event.reasonCode() : "",
                 "reason", event.reason() != null ? event.reason() : ""));
     }

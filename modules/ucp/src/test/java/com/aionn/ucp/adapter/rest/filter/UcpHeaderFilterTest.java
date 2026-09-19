@@ -5,13 +5,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.aionn.ucp.adapter.rest.dto.UcpErrorResponse;
 import com.aionn.ucp.application.port.out.UcpMetricsPort;
 import com.aionn.ucp.infrastructure.config.UcpProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Optional;
@@ -249,5 +249,145 @@ class UcpHeaderFilterTest {
         assertThat(response.getStatus()).isEqualTo(200);
         verify(metricsPort).recordRequest("discovery", "lookup", "success");
         verify(metricsPort).recordLatency(eq("discovery"), eq("lookup"), any(Duration.class));
+    }
+
+    @Test
+    void recordsMetricsForCartGetPutCancel() throws ServletException, IOException {
+        UcpMetricsPort metricsPort = mock(UcpMetricsPort.class);
+        UcpHeaderFilter filterWithMetrics = new UcpHeaderFilter(properties, Optional.of(metricsPort));
+
+        // GET cart
+        MockHttpServletRequest getReq = new MockHttpServletRequest("GET", "/ucp/v1/carts/cart-1");
+        filterWithMetrics.doFilter(getReq, new MockHttpServletResponse(), new MockFilterChain());
+        verify(metricsPort).recordRequest("cart", "get", "success");
+
+        // PUT cart
+        MockHttpServletRequest putReq = new MockHttpServletRequest("PUT", "/ucp/v1/carts/cart-1");
+        putReq.setContentType("application/json");
+        filterWithMetrics.doFilter(putReq, new MockHttpServletResponse(), new MockFilterChain());
+        verify(metricsPort).recordRequest("cart", "update", "success");
+
+        // Cancel cart
+        MockHttpServletRequest cancelReq = new MockHttpServletRequest("POST", "/ucp/v1/carts/cart-1/cancel");
+        cancelReq.setContentType("application/json");
+        filterWithMetrics.doFilter(cancelReq, new MockHttpServletResponse(), new MockFilterChain());
+        verify(metricsPort).recordRequest("cart", "cancel", "success");
+    }
+
+    @Test
+    void recordsMetricsForCheckoutSessions() throws ServletException, IOException {
+        UcpMetricsPort metricsPort = mock(UcpMetricsPort.class);
+        UcpHeaderFilter filterWithMetrics = new UcpHeaderFilter(properties, Optional.of(metricsPort));
+
+        // POST checkout create
+        MockHttpServletRequest createReq = new MockHttpServletRequest("POST", "/ucp/v1/checkout-sessions");
+        createReq.setContentType("application/json");
+        filterWithMetrics.doFilter(createReq, new MockHttpServletResponse(), new MockFilterChain());
+        verify(metricsPort).recordRequest("checkout", "create", "success");
+
+        // GET checkout
+        MockHttpServletRequest getReq = new MockHttpServletRequest("GET", "/ucp/v1/checkout-sessions/cs-1");
+        filterWithMetrics.doFilter(getReq, new MockHttpServletResponse(), new MockFilterChain());
+        verify(metricsPort).recordRequest("checkout", "get", "success");
+
+        // PUT checkout update
+        MockHttpServletRequest putReq = new MockHttpServletRequest("PUT", "/ucp/v1/checkout-sessions/cs-1");
+        putReq.setContentType("application/json");
+        filterWithMetrics.doFilter(putReq, new MockHttpServletResponse(), new MockFilterChain());
+        verify(metricsPort).recordRequest("checkout", "update", "success");
+
+        // Complete checkout
+        MockHttpServletRequest completeReq = new MockHttpServletRequest("POST",
+                "/ucp/v1/checkout-sessions/cs-1/complete");
+        completeReq.setContentType("application/json");
+        filterWithMetrics.doFilter(completeReq, new MockHttpServletResponse(), new MockFilterChain());
+        verify(metricsPort).recordRequest("checkout", "complete", "success");
+
+        // Cancel checkout
+        MockHttpServletRequest cancelReq = new MockHttpServletRequest("POST", "/ucp/v1/checkout-sessions/cs-1/cancel");
+        cancelReq.setContentType("application/json");
+        filterWithMetrics.doFilter(cancelReq, new MockHttpServletResponse(), new MockFilterChain());
+        verify(metricsPort).recordRequest("checkout", "cancel", "success");
+    }
+
+    @Test
+    void recordsMetricsForCatalogEndpoints() throws ServletException, IOException {
+        UcpMetricsPort metricsPort = mock(UcpMetricsPort.class);
+        UcpHeaderFilter filterWithMetrics = new UcpHeaderFilter(properties, Optional.of(metricsPort));
+
+        // Search
+        MockHttpServletRequest searchReq = new MockHttpServletRequest("POST", "/ucp/v1/catalog/search");
+        searchReq.setContentType("application/json");
+        filterWithMetrics.doFilter(searchReq, new MockHttpServletResponse(), new MockFilterChain());
+        verify(metricsPort).recordRequest("catalog", "search", "success");
+
+        // Lookup
+        MockHttpServletRequest lookupReq = new MockHttpServletRequest("POST", "/ucp/v1/catalog/lookup");
+        lookupReq.setContentType("application/json");
+        filterWithMetrics.doFilter(lookupReq, new MockHttpServletResponse(), new MockFilterChain());
+        verify(metricsPort).recordRequest("catalog", "lookup", "success");
+
+        // Product
+        MockHttpServletRequest productReq = new MockHttpServletRequest("POST", "/ucp/v1/catalog/product");
+        productReq.setContentType("application/json");
+        filterWithMetrics.doFilter(productReq, new MockHttpServletResponse(), new MockFilterChain());
+        verify(metricsPort).recordRequest("catalog", "product", "success");
+
+        // Unknown catalog path
+        MockHttpServletRequest unknownReq = new MockHttpServletRequest("GET", "/ucp/v1/catalog/other");
+        filterWithMetrics.doFilter(unknownReq, new MockHttpServletResponse(), new MockFilterChain());
+        verify(metricsPort).recordRequest("catalog", "unknown", "success");
+    }
+
+    @Test
+    void recordsMetricsForIdentityAndOrderEndpoints() throws ServletException, IOException {
+        UcpMetricsPort metricsPort = mock(UcpMetricsPort.class);
+        UcpHeaderFilter filterWithMetrics = new UcpHeaderFilter(properties, Optional.of(metricsPort));
+
+        // Identity link
+        MockHttpServletRequest linkReq = new MockHttpServletRequest("POST", "/ucp/v1/identity/link");
+        linkReq.setContentType("application/json");
+        filterWithMetrics.doFilter(linkReq, new MockHttpServletResponse(), new MockFilterChain());
+        verify(metricsPort).recordRequest("identity_linking", "link", "success");
+
+        // Identity get
+        MockHttpServletRequest getLinkReq = new MockHttpServletRequest("GET", "/ucp/v1/identity/link");
+        filterWithMetrics.doFilter(getLinkReq, new MockHttpServletResponse(), new MockFilterChain());
+        verify(metricsPort).recordRequest("identity_linking", "get", "success");
+
+        // Identity revoke
+        MockHttpServletRequest revokeReq = new MockHttpServletRequest("DELETE", "/ucp/v1/identity/link");
+        filterWithMetrics.doFilter(revokeReq, new MockHttpServletResponse(), new MockFilterChain());
+        verify(metricsPort).recordRequest("identity_linking", "revoke", "success");
+
+        // Orders get
+        MockHttpServletRequest orderReq = new MockHttpServletRequest("GET", "/ucp/v1/orders/ord-1");
+        filterWithMetrics.doFilter(orderReq, new MockHttpServletResponse(), new MockFilterChain());
+        verify(metricsPort).recordRequest("order", "get", "success");
+
+        // Unmatched path
+        MockHttpServletRequest otherReq = new MockHttpServletRequest("GET", "/ucp/v1/unknown");
+        filterWithMetrics.doFilter(otherReq, new MockHttpServletResponse(), new MockFilterChain());
+        verify(metricsPort).recordRequest("unknown", "get", "success");
+    }
+
+    @Test
+    void recordsMetricsOnServerErrorStatus() throws ServletException, IOException {
+        UcpMetricsPort metricsPort = mock(UcpMetricsPort.class);
+        UcpHeaderFilter filterWithMetrics = new UcpHeaderFilter(properties, Optional.of(metricsPort));
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/ucp/v1/orders/ord-500");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain() {
+            @Override
+            public void doFilter(jakarta.servlet.ServletRequest req, jakarta.servlet.ServletResponse res) {
+                ((HttpServletResponse) res).setStatus(500);
+            }
+        };
+
+        filterWithMetrics.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(500);
+        verify(metricsPort).recordRequest("order", "get", "server_error");
     }
 }

@@ -32,6 +32,18 @@ public class UcpHeaderFilter extends OncePerRequestFilter {
     public static final String ATTR_UCP_AGENT = "ucp.agent";
     public static final String MDC_REQUEST_ID_KEY = "requestId";
 
+    private static final String CAPABILITY_DISCOVERY = "discovery";
+    private static final String CAPABILITY_CART = "cart";
+    private static final String CAPABILITY_CHECKOUT = "checkout";
+    private static final String CAPABILITY_CATALOG = "catalog";
+    private static final String CAPABILITY_IDENTITY_LINKING = "identity_linking";
+    private static final String CAPABILITY_ORDER = "order";
+    private static final String VALUE_UNKNOWN = "unknown";
+    private static final String OP_GET = "get";
+    private static final String OP_CREATE = "create";
+    private static final String OP_UPDATE = "update";
+    private static final String OP_CANCEL = "cancel";
+
     private static final Pattern SAFE_REQUEST_ID_PATTERN = Pattern.compile("^[a-zA-Z0-9_.-]{1,128}$");
     private static final int MAX_AGENT_LENGTH = 256;
 
@@ -47,7 +59,7 @@ public class UcpHeaderFilter extends OncePerRequestFilter {
     public UcpHeaderFilter(UcpProperties properties, Optional<UcpMetricsPort> metricsPort) {
         this.properties = properties;
         this.objectMapper = new ObjectMapper();
-        this.metricsPort = metricsPort != null ? metricsPort : Optional.empty();
+        this.metricsPort = metricsPort;
     }
 
     @Override
@@ -154,63 +166,79 @@ public class UcpHeaderFilter extends OncePerRequestFilter {
 
     private EndpointInfo resolveEndpointInfo(String method, String path) {
         if (path == null) {
-            return new EndpointInfo("unknown", method != null ? method.toLowerCase() : "unknown");
+            return new EndpointInfo(VALUE_UNKNOWN, method != null ? method.toLowerCase() : VALUE_UNKNOWN);
         }
         if (path.startsWith("/.well-known/ucp")) {
-            return new EndpointInfo("discovery", "lookup");
+            return new EndpointInfo(CAPABILITY_DISCOVERY, "lookup");
         }
         if (path.startsWith("/ucp/v1/carts") || path.startsWith("/ucp/carts")) {
-            if (path.endsWith("/cancel")) {
-                return new EndpointInfo("cart", "cancel");
-            }
-            if ("POST".equalsIgnoreCase(method)) {
-                return new EndpointInfo("cart", "create");
-            }
-            if ("PUT".equalsIgnoreCase(method)) {
-                return new EndpointInfo("cart", "update");
-            }
-            return new EndpointInfo("cart", "get");
+            return resolveCartEndpoint(method, path);
         }
         if (path.startsWith("/ucp/v1/checkout-sessions") || path.startsWith("/ucp/checkout-sessions")) {
-            if (path.endsWith("/complete")) {
-                return new EndpointInfo("checkout", "complete");
-            }
-            if (path.endsWith("/cancel")) {
-                return new EndpointInfo("checkout", "cancel");
-            }
-            if ("POST".equalsIgnoreCase(method)) {
-                return new EndpointInfo("checkout", "create");
-            }
-            if ("PUT".equalsIgnoreCase(method)) {
-                return new EndpointInfo("checkout", "update");
-            }
-            return new EndpointInfo("checkout", "get");
+            return resolveCheckoutEndpoint(method, path);
         }
         if (path.startsWith("/ucp/v1/catalog") || path.startsWith("/ucp/catalog")) {
-            if (path.endsWith("/search")) {
-                return new EndpointInfo("catalog", "search");
-            }
-            if (path.endsWith("/lookup")) {
-                return new EndpointInfo("catalog", "lookup");
-            }
-            if (path.endsWith("/product")) {
-                return new EndpointInfo("catalog", "product");
-            }
-            return new EndpointInfo("catalog", "unknown");
+            return resolveCatalogEndpoint(path);
         }
         if (path.startsWith("/ucp/v1/identity") || path.startsWith("/ucp/identity")) {
-            if ("POST".equalsIgnoreCase(method)) {
-                return new EndpointInfo("identity_linking", "link");
-            }
-            if ("DELETE".equalsIgnoreCase(method)) {
-                return new EndpointInfo("identity_linking", "revoke");
-            }
-            return new EndpointInfo("identity_linking", "get");
+            return resolveIdentityEndpoint(method);
         }
         if (path.startsWith("/ucp/v1/orders") || path.startsWith("/ucp/orders")) {
-            return new EndpointInfo("order", "get");
+            return new EndpointInfo(CAPABILITY_ORDER, OP_GET);
         }
-        return new EndpointInfo("unknown", method != null ? method.toLowerCase() : "unknown");
+        return new EndpointInfo(VALUE_UNKNOWN, method != null ? method.toLowerCase() : VALUE_UNKNOWN);
+    }
+
+    private EndpointInfo resolveCartEndpoint(String method, String path) {
+        if (path.endsWith("/cancel")) {
+            return new EndpointInfo(CAPABILITY_CART, OP_CANCEL);
+        }
+        if ("POST".equalsIgnoreCase(method)) {
+            return new EndpointInfo(CAPABILITY_CART, OP_CREATE);
+        }
+        if ("PUT".equalsIgnoreCase(method)) {
+            return new EndpointInfo(CAPABILITY_CART, OP_UPDATE);
+        }
+        return new EndpointInfo(CAPABILITY_CART, OP_GET);
+    }
+
+    private EndpointInfo resolveCheckoutEndpoint(String method, String path) {
+        if (path.endsWith("/complete")) {
+            return new EndpointInfo(CAPABILITY_CHECKOUT, "complete");
+        }
+        if (path.endsWith("/cancel")) {
+            return new EndpointInfo(CAPABILITY_CHECKOUT, OP_CANCEL);
+        }
+        if ("POST".equalsIgnoreCase(method)) {
+            return new EndpointInfo(CAPABILITY_CHECKOUT, OP_CREATE);
+        }
+        if ("PUT".equalsIgnoreCase(method)) {
+            return new EndpointInfo(CAPABILITY_CHECKOUT, OP_UPDATE);
+        }
+        return new EndpointInfo(CAPABILITY_CHECKOUT, OP_GET);
+    }
+
+    private EndpointInfo resolveCatalogEndpoint(String path) {
+        if (path.endsWith("/search")) {
+            return new EndpointInfo(CAPABILITY_CATALOG, "search");
+        }
+        if (path.endsWith("/lookup")) {
+            return new EndpointInfo(CAPABILITY_CATALOG, "lookup");
+        }
+        if (path.endsWith("/product")) {
+            return new EndpointInfo(CAPABILITY_CATALOG, "product");
+        }
+        return new EndpointInfo(CAPABILITY_CATALOG, VALUE_UNKNOWN);
+    }
+
+    private EndpointInfo resolveIdentityEndpoint(String method) {
+        if ("POST".equalsIgnoreCase(method)) {
+            return new EndpointInfo(CAPABILITY_IDENTITY_LINKING, "link");
+        }
+        if ("DELETE".equalsIgnoreCase(method)) {
+            return new EndpointInfo(CAPABILITY_IDENTITY_LINKING, "revoke");
+        }
+        return new EndpointInfo(CAPABILITY_IDENTITY_LINKING, OP_GET);
     }
 
     private String resolveOutcomeStatus(int httpStatusCode) {

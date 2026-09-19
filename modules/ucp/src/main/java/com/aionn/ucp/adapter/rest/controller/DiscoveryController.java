@@ -21,84 +21,71 @@ public class DiscoveryController {
         public DiscoveryController(BusinessProfileValidationPort validator,
                         @Autowired(required = false) UcpProperties properties) {
                 String version = properties != null ? properties.version() : BusinessProfileResponse.PROTOCOL_VERSION;
-                Map<String, Object> services = new java.util.LinkedHashMap<>();
-                Map<String, Object> capabilities = new java.util.LinkedHashMap<>();
+                String endpoint = properties != null && properties.restEndpoint() != null
+                                ? properties.restEndpoint()
+                                : "http://localhost:8080/ucp/v1";
 
-                boolean cartEnabled = properties != null && properties.capabilities() != null
-                                && properties.capabilities().cart();
-                boolean checkoutEnabled = properties != null && properties.capabilities() != null
-                                && properties.capabilities().checkout();
-                boolean catalogEnabled = properties != null && properties.capabilities() != null
-                                && properties.capabilities().catalog();
-                boolean orderEnabled = properties != null && properties.capabilities() != null
-                                && properties.capabilities().order();
-                boolean identityLinkingEnabled = properties != null && properties.capabilities() != null
-                                && properties.capabilities().identityLinking();
+                UcpProperties.Capabilities caps = (properties != null) ? properties.capabilities() : null;
 
-                if (cartEnabled || checkoutEnabled || catalogEnabled || orderEnabled) {
-                        String endpoint = properties != null && properties.restEndpoint() != null
-                                        ? properties.restEndpoint()
-                                        : "http://localhost:8080/ucp/v1";
-                        services.put("dev.ucp.shopping", java.util.List.of(
-                                        Map.of(
-                                                        KEY_VERSION, version,
-                                                        "transport", "rest",
-                                                        "endpoint", endpoint)));
-                }
-
-                if (identityLinkingEnabled) {
-                        String endpoint = properties != null && properties.restEndpoint() != null
-                                        ? properties.restEndpoint()
-                                        : "http://localhost:8080/ucp/v1";
-                        services.put("dev.ucp.common", java.util.List.of(
-                                        Map.of(
-                                                        KEY_VERSION, version,
-                                                        "transport", "rest",
-                                                        "endpoint", endpoint)));
-                        capabilities.put("dev.ucp.common.identity_linking", java.util.List.of(
-                                        Map.of(
-                                                        KEY_VERSION, version,
-                                                        KEY_SCHEMA,
-                                                        "https://ucp.dev/schemas/common/identity_linking.json")));
-                }
-
-                if (cartEnabled) {
-                        capabilities.put("dev.ucp.shopping.cart", java.util.List.of(
-                                        Map.of(
-                                                        KEY_VERSION, version,
-                                                        KEY_SCHEMA, "https://ucp.dev/schemas/shopping/cart.json")));
-                }
-
-                if (checkoutEnabled) {
-                        capabilities.put("dev.ucp.shopping.checkout", java.util.List.of(
-                                        Map.of(
-                                                        KEY_VERSION, version,
-                                                        KEY_SCHEMA, "https://ucp.dev/schemas/shopping/checkout.json")));
-                }
-
-                if (catalogEnabled) {
-                        capabilities.put("dev.ucp.shopping.catalog.search", java.util.List.of(
-                                        Map.of(
-                                                        KEY_VERSION, version,
-                                                        KEY_SCHEMA,
-                                                        "https://ucp.dev/schemas/shopping/catalog_search.json")));
-                        capabilities.put("dev.ucp.shopping.catalog.lookup", java.util.List.of(
-                                        Map.of(
-                                                        KEY_VERSION, version,
-                                                        KEY_SCHEMA,
-                                                        "https://ucp.dev/schemas/shopping/catalog_lookup.json")));
-                }
-
-                if (orderEnabled) {
-                        capabilities.put("dev.ucp.shopping.order", java.util.List.of(
-                                        Map.of(
-                                                        KEY_VERSION, version,
-                                                        KEY_SCHEMA,
-                                                        "https://ucp.dev/schemas/shopping/order.json")));
-                }
+                Map<String, Object> services = buildServices(caps, version, endpoint);
+                Map<String, Object> capabilities = buildCapabilities(caps, version);
 
                 profile = BusinessProfileResponse.of(version, services, capabilities, Map.of());
                 validator.validate(new ObjectMapper().valueToTree(profile));
+        }
+
+        private static Map<String, Object> buildServices(UcpProperties.Capabilities caps, String version,
+                        String endpoint) {
+                Map<String, Object> services = new java.util.LinkedHashMap<>();
+                if (caps == null) {
+                        return services;
+                }
+                if (caps.cart() || caps.checkout() || caps.catalog() || caps.order()) {
+                        services.put("dev.ucp.shopping", java.util.List.of(
+                                        Map.of(KEY_VERSION, version, "transport", "rest", "endpoint", endpoint)));
+                }
+                if (caps.identityLinking()) {
+                        services.put("dev.ucp.common", java.util.List.of(
+                                        Map.of(KEY_VERSION, version, "transport", "rest", "endpoint", endpoint)));
+                }
+                return services;
+        }
+
+        private static Map<String, Object> buildCapabilities(UcpProperties.Capabilities caps, String version) {
+                Map<String, Object> capabilities = new java.util.LinkedHashMap<>();
+                if (caps == null) {
+                        return capabilities;
+                }
+                if (caps.identityLinking()) {
+                        capabilities.put("dev.ucp.common.identity_linking",
+                                        capabilityEntry(version,
+                                                        "https://ucp.dev/schemas/common/identity_linking.json"));
+                }
+                if (caps.cart()) {
+                        capabilities.put("dev.ucp.shopping.cart",
+                                        capabilityEntry(version, "https://ucp.dev/schemas/shopping/cart.json"));
+                }
+                if (caps.checkout()) {
+                        capabilities.put("dev.ucp.shopping.checkout",
+                                        capabilityEntry(version, "https://ucp.dev/schemas/shopping/checkout.json"));
+                }
+                if (caps.catalog()) {
+                        capabilities.put("dev.ucp.shopping.catalog.search",
+                                        capabilityEntry(version,
+                                                        "https://ucp.dev/schemas/shopping/catalog_search.json"));
+                        capabilities.put("dev.ucp.shopping.catalog.lookup",
+                                        capabilityEntry(version,
+                                                        "https://ucp.dev/schemas/shopping/catalog_lookup.json"));
+                }
+                if (caps.order()) {
+                        capabilities.put("dev.ucp.shopping.order",
+                                        capabilityEntry(version, "https://ucp.dev/schemas/shopping/order.json"));
+                }
+                return capabilities;
+        }
+
+        private static java.util.List<Map<String, Object>> capabilityEntry(String version, String schema) {
+                return java.util.List.of(Map.of(KEY_VERSION, version, KEY_SCHEMA, schema));
         }
 
         public DiscoveryController(BusinessProfileValidationPort validator) {
