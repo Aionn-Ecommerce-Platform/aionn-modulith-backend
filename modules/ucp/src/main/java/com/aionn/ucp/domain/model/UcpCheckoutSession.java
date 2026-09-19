@@ -76,6 +76,28 @@ public record UcpCheckoutSession(
         return "canceled".equalsIgnoreCase(status);
     }
 
+    public boolean isCompleting() {
+        return "completing".equalsIgnoreCase(status);
+    }
+
+    public UcpCheckoutSession withCompleting(Instant now) {
+        return new UcpCheckoutSession(
+                id,
+                userId,
+                cartId,
+                "completing",
+                currency,
+                items,
+                buyer,
+                context,
+                orderId,
+                createdAt,
+                now,
+                expiresAt,
+                priceSnapshot,
+                version + 1);
+    }
+
     public UcpCheckoutSession withUpdatedItems(Map<String, Integer> newItems, Map<String, Object> newBuyer,
             Map<String, Object> newContext, String newCurrency, Instant now) {
         return withUpdatedItems(newItems, newBuyer, newContext, newCurrency, now, priceSnapshot);

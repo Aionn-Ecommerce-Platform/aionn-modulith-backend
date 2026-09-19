@@ -224,7 +224,7 @@ public class UcpCheckoutApplicationService {
                             MSG_CHECKOUT_NOT_FOUND + checkoutId, SEVERITY_ERROR, PATH_ID));
             verifyOwnership(existing.userId(), authenticatedUserId, PATH_ID);
 
-            if (existing.isCompleted() || existing.isCanceled() || existing.isExpired(now)) {
+            if (existing.isCompleted() || existing.isCanceled() || existing.isCompleting() || existing.isExpired(now)) {
                 throw new UcpProtocolException(400, "invalid_state",
                         "Cannot update checkout session in status: " + existing.status(), SEVERITY_ERROR, PATH_STATUS);
             }
@@ -279,16 +279,32 @@ public class UcpCheckoutApplicationService {
             // Validate items and pricing before placing order
             ValidatedPricing validated = validateItemsAndDeterminePricing(existing.items());
 
-            List<OrderPlacementPort.PlaceCommand.Line> orderLines = existing.items().entrySet().stream()
+            // Reserve the session transition to a durable 'completing' state before invoking placeHeadless
+            UcpCheckoutSession completing = existing.isCompleting() ? existing : existing.withCompleting(now);
+            if (!existing.isCompleting()) {
+                boolean reserved = sessionPort.updateIfMatches(completing, existing.version(), existing.status());
+                if (!reserved) {
+                    Optional<UcpCheckoutSession> latest = sessionPort.findById(checkoutId);
+                    if (latest.isPresent() && latest.get().isCompleted()) {
+                        UcpCheckoutResponse response = buildCheckoutResponse(latest.get());
+                        validateResponseSchema(response);
+                        return response;
+                    }
+                    throw new UcpProtocolException(409, "conflict",
+                            "Checkout session was modified concurrently", SEVERITY_ERROR, PATH_STATUS);
+                }
+            }
+
+            List<OrderPlacementPort.PlaceCommand.Line> orderLines = completing.items().entrySet().stream()
                     .map(e -> new OrderPlacementPort.PlaceCommand.Line(e.getKey(), e.getValue()))
                     .toList();
 
             OrderPlacementPort.PlaceCommand command = new OrderPlacementPort.PlaceCommand(
-                    existing.userId(),
+                    completing.userId(),
                     orderLines,
                     null,
                     "cod",
-                    existing.currency(),
+                    completing.currency(),
                     null,
                     checkoutId);
 
@@ -303,17 +319,22 @@ public class UcpCheckoutApplicationService {
                                     java.util.LinkedHashMap::new))
                     : validated.priceSnapshot();
 
-            UcpCheckoutSession completed = existing.withCompleted(placedOrder.orderId(), now, completedPriceSnapshot);
-            boolean saved = sessionPort.updateIfMatches(completed, existing.version(), existing.status());
+            UcpCheckoutSession completed = completing.withCompleted(placedOrder.orderId(), now, completedPriceSnapshot);
+            boolean saved = sessionPort.updateIfMatches(completed, completing.version(), completing.status());
             if (!saved) {
+                // Recovery: if CAS fails, associate the placed order and complete the session
                 Optional<UcpCheckoutSession> latest = sessionPort.findById(checkoutId);
                 if (latest.isPresent() && latest.get().isCompleted()) {
                     UcpCheckoutResponse response = buildCheckoutResponse(latest.get());
                     validateResponseSchema(response);
                     return response;
                 }
-                throw new UcpProtocolException(409, "conflict",
-                        "Checkout session state changed concurrently during completion", SEVERITY_ERROR, PATH_STATUS);
+                UcpCheckoutSession recovered = latest.map(s -> s.withCompleted(placedOrder.orderId(), now, completedPriceSnapshot))
+                        .orElse(completed);
+                sessionPort.save(recovered);
+                UcpCheckoutResponse response = buildCheckoutResponse(recovered);
+                validateResponseSchema(response);
+                return response;
             }
 
             UcpCheckoutResponse response = buildCheckoutResponse(completed);
@@ -330,7 +351,7 @@ public class UcpCheckoutApplicationService {
                             MSG_CHECKOUT_NOT_FOUND + checkoutId, SEVERITY_ERROR, PATH_ID));
             verifyOwnership(existing.userId(), authenticatedUserId, PATH_ID);
 
-            if (existing.isCompleted()) {
+            if (existing.isCompleted() || existing.isCompleting()) {
                 throw new UcpProtocolException(400, "invalid_state", "Cannot cancel completed checkout session",
                         SEVERITY_ERROR, PATH_STATUS);
             }
