@@ -7,9 +7,9 @@ import java.util.Map;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record UcpCatalogLookupRequest(
-                @JsonProperty("ids") List<String> ids,
-                @JsonProperty("filters") UcpCatalogModels.UcpSearchFiltersDto filters,
-                @JsonProperty("context") Map<String, Object> context,
-                @JsonProperty("signals") Map<String, Object> signals,
-                @JsonProperty("attribution") Map<String, Object> attribution) {
+        @JsonProperty("ids") List<String> ids,
+        @JsonProperty("filters") UcpCatalogModels.UcpSearchFiltersDto filters,
+        @JsonProperty("context") Map<String, Object> context,
+        @JsonProperty("signals") Map<String, Object> signals,
+        @JsonProperty("attribution") Map<String, Object> attribution) {
 }

@@ -9,10 +9,10 @@ import java.util.Map;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record UcpCatalogSearchResponse(
-                @JsonProperty("ucp") UcpResponseMetadata ucp,
-                @JsonProperty("products") List<UcpCatalogModels.UcpProductDto> products,
-                @JsonProperty("pagination") UcpCatalogModels.UcpPaginationResponseDto pagination,
-                @JsonProperty("actions") Map<String, Object> actions,
-                @JsonProperty("messages") List<UcpMessage> messages,
-                @JsonProperty("policies") List<Map<String, Object>> policies) {
+        @JsonProperty("ucp") UcpResponseMetadata ucp,
+        @JsonProperty("products") List<UcpCatalogModels.UcpProductDto> products,
+        @JsonProperty("pagination") UcpCatalogModels.UcpPaginationResponseDto pagination,
+        @JsonProperty("actions") Map<String, Object> actions,
+        @JsonProperty("messages") List<UcpMessage> messages,
+        @JsonProperty("policies") List<Map<String, Object>> policies) {
 }

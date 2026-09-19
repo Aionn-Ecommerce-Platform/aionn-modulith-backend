@@ -7,11 +7,11 @@ import java.util.Map;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record UcpProductDetailRequest(
-                @JsonProperty("id") String id,
-                @JsonProperty("selected") List<UcpCatalogModels.UcpSelectedOptionDto> selected,
-                @JsonProperty("preferences") List<String> preferences,
-                @JsonProperty("filters") UcpCatalogModels.UcpSearchFiltersDto filters,
-                @JsonProperty("context") Map<String, Object> context,
-                @JsonProperty("signals") Map<String, Object> signals,
-                @JsonProperty("attribution") Map<String, Object> attribution) {
+        @JsonProperty("id") String id,
+        @JsonProperty("selected") List<UcpCatalogModels.UcpSelectedOptionDto> selected,
+        @JsonProperty("preferences") List<String> preferences,
+        @JsonProperty("filters") UcpCatalogModels.UcpSearchFiltersDto filters,
+        @JsonProperty("context") Map<String, Object> context,
+        @JsonProperty("signals") Map<String, Object> signals,
+        @JsonProperty("attribution") Map<String, Object> attribution) {
 }
