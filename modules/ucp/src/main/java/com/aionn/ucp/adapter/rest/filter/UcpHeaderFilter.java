@@ -166,7 +166,7 @@ public class UcpHeaderFilter extends OncePerRequestFilter {
 
     private EndpointInfo resolveEndpointInfo(String method, String path) {
         if (path == null) {
-            return new EndpointInfo(VALUE_UNKNOWN, method != null ? method.toLowerCase() : VALUE_UNKNOWN);
+            return new EndpointInfo(VALUE_UNKNOWN, VALUE_UNKNOWN);
         }
         if (path.startsWith("/.well-known/ucp")) {
             return new EndpointInfo(CAPABILITY_DISCOVERY, "lookup");
@@ -186,7 +186,7 @@ public class UcpHeaderFilter extends OncePerRequestFilter {
         if (path.startsWith("/ucp/v1/orders") || path.startsWith("/ucp/orders")) {
             return new EndpointInfo(CAPABILITY_ORDER, OP_GET);
         }
-        return new EndpointInfo(VALUE_UNKNOWN, method != null ? method.toLowerCase() : VALUE_UNKNOWN);
+        return new EndpointInfo(VALUE_UNKNOWN, VALUE_UNKNOWN);
     }
 
     private EndpointInfo resolveCartEndpoint(String method, String path) {

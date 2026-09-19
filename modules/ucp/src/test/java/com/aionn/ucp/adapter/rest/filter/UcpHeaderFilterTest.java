@@ -368,7 +368,7 @@ class UcpHeaderFilterTest {
         // Unmatched path
         MockHttpServletRequest otherReq = new MockHttpServletRequest("GET", "/ucp/v1/unknown");
         filterWithMetrics.doFilter(otherReq, new MockHttpServletResponse(), new MockFilterChain());
-        verify(metricsPort).recordRequest("unknown", "get", "success");
+        verify(metricsPort).recordRequest("unknown", "unknown", "success");
     }
 
     @Test
