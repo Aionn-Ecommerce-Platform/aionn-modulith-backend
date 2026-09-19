@@ -13,57 +13,72 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class DiscoveryController {
 
-    private static final String KEY_VERSION = "version";
-    private final BusinessProfileResponse profile;
+        private static final String KEY_VERSION = "version";
+        private final BusinessProfileResponse profile;
 
-    @Autowired
-    public DiscoveryController(BusinessProfileValidationPort validator,
-            @Autowired(required = false) UcpProperties properties) {
-        String version = properties != null ? properties.version() : BusinessProfileResponse.PROTOCOL_VERSION;
-        Map<String, Object> services = new java.util.LinkedHashMap<>();
-        Map<String, Object> capabilities = new java.util.LinkedHashMap<>();
+        @Autowired
+        public DiscoveryController(BusinessProfileValidationPort validator,
+                        @Autowired(required = false) UcpProperties properties) {
+                String version = properties != null ? properties.version() : BusinessProfileResponse.PROTOCOL_VERSION;
+                Map<String, Object> services = new java.util.LinkedHashMap<>();
+                Map<String, Object> capabilities = new java.util.LinkedHashMap<>();
 
-        boolean cartEnabled = properties != null && properties.capabilities() != null
-                && properties.capabilities().cart();
-        boolean checkoutEnabled = properties != null && properties.capabilities() != null
-                && properties.capabilities().checkout();
+                boolean cartEnabled = properties != null && properties.capabilities() != null
+                                && properties.capabilities().cart();
+                boolean checkoutEnabled = properties != null && properties.capabilities() != null
+                                && properties.capabilities().checkout();
+                boolean catalogEnabled = properties != null && properties.capabilities() != null
+                                && properties.capabilities().catalog();
 
-        if (cartEnabled || checkoutEnabled) {
-            String endpoint = properties.restEndpoint() != null ? properties.restEndpoint()
-                    : "http://localhost:8080/ucp/v1";
-            services.put("dev.ucp.shopping", java.util.List.of(
-                    Map.of(
-                            KEY_VERSION, version,
-                            "transport", "rest",
-                            "endpoint", endpoint)));
+                if (cartEnabled || checkoutEnabled || catalogEnabled) {
+                        String endpoint = properties.restEndpoint() != null ? properties.restEndpoint()
+                                        : "http://localhost:8080/ucp/v1";
+                        services.put("dev.ucp.shopping", java.util.List.of(
+                                        Map.of(
+                                                        KEY_VERSION, version,
+                                                        "transport", "rest",
+                                                        "endpoint", endpoint)));
+                }
+
+                if (cartEnabled) {
+                        capabilities.put("dev.ucp.shopping.cart", java.util.List.of(
+                                        Map.of(
+                                                        KEY_VERSION, version,
+                                                        "schema", "https://ucp.dev/schemas/shopping/cart.json")));
+                }
+
+                if (checkoutEnabled) {
+                        capabilities.put("dev.ucp.shopping.checkout", java.util.List.of(
+                                        Map.of(
+                                                        KEY_VERSION, version,
+                                                        "schema", "https://ucp.dev/schemas/shopping/checkout.json")));
+                }
+
+                if (catalogEnabled) {
+                        capabilities.put("dev.ucp.shopping.catalog.search", java.util.List.of(
+                                        Map.of(
+                                                        KEY_VERSION, version,
+                                                        "schema",
+                                                        "https://ucp.dev/schemas/shopping/catalog_search.json")));
+                        capabilities.put("dev.ucp.shopping.catalog.lookup", java.util.List.of(
+                                        Map.of(
+                                                        KEY_VERSION, version,
+                                                        "schema",
+                                                        "https://ucp.dev/schemas/shopping/catalog_lookup.json")));
+                }
+
+                profile = BusinessProfileResponse.of(version, services, capabilities, Map.of());
+                validator.validate(new ObjectMapper().valueToTree(profile));
         }
 
-        if (cartEnabled) {
-            capabilities.put("dev.ucp.shopping.cart", java.util.List.of(
-                    Map.of(
-                            KEY_VERSION, version,
-                            "schema", "https://ucp.dev/schemas/shopping/cart.json")));
+        public DiscoveryController(BusinessProfileValidationPort validator) {
+                this(validator, null);
         }
 
-        if (checkoutEnabled) {
-            capabilities.put("dev.ucp.shopping.checkout", java.util.List.of(
-                    Map.of(
-                            KEY_VERSION, version,
-                            "schema", "https://ucp.dev/schemas/shopping/checkout.json")));
+        @GetMapping(value = "/.well-known/ucp", produces = MediaType.APPLICATION_JSON_VALUE)
+        public BusinessProfileResponse getProfile() {
+                // Advertise no commerce services until their complete protocol flows are
+                // available.
+                return profile;
         }
-
-        profile = BusinessProfileResponse.of(version, services, capabilities, Map.of());
-        validator.validate(new ObjectMapper().valueToTree(profile));
-    }
-
-    public DiscoveryController(BusinessProfileValidationPort validator) {
-        this(validator, null);
-    }
-
-    @GetMapping(value = "/.well-known/ucp", produces = MediaType.APPLICATION_JSON_VALUE)
-    public BusinessProfileResponse getProfile() {
-        // Advertise no commerce services until their complete protocol flows are
-        // available.
-        return profile;
-    }
 }

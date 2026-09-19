@@ -71,13 +71,15 @@ class ControllerAuthorizationArchitectureTest {
             "com.aionn.recommendation.adapter.rest.controller.RecommendationController#getHomeFeed",
             "com.aionn.recommendation.adapter.rest.controller.RecommendationController#getSimilarProducts",
             "com.aionn.ucp.adapter.rest.controller.DiscoveryController#getProfile",
+            "com.aionn.ucp.adapter.rest.controller.UcpCatalogController#search",
+            "com.aionn.ucp.adapter.rest.controller.UcpCatalogController#lookup",
+            "com.aionn.ucp.adapter.rest.controller.UcpCatalogController#getProduct",
             "com.aionn.shipping.adapter.rest.controller.ShippingWebhookController#carrierWebhook");
 
     @Test
     void everyControllerRouteIsSecuredOrExplicitlyAllowListed() {
         Set<String> unsecuredRoutes = new TreeSet<>();
-        ClassPathScanningCandidateComponentProvider scanner =
-                new ClassPathScanningCandidateComponentProvider(false);
+        ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false);
         scanner.addIncludeFilter(new AnnotationTypeFilter(RestController.class));
         scanner.addIncludeFilter(new AnnotationTypeFilter(Controller.class));
 

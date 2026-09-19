@@ -95,4 +95,30 @@ class DiscoveryControllerTest {
                 assertThat(profile.at("/ucp/services/dev.ucp.shopping/0/endpoint").asText())
                                 .isEqualTo("http://localhost:8080/ucp/v1");
         }
+
+        @Test
+        void discoveryAdvertisesCatalogCapabilityWhenConfigured() {
+                com.aionn.ucp.infrastructure.config.UcpProperties properties = new com.aionn.ucp.infrastructure.config.UcpProperties(
+                                "2026-08-25",
+                                "http://localhost:8080/ucp/v1",
+                                "Aionn Commerce",
+                                java.util.Set.of("https://ucp.dev/schemas/"),
+                                false,
+                                new com.aionn.ucp.infrastructure.config.UcpProperties.Capabilities(false, false, true,
+                                                false));
+
+                DiscoveryController controller = new DiscoveryController(new PinnedBusinessProfileValidator(),
+                                properties);
+                ObjectNode profile = mapper.valueToTree(controller.getProfile());
+
+                assertThat(schema.validate(profile)).isEmpty();
+                assertThat(profile.at("/ucp/capabilities/dev.ucp.shopping.catalog.search").isArray()).isTrue();
+                assertThat(profile.at("/ucp/capabilities/dev.ucp.shopping.catalog.search/0/schema").asText())
+                                .isEqualTo("https://ucp.dev/schemas/shopping/catalog_search.json");
+                assertThat(profile.at("/ucp/capabilities/dev.ucp.shopping.catalog.lookup").isArray()).isTrue();
+                assertThat(profile.at("/ucp/capabilities/dev.ucp.shopping.catalog.lookup/0/schema").asText())
+                                .isEqualTo("https://ucp.dev/schemas/shopping/catalog_lookup.json");
+                assertThat(profile.at("/ucp/services/dev.ucp.shopping/0/endpoint").asText())
+                                .isEqualTo("http://localhost:8080/ucp/v1");
+        }
 }
