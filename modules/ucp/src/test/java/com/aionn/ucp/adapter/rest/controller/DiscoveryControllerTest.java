@@ -59,7 +59,7 @@ class DiscoveryControllerTest {
                                 java.util.Set.of("https://ucp.dev/schemas/"),
                                 false,
                                 new com.aionn.ucp.infrastructure.config.UcpProperties.Capabilities(true, false, false,
-                                                false));
+                                                false, false));
 
                 DiscoveryController controller = new DiscoveryController(new PinnedBusinessProfileValidator(),
                                 properties);
@@ -82,7 +82,7 @@ class DiscoveryControllerTest {
                                 java.util.Set.of("https://ucp.dev/schemas/"),
                                 false,
                                 new com.aionn.ucp.infrastructure.config.UcpProperties.Capabilities(false, true, false,
-                                                false));
+                                                false, false));
 
                 DiscoveryController controller = new DiscoveryController(new PinnedBusinessProfileValidator(),
                                 properties);
@@ -105,7 +105,7 @@ class DiscoveryControllerTest {
                                 java.util.Set.of("https://ucp.dev/schemas/"),
                                 false,
                                 new com.aionn.ucp.infrastructure.config.UcpProperties.Capabilities(false, false, true,
-                                                false));
+                                                false, false));
 
                 DiscoveryController controller = new DiscoveryController(new PinnedBusinessProfileValidator(),
                                 properties);
@@ -131,7 +131,7 @@ class DiscoveryControllerTest {
                                 java.util.Set.of("https://ucp.dev/schemas/"),
                                 false,
                                 new com.aionn.ucp.infrastructure.config.UcpProperties.Capabilities(false, false, false,
-                                                true));
+                                                true, false));
 
                 DiscoveryController controller = new DiscoveryController(new PinnedBusinessProfileValidator(),
                                 properties);

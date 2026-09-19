@@ -42,6 +42,8 @@ class UcpIdentityApplicationServiceTest {
                                 "link_1", "google_assistant", "sub_123", "cust_456", "ACTIVE",
                                 List.of("orders.read"), Instant.now(), null, Map.of());
 
+                when(identityLinkPort.findByPlatformAndSubject("google_assistant", "sub_123"))
+                                .thenReturn(Optional.empty());
                 when(identityLinkPort.saveLink(any())).thenReturn(expected);
 
                 UcpIdentityLinkResponse result = service.linkIdentity(request, "cust_456");
@@ -63,14 +65,35 @@ class UcpIdentityApplicationServiceTest {
         }
 
         @Test
+        void linkIdentityThrowsConflictWhenPlatformSubjectBelongsToAnotherCustomer() {
+                UcpIdentityLinkRequest request = new UcpIdentityLinkRequest(
+                                "google_assistant", "sub_123", "cust_456", List.of(), Map.of());
+                UcpIdentityLinkResponse existingOtherCustomer = new UcpIdentityLinkResponse(
+                                "link_old", "google_assistant", "sub_123", "different_cust", "ACTIVE",
+                                List.of(), Instant.now(), null, Map.of());
+
+                when(identityLinkPort.findByPlatformAndSubject("google_assistant", "sub_123"))
+                                .thenReturn(Optional.of(existingOtherCustomer));
+
+                assertThatThrownBy(() -> service.linkIdentity(request, "cust_456"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> {
+                                        UcpProtocolException ucpEx = (UcpProtocolException) ex;
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(409);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("identity_conflict");
+                                });
+        }
+
+        @Test
         void getLinkSucceedsWhenFoundAndCallerMatches() {
                 UcpIdentityLinkResponse expected = new UcpIdentityLinkResponse(
                                 "link_1", "google_assistant", "sub_123", "cust_456", "ACTIVE",
                                 List.of(), Instant.now(), null, Map.of());
 
-                when(identityLinkPort.findByPlatformSubject("sub_123")).thenReturn(Optional.of(expected));
+                when(identityLinkPort.findByPlatformAndSubject("google_assistant", "sub_123"))
+                                .thenReturn(Optional.of(expected));
 
-                UcpIdentityLinkResponse result = service.getLink("sub_123", "cust_456");
+                UcpIdentityLinkResponse result = service.getLink("google_assistant", "sub_123", "cust_456");
 
                 assertThat(result).isNotNull();
                 assertThat(result.platformSubject()).isEqualTo("sub_123");
@@ -78,9 +101,10 @@ class UcpIdentityApplicationServiceTest {
 
         @Test
         void getLinkThrowsNotFoundWhenSubjectDoesNotExist() {
-                when(identityLinkPort.findByPlatformSubject("unknown_sub")).thenReturn(Optional.empty());
+                when(identityLinkPort.findByPlatformAndSubject("google_assistant", "unknown_sub"))
+                                .thenReturn(Optional.empty());
 
-                assertThatThrownBy(() -> service.getLink("unknown_sub", "cust_456"))
+                assertThatThrownBy(() -> service.getLink("google_assistant", "unknown_sub", "cust_456"))
                                 .isInstanceOf(UcpProtocolException.class)
                                 .satisfies(ex -> {
                                         UcpProtocolException ucpEx = (UcpProtocolException) ex;
@@ -90,19 +114,21 @@ class UcpIdentityApplicationServiceTest {
         }
 
         @Test
-        void getLinkThrowsForbiddenWhenCallerDoesNotMatchCustomer() {
+        void getLinkThrowsNotFoundWhenCallerDoesNotMatchCustomer() {
                 UcpIdentityLinkResponse expected = new UcpIdentityLinkResponse(
                                 "link_1", "google_assistant", "sub_123", "cust_456", "ACTIVE",
                                 List.of(), Instant.now(), null, Map.of());
 
-                when(identityLinkPort.findByPlatformSubject("sub_123")).thenReturn(Optional.of(expected));
+                when(identityLinkPort.findByPlatformAndSubject("google_assistant", "sub_123"))
+                                .thenReturn(Optional.of(expected));
 
-                assertThatThrownBy(() -> service.getLink("sub_123", "attacker_user"))
+                // Maps unauthorized access to 404 to avoid leaking subject existence
+                assertThatThrownBy(() -> service.getLink("google_assistant", "sub_123", "attacker_user"))
                                 .isInstanceOf(UcpProtocolException.class)
                                 .satisfies(ex -> {
                                         UcpProtocolException ucpEx = (UcpProtocolException) ex;
-                                        assertThat(ucpEx.getStatusCode()).isEqualTo(403);
-                                        assertThat(ucpEx.getErrorCode()).isEqualTo("access_denied");
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(404);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("link_not_found");
                                 });
         }
 
@@ -112,27 +138,29 @@ class UcpIdentityApplicationServiceTest {
                                 "link_1", "google_assistant", "sub_123", "cust_456", "ACTIVE",
                                 List.of(), Instant.now(), null, Map.of());
 
-                when(identityLinkPort.findByPlatformSubject("sub_123")).thenReturn(Optional.of(expected));
+                when(identityLinkPort.findByPlatformAndSubject("google_assistant", "sub_123"))
+                                .thenReturn(Optional.of(expected));
 
-                service.revokeLink("sub_123", "cust_456");
+                service.revokeLink("google_assistant", "sub_123", "cust_456");
 
-                verify(identityLinkPort).revokeLink("sub_123");
+                verify(identityLinkPort).revokeLink("google_assistant", "sub_123");
         }
 
         @Test
-        void revokeLinkThrowsForbiddenWhenCallerDoesNotMatchCustomer() {
+        void revokeLinkThrowsNotFoundWhenCallerDoesNotMatchCustomer() {
                 UcpIdentityLinkResponse expected = new UcpIdentityLinkResponse(
                                 "link_1", "google_assistant", "sub_123", "cust_456", "ACTIVE",
                                 List.of(), Instant.now(), null, Map.of());
 
-                when(identityLinkPort.findByPlatformSubject("sub_123")).thenReturn(Optional.of(expected));
+                when(identityLinkPort.findByPlatformAndSubject("google_assistant", "sub_123"))
+                                .thenReturn(Optional.of(expected));
 
-                assertThatThrownBy(() -> service.revokeLink("sub_123", "attacker_user"))
+                assertThatThrownBy(() -> service.revokeLink("google_assistant", "sub_123", "attacker_user"))
                                 .isInstanceOf(UcpProtocolException.class)
                                 .satisfies(ex -> {
                                         UcpProtocolException ucpEx = (UcpProtocolException) ex;
-                                        assertThat(ucpEx.getStatusCode()).isEqualTo(403);
-                                        assertThat(ucpEx.getErrorCode()).isEqualTo("access_denied");
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(404);
+                                        assertThat(ucpEx.getErrorCode()).isEqualTo("link_not_found");
                                 });
         }
 }

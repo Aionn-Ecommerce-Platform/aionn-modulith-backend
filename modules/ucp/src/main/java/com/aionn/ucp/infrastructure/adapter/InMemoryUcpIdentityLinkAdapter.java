@@ -7,20 +7,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
-import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * In-memory thread-safe adapter implementation for UcpIdentityLinkPort.
+ * Keys identity links by composite key (platformId:platformSubject).
  */
 @Component
 public class InMemoryUcpIdentityLinkAdapter implements UcpIdentityLinkPort {
 
-    private final Map<String, UcpIdentityLinkResponse> linksBySubject = new ConcurrentHashMap<>();
+    private final Map<String, UcpIdentityLinkResponse> linksByKey = new ConcurrentHashMap<>();
     private final Clock clock;
 
     @Autowired
@@ -32,61 +33,57 @@ public class InMemoryUcpIdentityLinkAdapter implements UcpIdentityLinkPort {
         this(Clock.systemUTC());
     }
 
+    private static String compositeKey(String platformId, String platformSubject) {
+        return (platformId != null ? platformId : "") + "::" + (platformSubject != null ? platformSubject : "");
+    }
+
     @Override
     public UcpIdentityLinkResponse saveLink(UcpIdentityLinkRequest request) {
-        String linkId = "idlink_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
-        UcpIdentityLinkResponse response = new UcpIdentityLinkResponse(
-                linkId,
-                request.platformId(),
-                request.platformSubject(),
-                request.customerId(),
-                "ACTIVE",
-                request.scopes() != null ? request.scopes() : Collections.emptyList(),
-                clock.instant(),
-                null,
-                request.metadata() != null ? request.metadata() : Collections.emptyMap());
-        linksBySubject.put(request.platformSubject(), response);
-        return response;
+        String key = compositeKey(request.platformId(), request.platformSubject());
+        return linksByKey.compute(key, (k, existing) -> {
+            String linkId = existing != null ? existing.linkId()
+                    : "idlink_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+            return new UcpIdentityLinkResponse(
+                    linkId,
+                    request.platformId(),
+                    request.platformSubject(),
+                    request.customerId(),
+                    "ACTIVE",
+                    request.scopes() != null ? request.scopes() : Collections.emptyList(),
+                    existing != null ? existing.linkedAt() : clock.instant(),
+                    null,
+                    request.metadata() != null ? request.metadata() : Collections.emptyMap());
+        });
     }
 
     @Override
-    public Optional<UcpIdentityLinkResponse> findByPlatformSubject(String platformSubject) {
-        if (platformSubject == null) {
+    public Optional<UcpIdentityLinkResponse> findByPlatformAndSubject(String platformId, String platformSubject) {
+        if (platformId == null || platformSubject == null) {
             return Optional.empty();
         }
-        return Optional.ofNullable(linksBySubject.get(platformSubject));
+        return Optional.ofNullable(linksByKey.get(compositeKey(platformId, platformSubject)));
     }
 
     @Override
-    public Optional<UcpIdentityLinkResponse> findByCustomerId(String customerId) {
-        if (customerId == null) {
-            return Optional.empty();
-        }
-        return linksBySubject.values().stream()
-                .filter(link -> customerId.equals(link.customerId()))
-                .findFirst();
-    }
-
-    @Override
-    public boolean revokeLink(String platformSubject) {
-        if (platformSubject == null) {
+    public boolean revokeLink(String platformId, String platformSubject) {
+        if (platformId == null || platformSubject == null) {
             return false;
         }
-        UcpIdentityLinkResponse existing = linksBySubject.get(platformSubject);
-        if (existing == null) {
-            return false;
-        }
-        UcpIdentityLinkResponse revoked = new UcpIdentityLinkResponse(
-                existing.linkId(),
-                existing.platformId(),
-                existing.platformSubject(),
-                existing.customerId(),
-                "REVOKED",
-                existing.scopes(),
-                existing.linkedAt(),
-                clock.instant(),
-                existing.metadata());
-        linksBySubject.put(platformSubject, revoked);
-        return true;
+        String key = compositeKey(platformId, platformSubject);
+        AtomicBoolean wasRevoked = new AtomicBoolean(false);
+        linksByKey.computeIfPresent(key, (k, existing) -> {
+            wasRevoked.set(true);
+            return new UcpIdentityLinkResponse(
+                    existing.linkId(),
+                    existing.platformId(),
+                    existing.platformSubject(),
+                    existing.customerId(),
+                    "REVOKED",
+                    existing.scopes(),
+                    existing.linkedAt(),
+                    clock.instant(),
+                    existing.metadata());
+        });
+        return wasRevoked.get();
     }
 }

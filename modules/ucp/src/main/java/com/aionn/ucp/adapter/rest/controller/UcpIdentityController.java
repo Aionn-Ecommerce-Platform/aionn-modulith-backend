@@ -23,8 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Controller exposing canonical UCP Identity Linking endpoints
  * (dev.ucp.common.identity_linking).
- * Allows platforms/agents to establish, query, and revoke identity bindings to
- * merchant customers.
+ * Allows platforms/agents to establish, query, and revoke identity bindings
+ * using composite keys.
  */
 @RestController
 @RequestMapping("/ucp/v1/identity/links")
@@ -53,34 +53,39 @@ public class UcpIdentityController {
     }
 
     /**
-     * Queries an identity link by its platform subject identifier.
+     * Queries an identity link by platform identifier and platform subject
+     * identifier.
      *
+     * @param platformId      platform ID
      * @param platformSubject platform subject ID
      * @param authentication  caller's security context
      * @return 200 OK with identity link details
      */
-    @GetMapping(value = "/{platformSubject}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/{platformId}/{platformSubject}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<UcpIdentityLinkResponse> getLink(
+            @PathVariable("platformId") String platformId,
             @PathVariable("platformSubject") String platformSubject,
             Authentication authentication) {
         String userId = getAuthenticatedUserId(authentication);
-        UcpIdentityLinkResponse response = identityService.getLink(platformSubject, userId);
+        UcpIdentityLinkResponse response = identityService.getLink(platformId, platformSubject, userId);
         return ResponseEntity.ok(response);
     }
 
     /**
      * Revokes an existing identity link.
      *
+     * @param platformId      platform ID
      * @param platformSubject platform subject ID
      * @param authentication  caller's security context
      */
-    @DeleteMapping("/{platformSubject}")
+    @DeleteMapping("/{platformId}/{platformSubject}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void revokeLink(
+            @PathVariable("platformId") String platformId,
             @PathVariable("platformSubject") String platformSubject,
             Authentication authentication) {
         String userId = getAuthenticatedUserId(authentication);
-        identityService.revokeLink(platformSubject, userId);
+        identityService.revokeLink(platformId, platformSubject, userId);
     }
 
     private String getAuthenticatedUserId(Authentication authentication) {

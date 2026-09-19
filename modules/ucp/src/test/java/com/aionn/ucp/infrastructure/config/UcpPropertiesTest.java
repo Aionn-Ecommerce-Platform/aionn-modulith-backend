@@ -20,7 +20,7 @@ class UcpPropertiesTest {
                 "Aionn Commerce",
                 Set.of("https://ucp.dev/schemas/"),
                 false,
-                new UcpProperties.Capabilities(false, false, false, false));
+                new UcpProperties.Capabilities(false, false, false, false, false));
 
         assertThat(properties.version()).isEqualTo("2026-08-25");
         assertThat(properties.restEndpoint()).isEqualTo("http://localhost:8080/ucp/v1");
@@ -31,6 +31,7 @@ class UcpPropertiesTest {
         assertThat(properties.capabilities().checkout()).isFalse();
         assertThat(properties.capabilities().catalog()).isFalse();
         assertThat(properties.capabilities().order()).isFalse();
+        assertThat(properties.capabilities().identityLinking()).isFalse();
 
         Set<ConstraintViolation<UcpProperties>> violations = validator.validate(properties);
         assertThat(violations).isEmpty();
@@ -44,7 +45,7 @@ class UcpPropertiesTest {
                 "Aionn Commerce",
                 Set.of("https://ucp.dev/schemas/"),
                 false,
-                new UcpProperties.Capabilities(false, false, false, false));
+                new UcpProperties.Capabilities(false, false, false, false, false));
 
         Set<ConstraintViolation<UcpProperties>> violations = validator.validate(properties);
         assertThat(violations)

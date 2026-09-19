@@ -19,26 +19,20 @@ public interface UcpIdentityLinkPort {
     UcpIdentityLinkResponse saveLink(UcpIdentityLinkRequest request);
 
     /**
-     * Finds an identity link by platform subject.
+     * Finds an identity link by platform identifier and platform subject.
      *
+     * @param platformId      the platform identifier
      * @param platformSubject the platform user identifier
      * @return optional link response if present
      */
-    Optional<UcpIdentityLinkResponse> findByPlatformSubject(String platformSubject);
+    Optional<UcpIdentityLinkResponse> findByPlatformAndSubject(String platformId, String platformSubject);
 
     /**
-     * Finds an identity link by customer identifier.
+     * Revokes an existing link for the given platform and subject.
      *
-     * @param customerId the Aionn customer identifier
-     * @return optional link response if present
-     */
-    Optional<UcpIdentityLinkResponse> findByCustomerId(String customerId);
-
-    /**
-     * Revokes an existing link for the given platform subject.
-     *
+     * @param platformId      the platform identifier
      * @param platformSubject the platform user identifier
      * @return true if a link was found and revoked, false otherwise
      */
-    boolean revokeLink(String platformSubject);
+    boolean revokeLink(String platformId, String platformSubject);
 }

@@ -12,9 +12,9 @@ import java.util.Map;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record UcpWebhookEvent(
-                @JsonProperty("event_id") String eventId,
-                @JsonProperty("event_type") String eventType,
-                @JsonProperty("order_id") String orderId,
-                @JsonProperty("occurred_at") Instant occurredAt,
-                @JsonProperty("data") Map<String, Object> data) {
+        @JsonProperty("event_id") String eventId,
+        @JsonProperty("event_type") String eventType,
+        @JsonProperty("order_id") String orderId,
+        @JsonProperty("occurred_at") Instant occurredAt,
+        @JsonProperty("data") Map<String, Object> data) {
 }

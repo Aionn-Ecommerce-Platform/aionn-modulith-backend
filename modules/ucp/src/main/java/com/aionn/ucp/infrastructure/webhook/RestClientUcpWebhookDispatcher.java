@@ -52,6 +52,11 @@ public class RestClientUcpWebhookDispatcher implements UcpWebhookDispatcherPort 
             return false;
         }
 
+        if (!isSafeWebhookUrl(webhookUrl)) {
+            log.warn("Rejecting webhook dispatch to prohibited destination: {}", webhookUrl);
+            return false;
+        }
+
         try {
             log.info("Dispatching UCP webhook event '{}' for order '{}' to {}",
                     event.eventType(), event.orderId(), webhookUrl);
@@ -80,6 +85,52 @@ public class RestClientUcpWebhookDispatcher implements UcpWebhookDispatcherPort 
             if (metricsPort != null) {
                 metricsPort.recordWebhookDispatch(event.eventType(), false);
             }
+            return false;
+        }
+    }
+
+    static boolean isSafeWebhookUrl(String webhookUrl) {
+        if (webhookUrl == null || webhookUrl.isBlank()) {
+            return false;
+        }
+        try {
+            java.net.URI uri = java.net.URI.create(webhookUrl);
+            String scheme = uri.getScheme();
+            if (scheme == null || (!"https".equalsIgnoreCase(scheme) && !"http".equalsIgnoreCase(scheme))) {
+                return false;
+            }
+            String host = uri.getHost();
+            if (host == null || host.isBlank()) {
+                return false;
+            }
+            String lowerHost = host.toLowerCase();
+            if (lowerHost.equals("localhost") || lowerHost.endsWith(".localhost") || lowerHost.endsWith(".local")
+                    || lowerHost.endsWith(".internal") || lowerHost.equals("127.0.0.1") || lowerHost.equals("::1")
+                    || lowerHost.startsWith("10.") || lowerHost.startsWith("192.168.")
+                    || lowerHost.startsWith("172.16.") || lowerHost.startsWith("172.17.")
+                    || lowerHost.startsWith("172.18.") || lowerHost.startsWith("172.19.")
+                    || lowerHost.startsWith("172.20.") || lowerHost.startsWith("172.21.")
+                    || lowerHost.startsWith("172.22.") || lowerHost.startsWith("172.23.")
+                    || lowerHost.startsWith("172.24.") || lowerHost.startsWith("172.25.")
+                    || lowerHost.startsWith("172.26.") || lowerHost.startsWith("172.27.")
+                    || lowerHost.startsWith("172.28.") || lowerHost.startsWith("172.29.")
+                    || lowerHost.startsWith("172.30.") || lowerHost.startsWith("172.31.")
+                    || lowerHost.startsWith("169.254.")) {
+                return false;
+            }
+            try {
+                java.net.InetAddress addr = java.net.InetAddress.getByName(host);
+                if (addr.isLoopbackAddress() || addr.isSiteLocalAddress()
+                        || addr.isLinkLocalAddress() || addr.isMulticastAddress()
+                        || addr.isAnyLocalAddress()) {
+                    return false;
+                }
+            } catch (java.net.UnknownHostException ignored) {
+                // If offline in test/CI environment, string-based prefix rejection above
+                // handles SSRF protection
+            }
+            return true;
+        } catch (Exception e) {
             return false;
         }
     }

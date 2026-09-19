@@ -81,4 +81,18 @@ class RestClientUcpWebhookDispatcherTest {
         assertThat(result).isFalse();
         org.mockito.Mockito.verify(metricsPort).recordWebhookDispatch("order.completed", false);
     }
+
+    @Test
+    void dispatchRejectsSsrfTargets() {
+        UcpWebhookEvent event = new UcpWebhookEvent(
+                "evt_1", "order.completed", "ord_1", Instant.now(), Map.of());
+
+        assertThat(dispatcher.dispatch("http://localhost:8080/webhook", event)).isFalse();
+        assertThat(dispatcher.dispatch("http://127.0.0.1:8080/webhook", event)).isFalse();
+        assertThat(dispatcher.dispatch("http://10.0.0.1/webhook", event)).isFalse();
+        assertThat(dispatcher.dispatch("http://192.168.1.1/webhook", event)).isFalse();
+        assertThat(dispatcher.dispatch("http://172.16.0.1/webhook", event)).isFalse();
+        assertThat(dispatcher.dispatch("http://169.254.169.254/latest/meta-data", event)).isFalse();
+        assertThat(dispatcher.dispatch("ftp://example.com/webhook", event)).isFalse();
+    }
 }

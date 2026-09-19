@@ -24,7 +24,6 @@ import java.util.Map;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -69,6 +68,7 @@ class UcpIdentityControllerTest {
                                 .content(objectMapper.writeValueAsString(request)))
                                 .andExpect(status().isCreated())
                                 .andExpect(jsonPath("$.linkId").value("link_1"))
+                                .andExpect(jsonPath("$.platformId").value("google_assistant"))
                                 .andExpect(jsonPath("$.platformSubject").value("sub_123"))
                                 .andExpect(jsonPath("$.status").value("ACTIVE"));
         }
@@ -79,12 +79,12 @@ class UcpIdentityControllerTest {
                                 "link_1", "google_assistant", "sub_123", "cust_456", "ACTIVE",
                                 List.of("orders.read"), Instant.now(), null, Map.of());
 
-                when(identityService.getLink("sub_123", "cust_456")).thenReturn(response);
+                when(identityService.getLink("google_assistant", "sub_123", "cust_456")).thenReturn(response);
 
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                                 "cust_456", null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
 
-                mockMvc.perform(get("/ucp/v1/identity/links/sub_123")
+                mockMvc.perform(get("/ucp/v1/identity/links/google_assistant/sub_123")
                                 .principal(auth))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.linkId").value("link_1"))
@@ -92,27 +92,26 @@ class UcpIdentityControllerTest {
         }
 
         @Test
-        void getLinkReturnsForbiddenWhenCallerDoesNotMatch() throws Exception {
-                when(identityService.getLink("sub_123", "intruder"))
-                                .thenThrow(new UcpProtocolException(403, "access_denied", "Caller is not authorized",
-                                                "error"));
+        void getLinkReturnsNotFoundWhenCallerDoesNotMatch() throws Exception {
+                when(identityService.getLink("google_assistant", "sub_123", "intruder"))
+                                .thenThrow(new UcpProtocolException(404, "link_not_found", "Not found", "error"));
 
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                                 "intruder", null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
 
-                mockMvc.perform(get("/ucp/v1/identity/links/sub_123")
+                mockMvc.perform(get("/ucp/v1/identity/links/google_assistant/sub_123")
                                 .principal(auth))
-                                .andExpect(status().isForbidden());
+                                .andExpect(status().isNotFound());
         }
 
         @Test
         void deleteLinkReturnsNoContentWhenAuthorized() throws Exception {
-                doNothing().when(identityService).revokeLink("sub_123", "cust_456");
+                doNothing().when(identityService).revokeLink("google_assistant", "sub_123", "cust_456");
 
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                                 "cust_456", null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
 
-                mockMvc.perform(delete("/ucp/v1/identity/links/sub_123")
+                mockMvc.perform(delete("/ucp/v1/identity/links/google_assistant/sub_123")
                                 .principal(auth))
                                 .andExpect(status().isNoContent());
         }
