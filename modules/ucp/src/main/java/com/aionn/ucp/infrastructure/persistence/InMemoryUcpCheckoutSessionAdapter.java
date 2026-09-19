@@ -121,8 +121,9 @@ public class InMemoryUcpCheckoutSessionAdapter implements UcpCheckoutSessionPort
         if (orderId == null || orderId.isBlank()) {
             return Optional.empty();
         }
+        Instant now = clock.instant();
         return store.values().stream()
-                .filter(session -> orderId.equals(session.orderId()))
+                .filter(session -> orderId.equals(session.orderId()) && !session.isExpired(now))
                 .findFirst();
     }
 

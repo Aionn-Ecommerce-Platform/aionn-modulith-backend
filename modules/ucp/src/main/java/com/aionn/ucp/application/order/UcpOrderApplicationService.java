@@ -100,8 +100,9 @@ public class UcpOrderApplicationService {
     }
 
     private void verifyOwnership(String orderUserId, String authenticatedUserId) {
-        if (orderUserId != null && authenticatedUserId != null && !authenticatedUserId.isBlank()
-                && !orderUserId.equals(authenticatedUserId)) {
+        if (orderUserId == null || orderUserId.isBlank()
+                || authenticatedUserId == null || authenticatedUserId.isBlank()
+                || !orderUserId.equals(authenticatedUserId)) {
             throw new UcpProtocolException(403, "forbidden", "Access denied to order", "error", "$.id");
         }
     }

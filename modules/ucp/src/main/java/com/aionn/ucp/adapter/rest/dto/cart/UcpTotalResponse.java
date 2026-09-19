@@ -4,7 +4,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Price total entry representing subtotal, fulfillment, discount, or total amount.
+ * Price total entry representing subtotal, fulfillment, discount, or total
+ * amount.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record UcpTotalResponse(

@@ -132,10 +132,11 @@ class UcpOrderApplicationServiceTest {
         @Test
         void getOrderCancelledMapsLineStatusToRemoved() {
                 String orderId = "ord_3003";
+                String userId = "user_3003";
 
                 OrderSnapshot snapshot = new OrderSnapshot(
                                 orderId,
-                                null,
+                                userId,
                                 "merch_1",
                                 "USD",
                                 "CANCELLED",
@@ -147,7 +148,7 @@ class UcpOrderApplicationServiceTest {
                 when(orderSnapshotPort.findOrderById(orderId)).thenReturn(Optional.of(snapshot));
                 when(sessionPort.findByOrderId(orderId)).thenReturn(Optional.empty());
 
-                UcpOrderResponse response = orderService.getOrder(orderId, null);
+                UcpOrderResponse response = orderService.getOrder(orderId, userId);
 
                 assertThat(response.lineItems().get(0).status()).isEqualTo("removed");
         }
@@ -188,6 +189,46 @@ class UcpOrderApplicationServiceTest {
                 assertThatThrownBy(() -> orderService.getOrder("ord_1", "user_different"))
                                 .isInstanceOf(UcpProtocolException.class)
                                 .hasMessageContaining("Access denied")
+                                .satisfies(e -> assertThat(((UcpProtocolException) e).getStatusCode()).isEqualTo(403));
+        }
+
+        @Test
+        void getOrderThrows403WhenOrderUserIdOrAuthenticatedUserIdIsMissingOrBlank() {
+                OrderSnapshot snapshotWithOwner = new OrderSnapshot(
+                                "ord_1",
+                                "user_owner",
+                                "merch_1",
+                                "USD",
+                                "PENDING",
+                                100L,
+                                0L,
+                                100L,
+                                List.of(new Line("sku_1", 1, 100L, 100L)));
+                when(orderSnapshotPort.findOrderById("ord_1")).thenReturn(Optional.of(snapshotWithOwner));
+
+                // Caller identity null or blank fails closed
+                assertThatThrownBy(() -> orderService.getOrder("ord_1", null))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(e -> assertThat(((UcpProtocolException) e).getStatusCode()).isEqualTo(403));
+                assertThatThrownBy(() -> orderService.getOrder("ord_1", "   "))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(e -> assertThat(((UcpProtocolException) e).getStatusCode()).isEqualTo(403));
+
+                OrderSnapshot snapshotOwnerless = new OrderSnapshot(
+                                "ord_2",
+                                null,
+                                "merch_1",
+                                "USD",
+                                "PENDING",
+                                100L,
+                                0L,
+                                100L,
+                                List.of(new Line("sku_1", 1, 100L, 100L)));
+                when(orderSnapshotPort.findOrderById("ord_2")).thenReturn(Optional.of(snapshotOwnerless));
+
+                // Order without owner also fails closed
+                assertThatThrownBy(() -> orderService.getOrder("ord_2", "any_caller"))
+                                .isInstanceOf(UcpProtocolException.class)
                                 .satisfies(e -> assertThat(((UcpProtocolException) e).getStatusCode()).isEqualTo(403));
         }
 }

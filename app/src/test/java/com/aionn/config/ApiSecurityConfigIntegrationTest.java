@@ -26,106 +26,113 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.beans.factory.annotation.Autowired;
 
-@SpringBootTest(
-        classes = ApiSecurityConfigIntegrationTest.TestApplication.class,
-        webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@SpringBootTest(classes = ApiSecurityConfigIntegrationTest.TestApplication.class, webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
 @TestPropertySource(properties = "SECURITY_CORS_ALLOWED_ORIGINS=https://frontend.example")
 class ApiSecurityConfigIntegrationTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+        @Autowired
+        private MockMvc mockMvc;
 
-    @org.springframework.test.context.bean.override.mockito.MockitoBean
-    private com.aionn.identity.application.port.out.auth.AccessTokenIssuerPort tokenIssuer;
+        @org.springframework.test.context.bean.override.mockito.MockitoBean
+        private com.aionn.identity.application.port.out.auth.AccessTokenIssuerPort tokenIssuer;
 
-    @org.springframework.test.context.bean.override.mockito.MockitoBean
-    private com.aionn.identity.application.port.out.auth.TokenBlacklistPort tokenBlacklist;
+        @org.springframework.test.context.bean.override.mockito.MockitoBean
+        private com.aionn.identity.application.port.out.auth.TokenBlacklistPort tokenBlacklist;
 
-    @org.springframework.test.context.bean.override.mockito.MockitoBean
-    private com.aionn.sharedkernel.infrastructure.outbox.OutboxDeadLetterService outboxDeadLetterService;
+        @org.springframework.test.context.bean.override.mockito.MockitoBean
+        private com.aionn.sharedkernel.infrastructure.outbox.OutboxDeadLetterService outboxDeadLetterService;
 
-    @Test
-    void unmatchedRequestRequiresAuthenticationAndReceivesSecurityHeaders() throws Exception {
-        mockMvc.perform(get("/test/ping"))
-                .andExpect(status().isForbidden())
-                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
-                .andExpect(header().string("X-Frame-Options", "DENY"))
-                .andExpect(header().string("Referrer-Policy", "strict-origin-when-cross-origin"));
-    }
+        @org.springframework.test.context.bean.override.mockito.MockitoBean
+        private com.aionn.ucp.application.order.UcpOrderApplicationService ucpOrderApplicationService;
 
-    @Test
-    void explicitlyPublicRouteDoesNotRequireAuthentication() throws Exception {
-        mockMvc.perform(get("/api/v1/catalog/products/example"))
-                .andExpect(status().isNotFound());
-    }
+        @Test
+        void unmatchedRequestRequiresAuthenticationAndReceivesSecurityHeaders() throws Exception {
+                mockMvc.perform(get("/test/ping"))
+                                .andExpect(status().isForbidden())
+                                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                                .andExpect(header().string("X-Frame-Options", "DENY"))
+                                .andExpect(header().string("Referrer-Policy", "strict-origin-when-cross-origin"));
+        }
 
-    @Test
-    void ucpDiscoveryIsPublicButCommerceRoutesRemainProtected() throws Exception {
-        mockMvc.perform(get("/.well-known/ucp"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.ucp.version").value("2026-08-25"))
-                .andExpect(jsonPath("$.ucp.payment_handlers").isMap());
-        mockMvc.perform(get("/ucp/v1/carts/cart-1"))
-                .andExpect(status().isForbidden());
-        mockMvc.perform(get("/ucp/v1/checkout-sessions/chk-1"))
-                .andExpect(status().isForbidden());
-        mockMvc.perform(post("/ucp/v1/checkout-sessions"))
-                .andExpect(status().isForbidden());
-        mockMvc.perform(post("/.well-known/ucp"))
-                .andExpect(status().isForbidden());
-    }
+        @Test
+        void explicitlyPublicRouteDoesNotRequireAuthentication() throws Exception {
+                mockMvc.perform(get("/api/v1/catalog/products/example"))
+                                .andExpect(status().isNotFound());
+        }
 
-    @Test
-    void actuatorEndpointsOutsideAllowListAreDenied() throws Exception {
-        mockMvc.perform(get("/actuator/env"))
-                .andExpect(status().isForbidden());
-    }
+        @Test
+        void ucpDiscoveryIsPublicButCommerceRoutesRemainProtected() throws Exception {
+                mockMvc.perform(get("/.well-known/ucp"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.ucp.version").value("2026-08-25"))
+                                .andExpect(jsonPath("$.ucp.payment_handlers").isMap());
+                mockMvc.perform(get("/ucp/v1/carts/cart-1"))
+                                .andExpect(status().isForbidden());
+                mockMvc.perform(get("/ucp/v1/checkout-sessions/chk-1"))
+                                .andExpect(status().isForbidden());
+                mockMvc.perform(post("/ucp/v1/checkout-sessions"))
+                                .andExpect(status().isForbidden());
+                mockMvc.perform(get("/ucp/v1/orders/ord-1"))
+                                .andExpect(status().isForbidden());
+                mockMvc.perform(post("/.well-known/ucp"))
+                                .andExpect(status().isForbidden());
+        }
 
-    @Test
-    void healthEndpointIsPublic() throws Exception {
-        mockMvc.perform(get("/actuator/health"))
-                .andExpect(status().isOk());
-    }
+        @Test
+        void actuatorEndpointsOutsideAllowListAreDenied() throws Exception {
+                mockMvc.perform(get("/actuator/env"))
+                                .andExpect(status().isForbidden());
+        }
 
-    @Test
-    void validBearerTokenAuthenticatesProtectedRequest() throws Exception {
-        when(tokenIssuer.parseClaims("valid-token"))
-                .thenReturn(Optional.of(new AccessTokenClaims("user-1", "session-1", null, List.of("USER"))));
+        @Test
+        void healthEndpointIsPublic() throws Exception {
+                mockMvc.perform(get("/actuator/health"))
+                                .andExpect(status().isOk());
+        }
 
-        mockMvc.perform(get("/test/ping").header("Authorization", "Bearer valid-token"))
-                .andExpect(status().isNotFound());
-    }
+        @Test
+        void validBearerTokenAuthenticatesProtectedRequest() throws Exception {
+                when(tokenIssuer.parseClaims("valid-token"))
+                                .thenReturn(Optional.of(
+                                                new AccessTokenClaims("user-1", "session-1", null, List.of("USER"))));
 
-    @Test
-    void preflightRequestUsesCorsConfiguration() throws Exception {
-        mockMvc.perform(options("/test/ping")
-                        .header("Origin", "https://frontend.example")
-                        .header("Access-Control-Request-Method", "GET")
-                        .header("Access-Control-Request-Headers", "Authorization")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(header().string("Access-Control-Allow-Origin", "https://frontend.example"))
-                .andExpect(header().string("Access-Control-Expose-Headers", "X-Request-Id, Idempotent-Replay"));
-    }
+                mockMvc.perform(get("/test/ping").header("Authorization", "Bearer valid-token"))
+                                .andExpect(status().isNotFound());
+        }
 
-    @Test
-    void preflightRequestRejectsUnknownOrigin() throws Exception {
-        mockMvc.perform(options("/test/ping")
-                        .header("Origin", "https://attacker.example")
-                        .header("Access-Control-Request-Method", "GET"))
-                .andExpect(status().isForbidden());
-    }
+        @Test
+        void preflightRequestUsesCorsConfiguration() throws Exception {
+                mockMvc.perform(options("/test/ping")
+                                .header("Origin", "https://frontend.example")
+                                .header("Access-Control-Request-Method", "GET")
+                                .header("Access-Control-Request-Headers", "Authorization")
+                                .contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isOk())
+                                .andExpect(header().string("Access-Control-Allow-Origin", "https://frontend.example"))
+                                .andExpect(header().string("Access-Control-Expose-Headers",
+                                                "X-Request-Id, Idempotent-Replay"));
+        }
 
-    @SpringBootApplication(exclude = {
-            DataSourceAutoConfiguration.class,
-            HibernateJpaAutoConfiguration.class,
-            FlywayAutoConfiguration.class,
-            DataRedisAutoConfiguration.class
-    })
-    @Import({ApiSecurityConfig.class, com.aionn.identity.infrastructure.security.web.BearerAuthenticationFilter.class,
-            com.aionn.ucp.adapter.rest.controller.DiscoveryController.class,
-            com.aionn.ucp.infrastructure.schema.PinnedBusinessProfileValidator.class})
-    static class TestApplication {
-    }
+        @Test
+        void preflightRequestRejectsUnknownOrigin() throws Exception {
+                mockMvc.perform(options("/test/ping")
+                                .header("Origin", "https://attacker.example")
+                                .header("Access-Control-Request-Method", "GET"))
+                                .andExpect(status().isForbidden());
+        }
+
+        @SpringBootApplication(exclude = {
+                        DataSourceAutoConfiguration.class,
+                        HibernateJpaAutoConfiguration.class,
+                        FlywayAutoConfiguration.class,
+                        DataRedisAutoConfiguration.class
+        })
+        @Import({ ApiSecurityConfig.class,
+                        com.aionn.identity.infrastructure.security.web.BearerAuthenticationFilter.class,
+                        com.aionn.ucp.adapter.rest.controller.DiscoveryController.class,
+                        com.aionn.ucp.adapter.rest.controller.UcpOrderController.class,
+                        com.aionn.ucp.infrastructure.schema.PinnedBusinessProfileValidator.class })
+        static class TestApplication {
+        }
 }

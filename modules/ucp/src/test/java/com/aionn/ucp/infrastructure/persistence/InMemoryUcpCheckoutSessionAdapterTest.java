@@ -220,6 +220,13 @@ class InMemoryUcpCheckoutSessionAdapterTest {
         assertThat(found).isPresent();
         assertThat(found.get().id()).isEqualTo("chk-order-match");
 
+        // Expired completed session must not be returned
+        UcpCheckoutSession expiredCompleted = new UcpCheckoutSession(
+                "chk-expired-order", "user-1", null, "completed", "USD", Map.of(),
+                null, null, "ord-expired-99", now.minusSeconds(7200), now.minusSeconds(7200), now.minusSeconds(3600));
+        adapter.save(expiredCompleted);
+        assertThat(adapter.findByOrderId("ord-expired-99")).isEmpty();
+
         assertThat(adapter.findByOrderId(null)).isEmpty();
         assertThat(adapter.findByOrderId("   ")).isEmpty();
         assertThat(adapter.findByOrderId("non-existent-order")).isEmpty();
