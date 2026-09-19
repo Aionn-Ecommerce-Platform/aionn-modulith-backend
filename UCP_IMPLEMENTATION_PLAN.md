@@ -119,9 +119,16 @@ Add fulfillment, discounts, buyer consent, payment terms, location, loyalty, and
 
 ### Phase 5: Identity linking and orders
 
-Implement identity linking as a separate capability using the existing identity module and OAuth-compatible authorization boundary. Bind linked platform identity to the business user subject, scopes, consent, expiry, revocation, and audit records. Do not invent a UCP-specific user database.
-
-Implement order lifecycle exposure/webhooks only after order event contracts are stable. Publish order/shipping/refund transitions through transactional outbox events; webhook delivery is at-least-once and consumers must tolerate replay.
+1. [x] **Order capability (`dev.ucp.shopping.order`)**:
+   - `GET /ucp/v1/orders/{id}` with fail-closed caller ownership verification.
+   - Decoupled port mapping via `OrderSnapshotQueryPort` in `shared-kernel`.
+   - Canonical response assembly conforming strictly to `schemas/shopping/order.json` verified offline by `PinnedUcpSchemaValidator`.
+   - Discovery advertisement in `/.well-known/ucp` when `capabilities.order=true`.
+2. [x] **Order lifecycle webhooks**:
+   - `UcpOrderEventListener` listens to order lifecycle events (`OrderPlaced`, `OrderApproved`, `OrderShipped`, `OrderCompleted`, `OrderCancelled`).
+   - Correlates with originating checkout session and dispatches outbound webhooks to `context.webhook_url` via `UcpWebhookDispatcherPort`.
+3. [ ] **Identity linking (`dev.ucp.common.identity_linking`)**:
+   - Delegated OAuth-compatible authorization boundary and linked platform identity records.
 
 ## 5. Validation and DTO Rules
 
