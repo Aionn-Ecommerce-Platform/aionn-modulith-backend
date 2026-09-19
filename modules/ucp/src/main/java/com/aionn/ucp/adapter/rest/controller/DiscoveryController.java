@@ -30,8 +30,10 @@ public class DiscoveryController {
                                 && properties.capabilities().checkout();
                 boolean catalogEnabled = properties != null && properties.capabilities() != null
                                 && properties.capabilities().catalog();
+                boolean orderEnabled = properties != null && properties.capabilities() != null
+                                && properties.capabilities().order();
 
-                if (cartEnabled || checkoutEnabled || catalogEnabled) {
+                if (cartEnabled || checkoutEnabled || catalogEnabled || orderEnabled) {
                         String endpoint = properties != null && properties.restEndpoint() != null
                                         ? properties.restEndpoint()
                                         : "http://localhost:8080/ucp/v1";
@@ -67,6 +69,14 @@ public class DiscoveryController {
                                                         KEY_VERSION, version,
                                                         KEY_SCHEMA,
                                                         "https://ucp.dev/schemas/shopping/catalog_lookup.json")));
+                }
+
+                if (orderEnabled) {
+                        capabilities.put("dev.ucp.shopping.order", java.util.List.of(
+                                        Map.of(
+                                                        KEY_VERSION, version,
+                                                        KEY_SCHEMA,
+                                                        "https://ucp.dev/schemas/shopping/order.json")));
                 }
 
                 profile = BusinessProfileResponse.of(version, services, capabilities, Map.of());

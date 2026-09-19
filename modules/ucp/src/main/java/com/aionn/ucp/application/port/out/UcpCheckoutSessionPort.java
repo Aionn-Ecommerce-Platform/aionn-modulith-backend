@@ -15,6 +15,7 @@ public interface UcpCheckoutSessionPort {
 
     Optional<UcpCheckoutSession> findIncompleteByCartId(String cartId);
 
+    Optional<UcpCheckoutSession> findByOrderId(String orderId);
+
     boolean updateIfMatches(UcpCheckoutSession session, long expectedVersion, String expectedStatus);
 }
-

@@ -208,4 +208,20 @@ class InMemoryUcpCheckoutSessionAdapterTest {
         assertThat(adapter.findById("chk-terminal")).isPresent();
         assertThat(adapter.findById("chk-terminal").get().isCompleted()).isTrue();
     }
+
+    @Test
+    void findByOrderIdReturnsMatchingSession() {
+        UcpCheckoutSession completed = new UcpCheckoutSession(
+                "chk-order-match", "user-1", null, "completed", "USD", Map.of(),
+                null, null, "ord-target-99", now, now, now.plusSeconds(3600));
+        adapter.save(completed);
+
+        Optional<UcpCheckoutSession> found = adapter.findByOrderId("ord-target-99");
+        assertThat(found).isPresent();
+        assertThat(found.get().id()).isEqualTo("chk-order-match");
+
+        assertThat(adapter.findByOrderId(null)).isEmpty();
+        assertThat(adapter.findByOrderId("   ")).isEmpty();
+        assertThat(adapter.findByOrderId("non-existent-order")).isEmpty();
+    }
 }
