@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class DiscoveryController {
 
         private static final String KEY_VERSION = "version";
+        private static final String KEY_SCHEMA = "schema";
         private final BusinessProfileResponse profile;
 
         @Autowired
@@ -31,7 +32,8 @@ public class DiscoveryController {
                                 && properties.capabilities().catalog();
 
                 if (cartEnabled || checkoutEnabled || catalogEnabled) {
-                        String endpoint = properties.restEndpoint() != null ? properties.restEndpoint()
+                        String endpoint = properties != null && properties.restEndpoint() != null
+                                        ? properties.restEndpoint()
                                         : "http://localhost:8080/ucp/v1";
                         services.put("dev.ucp.shopping", java.util.List.of(
                                         Map.of(
@@ -44,26 +46,26 @@ public class DiscoveryController {
                         capabilities.put("dev.ucp.shopping.cart", java.util.List.of(
                                         Map.of(
                                                         KEY_VERSION, version,
-                                                        "schema", "https://ucp.dev/schemas/shopping/cart.json")));
+                                                        KEY_SCHEMA, "https://ucp.dev/schemas/shopping/cart.json")));
                 }
 
                 if (checkoutEnabled) {
                         capabilities.put("dev.ucp.shopping.checkout", java.util.List.of(
                                         Map.of(
                                                         KEY_VERSION, version,
-                                                        "schema", "https://ucp.dev/schemas/shopping/checkout.json")));
+                                                        KEY_SCHEMA, "https://ucp.dev/schemas/shopping/checkout.json")));
                 }
 
                 if (catalogEnabled) {
                         capabilities.put("dev.ucp.shopping.catalog.search", java.util.List.of(
                                         Map.of(
                                                         KEY_VERSION, version,
-                                                        "schema",
+                                                        KEY_SCHEMA,
                                                         "https://ucp.dev/schemas/shopping/catalog_search.json")));
                         capabilities.put("dev.ucp.shopping.catalog.lookup", java.util.List.of(
                                         Map.of(
                                                         KEY_VERSION, version,
-                                                        "schema",
+                                                        KEY_SCHEMA,
                                                         "https://ucp.dev/schemas/shopping/catalog_lookup.json")));
                 }
 

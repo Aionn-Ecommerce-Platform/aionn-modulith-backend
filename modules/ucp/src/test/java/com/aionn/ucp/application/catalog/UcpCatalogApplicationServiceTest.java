@@ -215,4 +215,86 @@ class UcpCatalogApplicationServiceTest {
                                 .satisfies(ex -> assertThat(((UcpProtocolException) ex).getStatusCode())
                                                 .isEqualTo(400));
         }
+
+        @Test
+        void searchCatalogClampsLimit() {
+                when(catalogQueryPort.search(any())).thenReturn(List.of());
+
+                // Limit exceeds max 100 -> clamped to 100
+                service.searchCatalog(new UcpCatalogSearchRequest("test", null,
+                                new UcpPaginationRequestDto(999, null), null, null, null));
+                ArgumentCaptor<CatalogQueryPort.SearchCriteria> captor1 = ArgumentCaptor
+                                .forClass(CatalogQueryPort.SearchCriteria.class);
+                verify(catalogQueryPort).search(captor1.capture());
+                assertThat(captor1.getValue().limit()).isEqualTo(100);
+
+                // Limit <= 0 -> clamped to 1
+                service.searchCatalog(new UcpCatalogSearchRequest("test", null,
+                                new UcpPaginationRequestDto(-5, null), null, null, null));
+                ArgumentCaptor<CatalogQueryPort.SearchCriteria> captor2 = ArgumentCaptor
+                                .forClass(CatalogQueryPort.SearchCriteria.class);
+                verify(catalogQueryPort, org.mockito.Mockito.times(2)).search(captor2.capture());
+                assertThat(captor2.getValue().limit()).isEqualTo(1);
+        }
+
+        @Test
+        void searchAndLookupOmitProductsWithoutVariants() {
+                CatalogQueryPort.ProductView noVariants = new CatalogQueryPort.ProductView(
+                                "prod-empty", "Empty Product", "desc", List.of(), List.of());
+                when(catalogQueryPort.search(any())).thenReturn(List.of(noVariants));
+
+                UcpCatalogSearchResponse searchResponse = service.searchCatalog(
+                                new UcpCatalogSearchRequest("empty", null, null, null, null, null));
+                assertThat(searchResponse.products()).isEmpty();
+
+                when(catalogQueryPort.lookupByProductOrSkuIds(any())).thenReturn(
+                                new CatalogQueryPort.LookupResult(List.of(noVariants), List.of()));
+                UcpCatalogLookupResponse lookupResponse = service.lookupCatalog(
+                                new UcpCatalogLookupRequest(List.of("prod-empty"), null, null, null, null));
+                assertThat(lookupResponse.products()).isEmpty();
+        }
+
+        @Test
+        void getProductThrowsWhenProductHasNoVariants() {
+                CatalogQueryPort.ProductView noVariants = new CatalogQueryPort.ProductView(
+                                "prod-empty", "Empty Product", "desc", List.of(), null);
+                when(catalogQueryPort.findByProductOrSkuId("prod-empty")).thenReturn(Optional.of(noVariants));
+
+                assertThatThrownBy(() -> service.getProduct(
+                                new UcpProductDetailRequest("prod-empty", null, null, null, null, null, null)))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> {
+                                        UcpProtocolException ucpEx = (UcpProtocolException) ex;
+                                        assertThat(ucpEx.getStatusCode()).isEqualTo(404);
+                                        assertThat(ucpEx.getMessage()).contains("no purchasable variants");
+                                });
+        }
+
+        @Test
+        void getProductFallbacksToFirstVariantOptionsWhenSelectedNull() {
+                CatalogQueryPort.ProductView p1 = sampleProduct("prod-1", "Single Item", BigDecimal.valueOf(25.00),
+                                BigDecimal.valueOf(25.00));
+                when(catalogQueryPort.findByProductOrSkuId("prod-1")).thenReturn(Optional.of(p1));
+
+                UcpProductDetailRequest request = new UcpProductDetailRequest("prod-1", null, null, null, null, null,
+                                null);
+                UcpProductDetailResponse response = service.getProduct(request);
+
+                assertThat(response.product().selected()).isNotNull();
+                assertThat(response.product().selected()).extracting(UcpSelectedOptionDto::name).contains("Color",
+                                "Size");
+        }
+
+        @Test
+        void serviceWorksWithoutSchemaValidator() {
+                UcpCatalogApplicationService serviceWithoutValidator = new UcpCatalogApplicationService(
+                                catalogQueryPort, null);
+                CatalogQueryPort.ProductView p1 = sampleProduct("prod-1", "Single Item", BigDecimal.valueOf(25.00),
+                                BigDecimal.valueOf(25.00));
+                when(catalogQueryPort.findByProductOrSkuId("prod-1")).thenReturn(Optional.of(p1));
+
+                UcpProductDetailResponse response = serviceWithoutValidator.getProduct(
+                                new UcpProductDetailRequest("prod-1", null, null, null, null, null, null));
+                assertThat(response.product()).isNotNull();
+        }
 }
