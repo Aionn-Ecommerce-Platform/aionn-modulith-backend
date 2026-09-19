@@ -2,6 +2,7 @@ package com.aionn.ucp.adapter.rest.filter;
 
 import com.aionn.ucp.adapter.rest.dto.UcpErrorResponse;
 import com.aionn.ucp.adapter.rest.dto.UcpMessage;
+import com.aionn.ucp.application.port.out.UcpMetricsPort;
 import com.aionn.ucp.infrastructure.config.UcpProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
@@ -9,9 +10,12 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.time.Duration;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -33,10 +37,17 @@ public class UcpHeaderFilter extends OncePerRequestFilter {
 
     private final UcpProperties properties;
     private final ObjectMapper objectMapper;
+    private final Optional<UcpMetricsPort> metricsPort;
 
     public UcpHeaderFilter(UcpProperties properties) {
+        this(properties, Optional.empty());
+    }
+
+    @Autowired
+    public UcpHeaderFilter(UcpProperties properties, Optional<UcpMetricsPort> metricsPort) {
         this.properties = properties;
         this.objectMapper = new ObjectMapper();
+        this.metricsPort = metricsPort != null ? metricsPort : Optional.empty();
     }
 
     @Override
@@ -52,6 +63,9 @@ public class UcpHeaderFilter extends OncePerRequestFilter {
         String requestId = resolveRequestId(request.getHeader(HEADER_REQUEST_ID));
         MDC.put(MDC_REQUEST_ID_KEY, requestId);
         response.setHeader(HEADER_REQUEST_ID, requestId);
+
+        long startTime = System.nanoTime();
+        EndpointInfo endpointInfo = resolveEndpointInfo(request.getMethod(), request.getRequestURI());
 
         try {
             // Check HTTPS requirement if configured
@@ -81,6 +95,12 @@ public class UcpHeaderFilter extends OncePerRequestFilter {
 
             filterChain.doFilter(request, response);
         } finally {
+            if (metricsPort.isPresent()) {
+                Duration duration = Duration.ofNanos(System.nanoTime() - startTime);
+                String status = resolveOutcomeStatus(response.getStatus());
+                metricsPort.get().recordRequest(endpointInfo.capability(), endpointInfo.operation(), status);
+                metricsPort.get().recordLatency(endpointInfo.capability(), endpointInfo.operation(), duration);
+            }
             MDC.remove(MDC_REQUEST_ID_KEY);
         }
     }
@@ -127,5 +147,79 @@ public class UcpHeaderFilter extends OncePerRequestFilter {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
         response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
+    }
+
+    private record EndpointInfo(String capability, String operation) {
+    }
+
+    private EndpointInfo resolveEndpointInfo(String method, String path) {
+        if (path == null) {
+            return new EndpointInfo("unknown", method != null ? method.toLowerCase() : "unknown");
+        }
+        if (path.startsWith("/.well-known/ucp")) {
+            return new EndpointInfo("discovery", "lookup");
+        }
+        if (path.startsWith("/ucp/v1/carts") || path.startsWith("/ucp/carts")) {
+            if (path.endsWith("/cancel")) {
+                return new EndpointInfo("cart", "cancel");
+            }
+            if ("POST".equalsIgnoreCase(method)) {
+                return new EndpointInfo("cart", "create");
+            }
+            if ("PUT".equalsIgnoreCase(method)) {
+                return new EndpointInfo("cart", "update");
+            }
+            return new EndpointInfo("cart", "get");
+        }
+        if (path.startsWith("/ucp/v1/checkout-sessions") || path.startsWith("/ucp/checkout-sessions")) {
+            if (path.endsWith("/complete")) {
+                return new EndpointInfo("checkout", "complete");
+            }
+            if (path.endsWith("/cancel")) {
+                return new EndpointInfo("checkout", "cancel");
+            }
+            if ("POST".equalsIgnoreCase(method)) {
+                return new EndpointInfo("checkout", "create");
+            }
+            if ("PUT".equalsIgnoreCase(method)) {
+                return new EndpointInfo("checkout", "update");
+            }
+            return new EndpointInfo("checkout", "get");
+        }
+        if (path.startsWith("/ucp/v1/catalog") || path.startsWith("/ucp/catalog")) {
+            if (path.endsWith("/search")) {
+                return new EndpointInfo("catalog", "search");
+            }
+            if (path.endsWith("/lookup")) {
+                return new EndpointInfo("catalog", "lookup");
+            }
+            if (path.endsWith("/product")) {
+                return new EndpointInfo("catalog", "product");
+            }
+            return new EndpointInfo("catalog", "unknown");
+        }
+        if (path.startsWith("/ucp/v1/identity") || path.startsWith("/ucp/identity")) {
+            if ("POST".equalsIgnoreCase(method)) {
+                return new EndpointInfo("identity_linking", "link");
+            }
+            if ("DELETE".equalsIgnoreCase(method)) {
+                return new EndpointInfo("identity_linking", "revoke");
+            }
+            return new EndpointInfo("identity_linking", "get");
+        }
+        if (path.startsWith("/ucp/v1/orders") || path.startsWith("/ucp/orders")) {
+            return new EndpointInfo("order", "get");
+        }
+        return new EndpointInfo("unknown", method != null ? method.toLowerCase() : "unknown");
+    }
+
+    private String resolveOutcomeStatus(int httpStatusCode) {
+        if (httpStatusCode >= 200 && httpStatusCode < 400) {
+            return "success";
+        } else if (httpStatusCode >= 400 && httpStatusCode < 500) {
+            return "client_error";
+        } else {
+            return "server_error";
+        }
     }
 }

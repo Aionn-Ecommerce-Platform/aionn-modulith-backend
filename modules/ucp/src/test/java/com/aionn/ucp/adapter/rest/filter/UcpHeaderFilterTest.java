@@ -1,12 +1,20 @@
 package com.aionn.ucp.adapter.rest.filter;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.aionn.ucp.adapter.rest.dto.UcpErrorResponse;
+import com.aionn.ucp.application.port.out.UcpMetricsPort;
 import com.aionn.ucp.infrastructure.config.UcpProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import java.io.IOException;
+import java.time.Duration;
+import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -190,5 +198,56 @@ class UcpHeaderFilterTest {
         filterWithNullProperties.doFilter(request, response, chain);
 
         assertThat(response.getStatus()).isEqualTo(200);
+    }
+
+    @Test
+    void recordsMetricsOnSuccessfulRequest() throws ServletException, IOException {
+        UcpMetricsPort metricsPort = mock(UcpMetricsPort.class);
+        UcpHeaderFilter filterWithMetrics = new UcpHeaderFilter(properties, Optional.of(metricsPort));
+
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/ucp/v1/carts");
+        request.setContentType("application/json");
+        request.setContent("{}".getBytes());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filterWithMetrics.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        verify(metricsPort).recordRequest("cart", "create", "success");
+        verify(metricsPort).recordLatency(eq("cart"), eq("create"), any(Duration.class));
+    }
+
+    @Test
+    void recordsMetricsOnClientError() throws ServletException, IOException {
+        UcpMetricsPort metricsPort = mock(UcpMetricsPort.class);
+        UcpHeaderFilter filterWithMetrics = new UcpHeaderFilter(properties, Optional.of(metricsPort));
+
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/ucp/v1/carts");
+        request.setContentType(null); // missing content-type causes 415
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filterWithMetrics.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(415);
+        verify(metricsPort).recordRequest("cart", "create", "client_error");
+        verify(metricsPort).recordLatency(eq("cart"), eq("create"), any(Duration.class));
+    }
+
+    @Test
+    void recordsMetricsOnDiscoveryEndpoint() throws ServletException, IOException {
+        UcpMetricsPort metricsPort = mock(UcpMetricsPort.class);
+        UcpHeaderFilter filterWithMetrics = new UcpHeaderFilter(properties, Optional.of(metricsPort));
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/.well-known/ucp");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filterWithMetrics.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        verify(metricsPort).recordRequest("discovery", "lookup", "success");
+        verify(metricsPort).recordLatency(eq("discovery"), eq("lookup"), any(Duration.class));
     }
 }

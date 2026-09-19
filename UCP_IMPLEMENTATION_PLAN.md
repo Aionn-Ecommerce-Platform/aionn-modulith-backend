@@ -126,7 +126,7 @@ Add fulfillment, discounts, buyer consent, payment terms, location, loyalty, and
    - Discovery advertisement in `/.well-known/ucp` when `capabilities.order=true`.
 2. [x] **Order lifecycle webhooks**:
    - `UcpOrderEventListener` listens to order lifecycle events (`OrderPlaced`, `OrderApproved`, `OrderShipped`, `OrderCompleted`, `OrderCancelled`).
-   - Correlates with originating checkout session and dispatches outbound webhooks to `context.webhook_url` via `UcpWebhookDispatcherPort`.
+   - Correlates with originating checkout session and dispatches outbound webhooks to `context.webhook_url` via `UcpWebhookDispatcherPort` (in-memory dispatch with SSRF protection; durable queue retries/dead-lettering scoped to post-milestone production hardening).
 3. [x] **Identity linking (`dev.ucp.common.identity_linking`)**:
    - `UcpIdentityController`, `UcpIdentityApplicationService`, `UcpIdentityLinkPort`, `InMemoryUcpIdentityLinkAdapter`.
    - Delegated authorization boundary, platform subject binding, and fail-closed IDOR protection.
@@ -195,7 +195,7 @@ Run the canonical schema/conformance tooling in CI, then exercise a local platfo
 - [x] Micrometer protocol metrics implemented via `UcpMetricsPort` and `MicrometerUcpMetricsAdapter` recording `ucp.requests.total`, `ucp.requests.duration`, and `ucp.webhooks.total`.
 - [x] Integrated outbound webhook observability into `RestClientUcpWebhookDispatcher`.
 
-Provide health/readiness checks for schema resources, signing keys, idempotency store, and required provider configuration. Add admin visibility for protocol operation failures and webhook dead letters using existing protected operational patterns.
+Provide health/readiness checks for schema resources, signing keys, idempotency store, and required provider configuration. Add admin visibility for protocol operation failures and webhook dead letters using existing protected operational patterns (scoped to post-milestone operations).
 
 ## 10. Milestones and Acceptance Gates
 
@@ -203,9 +203,9 @@ Provide health/readiness checks for schema resources, signing keys, idempotency 
 2. [x] **Foundation:** discovery, protocol errors, validation, auth/correlation/idempotency skeleton.
 3. [x] **Cart:** all cart REST operations with contract and integration tests.
 4. [x] **Checkout:** lifecycle, conversion, payment actions, completion, replay and failure handling.
-5. [x] **Catalog/extensions:** search and selected extensions with composed schema tests.
+5. [x] **Catalog capability:** search, batch lookup, and single-product retrieval with canonical schema tests (extensions scoped to subsequent phases).
 6. [x] **Identity/order:** linking, authorization, lifecycle events, webhooks.
-7. [x] **Hardening & Observability:** OpenAPI group, Micrometer metrics, fail-closed IDOR security, and test verification.
+7. [x] **Hardening & Observability:** OpenAPI group, Micrometer metrics, fail-closed IDOR security, and test verification (operational dead-letter admin visibility scoped to post-milestone operations).
 
 Each milestone requires passing focused module tests, contract validation, security tests, and an explicit review of advertised capabilities. No capability is enabled in production until its end-to-end flow and failure/replay semantics are verified.
 
