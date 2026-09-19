@@ -23,13 +23,15 @@ public class RestClientUcpWebhookDispatcher implements UcpWebhookDispatcherPort 
     private final com.aionn.ucp.application.port.out.UcpMetricsPort metricsPort;
 
     @Autowired
-    public RestClientUcpWebhookDispatcher(RestClient.Builder restClientBuilder,
+    public RestClientUcpWebhookDispatcher(
+            @Autowired(required = false) RestClient.Builder restClientBuilder,
             @Autowired(required = false) com.aionn.ucp.application.port.out.UcpMetricsPort metricsPort) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(3));
         requestFactory.setReadTimeout(Duration.ofSeconds(5));
 
-        this.restClient = restClientBuilder
+        RestClient.Builder builder = restClientBuilder != null ? restClientBuilder : RestClient.builder();
+        this.restClient = builder
                 .requestFactory(requestFactory)
                 .build();
         this.metricsPort = metricsPort;

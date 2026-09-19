@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
  * Controller exposing canonical UCP Identity Linking endpoints
  * (dev.ucp.common.identity_linking).
  * Allows platforms/agents to establish, query, and revoke identity bindings
- * using composite keys.
+ * using composite keys (platformId / platformSubject).
  */
 @RestController
 @RequestMapping("/ucp/v1/identity/links")

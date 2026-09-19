@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * In-memory thread-safe adapter implementation for UcpIdentityLinkPort.
- * Keys identity links by composite key (platformId:platformSubject).
+ * Keys identity links by composite key (platformId::platformSubject).
  */
 @Component
 public class InMemoryUcpIdentityLinkAdapter implements UcpIdentityLinkPort {
@@ -62,6 +62,16 @@ public class InMemoryUcpIdentityLinkAdapter implements UcpIdentityLinkPort {
             return Optional.empty();
         }
         return Optional.ofNullable(linksByKey.get(compositeKey(platformId, platformSubject)));
+    }
+
+    @Override
+    public Optional<UcpIdentityLinkResponse> findByCustomerId(String customerId) {
+        if (customerId == null) {
+            return Optional.empty();
+        }
+        return linksByKey.values().stream()
+                .filter(link -> customerId.equals(link.customerId()))
+                .findFirst();
     }
 
     @Override

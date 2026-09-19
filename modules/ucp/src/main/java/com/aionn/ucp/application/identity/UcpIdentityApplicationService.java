@@ -12,7 +12,8 @@ import java.util.Optional;
 
 /**
  * Application service managing UCP identity links with fail-closed IDOR
- * security.
+ * security
+ * and composite platform keys.
  */
 @Slf4j
 @Service
@@ -23,9 +24,9 @@ public class UcpIdentityApplicationService {
 
         /**
          * Creates or updates an identity link. Verifies that the authenticated caller
-         * matches the customerId,
-         * and ensures an existing platform binding cannot be hijacked by a different
-         * customer.
+         * matches the customerId, and ensures an existing platform binding cannot be
+         * hijacked
+         * by a different customer.
          *
          * @param request      the identity link request
          * @param callerUserId authenticated caller user id
@@ -65,14 +66,12 @@ public class UcpIdentityApplicationService {
          * @return link details
          */
         public UcpIdentityLinkResponse getLink(String platformId, String platformSubject, String callerUserId) {
-                UcpIdentityLinkResponse link = identityLinkPort.findByPlatformAndSubject(platformId, platformSubject)
+                return identityLinkPort.findByPlatformAndSubject(platformId, platformSubject)
                                 .filter(l -> callerUserId != null && callerUserId.equals(l.customerId()))
                                 .orElseThrow(() -> new UcpProtocolException(404, "link_not_found",
                                                 "Identity link not found for platform: " + platformId + ", subject: "
                                                                 + platformSubject,
                                                 "error"));
-
-                return link;
         }
 
         /**
@@ -83,7 +82,7 @@ public class UcpIdentityApplicationService {
          * @param callerUserId    authenticated caller user id
          */
         public void revokeLink(String platformId, String platformSubject, String callerUserId) {
-                UcpIdentityLinkResponse link = identityLinkPort.findByPlatformAndSubject(platformId, platformSubject)
+                identityLinkPort.findByPlatformAndSubject(platformId, platformSubject)
                                 .filter(l -> callerUserId != null && callerUserId.equals(l.customerId()))
                                 .orElseThrow(() -> new UcpProtocolException(404, "link_not_found",
                                                 "Identity link not found for platform: " + platformId + ", subject: "

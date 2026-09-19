@@ -28,6 +28,14 @@ public interface UcpIdentityLinkPort {
     Optional<UcpIdentityLinkResponse> findByPlatformAndSubject(String platformId, String platformSubject);
 
     /**
+     * Finds an identity link by customer identifier.
+     *
+     * @param customerId the Aionn customer identifier
+     * @return optional link response if present
+     */
+    Optional<UcpIdentityLinkResponse> findByCustomerId(String customerId);
+
+    /**
      * Revokes an existing link for the given platform and subject.
      *
      * @param platformId      the platform identifier
