@@ -63,7 +63,8 @@ public class ApiSecurityConfig {
                                                                 "/api/v1/kyc/webhooks/sumsub",
                                                                 "/api/v1/payments/webhooks/**",
                                                                 "/api/v1/payments/vnpay/ipn",
-                                                                "/api/v1/shipping/webhooks/carrier")
+                                                                "/api/v1/shipping/webhooks/carrier",
+                                                                "/ucp/v1/catalog/**")
                                                 .permitAll()
                                                 .requestMatchers(HttpMethod.GET,
                                                                 "/.well-known/ucp",

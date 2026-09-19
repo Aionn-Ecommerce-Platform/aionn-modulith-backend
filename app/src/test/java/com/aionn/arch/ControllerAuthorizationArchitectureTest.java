@@ -6,6 +6,7 @@ import java.lang.reflect.Method;
 import java.util.Set;
 import java.util.TreeSet;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
@@ -17,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 class ControllerAuthorizationArchitectureTest {
 
-    private static final Set<String> PUBLIC_ENDPOINTS = Set.of(
+    static final Set<String> PUBLIC_ENDPOINTS = Set.of(
             "com.aionn.catalog.adapter.rest.controller.AttributeTemplateController#get",
             "com.aionn.catalog.adapter.rest.controller.AttributeTemplateController#getByCategory",
             "com.aionn.catalog.adapter.rest.controller.BrandController#get",
@@ -71,17 +72,19 @@ class ControllerAuthorizationArchitectureTest {
             "com.aionn.recommendation.adapter.rest.controller.RecommendationController#getHomeFeed",
             "com.aionn.recommendation.adapter.rest.controller.RecommendationController#getSimilarProducts",
             "com.aionn.ucp.adapter.rest.controller.DiscoveryController#getProfile",
+            "com.aionn.ucp.adapter.rest.controller.UcpCatalogController#search",
+            "com.aionn.ucp.adapter.rest.controller.UcpCatalogController#lookup",
+            "com.aionn.ucp.adapter.rest.controller.UcpCatalogController#getProduct",
             "com.aionn.shipping.adapter.rest.controller.ShippingWebhookController#carrierWebhook");
 
     @Test
     void everyControllerRouteIsSecuredOrExplicitlyAllowListed() {
         Set<String> unsecuredRoutes = new TreeSet<>();
-        ClassPathScanningCandidateComponentProvider scanner =
-                new ClassPathScanningCandidateComponentProvider(false);
+        ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false);
         scanner.addIncludeFilter(new AnnotationTypeFilter(RestController.class));
         scanner.addIncludeFilter(new AnnotationTypeFilter(Controller.class));
 
-        scanner.findCandidateComponents("com.aionn").forEach(candidate -> {
+        for (BeanDefinition candidate : scanner.findCandidateComponents("com.aionn")) {
             Class<?> controller = loadClass(candidate.getBeanClassName());
             boolean classSecured = AnnotatedElementUtils.hasAnnotation(controller, PreAuthorize.class);
             for (Method method : controller.getDeclaredMethods()) {
@@ -94,7 +97,7 @@ class ControllerAuthorizationArchitectureTest {
                     unsecuredRoutes.add(endpoint);
                 }
             }
-        });
+        }
 
         assertThat(unsecuredRoutes)
                 .as("Controller routes must use @PreAuthorize or be explicitly listed as public")

@@ -26,4 +26,19 @@ public final class UcpCurrencyUtil {
                 .setScale(0, RoundingMode.HALF_UP)
                 .longValueExact();
     }
+
+    public static BigDecimal fromMinorUnits(Long minorUnits, String currency) {
+        if (minorUnits == null) {
+            return null;
+        }
+        int fractionDigits = 2;
+        if (currency != null && !currency.isBlank()) {
+            try {
+                fractionDigits = Currency.getInstance(currency.toUpperCase(Locale.ROOT)).getDefaultFractionDigits();
+            } catch (IllegalArgumentException ignored) {
+                fractionDigits = 2;
+            }
+        }
+        return BigDecimal.valueOf(minorUnits).movePointLeft(Math.max(fractionDigits, 0));
+    }
 }

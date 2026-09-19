@@ -24,4 +24,12 @@ public record UcpMessage(
     public static UcpMessage error(String code, String content, String severity, String path) {
         return new UcpMessage("error", code, content, severity, path, "plain");
     }
+
+    public static UcpMessage warning(String code, String content, String path) {
+        return new UcpMessage("warning", code, content, SEVERITY_RECOVERABLE, path, "plain");
+    }
+
+    public static UcpMessage info(String code, String content, String path) {
+        return new UcpMessage("info", code, content, null, path, "plain");
+    }
 }

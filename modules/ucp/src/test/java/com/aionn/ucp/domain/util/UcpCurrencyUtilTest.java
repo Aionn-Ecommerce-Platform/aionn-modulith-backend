@@ -30,4 +30,19 @@ class UcpCurrencyUtilTest {
         assertThat(UcpCurrencyUtil.toMinorUnits(BigDecimal.valueOf(15.25), "UNKNOWN")).isEqualTo(1525L);
         assertThat(UcpCurrencyUtil.toMinorUnits(BigDecimal.valueOf(15.25), null)).isEqualTo(1525L);
     }
+
+    @Test
+    void fromMinorUnitsReturnsNullForNull() {
+        assertThat(UcpCurrencyUtil.fromMinorUnits(null, "USD")).isNull();
+    }
+
+    @Test
+    void fromMinorUnitsConvertsTwoDecimalCurrency() {
+        assertThat(UcpCurrencyUtil.fromMinorUnits(1050L, "USD")).isEqualByComparingTo("10.50");
+    }
+
+    @Test
+    void fromMinorUnitsConvertsZeroDecimalCurrencies() {
+        assertThat(UcpCurrencyUtil.fromMinorUnits(50000L, "VND")).isEqualByComparingTo("50000");
+    }
 }
