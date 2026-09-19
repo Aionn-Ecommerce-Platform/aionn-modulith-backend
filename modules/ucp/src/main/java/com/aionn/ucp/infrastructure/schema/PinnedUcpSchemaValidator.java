@@ -108,7 +108,8 @@ public class PinnedUcpSchemaValidator implements UcpSchemaValidationPort {
                 context -> context.getExecutionConfig().setFormatAssertionsEnabled(true));
 
         if (!errors.isEmpty()) {
-            throw new IllegalStateException("UCP payload failed validation against schema: " + schemaUri);
+            throw new IllegalStateException(
+                    "UCP payload failed validation against schema: " + schemaUri + ", errors: " + errors);
         }
     }
 

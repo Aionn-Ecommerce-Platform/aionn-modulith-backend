@@ -61,7 +61,8 @@ public class InMemoryUcpCheckoutSessionAdapter implements UcpCheckoutSessionPort
     }
 
     @Override
-    public synchronized boolean updateIfMatches(UcpCheckoutSession session, long expectedVersion, String expectedStatus) {
+    public synchronized boolean updateIfMatches(UcpCheckoutSession session, long expectedVersion,
+            String expectedStatus) {
         if (session == null || session.id() == null) {
             return false;
         }
@@ -93,7 +94,8 @@ public class InMemoryUcpCheckoutSessionAdapter implements UcpCheckoutSessionPort
                 if (store.remove(id, session)) {
                     return Optional.empty();
                 }
-                // If conditional removal returned false, a newer session was stored concurrently; retry lookup
+                // If conditional removal returned false, a newer session was stored
+                // concurrently; retry lookup
                 continue;
             }
             return Optional.of(session);
@@ -111,6 +113,17 @@ public class InMemoryUcpCheckoutSessionAdapter implements UcpCheckoutSessionPort
                 .filter(session -> cartId.equals(session.cartId()))
                 .filter(session -> "incomplete".equalsIgnoreCase(session.status())
                         || "ready_for_complete".equalsIgnoreCase(session.status()))
+                .findFirst();
+    }
+
+    @Override
+    public Optional<UcpCheckoutSession> findByOrderId(String orderId) {
+        if (orderId == null || orderId.isBlank()) {
+            return Optional.empty();
+        }
+        Instant now = clock.instant();
+        return store.values().stream()
+                .filter(session -> orderId.equals(session.orderId()) && !session.isExpired(now))
                 .findFirst();
     }
 
