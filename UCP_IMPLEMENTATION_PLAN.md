@@ -80,20 +80,27 @@ Discovery returns only capabilities enabled by configuration and backed by a com
 
 ### Phase 2: Cart
 
-Expose the REST cart binding under the discovered endpoint:
-
-- `POST /carts`
-- `GET /carts/{id}`
-- `PUT /carts/{id}`
-- `POST /carts/{id}/cancel`
-
-Map these to ordering cart input ports and existing cart persistence. Preserve UCP IDs through a stable external-ID mapping or use a documented prefix/namespace. Resolve product/item identity through catalog ports and reprice using the owning pricing/promotion rules. Never trust client prices, totals, inventory, or fulfillment selections.
-
-Implement optimistic concurrency/version checks, ownership and token checks, expiration/cancellation states, and idempotency for mutating operations. Cart-to-checkout conversion must reuse an incomplete checkout for the same cart instead of creating conflicting sessions.
+1. [x] Expose the canonical REST cart binding under `/ucp/v1/carts`:
+   - `POST /carts` (create cart)
+   - `GET /carts/{id}` (get cart)
+   - `PUT /carts/{id}` (update cart line items)
+   - `POST /carts/{id}/cancel` (cancel/clear cart)
+2. [x] Map to Ordering module via `CartOperationsPort` in `shared-kernel` and `OrderingCartAdapter` in `modules/ordering`, with pessimistic write locking and optimistic lock enforcement on item mutations.
+3. [x] Enforce IDOR protection: verified caller ownership against authenticated user id across all read and mutate endpoints.
+4. [x] Reprice using catalog and pricing ports with minor-unit conversion, and reject mixed-currency carts before persistence.
+5. [x] Protect against quantity overflow and validate request/response against canonical UCP schemas offline.
+6. [x] Advertise `dev.ucp.shopping.cart` capability in discovery `/.well-known/ucp` when cart capability is enabled.
 
 ### Phase 3: Checkout
 
 Expose the canonical checkout operations from the current UCP REST spec, including create/read/update/complete and any cancel/recover operation required by the pinned version. Map them to ordering, inventory, shipping, promotion, identity, and payment ports.
+
+1. [x] Expose discovered `/ucp/v1` endpoint with canonical `/checkout-sessions` paths: `POST /ucp/v1/checkout-sessions`, `GET /ucp/v1/checkout-sessions/{id}`, `PUT /ucp/v1/checkout-sessions/{id}`, `POST /ucp/v1/checkout-sessions/{id}/complete`, `POST /ucp/v1/checkout-sessions/{id}/cancel`.
+2. [x] Support checkout session creation from direct line items or existing cart ID, reusing incomplete sessions for the same cart to prevent duplicate conflicts.
+3. [x] Store protocol-only session state via thread-safe `UcpCheckoutSessionPort` without duplicating business database tables.
+4. [x] Delegate final order completion to ordering's `OrderPlacementPort.placeHeadless(...)` with idempotent replay safety and session state machine updates.
+5. [x] Advertise `dev.ucp.shopping.checkout` capability in discovery `/.well-known/ucp` when checkout capability is enabled.
+6. [x] Validate request/response payloads against canonical schema `ucp/2026-08-25/shopping/checkout.json`.
 
 The checkout adapter owns protocol-session coordination and mapping only. Final completion must delegate to ordering's existing headless placement flow through an exposed port (inspect the existing `OrderPlacementPort` before adding another). Ordering remains authoritative for pricing, stock, promotion, shipping, payment initiation, and compensation. Neither boundary may hold an open database transaction while calling payment providers, carriers, email/SMS, or other external systems. Completion must have a stable operation key, deterministic replay behavior, and a clear state machine for pending, requires action, completed, failed, and cancelled outcomes.
 

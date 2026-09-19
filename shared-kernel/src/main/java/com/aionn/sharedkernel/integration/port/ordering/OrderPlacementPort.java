@@ -41,6 +41,15 @@ public interface OrderPlacementPort {
         }
     }
 
-    record PlacedOrder(String orderId, long totalAmountMinor, String currency, String status) {
+    record PlacedOrder(String orderId, long totalAmountMinor, String currency, String status,
+            java.util.Map<String, java.math.BigDecimal> linePrices) {
+
+        public PlacedOrder {
+            linePrices = linePrices != null ? java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(linePrices)) : java.util.Map.of();
+        }
+
+        public PlacedOrder(String orderId, long totalAmountMinor, String currency, String status) {
+            this(orderId, totalAmountMinor, currency, status, java.util.Map.of());
+        }
     }
 }

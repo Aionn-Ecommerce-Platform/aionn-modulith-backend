@@ -46,6 +46,14 @@ public class OrderingOrderPlacementAdapter implements OrderPlacementPort {
                                 addr,
                                 command.idempotencyKey()));
                 long total = order.getTotalAmount() == null ? 0L : order.getTotalAmount().amount().longValue();
-                return new PlacedOrder(order.getOrderId(), total, order.getCurrency(), order.getStatus().name());
+                java.util.Map<String, java.math.BigDecimal> linePrices = new java.util.LinkedHashMap<>();
+                if (order.getItems() != null) {
+                        for (com.aionn.ordering.domain.model.OrderItem item : order.getItems()) {
+                                if (item.unitPrice() != null && item.unitPrice().amount() != null) {
+                                        linePrices.put(item.skuId(), item.unitPrice().amount());
+                                }
+                        }
+                }
+                return new PlacedOrder(order.getOrderId(), total, order.getCurrency(), order.getStatus().name(), linePrices);
         }
 }

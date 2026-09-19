@@ -35,7 +35,7 @@ public class PricingQueryAdapter implements PricingQueryPort {
                     continue;
                 }
                 String currency = variant.price() == null ? "VND" : variant.price().currency();
-                BigDecimal price = variant.price() == null ? BigDecimal.ZERO : variant.price().amount();
+                BigDecimal price = variant.price() == null ? null : variant.price().amount();
                 result.put(variant.skuId(), new SkuPricing(
                         variant.skuId(), product.getMerchantId(), price, currency, active,
                         product.categoryIds()));

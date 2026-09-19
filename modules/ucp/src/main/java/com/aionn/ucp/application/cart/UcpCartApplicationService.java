@@ -13,6 +13,7 @@ import com.aionn.ucp.adapter.rest.dto.cart.UcpResponseMetadata;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpTotalResponse;
 import com.aionn.ucp.application.port.out.UcpSchemaValidationPort;
 import com.aionn.ucp.domain.exception.UcpProtocolException;
+import com.aionn.ucp.domain.util.UcpCurrencyUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -262,13 +263,7 @@ public class UcpCartApplicationService {
     }
 
     private long toMinorUnits(BigDecimal price, String currency) {
-        if (price == null) {
-            return 0;
-        }
-        if ("VND".equalsIgnoreCase(currency)) {
-            return price.longValue();
-        }
-        return price.multiply(BigDecimal.valueOf(100)).longValue();
+        return UcpCurrencyUtil.toMinorUnits(price, currency);
     }
 
     private void validateResponseSchema(UcpCartResponse response) {
