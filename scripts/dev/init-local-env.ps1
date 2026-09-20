@@ -1,9 +1,9 @@
 param(
-    [string]$Directory = (Join-Path $PSScriptRoot "..\envs")
+    [string]$Directory = (Join-Path $PSScriptRoot "..\..\envs")
 )
 
 $ErrorActionPreference = "Stop"
-$template = Join-Path $PSScriptRoot "..\.env.example"
+$template = Join-Path $PSScriptRoot "..\..\.env.example"
 # Only the tracked template is read; existing local files are never opened or overwritten.
 $templateBytes = [System.IO.File]::ReadAllBytes($template)
 New-Item -ItemType Directory -Path $Directory -Force | Out-Null

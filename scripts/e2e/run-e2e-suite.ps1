@@ -15,7 +15,7 @@ $envFiles = @("envs/common.env", "envs/identity.env", "envs/catalog.env",
 $missingEnvFiles = @($envFiles | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) })
 if ($missingEnvFiles.Count -gt 0) {
     throw ("Missing local environment files:`n" + ($missingEnvFiles -join "`n") +
-        "`nRun powershell -File scripts/init-local-env.ps1 from the repository root, then fill local placeholders before retrying.")
+        "`nRun powershell -File scripts/dev/init-local-env.ps1 from the repository root, then fill local placeholders before retrying.")
 }
 
 # 1. Stop any running gradle daemons first
@@ -176,7 +176,7 @@ try {
 
     # Flyway has now prepared the schema. Seed only the smallest reference
     # fixture required to exercise product publication and checkout.
-    $fixture = Get-Content (Join-Path $PSScriptRoot "fixtures\e2e-prerequisites.sql") -Raw
+    $fixture = Get-Content (Join-Path $PSScriptRoot "e2e-prerequisites.sql") -Raw
     $fixture | docker compose -p aionn-modulith-backend `
         -f docker/docker-compose.yml --env-file envs/common.env `
         exec -T postgres psql -v ON_ERROR_STOP=1 `
@@ -195,7 +195,7 @@ try {
         }
 
         Write-Host "Running E2E tests for $name module..."
-        & bash "scripts/$name/test-$name-e2e.sh"
+        & bash "$PSScriptRoot/$name/test-$name-e2e.sh"
         $exitCode = $LASTEXITCODE
         $results.Add([pscustomobject]@{
             Module = $name

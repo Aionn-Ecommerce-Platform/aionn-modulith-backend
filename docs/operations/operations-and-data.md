@@ -84,12 +84,12 @@ Before changing an interval or lock duration, measure worst-case runtime and ver
 
 ### Recommendation offline jobs
 
-| Lock name | Default cadence | `lockAtMostFor` | `lockAtLeastFor` |
-| --- | --- | --- | --- |
-| `recommendation-profile-refresh` | 15 min | PT10M | PT30S |
-| `recommendation-item-similarity` | 1 h | PT30M | PT1M |
-| `recommendation-popularity` | 15 min | PT30M | PT30S |
-| `recommendation-interaction-prune` | 24 h | PT1H | PT1M |
+| Lock name                          | Default cadence | `lockAtMostFor` | `lockAtLeastFor` |
+| ---------------------------------- | --------------- | --------------- | ---------------- |
+| `recommendation-profile-refresh`   | 15 min          | PT10M           | PT30S            |
+| `recommendation-item-similarity`   | 1 h             | PT30M           | PT1M             |
+| `recommendation-popularity`        | 15 min          | PT30M           | PT30S            |
+| `recommendation-interaction-prune` | 24 h            | PT1H            | PT1M             |
 
 `RECOMMENDATION_EXECUTION_COMPUTE_TIMEOUT_SECONDS` overrides the application-wide transaction timeout for the heavy read and batched-write phases of the two rebuilds, which scan the interaction log and legitimately need longer than a request budget. Its validated range is 1 to 1740 seconds inclusive (default 900), below the initial PT30M lease. This is not a whole-rebuild deadline: the lease is automatically renewed for the entire read/write/cleanup sequence, so a large number of batches does not alone cause lease expiry. Monitor renewal failures and job runtime: a prolonged database outage or process pause can still prevent lease extension.
 
@@ -123,10 +123,10 @@ The scheduled reconciliation job reports mismatches through metrics and error lo
 
 ```powershell
 .\gradlew.bat build
-powershell -ExecutionPolicy Bypass -File scripts/run-e2e-suite.ps1 -Module all
+powershell -ExecutionPolicy Bypass -File scripts/e2e/run-e2e-suite.ps1 -Module all
 ```
 
-`-Module all` runs every module script under `scripts/<module>/test-<module>-e2e.sh`, including `scripts/recommendation/`. A single module can be run on its own with `-Module recommendation`, which is faster when iterating but is not a substitute for the full suite before a release. The runner starts the application against an isolated database, applies `scripts/fixtures/e2e-prerequisites.sql`, and shortens the recommendation offline-job cadence so the behavioural chain can be observed inside one run; the recommendation script therefore depends on being launched by the runner rather than against a default-configured application.
+`-Module all` runs every module script under `scripts/e2e/<module>/test-<module>-e2e.sh`, including `scripts/e2e/recommendation/`. A single module can be run on its own with `-Module recommendation`, which is faster when iterating but is not a substitute for the full suite before a release. The runner starts the application against an isolated database, applies `scripts/e2e/e2e-prerequisites.sql`, and shortens the recommendation offline-job cadence so the behavioural chain can be observed inside one run; the recommendation script therefore depends on being launched by the runner rather than against a default-configured application.
 
 In addition to green tests, verify that:
 

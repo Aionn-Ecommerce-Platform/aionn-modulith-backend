@@ -8,16 +8,16 @@ The Sonar configuration in the root `build.gradle` is the source of truth for co
 
 ## 2. Strategy by layer
 
-| Package | Test strategy |
-| --- | --- |
-| `domain/model` | Plain JUnit tests for invariants, state transitions, events, and errors |
-| `application/service` | Mockito unit tests with mocked output ports and policies; cover success, compensation, and failure paths |
-| `application/usecase` | Do not test one-line wrappers; move meaningful logic to a service or policy |
-| `adapter/rest/controller` | MockMvc tests with mocked input ports and mappers; verify status, response, validation, and authorization |
-| `infrastructure/persistence/adapter` | Unit tests for mapping and delegation; integration tests when database or query semantics matter |
-| provider/client/security | Test success, network failure, non-2xx responses, malformed payloads, signatures, and configuration boundaries |
-| scheduler/worker | Test delegation, batching, retries, and transaction isolation |
-| architecture | ArchUnit tests in `app` protect system-wide dependency rules |
+| Package                              | Test strategy                                                                                                  |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `domain/model`                       | Plain JUnit tests for invariants, state transitions, events, and errors                                        |
+| `application/service`                | Mockito unit tests with mocked output ports and policies; cover success, compensation, and failure paths       |
+| `application/usecase`                | Do not test one-line wrappers; move meaningful logic to a service or policy                                    |
+| `adapter/rest/controller`            | MockMvc tests with mocked input ports and mappers; verify status, response, validation, and authorization      |
+| `infrastructure/persistence/adapter` | Unit tests for mapping and delegation; integration tests when database or query semantics matter               |
+| provider/client/security             | Test success, network failure, non-2xx responses, malformed payloads, signatures, and configuration boundaries |
+| scheduler/worker                     | Test delegation, batching, retries, and transaction isolation                                                  |
+| architecture                         | ArchUnit tests in `app` protect system-wide dependency rules                                                   |
 
 ## 3. Test rules
 
@@ -44,7 +44,7 @@ Tests requiring PostgreSQL, Redis, or OpenSearch use Testcontainers or infrastru
 Run from the repository root with PowerShell, Docker Compose, the project JDK, and Bash available. Ignored `envs/*.env` files are not included in a checkout. Create the complete set first:
 
 ```powershell
-powershell -File scripts/init-local-env.ps1
+powershell -File scripts/dev/init-local-env.ps1
 ```
 
 The initializer creates only missing files and never overwrites existing configuration. It copies tracked `.env.example` to `envs/common.env` and creates comment-only override files for `identity`, `catalog`, `inventory`, `ordering`, `payment`, `shipping`, `promotion`, `notification`, `chat`, and `recommendation` (11 files total). Unset options retain application YAML defaults. Re-running repairs missing files but does not update existing files when the template changes.
@@ -55,13 +55,13 @@ Start infrastructure with the same common configuration, wait for healthy servic
 
 ```powershell
 docker compose -f docker/docker-compose.yml --env-file envs/common.env up -d --wait
-powershell -File scripts/run-e2e-suite.ps1 -Module all
+powershell -File scripts/e2e/run-e2e-suite.ps1 -Module all
 ```
 
 The runner checks all 11 files before stopping Gradle, reporting only missing paths and the initializer command. Smoke-test create-only behavior in a fresh temporary directory without touching local environment files or running Gradle:
 
 ```powershell
-powershell -File scripts/test-init-local-env.ps1
+powershell -File scripts/dev/test-init-local-env.ps1
 ```
 
 ## 5. Verification commands
@@ -80,7 +80,7 @@ powershell -File scripts/test-init-local-env.ps1
 powershell -ExecutionPolicy Bypass -File scripts/coverage/effective-coverage.ps1 -Module <module>
 
 # End-to-end checks
-powershell -ExecutionPolicy Bypass -File scripts/run-e2e-suite.ps1 -Module all
+powershell -ExecutionPolicy Bypass -File scripts/e2e/run-e2e-suite.ps1 -Module all
 ```
 
 Interpret coverage using Sonar's real exclusions rather than the raw JaCoCo percentage alone. Provider, security, and orchestration code deserves deeper testing than declaration-only DTO and configuration code.

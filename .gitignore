@@ -22,6 +22,8 @@ envs/*.secret
 !envs/*.example
 
 .kiro/
+.claude/
+.claudeignore
 
 docker/.env
 docker/*.local.env
@@ -32,7 +34,7 @@ docker/*.local.env
 **/.jqwik-database
 .disabled-tests-phase4/
 
-document/later_check/
+docs/later_check/
 
 # Terraform
 **/.terraform/

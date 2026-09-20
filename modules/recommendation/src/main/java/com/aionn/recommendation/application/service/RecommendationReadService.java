@@ -27,7 +27,7 @@ import java.util.function.Supplier;
  *
  * <p>{@code NOT_SUPPORTED}: the availability call must not run inside a transaction. It is an
  * in-process adapter today but becomes a network call when this module is split out, and per
- * {@code document/architecture.md} a read-only transaction is still a transaction.
+ * {@code docs/architecture/modular-monolith.md} a read-only transaction is still a transaction.
  */
 @Slf4j
 @Service
