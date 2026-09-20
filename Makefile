@@ -22,7 +22,7 @@ smoke:
 	./gradlew :app:test
 
 e2e:
-	powershell -ExecutionPolicy Bypass -File scripts/run-e2e-suite.ps1 -Module all
+	powershell -ExecutionPolicy Bypass -File scripts/e2e/run-e2e-suite.ps1 -Module all
 
 image-build:
 	$(CONTAINER) build --tag aionn-modulith-backend:local .

@@ -2,8 +2,8 @@
 # E2E API smoke test for the Recommendation module.
 # Exit non-zero on the first failed step so CI can gate on it.
 #
-# Run through scripts/run-e2e-suite.ps1, which starts the application against an isolated database,
-# applies scripts/fixtures/e2e-prerequisites.sql (this script needs the CAT_E2E category it creates)
+# Run through scripts/e2e/run-e2e-suite.ps1, which starts the application against an isolated database,
+# applies scripts/e2e/e2e-prerequisites.sql (this script needs the CAT_E2E category it creates)
 # and shortens the recommendation offline-job cadence so step 6 can observe a profile refresh inside
 # one run. Running it standalone against a default-configured application will work for steps 1-5 and
 # 7-8, but step 6 waits on the profile refresh scheduler and will time out at the production cadence.

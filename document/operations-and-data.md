@@ -123,10 +123,10 @@ The scheduled reconciliation job reports mismatches through metrics and error lo
 
 ```powershell
 .\gradlew.bat build
-powershell -ExecutionPolicy Bypass -File scripts/run-e2e-suite.ps1 -Module all
+powershell -ExecutionPolicy Bypass -File scripts/e2e/run-e2e-suite.ps1 -Module all
 ```
 
-`-Module all` runs every module script under `scripts/<module>/test-<module>-e2e.sh`, including `scripts/recommendation/`. A single module can be run on its own with `-Module recommendation`, which is faster when iterating but is not a substitute for the full suite before a release. The runner starts the application against an isolated database, applies `scripts/fixtures/e2e-prerequisites.sql`, and shortens the recommendation offline-job cadence so the behavioural chain can be observed inside one run; the recommendation script therefore depends on being launched by the runner rather than against a default-configured application.
+`-Module all` runs every module script under `scripts/e2e/<module>/test-<module>-e2e.sh`, including `scripts/e2e/recommendation/`. A single module can be run on its own with `-Module recommendation`, which is faster when iterating but is not a substitute for the full suite before a release. The runner starts the application against an isolated database, applies `scripts/e2e/e2e-prerequisites.sql`, and shortens the recommendation offline-job cadence so the behavioural chain can be observed inside one run; the recommendation script therefore depends on being launched by the runner rather than against a default-configured application.
 
 In addition to green tests, verify that:
 

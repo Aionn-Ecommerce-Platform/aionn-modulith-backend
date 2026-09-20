@@ -20,7 +20,7 @@ try {
         }
     }
     $common = Join-Path $directory "common.env"
-    $template = Join-Path $PSScriptRoot "..\.env.example"
+    $template = Join-Path $PSScriptRoot "..\..\.env.example"
     if ((Get-FileHash -LiteralPath $common).Hash -ne (Get-FileHash -LiteralPath $template).Hash) {
         throw "common.env must preserve the tracked template exactly."
     }
