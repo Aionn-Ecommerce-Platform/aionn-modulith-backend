@@ -2,6 +2,7 @@
 
 **Protocol baseline:** `2026-08-25` (`v2026-08-25`, commit `cd78fb38e819de77d9b527d110476eccb876f1bd`).  
 Pinned schemas, REST service descriptions, and contract verification bundles are located in:
+
 - Runtime schemas: [`modules/ucp/src/main/resources/ucp/2026-08-25/`](../../modules/ucp/src/main/resources/ucp/2026-08-25/)
 - Contract test bundle: [`modules/ucp/src/test/resources/ucp-contract/2026-08-25/`](../../modules/ucp/src/test/resources/ucp-contract/2026-08-25/)
 
@@ -10,6 +11,7 @@ Pinned schemas, REST service descriptions, and contract verification bundles are
 ## 1. Architectural Role
 
 The Universal Commerce Protocol (UCP) module (`modules/ucp`) acts as an **interoperability protocol adapter** inside the Aionn Modular Monolith:
+
 - **Discovery Endpoint:** `GET /.well-known/ucp`
 - **REST Base Path:** `/ucp/v1`
 - **Integration Boundary:** Calls application ports in `shared-kernel` (`CartOperationsPort`, `OrderPlacementPort`, `CatalogQueryPort`, `OrderSnapshotQueryPort`).
@@ -23,27 +25,27 @@ UCP discovery (`/.well-known/ucp`) advertises only capabilities that are fully i
 
 ### Core Capabilities
 
-| Capability | Canonical Schema | REST Endpoints | Implemented By | Discovery Advertisement |
-|---|---|---|---|---|
-| **Cart**<br>`dev.ucp.shopping.cart` | `schemas/shopping/cart.json` | `POST /ucp/v1/carts`<br>`GET /ucp/v1/carts/{id}`<br>`PUT /ucp/v1/carts/{id}`<br>`POST /ucp/v1/carts/{id}/cancel` | `UcpCartController`<br>`UcpCartApplicationService`<br>`CartOperationsPort` | `true` (when `capabilities.cart=true`) |
-| **Checkout**<br>`dev.ucp.shopping.checkout` | `schemas/shopping/checkout.json` | `POST /ucp/v1/checkout-sessions`<br>`GET /ucp/v1/checkout-sessions/{id}`<br>`PUT /ucp/v1/checkout-sessions/{id}`<br>`POST /ucp/v1/checkout-sessions/{id}/complete`<br>`POST /ucp/v1/checkout-sessions/{id}/cancel` | `UcpCheckoutController`<br>`UcpCheckoutApplicationService`<br>`OrderPlacementPort.placeHeadless` | `true` (when `capabilities.checkout=true`) |
-| **Catalog Lookup**<br>`dev.ucp.shopping.catalog.lookup` | `schemas/shopping/catalog_lookup.json` | `POST /ucp/v1/catalog/lookup`<br>`POST /ucp/v1/catalog/product` | `UcpCatalogController`<br>`UcpCatalogApplicationService`<br>`CatalogQueryPort` | `true` (when `capabilities.catalog=true`) |
-| **Catalog Search**<br>`dev.ucp.shopping.catalog.search` | `schemas/shopping/catalog_search.json` | `POST /ucp/v1/catalog/search` | `UcpCatalogController`<br>`UcpCatalogApplicationService`<br>`CatalogQueryPort` | `true` (when `capabilities.catalog=true`) |
-| **Identity Linking**<br>`dev.ucp.common.identity_linking` | `schemas/common/identity_linking.json` | `POST /ucp/v1/identity/links`<br>`GET /ucp/v1/identity/links/{platformId}/{platformSubject}`<br>`DELETE /ucp/v1/identity/links/{platformId}/{platformSubject}` | `UcpIdentityController`<br>`UcpIdentityApplicationService`<br>`UcpIdentityLinkPort` | `true` (when `capabilities.identity-linking=true`) |
-| **Order**<br>`dev.ucp.shopping.order` | `schemas/shopping/order.json` | `GET /ucp/v1/orders/{id}`<br>Outbound order lifecycle webhooks | `UcpOrderController`<br>`UcpOrderApplicationService`<br>`UcpOrderEventListener`<br>`RestClientUcpWebhookDispatcher` | `true` (when `capabilities.order=true`) |
+| Capability                                                | Canonical Schema                       | REST Endpoints                                                                                                                                                                                                     | Implemented By                                                                                                      | Advertised |
+| --------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- | ---------- |
+| **Cart**<br>`dev.ucp.shopping.cart`                       | `schemas/shopping/cart.json`           | `POST /ucp/v1/carts`<br>`GET /ucp/v1/carts/{id}`<br>`PUT /ucp/v1/carts/{id}`<br>`POST /ucp/v1/carts/{id}/cancel`                                                                                                   | `UcpCartController`<br>`UcpCartApplicationService`<br>`CartOperationsPort`                                          | `true`     |
+| **Checkout**<br>`dev.ucp.shopping.checkout`               | `schemas/shopping/checkout.json`       | `POST /ucp/v1/checkout-sessions`<br>`GET /ucp/v1/checkout-sessions/{id}`<br>`PUT /ucp/v1/checkout-sessions/{id}`<br>`POST /ucp/v1/checkout-sessions/{id}/complete`<br>`POST /ucp/v1/checkout-sessions/{id}/cancel` | `UcpCheckoutController`<br>`UcpCheckoutApplicationService`<br>`OrderPlacementPort.placeHeadless`                    | `true`     |
+| **Catalog Lookup**<br>`dev.ucp.shopping.catalog.lookup`   | `schemas/shopping/catalog_lookup.json` | `POST /ucp/v1/catalog/lookup`<br>`POST /ucp/v1/catalog/product`                                                                                                                                                    | `UcpCatalogController`<br>`UcpCatalogApplicationService`<br>`CatalogQueryPort`                                      | `true`     |
+| **Catalog Search**<br>`dev.ucp.shopping.catalog.search`   | `schemas/shopping/catalog_search.json` | `POST /ucp/v1/catalog/search`                                                                                                                                                                                      | `UcpCatalogController`<br>`UcpCatalogApplicationService`<br>`CatalogQueryPort`                                      | `true`     |
+| **Identity Linking**<br>`dev.ucp.common.identity_linking` | `schemas/common/identity_linking.json` | `POST /ucp/v1/identity/links`<br>`GET /ucp/v1/identity/links/{platformId}/{platformSubject}`<br>`DELETE /ucp/v1/identity/links/{platformId}/{platformSubject}`                                                     | `UcpIdentityController`<br>`UcpIdentityApplicationService`<br>`UcpIdentityLinkPort`                                 | `true`     |
+| **Order**<br>`dev.ucp.shopping.order`                     | `schemas/shopping/order.json`          | `GET /ucp/v1/orders/{id}`<br>Outbound order lifecycle webhooks                                                                                                                                                     | `UcpOrderController`<br>`UcpOrderApplicationService`<br>`UcpOrderEventListener`<br>`RestClientUcpWebhookDispatcher` | `true`     |
 
 ### Optional Extensions (Unadvertised)
 
 The following extensions exist in UCP specifications but are not advertised by Aionn (`advertised=false`):
 
-| Extension | Canonical Schema | Discovery Status | Note |
-|---|---|---|---|
-| **Buyer Consent** | `schemas/shopping/buyer_consent.json` | `advertised=false` | Handled internally by Identity module; not exposed via UCP extension. |
-| **Discount** | `schemas/shopping/discount.json` | `advertised=false` | Promotion vouchers are applied through cart/checkout rather than UCP discount extension. |
-| **Fulfillment** | `schemas/shopping/fulfillment.json` | `advertised=false` | Shipping module manages logistics internally; not exposed as UCP selection. |
-| **Payment Terms** | `schemas/common/payment_terms.json` | `advertised=false` | Internal payment flows only; not exposed as UCP payment terms. |
-| **Location Lookup & Search** | `schemas/common/location_lookup.json`<br>`schemas/common/location_search.json` | `advertised=false` | Standard address management used instead. |
-| **Loyalty** | `schemas/common/loyalty.json` | `advertised=false` | No loyalty system in platform. |
+| Extension                    | Canonical Schema                                                               | Advertised | Note                                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------- |
+| **Buyer Consent**            | `schemas/shopping/buyer_consent.json`                                          | `false`    | Handled internally by Identity module; not exposed via UCP extension.                    |
+| **Discount**                 | `schemas/shopping/discount.json`                                               | `false`    | Promotion vouchers are applied through cart/checkout rather than UCP discount extension. |
+| **Fulfillment**              | `schemas/shopping/fulfillment.json`                                            | `false`    | Shipping module manages logistics internally; not exposed as UCP selection.              |
+| **Payment Terms**            | `schemas/common/payment_terms.json`                                            | `false`    | Internal payment flows only; not exposed as UCP payment terms.                           |
+| **Location Lookup & Search** | `schemas/common/location_lookup.json`<br>`schemas/common/location_search.json` | `false`    | Standard address management used instead.                                                |
+| **Loyalty**                  | `schemas/common/loyalty.json`                                                  | `false`    | No loyalty system in platform.                                                           |
 
 ---
 
