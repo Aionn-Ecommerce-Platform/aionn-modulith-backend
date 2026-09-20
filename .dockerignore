@@ -5,7 +5,7 @@
 .vscode
 **/build
 bin
-document
+docs
 envs/*.env
 *.log
 *.tmp

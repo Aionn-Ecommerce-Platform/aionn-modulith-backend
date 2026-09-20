@@ -60,9 +60,10 @@ The Flyway integration test uses Testcontainers and requires Docker.
 
 ## Documentation
 
-- [Architecture](document/architecture.md): module boundaries, dependencies, transactions, events, and schedulers.
-- [Coding conventions](document/coding-conventions.md): Java, REST, validation, mapping, configuration, and time conventions.
-- [Testing](document/testing.md): test strategy, coverage, and quality gates.
-- [Operations and data](document/operations-and-data.md): runtime configuration, databases, outbox operations, dependencies, and local commands.
+- [Architecture](docs/architecture/modular-monolith.md): module boundaries, dependencies, transactions, events, and schedulers.
+- [UCP Capability Matrix](docs/architecture/ucp-capability-matrix.md): Universal Commerce Protocol capability matrix and verification.
+- [Coding conventions](docs/conventions/coding-conventions.md): Java, REST, validation, mapping, configuration, and time conventions.
+- [Testing strategy](docs/conventions/testing-strategy.md): test strategy, coverage, and quality gates.
+- [Operations and data](docs/operations/operations-and-data.md): runtime configuration, databases, outbox operations, dependencies, and local commands.
 
 Documentation describes the current system. Historical migration plans and completed checklists do not belong in the repository.
