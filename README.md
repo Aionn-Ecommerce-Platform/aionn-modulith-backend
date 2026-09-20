@@ -45,6 +45,8 @@ Copy the sample environment variables:
 Copy-Item .env.example .env
 ```
 
+_(Alternatively, initialize per-module environment files in `envs/`: `powershell -ExecutionPolicy Bypass -File scripts/dev/init-local-env.ps1`)_
+
 ### 2. Start Infrastructure Dependencies
 
 Spin up PostgreSQL 16, Redis 7, and OpenSearch 2.18:
@@ -52,8 +54,6 @@ Spin up PostgreSQL 16, Redis 7, and OpenSearch 2.18:
 ```powershell
 docker compose --env-file .env -f docker/docker-compose.yml up -d
 ```
-
-_(Alternatively, use the automated setup script: `powershell -ExecutionPolicy Bypass -File scripts/dev/init-local-env.ps1`)_
 
 ### 3. Run the Backend Application
 

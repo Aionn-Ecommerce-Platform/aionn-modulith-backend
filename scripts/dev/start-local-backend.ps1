@@ -3,6 +3,7 @@ $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $envFiles = @(
+    ".env",
     "envs/common.env",
     "envs/identity.env",
     "envs/catalog.env",

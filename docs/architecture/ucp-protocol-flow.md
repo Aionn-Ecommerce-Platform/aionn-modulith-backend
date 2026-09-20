@@ -99,12 +99,12 @@ sequenceDiagram
 ### Flow 1: Business Profile Discovery
 
 - **Endpoint**: `GET /.well-known/ucp`
-- **Controller**: [`DiscoveryController`](file:///d:/mix-of-ucp-ecommerce/aionn-modulith-backend/modules/ucp/src/main/java/com/aionn/ucp/adapter/rest/controller/DiscoveryController.java)
+- **Controller**: [`DiscoveryController`](../../modules/ucp/src/main/java/com/aionn/ucp/adapter/rest/controller/DiscoveryController.java)
 - **Application Service**: `UcpProfileApplicationService`
 - **Mechanism**:
   1. Reads business identity, contact metadata, and active capability flags from `UcpProperties`.
   2. Dynamically constructs the root discovery response adhering to UCP protocol `2026-08-25`.
-  3. Advertises all 6 implemented core capabilities (`cart`, `checkout`, `catalog.lookup`, `catalog.search`, `identity_linking`, `order`).
+  3. Advertises all 6 implemented core capabilities (`cart`, `checkout`, `catalog.lookup`, `catalog.search`, `identity_linking`, `order`) when enabled via matching `aionn.ucp.capabilities.*` configuration flags.
   4. Omits or marks unadvertised optional extensions (`advertised=false`).
 
 ### Flow 2: Identity Linking
@@ -113,8 +113,8 @@ sequenceDiagram
   - `POST /ucp/v1/identity/links`: Establish connection between an external platform subject and internal Aionn customer.
   - `GET /ucp/v1/identity/links/{platformId}/{platformSubject}`: Query link status.
   - `DELETE /ucp/v1/identity/links/{platformId}/{platformSubject}`: Revoke link.
-- **Controller**: [`UcpIdentityController`](file:///d:/mix-of-ucp-ecommerce/aionn-modulith-backend/modules/ucp/src/main/java/com/aionn/ucp/adapter/rest/controller/UcpIdentityController.java)
-- **Port**: `UcpIdentityLinkPort` (backed by [`InMemoryUcpIdentityLinkAdapter`](file:///d:/mix-of-ucp-ecommerce/aionn-modulith-backend/modules/ucp/src/main/java/com/aionn/ucp/infrastructure/adapter/InMemoryUcpIdentityLinkAdapter.java))
+- **Controller**: [`UcpIdentityController`](../../modules/ucp/src/main/java/com/aionn/ucp/adapter/rest/controller/UcpIdentityController.java)
+- **Port**: `UcpIdentityLinkPort` (backed by [`InMemoryUcpIdentityLinkAdapter`](../../modules/ucp/src/main/java/com/aionn/ucp/infrastructure/adapter/InMemoryUcpIdentityLinkAdapter.java))
 - **Security**: IDOR protection ensures callers can only manipulate links authorized for their authenticated subject context.
 
 ### Flow 3: Catalog Search & Lookup
@@ -123,7 +123,7 @@ sequenceDiagram
   - `POST /ucp/v1/catalog/search`: Multi-criteria search with keywords, category, and price range.
   - `POST /ucp/v1/catalog/lookup`: Batch lookup of items by SKUs/IDs.
   - `POST /ucp/v1/catalog/product`: Detailed view of a single product.
-- **Controller**: [`UcpCatalogController`](file:///d:/mix-of-ucp-ecommerce/aionn-modulith-backend/modules/ucp/src/main/java/com/aionn/ucp/adapter/rest/controller/UcpCatalogController.java)
+- **Controller**: [`UcpCatalogController`](../../modules/ucp/src/main/java/com/aionn/ucp/adapter/rest/controller/UcpCatalogController.java)
 - **Port**: `CatalogQueryPort` in `shared-kernel`.
 - **Validation**: Strict verification against `schemas/shopping/catalog_search.json` and `catalog_lookup.json`. Prices are converted into minor units (cents).
 
@@ -134,7 +134,7 @@ sequenceDiagram
   - `GET /ucp/v1/carts/{id}`: Retrieve cart status and line items.
   - `PUT /ucp/v1/carts/{id}`: Replace/update line items.
   - `POST /ucp/v1/carts/{id}/cancel`: Clear/abandon cart.
-- **Controller**: [`UcpCartController`](file:///d:/mix-of-ucp-ecommerce/aionn-modulith-backend/modules/ucp/src/main/java/com/aionn/ucp/adapter/rest/controller/UcpCartController.java)
+- **Controller**: [`UcpCartController`](../../modules/ucp/src/main/java/com/aionn/ucp/adapter/rest/controller/UcpCartController.java)
 - **Port**: `CartOperationsPort` implemented by `modules/ordering`.
 - **Integrity**: Pessimistic/optimistic locking prevents race conditions on item quantities. Mixed-currency carts are rejected fail-closed.
 
@@ -146,7 +146,7 @@ sequenceDiagram
   - `PUT /ucp/v1/checkout-sessions/{id}`: Update shipping address, email, or discounts.
   - `POST /ucp/v1/checkout-sessions/{id}/complete`: Finalize checkout.
   - `POST /ucp/v1/checkout-sessions/{id}/cancel`: Cancel session.
-- **Controller**: [`UcpCheckoutController`](file:///d:/mix-of-ucp-ecommerce/aionn-modulith-backend/modules/ucp/src/main/java/com/aionn/ucp/adapter/rest/controller/UcpCheckoutController.java)
+- **Controller**: [`UcpCheckoutController`](../../modules/ucp/src/main/java/com/aionn/ucp/adapter/rest/controller/UcpCheckoutController.java)
 - **Session Store**: `UcpCheckoutSessionPort` tracks protocol lifecycle states (`PENDING`, `READY_FOR_COMPLETION`, `COMPLETED`, `CANCELLED`) with TTL eviction.
 - **Order Placement**: Completion delegates directly to `OrderPlacementPort.placeHeadless(...)`. This creates the real order in `modules/ordering`, initiates stock reservation, and triggers the Transactional Outbox event.
 
@@ -156,8 +156,8 @@ sequenceDiagram
   - Inbound Query: `GET /ucp/v1/orders/{id}` retrieves order status conforming to `schemas/shopping/order.json`.
   - Outbound Webhook: Dispatched to client's `context.webhook_url` when internal order lifecycle events occur.
 - **Listener & Dispatcher**:
-  - [`UcpOrderEventListener`](file:///d:/mix-of-ucp-ecommerce/aionn-modulith-backend/modules/ucp/src/main/java/com/aionn/ucp/infrastructure/webhook/UcpOrderEventListener.java): Spring `@TransactionalEventListener(phase = AFTER_COMMIT)` listens to domain events (`OrderPlaced`, `OrderApproved`, `OrderShipped`, `OrderCompleted`, `OrderCancelled`).
-  - [`RestClientUcpWebhookDispatcher`](file:///d:/mix-of-ucp-ecommerce/aionn-modulith-backend/modules/ucp/src/main/java/com/aionn/ucp/infrastructure/webhook/RestClientUcpWebhookDispatcher.java): Dispatches HTTP POST webhooks with SSRF protection (rejecting private/internal IP ranges) and timeout enforcement.
+  - [`UcpOrderEventListener`](../../modules/ucp/src/main/java/com/aionn/ucp/infrastructure/webhook/UcpOrderEventListener.java): Spring `@TransactionalEventListener(phase = AFTER_COMMIT)` listens to domain events (`OrderPlaced`, `OrderApproved`, `OrderShipped`, `OrderCompleted`, `OrderCancelled`).
+  - [`RestClientUcpWebhookDispatcher`](../../modules/ucp/src/main/java/com/aionn/ucp/infrastructure/webhook/RestClientUcpWebhookDispatcher.java): Dispatches HTTP POST webhooks with SSRF protection (rejecting private/internal IP ranges) and timeout enforcement.
 
 ---
 
