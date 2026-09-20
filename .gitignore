@@ -22,6 +22,8 @@ envs/*.secret
 !envs/*.example
 
 .kiro/
+.claude/
+.claudeignore
 
 docker/.env
 docker/*.local.env

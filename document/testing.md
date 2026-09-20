@@ -8,16 +8,16 @@ The Sonar configuration in the root `build.gradle` is the source of truth for co
 
 ## 2. Strategy by layer
 
-| Package | Test strategy |
-| --- | --- |
-| `domain/model` | Plain JUnit tests for invariants, state transitions, events, and errors |
-| `application/service` | Mockito unit tests with mocked output ports and policies; cover success, compensation, and failure paths |
-| `application/usecase` | Do not test one-line wrappers; move meaningful logic to a service or policy |
-| `adapter/rest/controller` | MockMvc tests with mocked input ports and mappers; verify status, response, validation, and authorization |
-| `infrastructure/persistence/adapter` | Unit tests for mapping and delegation; integration tests when database or query semantics matter |
-| provider/client/security | Test success, network failure, non-2xx responses, malformed payloads, signatures, and configuration boundaries |
-| scheduler/worker | Test delegation, batching, retries, and transaction isolation |
-| architecture | ArchUnit tests in `app` protect system-wide dependency rules |
+| Package                              | Test strategy                                                                                                  |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `domain/model`                       | Plain JUnit tests for invariants, state transitions, events, and errors                                        |
+| `application/service`                | Mockito unit tests with mocked output ports and policies; cover success, compensation, and failure paths       |
+| `application/usecase`                | Do not test one-line wrappers; move meaningful logic to a service or policy                                    |
+| `adapter/rest/controller`            | MockMvc tests with mocked input ports and mappers; verify status, response, validation, and authorization      |
+| `infrastructure/persistence/adapter` | Unit tests for mapping and delegation; integration tests when database or query semantics matter               |
+| provider/client/security             | Test success, network failure, non-2xx responses, malformed payloads, signatures, and configuration boundaries |
+| scheduler/worker                     | Test delegation, batching, retries, and transaction isolation                                                  |
+| architecture                         | ArchUnit tests in `app` protect system-wide dependency rules                                                   |
 
 ## 3. Test rules
 
