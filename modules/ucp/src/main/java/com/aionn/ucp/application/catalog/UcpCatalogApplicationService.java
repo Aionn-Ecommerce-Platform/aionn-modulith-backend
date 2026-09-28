@@ -41,7 +41,6 @@ public class UcpCatalogApplicationService {
     private final ObjectMapper objectMapper;
     private final String version;
 
-    @Autowired
     public UcpCatalogApplicationService(
             CatalogQueryPort catalogQueryPort,
             @Autowired(required = false) UcpSchemaValidationPort schemaValidator) {
