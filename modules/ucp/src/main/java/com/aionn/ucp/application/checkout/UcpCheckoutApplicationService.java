@@ -29,7 +29,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -127,7 +126,8 @@ public class UcpCheckoutApplicationService {
         }
 
         synchronized (getCartLock(cartId)) {
-            // Reuse existing incomplete checkout session for the same cart to prevent duplicate conflicting sessions
+            // Reuse existing incomplete checkout session for the same cart to prevent
+            // duplicate conflicting sessions
             Optional<UcpCheckoutSession> existingSession = sessionPort.findIncompleteByCartId(cartId);
             if (existingSession.isPresent() && !existingSession.get().isExpired(now)) {
                 UcpCheckoutSession session = existingSession.get();
@@ -273,13 +273,15 @@ public class UcpCheckoutApplicationService {
 
             if (existing.isCanceled() || existing.isExpired(now)) {
                 throw new UcpProtocolException(400, "invalid_state",
-                        "Cannot complete checkout session in status: " + existing.status(), SEVERITY_ERROR, PATH_STATUS);
+                        "Cannot complete checkout session in status: " + existing.status(), SEVERITY_ERROR,
+                        PATH_STATUS);
             }
 
             // Validate items and pricing before placing order
             ValidatedPricing validated = validateItemsAndDeterminePricing(existing.items());
 
-            // Reserve the session transition to a durable 'completing' state before invoking placeHeadless
+            // Reserve the session transition to a durable 'completing' state before
+            // invoking placeHeadless
             UcpCheckoutSession completing = existing.isCompleting() ? existing : existing.withCompleting(now);
             if (!existing.isCompleting()) {
                 boolean reserved = sessionPort.updateIfMatches(completing, existing.version(), existing.status());
@@ -310,14 +312,15 @@ public class UcpCheckoutApplicationService {
 
             OrderPlacementPort.PlacedOrder placedOrder = orderPlacementPort.placeHeadless(command);
 
-            Map<String, Long> completedPriceSnapshot = placedOrder.linePrices() != null && !placedOrder.linePrices().isEmpty()
-                    ? placedOrder.linePrices().entrySet().stream()
-                            .collect(java.util.stream.Collectors.toMap(
-                                    Map.Entry::getKey,
-                                    e -> UcpCurrencyUtil.toMinorUnits(e.getValue(), placedOrder.currency()),
-                                    (k1, k2) -> k1,
-                                    java.util.LinkedHashMap::new))
-                    : validated.priceSnapshot();
+            Map<String, Long> completedPriceSnapshot = placedOrder.linePrices() != null
+                    && !placedOrder.linePrices().isEmpty()
+                            ? placedOrder.linePrices().entrySet().stream()
+                                    .collect(java.util.stream.Collectors.toMap(
+                                            Map.Entry::getKey,
+                                            e -> UcpCurrencyUtil.toMinorUnits(e.getValue(), placedOrder.currency()),
+                                            (k1, k2) -> k1,
+                                            java.util.LinkedHashMap::new))
+                            : validated.priceSnapshot();
 
             UcpCheckoutSession completed = completing.withCompleted(placedOrder.orderId(), now, completedPriceSnapshot);
             boolean saved = sessionPort.updateIfMatches(completed, completing.version(), completing.status());
@@ -329,7 +332,8 @@ public class UcpCheckoutApplicationService {
                     validateResponseSchema(response);
                     return response;
                 }
-                UcpCheckoutSession recovered = latest.map(s -> s.withCompleted(placedOrder.orderId(), now, completedPriceSnapshot))
+                UcpCheckoutSession recovered = latest
+                        .map(s -> s.withCompleted(placedOrder.orderId(), now, completedPriceSnapshot))
                         .orElse(completed);
                 sessionPort.save(recovered);
                 UcpCheckoutResponse response = buildCheckoutResponse(recovered);
@@ -412,7 +416,8 @@ public class UcpCheckoutApplicationService {
             String skuId = skuIds.get(i);
             PricingQueryPort.SkuPricing pricing = pricingMap.get(skuId);
             if (pricing == null || !pricing.active() || pricing.price() == null) {
-                throw new UcpProtocolException(400, "item_not_found", "Item not found, inactive, or missing price: " + skuId,
+                throw new UcpProtocolException(400, "item_not_found",
+                        "Item not found, inactive, or missing price: " + skuId,
                         SEVERITY_ERROR, "$.line_items[" + i + "].item.id");
             }
             if (pricing.currency() != null) {

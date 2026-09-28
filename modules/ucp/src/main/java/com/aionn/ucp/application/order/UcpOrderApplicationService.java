@@ -36,7 +36,6 @@ public class UcpOrderApplicationService {
     private final ObjectMapper objectMapper;
     private final String version;
 
-    @Autowired
     public UcpOrderApplicationService(
             OrderSnapshotQueryPort orderSnapshotPort,
             UcpCheckoutSessionPort sessionPort,
