@@ -9,10 +9,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneOffset;
 
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -27,7 +26,7 @@ class PaymentIntegrationEventPublisherTest {
     @BeforeEach
     void setUp() {
         eventPublisher = mock(IntegrationEventPublisher.class);
-        publisher = new PaymentIntegrationEventPublisher(eventPublisher, Clock.fixed(NOW, ZoneOffset.UTC));
+        publisher = new PaymentIntegrationEventPublisher(eventPublisher, FIXED);
     }
 
     @Test

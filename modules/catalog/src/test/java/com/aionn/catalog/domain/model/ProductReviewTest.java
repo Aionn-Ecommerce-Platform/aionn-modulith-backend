@@ -13,6 +13,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 class ProductReviewTest {
 
@@ -25,7 +26,7 @@ class ProductReviewTest {
 
     private ProductReview freshReview() {
         ProductReview review = ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, ORDER_ID,
-                5, "title", "content", List.of(), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                5, "title", "content", List.of(), FIXED);
         review.pullEvents();
         return review;
     }
@@ -33,7 +34,7 @@ class ProductReviewTest {
     @Test
     void createInitializesVisibleAndEmitsEvent() {
         ProductReview review = ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, ORDER_ID,
-                4, "t", "c", List.of(), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                4, "t", "c", List.of(), FIXED);
 
         assertThat(review.getStatus()).isEqualTo(ReviewStatus.VISIBLE);
         assertThat(review.pullEvents()).hasSize(1);
@@ -42,7 +43,7 @@ class ProductReviewTest {
     @Test
     void createRejectsInvalidRating() {
         assertThatThrownBy(() -> ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, ORDER_ID,
-                0, "t", "c", List.of(), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+                0, "t", "c", List.of(), FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.REVIEW_INVALID_RATING.getCode());
@@ -51,7 +52,7 @@ class ProductReviewTest {
     @Test
     void createRejectsTooManyImages() {
         assertThatThrownBy(() -> ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, ORDER_ID,
-                5, "t", "c", List.of("a", "b", "c", "d", "e", "f"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+                5, "t", "c", List.of("a", "b", "c", "d", "e", "f"), FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
@@ -61,7 +62,7 @@ class ProductReviewTest {
     void updateChangesFieldsAndEmitsEvent() {
         ProductReview review = freshReview();
 
-        review.update(3, "new title", "new content", List.of("img1"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        review.update(3, "new title", "new content", List.of("img1"), FIXED);
 
         assertThat(review.getRating()).isEqualTo(3);
         assertThat(review.getTitle()).isEqualTo("new title");
@@ -72,10 +73,10 @@ class ProductReviewTest {
     @Test
     void updateThrowsWhenHidden() {
         ProductReview review = freshReview();
-        review.hide(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        review.hide(FIXED);
         review.pullEvents();
 
-        assertThatThrownBy(() -> review.update(3, "t", "c", List.of(), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> review.update(3, "t", "c", List.of(), FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.REVIEW_FORBIDDEN.getCode());
@@ -85,7 +86,7 @@ class ProductReviewTest {
     void replySetsReplyContentAndEvent() {
         ProductReview review = freshReview();
 
-        review.reply("thanks!", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        review.reply("thanks!", FIXED);
 
         assertThat(review.getMerchantReply()).isEqualTo("thanks!");
         assertThat(review.getMerchantRepliedAt()).isNotNull();
@@ -95,7 +96,7 @@ class ProductReviewTest {
     @Test
     void hideChangesStatus() {
         ProductReview review = freshReview();
-        review.hide(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        review.hide(FIXED);
         assertThat(review.getStatus()).isEqualTo(ReviewStatus.HIDDEN);
         assertThat(review.pullEvents()).hasSize(1);
     }
@@ -104,7 +105,7 @@ class ProductReviewTest {
     void reportSetsStatusAndMetadata() {
         ProductReview review = freshReview();
 
-        review.report(MERCHANT_ID, "abusive language", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        review.report(MERCHANT_ID, "abusive language", FIXED);
 
         assertThat(review.getStatus()).isEqualTo(ReviewStatus.REPORTED);
         assertThat(review.getReportedByMerchantId()).isEqualTo(MERCHANT_ID);
@@ -116,9 +117,9 @@ class ProductReviewTest {
     @Test
     void reportThrowsWhenAlreadyReported() {
         ProductReview review = freshReview();
-        review.report(MERCHANT_ID, "reason1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        review.report(MERCHANT_ID, "reason1", FIXED);
 
-        assertThatThrownBy(() -> review.report(MERCHANT_ID, "reason2", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> review.report(MERCHANT_ID, "reason2", FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.REVIEW_ALREADY_REPORTED.getCode());
@@ -127,9 +128,9 @@ class ProductReviewTest {
     @Test
     void reportThrowsWhenDeleted() {
         ProductReview review = freshReview();
-        review.adminDelete(ADMIN_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        review.adminDelete(ADMIN_ID, FIXED);
 
-        assertThatThrownBy(() -> review.report(MERCHANT_ID, "any", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> review.report(MERCHANT_ID, "any", FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.REVIEW_FORBIDDEN.getCode());
@@ -138,7 +139,7 @@ class ProductReviewTest {
     @Test
     void adminDeleteChangesStatus() {
         ProductReview review = freshReview();
-        review.adminDelete(ADMIN_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        review.adminDelete(ADMIN_ID, FIXED);
         assertThat(review.getStatus()).isEqualTo(ReviewStatus.DELETED);
         assertThat(review.pullEvents()).hasSize(1);
     }
@@ -159,10 +160,10 @@ class ProductReviewTest {
     @Test
     void restoreReportedReview() {
         ProductReview review = freshReview();
-        review.report(MERCHANT_ID, "reason", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        review.report(MERCHANT_ID, "reason", FIXED);
         review.pullEvents();
 
-        review.restore(ADMIN_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        review.restore(ADMIN_ID, FIXED);
 
         assertThat(review.getStatus()).isEqualTo(ReviewStatus.VISIBLE);
         assertThat(review.getReportedByMerchantId()).isNull();
@@ -173,7 +174,7 @@ class ProductReviewTest {
     @Test
     void restoreHiddenReview() {
         ProductReview review = freshReview();
-        review.hide(Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC));
+        review.hide(FIXED);
         review.pullEvents();
 
         review.restore(ADMIN_ID, Clock.fixed(Instant.parse("2026-01-02T00:00:00Z"), ZoneOffset.UTC));
@@ -185,7 +186,7 @@ class ProductReviewTest {
     void restoreThrowsWhenNotReported() {
         ProductReview review = freshReview();
 
-        assertThatThrownBy(() -> review.restore(ADMIN_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> review.restore(ADMIN_ID, FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.REVIEW_NOT_REPORTED.getCode());
@@ -194,9 +195,9 @@ class ProductReviewTest {
     @Test
     void replyThrowsWhenDeleted() {
         ProductReview review = freshReview();
-        review.adminDelete(ADMIN_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        review.adminDelete(ADMIN_ID, FIXED);
 
-        assertThatThrownBy(() -> review.reply("hi", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> review.reply("hi", FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.REVIEW_FORBIDDEN.getCode());

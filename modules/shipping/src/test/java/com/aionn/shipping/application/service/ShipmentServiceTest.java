@@ -15,6 +15,8 @@ import com.aionn.shipping.domain.valueobject.ShipmentAddress;
 import com.aionn.shipping.domain.valueobject.ShipmentDimensions;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -89,7 +91,7 @@ class ShipmentServiceTest {
         @Test
         void quoteReturnsConfiguredRateWhenAvailable() {
                 ShippingRate rate = ShippingRate.configure("R_1", "HN",
-                                BigDecimal.valueOf(25000), "VND", "<=2kg", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                BigDecimal.valueOf(25000), "VND", "<=2kg", FIXED);
                 when(rateRepository.findByZoneCode("HN")).thenReturn(Optional.of(rate));
 
                 ShippingQuoteResult result = service.quote(new QuoteShippingCommand(
@@ -132,10 +134,10 @@ class ShipmentServiceTest {
         @Test
         void applyCarrierWebhookForDeliveredPublishesIntegrationEvent() {
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                shipment.markPickedUp("WH_1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                shipment.markOutForDelivery("Driver", "0901111222", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
+                shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null, FIXED);
+                shipment.markPickedUp("WH_1", FIXED);
+                shipment.markOutForDelivery("Driver", "0901111222", FIXED);
                 shipment.pullEvents();
                 when(shipmentRepository.findByTrackingCode("TRACK_1")).thenReturn(Optional.of(shipment));
                 when(shipmentRepository.save(any(Shipment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -150,7 +152,7 @@ class ShipmentServiceTest {
         @Test
         void applyCarrierWebhookRejectsUnknownType() {
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
                 when(shipmentRepository.findByTrackingCode("TRACK_1")).thenReturn(Optional.of(shipment));
 
                 assertThatThrownBy(() -> service.applyCarrierWebhook(new CarrierWebhookCommand(
@@ -163,7 +165,7 @@ class ShipmentServiceTest {
         @Test
         void getReturnsShipmentForAuthorizedUser() {
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
                 when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
 
                 Shipment result = service.get("S_1", "U_1");
@@ -174,7 +176,7 @@ class ShipmentServiceTest {
         @Test
         void findByOrderIdReturnsAuthorizedShipments() {
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
                 when(shipmentRepository.findByOrderId("ORDER_1")).thenReturn(List.of(shipment));
 
                 var results = service.findByOrderId("ORDER_1", "U_1");
@@ -185,7 +187,7 @@ class ShipmentServiceTest {
         @Test
         void resolveIssueUpdatesShipmentAndSaves() {
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
                 when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
                 when(shipmentRepository.save(any(Shipment.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -198,8 +200,8 @@ class ShipmentServiceTest {
         @Test
         void applyCarrierWebhookForVariousStatuses() {
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
+                shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null, FIXED);
                 when(shipmentRepository.findByTrackingCode("TRACK_1")).thenReturn(Optional.of(shipment));
                 when(shipmentRepository.save(any(Shipment.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -222,7 +224,7 @@ class ShipmentServiceTest {
         @Test
         void applyRegistrationUpdatesTrackingAndSaves() {
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
                 when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
                 when(shipmentRepository.save(any(Shipment.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -235,8 +237,8 @@ class ShipmentServiceTest {
         @Test
         void applyLabelUpdatesLabelUrlAndSaves() {
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                shipment.registerWithCarrier("TRACK_1", "CARRIER_O1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
+                shipment.registerWithCarrier("TRACK_1", "CARRIER_O1", null, FIXED);
                 when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
                 when(shipmentRepository.save(any(Shipment.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -249,7 +251,7 @@ class ShipmentServiceTest {
         @Test
         void applyCancelUpdatesStatusAndSaves() {
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
                 when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
                 when(shipmentRepository.save(any(Shipment.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -264,8 +266,8 @@ class ShipmentServiceTest {
         void applyCarrierWebhookVerifiesSecretSuccessfully() {
                 when(webhookSecurityPolicy.isAuthorized("correct-secret")).thenReturn(true);
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
+                shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null, FIXED);
                 when(shipmentRepository.findByTrackingCode("TRACK_1")).thenReturn(Optional.of(shipment));
                 when(shipmentRepository.save(any(Shipment.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -315,8 +317,8 @@ class ShipmentServiceTest {
         @Test
         void applyRegistrationIsIdempotentWhenTrackingCodeAlreadyPresent() {
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                shipment.registerWithCarrier("TRACK_EXISTING", "CARRIER_1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
+                shipment.registerWithCarrier("TRACK_EXISTING", "CARRIER_1", null, FIXED);
                 when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
 
                 Shipment result = service.applyRegistration("S_1",
@@ -330,10 +332,10 @@ class ShipmentServiceTest {
         @Test
         void applyCarrierWebhookForDeliveryFailedPublishesIntegrationEvent() {
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                shipment.markPickedUp("WH_1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                shipment.markOutForDelivery("Driver", "0901111222", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
+                shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null, FIXED);
+                shipment.markPickedUp("WH_1", FIXED);
+                shipment.markOutForDelivery("Driver", "0901111222", FIXED);
                 shipment.pullEvents();
                 when(shipmentRepository.findByTrackingCode("TRACK_1")).thenReturn(Optional.of(shipment));
                 when(shipmentRepository.save(any(Shipment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -349,8 +351,8 @@ class ShipmentServiceTest {
         @Test
         void applyCarrierWebhookForPickedUpPublishesDispatchedEvent() {
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
+                shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null, FIXED);
                 shipment.pullEvents();
                 when(shipmentRepository.findByTrackingCode("TRACK_1")).thenReturn(Optional.of(shipment));
                 when(shipmentRepository.save(any(Shipment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -364,9 +366,9 @@ class ShipmentServiceTest {
         @Test
         void applyCarrierWebhookForReturnedDoesNotPublishIntegrationEvent() {
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                shipment.markPickedUp("WH_1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
+                shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null, FIXED);
+                shipment.markPickedUp("WH_1", FIXED);
                 shipment.pullEvents();
                 when(shipmentRepository.findByTrackingCode("TRACK_1")).thenReturn(Optional.of(shipment));
                 when(shipmentRepository.save(any(Shipment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -380,11 +382,11 @@ class ShipmentServiceTest {
         @Test
         void applyCarrierWebhookRetriesFailedDelivery() {
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                shipment.markPickedUp("WH_1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                shipment.markOutForDelivery("Driver", "0901111222", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                shipment.recordDeliveryFailure("nobody home", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
+                shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null, FIXED);
+                shipment.markPickedUp("WH_1", FIXED);
+                shipment.markOutForDelivery("Driver", "0901111222", FIXED);
+                shipment.recordDeliveryFailure("nobody home", FIXED);
                 shipment.pullEvents();
                 when(shipmentRepository.findByTrackingCode("TRACK_1")).thenReturn(Optional.of(shipment));
                 when(shipmentRepository.save(any(Shipment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -400,8 +402,8 @@ class ShipmentServiceTest {
         void applyCarrierWebhookSkipsSecretCheckWhenNoSecretConfigured() {
                 when(webhookSecurityPolicy.isAuthorized(null)).thenReturn(true);
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
+                shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null, FIXED);
                 when(shipmentRepository.findByTrackingCode("TRACK_1")).thenReturn(Optional.of(shipment));
                 when(shipmentRepository.save(any(Shipment.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -440,7 +442,7 @@ class ShipmentServiceTest {
         @Test
         void getRejectsViewerThatIsNeitherBuyerNorSellingMerchant() {
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
                 when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
                 when(merchantQueryPort.findMerchantIdByOwnerId("STRANGER")).thenReturn(Optional.empty());
 
@@ -451,7 +453,7 @@ class ShipmentServiceTest {
         @Test
         void getAllowsOwningMerchantToView() {
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
                 when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
                 when(merchantQueryPort.findMerchantIdByOwnerId("OWNER_1")).thenReturn(Optional.of("M_1"));
 
@@ -471,9 +473,9 @@ class ShipmentServiceTest {
         @Test
         void findByOrderIdFiltersOutShipmentsTheViewerCannotSee() {
                 Shipment mine = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
                 Shipment other = Shipment.request("S_2", "ORDER_1", "M_2", "U_2",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
                 when(shipmentRepository.findByOrderId("ORDER_1")).thenReturn(List.of(mine, other));
                 when(merchantQueryPort.findMerchantIdByOwnerId("U_1")).thenReturn(Optional.empty());
 
@@ -483,7 +485,7 @@ class ShipmentServiceTest {
         @Test
         void findByOrderIdSkipsMerchantLookupForAnonymousViewer() {
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
                 when(shipmentRepository.findByOrderId("ORDER_1")).thenReturn(List.of(shipment));
 
                 assertThat(service.findByOrderId("ORDER_1", null)).isEmpty();
@@ -493,7 +495,7 @@ class ShipmentServiceTest {
         @Test
         void loadShipmentReturnsShipmentWithoutViewerCheck() {
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
                 when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
 
                 assertThat(service.loadShipment("S_1")).isEqualTo(shipment);

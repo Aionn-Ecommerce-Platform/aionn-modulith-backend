@@ -12,9 +12,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,6 +20,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 @ExtendWith(MockitoExtension.class)
 class CatalogMerchantQueryAdapterTest {
@@ -36,12 +34,12 @@ class CatalogMerchantQueryAdapterTest {
     void setUp() {
         adapter = new CatalogMerchantQueryAdapter(
                 merchantRepository,
-                Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC));
+                FIXED);
     }
 
     @Test
     void findMerchantIdByOwnerIdReturnsIdWhenPresent() {
-        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
         when(merchantRepository.findByOwnerId("owner-1")).thenReturn(Optional.of(merchant));
 
         assertThat(adapter.findMerchantIdByOwnerId("owner-1")).contains("m-1");
@@ -55,7 +53,7 @@ class CatalogMerchantQueryAdapterTest {
 
     @Test
     void findOwnerIdByMerchantIdReturnsOwner() {
-        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
         when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
 
         assertThat(adapter.findOwnerIdByMerchantId("m-1")).contains("owner-1");
@@ -69,7 +67,7 @@ class CatalogMerchantQueryAdapterTest {
 
     @Test
     void findCommissionRateReturnsRateWhenMerchantExists() {
-        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.0750"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.0750"), FIXED);
         when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
 
         assertThat(adapter.findCommissionRate("m-1")).contains(new BigDecimal("0.0750"));
@@ -83,7 +81,7 @@ class CatalogMerchantQueryAdapterTest {
 
     @Test
     void findStripeConnectInfoReturnsEmptyWhenNoStripeAccount() {
-        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
         when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
 
         assertThat(adapter.findStripeConnectInfo("m-1")).isEmpty();
@@ -91,9 +89,9 @@ class CatalogMerchantQueryAdapterTest {
 
     @Test
     void findStripeConnectInfoReturnsInfoWhenLinked() {
-        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        merchant.linkStripeAccount("acct_test", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        merchant.updateStripeCapabilities(true, false, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
+        merchant.linkStripeAccount("acct_test", FIXED);
+        merchant.updateStripeCapabilities(true, false, FIXED);
         when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
 
         Optional<StripeConnectInfo> info = adapter.findStripeConnectInfo("m-1");
@@ -106,7 +104,7 @@ class CatalogMerchantQueryAdapterTest {
 
     @Test
     void saveStripeAccountIdPersistsChanges() {
-        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
         when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
 
         adapter.saveStripeAccountId("m-1", "acct_test");
@@ -128,8 +126,8 @@ class CatalogMerchantQueryAdapterTest {
 
     @Test
     void updateStripeCapabilitiesPersistsChanges() {
-        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        merchant.linkStripeAccount("acct_test", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
+        merchant.linkStripeAccount("acct_test", FIXED);
         when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
 
         adapter.updateStripeCapabilities("m-1", true, true);

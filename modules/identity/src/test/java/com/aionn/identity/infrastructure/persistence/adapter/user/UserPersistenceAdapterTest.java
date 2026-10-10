@@ -31,7 +31,7 @@ class UserPersistenceAdapterTest {
     private UserPersistenceAdapter adapter;
 
     private IdentityUser user() {
-        return IdentityUser.createNew(USER_ID, "a@b.com", "+84912345678", "alice", com.aionn.identity.TestClocks.FIXED);
+        return IdentityUser.createNew(USER_ID, "a@b.com", "+84912345678", "alice", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED);
     }
 
     @Test

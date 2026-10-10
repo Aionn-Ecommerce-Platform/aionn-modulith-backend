@@ -10,6 +10,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 class NotificationTemplateTest {
 
@@ -17,7 +18,7 @@ class NotificationTemplateTest {
     void create_extractsPlaceholdersAndRecordsEvent() {
         NotificationTemplate t = NotificationTemplate.create("tpl", "evt",
                 NotificationChannel.EMAIL, NotificationCategory.SYSTEM, "vi-VN",
-                "Hi {{name}}", "Hello {{name}}, code {{code}}", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                "Hi {{name}}", "Hello {{name}}, code {{code}}", FIXED);
         assertThat(t.getPlaceholders()).containsExactly("name", "code");
         assertThat(t.pullEvents())
                 .anyMatch(env -> env.payload() instanceof NotificationEvents.TemplateCreated);
@@ -27,7 +28,7 @@ class NotificationTemplateTest {
     void render_replacesPlaceholders() {
         NotificationTemplate t = NotificationTemplate.create("tpl", "evt",
                 NotificationChannel.EMAIL, NotificationCategory.SYSTEM, "vi-VN",
-                "Hi {{name}}", "Hello {{name}}, code {{code}}", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                "Hi {{name}}", "Hello {{name}}, code {{code}}", FIXED);
         NotificationTemplate.Rendered r = t.render(Map.of("name", "Phat", "code", "123"));
         assertThat(r.subject()).isEqualTo("Hi Phat");
         assertThat(r.content()).isEqualTo("Hello Phat, code 123");
@@ -37,7 +38,7 @@ class NotificationTemplateTest {
     void render_missingPlaceholder_throws() {
         NotificationTemplate t = NotificationTemplate.create("tpl", "evt",
                 NotificationChannel.EMAIL, NotificationCategory.SYSTEM, "vi-VN",
-                null, "Hello {{name}}", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                null, "Hello {{name}}", FIXED);
         assertThatThrownBy(() -> t.render(Map.of()))
                 .isInstanceOf(NotificationException.class);
     }
@@ -46,9 +47,9 @@ class NotificationTemplateTest {
     void update_bumpsVersionAndExtractsNewPlaceholders() {
         NotificationTemplate t = NotificationTemplate.create("tpl", "evt",
                 NotificationChannel.EMAIL, NotificationCategory.SYSTEM, "vi-VN",
-                "Hi", "Hello {{name}}", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                "Hi", "Hello {{name}}", FIXED);
         t.pullEvents();
-        t.update("Subj", "Hi {{name}} from {{shop}}", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        t.update("Subj", "Hi {{name}} from {{shop}}", FIXED);
         assertThat(t.getVersion()).isEqualTo(2);
         assertThat(t.getPlaceholders()).containsExactly("name", "shop");
         assertThat(t.pullEvents())

@@ -9,15 +9,15 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 class InventoryItemTest {
 
     private static final InventoryItemKey KEY = new InventoryItemKey("SKU_1", "WH_1");
-    private static final Clock FIXED_CLOCK = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
+    private static final Clock FIXED_CLOCK = FIXED;
 
     @Test
     void initializeSetsAvailableEqualToPhysicalAndEmitsEvent() {

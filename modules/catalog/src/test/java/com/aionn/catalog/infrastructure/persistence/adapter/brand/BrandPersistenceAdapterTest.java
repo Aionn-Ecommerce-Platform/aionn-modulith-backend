@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 @ExtendWith(MockitoExtension.class)
 class BrandPersistenceAdapterTest {
@@ -38,7 +39,7 @@ class BrandPersistenceAdapterTest {
 
     @Test
     void saveMapsThroughEntityAndBack() {
-        Brand domain = Brand.create(BRAND_ID, "Acme", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Brand domain = Brand.create(BRAND_ID, "Acme", null, null, FIXED);
         BrandEntity entity = new BrandEntity();
         when(mapper.toEntity(domain)).thenReturn(entity);
         when(jpa.save(entity)).thenReturn(entity);
@@ -52,7 +53,7 @@ class BrandPersistenceAdapterTest {
     @Test
     void findByIdReturnsMappedDomainWhenPresent() {
         BrandEntity entity = new BrandEntity();
-        Brand domain = Brand.create(BRAND_ID, "Acme", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Brand domain = Brand.create(BRAND_ID, "Acme", null, null, FIXED);
         when(jpa.findById(BRAND_ID)).thenReturn(Optional.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -76,7 +77,7 @@ class BrandPersistenceAdapterTest {
     @Test
     void listReturnsMappedResult() {
         BrandEntity entity = new BrandEntity();
-        Brand domain = Brand.create(BRAND_ID, "Acme", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Brand domain = Brand.create(BRAND_ID, "Acme", null, null, FIXED);
         when(jpa.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of(entity)));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -89,7 +90,7 @@ class BrandPersistenceAdapterTest {
     void listAppliesStableSortByCreatedAtThenBrandId() {
         BrandEntity entity = new BrandEntity();
         when(jpa.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of(entity)));
-        when(mapper.toDomain(entity)).thenReturn(Brand.create(BRAND_ID, "Acme", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)));
+        when(mapper.toDomain(entity)).thenReturn(Brand.create(BRAND_ID, "Acme", null, null, FIXED));
 
         adapter.list(OffsetPagination.of(0, 10));
 

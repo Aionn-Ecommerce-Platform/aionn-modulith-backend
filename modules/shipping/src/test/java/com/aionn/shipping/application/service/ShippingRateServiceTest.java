@@ -7,6 +7,8 @@ import com.aionn.shipping.domain.exception.ShippingErrorCode;
 import com.aionn.shipping.domain.exception.ShippingException;
 import com.aionn.shipping.domain.model.ShippingRate;
 import com.aionn.sharedkernel.application.port.EventPublisher;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -72,7 +74,7 @@ class ShippingRateServiceTest {
     @Test
     void configureRejectsDuplicateZone() {
         ShippingRate existing = ShippingRate.configure("R_1", "HN",
-                BigDecimal.valueOf(30000), "VND", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                BigDecimal.valueOf(30000), "VND", null, FIXED);
         when(repository.findByZoneCode("HN")).thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> service.configure(new ConfigureRateCommand(
@@ -87,7 +89,7 @@ class ShippingRateServiceTest {
     @Test
     void updateAppliesNewFeeAndPublishesEvent() {
         ShippingRate rate = ShippingRate.configure("R_1", "HN",
-                BigDecimal.valueOf(30000), "VND", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                BigDecimal.valueOf(30000), "VND", null, FIXED);
         rate.pullEvents();
         when(repository.findById("R_1")).thenReturn(Optional.of(rate));
         when(repository.save(any(ShippingRate.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -113,7 +115,7 @@ class ShippingRateServiceTest {
     @Test
     void getReturnsRateWhenFound() {
         ShippingRate rate = ShippingRate.configure("R_1", "HN",
-                BigDecimal.valueOf(30000), "VND", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                BigDecimal.valueOf(30000), "VND", null, FIXED);
         when(repository.findById("R_1")).thenReturn(Optional.of(rate));
 
         assertThat(service.get("R_1")).isSameAs(rate);

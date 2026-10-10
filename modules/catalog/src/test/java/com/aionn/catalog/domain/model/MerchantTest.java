@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 class MerchantTest {
 
@@ -18,7 +19,7 @@ class MerchantTest {
 
     @Test
     void registerInitializesAsPendingWithDefaultCommission() {
-        Merchant merchant = Merchant.register(MERCHANT_ID, OWNER_ID, "Acme Store", DEFAULT_RATE, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Merchant merchant = Merchant.register(MERCHANT_ID, OWNER_ID, "Acme Store", DEFAULT_RATE, FIXED);
 
         assertThat(merchant.getMerchantId()).isEqualTo(MERCHANT_ID);
         assertThat(merchant.getOwnerId()).isEqualTo(OWNER_ID);
@@ -29,10 +30,10 @@ class MerchantTest {
 
     @Test
     void updateProfilePromotesPendingToActive() {
-        Merchant merchant = Merchant.register(MERCHANT_ID, OWNER_ID, "Acme", DEFAULT_RATE, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Merchant merchant = Merchant.register(MERCHANT_ID, OWNER_ID, "Acme", DEFAULT_RATE, FIXED);
         merchant.pullEvents();
 
-        merchant.updateProfile("Acme Pro", "logo.png", "desc", "01", "Ha Noi", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        merchant.updateProfile("Acme Pro", "logo.png", "desc", "01", "Ha Noi", FIXED);
 
         assertThat(merchant.getName()).isEqualTo("Acme Pro");
         assertThat(merchant.getProvinceCode()).isEqualTo("01");
@@ -43,9 +44,9 @@ class MerchantTest {
 
     @Test
     void updateProfileRejectsBlankName() {
-        Merchant merchant = Merchant.register(MERCHANT_ID, OWNER_ID, "Acme", DEFAULT_RATE, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Merchant merchant = Merchant.register(MERCHANT_ID, OWNER_ID, "Acme", DEFAULT_RATE, FIXED);
 
-        assertThatThrownBy(() -> merchant.updateProfile(" ", null, null, null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> merchant.updateProfile(" ", null, null, null, null, FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
@@ -53,21 +54,21 @@ class MerchantTest {
 
     @Test
     void updateCommissionRateRejectsValuesOutsideRange() {
-        Merchant merchant = Merchant.register(MERCHANT_ID, OWNER_ID, "Acme", DEFAULT_RATE, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Merchant merchant = Merchant.register(MERCHANT_ID, OWNER_ID, "Acme", DEFAULT_RATE, FIXED);
 
-        assertThatThrownBy(() -> merchant.updateCommissionRate(new BigDecimal("1.5"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> merchant.updateCommissionRate(new BigDecimal("1.5"), FIXED))
                 .isInstanceOf(CatalogException.class);
-        assertThatThrownBy(() -> merchant.updateCommissionRate(new BigDecimal("-0.1"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> merchant.updateCommissionRate(new BigDecimal("-0.1"), FIXED))
                 .isInstanceOf(CatalogException.class);
     }
 
     @Test
     void suspendTransitionsActiveMerchantToSuspended() {
-        Merchant merchant = Merchant.register(MERCHANT_ID, OWNER_ID, "Acme", DEFAULT_RATE, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        merchant.updateProfile("Acme Pro", null, null, null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Merchant merchant = Merchant.register(MERCHANT_ID, OWNER_ID, "Acme", DEFAULT_RATE, FIXED);
+        merchant.updateProfile("Acme Pro", null, null, null, null, FIXED);
         merchant.pullEvents();
 
-        merchant.suspend("admin-1", "policy violation", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        merchant.suspend("admin-1", "policy violation", FIXED);
 
         assertThat(merchant.getStatus()).isEqualTo(MerchantStatus.SUSPENDED);
         assertThat(merchant.pullEvents()).hasSize(1);

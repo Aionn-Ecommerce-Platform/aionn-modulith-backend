@@ -11,8 +11,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,13 +18,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 @ExtendWith(MockitoExtension.class)
 class WarehousePersistenceAdapterTest {
 
     private static final String WAREHOUSE_ID = "WH_1";
     private static final String MERCHANT_ID = "M_1";
-    private static final Clock FIXED_CLOCK = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
+    private static final Clock FIXED_CLOCK = FIXED;
 
     @Mock
     private WarehouseRepository jpa;

@@ -87,7 +87,7 @@ class AccountManagementServiceTest {
         }
 
         private static IdentityUser activeUser() {
-                return IdentityUser.createNew(USER_ID, "u@example.com", null, "user", com.aionn.identity.TestClocks.FIXED);
+                return IdentityUser.createNew(USER_ID, "u@example.com", null, "user", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED);
         }
 
         @Test
@@ -164,7 +164,7 @@ class AccountManagementServiceTest {
         }
 
         private static IdentityUser bannedUser() {
-                IdentityUser user = IdentityUser.createNew(USER_ID, "u@example.com", null, "user", com.aionn.identity.TestClocks.FIXED);
+                IdentityUser user = IdentityUser.createNew(USER_ID, "u@example.com", null, "user", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED);
                 user.ban();
                 return user;
         }
@@ -214,7 +214,7 @@ class AccountManagementServiceTest {
         @Test
         void sendVerifyPrimaryEmailOtpThrowsWhenNoPrimaryEmail() {
                 when(userPersistencePort.findById(USER_ID))
-                                .thenReturn(Optional.of(IdentityUser.createNew(USER_ID, null, null, "user", com.aionn.identity.TestClocks.FIXED)));
+                                .thenReturn(Optional.of(IdentityUser.createNew(USER_ID, null, null, "user", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED)));
 
                 assertErrorCode(IdentityErrorCode.EMAIL_REQUIRED,
                                 () -> service.sendVerifyPrimaryEmailOtp(USER_ID));
@@ -335,7 +335,7 @@ class AccountManagementServiceTest {
         void requestEmailChangeOtpRejectsEmailUsedByAnotherUser() {
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
                 when(userPersistencePort.findByIdentity("new@example.com")).thenReturn(
-                                Optional.of(IdentityUser.createNew("other", "new@example.com", null, "other", com.aionn.identity.TestClocks.FIXED)));
+                                Optional.of(IdentityUser.createNew("other", "new@example.com", null, "other", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED)));
 
                 assertErrorCode(IdentityErrorCode.EMAIL_ALREADY_EXISTS,
                                 () -> service.requestEmailChangeOtp(USER_ID, "new@example.com"));
@@ -378,7 +378,7 @@ class AccountManagementServiceTest {
                                 Optional.of(challenge(UserOtpPurpose.CHANGE_EMAIL, OtpChannel.EMAIL,
                                                 "new@example.com", "123456", "new@example.com", future(), 0)));
                 when(userPersistencePort.findByIdentity("new@example.com")).thenReturn(
-                                Optional.of(IdentityUser.createNew("other", "new@example.com", null, "other", com.aionn.identity.TestClocks.FIXED)));
+                                Optional.of(IdentityUser.createNew("other", "new@example.com", null, "other", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED)));
 
                 assertErrorCode(IdentityErrorCode.EMAIL_ALREADY_EXISTS,
                                 () -> service.confirmEmailChange(USER_ID, "123456"));

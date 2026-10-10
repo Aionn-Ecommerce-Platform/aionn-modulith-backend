@@ -26,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 @ExtendWith(MockitoExtension.class)
 class ProductReviewPersistenceAdapterTest {
@@ -39,7 +40,7 @@ class ProductReviewPersistenceAdapterTest {
     @InjectMocks private ProductReviewPersistenceAdapter adapter;
 
     private ProductReview domainReview() {
-        return ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, "order-1", 5, "t", "c", List.of(), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        return ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, "order-1", 5, "t", "c", List.of(), FIXED);
     }
 
     @Test void saveMapsThroughEntityAndBack() {

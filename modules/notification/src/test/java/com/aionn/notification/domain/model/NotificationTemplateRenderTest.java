@@ -13,6 +13,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 class NotificationTemplateRenderTest {
 
@@ -29,7 +30,7 @@ class NotificationTemplateRenderTest {
     void createWithoutClockUsesSystemTime() {
         NotificationTemplate created = NotificationTemplate.create("tpl-2",
                 "identity.password-changed", NotificationChannel.EMAIL,
-                NotificationCategory.SECURITY, "vi-VN", "Subject", "Hello", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                NotificationCategory.SECURITY, "vi-VN", "Subject", "Hello", FIXED);
 
         assertThat(created.getCreatedAt()).isNotNull();
     }
@@ -112,7 +113,7 @@ class NotificationTemplateRenderTest {
     void updateWithoutClockUsesSystemTime() {
         NotificationTemplate created = template("Subject", "Hello {{name}}");
 
-        created.update("New", "Hi {{other}}", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        created.update("New", "Hi {{other}}", FIXED);
 
         assertThat(created.getVersion()).isEqualTo(2);
         assertThat(created.getPlaceholders()).containsExactly("other");

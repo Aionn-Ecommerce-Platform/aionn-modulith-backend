@@ -5,6 +5,8 @@ import com.aionn.shipping.domain.model.Shipment;
 import com.aionn.shipping.domain.valueobject.ShipmentAddress;
 import com.aionn.shipping.domain.valueobject.ShipmentDimensions;
 import com.aionn.shipping.domain.valueobject.ShipmentStatus;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
+
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
@@ -24,7 +26,7 @@ class ShipmentResultMapperTest {
     @Test
     void mapsBasicFields() {
         Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
 
         ShipmentResult result = mapper.toResult(shipment);
 
@@ -40,7 +42,7 @@ class ShipmentResultMapperTest {
     @Test
     void mapsStatusFromEnumToName() {
         Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
 
         ShipmentResult result = mapper.toResult(shipment);
 
@@ -50,8 +52,8 @@ class ShipmentResultMapperTest {
     @Test
     void mapsTrackingFieldsAfterRegistration() {
         Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
+        shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null, FIXED);
 
         ShipmentResult result = mapper.toResult(shipment);
 

@@ -64,6 +64,12 @@ subprojects {
         testAnnotationProcessor 'org.projectlombok:lombok'
         testImplementation 'org.junit.jupiter:junit-jupiter'
     }
+
+    if (project.name != 'shared-kernel') {
+        dependencies {
+            testImplementation(testFixtures(project(':shared-kernel')))
+        }
+    }
 }
 
 sonar {

@@ -15,6 +15,7 @@ import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 class NotificationTest {
 
@@ -24,7 +25,7 @@ class NotificationTest {
     private static Notification newNotification() {
         return Notification.create("noti-1", "user-1", "tpl-1",
                 NotificationChannel.EMAIL, NotificationCategory.TRANSACTION,
-                "Subject", "Content", "campaign-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                "Subject", "Content", "campaign-1", FIXED);
     }
 
     @Test
@@ -43,7 +44,7 @@ class NotificationTest {
     void markSentTransitionsAndEmitsEvent() {
         Notification n = newNotification();
 
-        n.markSent(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        n.markSent(FIXED);
 
         assertThat(n.getStatus()).isEqualTo(NotificationStatus.SENT);
         assertThat(n.getSentAt()).isNotNull();
@@ -55,8 +56,8 @@ class NotificationTest {
     void markFailedIncrementsRetryCount() {
         Notification n = newNotification();
 
-        n.markFailed("smtp-down", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        n.markFailed("smtp-down", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        n.markFailed("smtp-down", FIXED);
+        n.markFailed("smtp-down", FIXED);
 
         assertThat(n.getRetryCount()).isEqualTo(2);
         assertThat(n.getLastFailureReason()).isEqualTo("smtp-down");
@@ -68,9 +69,9 @@ class NotificationTest {
     void markFailedAtMaxRetryTransitionsToFailed() {
         Notification n = newNotification();
 
-        n.markFailed("err", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        n.markFailed("err", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        n.markFailed("err", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        n.markFailed("err", FIXED);
+        n.markFailed("err", FIXED);
+        n.markFailed("err", FIXED);
 
         assertThat(n.getRetryCount()).isEqualTo(3);
         assertThat(n.getStatus()).isEqualTo(NotificationStatus.FAILED);
@@ -95,8 +96,8 @@ class NotificationTest {
     @Test
     void markDeliveryUnknownIsRejectedOnceTheNotificationIsRead() {
         Notification n = newNotification();
-        n.markSent(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        n.markRead(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        n.markSent(FIXED);
+        n.markRead(FIXED);
 
         assertThatThrownBy(() -> n.markDeliveryUnknown("gateway timeout", FIXED_CLOCK))
                 .isInstanceOf(NotificationException.class)
@@ -107,10 +108,10 @@ class NotificationTest {
     @Test
     void markReadAfterSentTransitionsAndIsIdempotent() {
         Notification n = newNotification();
-        n.markSent(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        n.markSent(FIXED);
 
-        n.markRead(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        n.markRead(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        n.markRead(FIXED);
+        n.markRead(FIXED);
 
         assertThat(n.getStatus()).isEqualTo(NotificationStatus.READ);
         assertThat(n.getReadAt()).isNotNull();
@@ -133,7 +134,7 @@ class NotificationTest {
         Notification n = newNotification();
 
         assertThatThrownBy(() -> n.markRead(
-                java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+                FIXED))
                 .isInstanceOf(NotificationException.class)
                 .extracting("errorCode")
                 .isEqualTo(NotificationErrorCode.NOTIFICATION_INVALID_STATE.getCode());
@@ -143,7 +144,7 @@ class NotificationTest {
     void softDeleteFromAnyNonDeletedStateAllowed() {
         Notification n = newNotification();
 
-        n.softDelete(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        n.softDelete(FIXED);
 
         assertThat(n.getStatus()).isEqualTo(NotificationStatus.DELETED);
         assertThat(n.getDeletedAt()).isNotNull();

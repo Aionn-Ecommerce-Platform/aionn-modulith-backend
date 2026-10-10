@@ -56,6 +56,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 @ExtendWith(MockitoExtension.class)
 class ProductServiceTest {
@@ -117,10 +118,10 @@ class ProductServiceTest {
         }
 
         private Product publishableProduct() {
-                Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                product.categorize(List.of(CATEGORY_ID), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
+                product.categorize(List.of(CATEGORY_ID), FIXED);
                 product.defineVariant("sku-1", Map.of("color", "red"),
-                                Money.of(new BigDecimal("10.00"), "VND"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                Money.of(new BigDecimal("10.00"), "VND"), FIXED);
                 product.pullEvents();
                 return product;
         }
@@ -139,7 +140,7 @@ class ProductServiceTest {
 
         @Test
         void createPersistsAndPublishes() {
-                Merchant merchant = Merchant.register(MERCHANT_ID, "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Merchant merchant = Merchant.register(MERCHANT_ID, "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
                 when(merchantRepository.findById(MERCHANT_ID)).thenReturn(Optional.of(merchant));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -151,7 +152,7 @@ class ProductServiceTest {
 
         @Test
         void defineVariantAddsSku() {
-                Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
                 product.pullEvents();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -165,7 +166,7 @@ class ProductServiceTest {
 
         @Test
         void defineVariantRejectsWhenNotOwner() {
-                Product product = Product.create(PRODUCT_ID, "other-merchant", "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Product product = Product.create(PRODUCT_ID, "other-merchant", "Widget", FIXED);
                 product.pullEvents();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
 
@@ -235,10 +236,10 @@ class ProductServiceTest {
 
         @Test
         void assignBrandRequiresActiveBrand() {
-                Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
                 product.pullEvents();
-                Brand brand = Brand.create(BRAND_ID, "Acme", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                brand.softDelete("gone", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Brand brand = Brand.create(BRAND_ID, "Acme", null, null, FIXED);
+                brand.softDelete("gone", FIXED);
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(brandRepository.findById(BRAND_ID)).thenReturn(Optional.of(brand));
 
@@ -251,9 +252,9 @@ class ProductServiceTest {
 
         @Test
         void assignBrandSetsBrandIdWhenActive() {
-                Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
                 product.pullEvents();
-                Brand brand = Brand.create(BRAND_ID, "Acme", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Brand brand = Brand.create(BRAND_ID, "Acme", null, null, FIXED);
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(brandRepository.findById(BRAND_ID)).thenReturn(Optional.of(brand));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -265,7 +266,7 @@ class ProductServiceTest {
 
         @Test
         void categorizeRequiresAllCategoriesToExist() {
-                Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
                 product.pullEvents();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(categoryRepository.findById("missing")).thenReturn(Optional.empty());
@@ -279,7 +280,7 @@ class ProductServiceTest {
 
         @Test
         void categorizeRejectsEmptyList() {
-                Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
                 product.pullEvents();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
 
@@ -292,9 +293,9 @@ class ProductServiceTest {
 
         @Test
         void categorizeAppliesCategoriesWhenAllExist() {
-                Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
                 product.pullEvents();
-                Category category = Category.create(CATEGORY_ID, null, "A", "a", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Category category = Category.create(CATEGORY_ID, null, "A", "a", FIXED);
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -320,7 +321,7 @@ class ProductServiceTest {
         @Test
         void deactivateHidesAndPublishesDomainEvent() {
                 Product product = publishableProduct();
-                product.publish(ADMIN_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                product.publish(ADMIN_ID, FIXED);
                 product.pullEvents();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -343,7 +344,7 @@ class ProductServiceTest {
 
         @Test
         void listByMerchantReturnsPageResult() {
-                Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
                 when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 20)))
                                 .thenReturn(List.of(product));
                 when(productRepository.countByMerchant(MERCHANT_ID)).thenReturn(1L);
@@ -358,7 +359,7 @@ class ProductServiceTest {
         @Test
         void listByStatusReturnsPageResult() {
                 Product product = publishableProduct();
-                product.publish(ADMIN_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                product.publish(ADMIN_ID, FIXED);
                 when(productRepository.listByStatus(ProductStatus.PUBLISHED, OffsetPagination.of(0, 20)))
                                 .thenReturn(List.of(product));
                 when(productRepository.countByStatus(ProductStatus.PUBLISHED)).thenReturn(1L);
@@ -424,7 +425,7 @@ class ProductServiceTest {
         @Test
         void emergencyTakedownPublishesDomainEvent() {
                 Product product = publishableProduct();
-                product.publish(ADMIN_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                product.publish(ADMIN_ID, FIXED);
                 product.pullEvents();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -468,9 +469,9 @@ class ProductServiceTest {
         @Test
         void getRelatedProductsUsesProductBrandAndCategories() {
                 Product product = publishableProduct();
-                product.assignBrand(BRAND_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                product.assignBrand(BRAND_ID, FIXED);
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                Product related = Product.create("01HZPRD0000000000000000002", MERCHANT_ID, "Other", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Product related = Product.create("01HZPRD0000000000000000002", MERCHANT_ID, "Other", FIXED);
                 when(productRepository.findRelatedProducts(PRODUCT_ID, BRAND_ID, List.of(CATEGORY_ID), 5))
                                 .thenReturn(List.of(related));
 
@@ -545,7 +546,7 @@ class ProductServiceTest {
         @Test
         void trackProductViewCreatesHistoryWhenAbsent() {
                 Product product = publishableProduct();
-                product.assignBrand(BRAND_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                product.assignBrand(BRAND_ID, FIXED);
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(userBrowsingHistoryRepository.findByUserId("user-1")).thenReturn(Optional.empty());
 
@@ -592,7 +593,7 @@ class ProductServiceTest {
                                 com.aionn.catalog.application.dto.search.ProductSearchCriteria.Sort.RELEVANCE, 0, 20);
                 when(catalogSearchIndex.search(criteria)).thenReturn(Optional.empty());
                 Product product = publishableProduct();
-                product.publish(ADMIN_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                product.publish(ADMIN_ID, FIXED);
                 when(productRepository.searchFallback(any(), eq(OffsetPagination.of(0, 20))))
                                 .thenReturn(new ProductPersistencePort.FallbackPage(List.of(product), 1));
                 when(productResultMapper.toResult(product)).thenReturn(sampleResult);
@@ -619,8 +620,8 @@ class ProductServiceTest {
                                 new java.math.BigDecimal("5"), new java.math.BigDecimal("50"));
                 when(catalogSearchIndex.search(c)).thenReturn(Optional.empty());
                 Product product = publishableProduct();
-                product.publish(ADMIN_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                product.assignBrand(BRAND_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                product.publish(ADMIN_ID, FIXED);
+                product.assignBrand(BRAND_ID, FIXED);
                 when(productRepository.searchFallback(any(), eq(OffsetPagination.of(0, 20))))
                                 .thenReturn(new ProductPersistencePort.FallbackPage(List.of(product), 1));
                 when(productResultMapper.toResult(product)).thenReturn(sampleResult);
@@ -635,7 +636,7 @@ class ProductServiceTest {
                 var c = criteria(null, null, List.of(), List.of(), null, null);
                 when(catalogSearchIndex.search(c)).thenReturn(Optional.empty());
                 Product product = publishableProduct();
-                product.publish(ADMIN_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                product.publish(ADMIN_ID, FIXED);
                 when(productRepository.searchFallback(any(), eq(OffsetPagination.of(0, 20))))
                                 .thenReturn(new ProductPersistencePort.FallbackPage(List.of(product), 1));
                 when(productResultMapper.toResult(product)).thenReturn(sampleResult);
@@ -752,8 +753,8 @@ class ProductServiceTest {
         @Test
         void restoreRepublishesHiddenProductAndPublishesDomainEvent() {
                 Product product = publishableProduct();
-                product.publish(ADMIN_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                product.deactivate("policy", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                product.publish(ADMIN_ID, FIXED);
+                product.deactivate("policy", FIXED);
                 product.pullEvents();
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -790,7 +791,7 @@ class ProductServiceTest {
         @Test
         void syncAllToSearchIndexPagesThroughPublishedProducts() {
                 Product product = publishableProduct();
-                product.publish(ADMIN_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                product.publish(ADMIN_ID, FIXED);
                 when(productRepository.findPublished(100, 0)).thenReturn(List.of(product));
                 when(productRepository.findPublished(100, 100)).thenReturn(List.of());
                 com.aionn.catalog.application.dto.search.ProductSearchDocument doc = new com.aionn.catalog.application.dto.search.ProductSearchDocument(

@@ -9,6 +9,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 class AttributeTemplateTest {
 
@@ -18,7 +19,7 @@ class AttributeTemplateTest {
     @Test
     void createInitializesAttributesAsFilterableAndEmitsEvent() {
         AttributeTemplate template = AttributeTemplate.create(
-                TEMPLATE_ID, CATEGORY_ID, List.of("color", "size"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                TEMPLATE_ID, CATEGORY_ID, List.of("color", "size"), FIXED);
 
         assertThat(template.getTemplateId()).isEqualTo(TEMPLATE_ID);
         assertThat(template.getCategoryId()).isEqualTo(CATEGORY_ID);
@@ -34,7 +35,7 @@ class AttributeTemplateTest {
     @Test
     void createTrimsAttributeKeysConsistentlyOnStateAndEvent() {
         AttributeTemplate template = AttributeTemplate.create(
-                TEMPLATE_ID, CATEGORY_ID, List.of("  color  ", " size "), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                TEMPLATE_ID, CATEGORY_ID, List.of("  color  ", " size "), FIXED);
 
         assertThat(template.snapshot()).containsKeys("color", "size");
         var created = (AttributeTemplateEvents.AttributeTemplateCreated) template.pullEvents().get(0).payload();
@@ -43,7 +44,7 @@ class AttributeTemplateTest {
 
     @Test
     void createRejectsBlankTemplateId() {
-        assertThatThrownBy(() -> AttributeTemplate.create(" ", CATEGORY_ID, List.of("color"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> AttributeTemplate.create(" ", CATEGORY_ID, List.of("color"), FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
@@ -51,7 +52,7 @@ class AttributeTemplateTest {
 
     @Test
     void createRejectsBlankCategoryId() {
-        assertThatThrownBy(() -> AttributeTemplate.create(TEMPLATE_ID, " ", List.of("color"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> AttributeTemplate.create(TEMPLATE_ID, " ", List.of("color"), FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
@@ -59,7 +60,7 @@ class AttributeTemplateTest {
 
     @Test
     void createRejectsEmptyAttributes() {
-        assertThatThrownBy(() -> AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of(), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of(), FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
@@ -67,7 +68,7 @@ class AttributeTemplateTest {
 
     @Test
     void createRejectsBlankAttributeKey() {
-        assertThatThrownBy(() -> AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color", " "), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color", " "), FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
@@ -75,7 +76,7 @@ class AttributeTemplateTest {
 
     @Test
     void createRejectsDuplicateAttributeKeys() {
-        assertThatThrownBy(() -> AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color", "  color  "), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color", "  color  "), FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
@@ -84,10 +85,10 @@ class AttributeTemplateTest {
     @Test
     void configureFilterableUpdatesAttributeFlagAndEmitsEvent() {
         AttributeTemplate template = AttributeTemplate.create(
-                TEMPLATE_ID, CATEGORY_ID, List.of("color"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                TEMPLATE_ID, CATEGORY_ID, List.of("color"), FIXED);
         template.pullEvents();
 
-        template.configureFilterable("color", false, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        template.configureFilterable("color", false, FIXED);
 
         assertThat(template.snapshot().get("color").filterable()).isFalse();
         assertThat(template.pullEvents()).hasSize(1);
@@ -96,10 +97,10 @@ class AttributeTemplateTest {
     @Test
     void configureFilterableIsIdempotentWhenValueUnchanged() {
         AttributeTemplate template = AttributeTemplate.create(
-                TEMPLATE_ID, CATEGORY_ID, List.of("color"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                TEMPLATE_ID, CATEGORY_ID, List.of("color"), FIXED);
         template.pullEvents();
 
-        template.configureFilterable("color", true, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        template.configureFilterable("color", true, FIXED);
 
         assertThat(template.pullEvents()).isEmpty();
     }
@@ -107,10 +108,10 @@ class AttributeTemplateTest {
     @Test
     void configureFilterableTrimsKeyBeforeLookup() {
         AttributeTemplate template = AttributeTemplate.create(
-                TEMPLATE_ID, CATEGORY_ID, List.of("color"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                TEMPLATE_ID, CATEGORY_ID, List.of("color"), FIXED);
         template.pullEvents();
 
-        template.configureFilterable("  color  ", false, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        template.configureFilterable("  color  ", false, FIXED);
 
         assertThat(template.snapshot().get("color").filterable()).isFalse();
     }
@@ -118,9 +119,9 @@ class AttributeTemplateTest {
     @Test
     void configureFilterableThrowsWhenAttributeMissing() {
         AttributeTemplate template = AttributeTemplate.create(
-                TEMPLATE_ID, CATEGORY_ID, List.of("color"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                TEMPLATE_ID, CATEGORY_ID, List.of("color"), FIXED);
 
-        assertThatThrownBy(() -> template.configureFilterable("missing", true, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> template.configureFilterable("missing", true, FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.ATTRIBUTE_KEY_NOT_FOUND.getCode());
@@ -129,9 +130,9 @@ class AttributeTemplateTest {
     @Test
     void configureFilterableRejectsBlankKey() {
         AttributeTemplate template = AttributeTemplate.create(
-                TEMPLATE_ID, CATEGORY_ID, List.of("color"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                TEMPLATE_ID, CATEGORY_ID, List.of("color"), FIXED);
 
-        assertThatThrownBy(() -> template.configureFilterable(" ", true, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> template.configureFilterable(" ", true, FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());

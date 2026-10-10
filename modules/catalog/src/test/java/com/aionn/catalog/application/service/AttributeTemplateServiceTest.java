@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 @ExtendWith(MockitoExtension.class)
 class AttributeTemplateServiceTest {
@@ -50,7 +51,7 @@ class AttributeTemplateServiceTest {
 
         @Test
         void createPersistsTemplateAndPublishesEvent() {
-                Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", FIXED);
                 when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
                 when(attributeTemplateRepository.findByCategoryId(CATEGORY_ID)).thenReturn(Optional.empty());
                 when(attributeTemplateRepository.save(any(AttributeTemplate.class)))
@@ -80,10 +81,10 @@ class AttributeTemplateServiceTest {
 
         @Test
         void createThrowsWhenTemplateAlreadyExistsForCategory() {
-                Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", FIXED);
                 when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
                 AttributeTemplate existing = AttributeTemplate.create(
-                                TEMPLATE_ID, CATEGORY_ID, List.of("color"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                TEMPLATE_ID, CATEGORY_ID, List.of("color"), FIXED);
                 when(attributeTemplateRepository.findByCategoryId(CATEGORY_ID))
                                 .thenReturn(Optional.of(existing));
 
@@ -98,7 +99,7 @@ class AttributeTemplateServiceTest {
 
         @Test
         void configureFilterableUpdatesExistingAttribute() {
-                AttributeTemplate template = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                AttributeTemplate template = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), FIXED);
                 template.pullEvents();
                 when(attributeTemplateRepository.findById(TEMPLATE_ID)).thenReturn(Optional.of(template));
                 when(attributeTemplateRepository.save(template)).thenReturn(template);
@@ -123,7 +124,7 @@ class AttributeTemplateServiceTest {
 
         @Test
         void getReturnsResultWhenTemplateFound() {
-                AttributeTemplate template = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                AttributeTemplate template = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), FIXED);
                 when(attributeTemplateRepository.findById(TEMPLATE_ID)).thenReturn(Optional.of(template));
 
                 AttributeTemplate result = attributeTemplateService.get(TEMPLATE_ID);
@@ -144,7 +145,7 @@ class AttributeTemplateServiceTest {
 
         @Test
         void getByCategoryReturnsResultWhenTemplateFound() {
-                AttributeTemplate template = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                AttributeTemplate template = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), FIXED);
                 when(attributeTemplateRepository.findByCategoryId(CATEGORY_ID)).thenReturn(Optional.of(template));
 
                 AttributeTemplate result = attributeTemplateService.getByCategory(CATEGORY_ID);
