@@ -9,6 +9,8 @@ import com.aionn.shipping.domain.model.Shipment;
 import com.aionn.shipping.domain.valueobject.ShipmentAddress;
 import com.aionn.shipping.domain.valueobject.ShipmentDimensions;
 import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -51,12 +53,12 @@ class ShipmentCarrierOrchestratorTest {
 
     private static Shipment shipment() {
         return Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
-                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
     }
 
     private static Shipment registeredShipment() {
         Shipment shipment = shipment();
-        shipment.registerWithCarrier("TRACK_1", "CARRIER_O1", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        shipment.registerWithCarrier("TRACK_1", "CARRIER_O1", null, FIXED);
         shipment.pullEvents();
         return shipment;
     }

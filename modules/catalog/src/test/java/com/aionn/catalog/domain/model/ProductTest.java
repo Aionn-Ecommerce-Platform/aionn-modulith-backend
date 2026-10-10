@@ -14,6 +14,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 class ProductTest {
 
@@ -21,17 +22,17 @@ class ProductTest {
     private static final String MERCHANT_ID = "01HZMER0000000000000000001";
 
     private Product publishableProduct() {
-        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        product.categorize(List.of("cat-1"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
+        product.categorize(List.of("cat-1"), FIXED);
         product.defineVariant("sku-1", Map.of("color", "red"),
-                Money.of(new BigDecimal("10.00"), "VND"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Money.of(new BigDecimal("10.00"), "VND"), FIXED);
         product.pullEvents();
         return product;
     }
 
     @Test
     void createInitializesAsDraft() {
-        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
 
         assertThat(product.getStatus()).isEqualTo(ProductStatus.DRAFT);
         assertThat(product.pullEvents()).hasSize(1);
@@ -39,7 +40,7 @@ class ProductTest {
 
     @Test
     void createRejectsBlankName() {
-        assertThatThrownBy(() -> Product.create(PRODUCT_ID, MERCHANT_ID, " ", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> Product.create(PRODUCT_ID, MERCHANT_ID, " ", FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
@@ -47,7 +48,7 @@ class ProductTest {
 
     @Test
     void ensureOwnedByRejectsMismatch() {
-        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
 
         assertThatThrownBy(() -> product.ensureOwnedBy("other-merchant"))
                 .isInstanceOf(CatalogException.class)
@@ -57,11 +58,11 @@ class ProductTest {
 
     @Test
     void defineVariantAddsSku() {
-        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
         product.pullEvents();
 
         product.defineVariant("sku-1", Map.of("color", "red"),
-                Money.of(new BigDecimal("10.00"), "VND"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Money.of(new BigDecimal("10.00"), "VND"), FIXED);
 
         assertThat(product.variants()).hasSize(1);
         assertThat(product.findVariant("sku-1")).isPresent();
@@ -72,11 +73,11 @@ class ProductTest {
         // A single-SKU item has no attributes, and callers express that either as an empty map or by
         // omitting the field. The variant stored fine but the event copied the raw argument, so the
         // omitted form threw halfway through: the write succeeded and the request still came back 500.
-        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
         product.pullEvents();
 
         product.defineVariant("sku-1", null,
-                Money.of(new BigDecimal("10.00"), "VND"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Money.of(new BigDecimal("10.00"), "VND"), FIXED);
 
         assertThat(product.findVariant("sku-1")).isPresent();
         assertThat(product.findVariant("sku-1").orElseThrow().attributeValues()).isEmpty();
@@ -110,12 +111,12 @@ class ProductTest {
 
     @Test
     void defineVariantRejectsDuplicateSkuId() {
-        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
         product.defineVariant("sku-1", Map.of("color", "red"),
-                Money.of(new BigDecimal("10.00"), "VND"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Money.of(new BigDecimal("10.00"), "VND"), FIXED);
 
         assertThatThrownBy(() -> product.defineVariant("sku-1", Map.of("color", "blue"),
-                Money.of(new BigDecimal("12.00"), "VND"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+                Money.of(new BigDecimal("12.00"), "VND"), FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.PRODUCT_VARIANT_DUPLICATE.getCode());
@@ -123,12 +124,12 @@ class ProductTest {
 
     @Test
     void defineVariantRejectsDuplicateAttributeCombination() {
-        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
         product.defineVariant("sku-1", Map.of("color", "red"),
-                Money.of(new BigDecimal("10.00"), "VND"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Money.of(new BigDecimal("10.00"), "VND"), FIXED);
 
         assertThatThrownBy(() -> product.defineVariant("sku-2", Map.of("color", "red"),
-                Money.of(new BigDecimal("12.00"), "VND"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+                Money.of(new BigDecimal("12.00"), "VND"), FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.PRODUCT_VARIANT_DUPLICATE.getCode());
@@ -138,7 +139,7 @@ class ProductTest {
     void changeVariantPriceUpdatesSku() {
         Product product = publishableProduct();
 
-        product.changeVariantPrice("sku-1", Money.of(new BigDecimal("20.00"), "VND"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        product.changeVariantPrice("sku-1", Money.of(new BigDecimal("20.00"), "VND"), FIXED);
 
         assertThat(product.findVariant("sku-1").orElseThrow().price().amount())
                 .isEqualByComparingTo(new BigDecimal("20.00"));
@@ -149,7 +150,7 @@ class ProductTest {
         Product product = publishableProduct();
 
         assertThatThrownBy(() -> product.changeVariantPrice("missing",
-                Money.of(new BigDecimal("20.00"), "VND"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+                Money.of(new BigDecimal("20.00"), "VND"), FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.PRODUCT_VARIANT_NOT_FOUND.getCode());
@@ -157,19 +158,19 @@ class ProductTest {
 
     @Test
     void assignBrandSetsBrandId() {
-        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
         product.pullEvents();
 
-        product.assignBrand("brand-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        product.assignBrand("brand-1", FIXED);
 
         assertThat(product.getBrandId()).isEqualTo("brand-1");
     }
 
     @Test
     void categorizeRejectsEmptyList() {
-        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
 
-        assertThatThrownBy(() -> product.categorize(List.of(), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> product.categorize(List.of(), FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.PRODUCT_CATEGORY_REQUIRED.getCode());
@@ -179,17 +180,17 @@ class ProductTest {
     void publishSetsStatusPublishedWhenRequirementsMet() {
         Product product = publishableProduct();
 
-        product.publish("admin-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        product.publish("admin-1", FIXED);
 
         assertThat(product.getStatus()).isEqualTo(ProductStatus.PUBLISHED);
     }
 
     @Test
     void publishRejectsWhenNoVariants() {
-        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        product.categorize(List.of("cat-1"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
+        product.categorize(List.of("cat-1"), FIXED);
 
-        assertThatThrownBy(() -> product.publish("admin-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> product.publish("admin-1", FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.PRODUCT_PUBLISH_REQUIREMENTS.getCode());
@@ -197,11 +198,11 @@ class ProductTest {
 
     @Test
     void publishRejectsWhenNoCategories() {
-        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
         product.defineVariant("sku-1", Map.of("color", "red"),
-                Money.of(new BigDecimal("10.00"), "VND"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Money.of(new BigDecimal("10.00"), "VND"), FIXED);
 
-        assertThatThrownBy(() -> product.publish("admin-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> product.publish("admin-1", FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.PRODUCT_PUBLISH_REQUIREMENTS.getCode());
@@ -210,10 +211,10 @@ class ProductTest {
     @Test
     void deactivateTransitionsToHidden() {
         Product product = publishableProduct();
-        product.publish("admin-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        product.publish("admin-1", FIXED);
         product.pullEvents();
 
-        product.deactivate("policy", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        product.deactivate("policy", FIXED);
 
         assertThat(product.getStatus()).isEqualTo(ProductStatus.HIDDEN);
     }
@@ -221,11 +222,11 @@ class ProductTest {
     @Test
     void restoreTransitionsBackToPublished() {
         Product product = publishableProduct();
-        product.publish("admin-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        product.deactivate("policy", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        product.publish("admin-1", FIXED);
+        product.deactivate("policy", FIXED);
         product.pullEvents();
 
-        product.restore(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        product.restore(FIXED);
 
         assertThat(product.getStatus()).isEqualTo(ProductStatus.PUBLISHED);
     }
@@ -233,10 +234,10 @@ class ProductTest {
     @Test
     void rejectTransitionsFromPendingReview() {
         Product product = publishableProduct();
-        product.submitForReview(MERCHANT_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        product.submitForReview(MERCHANT_ID, FIXED);
         product.pullEvents();
 
-        product.reject("admin-1", "IMG_ISSUE", "Missing photos", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        product.reject("admin-1", "IMG_ISSUE", "Missing photos", FIXED);
 
         assertThat(product.getStatus()).isEqualTo(ProductStatus.REJECTED);
     }
@@ -244,11 +245,11 @@ class ProductTest {
     @Test
     void publishFromTakedownStateThrows() {
         Product product = publishableProduct();
-        product.publish("admin-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        product.emergencyTakedown("admin-1", "abuse", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        product.publish("admin-1", FIXED);
+        product.emergencyTakedown("admin-1", "abuse", FIXED);
         product.pullEvents();
 
-        assertThatThrownBy(() -> product.publish("admin-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> product.publish("admin-1", FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.PRODUCT_INVALID_TRANSITION.getCode());

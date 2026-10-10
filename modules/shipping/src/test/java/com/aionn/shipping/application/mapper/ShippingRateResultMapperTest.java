@@ -2,6 +2,8 @@ package com.aionn.shipping.application.mapper;
 
 import com.aionn.shipping.application.dto.rate.result.ShippingRateResult;
 import com.aionn.shipping.domain.model.ShippingRate;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
+
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
@@ -15,7 +17,7 @@ class ShippingRateResultMapperTest {
 
     @Test
     void mapsAllFields() {
-        ShippingRate r = ShippingRate.configure("r1", "HCM", new BigDecimal("30000"), "VND", "<=2kg", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        ShippingRate r = ShippingRate.configure("r1", "HCM", new BigDecimal("30000"), "VND", "<=2kg", FIXED);
 
         ShippingRateResult result = mapper.toResult(r);
 

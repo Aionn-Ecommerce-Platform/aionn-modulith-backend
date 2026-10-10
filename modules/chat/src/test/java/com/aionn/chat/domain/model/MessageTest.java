@@ -1,5 +1,7 @@
 package com.aionn.chat.domain.model;
 
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
+
 import com.aionn.chat.domain.exception.ChatException;
 import com.aionn.chat.domain.valueobject.MessagePayload;
 import com.aionn.chat.domain.valueobject.MessageStatus;
@@ -20,13 +22,13 @@ class MessageTest {
 
     private static Message textMessage() {
         return Message.send("M_1", "C_1", "U_buyer", ParticipantRole.BUYER, MessageType.TEXT,
-                MessagePayload.text("hi"), List.of("U_merchant"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                MessagePayload.text("hi"), List.of("U_merchant"), FIXED);
     }
 
     @Test
     void send_textWithEmptyBody_throwsMessageEmpty() {
         assertThatThrownBy(() -> Message.send("M_1", "C_1", "U_b", ParticipantRole.BUYER, MessageType.TEXT,
-                MessagePayload.text(""), List.of("U_m"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+                MessagePayload.text(""), List.of("U_m"), FIXED))
                 .isInstanceOf(ChatException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "CHT_104");
     }
@@ -35,7 +37,7 @@ class MessageTest {
     void send_textBeyondMaxLength_throwsTooLong() {
         String tooLong = "x".repeat(Message.MAX_TEXT_LENGTH + 1);
         assertThatThrownBy(() -> Message.send("M_1", "C_1", "U_b", ParticipantRole.BUYER, MessageType.TEXT,
-                MessagePayload.text(tooLong), List.of("U_m"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+                MessagePayload.text(tooLong), List.of("U_m"), FIXED))
                 .isInstanceOf(ChatException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "CHT_103");
     }
@@ -44,7 +46,7 @@ class MessageTest {
     void markDeliveredTo_sender_isIgnored() {
         Message m = textMessage();
 
-        m.markDeliveredTo("U_buyer", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        m.markDeliveredTo("U_buyer", FIXED);
 
         assertThat(m.getDeliveredTo()).doesNotContain("U_buyer");
         assertThat(m.getStatus()).isEqualTo(MessageStatus.SENT);
@@ -54,9 +56,9 @@ class MessageTest {
     void markDeliveredTo_recipient_flipsStatusAndIsIdempotent() {
         Message m = textMessage();
 
-        m.markDeliveredTo("U_merchant", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        m.markDeliveredTo("U_merchant", FIXED);
         Instant firstUpdate = m.getUpdatedAt();
-        m.markDeliveredTo("U_merchant", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        m.markDeliveredTo("U_merchant", FIXED);
 
         assertThat(m.getDeliveredTo()).containsExactly("U_merchant");
         assertThat(m.getStatus()).isEqualTo(MessageStatus.DELIVERED);
@@ -67,7 +69,7 @@ class MessageTest {
     void markReadBy_recipient_alsoMarksDelivered() {
         Message m = textMessage();
 
-        m.markReadBy("U_merchant", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        m.markReadBy("U_merchant", FIXED);
 
         assertThat(m.getReadBy()).containsExactly("U_merchant");
         assertThat(m.getDeliveredTo()).contains("U_merchant");
@@ -78,7 +80,7 @@ class MessageTest {
     void recall_bySender_clearsBodyAndFlipsStatus() {
         Message m = textMessage();
 
-        m.recall("U_buyer", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        m.recall("U_buyer", FIXED);
 
         assertThat(m.isRecalled()).isTrue();
         assertThat(m.getStatus()).isEqualTo(MessageStatus.RECALLED);
@@ -89,7 +91,7 @@ class MessageTest {
     void recall_byNonSender_throwsForbidden() {
         Message m = textMessage();
 
-        assertThatThrownBy(() -> m.recall("U_merchant", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> m.recall("U_merchant", FIXED))
                 .isInstanceOf(ChatException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "CHT_102");
     }
@@ -97,9 +99,9 @@ class MessageTest {
     @Test
     void recall_alreadyRecalled_throwsAlreadyRecalled() {
         Message m = textMessage();
-        m.recall("U_buyer", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        m.recall("U_buyer", FIXED);
 
-        assertThatThrownBy(() -> m.recall("U_buyer", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> m.recall("U_buyer", FIXED))
                 .isInstanceOf(ChatException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "CHT_106");
     }
@@ -122,9 +124,9 @@ class MessageTest {
     @Test
     void markDeliveredTo_recalledMessage_isIgnored() {
         Message m = textMessage();
-        m.recall("U_buyer", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        m.recall("U_buyer", FIXED);
 
-        m.markDeliveredTo("U_merchant", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        m.markDeliveredTo("U_merchant", FIXED);
 
         assertThat(m.getDeliveredTo()).isEmpty();
     }
@@ -132,7 +134,7 @@ class MessageTest {
     @Test
     void send_nullPayload_throwsMessageEmpty() {
         assertThatThrownBy(() -> Message.send("M_1", "C_1", "U_b", ParticipantRole.BUYER, MessageType.TEXT,
-                null, List.of("U_m"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+                null, List.of("U_m"), FIXED))
                 .isInstanceOf(ChatException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "CHT_104");
     }
@@ -140,7 +142,7 @@ class MessageTest {
     @Test
     void send_imageWithoutImageUrl_throwsInvalidArgument() {
         assertThatThrownBy(() -> Message.send("M_1", "C_1", "U_b", ParticipantRole.BUYER, MessageType.IMAGE,
-                new MessagePayload(null, Map.of()), List.of("U_m"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+                new MessagePayload(null, Map.of()), List.of("U_m"), FIXED))
                 .isInstanceOf(ChatException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "CHT_900");
     }
@@ -148,7 +150,7 @@ class MessageTest {
     @Test
     void send_productCardWithoutProductId_throwsInvalidArgument() {
         assertThatThrownBy(() -> Message.send("M_1", "C_1", "U_b", ParticipantRole.BUYER,
-                MessageType.PRODUCT_CARD, new MessagePayload(null, Map.of()), List.of("U_m"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+                MessageType.PRODUCT_CARD, new MessagePayload(null, Map.of()), List.of("U_m"), FIXED))
                 .isInstanceOf(ChatException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "CHT_900");
     }
@@ -156,7 +158,7 @@ class MessageTest {
     @Test
     void send_orderRefWithoutOrderId_throwsInvalidArgument() {
         assertThatThrownBy(() -> Message.send("M_1", "C_1", "U_b", ParticipantRole.BUYER,
-                MessageType.ORDER_REF, new MessagePayload(null, Map.of()), List.of("U_m"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+                MessageType.ORDER_REF, new MessagePayload(null, Map.of()), List.of("U_m"), FIXED))
                 .isInstanceOf(ChatException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "CHT_900");
     }
@@ -178,7 +180,7 @@ class MessageTest {
                 MessagePayload.system("(recalled)"), MessageStatus.RECALLED, new HashSet<>(),
                 new HashSet<>(), false, now, now);
 
-        m.markReadBy("U_merchant", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        m.markReadBy("U_merchant", FIXED);
 
         assertThat(m.getStatus()).isEqualTo(MessageStatus.RECALLED);
         assertThat(m.getReadBy()).containsExactly("U_merchant");

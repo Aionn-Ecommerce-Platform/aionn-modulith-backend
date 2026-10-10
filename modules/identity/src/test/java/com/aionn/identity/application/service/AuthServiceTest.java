@@ -188,7 +188,7 @@ class AuthServiceTest {
     }
 
     private static IdentityUser activeUser() {
-        return IdentityUser.createNew(USER_ID, "u@example.com", null, "user", com.aionn.identity.TestClocks.FIXED);
+        return IdentityUser.createNew(USER_ID, "u@example.com", null, "user", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED);
     }
 
     private static UserSecurityPort.UserSecurityData security(boolean mfaEnabled, String mfaSecret) {
@@ -561,7 +561,7 @@ class AuthServiceTest {
 
     @Test
     void unlinkSocialRejectsWhenItIsTheOnlyLoginMethod() {
-        IdentityUser noCredentials = IdentityUser.createNew(USER_ID, null, null, "user", com.aionn.identity.TestClocks.FIXED);
+        IdentityUser noCredentials = IdentityUser.createNew(USER_ID, null, null, "user", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED);
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(noCredentials));
         when(socialLinkPersistencePort.findByUserIdAndProvider(USER_ID, AuthProvider.GOOGLE))
                 .thenReturn(Optional.of(SocialLink.createNew("sl-1", USER_ID, AuthProvider.GOOGLE, "puid", TEST_CLOCK)));

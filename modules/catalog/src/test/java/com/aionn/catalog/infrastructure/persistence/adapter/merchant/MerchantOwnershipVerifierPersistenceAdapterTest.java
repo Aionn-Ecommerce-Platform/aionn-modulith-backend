@@ -13,6 +13,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 @ExtendWith(MockitoExtension.class)
 class MerchantOwnershipVerifierPersistenceAdapterTest {
@@ -25,7 +26,7 @@ class MerchantOwnershipVerifierPersistenceAdapterTest {
 
     @Test
     void returnsTrueWhenOwnerMatches() {
-        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.0500"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.0500"), FIXED);
         when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
 
         assertThat(adapter.isOwnedBy("m-1", "owner-1")).isTrue();
@@ -33,7 +34,7 @@ class MerchantOwnershipVerifierPersistenceAdapterTest {
 
     @Test
     void returnsFalseWhenOwnerDoesNotMatch() {
-        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.0500"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.0500"), FIXED);
         when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
 
         assertThat(adapter.isOwnedBy("m-1", "other-owner")).isFalse();

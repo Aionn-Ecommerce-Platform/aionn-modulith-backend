@@ -6,11 +6,10 @@ import com.aionn.inventory.domain.valueobject.StockTransferStatus;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 class StockTransferTest {
 
@@ -19,7 +18,7 @@ class StockTransferTest {
     private static final String FROM = "01HZWHS000000000000000001";
     private static final String TO = "01HZWHS000000000000000002";
     private static final String SKU = "01HZSKU000000000000000001";
-    private static final Clock FIXED_CLOCK = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
+    private static final Clock FIXED_CLOCK = FIXED;
 
     @Test
     void initiateRejectsSameWarehouse() {

@@ -44,6 +44,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 @ExtendWith(MockitoExtension.class)
 class ReviewServiceTest {
@@ -74,16 +75,16 @@ class ReviewServiceTest {
     private ReviewService reviewService;
 
     private Product productWithSku(String skuId) {
-        Product p = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        p.categorize(List.of("cat-1"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        p.defineVariant(skuId, Map.of("color", "red"), Money.of(new BigDecimal("10"), "VND"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Product p = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
+        p.categorize(List.of("cat-1"), FIXED);
+        p.defineVariant(skuId, Map.of("color", "red"), Money.of(new BigDecimal("10"), "VND"), FIXED);
         p.pullEvents();
         return p;
     }
 
     private ProductReview makeReview() {
         ProductReview review = ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, ORDER_ID,
-                5, "t", "c", List.of(), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                5, "t", "c", List.of(), FIXED);
         review.pullEvents();
         return review;
     }
@@ -167,7 +168,7 @@ class ReviewServiceTest {
         Product product = productWithSku("sku-1");
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
         when(merchantRepository.findByOwnerId("stranger")).thenReturn(Optional.of(
-                Merchant.register("other-mer", "stranger", "X", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC))));
+                Merchant.register("other-mer", "stranger", "X", new BigDecimal("0.05"), FIXED)));
 
         assertThatThrownBy(() -> reviewService.merchantReply(
                 new MerchantReplyCommand("stranger", REVIEW_ID, "hi")))
@@ -182,7 +183,7 @@ class ReviewServiceTest {
         when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(review));
         Product product = productWithSku("sku-1");
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-        Merchant merchant = Merchant.register(MERCHANT_ID, OWNER_ID, "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Merchant merchant = Merchant.register(MERCHANT_ID, OWNER_ID, "Acme", new BigDecimal("0.05"), FIXED);
         when(merchantRepository.findByOwnerId(OWNER_ID)).thenReturn(Optional.of(merchant));
         when(reviewRepository.save(review)).thenReturn(review);
 
@@ -227,7 +228,7 @@ class ReviewServiceTest {
     @Test
     void restoreClearsReportedFields() {
         ProductReview review = makeReview();
-        review.report(MERCHANT_ID, "abuse", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        review.report(MERCHANT_ID, "abuse", FIXED);
         review.pullEvents();
         when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(review));
         when(reviewRepository.save(review)).thenReturn(review);
@@ -321,7 +322,7 @@ class ReviewServiceTest {
     @Test
     void getReportedReturnsPage() {
         ProductReview review = makeReview();
-        review.report(MERCHANT_ID, "abuse", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        review.report(MERCHANT_ID, "abuse", FIXED);
         review.pullEvents();
         when(reviewRepository.findByStatus(ReviewStatus.REPORTED, OffsetPagination.of(0, 20)))
                 .thenReturn(List.of(review));

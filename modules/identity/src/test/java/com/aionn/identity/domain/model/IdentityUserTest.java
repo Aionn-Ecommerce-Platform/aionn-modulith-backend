@@ -10,8 +10,8 @@ import java.time.Instant;
 import java.time.Duration;
 import java.util.Set;
 
-import static com.aionn.identity.TestClocks.FIXED;
-import static com.aionn.identity.TestClocks.NOW;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.NOW;
 import static org.assertj.core.api.Assertions.*;
 
 class IdentityUserTest {
@@ -447,7 +447,8 @@ class IdentityUserTest {
 
     @Test
     void equals_sameUserId_returnsTrue() {
-        IdentityUser user1 = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
+        IdentityUser user1 = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith",
+                FIXED);
         IdentityUser user2 = IdentityUser.createNew("user-123", "different@example.com", "0999999999",
                 "different_user", FIXED);
 
@@ -456,8 +457,10 @@ class IdentityUserTest {
 
     @Test
     void equals_differentUserId_returnsFalse() {
-        IdentityUser user1 = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith", FIXED);
-        IdentityUser user2 = IdentityUser.createNew("user-456", "alice@example.com", "0912345678", "alice_smith", FIXED);
+        IdentityUser user1 = IdentityUser.createNew("user-123", "alice@example.com", "0912345678", "alice_smith",
+                FIXED);
+        IdentityUser user2 = IdentityUser.createNew("user-456", "alice@example.com", "0912345678", "alice_smith",
+                FIXED);
 
         assertThat(user1).isNotEqualTo(user2);
     }

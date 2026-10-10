@@ -5,13 +5,14 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class DeviceTokenTest {
 
     @Test
     void registerCreatesActiveTokenAndEmitsEvent() {
-        DeviceToken dt = DeviceToken.register("tok-1", "user-1", "fcm-abc", "ANDROID", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        DeviceToken dt = DeviceToken.register("tok-1", "user-1", "fcm-abc", "ANDROID", FIXED);
 
         assertThat(dt.getTokenId()).isEqualTo("tok-1");
         assertThat(dt.getUserId()).isEqualTo("user-1");
@@ -26,12 +27,12 @@ class DeviceTokenTest {
 
     @Test
     void deactivateDisablesTokenAndUpdatesTimestamp() {
-        DeviceToken dt = DeviceToken.register("tok-2", "user-2", "fcm-xyz", "IOS", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        DeviceToken dt = DeviceToken.register("tok-2", "user-2", "fcm-xyz", "IOS", FIXED);
         dt.pullEvents();
 
         Instant beforeDeactivate = dt.getUpdatedAt();
         sleepBriefly();
-        dt.deactivate(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        dt.deactivate(FIXED);
 
         assertThat(dt.isActive()).isFalse();
         assertThat(dt.getUpdatedAt()).isAfterOrEqualTo(beforeDeactivate);
@@ -39,10 +40,10 @@ class DeviceTokenTest {
 
     @Test
     void deactivateIsCallableTwiceWithoutThrowing() {
-        DeviceToken dt = DeviceToken.register("tok-3", "user-3", "fcm-xyz", "WEB", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        DeviceToken dt = DeviceToken.register("tok-3", "user-3", "fcm-xyz", "WEB", FIXED);
 
-        dt.deactivate(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        dt.deactivate(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        dt.deactivate(FIXED);
+        dt.deactivate(FIXED);
 
         assertThat(dt.isActive()).isFalse();
     }

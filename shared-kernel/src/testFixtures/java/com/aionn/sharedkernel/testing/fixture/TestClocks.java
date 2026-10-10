@@ -1,4 +1,4 @@
-package com.aionn.identity;
+package com.aionn.sharedkernel.testing.fixture;
 
 import java.time.Clock;
 import java.time.Instant;
