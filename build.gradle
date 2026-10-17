@@ -42,6 +42,7 @@ subprojects {
     tasks.withType(Test).configureEach {
         useJUnitPlatform()
         systemProperty 'file.encoding', 'UTF-8'
+        maxHeapSize = '1024m'
         finalizedBy tasks.named('jacocoTestReport')
     }
 

@@ -50,7 +50,7 @@ class FlywayMigrationIntegrationTest {
         assertThat(rowCount("payments")).isPositive();
         assertThat(rowCount("products")).isPositive();
         assertThat(rowCount("recommendation_interactions")).isPositive();
-        assertThat(rowCount("promotion_banners")).isZero();
+        assertThat(rowCount("promotion_banners")).isPositive();
     }
 
     @Test
