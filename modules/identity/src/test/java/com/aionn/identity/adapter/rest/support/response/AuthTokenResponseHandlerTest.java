@@ -16,15 +16,15 @@ import org.springframework.http.ResponseEntity;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.Duration;
-import java.time.ZoneOffset;
 
 import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThat;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 @ExtendWith(MockitoExtension.class)
 class AuthTokenResponseHandlerTest {
 
-    private static final Clock FIXED_CLOCK = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
+    private static final Clock FIXED_CLOCK = FIXED;
 
     @Mock
     private AuthProperties authProperties;

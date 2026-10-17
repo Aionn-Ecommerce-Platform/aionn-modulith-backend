@@ -1,5 +1,7 @@
 package com.aionn.promotion.domain.model;
 
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
+
 import com.aionn.promotion.domain.exception.PromotionException;
 import com.aionn.promotion.domain.valueobject.FlashSaleRegistrationStatus;
 import com.aionn.sharedkernel.domain.vo.Money;
@@ -38,7 +40,7 @@ class FlashSaleRegistrationTest {
     @Test
     void submitWithoutClockUsesSystemTime() {
         FlashSaleRegistration reg = FlashSaleRegistration.submit("reg-2", "camp-1", "mer-1",
-                "prod-1", "sku-1", SALE_PRICE, 5, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                "prod-1", "sku-1", SALE_PRICE, 5, FIXED);
 
         assertThat(reg.getSubmittedAt()).isNotNull();
     }
@@ -85,7 +87,7 @@ class FlashSaleRegistrationTest {
     void approveWithoutClockUsesSystemTime() {
         FlashSaleRegistration reg = pending();
 
-        reg.approve("admin-1", REGULAR_PRICE, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        reg.approve("admin-1", REGULAR_PRICE, FIXED);
 
         assertThat(reg.getDecidedAt()).isNotNull();
     }
@@ -115,7 +117,7 @@ class FlashSaleRegistrationTest {
     void rejectWithoutClockUsesSystemTime() {
         FlashSaleRegistration reg = pending();
 
-        reg.reject("admin-1", "nope", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        reg.reject("admin-1", "nope", FIXED);
 
         assertThat(reg.getDecidedAt()).isNotNull();
     }
@@ -135,7 +137,7 @@ class FlashSaleRegistrationTest {
     void cancelWithoutClockUsesSystemTime() {
         FlashSaleRegistration reg = pending();
 
-        reg.cancel("mer-1", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        reg.cancel("mer-1", FIXED);
 
         assertThat(reg.getUpdatedAt()).isNotNull();
     }
@@ -173,7 +175,7 @@ class FlashSaleRegistrationTest {
         FlashSaleRegistration reg = pending();
         reg.approve("admin-1", REGULAR_PRICE, CLOCK);
 
-        reg.consumeStock(10, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        reg.consumeStock(10, FIXED);
 
         assertThat(reg.hasStockLeft()).isFalse();
     }

@@ -18,4 +18,7 @@ public interface ShipmentRepository extends JpaRepository<ShipmentEntity, String
 
     List<ShipmentEntity> findByTrackingCodeIsNotNullAndStatusNotIn(
             Collection<String> terminalStatuses, Pageable pageable);
+
+    List<ShipmentEntity> findByStatusInAndUpdatedAtBefore(
+            Collection<String> statuses, java.time.Instant cutoff, Pageable pageable);
 }

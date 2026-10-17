@@ -26,6 +26,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 @ExtendWith(MockitoExtension.class)
 class InventoryItemPersistenceAdapterTest {
@@ -44,7 +45,7 @@ class InventoryItemPersistenceAdapterTest {
 
     @Test
     void saveMapsThroughEntityAndBack() {
-        InventoryItem domain = InventoryItem.initialize(KEY, 100, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        InventoryItem domain = InventoryItem.initialize(KEY, 100, FIXED);
         InventoryItemEntity entity = new InventoryItemEntity();
         InventoryItemEntity.InventoryItemId id = new InventoryItemEntity.InventoryItemId(SKU_ID, WAREHOUSE_ID);
         when(jpa.findById(id)).thenReturn(Optional.empty());
@@ -60,7 +61,7 @@ class InventoryItemPersistenceAdapterTest {
 
     @Test
     void saveUsesExistingEntityWhenPresent() {
-        InventoryItem domain = InventoryItem.initialize(KEY, 100, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        InventoryItem domain = InventoryItem.initialize(KEY, 100, FIXED);
         InventoryItemEntity existing = new InventoryItemEntity();
         InventoryItemEntity updated = new InventoryItemEntity();
         InventoryItemEntity.InventoryItemId id = new InventoryItemEntity.InventoryItemId(SKU_ID, WAREHOUSE_ID);
@@ -77,7 +78,7 @@ class InventoryItemPersistenceAdapterTest {
     @Test
     void findByKeyReturnsMappedDomainWhenPresent() {
         InventoryItemEntity entity = new InventoryItemEntity();
-        InventoryItem domain = InventoryItem.initialize(KEY, 100, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        InventoryItem domain = InventoryItem.initialize(KEY, 100, FIXED);
         InventoryItemEntity.InventoryItemId id = new InventoryItemEntity.InventoryItemId(SKU_ID, WAREHOUSE_ID);
         when(jpa.findById(id)).thenReturn(Optional.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
@@ -96,7 +97,7 @@ class InventoryItemPersistenceAdapterTest {
     @Test
     void lockByKeyReturnsMappedDomain() {
         InventoryItemEntity entity = new InventoryItemEntity();
-        InventoryItem domain = InventoryItem.initialize(KEY, 100, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        InventoryItem domain = InventoryItem.initialize(KEY, 100, FIXED);
         when(jpa.findForUpdate(SKU_ID, WAREHOUSE_ID)).thenReturn(Optional.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -114,7 +115,7 @@ class InventoryItemPersistenceAdapterTest {
     void createIfAbsentThenLocksTheWinningItem() {
         Instant now = Instant.parse("2026-08-05T00:00:00Z");
         InventoryItemEntity entity = new InventoryItemEntity();
-        InventoryItem domain = InventoryItem.initialize(KEY, 0, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        InventoryItem domain = InventoryItem.initialize(KEY, 0, FIXED);
         when(jpa.findForUpdate(SKU_ID, WAREHOUSE_ID)).thenReturn(Optional.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -132,7 +133,7 @@ class InventoryItemPersistenceAdapterTest {
     @Test
     void findBySkuAcrossWarehousesMapsResults() {
         InventoryItemEntity entity = new InventoryItemEntity();
-        InventoryItem domain = InventoryItem.initialize(KEY, 100, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        InventoryItem domain = InventoryItem.initialize(KEY, 100, FIXED);
         when(jpa.findByIdSkuIdAndIdWarehouseIdIn(SKU_ID, List.of(WAREHOUSE_ID)))
                 .thenReturn(List.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
@@ -144,7 +145,7 @@ class InventoryItemPersistenceAdapterTest {
     @Test
     void findBySkuMapsResults() {
         InventoryItemEntity entity = new InventoryItemEntity();
-        InventoryItem domain = InventoryItem.initialize(KEY, 100, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        InventoryItem domain = InventoryItem.initialize(KEY, 100, FIXED);
         when(jpa.findByIdSkuId(SKU_ID)).thenReturn(List.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -154,7 +155,7 @@ class InventoryItemPersistenceAdapterTest {
     @Test
     void findByWarehouseMapsResults() {
         InventoryItemEntity entity = new InventoryItemEntity();
-        InventoryItem domain = InventoryItem.initialize(KEY, 100, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        InventoryItem domain = InventoryItem.initialize(KEY, 100, FIXED);
         when(jpa.findByIdWarehouseIdOrderByIdSkuIdAsc(eq(WAREHOUSE_ID), any(PageRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(entity)));
         when(mapper.toDomain(entity)).thenReturn(domain);

@@ -15,6 +15,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 @ExtendWith(MockitoExtension.class)
 class AttributeTemplatePersistenceAdapterTest {
@@ -32,7 +33,7 @@ class AttributeTemplatePersistenceAdapterTest {
 
     @Test
     void saveMapsThroughEntityAndBack() {
-        AttributeTemplate domain = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        AttributeTemplate domain = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), FIXED);
         AttributeTemplateEntity entity = new AttributeTemplateEntity();
         when(mapper.toEntity(domain)).thenReturn(entity);
         when(jpa.save(entity)).thenReturn(entity);
@@ -44,7 +45,7 @@ class AttributeTemplatePersistenceAdapterTest {
     @Test
     void findByIdReturnsMappedDomainWhenPresent() {
         AttributeTemplateEntity entity = new AttributeTemplateEntity();
-        AttributeTemplate domain = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        AttributeTemplate domain = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), FIXED);
         when(jpa.findById(TEMPLATE_ID)).thenReturn(Optional.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -61,7 +62,7 @@ class AttributeTemplatePersistenceAdapterTest {
     @Test
     void findByCategoryIdReturnsMappedDomainWhenPresent() {
         AttributeTemplateEntity entity = new AttributeTemplateEntity();
-        AttributeTemplate domain = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        AttributeTemplate domain = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), FIXED);
         when(jpa.findByCategoryId(CATEGORY_ID)).thenReturn(Optional.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -81,7 +82,7 @@ class AttributeTemplatePersistenceAdapterTest {
     @Test
     void findByCategoryIdsMapsResults() {
         AttributeTemplateEntity entity = new AttributeTemplateEntity();
-        AttributeTemplate domain = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        AttributeTemplate domain = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), FIXED);
         when(jpa.findByCategoryIdIn(List.of(CATEGORY_ID))).thenReturn(List.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
@@ -90,7 +91,7 @@ class AttributeTemplatePersistenceAdapterTest {
 
     @Test
     void saveTranslatesUniqueConstraintViolationToDomainException() {
-        AttributeTemplate domain = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        AttributeTemplate domain = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), FIXED);
         AttributeTemplateEntity entity = new AttributeTemplateEntity();
         when(mapper.toEntity(domain)).thenReturn(entity);
         when(jpa.save(entity)).thenThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate"));

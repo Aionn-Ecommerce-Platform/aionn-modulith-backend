@@ -29,6 +29,7 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 @ExtendWith(MockitoExtension.class)
 class MerchantServiceTest {
@@ -79,7 +80,7 @@ class MerchantServiceTest {
 
         @Test
         void updateProfileResolvesProvinceAndPersists() {
-                Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
                 merchant.pullEvents();
                 when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
                 when(addressLookupPort.resolveProvince("01"))
@@ -97,7 +98,7 @@ class MerchantServiceTest {
 
         @Test
         void updateProfileThrowsWhenNotOwner() {
-                Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
                 when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
 
                 assertThatThrownBy(() -> merchantService.updateProfile(new UpdateMerchantProfileCommand(
@@ -109,8 +110,8 @@ class MerchantServiceTest {
 
         @Test
         void closeRejectsWhenOpenOrdersExist() {
-                Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                merchant.updateProfile("Acme", null, null, null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
+                merchant.updateProfile("Acme", null, null, null, null, FIXED);
                 merchant.pullEvents();
                 when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
                 when(orderQueryPort.hasOpenOrdersForMerchant("m-1")).thenReturn(true);
@@ -133,8 +134,8 @@ class MerchantServiceTest {
 
         @Test
         void suspendChangesStatusAndPublishesEvent() {
-                Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                merchant.updateProfile("Acme", "logo", "desc", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
+                merchant.updateProfile("Acme", "logo", "desc", null, null, FIXED);
                 merchant.pullEvents();
                 when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
                 when(merchantRepository.save(merchant)).thenReturn(merchant);
@@ -149,9 +150,9 @@ class MerchantServiceTest {
 
         @Test
         void activateReenablesSuspendedMerchant() {
-                Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                merchant.updateProfile("Acme", "logo", "desc", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                merchant.suspend("admin-1", "violation", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
+                merchant.updateProfile("Acme", "logo", "desc", null, null, FIXED);
+                merchant.suspend("admin-1", "violation", FIXED);
                 merchant.pullEvents();
                 when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
                 when(merchantRepository.save(merchant)).thenReturn(merchant);
@@ -166,8 +167,8 @@ class MerchantServiceTest {
 
         @Test
         void closeSucceedsWhenNoOpenOrders() {
-                Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-                merchant.updateProfile("Acme", null, null, null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
+                merchant.updateProfile("Acme", null, null, null, null, FIXED);
                 merchant.pullEvents();
                 when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
                 when(orderQueryPort.hasOpenOrdersForMerchant("m-1")).thenReturn(false);
@@ -181,7 +182,7 @@ class MerchantServiceTest {
 
         @Test
         void getByOwnerReturnsResult() {
-                Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
                 when(merchantRepository.findByOwnerId("owner-1")).thenReturn(Optional.of(merchant));
 
                 Merchant result = merchantService.getByOwner("owner-1");
@@ -202,7 +203,7 @@ class MerchantServiceTest {
 
         @Test
         void updateCommissionRateAppliesRateAndPublishesEvent() {
-                Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
                 merchant.pullEvents();
                 when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
                 when(merchantRepository.save(merchant)).thenReturn(merchant);

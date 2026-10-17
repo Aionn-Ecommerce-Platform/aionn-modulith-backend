@@ -1,5 +1,7 @@
 package com.aionn.promotion.domain.model;
 
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
+
 import com.aionn.promotion.domain.exception.PromotionException;
 import com.aionn.promotion.domain.valueobject.UserVoucherStatus;
 import com.aionn.sharedkernel.domain.vo.Money;
@@ -35,7 +37,7 @@ class UserVoucherTest {
 
     @Test
     void claimWithoutClockUsesSystemTime() {
-        UserVoucher uv = UserVoucher.claim("uv-2", "V-2", "user-2", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        UserVoucher uv = UserVoucher.claim("uv-2", "V-2", "user-2", FIXED);
 
         assertThat(uv.getClaimedAt()).isNotNull();
         assertThat(uv.getStatus()).isEqualTo(UserVoucherStatus.CLAIMED);
@@ -59,7 +61,7 @@ class UserVoucherTest {
     void reserveWithoutClockUsesSystemTime() {
         UserVoucher uv = claimed();
 
-        uv.reserve("order-1", NOW.plusSeconds(900), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        uv.reserve("order-1", NOW.plusSeconds(900), FIXED);
 
         assertThat(uv.getStatus()).isEqualTo(UserVoucherStatus.RESERVED);
     }
@@ -91,7 +93,7 @@ class UserVoucherTest {
         UserVoucher uv = claimed();
         uv.reserve("order-1", NOW.plusSeconds(900), CLOCK);
 
-        uv.apply(AMOUNT, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        uv.apply(AMOUNT, FIXED);
 
         assertThat(uv.getStatus()).isEqualTo(UserVoucherStatus.APPLIED);
     }
@@ -125,7 +127,7 @@ class UserVoucherTest {
         UserVoucher uv = claimed();
         uv.reserve("order-1", NOW.plusSeconds(900), CLOCK);
 
-        uv.release("expired", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        uv.release("expired", FIXED);
 
         assertThat(uv.getStatus()).isEqualTo(UserVoucherStatus.RELEASED);
     }
@@ -158,7 +160,7 @@ class UserVoucherTest {
     void expireWithoutClockUsesSystemTime() {
         UserVoucher uv = claimed();
 
-        uv.expire(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        uv.expire(FIXED);
 
         assertThat(uv.getStatus()).isEqualTo(UserVoucherStatus.EXPIRED);
     }

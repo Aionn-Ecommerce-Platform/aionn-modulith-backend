@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -35,7 +36,7 @@ class ReconciliationServiceTest {
     private EventPublisher eventPublisher;
 
     private final Instant fixedInstant = Instant.parse("2026-01-01T00:00:00Z");
-    private final Clock clock = Clock.fixed(fixedInstant, java.time.ZoneOffset.UTC);
+    private final Clock clock = FIXED;
 
     private ReconciliationService service;
 

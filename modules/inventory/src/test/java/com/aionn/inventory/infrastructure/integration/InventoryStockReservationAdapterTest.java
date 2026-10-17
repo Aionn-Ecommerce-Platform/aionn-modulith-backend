@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 @ExtendWith(MockitoExtension.class)
 class InventoryStockReservationAdapterTest {
@@ -40,7 +41,7 @@ class InventoryStockReservationAdapterTest {
 
     private static StockReservation reserved(String reservationId, String skuId) {
         StockReservation reservation = StockReservation.reserve(
-                reservationId, skuId, "WH_1", "ORDER_1", 2, Instant.now().plusSeconds(300), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                reservationId, skuId, "WH_1", "ORDER_1", 2, Instant.now().plusSeconds(300), FIXED);
         reservation.pullEvents();
         return reservation;
     }

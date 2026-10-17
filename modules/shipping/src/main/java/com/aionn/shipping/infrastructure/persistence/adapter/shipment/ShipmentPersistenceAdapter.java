@@ -49,4 +49,12 @@ public class ShipmentPersistenceAdapter implements ShipmentPersistencePort {
                 PageRequest.of(0, Math.max(1, batchSize)))
                 .stream().map(mapper::toDomain).toList();
     }
+
+    @Override
+    public List<Shipment> findInTransitOlderThan(java.time.Instant cutoff, int batchSize) {
+        Set<String> transitStatuses = Set.of("REGISTERED", "PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY");
+        return jpa.findByStatusInAndUpdatedAtBefore(transitStatuses, cutoff,
+                PageRequest.of(0, Math.max(1, batchSize)))
+                .stream().map(mapper::toDomain).toList();
+    }
 }

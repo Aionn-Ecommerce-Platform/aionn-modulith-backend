@@ -1,5 +1,7 @@
 package com.aionn.shipping.infrastructure.integration;
 
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
+
 import com.aionn.shipping.application.dto.rate.result.ShippingQuoteResult;
 import com.aionn.shipping.application.dto.shipment.command.CreateShipmentCommand;
 import com.aionn.shipping.application.dto.shipment.command.QuoteShippingCommand;
@@ -75,7 +77,7 @@ class ShippingFulfillmentAdapterTest {
                 com.aionn.shipping.domain.model.Shipment createdShipment = com.aionn.shipping.domain.model.Shipment
                                 .request(
                                                 "S_1", "O_1", "M_1", "U_1", addressVal, dimensionsVal,
-                                                BigDecimal.ZERO, BigDecimal.valueOf(20000), "VND", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                                                BigDecimal.ZERO, BigDecimal.valueOf(20000), "VND", FIXED);
                 ShipmentResult registeredResult = new ShipmentResult(
                                 "S_1", "O_1", "M_1", "U_1", "TR_1", "C_1", "L_1",
                                 BigDecimal.ZERO, BigDecimal.valueOf(20000), "VND", "REGISTERED",

@@ -32,6 +32,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 @ExtendWith(MockitoExtension.class)
 class BrandServiceTest {
@@ -78,7 +79,7 @@ class BrandServiceTest {
 
     @Test
     void updateAppliesChangesAndSaves() {
-        Brand brand = Brand.create(BRAND_ID, "Acme", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Brand brand = Brand.create(BRAND_ID, "Acme", null, null, FIXED);
         brand.pullEvents();
         when(brandRepository.findById(BRAND_ID)).thenReturn(Optional.of(brand));
         when(brandRepository.existsByName("Acme New")).thenReturn(false);
@@ -93,7 +94,7 @@ class BrandServiceTest {
 
     @Test
     void updateRejectsWhenNewNameCollides() {
-        Brand brand = Brand.create(BRAND_ID, "Acme", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Brand brand = Brand.create(BRAND_ID, "Acme", null, null, FIXED);
         brand.pullEvents();
         when(brandRepository.findById(BRAND_ID)).thenReturn(Optional.of(brand));
         when(brandRepository.existsByName("Zenith")).thenReturn(true);
@@ -108,7 +109,7 @@ class BrandServiceTest {
 
     @Test
     void updateAllowsSameNameCaseInsensitive() {
-        Brand brand = Brand.create(BRAND_ID, "Acme", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Brand brand = Brand.create(BRAND_ID, "Acme", null, null, FIXED);
         brand.pullEvents();
         when(brandRepository.findById(BRAND_ID)).thenReturn(Optional.of(brand));
         when(brandRepository.save(any(Brand.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -130,7 +131,7 @@ class BrandServiceTest {
 
     @Test
     void deleteSoftDeletesAndPublishesEvent() {
-        Brand brand = Brand.create(BRAND_ID, "Acme", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Brand brand = Brand.create(BRAND_ID, "Acme", null, null, FIXED);
         brand.pullEvents();
         when(brandRepository.findById(BRAND_ID)).thenReturn(Optional.of(brand));
 
@@ -153,7 +154,7 @@ class BrandServiceTest {
 
     @Test
     void getReturnsResultWhenBrandFound() {
-        Brand brand = Brand.create(BRAND_ID, "Acme", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Brand brand = Brand.create(BRAND_ID, "Acme", null, null, FIXED);
         when(brandRepository.findById(BRAND_ID)).thenReturn(Optional.of(brand));
 
         Brand result = brandService.get(BRAND_ID);
@@ -174,7 +175,7 @@ class BrandServiceTest {
 
     @Test
     void listReturnsPagedResults() {
-        Brand brand = Brand.create(BRAND_ID, "Acme", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Brand brand = Brand.create(BRAND_ID, "Acme", null, null, FIXED);
         when(brandRepository.list(any(OffsetPagination.class))).thenReturn(List.of(brand));
         when(brandRepository.count()).thenReturn(1L);
 

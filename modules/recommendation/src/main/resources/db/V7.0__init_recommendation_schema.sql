@@ -18,6 +18,7 @@ CREATE TABLE recommendation_interactions (
     weight           NUMERIC(5,2) NOT NULL,
     occurred_at      TIMESTAMPTZ  NOT NULL,
     created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    source_event_id  VARCHAR(100),
     CONSTRAINT chk_rec_interaction_weight CHECK (weight > 0)
 );
 
@@ -34,6 +35,17 @@ CREATE INDEX idx_rec_interactions_type_user
 -- Supports the incremental profile refresh sweep and the age-based prune.
 CREATE INDEX idx_rec_interactions_occurred_at
     ON recommendation_interactions (occurred_at);
+
+-- One signal per (event, user, product, type). An order carrying two lines for the same product
+-- reaches the listener as one event that produces two rows, and collapses to a single purchase signal
+-- here. That matches the rule already applied to quantity: needing five of something is not liking it
+-- five times more.
+--
+-- Leading on source_event_id also serves a lookup by event alone - what a dead-letter replay already
+-- wrote - so no second index is needed.
+CREATE UNIQUE INDEX uq_rec_interactions_source_event
+    ON recommendation_interactions (source_event_id, user_id, product_id, interaction_type)
+    WHERE source_event_id IS NOT NULL;
 
 -- Aggregated affinity per user, rewritten by the profile refresh scheduler. Scores are normalised
 -- to [0,1] so content scoring can combine them with other signals without rescaling.
@@ -80,3 +92,20 @@ CREATE TABLE recommendation_popularity (
 
 CREATE INDEX idx_rec_popularity_score
     ON recommendation_popularity (popularity_score DESC);
+
+-- Erasure marks.
+--
+-- Deleting an account removes this module's interactions and affinity profile, but two things can put
+-- them back afterwards: the profile refresh sweep, which reads its batch of user IDs before processing
+-- them and so can refresh an account erased in between, and at-least-once outbox delivery, which can
+-- replay a view or purchase event for an account that no longer exists. Neither is stopped by the
+-- deletes themselves, because there is nothing left to distinguish "erased" from "never had any
+-- behavioural data".
+--
+-- A mark is the bare user identifier and the time erasure was honoured. It holds no behavioural data
+-- and is retained indefinitely: pruning it would reopen the leak it exists to close, and at one row
+-- per deleted account it is bounded by account deletions rather than by activity.
+CREATE TABLE recommendation_erased_users (
+    user_id   VARCHAR(50) PRIMARY KEY,
+    erased_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

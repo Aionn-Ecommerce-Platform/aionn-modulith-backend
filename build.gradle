@@ -42,6 +42,7 @@ subprojects {
     tasks.withType(Test).configureEach {
         useJUnitPlatform()
         systemProperty 'file.encoding', 'UTF-8'
+        maxHeapSize = '1024m'
         finalizedBy tasks.named('jacocoTestReport')
     }
 
@@ -63,6 +64,12 @@ subprojects {
         testCompileOnly 'org.projectlombok:lombok'
         testAnnotationProcessor 'org.projectlombok:lombok'
         testImplementation 'org.junit.jupiter:junit-jupiter'
+    }
+
+    if (project.name != 'shared-kernel') {
+        dependencies {
+            testImplementation(testFixtures(project(':shared-kernel')))
+        }
     }
 }
 

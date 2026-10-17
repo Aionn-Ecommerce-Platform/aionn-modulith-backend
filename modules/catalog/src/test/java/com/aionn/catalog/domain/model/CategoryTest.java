@@ -9,6 +9,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 class CategoryTest {
 
@@ -16,7 +17,7 @@ class CategoryTest {
 
     @Test
     void createSetsActiveTrueAndEmitsCreatedEvent() {
-        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", FIXED);
 
         assertThat(category.isActive()).isTrue();
         assertThat(category.getDeletedAt()).isNull();
@@ -25,7 +26,7 @@ class CategoryTest {
 
     @Test
     void createRejectsBlankName() {
-        assertThatThrownBy(() -> Category.create(CATEGORY_ID, null, "", "x", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> Category.create(CATEGORY_ID, null, "", "x", FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
@@ -33,7 +34,7 @@ class CategoryTest {
 
     @Test
     void createRejectsBlankSlug() {
-        assertThatThrownBy(() -> Category.create(CATEGORY_ID, null, "Electronics", " ", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> Category.create(CATEGORY_ID, null, "Electronics", " ", FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
@@ -41,7 +42,7 @@ class CategoryTest {
 
     @Test
     void createRejectsNullSlug() {
-        assertThatThrownBy(() -> Category.create(CATEGORY_ID, null, "Electronics", null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> Category.create(CATEGORY_ID, null, "Electronics", null, FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
@@ -49,7 +50,7 @@ class CategoryTest {
 
     @Test
     void createTrimsNameAndSlugConsistentlyOnStateAndEvent() {
-        Category category = Category.create(CATEGORY_ID, null, "  Electronics  ", "  electronics  ", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Category category = Category.create(CATEGORY_ID, null, "  Electronics  ", "  electronics  ", FIXED);
 
         assertThat(category.getName()).isEqualTo("Electronics");
         assertThat(category.getSlug()).isEqualTo("electronics");
@@ -62,10 +63,10 @@ class CategoryTest {
 
     @Test
     void updateAppliesAllFieldsWhenProvided() {
-        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", FIXED);
         category.pullEvents();
 
-        category.update("Renamed", "https://icon", false, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        category.update("Renamed", "https://icon", false, FIXED);
 
         assertThat(category.getName()).isEqualTo("Renamed");
         assertThat(category.getIconUrl()).isEqualTo("https://icon");
@@ -75,10 +76,10 @@ class CategoryTest {
 
     @Test
     void updateEmitsNoEventWhenNothingChanged() {
-        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", FIXED);
         category.pullEvents();
 
-        category.update(null, null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        category.update(null, null, null, FIXED);
 
         assertThat(category.getName()).isEqualTo("Electronics");
         assertThat(category.isActive()).isTrue();
@@ -87,21 +88,21 @@ class CategoryTest {
 
     @Test
     void updateEmitsNoEventWhenAllValuesEqualCurrent() {
-        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        category.update("Renamed", "https://icon", false, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", FIXED);
+        category.update("Renamed", "https://icon", false, FIXED);
         category.pullEvents();
 
-        category.update("Renamed", "https://icon", false, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        category.update("Renamed", "https://icon", false, FIXED);
 
         assertThat(category.pullEvents()).isEmpty();
     }
 
     @Test
     void updateRejectsBlankName() {
-        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", FIXED);
         category.pullEvents();
 
-        assertThatThrownBy(() -> category.update("  ", null, null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> category.update("  ", null, null, FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
@@ -109,9 +110,9 @@ class CategoryTest {
 
     @Test
     void moveToSelfThrowsCycle() {
-        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", FIXED);
 
-        assertThatThrownBy(() -> category.moveTo(CATEGORY_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> category.moveTo(CATEGORY_ID, FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.CATEGORY_CYCLE.getCode());
@@ -119,10 +120,10 @@ class CategoryTest {
 
     @Test
     void moveToNewParentSucceeds() {
-        Category category = Category.create(CATEGORY_ID, "old-parent", "A", "a", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Category category = Category.create(CATEGORY_ID, "old-parent", "A", "a", FIXED);
         category.pullEvents();
 
-        category.moveTo("new-parent", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        category.moveTo("new-parent", FIXED);
 
         assertThat(category.getParentId()).isEqualTo("new-parent");
         assertThat(category.pullEvents()).hasSize(1);
@@ -130,19 +131,19 @@ class CategoryTest {
 
     @Test
     void moveToNullParentBecomesRoot() {
-        Category category = Category.create(CATEGORY_ID, "old-parent", "A", "a", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Category category = Category.create(CATEGORY_ID, "old-parent", "A", "a", FIXED);
         category.pullEvents();
 
-        category.moveTo(null, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        category.moveTo(null, FIXED);
 
         assertThat(category.getParentId()).isNull();
     }
 
     @Test
     void markDeletedSetsTimestampAndDeactivates() {
-        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", FIXED);
 
-        category.markDeleted(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        category.markDeleted(FIXED);
 
         assertThat(category.getDeletedAt()).isNotNull();
         assertThat(category.isActive()).isFalse();
@@ -150,21 +151,21 @@ class CategoryTest {
 
     @Test
     void markDeletedIsIdempotent() {
-        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        category.markDeleted(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", FIXED);
+        category.markDeleted(FIXED);
         category.pullEvents();
 
-        category.markDeleted(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        category.markDeleted(FIXED);
 
         assertThat(category.pullEvents()).isEmpty();
     }
 
     @Test
     void updateOnDeletedCategoryThrows() {
-        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        category.markDeleted(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", FIXED);
+        category.markDeleted(FIXED);
 
-        assertThatThrownBy(() -> category.update("Renamed", null, true, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> category.update("Renamed", null, true, FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.CATEGORY_NOT_FOUND.getCode());
@@ -172,10 +173,10 @@ class CategoryTest {
 
     @Test
     void moveOnDeletedCategoryThrows() {
-        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        category.markDeleted(java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", FIXED);
+        category.markDeleted(FIXED);
 
-        assertThatThrownBy(() -> category.moveTo("new-parent", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+        assertThatThrownBy(() -> category.moveTo("new-parent", FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.CATEGORY_NOT_FOUND.getCode());

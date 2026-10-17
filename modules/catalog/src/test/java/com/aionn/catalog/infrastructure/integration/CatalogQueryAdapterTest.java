@@ -18,6 +18,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 @ExtendWith(MockitoExtension.class)
 class CatalogQueryAdapterTest {
@@ -33,10 +34,10 @@ class CatalogQueryAdapterTest {
     private CatalogQueryAdapter adapter;
 
     private Product publishedProduct() {
-        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        product.categorize(List.of("01HZCAT0000000000000000001"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        product.defineVariant("sku-1", Map.of("color", "red"), Money.of(new BigDecimal("100"), "VND"), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
-        product.publish(ADMIN_ID, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
+        product.categorize(List.of("01HZCAT0000000000000000001"), FIXED);
+        product.defineVariant("sku-1", Map.of("color", "red"), Money.of(new BigDecimal("100"), "VND"), FIXED);
+        product.publish(ADMIN_ID, FIXED);
         product.pullEvents();
         return product;
     }
@@ -111,7 +112,7 @@ class CatalogQueryAdapterTest {
     @Test
     void searchExcludesTakenDownProducts() {
         Product takenDown = publishedProduct();
-        takenDown.emergencyTakedown(ADMIN_ID, "abuse", java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        takenDown.emergencyTakedown(ADMIN_ID, "abuse", FIXED);
         takenDown.pullEvents();
         when(productRepository.searchPublished("widget", 10, 0)).thenReturn(List.of(takenDown));
 

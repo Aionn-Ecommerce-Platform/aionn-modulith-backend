@@ -1,5 +1,7 @@
 package com.aionn.chat.domain.model;
 
+import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
+
 import com.aionn.chat.domain.exception.ChatErrorCode;
 import com.aionn.chat.domain.exception.ChatException;
 import org.junit.jupiter.api.Test;
@@ -22,7 +24,7 @@ class MerchantAutoReplyTest {
 
     @Test
     void createUsesDefaultsAndIsDisabled() {
-        MerchantAutoReply ar = MerchantAutoReply.create(MERCHANT, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        MerchantAutoReply ar = MerchantAutoReply.create(MERCHANT, FIXED);
 
         assertThat(ar.getMerchantId()).isEqualTo(MERCHANT);
         assertThat(ar.isEnabled()).isFalse();
@@ -34,21 +36,21 @@ class MerchantAutoReplyTest {
 
     @Test
     void updateRejectsStartAfterEnd() {
-        MerchantAutoReply ar = MerchantAutoReply.create(MERCHANT, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        MerchantAutoReply ar = MerchantAutoReply.create(MERCHANT, FIXED);
 
         assertThatThrownBy(() -> ar.update(true, "hi", "bye",
                 LocalTime.of(20, 0), LocalTime.of(8, 0),
-                EnumSet.of(DayOfWeek.MONDAY), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC)))
+                EnumSet.of(DayOfWeek.MONDAY), FIXED))
                 .isInstanceOf(ChatException.class)
                 .extracting("errorCode").isEqualTo(ChatErrorCode.INVALID_ARGUMENT.getCode());
     }
 
     @Test
     void updateAppliesValuesAndRecordsEvent() {
-        MerchantAutoReply ar = MerchantAutoReply.create(MERCHANT, java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+        MerchantAutoReply ar = MerchantAutoReply.create(MERCHANT, FIXED);
 
         ar.update(true, "Hello", "Away", LocalTime.of(9, 0), LocalTime.of(18, 0),
-                EnumSet.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY), java.time.Clock.fixed(java.time.Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC));
+                EnumSet.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY), FIXED);
 
         assertThat(ar.isEnabled()).isTrue();
         assertThat(ar.getGreeting()).isEqualTo("Hello");
