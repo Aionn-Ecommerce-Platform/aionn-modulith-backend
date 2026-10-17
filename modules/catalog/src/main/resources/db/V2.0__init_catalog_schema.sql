@@ -9,6 +9,8 @@ CREATE TABLE merchants (
     stripe_account_id VARCHAR(100),
     stripe_charges_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     stripe_payouts_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    province_code VARCHAR(10),
+    province_name VARCHAR(100),
     version     BIGINT      NOT NULL DEFAULT 0,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -97,6 +99,7 @@ CREATE TABLE product_variants (
     attribute_values JSONB       NOT NULL DEFAULT '{}'::jsonb,
     price            NUMERIC(18,2),
     currency         VARCHAR(3),
+    original_price   NUMERIC(18,2),
     CONSTRAINT fk_variants_product FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE
 );
 CREATE INDEX idx_variants_product ON product_variants(product_id);
@@ -162,10 +165,6 @@ CREATE UNIQUE INDEX uq_reviews_user_product ON product_reviews(user_id, product_
 CREATE INDEX idx_reviews_product ON product_reviews(product_id, created_at DESC);
 CREATE INDEX idx_reviews_user ON product_reviews(user_id);
 CREATE INDEX idx_reviews_status ON product_reviews(status);
-CREATE INDEX idx_reviews_reported ON product_reviews(status) WHERE status = 'REPORTED';
-
-ALTER TABLE product_variants ADD COLUMN original_price NUMERIC(18, 2);
-
 CREATE TABLE product_sold_counters (
     product_id  VARCHAR(50) PRIMARY KEY,
     sold_count  BIGINT      NOT NULL DEFAULT 0,
@@ -173,8 +172,6 @@ CREATE TABLE product_sold_counters (
     CONSTRAINT chk_sold_count_nonneg CHECK (sold_count >= 0)
 );
 
-ALTER TABLE merchants ADD COLUMN province_code VARCHAR(10);
-ALTER TABLE merchants ADD COLUMN province_name VARCHAR(100);
 CREATE INDEX idx_merchants_province ON merchants(province_code);
 
 CREATE TABLE catalog_settings (
@@ -186,8 +183,9 @@ CREATE TABLE catalog_settings (
 INSERT INTO catalog_settings (key, value) VALUES ('default_commission_rate', '0.0500');
 
 CREATE TABLE user_browsing_history (
-    user_id      VARCHAR(50) PRIMARY KEY,
-    category_ids JSONB       NOT NULL DEFAULT '[]'::jsonb,
-    brand_ids    JSONB       NOT NULL DEFAULT '[]'::jsonb,
-    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    user_id         VARCHAR(50) PRIMARY KEY,
+    category_ids    JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    brand_ids       JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    recent_searches JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

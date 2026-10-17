@@ -20,11 +20,23 @@ INSERT INTO warehouses (warehouse_id, merchant_id, address, priority_level, stat
 -- Seed Inventory Items
 
 INSERT INTO inventory_items (sku_id, warehouse_id, physical_qty, available_qty, safety_stock_qty, is_locked, version, created_at, updated_at) VALUES
-('SKU_00001', 'WH_002', 501, 501, 21, FALSE, 0, NOW(), NOW()),
-('SKU_00002', 'WH_003', 835, 835, 22, FALSE, 0, NOW(), NOW()),
-('SKU_00003', 'WH_004', 309, 309, 19, FALSE, 0, NOW(), NOW()),
-('SKU_00004', 'WH_005', 668, 668, 22, FALSE, 0, NOW(), NOW()),
-('SKU_00005', 'WH_006', 920, 920, 15, FALSE, 0, NOW(), NOW()),
+('SKU_PR0001_BLK', 'WH_002', 150, 150, 10, FALSE, 0, NOW(), NOW()),
+('SKU_PR0001_WHT', 'WH_002', 200, 200, 10, FALSE, 0, NOW(), NOW()),
+('SKU_PR0002_M_NVY', 'WH_003', 80, 80, 5, FALSE, 0, NOW(), NOW()),
+('SKU_PR0002_L_NVY', 'WH_003', 120, 120, 5, FALSE, 0, NOW(), NOW()),
+('SKU_PR0002_M_GRY', 'WH_003', 0, 0, 5, FALSE, 0, NOW(), NOW()),
+('SKU_PR0002_L_GRY', 'WH_003', 95, 95, 5, FALSE, 0, NOW(), NOW()),
+('SKU_PR0002_XL_BLK', 'WH_003', 15, 15, 2, FALSE, 0, NOW(), NOW()),
+('SKU_PR0003_39_WHT', 'WH_004', 50, 50, 5, FALSE, 0, NOW(), NOW()),
+('SKU_PR0003_40_WHT', 'WH_004', 60, 60, 5, FALSE, 0, NOW(), NOW()),
+('SKU_PR0003_41_BLK', 'WH_004', 70, 70, 5, FALSE, 0, NOW(), NOW()),
+('SKU_PR0003_42_BLK', 'WH_004', 80, 80, 5, FALSE, 0, NOW(), NOW()),
+('SKU_PR0004_S_GRY', 'WH_005', 110, 110, 10, FALSE, 0, NOW(), NOW()),
+('SKU_PR0004_M_GRY', 'WH_005', 130, 130, 10, FALSE, 0, NOW(), NOW()),
+('SKU_PR0004_L_BLK', 'WH_005', 140, 140, 10, FALSE, 0, NOW(), NOW()),
+('SKU_PR0005_256_BLK', 'WH_006', 45, 45, 3, FALSE, 0, NOW(), NOW()),
+('SKU_PR0005_512_BLK', 'WH_006', 25, 25, 2, FALSE, 0, NOW(), NOW()),
+('SKU_PR0005_256_GRN', 'WH_006', 30, 30, 3, FALSE, 0, NOW(), NOW()),
 ('SKU_00006', 'WH_007', 251, 251, 27, FALSE, 0, NOW(), NOW()),
 ('SKU_00007', 'WH_008', 927, 927, 18, FALSE, 0, NOW(), NOW()),
 ('SKU_00008', 'WH_009', 348, 348, 23, FALSE, 0, NOW(), NOW()),
@@ -1501,41 +1513,3 @@ INSERT INTO inventory_items (sku_id, warehouse_id, physical_qty, available_qty, 
 ('SKU_01475', 'WH_010', 384, 384, 17, FALSE, 0, NOW(), NOW()),
 ('SKU_01476', 'WH_010', 634, 634, 23, FALSE, 0, NOW(), NOW()),
 ('SKU_01477', 'WH_011', 271, 271, 25, FALSE, 0, NOW(), NOW());
-
--- Seed inventory data for new product variants PR_0001 - PR_0005
-
-DELETE FROM inventory_items WHERE sku_id IN (
-  'SKU_PR0001_BLK', 'SKU_PR0001_WHT',
-  'SKU_PR0002_M_NVY', 'SKU_PR0002_L_NVY', 'SKU_PR0002_M_GRY', 'SKU_PR0002_L_GRY', 'SKU_PR0002_XL_BLK',
-  'SKU_PR0003_39_WHT', 'SKU_PR0003_40_WHT', 'SKU_PR0003_41_BLK', 'SKU_PR0003_42_BLK',
-  'SKU_PR0004_S_GRY', 'SKU_PR0004_M_GRY', 'SKU_PR0004_L_BLK',
-  'SKU_PR0005_256_BLK', 'SKU_PR0005_512_BLK', 'SKU_PR0005_256_GRN'
-);
-
-INSERT INTO inventory_items (sku_id, warehouse_id, physical_qty, available_qty, safety_stock_qty, is_locked, version, created_at, updated_at) VALUES
--- PR_0001 in WH_002
-('SKU_PR0001_BLK', 'WH_002', 150, 150, 10, FALSE, 0, NOW(), NOW()),
-('SKU_PR0001_WHT', 'WH_002', 200, 200, 10, FALSE, 0, NOW(), NOW()),
-
--- PR_0002 in WH_003
-('SKU_PR0002_M_NVY', 'WH_003', 80, 80, 5, FALSE, 0, NOW(), NOW()),
-('SKU_PR0002_L_NVY', 'WH_003', 120, 120, 5, FALSE, 0, NOW(), NOW()),
-('SKU_PR0002_M_GRY', 'WH_003', 0, 0, 5, FALSE, 0, NOW(), NOW()), -- Set grey M to 0 stock to test out-of-stock behavior
-('SKU_PR0002_L_GRY', 'WH_003', 95, 95, 5, FALSE, 0, NOW(), NOW()),
-('SKU_PR0002_XL_BLK', 'WH_003', 15, 15, 2, FALSE, 0, NOW(), NOW()),
-
--- PR_0003 in WH_004
-('SKU_PR0003_39_WHT', 'WH_004', 50, 50, 5, FALSE, 0, NOW(), NOW()),
-('SKU_PR0003_40_WHT', 'WH_004', 60, 60, 5, FALSE, 0, NOW(), NOW()),
-('SKU_PR0003_41_BLK', 'WH_004', 70, 70, 5, FALSE, 0, NOW(), NOW()),
-('SKU_PR0003_42_BLK', 'WH_004', 80, 80, 5, FALSE, 0, NOW(), NOW()),
-
--- PR_0004 in WH_005
-('SKU_PR0004_S_GRY', 'WH_005', 110, 110, 10, FALSE, 0, NOW(), NOW()),
-('SKU_PR0004_M_GRY', 'WH_005', 130, 130, 10, FALSE, 0, NOW(), NOW()),
-('SKU_PR0004_L_BLK', 'WH_005', 140, 140, 10, FALSE, 0, NOW(), NOW()),
-
--- PR_0005 in WH_006
-('SKU_PR0005_256_BLK', 'WH_006', 45, 45, 3, FALSE, 0, NOW(), NOW()),
-('SKU_PR0005_512_BLK', 'WH_006', 25, 25, 2, FALSE, 0, NOW(), NOW()),
-('SKU_PR0005_256_GRN', 'WH_006', 30, 30, 3, FALSE, 0, NOW(), NOW());

@@ -18,6 +18,12 @@ shipping:
     delay-ms: ${SHIPPING_STATUS_POLLER_DELAY_MS:60000}
     batch-size: ${SHIPPING_STATUS_POLLER_BATCH:100}
 
+  auto-delivery:
+    enabled: ${SHIPPING_AUTO_DELIVERY_ENABLED:true}
+    delay-ms: ${SHIPPING_AUTO_DELIVERY_DELAY_MS:1200000}
+    transit-threshold-seconds: ${SHIPPING_AUTO_DELIVERY_THRESHOLD_SECONDS:1200}
+    batch-size: ${SHIPPING_AUTO_DELIVERY_BATCH:50}
+
   default-dimensions:
     weight-gram: ${SHIPPING_DEFAULT_DIM_WEIGHT_GRAM:500}
     length-cm: ${SHIPPING_DEFAULT_DIM_LENGTH_CM:20}

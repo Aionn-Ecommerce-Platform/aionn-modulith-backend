@@ -20,4 +20,9 @@ public interface ShipmentPersistencePort {
      * not yet in a terminal state).
      */
     List<Shipment> findActiveTracking(int batchSize);
+
+    /**
+     * Shipments in non-terminal shipping states updated before the specified cutoff.
+     */
+    List<Shipment> findInTransitOlderThan(java.time.Instant cutoff, int batchSize);
 }

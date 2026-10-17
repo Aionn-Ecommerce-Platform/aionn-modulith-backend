@@ -23,7 +23,7 @@ CREATE INDEX idx_campaigns_status_dates ON promotion_campaigns(status, start_dat
 
 CREATE TABLE vouchers (
     voucher_code    VARCHAR(50) PRIMARY KEY,
-    campaign_id     VARCHAR(50) NOT NULL,
+    campaign_id     VARCHAR(50),
     discount_amount NUMERIC(18,2) NOT NULL,
     currency        VARCHAR(3)  NOT NULL,
     usage_limit     INT NOT NULL,
@@ -31,14 +31,22 @@ CREATE TABLE vouchers (
     reserved_count  INT NOT NULL DEFAULT 0,
     valid_from      TIMESTAMPTZ,
     valid_until     TIMESTAMPTZ,
+    scope           VARCHAR(20) NOT NULL DEFAULT 'PLATFORM',
+    merchant_id     VARCHAR(50),
     version         BIGINT      NOT NULL DEFAULT 0,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_vouchers_campaign FOREIGN KEY (campaign_id) REFERENCES promotion_campaigns(campaign_id),
     CONSTRAINT chk_vouchers_counts CHECK (used_count >= 0 AND reserved_count >= 0
-                                          AND (used_count + reserved_count) <= usage_limit)
+                                          AND (used_count + reserved_count) <= usage_limit),
+    CONSTRAINT chk_voucher_owner CHECK (
+        (scope = 'PLATFORM' AND campaign_id IS NOT NULL AND merchant_id IS NULL)
+        OR
+        (scope = 'SHOP' AND campaign_id IS NULL AND merchant_id IS NOT NULL)
+    )
 );
 CREATE INDEX idx_vouchers_campaign ON vouchers(campaign_id);
+CREATE INDEX idx_vouchers_merchant ON vouchers(merchant_id);
 
 CREATE TABLE user_vouchers (
     user_voucher_id      VARCHAR(50) PRIMARY KEY,
@@ -63,18 +71,21 @@ CREATE INDEX idx_user_vouchers_status_expires      ON user_vouchers(status, rese
 CREATE INDEX idx_user_vouchers_order               ON user_vouchers(reserved_order_id);
 
 CREATE TABLE promotion_banners (
-    banner_id      VARCHAR(50) PRIMARY KEY,
-    title          VARCHAR(150) NOT NULL,
-    image_url      VARCHAR(500) NOT NULL,
-    link_url       VARCHAR(500) NOT NULL,
-    display_order  INT NOT NULL DEFAULT 0,
-    active         BOOLEAN NOT NULL DEFAULT TRUE,
-    version        BIGINT NOT NULL DEFAULT 0,
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    banner_id        VARCHAR(50) PRIMARY KEY,
+    title            VARCHAR(150) NOT NULL,
+    image_url        VARCHAR(500) NOT NULL,
+    link_url         VARCHAR(500),
+    image_public_id  VARCHAR(255) NOT NULL DEFAULT 'legacy/promotion/banners/unmanaged',
+    display_order    INT NOT NULL DEFAULT 0,
+    active           BOOLEAN NOT NULL DEFAULT TRUE,
+    version          BIGINT NOT NULL DEFAULT 0,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_promotion_banners_active ON promotion_banners(active, display_order);
+
+CREATE SEQUENCE promotion_banner_display_order_seq;
 
 -- FLASH SALE REGISTRATIONS — merchant signs a SKU into a FLASH_SALE
 -- campaign; admin approves so the platform stays curated.
@@ -109,18 +120,17 @@ CREATE INDEX idx_flash_sale_merchant
 CREATE UNIQUE INDEX uq_flash_sale_campaign_sku
     ON flash_sale_registrations(campaign_id, sku_id);
 
--- Platform vouchers belong to campaigns; shop vouchers belong to merchants.
-ALTER TABLE vouchers
-    ADD COLUMN scope VARCHAR(20) NOT NULL DEFAULT 'PLATFORM',
-    ADD COLUMN merchant_id VARCHAR(50);
+CREATE TABLE flash_sale_allocations (
+    order_id        VARCHAR(50) NOT NULL,
+    registration_id VARCHAR(50) NOT NULL,
+    quantity        INTEGER NOT NULL CHECK (quantity > 0),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    released_at     TIMESTAMPTZ,
+    PRIMARY KEY (order_id, registration_id),
+    CONSTRAINT fk_flash_sale_allocation_registration
+        FOREIGN KEY (registration_id) REFERENCES flash_sale_registrations(registration_id)
+);
 
-ALTER TABLE vouchers ALTER COLUMN campaign_id DROP NOT NULL;
-
-ALTER TABLE vouchers
-    ADD CONSTRAINT chk_voucher_owner CHECK (
-        (scope = 'PLATFORM' AND campaign_id IS NOT NULL AND merchant_id IS NULL)
-        OR
-        (scope = 'SHOP' AND campaign_id IS NULL AND merchant_id IS NOT NULL)
-    );
-
-CREATE INDEX idx_vouchers_merchant ON vouchers(merchant_id);
+CREATE INDEX idx_flash_sale_allocations_active
+    ON flash_sale_allocations(order_id)
+    WHERE released_at IS NULL;
