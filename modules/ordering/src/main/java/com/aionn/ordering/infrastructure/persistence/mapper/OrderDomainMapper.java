@@ -42,6 +42,7 @@ public class OrderDomainMapper {
         Money total = e.getTotalAmount() == null ? null : Money.of(e.getTotalAmount(), e.getCurrency());
         return new Order(
                 e.getOrderId(),
+                e.getOrderSn(),
                 e.getParentOrderId(),
                 e.getUserId(),
                 e.getMerchantId(),
@@ -65,11 +66,13 @@ public class OrderDomainMapper {
         OrderEntity entity = existing != null ? existing
                 : OrderEntity.builder()
                         .orderId(order.getOrderId())
+                        .orderSn(order.getOrderSn())
                         .userId(order.getUserId())
                         .merchantId(order.getMerchantId())
                         .proposalId(order.getProposalId())
                         .currency(order.getCurrency())
                         .build();
+        entity.setOrderSn(order.getOrderSn());
         entity.setParentOrderId(order.getParentOrderId());
         entity.setPaymentMethodId(order.getPaymentMethodId());
         entity.setPaymentId(order.getPaymentId());

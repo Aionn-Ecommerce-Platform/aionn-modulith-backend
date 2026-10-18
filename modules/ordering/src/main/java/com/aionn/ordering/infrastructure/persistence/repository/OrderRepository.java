@@ -18,6 +18,13 @@ public interface OrderRepository extends JpaRepository<OrderEntity, String> {
   Optional<OrderEntity> findById(String orderId);
 
   @EntityGraph(attributePaths = "items")
+  Optional<OrderEntity> findByOrderSn(String orderSn);
+
+  @EntityGraph(attributePaths = "items")
+  @Query("SELECT o FROM OrderEntity o WHERE o.orderId = :idOrSn OR o.orderSn = :idOrSn")
+  Optional<OrderEntity> findByIdOrOrderSn(String idOrSn);
+
+  @EntityGraph(attributePaths = "items")
   List<OrderEntity> findByUserIdOrderByCreatedAtDesc(String userId, Pageable pageable);
 
   @EntityGraph(attributePaths = "items")

@@ -9,6 +9,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 @Component
@@ -18,7 +19,15 @@ public class MerchantAutoReplyDomainMapper {
         Set<DayOfWeek> days = EnumSet.noneOf(DayOfWeek.class);
         if (e.getWorkingDays() != null) {
             for (String d : e.getWorkingDays()) {
-                days.add(DayOfWeek.valueOf(d));
+                if (d == null || d.isBlank()) continue;
+                try {
+                    days.add(DayOfWeek.valueOf(d.trim().toUpperCase(Locale.ROOT)));
+                } catch (IllegalArgumentException ex) {
+                    try {
+                        days.add(DayOfWeek.of(Integer.parseInt(d.trim())));
+                    } catch (Exception ignored) {
+                    }
+                }
             }
         }
         return new MerchantAutoReply(

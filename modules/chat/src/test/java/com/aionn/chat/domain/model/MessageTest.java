@@ -148,6 +148,22 @@ class MessageTest {
     }
 
     @Test
+    void send_imageWithBody_success() {
+        Message m = Message.send("M_1", "C_1", "U_b", ParticipantRole.BUYER, MessageType.IMAGE,
+                new MessagePayload("https://cdn.example.com/a.png", Map.of()), List.of("U_m"), FIXED);
+        assertThat(m.getType()).isEqualTo(MessageType.IMAGE);
+        assertThat(m.previewBody()).isEqualTo("[Photo]");
+    }
+
+    @Test
+    void send_imageWithMetadata_success() {
+        Message m = Message.send("M_1", "C_1", "U_b", ParticipantRole.BUYER, MessageType.IMAGE,
+                new MessagePayload(null, Map.of("imageUrl", "https://cdn.example.com/a.png")), List.of("U_m"), FIXED);
+        assertThat(m.getType()).isEqualTo(MessageType.IMAGE);
+        assertThat(m.previewBody()).isEqualTo("[Photo]");
+    }
+
+    @Test
     void send_productCardWithoutProductId_throwsInvalidArgument() {
         assertThatThrownBy(() -> Message.send("M_1", "C_1", "U_b", ParticipantRole.BUYER,
                 MessageType.PRODUCT_CARD, new MessagePayload(null, Map.of()), List.of("U_m"), FIXED))

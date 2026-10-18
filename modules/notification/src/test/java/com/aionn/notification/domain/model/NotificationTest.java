@@ -141,6 +141,20 @@ class NotificationTest {
     }
 
     @Test
+    void markReadFromFailedTransitionsToRead() {
+        Notification n = newNotification();
+        n.markFailed("smtp error", FIXED);
+        n.markFailed("smtp error", FIXED);
+        n.markFailed("smtp error", FIXED);
+        assertThat(n.getStatus()).isEqualTo(NotificationStatus.FAILED);
+
+        n.markRead(FIXED);
+
+        assertThat(n.getStatus()).isEqualTo(NotificationStatus.READ);
+        assertThat(n.getReadAt()).isNotNull();
+    }
+
+    @Test
     void softDeleteFromAnyNonDeletedStateAllowed() {
         Notification n = newNotification();
 

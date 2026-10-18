@@ -38,6 +38,7 @@ CREATE TABLE orders (
     address_country_code  VARCHAR(5),
     status                VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     reason_code           VARCHAR(50),
+    order_sn              VARCHAR(32) NOT NULL DEFAULT (TO_CHAR(NOW() AT TIME ZONE 'UTC', 'YYMMDD') || UPPER(SUBSTRING(MD5(RANDOM()::text || CLOCK_TIMESTAMP()::text), 1, 16))),
     version               BIGINT      NOT NULL DEFAULT 0,
     created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -45,9 +46,10 @@ CREATE TABLE orders (
     cancelled_at          TIMESTAMPTZ,
     CONSTRAINT fk_orders_parent FOREIGN KEY (parent_order_id) REFERENCES orders(order_id)
 );
-CREATE INDEX idx_orders_user           ON orders(user_id);
-CREATE INDEX idx_orders_merchant       ON orders(merchant_id);
-CREATE INDEX idx_orders_status_created ON orders(status, created_at);
+CREATE UNIQUE INDEX uq_orders_order_sn         ON orders(order_sn);
+CREATE INDEX idx_orders_user                   ON orders(user_id);
+CREATE INDEX idx_orders_merchant               ON orders(merchant_id);
+CREATE INDEX idx_orders_status_created         ON orders(status, created_at);
 CREATE INDEX idx_orders_parent ON orders(parent_order_id) WHERE parent_order_id IS NOT NULL;
 
 CREATE TABLE order_items (

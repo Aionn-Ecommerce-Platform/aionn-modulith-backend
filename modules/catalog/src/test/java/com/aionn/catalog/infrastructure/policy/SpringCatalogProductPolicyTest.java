@@ -9,9 +9,10 @@ class SpringCatalogProductPolicyTest {
 
     @Test
     void getBulkPriceUpdateMaxSizeReadsFromProperties() {
-        CatalogProductProperties props = new CatalogProductProperties("VND", " (Copy)", 250, 200);
+        CatalogProductProperties props = new CatalogProductProperties("VND", " (Copy)", 250, 200, 2500L);
         SpringCatalogProductPolicy policy = new SpringCatalogProductPolicy(props);
 
         assertThat(policy.getBulkPriceUpdateMaxSize()).isEqualTo(250);
+        assertThat(policy.getBestSellerThreshold()).isEqualTo(2500L);
     }
 }

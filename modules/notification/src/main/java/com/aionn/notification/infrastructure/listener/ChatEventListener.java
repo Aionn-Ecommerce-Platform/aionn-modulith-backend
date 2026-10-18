@@ -3,12 +3,14 @@ package com.aionn.notification.infrastructure.listener;
 import com.aionn.notification.application.dto.notification.command.NotificationCommands;
 import com.aionn.notification.application.service.NotificationDeliveryOrchestrator;
 import com.aionn.notification.domain.valueobject.NotificationCategory;
+import com.aionn.notification.domain.valueobject.NotificationChannel;
 import com.aionn.sharedkernel.integration.event.chat.MessageSentIntegrationEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -31,7 +33,7 @@ public class ChatEventListener {
         context.put("messagePreview", nullToEmpty(event.messagePreview()));
         deliveryOrchestrator.sendByEvent(new NotificationCommands.SendByEvent(
                 event.recipientId(), EVENT_MESSAGE_RECEIVED, NotificationCategory.CHAT,
-                null, null, null, context));
+                List.of(NotificationChannel.IN_APP), null, null, context));
     }
 
     private static String nullToEmpty(String s) {

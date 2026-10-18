@@ -39,6 +39,9 @@ public class OrderEntity {
     @Column(name = "order_id", length = 50)
     private String orderId;
 
+    @Column(name = "order_sn", length = 32, nullable = false, unique = true)
+    private String orderSn;
+
     @Column(name = "parent_order_id", length = 50)
     private String parentOrderId;
 

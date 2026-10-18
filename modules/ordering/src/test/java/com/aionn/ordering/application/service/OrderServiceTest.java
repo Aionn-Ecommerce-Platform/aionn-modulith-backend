@@ -697,4 +697,16 @@ class OrderServiceTest {
         assertEquals(1, result.size());
         assertEquals("sku-1", result.getFirst().skuId());
     }
+
+    @Test
+    void statusOfFallsBackToOrderSnWhenNotFoundById() {
+        Order order = pendingOrder();
+        String orderSn = order.getOrderSn();
+        when(orderRepository.findById(orderSn)).thenReturn(Optional.empty());
+        when(orderRepository.findByIdOrOrderSn(orderSn)).thenReturn(Optional.of(order));
+
+        OrderStatus status = orderService.statusOf(orderSn);
+
+        assertEquals(OrderStatus.PENDING, status);
+    }
 }

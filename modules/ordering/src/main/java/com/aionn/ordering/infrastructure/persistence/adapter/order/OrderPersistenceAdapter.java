@@ -33,6 +33,14 @@ public class OrderPersistenceAdapter implements OrderPersistencePort {
     }
 
     @Override
+    public Optional<Order> findByIdOrOrderSn(String idOrSn) {
+        if (idOrSn == null || idOrSn.isBlank()) {
+            return Optional.empty();
+        }
+        return jpa.findByIdOrOrderSn(idOrSn.trim()).map(mapper::toDomain);
+    }
+
+    @Override
     public List<Order> findByUser(String userId, int limit) {
         return jpa.findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, Math.max(1, limit))).stream()
                 .map(mapper::toDomain)

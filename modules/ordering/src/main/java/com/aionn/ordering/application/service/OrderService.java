@@ -184,10 +184,11 @@ public class OrderService {
                             + " does not match catalog pricing currency " + pricingCurrency);
         }
         String currency = pricingCurrency;
-        String idempotencyKey = requestedIdempotencyKey == null || requestedIdempotencyKey.isBlank()
-                ? "legacy:" + IdGenerator.ulid() : requestedIdempotencyKey.trim();
-        String requestHash = placementRequestHash(userId, lines, voucherCode, paymentMethodId,
-                currency, shippingAddress);
+        String idempotencyKey = (requestedIdempotencyKey == null || requestedIdempotencyKey.isBlank())
+                ? "legacy:" + IdGenerator.ulid()
+                : requestedIdempotencyKey.trim();
+        String requestHash = placementRequestHash(
+                userId, lines, voucherCode, paymentMethodId, currency, shippingAddress);
         OrderPlacementOperationPort.Operation operation = placementOperationPort.start(
                 userId, idempotencyKey, requestHash, IdGenerator.ulid());
         String orderId = operation.orderId();
@@ -759,6 +760,7 @@ public class OrderService {
 
     Order required(String orderId) {
         return orderRepository.findById(orderId)
+                .or(() -> orderRepository.findByIdOrOrderSn(orderId))
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.ORDER_NOT_FOUND));
     }
 

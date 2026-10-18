@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -159,6 +160,13 @@ public class MessageService {
         return switch (command.type()) {
             case TEXT -> MessagePayload.text(command.body());
             case SYSTEM -> MessagePayload.system(command.body());
+            case IMAGE -> {
+                Map<String, Object> meta = new HashMap<>(command.metadata() == null ? Map.of() : command.metadata());
+                if (!meta.containsKey("imageUrl") && command.body() != null && !command.body().isBlank()) {
+                    meta.put("imageUrl", command.body());
+                }
+                yield new MessagePayload(command.body(), meta);
+            }
             default -> new MessagePayload(command.body(),
                     command.metadata() == null ? Map.of() : command.metadata());
         };

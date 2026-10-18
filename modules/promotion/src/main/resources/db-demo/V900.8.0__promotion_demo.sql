@@ -15,7 +15,7 @@ INSERT INTO promotion_banners (banner_id, title, image_url, link_url, image_publ
 ('BAN_004', 'Chào mừng bạn đến với Aionn', 'https://res.cloudinary.com/dkb9l6kfy/image/upload/v1790350745/aionn/promotion/banners/fhs8kcthqy1eaj0nahzs.png', '/products', 'aionn/promotion/banners/fhs8kcthqy1eaj0nahzs', 4, TRUE, 0, NOW(), NOW());
 
 -- Demo data so the storefront has a live flash-sale to render. Campaign
--- runs for 7 days starting now; SKUs registered at varied discount rates
+-- runs for 365 days starting now; SKUs registered at varied discount rates
 -- (-25% → -50%) so the storefront doesn't look like a flat 50% banner.
 
 INSERT INTO promotion_campaigns
@@ -24,7 +24,7 @@ INSERT INTO promotion_campaigns
 VALUES
     ('CAMP_FLASH_DEMO', 'Flash Sale Cuối Tuần', 'FLASH_SALE',
      100000000.00, 100000000.00, 'VND',
-     NOW() - INTERVAL '1 hour', NOW() + INTERVAL '7 days',
+     NOW() - INTERVAL '1 hour', NOW() + INTERVAL '365 days',
      'sys_admin_01', 'RUNNING', 0, NOW(), NOW());
 
 INSERT INTO flash_sale_registrations
@@ -167,17 +167,17 @@ INSERT INTO vouchers
 VALUES
     ('FLASH50K',  'CAMP_FLASH_DEMO', 50000.00,  'VND',
      500, 500, 0,
-     NOW() - INTERVAL '1 hour', NOW() + INTERVAL '7 days',
+     NOW() - INTERVAL '1 hour', NOW() + INTERVAL '365 days',
      0, NOW(), NOW()),
 
     ('FLASH100K', 'CAMP_FLASH_DEMO', 100000.00, 'VND',
      300, 0, 0,
-     NOW() - INTERVAL '1 hour', NOW() + INTERVAL '7 days',
+     NOW() - INTERVAL '1 hour', NOW() + INTERVAL '365 days',
      0, NOW(), NOW()),
 
     ('FLASH200K', 'CAMP_FLASH_DEMO', 200000.00, 'VND',
      100, 0, 0,
-     NOW() - INTERVAL '1 hour', NOW() + INTERVAL '7 days',
+     NOW() - INTERVAL '1 hour', NOW() + INTERVAL '365 days',
      0, NOW(), NOW())
 ON CONFLICT (voucher_code) DO NOTHING;
 

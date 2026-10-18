@@ -132,4 +132,54 @@ class OrderTest {
         assertEquals(0, order.getTotalAmount().amount().compareTo(BigDecimal.valueOf(250)));
         assertNull(order.getCancelledAt());
     }
+
+    @Test
+    void placeWithExplicitOrderSnUsesProvidedValue() {
+        Money subtotal = Money.of(BigDecimal.valueOf(200), "VND");
+        Money shipping = Money.of(BigDecimal.valueOf(20), "VND");
+        Order order = Order.place("order-2", "261018CUSTOM01", "user-1", "merchant-1", "prop-1",
+                "COD", "VND", List.of(item(2)), address(), shipping, subtotal, now);
+
+        assertEquals("261018CUSTOM01", order.getOrderSn());
+    }
+
+    @Test
+    void placeWithNullOrderSnGeneratesValidSn() {
+        Order order = pendingOrder();
+
+        assertNotNull(order.getOrderSn());
+        assertEquals(14, order.getOrderSn().length());
+    }
+
+    @Test
+    void placeWithBlankOrderSnGeneratesValidSn() {
+        Money subtotal = Money.of(BigDecimal.valueOf(200), "VND");
+        Money shipping = Money.of(BigDecimal.valueOf(20), "VND");
+        Order order = Order.place("order-3", "   ", "user-1", "merchant-1", "prop-1",
+                "COD", "VND", List.of(item(2)), address(), shipping, subtotal, now);
+
+        assertNotNull(order.getOrderSn());
+        assertEquals(14, order.getOrderSn().length());
+    }
+
+    @Test
+    void constructorWithoutOrderSnGeneratesValidSn() {
+        Money amount = Money.of(BigDecimal.valueOf(100), "VND");
+        Order order = new Order("order-4", null, "user-1", "merchant-1", "prop-1",
+                "COD", "VND", List.of(item(1)), address(), amount, amount,
+                OrderStatus.PENDING, null, null, now, now, null, null);
+
+        assertNotNull(order.getOrderSn());
+        assertEquals(14, order.getOrderSn().length());
+    }
+
+    @Test
+    void constructorWithExplicitOrderSnPreservesValue() {
+        Money amount = Money.of(BigDecimal.valueOf(100), "VND");
+        Order order = new Order("order-5", "261018EXPLICIT", null, "user-1", "merchant-1", "prop-1",
+                "COD", "VND", List.of(item(1)), address(), amount, amount,
+                OrderStatus.PENDING, null, null, now, now, null, null);
+
+        assertEquals("261018EXPLICIT", order.getOrderSn());
+    }
 }
