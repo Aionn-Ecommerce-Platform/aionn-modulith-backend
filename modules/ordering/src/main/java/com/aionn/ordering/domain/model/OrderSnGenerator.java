@@ -21,12 +21,11 @@ public final class OrderSnGenerator {
      */
     public static String generate(Instant now) {
         Instant effective = now != null ? now : Instant.EPOCH;
-        String datePart = DATE_FMT.format(effective);
         char[] randomPart = new char[8];
         for (int i = 0; i < 8; i++) {
             randomPart[i] = ALPHABET[RANDOM.nextInt(ALPHABET.length)];
         }
-        return datePart + new String(randomPart);
+        return DATE_FMT.format(effective) + new String(randomPart);
     }
 }
 

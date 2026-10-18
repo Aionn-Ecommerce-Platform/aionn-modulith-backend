@@ -353,4 +353,35 @@ class MessageServiceTest {
         assertThat(service().listBefore("buyer-1", "conv-1", NOW, 10)).isEmpty();
         verify(messageRepository).findByConversationBefore("conv-1", NOW, 10);
     }
+
+    @Test
+    void persistSend_imageWithBodyPopulatesImageUrlMetadata() {
+        conversationFound(conversation());
+        echoMessageSave();
+        when(userBlockRepository.exists(anyString(), anyString())).thenReturn(false);
+
+        MessageCommands.SendMessage command = new MessageCommands.SendMessage(
+                "buyer-1", "conv-1", MessageType.IMAGE, "https://cdn.example.com/photo.jpg", null);
+
+        MessageService.Sent sent = service().persistSend(command);
+
+        assertThat(sent.message().getType()).isEqualTo(MessageType.IMAGE);
+        assertThat(sent.message().getPayload().body()).isEqualTo("https://cdn.example.com/photo.jpg");
+        assertThat(sent.message().getPayload().metadata()).containsEntry("imageUrl", "https://cdn.example.com/photo.jpg");
+    }
+
+    @Test
+    void persistSend_imageWithExplicitMetadataPreserved() {
+        conversationFound(conversation());
+        echoMessageSave();
+        when(userBlockRepository.exists(anyString(), anyString())).thenReturn(false);
+
+        MessageCommands.SendMessage command = new MessageCommands.SendMessage(
+                "buyer-1", "conv-1", MessageType.IMAGE, "https://cdn.example.com/caption", Map.of("imageUrl", "https://cdn.example.com/photo.jpg"));
+
+        MessageService.Sent sent = service().persistSend(command);
+
+        assertThat(sent.message().getType()).isEqualTo(MessageType.IMAGE);
+        assertThat(sent.message().getPayload().metadata()).containsEntry("imageUrl", "https://cdn.example.com/photo.jpg");
+    }
 }
