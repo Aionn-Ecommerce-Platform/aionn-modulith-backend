@@ -20,6 +20,7 @@ import java.util.List;
 public class Order extends AggregateRoot {
 
     private final String orderId;
+    private final String orderSn;
     private final String parentOrderId;
     private final String userId;
     private final String merchantId;
@@ -40,6 +41,7 @@ public class Order extends AggregateRoot {
 
     public Order(
             String orderId,
+            String orderSn,
             String parentOrderId,
             String userId,
             String merchantId,
@@ -58,6 +60,9 @@ public class Order extends AggregateRoot {
             Instant completedAt,
             Instant cancelledAt) {
         this.orderId = orderId;
+        this.orderSn = (orderSn != null && !orderSn.isBlank())
+                ? orderSn
+                : OrderSnGenerator.generate(createdAt != null ? createdAt : Instant.now());
         this.parentOrderId = parentOrderId;
         this.userId = userId;
         this.merchantId = merchantId;
@@ -78,8 +83,33 @@ public class Order extends AggregateRoot {
         this.cancelledAt = cancelledAt;
     }
 
+    public Order(
+            String orderId,
+            String parentOrderId,
+            String userId,
+            String merchantId,
+            String proposalId,
+            String paymentMethodId,
+            String currency,
+            List<OrderItem> items,
+            ShippingAddress shippingAddress,
+            Money shippingFee,
+            Money totalAmount,
+            OrderStatus status,
+            String paymentId,
+            String reasonCode,
+            Instant createdAt,
+            Instant updatedAt,
+            Instant completedAt,
+            Instant cancelledAt) {
+        this(orderId, null, parentOrderId, userId, merchantId, proposalId, paymentMethodId, currency,
+                items, shippingAddress, shippingFee, totalAmount, status, paymentId, reasonCode,
+                createdAt, updatedAt, completedAt, cancelledAt);
+    }
+
     public static Order place(
             String orderId,
+            String orderSn,
             String userId,
             String merchantId,
             String proposalId,
@@ -99,9 +129,29 @@ public class Order extends AggregateRoot {
         Money lineSubtotal = merchandiseSubtotal == null ? originalLineSubtotal : merchandiseSubtotal;
         Money totalAmount = shippingFee == null ? lineSubtotal : lineSubtotal.add(shippingFee);
 
-        Order order = new Order(orderId, null, userId, merchantId, proposalId, paymentMethodId, currency,
-                items, address, shippingFee, totalAmount,
-                OrderStatus.PENDING, null, null, now, now, null, null);
+        String effectiveOrderSn = (orderSn != null && !orderSn.isBlank())
+                ? orderSn
+                : OrderSnGenerator.generate(now);
+        Order order = new Order(
+                orderId,
+                effectiveOrderSn,
+                null,
+                userId,
+                merchantId,
+                proposalId,
+                paymentMethodId,
+                currency,
+                items,
+                address,
+                shippingFee,
+                totalAmount,
+                OrderStatus.PENDING,
+                null,
+                null,
+                now,
+                now,
+                null,
+                null);
         order.registerEvent(new OrderEvents.OrderPlaced(
                 orderId, userId, merchantId, proposalId,
                 items.stream().map(it -> new OrderEvents.OrderLineSnapshot(
@@ -113,6 +163,22 @@ public class Order extends AggregateRoot {
                 paymentMethodId,
                 now, now));
         return order;
+    }
+
+    public static Order place(
+            String orderId,
+            String userId,
+            String merchantId,
+            String proposalId,
+            String paymentMethodId,
+            String currency,
+            List<OrderItem> items,
+            ShippingAddress address,
+            Money shippingFee,
+            Money merchandiseSubtotal,
+            Instant now) {
+        return place(orderId, OrderSnGenerator.generate(now), userId, merchantId, proposalId,
+                paymentMethodId, currency, items, address, shippingFee, merchandiseSubtotal, now);
     }
 
     public void approve(String paymentId, Instant now) {

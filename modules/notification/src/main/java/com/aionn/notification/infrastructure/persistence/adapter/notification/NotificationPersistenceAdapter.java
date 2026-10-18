@@ -34,7 +34,7 @@ public class NotificationPersistenceAdapter implements NotificationPersistencePo
 
     @Override
     public List<Notification> findByUser(String userId, int limit) {
-        return jpa.findByUserIdAndStatusNotOrderByCreatedAtDesc(userId, "DELETED",
+        return jpa.findByUserIdAndChannelAndStatusNotOrderByCreatedAtDesc(userId, "IN_APP", "DELETED",
                 PageRequest.of(0, Math.max(1, limit))).stream()
                 .map(mapper::toDomain)
                 .toList();

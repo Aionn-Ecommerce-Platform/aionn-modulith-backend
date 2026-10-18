@@ -11,8 +11,8 @@ public enum NotificationStatus {
         return switch (this) {
             case PENDING -> next == SENT || next == FAILED || next == DELETED;
             case SENT -> next == READ || next == DELETED;
-            case READ -> next == DELETED;
-            case FAILED -> next == DELETED;
+            case READ -> next == READ || next == DELETED;
+            case FAILED -> next == READ || next == DELETED;
             case DELETED -> false;
         };
     }

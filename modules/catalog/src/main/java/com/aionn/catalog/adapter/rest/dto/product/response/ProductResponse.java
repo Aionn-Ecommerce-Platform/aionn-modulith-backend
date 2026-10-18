@@ -19,7 +19,8 @@ public record ProductResponse(
         String status,
         Instant createdAt,
         Instant updatedAt,
-        long soldCount) {
+        long soldCount,
+        boolean isBestSeller) {
 
     public record Variant(String skuId, Map<String, String> attributeValues, BigDecimal price, String currency) {
     }

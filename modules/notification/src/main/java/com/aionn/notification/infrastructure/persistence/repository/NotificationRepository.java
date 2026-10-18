@@ -12,6 +12,9 @@ public interface NotificationRepository extends JpaRepository<NotificationEntity
     List<NotificationEntity> findByUserIdAndStatusNotOrderByCreatedAtDesc(
             String userId, String excludedStatus, Pageable pageable);
 
+    List<NotificationEntity> findByUserIdAndChannelAndStatusNotOrderByCreatedAtDesc(
+            String userId, String channel, String excludedStatus, Pageable pageable);
+
     @Query("""
             SELECT n FROM NotificationEntity n
               WHERE n.status = 'PENDING' AND n.retryCount < 3

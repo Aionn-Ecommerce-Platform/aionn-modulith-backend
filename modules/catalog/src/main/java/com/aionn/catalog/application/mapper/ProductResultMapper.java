@@ -6,7 +6,6 @@ import com.aionn.catalog.application.port.out.product.ProductSoldCounterPersiste
 import com.aionn.catalog.domain.model.Product;
 import com.aionn.catalog.domain.model.ProductVariant;
 import com.aionn.sharedkernel.domain.vo.Money;
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 
@@ -15,11 +14,21 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import com.aionn.catalog.application.policy.CatalogProductPolicy;
+
 @Component
-@RequiredArgsConstructor
 public class ProductResultMapper {
 
     private final ProductSoldCounterPersistencePort soldCounterRepository;
+    private final CatalogProductPolicy productPolicy;
+
+    public ProductResultMapper(
+            ProductSoldCounterPersistencePort soldCounterRepository,
+            CatalogProductPolicy productPolicy
+    ) {
+        this.soldCounterRepository = soldCounterRepository;
+        this.productPolicy = productPolicy;
+    }
 
     public ProductResult toResult(Product product) {
         if (product == null) {
@@ -53,6 +62,8 @@ public class ProductResultMapper {
                 .map(ProductResultMapper::toVariantResult)
                 .toList();
 
+        boolean isBestSeller = soldCount >= productPolicy.getBestSellerThreshold();
+
         return new ProductResult(
                 product.getProductId(),
                 product.getMerchantId(),
@@ -67,7 +78,8 @@ public class ProductResultMapper {
                 product.getStatus() != null ? product.getStatus().name() : null,
                 product.getCreatedAt(),
                 product.getUpdatedAt(),
-                soldCount);
+                soldCount,
+                isBestSeller);
     }
 
     public List<ProductResult> toResults(List<Product> products) {

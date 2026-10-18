@@ -13,6 +13,8 @@ public interface OrderPersistencePort {
 
     Optional<Order> findById(String orderId);
 
+    Optional<Order> findByIdOrOrderSn(String idOrSn);
+
     List<Order> findByUser(String userId, int limit);
 
     List<Order> findByUserAndStatuses(String userId, List<String> statuses, int limit);

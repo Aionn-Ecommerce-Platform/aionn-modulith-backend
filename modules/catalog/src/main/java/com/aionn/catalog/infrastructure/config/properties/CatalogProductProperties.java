@@ -8,5 +8,6 @@ public record CatalogProductProperties(
                 @DefaultValue("VND") String defaultCurrency,
                 @DefaultValue(" (Copy)") String cloneNameSuffix,
                 @DefaultValue("100") int bulkPriceUpdateMaxSize,
-                @DefaultValue("200") int reindexPageSize) {
+                @DefaultValue("200") int reindexPageSize,
+                @DefaultValue("2500") long bestSellerThreshold) {
 }

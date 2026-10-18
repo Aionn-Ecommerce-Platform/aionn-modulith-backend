@@ -35,9 +35,10 @@ CREATE TABLE notifications (
     read_at              TIMESTAMPTZ,
     deleted_at           TIMESTAMPTZ
 );
-CREATE INDEX idx_notifications_user_status     ON notifications(user_id, status);
-CREATE INDEX idx_notifications_campaign_status ON notifications(campaign_id, status);
-CREATE INDEX idx_notifications_status_retry    ON notifications(status, retry_count);
+CREATE INDEX idx_notifications_user_status         ON notifications(user_id, status);
+CREATE INDEX idx_notifications_user_channel_status ON notifications(user_id, channel, status);
+CREATE INDEX idx_notifications_campaign_status     ON notifications(campaign_id, status);
+CREATE INDEX idx_notifications_status_retry        ON notifications(status, retry_count);
 
 CREATE TABLE notification_delivery_attempts (
     attempt_id         VARCHAR(150) PRIMARY KEY,
@@ -168,7 +169,7 @@ VALUES
  'chat.message-received', 'EMAIL', 'CHAT', 'vi-VN',
  'Tin nhắn mới từ {{senderName}}',
  '{{senderName}} đã gửi cho bạn một tin nhắn:\n\n{{messagePreview}}\n\nMở Aionn để trả lời.',
- '["senderName","messagePreview","conversationId"]'::jsonb, 1, TRUE),
+ '["senderName","messagePreview","conversationId"]'::jsonb, 1, FALSE),
 
 ('chat_msg_push_vi',
  'chat.message-received', 'PUSH', 'CHAT', 'vi-VN',
@@ -250,7 +251,7 @@ VALUES
  'chat.message-received', 'EMAIL', 'CHAT', 'en-US',
  'New message from {{senderName}}',
  '{{senderName}} has sent you a message:\n\n{{messagePreview}}\n\nOpen Aionn to reply.',
- '["senderName","messagePreview","conversationId"]'::jsonb, 1, TRUE),
+ '["senderName","messagePreview","conversationId"]'::jsonb, 1, FALSE),
 
 ('chat_msg_push_en',
  'chat.message-received', 'PUSH', 'CHAT', 'en-US',

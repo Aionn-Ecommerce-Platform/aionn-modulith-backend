@@ -150,7 +150,7 @@ public class Message extends AggregateRoot {
                 throw new ChatException(ChatErrorCode.MESSAGE_TOO_LONG);
             }
         }
-        Guard.require(type != MessageType.IMAGE || payload.metadata().containsKey("imageUrl"),
+        Guard.require(type != MessageType.IMAGE || (payload.body() != null && !payload.body().isBlank()) || payload.metadata().containsKey("imageUrl"),
                 () -> new ChatException(ChatErrorCode.INVALID_ARGUMENT, "imageUrl required for IMAGE message"));
         Guard.require(type != MessageType.PRODUCT_CARD || payload.metadata().containsKey("productId"),
                 () -> new ChatException(ChatErrorCode.INVALID_ARGUMENT, "productId required for PRODUCT_CARD message"));

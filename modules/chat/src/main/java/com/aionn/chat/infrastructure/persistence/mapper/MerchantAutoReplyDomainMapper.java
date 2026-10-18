@@ -18,7 +18,15 @@ public class MerchantAutoReplyDomainMapper {
         Set<DayOfWeek> days = EnumSet.noneOf(DayOfWeek.class);
         if (e.getWorkingDays() != null) {
             for (String d : e.getWorkingDays()) {
-                days.add(DayOfWeek.valueOf(d));
+                if (d == null || d.isBlank()) continue;
+                try {
+                    days.add(DayOfWeek.valueOf(d.trim().toUpperCase()));
+                } catch (IllegalArgumentException ex) {
+                    try {
+                        days.add(DayOfWeek.of(Integer.parseInt(d.trim())));
+                    } catch (Exception ignored) {
+                    }
+                }
             }
         }
         return new MerchantAutoReply(

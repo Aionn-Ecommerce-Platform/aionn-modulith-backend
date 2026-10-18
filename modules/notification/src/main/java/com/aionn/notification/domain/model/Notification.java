@@ -129,7 +129,7 @@ public class Notification extends AggregateRoot {
     }
 
     public void markRead(Clock clock) {
-        if (status == NotificationStatus.READ)
+        if (status == NotificationStatus.READ && readAt != null)
             return;
         ensureTransition(NotificationStatus.READ);
         Instant now = clock.instant();

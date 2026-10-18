@@ -14,6 +14,7 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface OrderResultMapper {
 
+    @Mapping(target = "orderSn", source = "orderSn")
     @Mapping(target = "totalAmount", source = "totalAmount", qualifiedByName = "moneyAmount")
     @Mapping(target = "shippingFee", source = "shippingFee", qualifiedByName = "moneyAmount")
     @Mapping(target = "addressId", expression = "java(order.getShippingAddress() == null ? null : order.getShippingAddress().addressId())")
