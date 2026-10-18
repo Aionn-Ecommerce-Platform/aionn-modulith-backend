@@ -20,7 +20,8 @@ public final class OrderSnGenerator {
      * Format: YYMMDD (6-digit date) + 8-character uppercase alphanumeric code.
      */
     public static String generate(Instant now) {
-        String datePart = DATE_FMT.format(now != null ? now : Instant.now());
+        Instant effective = now != null ? now : Instant.EPOCH;
+        String datePart = DATE_FMT.format(effective);
         char[] randomPart = new char[8];
         for (int i = 0; i < 8; i++) {
             randomPart[i] = ALPHABET[RANDOM.nextInt(ALPHABET.length)];

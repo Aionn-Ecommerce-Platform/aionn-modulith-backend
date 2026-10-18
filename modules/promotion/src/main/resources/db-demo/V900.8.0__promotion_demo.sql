@@ -15,7 +15,7 @@ INSERT INTO promotion_banners (banner_id, title, image_url, link_url, image_publ
 ('BAN_004', 'Chào mừng bạn đến với Aionn', 'https://res.cloudinary.com/dkb9l6kfy/image/upload/v1790350745/aionn/promotion/banners/fhs8kcthqy1eaj0nahzs.png', '/products', 'aionn/promotion/banners/fhs8kcthqy1eaj0nahzs', 4, TRUE, 0, NOW(), NOW());
 
 -- Demo data so the storefront has a live flash-sale to render. Campaign
--- runs for 7 days starting now; SKUs registered at varied discount rates
+-- runs for 365 days starting now; SKUs registered at varied discount rates
 -- (-25% → -50%) so the storefront doesn't look like a flat 50% banner.
 
 INSERT INTO promotion_campaigns

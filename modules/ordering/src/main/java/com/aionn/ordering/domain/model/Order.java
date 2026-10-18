@@ -62,7 +62,7 @@ public class Order extends AggregateRoot {
         this.orderId = orderId;
         this.orderSn = (orderSn != null && !orderSn.isBlank())
                 ? orderSn
-                : OrderSnGenerator.generate(createdAt != null ? createdAt : Instant.now());
+                : OrderSnGenerator.generate(createdAt != null ? createdAt : Instant.EPOCH);
         this.parentOrderId = parentOrderId;
         this.userId = userId;
         this.merchantId = merchantId;

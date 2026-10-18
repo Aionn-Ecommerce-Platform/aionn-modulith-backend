@@ -38,7 +38,7 @@ CREATE TABLE orders (
     address_country_code  VARCHAR(5),
     status                VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     reason_code           VARCHAR(50),
-    order_sn              VARCHAR(32) NOT NULL DEFAULT ('ORD' || UPPER(SUBSTRING(MD5(RANDOM()::text || CLOCK_TIMESTAMP()::text), 1, 10))),
+    order_sn              VARCHAR(32) NOT NULL DEFAULT (TO_CHAR(NOW() AT TIME ZONE 'UTC', 'YYMMDD') || UPPER(SUBSTRING(MD5(RANDOM()::text || CLOCK_TIMESTAMP()::text), 1, 8))),
     version               BIGINT      NOT NULL DEFAULT 0,
     created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
