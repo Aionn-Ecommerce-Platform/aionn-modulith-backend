@@ -46,23 +46,40 @@ class UserPreferencePersistenceAdapterTest {
     }
 
     @Test
-    void saveAttachesUserAndMapsBack() {
+    void saveUpdatesExistingPreferenceWhenPresent() {
         UserPreferenceResult preference = result();
         UserPreferenceEntity entity = mock(UserPreferenceEntity.class);
-        UserEntity user = UserEntity.builder().userId(USER_ID).build();
-        when(mapper.toEntity(preference)).thenReturn(entity);
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(preferenceRepository.findById(USER_ID)).thenReturn(Optional.of(entity));
         when(preferenceRepository.save(entity)).thenReturn(entity);
         when(mapper.toResult(entity)).thenReturn(preference);
 
         assertThat(adapter.save(preference)).isSameAs(preference);
-        verify(entity).setUser(user);
+        verify(entity).setLanguage("vi");
+        verify(entity).setCurrency("VND");
+        verify(entity).setTimezone("Asia/Ho_Chi_Minh");
+        verify(entity).setTheme("dark");
+        verify(entity).setNotificationSettings("{}");
+        verify(entity).setAiPrivacySettings("{}");
+        verify(preferenceRepository).save(entity);
     }
 
     @Test
-    void saveThrowsWhenUserMissing() {
+    void saveCreatesNewPreferenceWhenNotFound() {
         UserPreferenceResult preference = result();
-        when(mapper.toEntity(preference)).thenReturn(mock(UserPreferenceEntity.class));
+        UserEntity user = UserEntity.builder().userId(USER_ID).build();
+        UserPreferenceEntity saved = mock(UserPreferenceEntity.class);
+        when(preferenceRepository.findById(USER_ID)).thenReturn(Optional.empty());
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(preferenceRepository.save(any(UserPreferenceEntity.class))).thenReturn(saved);
+        when(mapper.toResult(saved)).thenReturn(preference);
+
+        assertThat(adapter.save(preference)).isSameAs(preference);
+    }
+
+    @Test
+    void saveThrowsWhenEntityMissingAndUserMissing() {
+        UserPreferenceResult preference = result();
+        when(preferenceRepository.findById(USER_ID)).thenReturn(Optional.empty());
         when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> adapter.save(preference))

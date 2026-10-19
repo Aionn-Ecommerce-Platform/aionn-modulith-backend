@@ -4,3 +4,4 @@ SET working_hour_start = '00:00:00',
     working_days = '["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"]'::jsonb,
     updated_at = NOW()
 WHERE merchant_id = 'MER_002';
+
