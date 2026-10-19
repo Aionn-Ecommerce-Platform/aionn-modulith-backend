@@ -96,5 +96,5 @@ INSERT INTO chat_merchant_auto_replies (
     version, created_at, updated_at
 ) VALUES
 ('MER_001', TRUE, 'Xin chào! Shop MER_001 đã nhận được tin nhắn của bạn.', 'Shop sẽ phản hồi vào giờ làm việc tiếp theo.', '08:00', '18:00', '["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"]'::jsonb, 'Asia/Ho_Chi_Minh', 0, NOW(), NOW()),
-('MER_002', TRUE, 'Xin chào! Shop MER_002 có thể hỗ trợ gì cho bạn?', 'Shop hiện ngoài giờ làm việc và sẽ phản hồi sớm.', '09:00', '19:00', '["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"]'::jsonb, 'Asia/Ho_Chi_Minh', 0, NOW(), NOW()),
+('MER_002', TRUE, 'Xin chào! Shop MER_002 có thể hỗ trợ gì cho bạn?', 'Shop hiện ngoài giờ làm việc và sẽ phản hồi sớm.', '00:00', '23:59:59', '["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"]'::jsonb, 'Asia/Ho_Chi_Minh', 0, NOW(), NOW()),
 ('MER_003', TRUE, 'Cảm ơn bạn đã liên hệ shop MER_003.', 'Tin nhắn đã được ghi nhận. Shop sẽ phản hồi vào ngày mai.', '08:30', '17:30', '["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"]'::jsonb, 'Asia/Ho_Chi_Minh', 0, NOW(), NOW());

@@ -80,6 +80,12 @@ public class MerchantAutoReply extends AggregateRoot {
         OffsetDateTime local = now.atZone(timezone).toOffsetDateTime();
         if (!workingDays.contains(local.getDayOfWeek()))
             return false;
+        if (workingHourStart == null || workingHourEnd == null)
+            return true;
+        if (workingHourStart.equals(LocalTime.MIN) && (workingHourEnd.equals(LocalTime.MAX)
+                || workingHourEnd.isAfter(LocalTime.of(23, 59, 0)))) {
+            return true;
+        }
         LocalTime t = local.toLocalTime();
         return !t.isBefore(workingHourStart) && t.isBefore(workingHourEnd);
     }
