@@ -44,6 +44,19 @@ class OrderingOrderQueryAdapterTest {
     }
 
     @Test
+    void hasOpenOrdersForUserReturnsFalseWhenBlank() {
+        assertFalse(adapter.hasOpenOrdersForUser(null));
+        assertFalse(adapter.hasOpenOrdersForUser("  "));
+    }
+
+    @Test
+    void hasOpenOrdersForUserQueriesRepository() {
+        when(orderJpaRepository.existsByUserIdAndStatusNotIn(eq("usr-1"), anyList())).thenReturn(true);
+
+        assertTrue(adapter.hasOpenOrdersForUser("usr-1"));
+    }
+
+    @Test
     void hasCompletedPurchaseForSkusQueriesRepository() {
         assertFalse(adapter.hasCompletedPurchaseForSkus(null, List.of("sku-1")));
         when(orderJpaRepository.existsCompletedPurchaseForSkus("usr-1", List.of("sku-1"))).thenReturn(true);

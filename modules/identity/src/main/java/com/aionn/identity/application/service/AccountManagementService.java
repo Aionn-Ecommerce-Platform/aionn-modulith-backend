@@ -13,6 +13,12 @@ import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
 import com.aionn.identity.application.port.out.integration.IdentityIntegrationEventPublisherPort;
 import com.aionn.identity.application.port.out.user.UserOtpChallengeStorePort;
 import com.aionn.sharedkernel.integration.port.notification.IdentityNotificationPort;
+import com.aionn.identity.application.port.out.security.MfaPersistencePort;
+import com.aionn.identity.application.port.out.security.PasswordHasherPort;
+import com.aionn.identity.application.port.out.security.TotpManagerPort;
+import com.aionn.identity.application.port.out.security.UserSecurityPort;
+import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort;
 import com.aionn.identity.domain.valueobject.UserOtpPurpose;
 import com.aionn.identity.application.port.out.user.UserPersistencePort;
 import com.aionn.identity.application.port.out.user.AccountDeletionPort;
@@ -51,10 +57,16 @@ public class AccountManagementService {
     private final RefreshTokenStorePort refreshTokenStore;
     private final AccountManagementPolicy accountManagementPolicy;
     private final UserResultMapper userResultMapper;
+    private final UserSecurityPort userSecurityPort;
+    private final PasswordHasherPort passwordHasher;
+    private final TotpManagerPort totpManager;
+    private final MfaPersistencePort mfaPersistencePort;
+    private final OrderQueryPort orderQueryPort;
+    private final MerchantQueryPort merchantQueryPort;
 
     private final Clock clock;
     public DeletionRequestView requestAccountDeletion(RequestAccountDeletionCommand command) {
-        return requestAccountDeletion(command.userId());
+        return requestAccountDeletion(command.userId(), command.password(), command.mfaCode());
     }
 
     public void cancelAccountDeletion(CancelAccountDeletionCommand command) {
@@ -193,8 +205,49 @@ public class AccountManagementService {
         return userResultMapper.toUserProfileView(saved);
     }
 
-    private DeletionRequestView requestAccountDeletion(String userId) {
+    private DeletionRequestView requestAccountDeletion(String userId, String password, String mfaCode) {
         getActiveUser(userId);
+
+        UserSecurityPort.UserSecurityData userSecurity = userSecurityPort.findById(userId)
+                .orElseThrow(() -> new IdentityException(IdentityErrorCode.USER_NOT_FOUND));
+
+        if (userSecurity.passwordHash() != null && !userSecurity.passwordHash().isBlank()) {
+            if (password == null || password.isBlank() || !passwordHasher.matches(password, userSecurity.passwordHash())) {
+                throw new IdentityException(IdentityErrorCode.INVALID_CREDENTIALS);
+            }
+        }
+
+        if (userSecurity.mfaEnabled()) {
+            if (mfaCode == null || mfaCode.isBlank()) {
+                throw new IdentityException(IdentityErrorCode.OTP_REQUIRED, "MFA code is required");
+            }
+            boolean totpValid = totpManager.verifyCode(userSecurity.mfaSecret(), mfaCode.trim());
+            if (!totpValid) {
+                boolean matchedBackup = mfaPersistencePort.findActiveBackupCodes(userId).stream()
+                        .filter(code -> passwordHasher.matches(mfaCode.trim(), code.codeHash()))
+                        .findFirst()
+                        .map(code -> mfaPersistencePort.markBackupCodeUsed(code.backupCodeId(), nowUtc()))
+                        .orElse(false);
+                if (!matchedBackup) {
+                    throw new IdentityException(IdentityErrorCode.OTP_INVALID, "Invalid MFA code");
+                }
+            }
+        }
+
+        if (orderQueryPort != null && orderQueryPort.hasOpenOrdersForUser(userId)) {
+            throw new IdentityException(IdentityErrorCode.ACCOUNT_HAS_OPEN_ORDERS,
+                    "Cannot request account deletion while you have active or pending orders");
+        }
+
+        if (merchantQueryPort != null && orderQueryPort != null) {
+            merchantQueryPort.findMerchantIdByOwnerId(userId).ifPresent(merchantId -> {
+                if (orderQueryPort.hasOpenOrdersForMerchant(merchantId)) {
+                    throw new IdentityException(IdentityErrorCode.ACCOUNT_HAS_OPEN_ORDERS,
+                            "Cannot request account deletion while your store has active or pending orders");
+                }
+            });
+        }
+
         if (accountDeletionPort.findPendingByUserId(userId).isPresent()) {
             throw new IdentityException(IdentityErrorCode.ACCOUNT_DELETION_ALREADY_REQUESTED);
         }

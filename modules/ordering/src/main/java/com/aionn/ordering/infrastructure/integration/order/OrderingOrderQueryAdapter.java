@@ -32,6 +32,15 @@ public class OrderingOrderQueryAdapter implements OrderQueryPort {
 
     @Override
     @Transactional(readOnly = true)
+    public boolean hasOpenOrdersForUser(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return false;
+        }
+        return orderJpaRepository.existsByUserIdAndStatusNotIn(userId, TERMINAL_STATUSES);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public boolean hasCompletedPurchaseForSkus(String userId, java.util.Collection<String> skuIds) {
         if (userId == null || userId.isBlank() || skuIds == null || skuIds.isEmpty()) {
             return false;

@@ -23,6 +23,12 @@ import com.aionn.identity.domain.model.IdentityUser;
 import com.aionn.identity.domain.valueobject.OtpChannel;
 import com.aionn.identity.domain.valueobject.UserOtpPurpose;
 import com.aionn.sharedkernel.integration.port.notification.IdentityNotificationPort;
+import com.aionn.identity.application.port.out.security.MfaPersistencePort;
+import com.aionn.identity.application.port.out.security.PasswordHasherPort;
+import com.aionn.identity.application.port.out.security.TotpManagerPort;
+import com.aionn.identity.application.port.out.security.UserSecurityPort;
+import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -71,6 +77,18 @@ class AccountManagementServiceTest {
         private AccountManagementPolicy accountManagementPolicy;
         @Mock
         private UserResultMapper userResultMapper;
+        @Mock
+        private UserSecurityPort userSecurityPort;
+        @Mock
+        private PasswordHasherPort passwordHasher;
+        @Mock
+        private TotpManagerPort totpManager;
+        @Mock
+        private MfaPersistencePort mfaPersistencePort;
+        @Mock
+        private OrderQueryPort orderQueryPort;
+        @Mock
+        private MerchantQueryPort merchantQueryPort;
 
         private static final Instant FIXED_NOW = Instant.parse("2026-07-12T10:00:00Z");
 
@@ -83,6 +101,8 @@ class AccountManagementServiceTest {
                                 userOtpChallengeStore, accountDeletionPort, dataExportPort,
                                 authSessionPersistencePort, refreshTokenStore,
                                 accountManagementPolicy, userResultMapper,
+                                userSecurityPort, passwordHasher, totpManager,
+                                mfaPersistencePort, orderQueryPort, merchantQueryPort,
                                 Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
         }
 
@@ -95,6 +115,10 @@ class AccountManagementServiceTest {
                 DeletionRequestView view = new DeletionRequestView(
                                 "req-1", "PENDING", FIXED_NOW, FIXED_NOW.plus(Duration.ofDays(30)));
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, null, com.aionn.identity.domain.valueobject.UserStatus.ACTIVE, false, null, null, 0)));
+                when(orderQueryPort.hasOpenOrdersForUser(USER_ID)).thenReturn(false);
+                when(merchantQueryPort.findMerchantIdByOwnerId(USER_ID)).thenReturn(Optional.empty());
                 when(accountDeletionPort.findPendingByUserId(USER_ID)).thenReturn(Optional.empty());
                 when(accountManagementPolicy.getDeletionGraceDays()).thenReturn(30);
                 when(accountDeletionPort.save(eq(USER_ID), any(Instant.class))).thenReturn(view);
@@ -109,6 +133,10 @@ class AccountManagementServiceTest {
         @Test
         void requestAccountDeletionRejectsWhenAlreadyPending() {
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, null, com.aionn.identity.domain.valueobject.UserStatus.ACTIVE, false, null, null, 0)));
+                when(orderQueryPort.hasOpenOrdersForUser(USER_ID)).thenReturn(false);
+                when(merchantQueryPort.findMerchantIdByOwnerId(USER_ID)).thenReturn(Optional.empty());
                 when(accountDeletionPort.findPendingByUserId(USER_ID))
                                 .thenReturn(Optional.of(new DeletionRequestView(
                                                 "req-old", "PENDING", FIXED_NOW,
@@ -117,6 +145,20 @@ class AccountManagementServiceTest {
                 assertThrows(IdentityException.class,
                                 () -> service.requestAccountDeletion(new RequestAccountDeletionCommand(USER_ID)));
 
+                verify(accountDeletionPort, never()).save(any(), any());
+        }
+
+        @Test
+        void requestAccountDeletionRejectsWhenHasOpenOrders() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, null, com.aionn.identity.domain.valueobject.UserStatus.ACTIVE, false, null, null, 0)));
+                when(orderQueryPort.hasOpenOrdersForUser(USER_ID)).thenReturn(true);
+
+                IdentityException ex = assertThrows(IdentityException.class,
+                                () -> service.requestAccountDeletion(new RequestAccountDeletionCommand(USER_ID)));
+
+                assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.ACCOUNT_HAS_OPEN_ORDERS.getCode());
                 verify(accountDeletionPort, never()).save(any(), any());
         }
 

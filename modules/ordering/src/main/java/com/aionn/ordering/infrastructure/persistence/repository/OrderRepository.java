@@ -91,6 +91,8 @@ public interface OrderRepository extends JpaRepository<OrderEntity, String> {
 
   boolean existsByMerchantIdAndStatusNotIn(String merchantId, Collection<String> terminalStatuses);
 
+  boolean existsByUserIdAndStatusNotIn(String userId, Collection<String> terminalStatuses);
+
   @Query("""
       SELECT COUNT(o) > 0 FROM OrderEntity o
         JOIN o.items item

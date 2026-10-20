@@ -56,6 +56,7 @@ public enum IdentityErrorCode {
 	INVALID_USER_ROLE("IDENTITY_227", "Invalid user role"),
 	INVALID_FEEDBACK_CATEGORY("IDENTITY_228", "Invalid feedback category"),
 	FEEDBACK_CONTENT_REQUIRED("IDENTITY_229", "Feedback content is required"),
+	ACCOUNT_HAS_OPEN_ORDERS("IDENTITY_230", "Cannot request account deletion while there are active or pending orders"),
 
 	INVALID_ADDRESS_TYPE("IDENTITY_301", "Invalid address type. Supported types are HOME or OFFICE"),
 	ADDRESS_NOT_FOUND("IDENTITY_302", "Address not found"),

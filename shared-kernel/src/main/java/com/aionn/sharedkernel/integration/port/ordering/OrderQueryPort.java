@@ -8,6 +8,8 @@ public interface OrderQueryPort {
 
     boolean hasOpenOrdersForMerchant(String merchantId);
 
+    boolean hasOpenOrdersForUser(String userId);
+
     boolean hasCompletedPurchaseForSkus(String userId, Collection<String> skuIds);
 
     String findCompletedOrderIdForSkus(String userId, Collection<String> skuIds);

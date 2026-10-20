@@ -2,6 +2,7 @@ package com.aionn.identity.adapter.rest.mapper.user;
 
 import com.aionn.identity.adapter.rest.dto.user.request.ChangeAvatarRequest;
 import com.aionn.identity.adapter.rest.dto.user.request.ChangeDisplayNameRequest;
+import com.aionn.identity.adapter.rest.dto.user.request.RequestAccountDeletionRequest;
 import com.aionn.identity.adapter.rest.dto.user.response.DataExportRequestResponse;
 import com.aionn.identity.adapter.rest.dto.user.response.DeletionRequestResponse;
 import com.aionn.identity.adapter.rest.dto.user.response.UserProfileResponse;
@@ -28,7 +29,16 @@ public interface UserDtoMapper {
 
     UpdateAvatarCommand toUpdateAvatarCommand(String userId, ChangeAvatarRequest request);
 
-    RequestAccountDeletionCommand toRequestAccountDeletionCommand(String userId);
+    default RequestAccountDeletionCommand toRequestAccountDeletionCommand(String userId, RequestAccountDeletionRequest request) {
+        return new RequestAccountDeletionCommand(
+                userId,
+                request != null ? request.password() : null,
+                request != null ? request.mfaCode() : null);
+    }
+
+    default RequestAccountDeletionCommand toRequestAccountDeletionCommand(String userId) {
+        return new RequestAccountDeletionCommand(userId, null, null);
+    }
 
     CancelAccountDeletionCommand toCancelAccountDeletionCommand(String userId);
 

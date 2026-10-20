@@ -5,6 +5,7 @@ import com.aionn.identity.adapter.rest.dto.user.request.ChangeDisplayNameRequest
 import com.aionn.identity.adapter.rest.dto.user.request.ConfirmOtpRequest;
 import com.aionn.identity.adapter.rest.dto.user.request.RequestEmailChangeOtpRequest;
 import com.aionn.identity.adapter.rest.dto.user.request.RequestPhoneChangeOtpRequest;
+import com.aionn.identity.adapter.rest.dto.user.request.RequestAccountDeletionRequest;
 import com.aionn.identity.adapter.rest.dto.user.response.DataExportRequestResponse;
 import com.aionn.identity.adapter.rest.dto.user.response.DeletionRequestResponse;
 import com.aionn.identity.adapter.rest.dto.user.response.UserProfileResponse;
@@ -139,9 +140,11 @@ public class UserController {
 	@PostMapping("/deletion-requests")
 	@IdempotentRequest(ttlSeconds = 300)
 	@Operation(summary = "Request account deletion", description = "Create account deletion request for the authenticated user")
-	public ResponseEntity<ApiResponse<DeletionRequestResponse>> requestAccountDeletion(Authentication authentication) {
+	public ResponseEntity<ApiResponse<DeletionRequestResponse>> requestAccountDeletion(
+			Authentication authentication,
+			@Valid @RequestBody(required = false) RequestAccountDeletionRequest request) {
 		var result = requestAccountDeletionInputPort
-				.execute(userDtoMapper.toRequestAccountDeletionCommand(authentication.getName()));
+				.execute(request != null ? userDtoMapper.toRequestAccountDeletionCommand(authentication.getName(), request) : userDtoMapper.toRequestAccountDeletionCommand(authentication.getName()));
 		DeletionRequestResponse response = userDtoMapper.toDeletionRequestResponse(result);
 		return ApiResponse.createdResponse("Account deletion requested", response);
 	}
