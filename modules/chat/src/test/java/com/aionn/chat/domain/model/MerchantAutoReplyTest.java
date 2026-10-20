@@ -90,6 +90,61 @@ class MerchantAutoReplyTest {
         assertThat(ar.isWithinWorkingHours(sundayNoon)).isFalse();
     }
 
+    @Test
+    void isWithinWorkingHoursTrue24_7AllDays() {
+        Set<DayOfWeek> allDays = EnumSet.allOf(DayOfWeek.class);
+        MerchantAutoReply ar = new MerchantAutoReply(MERCHANT, true, "hi", "away",
+                LocalTime.MIN, LocalTime.of(23, 59, 59), allDays,
+                TZ, Instant.now(), Instant.now());
+
+        Instant sundayNight = ZonedDateTime.of(2025, 1, 5, 23, 59, 59, 900_000_000, TZ).toInstant();
+        Instant mondayMorning = ZonedDateTime.of(2025, 1, 6, 0, 0, 0, 0, TZ).toInstant();
+        Instant wednesdayAfternoon = ZonedDateTime.of(2025, 1, 8, 14, 30, 0, 0, TZ).toInstant();
+
+        assertThat(ar.isWithinWorkingHours(sundayNight)).isTrue();
+        assertThat(ar.isWithinWorkingHours(mondayMorning)).isTrue();
+        assertThat(ar.isWithinWorkingHours(wednesdayAfternoon)).isTrue();
+    }
+
+    @Test
+    void isWithinWorkingHoursReturnsTrueWhenStartHourIsNull() {
+        Set<DayOfWeek> allDays = EnumSet.allOf(DayOfWeek.class);
+        MerchantAutoReply ar = new MerchantAutoReply(MERCHANT, true, "hi", "away",
+                null, LocalTime.of(17, 0), allDays,
+                TZ, Instant.now(), Instant.now());
+        assertThat(ar.isWithinWorkingHours(Instant.now())).isTrue();
+    }
+
+    @Test
+    void isWithinWorkingHoursReturnsTrueWhenEndHourIsNull() {
+        Set<DayOfWeek> allDays = EnumSet.allOf(DayOfWeek.class);
+        MerchantAutoReply ar = new MerchantAutoReply(MERCHANT, true, "hi", "away",
+                LocalTime.of(9, 0), null, allDays,
+                TZ, Instant.now(), Instant.now());
+        assertThat(ar.isWithinWorkingHours(Instant.now())).isTrue();
+    }
+
+    @Test
+    void isWithinWorkingHoursReturnsTrueWhenHoursMinToMax() {
+        Set<DayOfWeek> allDays = EnumSet.allOf(DayOfWeek.class);
+        MerchantAutoReply ar = new MerchantAutoReply(MERCHANT, true, "hi", "away",
+                LocalTime.MIN, LocalTime.MAX, allDays,
+                TZ, Instant.now(), Instant.now());
+        assertThat(ar.isWithinWorkingHours(Instant.now())).isTrue();
+    }
+
+    @Test
+    void isWithinWorkingHoursHandlesMinStartWithIntermediateEnd() {
+        Set<DayOfWeek> allDays = EnumSet.allOf(DayOfWeek.class);
+        MerchantAutoReply ar = new MerchantAutoReply(MERCHANT, true, "hi", "away",
+                LocalTime.MIN, LocalTime.of(12, 0), allDays,
+                TZ, Instant.now(), Instant.now());
+        Instant morning = ZonedDateTime.of(2025, 1, 6, 8, 0, 0, 0, TZ).toInstant();
+        Instant afternoon = ZonedDateTime.of(2025, 1, 6, 15, 0, 0, 0, TZ).toInstant();
+        assertThat(ar.isWithinWorkingHours(morning)).isTrue();
+        assertThat(ar.isWithinWorkingHours(afternoon)).isFalse();
+    }
+
     private static MerchantAutoReply mondayNineToFive() {
         Set<DayOfWeek> mondayOnly = EnumSet.of(DayOfWeek.MONDAY);
         return new MerchantAutoReply(MERCHANT, true, "hi", "away",

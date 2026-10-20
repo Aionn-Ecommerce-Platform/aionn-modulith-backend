@@ -83,6 +83,7 @@ public class ApiSecurityConfig {
                                                                 "/api/v1/payments/vnpay/return")
                                                 .permitAll()
                                                 .requestMatchers(
+                                                                "/ws/chat/**",
                                                                 "/swagger-ui.html",
                                                                 "/swagger-ui/**",
                                                                 "/v3/api-docs/**",
