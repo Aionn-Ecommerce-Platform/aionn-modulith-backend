@@ -36,3 +36,4 @@ public class IdentityUserProfileLookupAdapter implements UserProfileLookupPort {
                 ));
     }
 }
+

@@ -9,3 +9,4 @@ public interface UserProfileLookupPort {
 
     Map<String, UserProfile> findProfiles(Set<String> userIds);
 }
+
