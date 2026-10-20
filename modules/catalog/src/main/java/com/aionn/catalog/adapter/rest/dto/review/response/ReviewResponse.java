@@ -19,5 +19,8 @@ public record ReviewResponse(
         String reportReason,
         Instant reportedAt,
         Instant createdAt,
-        Instant updatedAt) {
+        Instant updatedAt,
+        String userName,
+        String userDisplayName,
+        String userAvatarUrl) {
 }

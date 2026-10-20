@@ -38,6 +38,7 @@ import com.aionn.catalog.application.port.in.review.UpdateReviewInputPort;
 import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
 import com.aionn.sharedkernel.adapter.web.response.PageMetadata;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
+import com.aionn.sharedkernel.integration.port.identity.UserProfileLookupPort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -57,6 +58,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/catalog")
@@ -80,6 +84,7 @@ public class ReviewController {
         private final GetProductRatingSummaryInputPort getProductRatingSummaryInputPort;
         private final CheckReviewEligibilityInputPort checkReviewEligibilityInputPort;
         private final ReviewDtoMapper reviewDtoMapper;
+        private final UserProfileLookupPort userProfileLookupPort;
 
         @PostMapping("/products/{productId}/reviews")
         @PreAuthorize("isAuthenticated()")
@@ -178,8 +183,9 @@ public class ReviewController {
                         @RequestParam(defaultValue = "20") int size) {
                 PageResult<ReviewResult> result = getReviewsByProductInputPort.execute(
                                 new GetReviewsByProductQuery(productId, OffsetPagination.of(page, size)));
+                List<ReviewResponse> responses = enrichWithProfiles(reviewDtoMapper.toResponses(result.content()));
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
-                                reviewDtoMapper.toResponses(result.content()),
+                                responses,
                                 PageMetadata.of(result.page(), result.size(), result.totalElements()),
                                 "Reviews fetched"));
         }
@@ -201,8 +207,9 @@ public class ReviewController {
                         @RequestParam(defaultValue = "20") int size) {
                 PageResult<ReviewResult> result = getMyReviewsInputPort.execute(
                                 new GetMyReviewsQuery(userId, OffsetPagination.of(page, size)));
+                List<ReviewResponse> responses = enrichWithProfiles(reviewDtoMapper.toResponses(result.content()));
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
-                                reviewDtoMapper.toResponses(result.content()),
+                                responses,
                                 PageMetadata.of(result.page(), result.size(), result.totalElements()),
                                 "My reviews fetched"));
         }
@@ -217,8 +224,9 @@ public class ReviewController {
                         @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
                 PageResult<ReviewResult> result = getMerchantReviewsInputPort.execute(
                                 new GetMerchantReviewsQuery(ownerId, replied, OffsetPagination.of(page, size)));
+                List<ReviewResponse> responses = enrichWithProfiles(reviewDtoMapper.toResponses(result.content()));
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
-                                reviewDtoMapper.toResponses(result.content()),
+                                responses,
                                 PageMetadata.of(result.page(), result.size(), result.totalElements()),
                                 "Merchant reviews fetched"));
         }
@@ -231,8 +239,9 @@ public class ReviewController {
                         @RequestParam(defaultValue = "20") int size) {
                 PageResult<ReviewResult> result = getReportedReviewsInputPort.execute(
                                 new GetReportedReviewsQuery(OffsetPagination.of(page, size)));
+                List<ReviewResponse> responses = enrichWithProfiles(reviewDtoMapper.toResponses(result.content()));
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
-                                reviewDtoMapper.toResponses(result.content()),
+                                responses,
                                 PageMetadata.of(result.page(), result.size(), result.totalElements()),
                                 "Reported reviews fetched"));
         }
@@ -246,8 +255,9 @@ public class ReviewController {
                         @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
                 PageResult<ReviewResult> result = getAdminProductReviewsInputPort.execute(
                                 new GetAdminProductReviewsQuery(productId, OffsetPagination.of(page, size)));
+                List<ReviewResponse> responses = enrichWithProfiles(reviewDtoMapper.toResponses(result.content()));
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
-                                reviewDtoMapper.toResponses(result.content()),
+                                responses,
                                 PageMetadata.of(result.page(), result.size(), result.totalElements()),
                                 "Product reviews fetched for moderation"));
         }
@@ -262,5 +272,45 @@ public class ReviewController {
                                 .execute(new CheckReviewEligibilityQuery(userId, productId));
                 return ResponseEntity.ok(ApiResponse.success(
                                 reviewDtoMapper.toResponse(result), "Eligibility checked"));
+        }
+
+        private List<ReviewResponse> enrichWithProfiles(List<ReviewResponse> responses) {
+                if (responses == null || responses.isEmpty() || userProfileLookupPort == null) {
+                        return responses;
+                }
+                Set<String> userIds = responses.stream()
+                                .map(ReviewResponse::userId)
+                                .filter(id -> id != null && !id.isBlank())
+                                .collect(Collectors.toSet());
+                if (userIds.isEmpty()) {
+                        return responses;
+                }
+                Map<String, UserProfileLookupPort.UserProfile> profiles = userProfileLookupPort.findProfiles(userIds);
+                return responses.stream().map(r -> {
+                        UserProfileLookupPort.UserProfile profile = profiles.get(r.userId());
+                        if (profile == null) {
+                                return r;
+                        }
+                        return new ReviewResponse(
+                                        r.reviewId(),
+                                        r.productId(),
+                                        r.userId(),
+                                        r.orderId(),
+                                        r.rating(),
+                                        r.title(),
+                                        r.content(),
+                                        r.imageUrls(),
+                                        r.status(),
+                                        r.merchantReply(),
+                                        r.merchantRepliedAt(),
+                                        r.reportedByMerchantId(),
+                                        r.reportReason(),
+                                        r.reportedAt(),
+                                        r.createdAt(),
+                                        r.updatedAt(),
+                                        profile.username(),
+                                        profile.displayName(),
+                                        profile.avatarUrl());
+                }).toList();
         }
 }

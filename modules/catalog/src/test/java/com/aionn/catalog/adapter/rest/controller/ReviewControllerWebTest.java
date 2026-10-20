@@ -106,6 +106,8 @@ class ReviewControllerWebTest {
     private GetProductRatingSummaryInputPort getProductRatingSummaryInputPort;
     @Mock
     private CheckReviewEligibilityInputPort checkReviewEligibilityInputPort;
+    @Mock
+    private com.aionn.sharedkernel.integration.port.identity.UserProfileLookupPort userProfileLookupPort;
 
     private MockMvc mockMvc;
     private final JsonMapper objectMapper = JacksonMapperFactory.create();
@@ -119,7 +121,7 @@ class ReviewControllerWebTest {
                 getReviewsByProductInputPort, getMyReviewsInputPort, getMerchantReviewsInputPort,
                 getAdminProductReviewsInputPort, getReportedReviewsInputPort,
                 getProductRatingSummaryInputPort, checkReviewEligibilityInputPort,
-                new ReviewDtoMapperImpl());
+                new ReviewDtoMapperImpl(), userProfileLookupPort);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new CatalogExceptionHandler())
                 .setCustomArgumentResolvers(
@@ -293,3 +295,4 @@ class ReviewControllerWebTest {
                 .andExpect(jsonPath("$.data.canReview").value(true));
     }
 }
+
