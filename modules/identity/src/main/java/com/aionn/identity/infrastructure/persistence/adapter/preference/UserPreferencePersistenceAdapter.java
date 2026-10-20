@@ -39,6 +39,7 @@ public class UserPreferencePersistenceAdapter implements UserPreferencePersisten
         entity.setTheme(preference.theme());
         entity.setNotificationSettings(preference.notificationSettings());
         entity.setAiPrivacySettings(preference.aiPrivacySettings());
+        entity.setUpdatedAt(preference.updatedAt());
 
         UserPreferenceEntity saved = preferenceRepository.save(entity);
         return mapper.toResult(saved);

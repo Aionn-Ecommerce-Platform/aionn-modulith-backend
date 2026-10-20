@@ -62,6 +62,12 @@ class ApiSecurityConfigIntegrationTest {
         }
 
         @Test
+        void wsChatRouteIsPermittedWithoutAuthentication() throws Exception {
+                mockMvc.perform(get("/ws/chat/info"))
+                                .andExpect(status().isNotFound());
+        }
+
+        @Test
         void ucpDiscoveryIsPublicButCommerceRoutesRemainProtected() throws Exception {
                 mockMvc.perform(get("/.well-known/ucp"))
                                 .andExpect(status().isOk())

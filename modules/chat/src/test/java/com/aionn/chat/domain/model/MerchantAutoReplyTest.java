@@ -106,6 +106,45 @@ class MerchantAutoReplyTest {
         assertThat(ar.isWithinWorkingHours(wednesdayAfternoon)).isTrue();
     }
 
+    @Test
+    void isWithinWorkingHoursReturnsTrueWhenStartHourIsNull() {
+        Set<DayOfWeek> allDays = EnumSet.allOf(DayOfWeek.class);
+        MerchantAutoReply ar = new MerchantAutoReply(MERCHANT, true, "hi", "away",
+                null, LocalTime.of(17, 0), allDays,
+                TZ, Instant.now(), Instant.now());
+        assertThat(ar.isWithinWorkingHours(Instant.now())).isTrue();
+    }
+
+    @Test
+    void isWithinWorkingHoursReturnsTrueWhenEndHourIsNull() {
+        Set<DayOfWeek> allDays = EnumSet.allOf(DayOfWeek.class);
+        MerchantAutoReply ar = new MerchantAutoReply(MERCHANT, true, "hi", "away",
+                LocalTime.of(9, 0), null, allDays,
+                TZ, Instant.now(), Instant.now());
+        assertThat(ar.isWithinWorkingHours(Instant.now())).isTrue();
+    }
+
+    @Test
+    void isWithinWorkingHoursReturnsTrueWhenHoursMinToMax() {
+        Set<DayOfWeek> allDays = EnumSet.allOf(DayOfWeek.class);
+        MerchantAutoReply ar = new MerchantAutoReply(MERCHANT, true, "hi", "away",
+                LocalTime.MIN, LocalTime.MAX, allDays,
+                TZ, Instant.now(), Instant.now());
+        assertThat(ar.isWithinWorkingHours(Instant.now())).isTrue();
+    }
+
+    @Test
+    void isWithinWorkingHoursHandlesMinStartWithIntermediateEnd() {
+        Set<DayOfWeek> allDays = EnumSet.allOf(DayOfWeek.class);
+        MerchantAutoReply ar = new MerchantAutoReply(MERCHANT, true, "hi", "away",
+                LocalTime.MIN, LocalTime.of(12, 0), allDays,
+                TZ, Instant.now(), Instant.now());
+        Instant morning = ZonedDateTime.of(2025, 1, 6, 8, 0, 0, 0, TZ).toInstant();
+        Instant afternoon = ZonedDateTime.of(2025, 1, 6, 15, 0, 0, 0, TZ).toInstant();
+        assertThat(ar.isWithinWorkingHours(morning)).isTrue();
+        assertThat(ar.isWithinWorkingHours(afternoon)).isFalse();
+    }
+
     private static MerchantAutoReply mondayNineToFive() {
         Set<DayOfWeek> mondayOnly = EnumSet.of(DayOfWeek.MONDAY);
         return new MerchantAutoReply(MERCHANT, true, "hi", "away",
