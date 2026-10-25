@@ -2,9 +2,12 @@ package com.aionn.catalog.application.mapper;
 
 import com.aionn.catalog.application.dto.common.PageResult;
 import com.aionn.catalog.application.dto.product.result.ProductResult;
+import com.aionn.catalog.application.policy.CatalogProductPolicy;
 import com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort;
+import com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort;
 import com.aionn.catalog.domain.model.Product;
 import com.aionn.catalog.domain.model.ProductVariant;
+import com.aionn.catalog.domain.valueobject.ReviewStatus;
 import com.aionn.sharedkernel.domain.vo.Money;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
@@ -14,30 +17,34 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import com.aionn.catalog.application.policy.CatalogProductPolicy;
-
 @Component
 public class ProductResultMapper {
 
     private final ProductSoldCounterPersistencePort soldCounterRepository;
     private final CatalogProductPolicy productPolicy;
+    private final ProductReviewPersistencePort reviewRepository;
 
     public ProductResultMapper(
             ProductSoldCounterPersistencePort soldCounterRepository,
-            CatalogProductPolicy productPolicy
+            CatalogProductPolicy productPolicy,
+            ProductReviewPersistencePort reviewRepository
     ) {
         this.soldCounterRepository = soldCounterRepository;
         this.productPolicy = productPolicy;
+        this.reviewRepository = reviewRepository;
     }
 
     public ProductResult toResult(Product product) {
         if (product == null) {
             return null;
         }
-        return toResult(product, soldCounterRepository.getSoldCount(product.getProductId()));
+        long soldCount = soldCounterRepository.getSoldCount(product.getProductId());
+        double rating = reviewRepository.getAverageRating(product.getProductId());
+        long reviewCount = reviewRepository.countByProductIdAndStatus(product.getProductId(), ReviewStatus.VISIBLE);
+        return toResult(product, soldCount, rating, reviewCount);
     }
 
-    private ProductResult toResult(Product product, long soldCount) {
+    private ProductResult toResult(Product product, long soldCount, double rating, long reviewCount) {
         Locale locale = LocaleContextHolder.getLocale();
         String fullTag = locale.toLanguageTag();
         String language = locale.getLanguage();
@@ -79,17 +86,26 @@ public class ProductResultMapper {
                 product.getCreatedAt(),
                 product.getUpdatedAt(),
                 soldCount,
-                isBestSeller);
+                isBestSeller,
+                rating,
+                reviewCount);
     }
 
     public List<ProductResult> toResults(List<Product> products) {
         if (products == null) {
             return List.of();
         }
-        Map<String, Long> soldCounts = soldCounterRepository.getSoldCountsByProductIds(
-                products.stream().map(Product::getProductId).toList());
+        List<String> productIds = products.stream().map(Product::getProductId).toList();
+        Map<String, Long> soldCounts = soldCounterRepository.getSoldCountsByProductIds(productIds);
+        Map<String, ProductReviewPersistencePort.RatingStats> ratingStats = reviewRepository.getRatingStatsByProductIds(productIds);
         return products.stream()
-                .map(product -> toResult(product, soldCounts.getOrDefault(product.getProductId(), 0L)))
+                .map(product -> {
+                    long sold = soldCounts.getOrDefault(product.getProductId(), 0L);
+                    var stats = ratingStats.get(product.getProductId());
+                    double rating = stats != null ? stats.averageRating() : 0.0;
+                    long reviews = stats != null ? stats.reviewCount() : 0L;
+                    return toResult(product, sold, rating, reviews);
+                })
                 .toList();
     }
 

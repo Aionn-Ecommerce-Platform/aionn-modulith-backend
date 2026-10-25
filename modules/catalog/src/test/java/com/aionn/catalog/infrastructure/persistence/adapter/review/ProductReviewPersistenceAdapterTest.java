@@ -130,4 +130,19 @@ class ProductReviewPersistenceAdapterTest {
         assertThat(distribution.get(4)).isEqualTo(2L); assertThat(distribution.get(3)).isZero();
         assertThat(distribution.get(2)).isZero(); assertThat(distribution.get(1)).isZero();
     }
+
+    @Test
+    void getRatingStatsByProductIdsBuildsStatsMap() {
+        when(jpa.getRatingStatsByProductIds(List.of(PRODUCT_ID))).thenReturn(List.<Object[]>of(
+                new Object[] { PRODUCT_ID, Double.valueOf(4.5), Long.valueOf(8) }));
+        var stats = adapter.getRatingStatsByProductIds(List.of(PRODUCT_ID));
+        assertThat(stats).hasSize(1);
+        assertThat(stats.get(PRODUCT_ID).averageRating()).isEqualTo(4.5);
+        assertThat(stats.get(PRODUCT_ID).reviewCount()).isEqualTo(8L);
+    }
+
+    @Test
+    void getRatingStatsByProductIdsReturnsEmptyForEmptyList() {
+        assertThat(adapter.getRatingStatsByProductIds(List.of())).isEmpty();
+    }
 }

@@ -51,4 +51,7 @@ public interface ProductReviewRepository extends JpaRepository<ProductReviewEnti
 
     @Query("SELECT r.rating, COUNT(r) FROM ProductReviewEntity r WHERE r.productId = :productId AND r.status = 'VISIBLE' GROUP BY r.rating")
     List<Object[]> countRatingsGroupByRating(String productId);
+
+    @Query("SELECT r.productId, COALESCE(AVG(r.rating), 0.0), COUNT(r) FROM ProductReviewEntity r WHERE r.productId IN :productIds AND r.status = 'VISIBLE' GROUP BY r.productId")
+    List<Object[]> getRatingStatsByProductIds(@org.springframework.data.repository.query.Param("productIds") List<String> productIds);
 }

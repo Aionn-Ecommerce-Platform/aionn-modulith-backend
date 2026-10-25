@@ -143,9 +143,27 @@ public class ProductReviewPersistenceAdapter implements ProductReviewPersistence
             distribution.put(i, 0L);
         }
         for (Object[] row : jpa.countRatingsGroupByRating(productId)) {
-            distribution.put(((Number) row[0]).intValue(), ((Number) row[1]).longValue());
+            int rating = ((Number) row[0]).intValue();
+            long count = ((Number) row[1]).longValue();
+            distribution.put(rating, count);
         }
         return distribution;
+    }
+
+        @Override
+    public Map<String, RatingStats> getRatingStatsByProductIds(List<String> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return Map.of();
+        }
+        List<Object[]> rows = jpa.getRatingStatsByProductIds(productIds);
+        Map<String, RatingStats> stats = new HashMap<>();
+        for (Object[] row : rows) {
+            String productId = (String) row[0];
+            double avg = ((Number) row[1]).doubleValue();
+            long count = ((Number) row[2]).longValue();
+            stats.put(productId, new RatingStats(avg, count));
+        }
+        return stats;
     }
 
     private static boolean isDuplicateReviewViolation(DataIntegrityViolationException exception) {

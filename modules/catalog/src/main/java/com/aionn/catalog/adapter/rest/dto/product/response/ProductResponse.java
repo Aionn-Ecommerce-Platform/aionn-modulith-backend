@@ -20,7 +20,9 @@ public record ProductResponse(
         Instant createdAt,
         Instant updatedAt,
         long soldCount,
-        boolean isBestSeller) {
+        boolean isBestSeller,
+        Double rating,
+        Long reviewCount) {
 
     public record Variant(String skuId, Map<String, String> attributeValues, BigDecimal price, String currency) {
     }
