@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Builds the three raw signal maps that hybrid ranking consumes.
@@ -161,6 +162,43 @@ public class CandidateGenerationService {
         int rank = recent.size();
         for (ProductAttributeQueryPort.ProductAttributes product : recent) {
             scores.put(product.productId(), BigDecimal.valueOf(rank--));
+        }
+        return scores;
+    }
+
+    /**
+     * Category candidates: fallback pool for product surfaces when behavioural co-occurrence is absent.
+     * Selects items sharing the target product's categories (preferring specific subcategories).
+     */
+    @Transactional(readOnly = true)
+    public Map<String, BigDecimal> categoryCandidates(String productId, int limit) {
+        Optional<ProductAttributeQueryPort.ProductAttributes> targetOpt = productAttributeQuery.findByProductId(productId);
+        if (targetOpt.isEmpty()) {
+            return Map.of();
+        }
+        ProductAttributeQueryPort.ProductAttributes target = targetOpt.get();
+        List<String> categories = target.categoryIds();
+        if (categories == null || categories.isEmpty()) {
+            return Map.of();
+        }
+
+        List<String> specificCategory = categories.size() > 1
+                ? List.of(categories.get(categories.size() - 1))
+                : categories;
+
+        List<ProductAttributeQueryPort.ProductAttributes> candidates = productAttributeQuery
+                .findCandidatesByCategoriesOrBrands(specificCategory, List.of(), limit + 5);
+
+        if (candidates.size() <= 1 && categories.size() > 1) {
+            candidates = productAttributeQuery.findCandidatesByCategoriesOrBrands(categories, List.of(), limit + 5);
+        }
+
+        Map<String, BigDecimal> scores = new LinkedHashMap<>();
+        int rank = candidates.size();
+        for (ProductAttributeQueryPort.ProductAttributes candidate : candidates) {
+            if (!candidate.productId().equals(productId)) {
+                scores.put(candidate.productId(), BigDecimal.valueOf(rank--));
+            }
         }
         return scores;
     }

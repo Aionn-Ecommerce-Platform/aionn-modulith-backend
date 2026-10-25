@@ -426,6 +426,23 @@ class RecommendationServiceTest {
         verify(candidateGeneration).collaborativeScores(anyCollection(), eq(3));
     }
 
+    @Test
+    void similarProductsFallsBackToCategoryCandidatesWhenCollaborativeIsEmpty() {
+        when(candidateGeneration.productExists("p-1")).thenReturn(true);
+        when(candidateGeneration.collaborativeScores(anyCollection(), anyInt())).thenReturn(Map.of());
+        when(candidateGeneration.categoryCandidates(eq("p-1"), anyInt()))
+                .thenReturn(Map.of("p-cat-1", score(0.8), "p-cat-2", score(0.5)));
+        when(candidateGeneration.popularityScoresFor(anyCollection())).thenReturn(Map.of());
+        hydrationEchoesEveryProduct();
+
+        List<RecommendationItemResult> results = service().similarProducts("p-1", LIMIT);
+
+        assertThat(results).extracting(RecommendationItemResult::productId)
+                .containsExactly("p-cat-1", "p-cat-2");
+        assertThat(results).extracting(RecommendationItemResult::reason)
+                .containsOnly(RecommendationReason.SIMILAR_TO_VIEWED);
+    }
+
     private void establishedProfile() {
         when(profileRefreshService.profileOf("user-1")).thenReturn(new UserAffinityProfile(
                 "user-1",

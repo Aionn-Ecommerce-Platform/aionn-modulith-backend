@@ -28,6 +28,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -236,6 +237,32 @@ class CandidateGenerationServiceTest {
                 null,
                 BigDecimal.valueOf(price),
                 "VND");
+    }
+
+    @Test
+    void categoryCandidatesReturnOtherProductsInSameCategoryExcludingSelf() {
+        when(productAttributeQuery.findByProductId("p-target")).thenReturn(Optional.of(
+                product("p-target", "brand-1", List.of("cat-parent", "cat-child"), 100_000)));
+        when(productAttributeQuery.findCandidatesByCategoriesOrBrands(
+                eq(List.of("cat-child")), eq(List.of()), anyInt())).thenReturn(List.of(
+                        product("p-target", "brand-1", List.of("cat-child"), 100_000),
+                        product("p-similar-1", "brand-2", List.of("cat-child"), 120_000),
+                        product("p-similar-2", "brand-3", List.of("cat-child"), 110_000)));
+
+        Map<String, BigDecimal> candidates = service().categoryCandidates("p-target", 10);
+
+        assertThat(candidates).containsKeys("p-similar-1", "p-similar-2");
+        assertThat(candidates).doesNotContainKey("p-target");
+    }
+
+    @Test
+    void categoryCandidatesReturnEmptyWhenTargetNotFoundOrHasNoCategories() {
+        when(productAttributeQuery.findByProductId("p-missing")).thenReturn(Optional.empty());
+        when(productAttributeQuery.findByProductId("p-no-cats")).thenReturn(Optional.of(
+                product("p-no-cats", "brand-1", List.of(), 100_000)));
+
+        assertThat(service().categoryCandidates("p-missing", 10)).isEmpty();
+        assertThat(service().categoryCandidates("p-no-cats", 10)).isEmpty();
     }
 
     private static RankingWeightPolicy weights() {

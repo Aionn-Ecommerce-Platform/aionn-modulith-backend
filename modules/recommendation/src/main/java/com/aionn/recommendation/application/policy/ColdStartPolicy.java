@@ -40,6 +40,12 @@ public class ColdStartPolicy {
                 weights.collaborativeWeight(), weights.popularityWeight());
     }
 
+    /** Product-scoped cold start when co-occurrence is missing: content (category) carries the slate. */
+    public SignalWeights forProductSurfaceWithContent() {
+        return SignalWeights.withoutCollaborative(
+                weights.contentWeight(), weights.popularityWeight());
+    }
+
     /**
      * Normalised weights for the three candidate sources. Values are relative; the ranking policy
      * divides by their sum, so they need not add to one.

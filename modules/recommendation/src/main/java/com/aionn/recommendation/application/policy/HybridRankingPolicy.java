@@ -99,6 +99,13 @@ public class HybridRankingPolicy {
             Map<String, BigDecimal> popularity,
             ColdStartPolicy.SignalWeights weights) {
 
+        if (surface == RecommendationSurface.SIMILAR && (collaborative.containsKey(productId) || content.containsKey(productId))) {
+            return RecommendationReason.SIMILAR_TO_VIEWED;
+        }
+        if (surface == RecommendationSurface.ALSO_BOUGHT && (collaborative.containsKey(productId) || content.containsKey(productId))) {
+            return RecommendationReason.FREQUENTLY_BOUGHT_TOGETHER;
+        }
+
         BigDecimal cf = contribution(collaborative, productId, weights.collaborative());
         BigDecimal ct = contribution(content, productId, weights.content());
         BigDecimal pop = contribution(popularity, productId, weights.popularity());

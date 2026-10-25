@@ -163,18 +163,37 @@ public class RecommendationService {
 
         Map<String, BigDecimal> collaborative = candidateGeneration.collaborativeScores(List.of(productId),
                 candidateLimit);
-        // With no co-occurrence data yet, fall back to the global popularity pool;
-        // otherwise score only
-        // the neighbours so popularity breaks ties rather than introducing unrelated
-        // products.
-        Map<String, BigDecimal> popularity = collaborative.isEmpty()
-                ? candidateGeneration.popularityScores(candidateLimit)
-                : candidateGeneration.popularityScoresFor(collaborative.keySet());
+        if (collaborative == null) {
+            collaborative = Map.of();
+        }
+
+        Map<String, BigDecimal> contentCandidates = Map.of();
+        Map<String, BigDecimal> popularity;
+
+        if (collaborative.isEmpty()) {
+            Map<String, BigDecimal> categoryCandidates = candidateGeneration.categoryCandidates(productId, candidateLimit);
+            if (categoryCandidates != null && !categoryCandidates.isEmpty()) {
+                contentCandidates = categoryCandidates;
+                popularity = candidateGeneration.popularityScoresFor(contentCandidates.keySet());
+            } else {
+                popularity = candidateGeneration.popularityScores(candidateLimit);
+            }
+        } else {
+            popularity = candidateGeneration.popularityScoresFor(collaborative.keySet());
+        }
+
+        if (popularity == null) {
+            popularity = Map.of();
+        }
+
+        ColdStartPolicy.SignalWeights signalWeights = !contentCandidates.isEmpty()
+                ? coldStartPolicy.forProductSurfaceWithContent()
+                : coldStartPolicy.forProductSurface();
 
         List<RecommendationItemResult> results = rankAndHydrate(
                 surface,
-                new HybridRankingPolicy.SignalScores(collaborative, Map.of(), popularity),
-                coldStartPolicy.forProductSurface(),
+                new HybridRankingPolicy.SignalScores(collaborative, contentCandidates, popularity),
+                signalWeights,
                 Set.of(productId),
                 candidateLimit);
         return results.isEmpty() ? fallbackToTrending(surface, limit, Set.of(productId)) : results;
