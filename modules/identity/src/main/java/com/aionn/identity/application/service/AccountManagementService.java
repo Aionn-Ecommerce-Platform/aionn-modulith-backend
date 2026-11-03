@@ -211,29 +211,52 @@ public class AccountManagementService {
         UserSecurityPort.UserSecurityData userSecurity = userSecurityPort.findById(userId)
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.USER_NOT_FOUND));
 
-        if (userSecurity.passwordHash() != null && !userSecurity.passwordHash().isBlank()) {
-            if (password == null || password.isBlank() || !passwordHasher.matches(password, userSecurity.passwordHash())) {
-                throw new IdentityException(IdentityErrorCode.INVALID_CREDENTIALS);
-            }
-        }
+        verifyPasswordForDeletion(userSecurity, password);
+        verifyMfaForDeletion(userId, userSecurity, mfaCode);
+        verifyNoOpenOrdersForDeletion(userId);
 
-        if (userSecurity.mfaEnabled()) {
-            if (mfaCode == null || mfaCode.isBlank()) {
-                throw new IdentityException(IdentityErrorCode.OTP_REQUIRED, "MFA code is required");
-            }
-            boolean totpValid = totpManager.verifyCode(userSecurity.mfaSecret(), mfaCode.trim());
-            if (!totpValid) {
-                boolean matchedBackup = mfaPersistencePort.findActiveBackupCodes(userId).stream()
-                        .filter(code -> passwordHasher.matches(mfaCode.trim(), code.codeHash()))
-                        .findFirst()
-                        .map(code -> mfaPersistencePort.markBackupCodeUsed(code.backupCodeId(), nowUtc()))
-                        .orElse(false);
-                if (!matchedBackup) {
-                    throw new IdentityException(IdentityErrorCode.OTP_INVALID, "Invalid MFA code");
-                }
-            }
+        if (accountDeletionPort.findPendingByUserId(userId).isPresent()) {
+            throw new IdentityException(IdentityErrorCode.ACCOUNT_DELETION_ALREADY_REQUESTED);
         }
+        Instant scheduledDeletionAt = nowUtc()
+                .plus(Duration.ofDays(accountManagementPolicy.getDeletionGraceDays()));
+        DeletionRequestView result = accountDeletionPort.save(userId, scheduledDeletionAt);
+        log.info("Account deletion requested for user: {}, scheduled at: {}", userId, scheduledDeletionAt);
+        return result;
+    }
 
+    private void verifyPasswordForDeletion(UserSecurityPort.UserSecurityData userSecurity, String password) {
+        String passwordHash = userSecurity.passwordHash();
+        if (passwordHash != null && !passwordHash.isBlank()
+                && (password == null || password.isBlank() || !passwordHasher.matches(password, passwordHash))) {
+            throw new IdentityException(IdentityErrorCode.INVALID_CREDENTIALS);
+        }
+    }
+
+    private void verifyMfaForDeletion(String userId, UserSecurityPort.UserSecurityData userSecurity, String mfaCode) {
+        if (!userSecurity.mfaEnabled()) {
+            return;
+        }
+        if (mfaCode == null || mfaCode.isBlank()) {
+            throw new IdentityException(IdentityErrorCode.OTP_REQUIRED, "MFA code is required");
+        }
+        if (totpManager.verifyCode(userSecurity.mfaSecret(), mfaCode.trim())) {
+            return;
+        }
+        if (!markMatchingBackupCodeUsed(userId, mfaCode.trim())) {
+            throw new IdentityException(IdentityErrorCode.OTP_INVALID, "Invalid MFA code");
+        }
+    }
+
+    private boolean markMatchingBackupCodeUsed(String userId, String mfaCode) {
+        return mfaPersistencePort.findActiveBackupCodes(userId).stream()
+                .filter(code -> passwordHasher.matches(mfaCode, code.codeHash()))
+                .findFirst()
+                .map(code -> mfaPersistencePort.markBackupCodeUsed(code.backupCodeId(), nowUtc()))
+                .orElse(false);
+    }
+
+    private void verifyNoOpenOrdersForDeletion(String userId) {
         if (orderQueryPort != null && orderQueryPort.hasOpenOrdersForUser(userId)) {
             throw new IdentityException(IdentityErrorCode.ACCOUNT_HAS_OPEN_ORDERS,
                     "Cannot request account deletion while you have active or pending orders");
@@ -247,15 +270,6 @@ public class AccountManagementService {
                 }
             });
         }
-
-        if (accountDeletionPort.findPendingByUserId(userId).isPresent()) {
-            throw new IdentityException(IdentityErrorCode.ACCOUNT_DELETION_ALREADY_REQUESTED);
-        }
-        Instant scheduledDeletionAt = nowUtc()
-                .plus(Duration.ofDays(accountManagementPolicy.getDeletionGraceDays()));
-        DeletionRequestView result = accountDeletionPort.save(userId, scheduledDeletionAt);
-        log.info("Account deletion requested for user: {}, scheduled at: {}", userId, scheduledDeletionAt);
-        return result;
     }
 
     private void cancelAccountDeletion(String userId) {

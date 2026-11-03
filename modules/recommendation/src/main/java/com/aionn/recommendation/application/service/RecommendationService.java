@@ -186,9 +186,9 @@ public class RecommendationService {
             popularity = Map.of();
         }
 
-        ColdStartPolicy.SignalWeights signalWeights = !contentCandidates.isEmpty()
-                ? coldStartPolicy.forProductSurfaceWithContent()
-                : coldStartPolicy.forProductSurface();
+        ColdStartPolicy.SignalWeights signalWeights = contentCandidates.isEmpty()
+                ? coldStartPolicy.forProductSurface()
+                : coldStartPolicy.forProductSurfaceWithContent();
 
         List<RecommendationItemResult> results = rankAndHydrate(
                 surface,

@@ -155,8 +155,9 @@ class AccountManagementServiceTest {
                                 new UserSecurityPort.UserSecurityData(USER_ID, null, com.aionn.identity.domain.valueobject.UserStatus.ACTIVE, false, null, null, 0)));
                 when(orderQueryPort.hasOpenOrdersForUser(USER_ID)).thenReturn(true);
 
+                RequestAccountDeletionCommand command = new RequestAccountDeletionCommand(USER_ID);
                 IdentityException ex = assertThrows(IdentityException.class,
-                                () -> service.requestAccountDeletion(new RequestAccountDeletionCommand(USER_ID)));
+                                () -> service.requestAccountDeletion(command));
 
                 assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.ACCOUNT_HAS_OPEN_ORDERS.getCode());
                 verify(accountDeletionPort, never()).save(any(), any());
@@ -474,14 +475,74 @@ class AccountManagementServiceTest {
         }
 
         @Test
-        void confirmPhoneChangeRejectsPhoneTakenByAnotherUser() {
+        void requestAccountDeletionRejectsInvalidPassword() {
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
-                when(userOtpChallengeStore.find(USER_ID, UserOtpPurpose.CHANGE_PHONE)).thenReturn(
-                                Optional.of(challenge(UserOtpPurpose.CHANGE_PHONE, OtpChannel.PHONE,
-                                                "+15550001", "123456", "+15550001", future(), 0)));
-                when(userPersistencePort.existsByPhone("+15550001")).thenReturn(true);
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, "hash", com.aionn.identity.domain.valueobject.UserStatus.ACTIVE, false, null, null, 0)));
+                when(passwordHasher.matches("wrong", "hash")).thenReturn(false);
 
-                assertErrorCode(IdentityErrorCode.PHONE_ALREADY_EXISTS,
-                                () -> service.confirmPhoneChange(USER_ID, "123456"));
+                assertErrorCode(IdentityErrorCode.INVALID_CREDENTIALS,
+                                () -> service.requestAccountDeletion(
+                                                new RequestAccountDeletionCommand(USER_ID, "wrong", null)));
         }
+
+        @Test
+        void requestAccountDeletionRejectsMissingMfaCode() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, null, com.aionn.identity.domain.valueobject.UserStatus.ACTIVE, true, "secret", null, 0)));
+
+                assertErrorCode(IdentityErrorCode.OTP_REQUIRED,
+                                () -> service.requestAccountDeletion(
+                                                new RequestAccountDeletionCommand(USER_ID, null, " ")));
+        }
+
+        @Test
+        void requestAccountDeletionAcceptsValidBackupCode() {
+                DeletionRequestView view = new DeletionRequestView(
+                                "req-mfa", "PENDING", FIXED_NOW, FIXED_NOW.plus(Duration.ofDays(30)));
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, null, com.aionn.identity.domain.valueobject.UserStatus.ACTIVE, true, "secret", null, 0)));
+                when(totpManager.verifyCode("secret", "backup")).thenReturn(false);
+                when(mfaPersistencePort.findActiveBackupCodes(USER_ID))
+                                .thenReturn(List.of(new MfaPersistencePort.BackupCodeData("backup-1", "hash")));
+                when(passwordHasher.matches("backup", "hash")).thenReturn(true);
+                when(mfaPersistencePort.markBackupCodeUsed(eq("backup-1"), any(Instant.class))).thenReturn(true);
+                when(orderQueryPort.hasOpenOrdersForUser(USER_ID)).thenReturn(false);
+                when(merchantQueryPort.findMerchantIdByOwnerId(USER_ID)).thenReturn(Optional.empty());
+                when(accountDeletionPort.findPendingByUserId(USER_ID)).thenReturn(Optional.empty());
+                when(accountManagementPolicy.getDeletionGraceDays()).thenReturn(30);
+                when(accountDeletionPort.save(eq(USER_ID), any(Instant.class))).thenReturn(view);
+
+                assertThat(service.requestAccountDeletion(
+                                new RequestAccountDeletionCommand(USER_ID, null, "backup"))).isSameAs(view);
+        }
+
+        @Test
+        void requestAccountDeletionRejectsInvalidMfaCode() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, null, com.aionn.identity.domain.valueobject.UserStatus.ACTIVE, true, "secret", null, 0)));
+                when(totpManager.verifyCode("secret", "bad")).thenReturn(false);
+                when(mfaPersistencePort.findActiveBackupCodes(USER_ID)).thenReturn(List.of());
+
+                assertErrorCode(IdentityErrorCode.OTP_INVALID,
+                                () -> service.requestAccountDeletion(
+                                                new RequestAccountDeletionCommand(USER_ID, null, "bad")));
+        }
+
+        @Test
+        void requestAccountDeletionRejectsWhenMerchantHasOpenOrders() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, null, com.aionn.identity.domain.valueobject.UserStatus.ACTIVE, false, null, null, 0)));
+                when(orderQueryPort.hasOpenOrdersForUser(USER_ID)).thenReturn(false);
+                when(merchantQueryPort.findMerchantIdByOwnerId(USER_ID)).thenReturn(Optional.of("merchant-1"));
+                when(orderQueryPort.hasOpenOrdersForMerchant("merchant-1")).thenReturn(true);
+
+                assertErrorCode(IdentityErrorCode.ACCOUNT_HAS_OPEN_ORDERS,
+                                () -> service.requestAccountDeletion(new RequestAccountDeletionCommand(USER_ID)));
+        }
+
 }

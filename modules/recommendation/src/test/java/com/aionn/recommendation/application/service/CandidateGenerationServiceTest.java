@@ -251,8 +251,9 @@ class CandidateGenerationServiceTest {
 
         Map<String, BigDecimal> candidates = service().categoryCandidates("p-target", 10);
 
-        assertThat(candidates).containsKeys("p-similar-1", "p-similar-2");
-        assertThat(candidates).doesNotContainKey("p-target");
+        assertThat(candidates)
+                .containsKeys("p-similar-1", "p-similar-2")
+                .doesNotContainKey("p-target");
     }
 
     @Test
@@ -263,6 +264,24 @@ class CandidateGenerationServiceTest {
 
         assertThat(service().categoryCandidates("p-missing", 10)).isEmpty();
         assertThat(service().categoryCandidates("p-no-cats", 10)).isEmpty();
+    }
+
+    @Test
+    void categoryCandidatesFallsBackToAllCategoriesWhenSpecificCategoryYieldsTooFew() {
+        when(productAttributeQuery.findByProductId("p-target")).thenReturn(Optional.of(
+                product("p-target", "brand-1", List.of("cat-parent", "cat-child"), 100_000)));
+        // The specific subcategory only returns the target itself (size <= 1), so the
+        // service retries with the full category list.
+        when(productAttributeQuery.findCandidatesByCategoriesOrBrands(
+                eq(List.of("cat-child")), eq(List.of()), anyInt())).thenReturn(List.of(
+                        product("p-target", "brand-1", List.of("cat-child"), 100_000)));
+        when(productAttributeQuery.findCandidatesByCategoriesOrBrands(
+                eq(List.of("cat-parent", "cat-child")), eq(List.of()), anyInt())).thenReturn(List.of(
+                        product("p-similar-1", "brand-2", List.of("cat-parent"), 120_000)));
+
+        Map<String, BigDecimal> candidates = service().categoryCandidates("p-target", 10);
+
+        assertThat(candidates).containsOnlyKeys("p-similar-1");
     }
 
     private static RankingWeightPolicy weights() {
