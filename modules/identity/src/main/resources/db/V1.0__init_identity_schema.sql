@@ -1,8 +1,8 @@
 CREATE TABLE users (
     user_id VARCHAR(26) PRIMARY KEY,
-    email VARCHAR(100) UNIQUE,
-    phone VARCHAR(20) UNIQUE,
-    username VARCHAR(50) UNIQUE,
+    email VARCHAR(100),
+    phone VARCHAR(20),
+    username VARCHAR(50),
     password_hash VARCHAR(255),
     display_name VARCHAR(100),
     avatar_url TEXT,
@@ -231,6 +231,8 @@ CREATE INDEX idx_backup_user_id ON backup_codes(user_id);
 
 CREATE INDEX idx_audit_user_id ON security_audits(user_id);
 CREATE INDEX idx_audit_event_type ON security_audits(event_type);
+CREATE INDEX IF NOT EXISTS idx_security_audits_device_id
+    ON security_audits (device_id);
 
 CREATE INDEX idx_session_user_id ON auth_sessions(user_id);
 CREATE INDEX idx_session_status ON auth_sessions(status);
@@ -11233,3 +11235,17 @@ CREATE INDEX idx_user_feedbacks_created_at ON user_feedbacks(created_at DESC);
 
 ALTER TABLE user_feedbacks
     ADD COLUMN admin_reply TEXT;
+
+-- Soft-deleted users keep no identifying contact fields and must not block
+-- re-registration, so uniqueness is enforced only on live accounts.
+CREATE UNIQUE INDEX uq_users_active_email
+    ON users (email)
+    WHERE deleted_at IS NULL AND email IS NOT NULL;
+
+CREATE UNIQUE INDEX uq_users_active_phone
+    ON users (phone)
+    WHERE deleted_at IS NULL AND phone IS NOT NULL;
+
+CREATE UNIQUE INDEX uq_users_active_username
+    ON users (username)
+    WHERE deleted_at IS NULL AND username IS NOT NULL;

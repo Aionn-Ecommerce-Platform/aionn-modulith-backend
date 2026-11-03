@@ -29,3 +29,10 @@ CREATE TABLE event_inbox (
     processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (consumer_id, event_id)
 );
+
+CREATE TABLE shedlock (
+    name       VARCHAR(64) PRIMARY KEY,
+    lock_until TIMESTAMP NOT NULL,
+    locked_at  TIMESTAMP NOT NULL,
+    locked_by  VARCHAR(255) NOT NULL
+);
