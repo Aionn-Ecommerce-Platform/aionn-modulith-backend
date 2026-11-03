@@ -228,10 +228,38 @@ class ReviewControllerWebTest {
     void listByProductReturnsOk() throws Exception {
         when(getReviewsByProductInputPort.execute(any(GetReviewsByProductQuery.class)))
                 .thenReturn(new PageResult<>(List.of(sample()), 0, 20, 1));
+        when(userProfileLookupPort.findProfiles(any()))
+                .thenReturn(Map.of("user-1",
+                        new com.aionn.sharedkernel.integration.port.identity.UserProfileLookupPort.UserProfile(
+                                "user-1", "u1", "User One", "avatar.png")));
 
         mockMvc.perform(get("/api/v1/catalog/products/" + PRODUCT_ID + "/reviews"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].reviewId").value(REVIEW_ID));
+                .andExpect(jsonPath("$.data[0].reviewId").value(REVIEW_ID))
+                .andExpect(jsonPath("$.data[0].userName").value("u1"))
+                .andExpect(jsonPath("$.data[0].userDisplayName").value("User One"));
+    }
+
+    @Test
+    void listByProductLeavesReviewUntouchedWhenProfileMissing() throws Exception {
+        when(getReviewsByProductInputPort.execute(any(GetReviewsByProductQuery.class)))
+                .thenReturn(new PageResult<>(List.of(sample()), 0, 20, 1));
+        // Lookup returns no profile for user-1 -> controller returns the review as-is.
+        when(userProfileLookupPort.findProfiles(any())).thenReturn(Map.of());
+
+        mockMvc.perform(get("/api/v1/catalog/products/" + PRODUCT_ID + "/reviews"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].reviewId").value(REVIEW_ID))
+                .andExpect(jsonPath("$.data[0].userName").doesNotExist());
+    }
+
+    @Test
+    void listByProductSkipsLookupWhenNoReviews() throws Exception {
+        when(getReviewsByProductInputPort.execute(any(GetReviewsByProductQuery.class)))
+                .thenReturn(new PageResult<>(List.of(), 0, 20, 0));
+
+        mockMvc.perform(get("/api/v1/catalog/products/" + PRODUCT_ID + "/reviews"))
+                .andExpect(status().isOk());
     }
 
     @Test
