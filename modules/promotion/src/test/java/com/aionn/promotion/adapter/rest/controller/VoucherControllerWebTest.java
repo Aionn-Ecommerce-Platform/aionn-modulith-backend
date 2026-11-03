@@ -1,7 +1,10 @@
 package com.aionn.promotion.adapter.rest.controller;
 
+import com.aionn.promotion.adapter.rest.mapper.voucher.VoucherDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.promotion.adapter.rest.exception.PromotionExceptionHandler;
-import com.aionn.promotion.adapter.rest.mapper.voucher.VoucherDtoMapperImpl;
 import com.aionn.promotion.adapter.rest.support.session.CurrentUserIdArgumentResolver;
 import com.aionn.promotion.application.dto.voucher.command.VoucherCommands;
 import com.aionn.promotion.application.dto.voucher.result.UserVoucherResult;
@@ -62,7 +65,7 @@ class VoucherControllerWebTest {
                 VoucherController controller = new VoucherController(
                                 claimVoucherInputPort, reserveVoucherInputPort, applyVoucherInputPort,
                                 releaseVoucherInputPort, listMyVouchersInputPort, getMyVoucherInputPort,
-                                new VoucherDtoMapperImpl());
+                                Mappers.getMapper(VoucherDtoMapper.class));
 
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new PromotionExceptionHandler())

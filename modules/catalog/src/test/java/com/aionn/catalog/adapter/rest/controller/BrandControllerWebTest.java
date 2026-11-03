@@ -1,10 +1,13 @@
 package com.aionn.catalog.adapter.rest.controller;
 
+import com.aionn.catalog.adapter.rest.mapper.brand.BrandDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.catalog.adapter.rest.dto.brand.request.CreateBrandRequest;
 import com.aionn.catalog.adapter.rest.dto.brand.request.DeleteBrandRequest;
 import com.aionn.catalog.adapter.rest.dto.brand.request.UpdateBrandRequest;
 import com.aionn.catalog.adapter.rest.exception.CatalogExceptionHandler;
-import com.aionn.catalog.adapter.rest.mapper.brand.BrandDtoMapperImpl;
 import com.aionn.catalog.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.catalog.adapter.rest.support.TestAuth;
 import com.aionn.catalog.application.dto.brand.command.CreateBrandCommand;
@@ -72,7 +75,7 @@ class BrandControllerWebTest {
                 deleteBrandInputPort,
                 listBrandsInputPort,
                 getBrandInputPort,
-                new BrandDtoMapperImpl());
+                Mappers.getMapper(BrandDtoMapper.class));
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new CatalogExceptionHandler())
                 .addInterceptors(new MockSecurityInterceptor())

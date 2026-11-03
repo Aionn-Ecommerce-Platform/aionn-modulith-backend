@@ -1,11 +1,14 @@
 package com.aionn.catalog.adapter.rest.controller;
 
+import com.aionn.catalog.adapter.rest.mapper.review.ReviewDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.catalog.adapter.rest.dto.review.request.MerchantReplyRequest;
 import com.aionn.catalog.adapter.rest.dto.review.request.ReportReviewRequest;
 import com.aionn.catalog.adapter.rest.dto.review.request.SubmitReviewRequest;
 import com.aionn.catalog.adapter.rest.dto.review.request.UpdateReviewRequest;
 import com.aionn.catalog.adapter.rest.exception.CatalogExceptionHandler;
-import com.aionn.catalog.adapter.rest.mapper.review.ReviewDtoMapperImpl;
 import com.aionn.catalog.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.catalog.adapter.rest.support.TestAuth;
 import com.aionn.catalog.adapter.rest.support.session.CurrentAdminIdArgumentResolver;
@@ -121,7 +124,7 @@ class ReviewControllerWebTest {
                 getReviewsByProductInputPort, getMyReviewsInputPort, getMerchantReviewsInputPort,
                 getAdminProductReviewsInputPort, getReportedReviewsInputPort,
                 getProductRatingSummaryInputPort, checkReviewEligibilityInputPort,
-                new ReviewDtoMapperImpl(), userProfileLookupPort);
+                Mappers.getMapper(ReviewDtoMapper.class), userProfileLookupPort);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new CatalogExceptionHandler())
                 .setCustomArgumentResolvers(

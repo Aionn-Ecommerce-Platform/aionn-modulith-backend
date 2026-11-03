@@ -1,7 +1,10 @@
 package com.aionn.promotion.adapter.rest.controller;
 
+import com.aionn.promotion.adapter.rest.mapper.banner.PromotionBannerDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.promotion.adapter.rest.exception.PromotionExceptionHandler;
-import com.aionn.promotion.adapter.rest.mapper.banner.PromotionBannerDtoMapperImpl;
 import com.aionn.promotion.application.dto.banner.command.BannerCommands;
 import com.aionn.promotion.application.dto.banner.result.PromotionBannerResult;
 import com.aionn.promotion.application.port.in.banner.CreateBannerInputPort;
@@ -58,7 +61,7 @@ class PromotionBannerControllerWebTest {
         PromotionBannerController controller = new PromotionBannerController(
                 listActiveBannersInputPort, listAllBannersInputPort, getBannerInputPort,
                 createBannerInputPort, updateBannerInputPort, deleteBannerInputPort,
-                new PromotionBannerDtoMapperImpl());
+                Mappers.getMapper(PromotionBannerDtoMapper.class));
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new PromotionExceptionHandler())

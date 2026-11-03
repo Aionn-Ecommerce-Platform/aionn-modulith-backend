@@ -1,10 +1,13 @@
 package com.aionn.catalog.adapter.rest.controller;
 
+import com.aionn.catalog.adapter.rest.mapper.category.CategoryDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.catalog.adapter.rest.dto.category.request.CreateCategoryRequest;
 import com.aionn.catalog.adapter.rest.dto.category.request.MoveCategoryRequest;
 import com.aionn.catalog.adapter.rest.dto.category.request.UpdateCategoryRequest;
 import com.aionn.catalog.adapter.rest.exception.CatalogExceptionHandler;
-import com.aionn.catalog.adapter.rest.mapper.category.CategoryDtoMapperImpl;
 import com.aionn.catalog.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.catalog.adapter.rest.support.TestAuth;
 import com.aionn.catalog.application.dto.category.command.CreateCategoryCommand;
@@ -86,7 +89,7 @@ class CategoryControllerWebTest {
                                 listCategoryChildrenInputPort,
                                 getCategoryTreeInputPort,
                                 getCategoryInputPort,
-                                new CategoryDtoMapperImpl());
+                                Mappers.getMapper(CategoryDtoMapper.class));
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new CatalogExceptionHandler())
                                 .addInterceptors(new MockSecurityInterceptor())

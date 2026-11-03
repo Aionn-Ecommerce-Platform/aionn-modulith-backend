@@ -1,10 +1,13 @@
 package com.aionn.inventory.adapter.rest.controller;
 
+import com.aionn.inventory.adapter.rest.mapper.transfer.StockTransferDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.inventory.adapter.rest.dto.transfer.request.CancelTransferRequest;
 import com.aionn.inventory.adapter.rest.dto.transfer.request.CompleteTransferRequest;
 import com.aionn.inventory.adapter.rest.dto.transfer.request.InitiateTransferRequest;
 import com.aionn.inventory.adapter.rest.exception.InventoryExceptionHandler;
-import com.aionn.inventory.adapter.rest.mapper.transfer.StockTransferDtoMapperImpl;
 import com.aionn.inventory.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.inventory.adapter.rest.support.TestAuth;
 import com.aionn.inventory.application.dto.transfer.command.CancelTransferCommand;
@@ -55,7 +58,7 @@ class StockTransferControllerWebTest {
                 completeTransferInputPort,
                 cancelTransferInputPort,
                 getTransferInputPort,
-                new StockTransferDtoMapperImpl()
+                Mappers.getMapper(StockTransferDtoMapper.class)
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new InventoryExceptionHandler())

@@ -1,10 +1,13 @@
 package com.aionn.inventory.adapter.rest.controller;
 
+import com.aionn.inventory.adapter.rest.mapper.inventory.InventoryItemDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.inventory.adapter.rest.dto.inventory.request.ConfigureSafetyStockRequest;
 import com.aionn.inventory.adapter.rest.dto.inventory.request.EmergencyLockRequest;
 import com.aionn.inventory.adapter.rest.dto.inventory.request.InitializeStockRequest;
 import com.aionn.inventory.adapter.rest.exception.InventoryExceptionHandler;
-import com.aionn.inventory.adapter.rest.mapper.inventory.InventoryItemDtoMapperImpl;
 import com.aionn.inventory.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.inventory.adapter.rest.support.TestAuth;
 import com.aionn.inventory.adapter.rest.support.session.CurrentAdminIdArgumentResolver;
@@ -73,7 +76,7 @@ class InventoryItemControllerWebTest {
                 getInventoryItemInputPort,
                 getMerchantLowStockInputPort,
                 listAdminLowStockInputPort,
-                new InventoryItemDtoMapperImpl()
+                Mappers.getMapper(InventoryItemDtoMapper.class)
         );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)

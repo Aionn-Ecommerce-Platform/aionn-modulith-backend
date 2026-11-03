@@ -1,5 +1,9 @@
 package com.aionn.catalog.adapter.rest.controller;
 
+import com.aionn.catalog.adapter.rest.mapper.product.ProductDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.catalog.adapter.rest.dto.product.request.AssignBrandRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.AssignCategoriesRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.BulkPriceUpdateRequest;
@@ -10,7 +14,6 @@ import com.aionn.catalog.adapter.rest.dto.product.request.DefineAttributesReques
 import com.aionn.catalog.adapter.rest.dto.product.request.DefineVariantRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.RejectProductRequest;
 import com.aionn.catalog.adapter.rest.exception.CatalogExceptionHandler;
-import com.aionn.catalog.adapter.rest.mapper.product.ProductDtoMapperImpl;
 import com.aionn.catalog.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.catalog.adapter.rest.support.TestAuth;
 import com.aionn.catalog.adapter.rest.support.session.CurrentAdminIdArgumentResolver;
@@ -163,7 +166,7 @@ class ProductControllerWebTest {
                                 getRelatedProductsInputPort, getPopularProductsInputPort,
                                 getPersonalizedProductsInputPort, trackProductViewInputPort,
                                 getProductAnalyticsInputPort, searchProductCatalogInputPort,
-                                new ProductDtoMapperImpl());
+                                Mappers.getMapper(ProductDtoMapper.class));
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new CatalogExceptionHandler())
                                 .setCustomArgumentResolvers(

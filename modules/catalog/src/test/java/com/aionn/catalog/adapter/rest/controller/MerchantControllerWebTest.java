@@ -1,5 +1,9 @@
 package com.aionn.catalog.adapter.rest.controller;
 
+import com.aionn.catalog.adapter.rest.mapper.merchant.MerchantDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.catalog.adapter.rest.dto.merchant.request.AdminReasonRequest;
 import com.aionn.catalog.adapter.rest.dto.merchant.request.RegisterMerchantRequest;
 import com.aionn.catalog.adapter.rest.exception.CatalogExceptionHandler;
@@ -77,7 +81,7 @@ class MerchantControllerWebTest {
                                 registerMerchantInputPort, updateMerchantProfileInputPort, suspendMerchantInputPort,
                                 activateMerchantInputPort, closeMerchantInputPort, getMerchantByOwnerInputPort,
                                 getMerchantInputPort, listMerchantsInputPort,
-                                new com.aionn.catalog.adapter.rest.mapper.merchant.MerchantDtoMapperImpl(),
+                                Mappers.getMapper(MerchantDtoMapper.class),
                                 updateGlobalCommissionRateInputPort, updateMerchantCommissionRateInputPort);
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new CatalogExceptionHandler())

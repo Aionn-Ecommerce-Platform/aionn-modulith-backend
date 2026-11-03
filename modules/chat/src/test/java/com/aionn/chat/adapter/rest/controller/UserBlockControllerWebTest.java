@@ -1,7 +1,10 @@
 package com.aionn.chat.adapter.rest.controller;
 
+import com.aionn.chat.adapter.rest.mapper.block.BlockDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.chat.adapter.rest.exception.ChatExceptionHandler;
-import com.aionn.chat.adapter.rest.mapper.block.BlockDtoMapperImpl;
 import com.aionn.chat.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.chat.adapter.rest.support.session.CurrentUserIdArgumentResolver;
 import com.aionn.chat.application.dto.block.command.BlockCommands;
@@ -58,7 +61,7 @@ class UserBlockControllerWebTest {
         void setUp() {
                 UserBlockController controller = new UserBlockController(
                                 blockUserInputPort, unblockUserInputPort, listMyBlocksQueryPort,
-                                new BlockDtoMapperImpl());
+                                Mappers.getMapper(BlockDtoMapper.class));
 
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new ChatExceptionHandler())

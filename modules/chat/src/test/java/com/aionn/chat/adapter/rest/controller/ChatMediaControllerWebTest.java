@@ -1,7 +1,10 @@
 package com.aionn.chat.adapter.rest.controller;
 
+import com.aionn.chat.adapter.rest.mapper.media.ChatMediaDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.chat.adapter.rest.exception.ChatExceptionHandler;
-import com.aionn.chat.adapter.rest.mapper.media.ChatMediaDtoMapperImpl;
 import com.aionn.chat.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.chat.adapter.rest.support.session.CurrentUserIdArgumentResolver;
 import com.aionn.chat.application.dto.media.result.UploadSignatureResult;
@@ -39,7 +42,7 @@ class ChatMediaControllerWebTest {
     @BeforeEach
     void setUp() {
         ChatMediaController controller = new ChatMediaController(
-                generateChatMediaUploadSignatureInputPort, new ChatMediaDtoMapperImpl());
+                generateChatMediaUploadSignatureInputPort, Mappers.getMapper(ChatMediaDtoMapper.class));
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new ChatExceptionHandler())

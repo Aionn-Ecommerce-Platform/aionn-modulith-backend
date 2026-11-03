@@ -1,7 +1,10 @@
 package com.aionn.chat.adapter.rest.controller;
 
+import com.aionn.chat.adapter.rest.mapper.autoreply.AutoReplyDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.chat.adapter.rest.exception.ChatExceptionHandler;
-import com.aionn.chat.adapter.rest.mapper.autoreply.AutoReplyDtoMapperImpl;
 import com.aionn.chat.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.chat.adapter.rest.support.session.CurrentUserIdArgumentResolver;
 import com.aionn.chat.application.dto.autoreply.command.AutoReplyCommands;
@@ -56,7 +59,7 @@ class AutoReplyControllerWebTest {
         @BeforeEach
         void setUp() {
                 AutoReplyController controller = new AutoReplyController(
-                                getAutoReplyQueryPort, updateAutoReplyInputPort, new AutoReplyDtoMapperImpl());
+                                getAutoReplyQueryPort, updateAutoReplyInputPort, Mappers.getMapper(AutoReplyDtoMapper.class));
 
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new ChatExceptionHandler())

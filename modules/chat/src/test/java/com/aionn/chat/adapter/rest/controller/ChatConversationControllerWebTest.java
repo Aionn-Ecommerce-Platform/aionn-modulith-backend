@@ -1,7 +1,10 @@
 package com.aionn.chat.adapter.rest.controller;
 
+import com.aionn.chat.adapter.rest.mapper.conversation.ConversationDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.chat.adapter.rest.exception.ChatExceptionHandler;
-import com.aionn.chat.adapter.rest.mapper.conversation.ConversationDtoMapperImpl;
 import com.aionn.chat.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.chat.adapter.rest.support.session.CurrentUserIdArgumentResolver;
 import com.aionn.chat.application.dto.conversation.command.ConversationCommands;
@@ -75,7 +78,7 @@ class ChatConversationControllerWebTest {
                                 startConversationInputPort, listMyConversationsQueryPort, getConversationQueryPort,
                                 markConversationReadInputPort, archiveConversationInputPort,
                                 unarchiveConversationInputPort, joinSupportInputPort, getUnreadCountsQueryPort,
-                                new ConversationDtoMapperImpl());
+                                Mappers.getMapper(ConversationDtoMapper.class));
 
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new ChatExceptionHandler())

@@ -1,8 +1,12 @@
 package com.aionn.promotion.adapter.rest.controller;
 
+import com.aionn.promotion.adapter.rest.mapper.voucher.VoucherDtoMapper;
+
+import com.aionn.promotion.adapter.rest.mapper.campaign.PromotionCampaignDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.promotion.adapter.rest.exception.PromotionExceptionHandler;
-import com.aionn.promotion.adapter.rest.mapper.campaign.PromotionCampaignDtoMapperImpl;
-import com.aionn.promotion.adapter.rest.mapper.voucher.VoucherDtoMapperImpl;
 import com.aionn.promotion.adapter.rest.support.session.CurrentAdminIdArgumentResolver;
 import com.aionn.promotion.application.dto.campaign.command.CampaignCommands;
 import com.aionn.promotion.application.dto.campaign.result.CampaignResult;
@@ -76,7 +80,7 @@ class PromotionCampaignControllerWebTest {
                                 cancelCampaignInputPort, configureCampaignConditionInputPort,
                                 issueCampaignVoucherInputPort, getCampaignInputPort,
                                 listCampaignsByStatusInputPort, listCampaignVouchersInputPort,
-                                new PromotionCampaignDtoMapperImpl(), new VoucherDtoMapperImpl());
+                                Mappers.getMapper(PromotionCampaignDtoMapper.class), Mappers.getMapper(VoucherDtoMapper.class));
 
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new PromotionExceptionHandler())

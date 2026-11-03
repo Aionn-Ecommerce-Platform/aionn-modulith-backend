@@ -1,9 +1,12 @@
 package com.aionn.inventory.adapter.rest.controller;
 
+import com.aionn.inventory.adapter.rest.mapper.reservation.StockReservationDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.inventory.adapter.rest.dto.reservation.request.ReleaseReservationRequest;
 import com.aionn.inventory.adapter.rest.dto.reservation.request.ReserveStockRequest;
 import com.aionn.inventory.adapter.rest.exception.InventoryExceptionHandler;
-import com.aionn.inventory.adapter.rest.mapper.reservation.StockReservationDtoMapperImpl;
 import com.aionn.inventory.application.dto.reservation.command.CommitReservationCommand;
 import com.aionn.inventory.application.dto.reservation.command.ReleaseReservationCommand;
 import com.aionn.inventory.application.dto.reservation.command.ReserveStockCommand;
@@ -55,7 +58,7 @@ class StockReservationControllerWebTest {
                 commitReservationInputPort,
                 releaseReservationInputPort,
                 getReservationInputPort,
-                new StockReservationDtoMapperImpl()
+                Mappers.getMapper(StockReservationDtoMapper.class)
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new InventoryExceptionHandler())

@@ -1,7 +1,10 @@
 package com.aionn.promotion.adapter.rest.controller;
 
+import com.aionn.promotion.adapter.rest.mapper.media.PromotionMediaDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.promotion.adapter.rest.exception.PromotionExceptionHandler;
-import com.aionn.promotion.adapter.rest.mapper.media.PromotionMediaDtoMapperImpl;
 import com.aionn.promotion.application.dto.media.result.UploadSignatureResult;
 import com.aionn.promotion.application.port.in.media.GenerateBannerUploadSignatureInputPort;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,7 +33,7 @@ class PromotionMediaControllerWebTest {
     @BeforeEach
     void setUp() {
         PromotionMediaController controller = new PromotionMediaController(
-                generateBannerUploadSignatureInputPort, new PromotionMediaDtoMapperImpl());
+                generateBannerUploadSignatureInputPort, Mappers.getMapper(PromotionMediaDtoMapper.class));
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new PromotionExceptionHandler())
