@@ -237,7 +237,8 @@ class ReviewControllerWebTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].reviewId").value(REVIEW_ID))
                 .andExpect(jsonPath("$.data[0].userName").value("u1"))
-                .andExpect(jsonPath("$.data[0].userDisplayName").value("User One"));
+                .andExpect(jsonPath("$.data[0].userDisplayName").value("User One"))
+                .andExpect(jsonPath("$.data[0].userAvatarUrl").value("avatar.png"));
     }
 
     @Test

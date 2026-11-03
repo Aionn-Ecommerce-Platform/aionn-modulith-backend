@@ -475,6 +475,18 @@ class AccountManagementServiceTest {
         }
 
         @Test
+        void confirmPhoneChangeRejectsPhoneTakenByAnotherUser() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userOtpChallengeStore.find(USER_ID, UserOtpPurpose.CHANGE_PHONE)).thenReturn(
+                                Optional.of(challenge(UserOtpPurpose.CHANGE_PHONE, OtpChannel.PHONE,
+                                                "+15550001", "123456", "+15550001", future(), 0)));
+                when(userPersistencePort.existsByPhone("+15550001")).thenReturn(true);
+
+                assertErrorCode(IdentityErrorCode.PHONE_ALREADY_EXISTS,
+                                () -> service.confirmPhoneChange(USER_ID, "123456"));
+        }
+
+        @Test
         void requestAccountDeletionRejectsInvalidPassword() {
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
                 when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
