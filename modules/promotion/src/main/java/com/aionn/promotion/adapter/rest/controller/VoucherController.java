@@ -124,7 +124,7 @@ public class VoucherController {
         }
 
         @PostMapping("/admin/grant")
-        @PreAuthorize("hasAuthority('ADMIN')")
+        @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
         @Operation(summary = "Admin grant voucher to a user (e.g. late delivery compensation)")
         public ResponseEntity<ApiResponse<UserVoucherResponse>> grant(
                         @Valid @RequestBody GrantVoucherRequest request) {

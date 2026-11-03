@@ -84,7 +84,7 @@ class LateDeliveryCompensationListenerTest {
     }
 
     @Test
-    void onShipmentDelivered_whenGrantFails_catchesExceptionGracefully() {
+    void onShipmentDelivered_whenGrantFails_propagatesException() {
         Instant expected = Instant.parse("2026-06-20T10:00:00Z");
         Instant delivered = Instant.parse("2026-06-20T12:00:00Z");
 
@@ -95,8 +95,8 @@ class LateDeliveryCompensationListenerTest {
 
         when(grantVoucherInputPort.execute(any())).thenThrow(new RuntimeException("database timeout"));
 
-        // Must not throw
-        listener.onShipmentDelivered(event);
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class,
+                () -> listener.onShipmentDelivered(event));
 
         verify(grantVoucherInputPort).execute(any());
     }

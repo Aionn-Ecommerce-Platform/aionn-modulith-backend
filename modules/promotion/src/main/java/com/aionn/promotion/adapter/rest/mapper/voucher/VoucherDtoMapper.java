@@ -62,6 +62,7 @@ public interface VoucherDtoMapper {
     }
 
     default VoucherCommands.GrantVoucher toGrantCommand(GrantVoucherRequest request) {
-        return new VoucherCommands.GrantVoucher(request.userId(), request.voucherCode(), request.reason());
+        return new VoucherCommands.GrantVoucher(
+                request.userId(), request.voucherCode(), request.reason(), request.entitlementKey());
     }
 }

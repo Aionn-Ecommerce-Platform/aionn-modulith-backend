@@ -65,23 +65,24 @@ public class VoucherService {
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.VOUCHER_NOT_FOUND));
         runningCampaignOrNull(voucher);
 
-        Optional<UserVoucher> existingOpt = userVoucherRepository.findByUserAndCode(command.userId(), command.voucherCode());
+        // Deduplicate on the per-delivery entitlement when one is supplied so a
+        // repeated delivery webhook stays idempotent, while each distinct late
+        // order earns its own grant. A voucher already applied to a past order is
+        // never reclaimed - a new grant mints a fresh UserVoucher instead.
+        Optional<UserVoucher> existingOpt = command.entitlementKey() != null
+                ? userVoucherRepository.findByUserAndCodeAndEntitlement(
+                        command.userId(), command.voucherCode(), command.entitlementKey())
+                : userVoucherRepository.findByUserAndCode(command.userId(), command.voucherCode());
         if (existingOpt.isPresent()) {
             UserVoucher existing = existingOpt.get();
-            if (existing.getStatus() == UserVoucherStatus.CLAIMED || existing.getStatus() == UserVoucherStatus.RESERVED) {
-                log.info("User {} already has active voucher {}. Returning existing.", command.userId(), command.voucherCode());
-                return toResult(existing);
-            }
-            voucher.claimSlot(clock);
-            existing.reclaim(clock);
-            voucherRepository.save(voucher);
-            UserVoucher saved = userVoucherRepository.save(existing);
-            eventPublisher.publish(existing.pullEvents());
-            return toResult(saved);
+            log.info("Grant for user {} voucher {} entitlement {} already exists; returning existing.",
+                    command.userId(), command.voucherCode(), command.entitlementKey());
+            return toResult(existing);
         }
 
         voucher.claimSlot(clock);
-        UserVoucher uv = UserVoucher.claim(IdGenerator.ulid(), command.voucherCode(), command.userId(), clock);
+        UserVoucher uv = UserVoucher.claim(IdGenerator.ulid(), command.voucherCode(), command.userId(),
+                command.entitlementKey(), clock);
         voucherRepository.save(voucher);
         UserVoucher saved = userVoucherRepository.save(uv);
         eventPublisher.publish(uv.pullEvents());

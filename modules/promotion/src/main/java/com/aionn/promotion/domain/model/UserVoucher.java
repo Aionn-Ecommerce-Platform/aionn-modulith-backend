@@ -18,6 +18,14 @@ public class UserVoucher extends AggregateRoot {
     private final String userVoucherId;
     private final String voucherCode;
     private final String userId;
+    /**
+     * Per-delivery dedup key (e.g. {@code order-<orderId>} for compensation
+     * grants). Distinct keys let the same user hold several grants of one voucher
+     * code - one per late order - while a repeated delivery webhook stays
+     * idempotent on its own key. {@code null} marks the default claim, which
+     * remains unique per user and voucher.
+     */
+    private String entitlementKey;
     private UserVoucherStatus status;
     private String reservedOrderId;
     private Money appliedAmount;
@@ -32,9 +40,20 @@ public class UserVoucher extends AggregateRoot {
             UserVoucherStatus status, String reservedOrderId, Money appliedAmount,
             Instant claimedAt, Instant reservedAt, Instant reservedExpiresAt,
             Instant appliedAt, Instant releasedAt, Instant updatedAt) {
+        this(userVoucherId, voucherCode, userId, status, null, reservedOrderId,
+                appliedAmount, claimedAt, reservedAt, reservedExpiresAt,
+                appliedAt, releasedAt, updatedAt);
+    }
+
+    public UserVoucher(String userVoucherId, String voucherCode, String userId,
+            UserVoucherStatus status, String entitlementKey, String reservedOrderId,
+            Money appliedAmount, Instant claimedAt, Instant reservedAt,
+            Instant reservedExpiresAt, Instant appliedAt, Instant releasedAt,
+            Instant updatedAt) {
         this.userVoucherId = userVoucherId;
         this.voucherCode = voucherCode;
         this.userId = userId;
+        this.entitlementKey = entitlementKey;
         this.status = status;
         this.reservedOrderId = reservedOrderId;
         this.appliedAmount = appliedAmount;
@@ -47,9 +66,14 @@ public class UserVoucher extends AggregateRoot {
     }
 
     public static UserVoucher claim(String userVoucherId, String voucherCode, String userId, Clock clock) {
+        return claim(userVoucherId, voucherCode, userId, null, clock);
+    }
+
+    public static UserVoucher claim(String userVoucherId, String voucherCode, String userId,
+            String entitlementKey, Clock clock) {
         Instant now = clock.instant();
         UserVoucher uv = new UserVoucher(userVoucherId, voucherCode, userId,
-                UserVoucherStatus.CLAIMED, null, null, now, null, null, null, null, now);
+                UserVoucherStatus.CLAIMED, entitlementKey, null, null, now, null, null, null, null, now);
         uv.registerEvent(new PromotionEvents.VoucherClaimed(voucherCode, userId, now, now));
         return uv;
     }

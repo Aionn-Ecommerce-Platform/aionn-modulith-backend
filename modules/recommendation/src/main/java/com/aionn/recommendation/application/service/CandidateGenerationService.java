@@ -182,16 +182,11 @@ public class CandidateGenerationService {
             return Map.of();
         }
 
-        List<String> specificCategory = categories.size() > 1
-                ? List.of(categories.get(categories.size() - 1))
-                : categories;
-
+        // Query on all of the product's categories rather than inferring the most
+        // specific one from list position - the catalog does not guarantee an
+        // ordering, and matching any category keeps a usable child-category match.
         List<ProductAttributeQueryPort.ProductAttributes> candidates = productAttributeQuery
-                .findCandidatesByCategoriesOrBrands(specificCategory, List.of(), limit + 5);
-
-        if (candidates.size() <= 1 && categories.size() > 1) {
-            candidates = productAttributeQuery.findCandidatesByCategoriesOrBrands(categories, List.of(), limit + 5);
-        }
+                .findCandidatesByCategoriesOrBrands(categories, List.of(), limit + 5);
 
         Map<String, BigDecimal> scores = new LinkedHashMap<>();
         int rank = candidates.size();

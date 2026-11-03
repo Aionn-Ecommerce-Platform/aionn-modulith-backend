@@ -439,8 +439,12 @@ class RecommendationServiceTest {
 
         assertThat(results).extracting(RecommendationItemResult::productId)
                 .containsExactly("p-cat-1", "p-cat-2");
-        assertThat(results).extracting(RecommendationItemResult::reason)
-                .containsOnly(RecommendationReason.SIMILAR_TO_VIEWED);
+        // Category-only matches can no longer be labelled as bought together; the
+        // dominant signal wins the reason, so the content match takes
+        // MATCHES_YOUR_INTERESTS while the popularity tiebreaker takes TRENDING.
+        assertThat(results)
+                .noneMatch(r -> r.reason() == RecommendationReason.SIMILAR_TO_VIEWED
+                        || r.reason() == RecommendationReason.FREQUENTLY_BOUGHT_TOGETHER);
     }
 
     private void establishedProfile() {

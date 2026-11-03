@@ -416,18 +416,55 @@ class VoucherServiceTest {
     }
 
     @Test
-    void grantWhenPreviouslyAppliedReclaimsVoucher() {
+    void grantWithoutEntitlementReturnsExistingAppliedVoucherWithoutReclaiming() {
+        // The legacy one-voucher-per-user-per-code path now returns the stored record
+        // instead of clearing a spent voucher.
         mapperEchoes();
         Voucher voucher = platformVoucher(null);
         UserVoucher applied = applied("order-1", Money.of(new BigDecimal("15000"), "VND"));
         when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(voucher));
         when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(voucher));
         when(userVoucherRepository.findByUserAndCode("user-1", "V-1")).thenReturn(Optional.of(applied));
-        when(userVoucherRepository.save(any(UserVoucher.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UserVoucherResult result = service().grant(new VoucherCommands.GrantVoucher("user-1", "V-1", "new late delivery"));
 
-        assertThat(result.status()).isEqualTo("CLAIMED");
-        verify(userVoucherRepository).save(applied);
+        assertThat(result.status()).isEqualTo("APPLIED");
+        verify(userVoucherRepository, never()).save(any(UserVoucher.class));
+    }
+
+    @Test
+    void grantWithEntitlementMintsSeparateVouchersPerDelivery() {
+        // Two different late orders grant two independent vouchers for the same code.
+        mapperEchoes();
+        Voucher voucher = platformVoucher(null);
+        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(userVoucherRepository.findByUserAndCodeAndEntitlement("user-1", "V-1", "order-1"))
+                .thenReturn(Optional.empty());
+        when(userVoucherRepository.findByUserAndCodeAndEntitlement("user-1", "V-1", "order-2"))
+                .thenReturn(Optional.empty());
+        when(userVoucherRepository.save(any(UserVoucher.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service().grant(new VoucherCommands.GrantVoucher("user-1", "V-1", "late 1", "order-1"));
+        service().grant(new VoucherCommands.GrantVoucher("user-1", "V-1", "late 2", "order-2"));
+
+        verify(userVoucherRepository, org.mockito.Mockito.times(2)).save(any(UserVoucher.class));
+    }
+
+    @Test
+    void grantWithEntitlementIsIdempotentOnRepeatedDelivery() {
+        // A repeated delivered webhook for the same order returns the stored grant.
+        mapperEchoes();
+        Voucher voucher = platformVoucher(null);
+        UserVoucher existing = claimed();
+        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(userVoucherRepository.findByUserAndCodeAndEntitlement("user-1", "V-1", "order-1"))
+                .thenReturn(Optional.of(existing));
+
+        UserVoucherResult result = service().grant(new VoucherCommands.GrantVoucher("user-1", "V-1", "late", "order-1"));
+
+        assertThat(result.voucherCode()).isEqualTo("V-1");
+        verify(userVoucherRepository, never()).save(any(UserVoucher.class));
     }
 }

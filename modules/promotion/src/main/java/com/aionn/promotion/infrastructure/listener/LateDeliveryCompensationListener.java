@@ -35,18 +35,14 @@ public class LateDeliveryCompensationListener {
         log.info("Late delivery detected for shipment {} (order {}), user {}. Granting compensation voucher {}",
                 event.shipmentId(), event.orderId(), event.userId(), LATE_DELIVERY_VOUCHER_CODE);
 
-        try {
-            grantVoucherInputPort.execute(new VoucherCommands.GrantVoucher(
-                    event.userId(),
-                    LATE_DELIVERY_VOUCHER_CODE,
-                    "Late delivery compensation for order " + event.orderId()
-            ));
-            log.info("Successfully granted late delivery voucher {} to user {} for order {}",
-                    LATE_DELIVERY_VOUCHER_CODE, event.userId(), event.orderId());
-        } catch (Exception ex) {
-            log.error("Failed to grant late delivery compensation voucher to user {} for order {}: {}",
-                    event.userId(), event.orderId(), ex.getMessage(), ex);
-        }
+        grantVoucherInputPort.execute(new VoucherCommands.GrantVoucher(
+                event.userId(),
+                LATE_DELIVERY_VOUCHER_CODE,
+                "Late delivery compensation for order " + event.orderId(),
+                "order-" + event.orderId()
+        ));
+        log.info("Successfully granted late delivery voucher {} to user {} for order {}",
+                LATE_DELIVERY_VOUCHER_CODE, event.userId(), event.orderId());
     }
 }
 

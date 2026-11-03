@@ -18,6 +18,7 @@ public class UserVoucherDomainMapper {
                 e.getVoucherCode(),
                 e.getUserId(),
                 UserVoucherStatus.valueOf(e.getStatus()),
+                e.getEntitlementKey(),
                 e.getReservedOrderId(),
                 applied,
                 e.getClaimedAt(),
@@ -35,6 +36,7 @@ public class UserVoucherDomainMapper {
                         .voucherCode(uv.getVoucherCode())
                         .userId(uv.getUserId())
                         .build();
+        entity.setEntitlementKey(uv.getEntitlementKey());
         entity.setStatus(uv.getStatus().name());
         entity.setReservedOrderId(uv.getReservedOrderId());
         entity.setAppliedAmount(uv.getAppliedAmount() == null ? null : uv.getAppliedAmount().amount());

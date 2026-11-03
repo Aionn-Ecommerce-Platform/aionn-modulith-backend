@@ -14,7 +14,13 @@ public final class VoucherCommands {
         public record ClaimVoucher(String userId, String voucherCode) implements Command {
         }
 
-        public record GrantVoucher(String userId, String voucherCode, String reason) implements Command {
+        public record GrantVoucher(String userId, String voucherCode, String reason, String entitlementKey)
+                implements Command {
+
+            /** Backwards-compatible grant without a per-delivery dedup key. */
+            public GrantVoucher(String userId, String voucherCode, String reason) {
+                this(userId, voucherCode, reason, null);
+            }
         }
 
         public record IssueShopVoucher(

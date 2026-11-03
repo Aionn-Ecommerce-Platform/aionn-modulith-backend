@@ -13,6 +13,9 @@ public interface UserVoucherRepository extends JpaRepository<UserVoucherEntity, 
 
     Optional<UserVoucherEntity> findByUserIdAndVoucherCode(String userId, String voucherCode);
 
+    Optional<UserVoucherEntity> findByUserIdAndVoucherCodeAndEntitlementKey(
+            String userId, String voucherCode, String entitlementKey);
+
     Optional<UserVoucherEntity> findByReservedOrderId(String reservedOrderId);
 
     @Query("""

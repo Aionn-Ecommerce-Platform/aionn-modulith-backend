@@ -37,6 +37,13 @@ public class UserVoucherPersistenceAdapter implements UserVoucherPersistencePort
     }
 
     @Override
+    public Optional<UserVoucher> findByUserAndCodeAndEntitlement(
+            String userId, String voucherCode, String entitlementKey) {
+        return jpa.findByUserIdAndVoucherCodeAndEntitlementKey(userId, voucherCode, entitlementKey)
+                .map(mapper::toDomain);
+    }
+
+    @Override
     public Optional<UserVoucher> findByReservedOrderId(String orderId) {
         return jpa.findByReservedOrderId(orderId).map(mapper::toDomain);
     }
