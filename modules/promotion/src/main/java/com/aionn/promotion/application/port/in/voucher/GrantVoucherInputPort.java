@@ -6,3 +6,4 @@ import com.aionn.promotion.application.dto.voucher.result.UserVoucherResult;
 public interface GrantVoucherInputPort {
     UserVoucherResult execute(VoucherCommands.GrantVoucher command);
 }
+

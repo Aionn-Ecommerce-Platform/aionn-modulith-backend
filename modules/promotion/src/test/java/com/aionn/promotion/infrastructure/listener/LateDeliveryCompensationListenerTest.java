@@ -101,3 +101,4 @@ class LateDeliveryCompensationListenerTest {
         verify(grantVoucherInputPort).execute(any());
     }
 }
+

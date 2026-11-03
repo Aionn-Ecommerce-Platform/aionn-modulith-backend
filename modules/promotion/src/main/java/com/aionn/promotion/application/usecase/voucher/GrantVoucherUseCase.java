@@ -20,3 +20,4 @@ public class GrantVoucherUseCase implements GrantVoucherInputPort {
         return voucherService.grant(command);
     }
 }
+
