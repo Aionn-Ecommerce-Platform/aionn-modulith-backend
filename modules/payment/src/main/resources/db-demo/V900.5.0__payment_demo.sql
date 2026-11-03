@@ -24376,3 +24376,17 @@ INSERT INTO payment_preferences (user_id, payment_type, payment_method_id, updat
 ('01KV05RTG2MG91QM6RT7JNQGY7', 'COD', NULL, NOW()),
 ('01KV05RTG396VJVNRN276GRD7R', 'VNPAY', NULL, NOW()),
 ('01KV05RTG4G7SZR4FF5M83ENDF', 'COD', NULL, NOW());
+
+-- Backfill payment_method_id for demo orders using payment gateway information
+UPDATE orders o
+SET payment_method_id = p.gateway
+FROM payments p
+WHERE o.payment_id = p.payment_id
+  AND o.payment_method_id IS NULL;
+
+-- Normalize address_full_name for demo orders to match user's display name
+UPDATE orders o
+SET address_full_name = u.display_name
+FROM users u
+WHERE o.user_id = u.user_id
+  AND o.address_full_name LIKE 'Customer %';

@@ -10,7 +10,7 @@ CREATE TABLE users (
     email_verified_at TIMESTAMPTZ,
     phone_verified_at TIMESTAMPTZ,
     mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE,
-    mfa_secret VARCHAR(64),
+    mfa_secret VARCHAR(255),
     failed_login_attempts INT NOT NULL DEFAULT 0,
     locked_until TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

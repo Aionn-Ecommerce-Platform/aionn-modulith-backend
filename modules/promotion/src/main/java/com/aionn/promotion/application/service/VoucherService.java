@@ -10,7 +10,6 @@ import com.aionn.promotion.application.port.out.VoucherPersistencePort;
 import com.aionn.promotion.domain.exception.PromotionErrorCode;
 import com.aionn.promotion.domain.exception.PromotionException;
 import com.aionn.promotion.domain.model.PromotionCampaign;
-import com.aionn.promotion.domain.valueobject.UserVoucherStatus;
 import java.util.Optional;
 import com.aionn.promotion.domain.model.UserVoucher;
 import com.aionn.promotion.domain.model.Voucher;
