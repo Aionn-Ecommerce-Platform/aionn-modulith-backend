@@ -136,7 +136,7 @@ class ShipmentStatusApplierTest {
         applier.apply("S_1", ShipmentStatus.DELIVERED, detail());
 
         verify(shipment).markDelivered("sig", clock);
-        verify(integrationEventPublisher).publishDelivered(any(), any(), any(), any());
+        verify(integrationEventPublisher).publishDelivered(any(), any(), any(), any(), any(), any(), org.mockito.ArgumentMatchers.anyBoolean());
     }
 
     @Test

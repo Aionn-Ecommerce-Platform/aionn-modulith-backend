@@ -54,6 +54,19 @@ public class UserVoucher extends AggregateRoot {
         return uv;
     }
 
+    public void reclaim(Clock clock) {
+        this.status = UserVoucherStatus.CLAIMED;
+        this.reservedOrderId = null;
+        this.appliedAmount = null;
+        this.reservedAt = null;
+        this.reservedExpiresAt = null;
+        this.appliedAt = null;
+        this.releasedAt = null;
+        Instant now = clock.instant();
+        this.updatedAt = now;
+        registerEvent(new PromotionEvents.VoucherClaimed(voucherCode, userId, now, now));
+    }
+
     public void reserve(String orderId, Instant expiresAt, Clock clock) {
         ensureTransition(UserVoucherStatus.RESERVED);
         Guard.require(status != UserVoucherStatus.RESERVED || orderId.equals(reservedOrderId),

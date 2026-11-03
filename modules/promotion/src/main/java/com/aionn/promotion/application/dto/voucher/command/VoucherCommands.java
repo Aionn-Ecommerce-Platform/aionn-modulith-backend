@@ -14,6 +14,9 @@ public final class VoucherCommands {
         public record ClaimVoucher(String userId, String voucherCode) implements Command {
         }
 
+        public record GrantVoucher(String userId, String voucherCode, String reason) implements Command {
+        }
+
         public record IssueShopVoucher(
                         String ownerId,
                         String voucherCode,

@@ -10,6 +10,8 @@ import com.aionn.promotion.application.port.out.VoucherPersistencePort;
 import com.aionn.promotion.domain.exception.PromotionErrorCode;
 import com.aionn.promotion.domain.exception.PromotionException;
 import com.aionn.promotion.domain.model.PromotionCampaign;
+import com.aionn.promotion.domain.valueobject.UserVoucherStatus;
+import java.util.Optional;
 import com.aionn.promotion.domain.model.UserVoucher;
 import com.aionn.promotion.domain.model.Voucher;
 import com.aionn.sharedkernel.domain.vo.Money;
@@ -49,6 +51,34 @@ public class VoucherService {
                 .ifPresent(existing -> {
                     throw new PromotionException(PromotionErrorCode.USER_VOUCHER_ALREADY_CLAIMED);
                 });
+
+        voucher.claimSlot(clock);
+        UserVoucher uv = UserVoucher.claim(IdGenerator.ulid(), command.voucherCode(), command.userId(), clock);
+        voucherRepository.save(voucher);
+        UserVoucher saved = userVoucherRepository.save(uv);
+        eventPublisher.publish(uv.pullEvents());
+        return toResult(saved);
+    }
+
+    public UserVoucherResult grant(VoucherCommands.GrantVoucher command) {
+        Voucher voucher = voucherRepository.lockByCode(command.voucherCode())
+                .orElseThrow(() -> new PromotionException(PromotionErrorCode.VOUCHER_NOT_FOUND));
+        runningCampaignOrNull(voucher);
+
+        Optional<UserVoucher> existingOpt = userVoucherRepository.findByUserAndCode(command.userId(), command.voucherCode());
+        if (existingOpt.isPresent()) {
+            UserVoucher existing = existingOpt.get();
+            if (existing.getStatus() == UserVoucherStatus.CLAIMED || existing.getStatus() == UserVoucherStatus.RESERVED) {
+                log.info("User {} already has active voucher {}. Returning existing.", command.userId(), command.voucherCode());
+                return toResult(existing);
+            }
+            voucher.claimSlot(clock);
+            existing.reclaim(clock);
+            voucherRepository.save(voucher);
+            UserVoucher saved = userVoucherRepository.save(existing);
+            eventPublisher.publish(existing.pullEvents());
+            return toResult(saved);
+        }
 
         voucher.claimSlot(clock);
         UserVoucher uv = UserVoucher.claim(IdGenerator.ulid(), command.voucherCode(), command.userId(), clock);

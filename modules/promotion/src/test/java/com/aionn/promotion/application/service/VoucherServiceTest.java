@@ -96,6 +96,13 @@ class VoucherServiceTest {
         return uv;
     }
 
+    private static UserVoucher applied(String orderId, Money amount) {
+        UserVoucher uv = reserved(orderId);
+        uv.apply(amount, CLOCK);
+        uv.pullEvents();
+        return uv;
+    }
+
     private void mapperEchoes() {
         when(mapper.toResult(any(UserVoucher.class))).thenAnswer(invocation -> {
             UserVoucher uv = invocation.getArgument(0);
@@ -375,5 +382,52 @@ class VoucherServiceTest {
         when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
 
         assertThat(service().listMine("user-1", 50)).hasSize(2);
+    }
+
+    @Test
+    void grantSuccessfullyClaimsNewUserVoucher() {
+        mapperEchoes();
+        Voucher voucher = platformVoucher(null);
+        when(voucherRepository.lockByCode("LATEDELIVERY15K")).thenReturn(Optional.of(voucher));
+        when(voucherRepository.findByCode("LATEDELIVERY15K")).thenReturn(Optional.of(voucher));
+        when(userVoucherRepository.findByUserAndCode("user-1", "LATEDELIVERY15K")).thenReturn(Optional.empty());
+        when(userVoucherRepository.save(any(UserVoucher.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UserVoucherResult result = service().grant(new VoucherCommands.GrantVoucher("user-1", "LATEDELIVERY15K", "compensation"));
+
+        assertThat(result.voucherCode()).isEqualTo("LATEDELIVERY15K");
+        assertThat(result.userId()).isEqualTo("user-1");
+        verify(userVoucherRepository).save(any(UserVoucher.class));
+    }
+
+    @Test
+    void grantWhenAlreadyClaimedReturnsExistingIdempotently() {
+        mapperEchoes();
+        Voucher voucher = platformVoucher(null);
+        UserVoucher existing = claimed();
+        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(userVoucherRepository.findByUserAndCode("user-1", "V-1")).thenReturn(Optional.of(existing));
+
+        UserVoucherResult result = service().grant(new VoucherCommands.GrantVoucher("user-1", "V-1", "compensation"));
+
+        assertThat(result.voucherCode()).isEqualTo("V-1");
+        verify(userVoucherRepository, never()).save(any(UserVoucher.class));
+    }
+
+    @Test
+    void grantWhenPreviouslyAppliedReclaimsVoucher() {
+        mapperEchoes();
+        Voucher voucher = platformVoucher(null);
+        UserVoucher applied = applied("order-1", Money.of(new BigDecimal("15000"), "VND"));
+        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(userVoucherRepository.findByUserAndCode("user-1", "V-1")).thenReturn(Optional.of(applied));
+        when(userVoucherRepository.save(any(UserVoucher.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UserVoucherResult result = service().grant(new VoucherCommands.GrantVoucher("user-1", "V-1", "new late delivery"));
+
+        assertThat(result.status()).isEqualTo("CLAIMED");
+        verify(userVoucherRepository).save(applied);
     }
 }

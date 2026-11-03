@@ -146,7 +146,7 @@ class ShipmentServiceTest {
                                 "TRACK_1", "DELIVERED", null, null, null, null, "https://sig", null, null, null));
 
                 verify(integrationEventPublisher).publishDelivered(
-                                eq("S_1"), eq("ORDER_1"), eq("https://sig"), any());
+                                eq("S_1"), eq("ORDER_1"), any(), eq("https://sig"), any(), any(), anyBoolean());
         }
 
         @Test

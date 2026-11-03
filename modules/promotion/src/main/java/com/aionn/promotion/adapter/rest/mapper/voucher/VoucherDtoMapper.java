@@ -1,6 +1,7 @@
 package com.aionn.promotion.adapter.rest.mapper.voucher;
 
 import com.aionn.promotion.adapter.rest.dto.voucher.ApplyVoucherRequest;
+import com.aionn.promotion.adapter.rest.dto.voucher.GrantVoucherRequest;
 import com.aionn.promotion.adapter.rest.dto.voucher.IssueVoucherRequest;
 import com.aionn.promotion.adapter.rest.dto.voucher.ReleaseVoucherRequest;
 import com.aionn.promotion.adapter.rest.dto.voucher.ReserveVoucherRequest;
@@ -58,5 +59,9 @@ public interface VoucherDtoMapper {
             ReleaseVoucherRequest request) {
         return new VoucherCommands.ReleaseVoucher(userId, voucherCode, request.orderId(),
                 request.reason());
+    }
+
+    default VoucherCommands.GrantVoucher toGrantCommand(GrantVoucherRequest request) {
+        return new VoucherCommands.GrantVoucher(request.userId(), request.voucherCode(), request.reason());
     }
 }
