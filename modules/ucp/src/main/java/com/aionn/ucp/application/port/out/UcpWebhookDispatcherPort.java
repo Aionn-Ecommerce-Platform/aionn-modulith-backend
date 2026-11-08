@@ -1,17 +1,8 @@
 package com.aionn.ucp.application.port.out;
 
-/**
- * Port for dispatching outbound UCP webhook notifications to external
- * platforms.
- */
+/** Dispatches outbound UCP webhook notifications. */
 public interface UcpWebhookDispatcherPort {
 
-    /**
-     * Dispatches a webhook event to the destination URL.
-     *
-     * @param webhookUrl destination endpoint
-     * @param event      payload to deliver
-     * @return true if successfully delivered (HTTP 2xx), false otherwise
-     */
+    /** @return true when the destination answered 2xx */
     boolean dispatch(String webhookUrl, UcpWebhookEvent event);
 }

@@ -15,6 +15,8 @@ public record IssueVoucherRequest(
         @Size(min = 3, max = 3) String currency,
         @Positive int usageLimit,
         Instant validFrom,
-        Instant validUntil) {
+        Instant validUntil,
+        /** ORDER_DISCOUNT (default) reduces goods; FREE_SHIPPING waives shipping up to the amount. */
+        com.aionn.promotion.domain.valueobject.VoucherType type) {
 }
 

@@ -10,10 +10,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -26,13 +28,17 @@ class ShippingFulfillmentAdapterTest {
     @InjectMocks
     private ShippingFulfillmentAdapter adapter;
 
+    private static List<ShippingGateway.Parcel> parcels() {
+        return List.of(new ShippingGateway.Parcel(500, null, null, null, 1));
+    }
+
     @Test
     void quoteDelegatesToPort() {
-        when(shippingFulfillmentPort.quote(anyString(), anyString(), any(), anyString()))
+        when(shippingFulfillmentPort.quote(anyString(), anyString(), any(), anyString(), anyList(), any()))
                 .thenReturn(new ShippingFulfillmentPort.QuoteResult(BigDecimal.TEN, "VND"));
 
         ShippingAddress address = new ShippingAddress("fn", "ln", "ph", "st", "ct", "stt", "zp", "cn");
-        ShippingGateway.ShippingQuote quote = adapter.quote("ord-1", "m-1", address, "VND");
+        ShippingGateway.ShippingQuote quote = adapter.quote("ord-1", "m-1", address, "VND", parcels(), null);
 
         assertNotNull(quote);
         assertEquals(BigDecimal.TEN, quote.fee());
@@ -40,23 +46,25 @@ class ShippingFulfillmentAdapterTest {
 
     @Test
     void quoteHandlesNullAddress() {
-        when(shippingFulfillmentPort.quote(anyString(), anyString(), any(), anyString()))
+        when(shippingFulfillmentPort.quote(anyString(), anyString(), any(), anyString(), anyList(), any()))
                 .thenReturn(new ShippingFulfillmentPort.QuoteResult(BigDecimal.TEN, "VND"));
 
-        ShippingGateway.ShippingQuote quote = adapter.quote("ord-1", "m-1", null, "VND");
+        ShippingGateway.ShippingQuote quote = adapter.quote("ord-1", "m-1", null, "VND", parcels(), null);
 
         assertNotNull(quote);
     }
 
     @Test
     void createAndRegisterDelegatesToPort() {
-        when(shippingFulfillmentPort.createAndRegister(anyString(), anyString(), anyString(), any(), any(), any(), anyString()))
-                .thenReturn(new ShippingFulfillmentPort.RegistrationResult("ship-1", "track-1", "carrier-ord-1", "http://label"));
+        when(shippingFulfillmentPort.createAndRegister(anyString(), anyString(), anyString(), any(), any(), any(),
+                anyString(), anyList()))
+                .thenReturn(List.of(new ShippingFulfillmentPort.RegistrationResult("ship-1", "track-1", "carrier-ord-1", "http://label")));
 
         ShippingAddress address = new ShippingAddress("fn", "ln", "ph", "st", "ct", "stt", "zp", "cn");
-        ShippingGateway.Registration reg = adapter.createAndRegister("ord-1", "m-1", "usr-1", address, BigDecimal.ZERO, BigDecimal.TEN, "VND");
+        List<ShippingGateway.Registration> regs = adapter.createAndRegister("ord-1", "m-1", "usr-1", address,
+                BigDecimal.ZERO, BigDecimal.TEN, "VND", parcels());
 
-        assertNotNull(reg);
-        assertEquals("ship-1", reg.shipmentId());
+        assertNotNull(regs);
+        assertEquals("ship-1", regs.get(0).shipmentId());
     }
 }

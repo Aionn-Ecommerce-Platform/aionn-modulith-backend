@@ -24,6 +24,8 @@ public record ProductResponse(
         Double rating,
         Long reviewCount) {
 
-    public record Variant(String skuId, Map<String, String> attributeValues, BigDecimal price, String currency) {
+    public record Variant(String skuId, Map<String, String> attributeValues, BigDecimal price,
+            BigDecimal originalPrice, String currency, Integer weightGram, BigDecimal lengthCm,
+            BigDecimal widthCm, BigDecimal heightCm) {
     }
 }

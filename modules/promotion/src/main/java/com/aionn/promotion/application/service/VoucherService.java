@@ -10,6 +10,7 @@ import com.aionn.promotion.application.port.out.VoucherPersistencePort;
 import com.aionn.promotion.domain.exception.PromotionErrorCode;
 import com.aionn.promotion.domain.exception.PromotionException;
 import com.aionn.promotion.domain.model.PromotionCampaign;
+import com.aionn.promotion.domain.valueobject.UserVoucherStatus;
 import java.util.Optional;
 import com.aionn.promotion.domain.model.UserVoucher;
 import com.aionn.promotion.domain.model.Voucher;
@@ -144,7 +145,14 @@ public class VoucherService {
         if (uv.getReservedOrderId() == null || !uv.getReservedOrderId().equals(command.orderId())) {
             throw new PromotionException(PromotionErrorCode.USER_VOUCHER_RESERVED_BY_OTHER);
         }
-        voucher.releaseSlot(clock);
+        // A RESERVED voucher holds a reserved slot; an APPLIED voucher already
+        // committed that slot into usedCount, so the matching release must
+        // decrement usedCount, not reservedCount.
+        if (uv.getStatus() == UserVoucherStatus.APPLIED) {
+            voucher.releaseCommittedSlot(clock);
+        } else {
+            voucher.releaseSlot(clock);
+        }
         uv.release(command.reason(), clock);
 
         voucherRepository.save(voucher);
@@ -165,7 +173,11 @@ public class VoucherService {
         }
         Voucher voucher = voucherRepository.lockByCode(uv.getVoucherCode()).orElse(null);
         if (voucher != null) {
-            voucher.releaseSlot(clock);
+            if (uv.getStatus() == UserVoucherStatus.APPLIED) {
+                voucher.releaseCommittedSlot(clock);
+            } else {
+                voucher.releaseSlot(clock);
+            }
             voucherRepository.save(voucher);
         }
         uv.release(reason, clock);

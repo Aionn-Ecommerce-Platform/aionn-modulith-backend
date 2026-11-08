@@ -236,6 +236,7 @@ class CandidateGenerationServiceTest {
                 List.of("sku-" + productId),
                 null,
                 BigDecimal.valueOf(price),
+                null,
                 "VND");
     }
 

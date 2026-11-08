@@ -7,8 +7,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
-// Search response: a product page plus aggregations for the storefront sidebar
-// (brand counts, category counts, attribute facet counts, price min/max bounds).
 public record ProductSearchResult(
         PageResult<ProductResult> page,
         Facets facets) {

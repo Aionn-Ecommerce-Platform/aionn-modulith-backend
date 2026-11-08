@@ -10,6 +10,11 @@ public interface VoucherApplyPort {
 
     void release(String userId, String orderId, String reason);
 
-    record Discount(BigDecimal amount, String currency, boolean applied, String reason) {
+    record Discount(BigDecimal amount, String currency, boolean applied, String reason,
+            /** True when the amount applies to the shipping fee, not the goods subtotal. */
+            boolean freeShipping) {
+        public Discount(BigDecimal amount, String currency, boolean applied, String reason) {
+            this(amount, currency, applied, reason, false);
+        }
     }
 }

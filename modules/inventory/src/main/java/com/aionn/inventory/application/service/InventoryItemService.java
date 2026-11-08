@@ -141,6 +141,18 @@ public class InventoryItemService {
                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND));
     }
 
+    /**
+     * Owner-scoped read: a per-warehouse stock figure is internal data, so the
+     * requester must own the warehouse that holds it. listBySku stays public on
+     * purpose for the product detail page.
+     */
+    @Transactional(readOnly = true)
+    public InventoryItem getForOwner(String ownerId, String skuId, String warehouseId) {
+        ownerContext(ownerId, warehouseId);
+        return itemRepository.findByKey(new InventoryItemKey(skuId, warehouseId))
+                .orElseThrow(() -> new InventoryException(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND));
+    }
+
     @Transactional(readOnly = true)
     public List<InventoryItem> listBySku(String skuId) {
         return itemRepository.findBySku(skuId);

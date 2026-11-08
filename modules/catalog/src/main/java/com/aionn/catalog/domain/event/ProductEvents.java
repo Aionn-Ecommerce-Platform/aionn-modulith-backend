@@ -101,6 +101,16 @@ public final class ProductEvents {
             Instant occurredAt) implements CatalogEvent {
     }
 
+    public record ProductVariantParcelChanged(
+            String productId,
+            String skuId,
+            Integer weightGram,
+            BigDecimal lengthCm,
+            BigDecimal widthCm,
+            BigDecimal heightCm,
+            Instant occurredAt) implements CatalogEvent {
+    }
+
     public record ProductMetadataUpdated(
             String productId,
             List<String> tags,

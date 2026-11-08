@@ -16,14 +16,14 @@ class UcpPropertiesTest {
     void defaultValuesAreConsistentWithPhase1() {
         UcpProperties properties = new UcpProperties(
                 "2026-08-25",
-                "http://localhost:8080/ucp/v1",
+                "https://api.example.com/ucp/v1",
                 "Aionn Commerce",
                 Set.of("https://ucp.dev/schemas/"),
                 false,
-                new UcpProperties.Capabilities(false, false, false, false, false));
+                new UcpProperties.Capabilities(false, false, false, false, false), "", "VND", "");
 
         assertThat(properties.version()).isEqualTo("2026-08-25");
-        assertThat(properties.restEndpoint()).isEqualTo("http://localhost:8080/ucp/v1");
+        assertThat(properties.restEndpoint()).isEqualTo("https://api.example.com/ucp/v1");
         assertThat(properties.businessName()).isEqualTo("Aionn Commerce");
         assertThat(properties.allowedSchemaPrefixes()).contains("https://ucp.dev/schemas/");
         assertThat(properties.requireHttps()).isFalse();
@@ -45,7 +45,7 @@ class UcpPropertiesTest {
                 "Aionn Commerce",
                 Set.of("https://ucp.dev/schemas/"),
                 false,
-                new UcpProperties.Capabilities(false, false, false, false, false));
+                new UcpProperties.Capabilities(false, false, false, false, false), "", "VND", "");
 
         Set<ConstraintViolation<UcpProperties>> violations = validator.validate(properties);
         assertThat(violations)

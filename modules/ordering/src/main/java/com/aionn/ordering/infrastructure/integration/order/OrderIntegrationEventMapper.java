@@ -6,25 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.stream.Collectors;
 
-/**
- * Maps Ordering domain events to integration events.
- * 
- * <p>
- * This mapper extracts only the necessary data from domain events
- * and converts them into integration events that can be consumed by other
- * modules.
- * </p>
- * 
- * <p>
- * Key responsibilities:
- * </p>
- * <ul>
- * <li>Convert domain-specific types to simple DTOs</li>
- * <li>Generate eventId for each integration event</li>
- * <li>Preserve occurredAt timestamp</li>
- * <li>Avoid leaking internal domain details</li>
- * </ul>
- */
+/** Maps Ordering domain events to transport-safe integration events with a fresh eventId. */
 @Component
 public class OrderIntegrationEventMapper {
 

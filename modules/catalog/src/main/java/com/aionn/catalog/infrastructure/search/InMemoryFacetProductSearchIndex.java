@@ -15,9 +15,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-// Default faceted search backend. Keeps documents in memory and computes
-// filters, sorting and facet aggregations locally. Used unless an OpenSearch
-// backend is enabled via catalog.search.provider=opensearch.
 @Component
 @ConditionalOnProperty(prefix = "catalog.search", name = "provider", havingValue = "in-process", matchIfMissing = true)
 public class InMemoryFacetProductSearchIndex implements ProductSearchIndex {
@@ -111,6 +108,9 @@ public class InMemoryFacetProductSearchIndex implements ProductSearchIndex {
             return false;
         }
         if (!matchesAttributes(doc, criteria)) {
+            return false;
+        }
+        if (Boolean.TRUE.equals(criteria.onSale()) && !Boolean.TRUE.equals(doc.hasDiscount())) {
             return false;
         }
         return criteria.ratingMin() == null

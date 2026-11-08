@@ -85,7 +85,7 @@ public class PromotionCampaignService {
         }
         Money discount = Money.of(command.discountAmount(),
                 command.currency() == null ? campaign.getBudget().currency() : command.currency());
-        Voucher v = Voucher.issue(command.voucherCode(), campaign.getCampaignId(),
+        Voucher v = Voucher.issue(command.voucherCode(), campaign.getCampaignId(), command.type(),
                 discount, command.usageLimit(), command.validFrom(), command.validUntil(), clock);
         Voucher saved = voucherRepository.save(v);
         eventPublisher.publish(v.pullEvents());

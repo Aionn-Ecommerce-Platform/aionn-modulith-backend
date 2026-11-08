@@ -1,19 +1,23 @@
 package com.aionn.sharedkernel.integration.port.shipping;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public interface ShippingFulfillmentPort {
 
-        QuoteResult quote(String orderId, String merchantId, Address address, String currency);
+        QuoteResult quote(String orderId, String merchantId, Address address, String currency,
+                        List<Parcel> parcels, BigDecimal goodsSubtotal);
 
-        RegistrationResult createAndRegister(
+        /** One shipment per carrier consignment: oversized carts become several trackable parcels. */
+        List<RegistrationResult> createAndRegister(
                         String orderId,
                         String merchantId,
                         String userId,
                         Address address,
                         BigDecimal codAmount,
                         BigDecimal shippingFee,
-                        String currency);
+                        String currency,
+                        List<Parcel> parcels);
 
         record Address(
                         String fullName,
@@ -33,5 +37,17 @@ public interface ShippingFulfillmentPort {
                         String trackingCode,
                         String carrierOrderId,
                         String labelUrl) {
+        }
+
+        /**
+         * Parcel characteristics for one SKU in the shipment. {@code weightGram}
+         * is the total weight for {@code qty} units; box dims describe one unit.
+         */
+        record Parcel(
+                        Integer weightGram,
+                        java.math.BigDecimal lengthCm,
+                        java.math.BigDecimal widthCm,
+                        java.math.BigDecimal heightCm,
+                        int qty) {
         }
 }

@@ -1,13 +1,13 @@
 {
   "ucp": {
-    "version": "2026-01-01",
+    "version": "2026-08-25",
     "services": {
       "dev.ucp.shopping": [
         {
-          "version": "2026-01-01",
-          "spec": "https://ucp.dev/2026-01-01/specification/overview",
+          "version": "2026-08-25",
+          "spec": "https://ucp.dev/2026-08-25/specification/overview",
           "transport": "rest",
-          "schema": "https://ucp.dev/2026-01-01/services/shopping/rest.openapi.json",
+          "schema": "https://ucp.dev/2026-08-25/services/shopping/rest.openapi.json",
           "endpoint": "https://business.example.com/ucp/v1"
         }
       ]
@@ -17,7 +17,7 @@
       "com.google.pay": [
         {
           "id": "gpay",
-          "version": "2026-01-01",
+          "version": "2026-08-25",
           "spec": "https://payments.google.com/gpay/specification",
           "schema": "https://payments.google.com/gpay/schema.json"
         }
@@ -25,7 +25,7 @@
       "dev.shopify.shop_pay": [
         {
           "id": "shop_pay",
-          "version": "2026-01-01",
+          "version": "2026-08-25",
           "spec": "https://shopify.dev/ucp/shop-pay",
           "schema": "https://shopify.dev/ucp/shop-pay.json"
         }

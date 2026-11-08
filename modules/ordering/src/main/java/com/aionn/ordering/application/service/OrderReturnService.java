@@ -288,10 +288,7 @@ public class OrderReturnService {
         return saved;
     }
 
-    private OrderReturn ownedByOwner(String returnId, String ownerId) {
-        String merchantId = merchantQueryPort.findMerchantIdByOwnerId(ownerId)
-                .orElseThrow(() -> new OrderingException(OrderingErrorCode.ORDER_NOT_OWNED_BY_MERCHANT,
-                        "No merchant registered for the authenticated user"));
+    private OrderReturn ownedByOwner(String returnId, String merchantId) {
         OrderReturn r = returnRepository.findById(returnId)
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
         if (!r.getMerchantId().equals(merchantId)) {

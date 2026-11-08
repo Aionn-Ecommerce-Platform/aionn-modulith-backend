@@ -30,7 +30,7 @@ class ResilientProductSearchIndexTest {
 
     private static ProductSearchDocument doc() {
         return new ProductSearchDocument("p1", "m1", "Widget", null, null, List.of(), List.of(),
-                List.of(), List.of(), Map.of(), null, null, null, "PUBLISHED", Instant.now(), 0.0, 0L);
+                List.of(), List.of(), Map.of(), null, null, null, null, "PUBLISHED", Instant.now(), 0.0, 0L);
     }
 
     @BeforeEach

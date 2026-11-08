@@ -1,5 +1,6 @@
 package com.aionn.ucp.adapter.rest.controller;
 
+import com.aionn.sharedkernel.adapter.web.support.idempotency.IdempotentRequest;
 import com.aionn.ucp.adapter.rest.dto.identity.UcpIdentityModels.UcpIdentityLinkRequest;
 import com.aionn.ucp.adapter.rest.dto.identity.UcpIdentityModels.UcpIdentityLinkResponse;
 import com.aionn.ucp.application.identity.UcpIdentityApplicationService;
@@ -20,12 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Controller exposing canonical UCP Identity Linking endpoints
- * (dev.ucp.common.identity_linking).
- * Allows platforms/agents to establish, query, and revoke identity bindings
- * using composite keys (platformId / platformSubject).
- */
+/** UCP Identity Linking endpoints (dev.ucp.common.identity_linking), keyed by platformId/platformSubject. */
 @RestController
 @RequestMapping("/ucp/v1/identity/links")
 @RequiredArgsConstructor
@@ -35,15 +31,8 @@ public class UcpIdentityController {
 
     private final UcpIdentityApplicationService identityService;
 
-    /**
-     * Creates or updates an identity link between an external platform subject and
-     * an Aionn merchant customer.
-     *
-     * @param request        link request details
-     * @param authentication caller's security context
-     * @return 201 Created with the active identity link details
-     */
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @IdempotentRequest(ttlSeconds = 3600)
     public ResponseEntity<UcpIdentityLinkResponse> linkIdentity(
             @Valid @RequestBody UcpIdentityLinkRequest request,
             Authentication authentication) {
@@ -52,15 +41,6 @@ public class UcpIdentityController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    /**
-     * Queries an identity link by platform identifier and platform subject
-     * identifier.
-     *
-     * @param platformId      platform ID
-     * @param platformSubject platform subject ID
-     * @param authentication  caller's security context
-     * @return 200 OK with identity link details
-     */
     @GetMapping(value = "/{platformId}/{platformSubject}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<UcpIdentityLinkResponse> getLink(
             @PathVariable("platformId") String platformId,
@@ -71,15 +51,9 @@ public class UcpIdentityController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Revokes an existing identity link.
-     *
-     * @param platformId      platform ID
-     * @param platformSubject platform subject ID
-     * @param authentication  caller's security context
-     */
     @DeleteMapping("/{platformId}/{platformSubject}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @IdempotentRequest(ttlSeconds = 3600)
     public void revokeLink(
             @PathVariable("platformId") String platformId,
             @PathVariable("platformSubject") String platformSubject,
@@ -89,10 +63,15 @@ public class UcpIdentityController {
     }
 
     private String getAuthenticatedUserId(Authentication authentication) {
-        if (authentication != null && authentication.isAuthenticated()
-                && !"anonymousUser".equals(authentication.getPrincipal())) {
-            return authentication.getName();
+        // Anonymous and platform-principal callers have no buyer identity here.
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
+            return null;
         }
-        return null;
+        String name = authentication.getName();
+        if (name != null && name.startsWith("ucp:platform:")) {
+            return null;
+        }
+        return name;
     }
 }

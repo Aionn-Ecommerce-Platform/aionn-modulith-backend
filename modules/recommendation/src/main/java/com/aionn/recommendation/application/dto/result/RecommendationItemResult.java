@@ -17,6 +17,7 @@ public record RecommendationItemResult(
         String name,
         String imageUrl,
         BigDecimal priceFrom,
+        BigDecimal originalPriceFrom,
         String currency,
         BigDecimal score,
         RecommendationReason reason,

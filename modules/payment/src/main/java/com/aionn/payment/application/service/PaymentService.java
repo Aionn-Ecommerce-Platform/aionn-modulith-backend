@@ -26,6 +26,7 @@ import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.Money;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -78,12 +79,7 @@ public class PaymentService {
     public PaymentInitiation initiate(InitiatePaymentCommand command) {
         var existing = inTransaction(() -> paymentRepository.findByIdempotencyKey(command.idempotencyKey()));
         if (existing.isPresent()) {
-            Payment priorPayment = existing.get();
-            if (!priorPayment.getOrderId().equals(command.orderId())
-                    || !priorPayment.getUserId().equals(command.userId())) {
-                throw new PaymentException(PaymentErrorCode.PAYMENT_NOT_FOUND);
-            }
-            return new PaymentInitiation(priorPayment, null);
+            return replayInitiation(existing.get(), command);
         }
 
         var order = orderQueryPort.findOrderSummary(command.orderId())
@@ -104,11 +100,23 @@ public class PaymentService {
         Money amount = Money.of(order.totalAmount(), order.currency());
         Payment payment = Payment.initiate(IdGenerator.ulid(), command.orderId(), command.userId(),
                 command.paymentMethodId(), amount, command.gateway(), command.idempotencyKey(), now);
-        Payment saved = inTransaction(() -> {
-            Payment persisted = paymentRepository.save(payment);
-            eventPublisher.publish(payment.pullEvents());
-            return persisted;
-        });
+        Payment saved;
+        try {
+            saved = inTransaction(() -> {
+                Payment persisted = paymentRepository.save(payment);
+                eventPublisher.publish(payment.pullEvents());
+                return persisted;
+            });
+        } catch (DataIntegrityViolationException duplicateKey) {
+            // Two requests with the same idempotency key raced past the initial
+            // lookup. The unique payments.idempotency_key index lets exactly one
+            // insert win; the loser must return the winner instead of failing.
+            Payment winner = inTransaction(() -> paymentRepository.findByIdempotencyKey(command.idempotencyKey()))
+                    .orElseThrow(() -> duplicateKey);
+            log.info("Idempotent payment initiation replayed after a concurrent insert key={} payment={}",
+                    command.idempotencyKey(), winner.getPaymentId());
+            return replayInitiation(winner, command);
+        }
 
         PaymentProviderClient client = providerRouter.route(command.gateway());
         PaymentProviderClient.Authorization auth = client.authorize(
@@ -137,7 +145,13 @@ public class PaymentService {
         if (existing.getStatus().name().equals("PAID")) {
             return existing;
         }
-        Payment payment = inTransaction(() -> confirmInTransaction(command));
+        Confirmation confirmation = inTransaction(() -> confirmInTransaction(command));
+        Payment payment = confirmation.payment();
+        if (!confirmation.transitioned()) {
+            // A concurrent webhook already marked this payment PAID and wrote the
+            // CREDIT ledger entry. Do not attach/publish a second captured event.
+            return payment;
+        }
         Payment current = payment;
         try {
             String invoiceUrl = invoiceStorage.storeInvoiceUrl(payment.getPaymentId(), payment.getOrderId());
@@ -165,10 +179,14 @@ public class PaymentService {
         }
     }
 
-    private Payment confirmInTransaction(ConfirmPaymentCommand command) {
-        Payment payment = required(command.paymentId());
+    private Confirmation confirmInTransaction(ConfirmPaymentCommand command) {
+        // Row lock serialises concurrent gateway webhooks for the same payment.
+        // The PAID re-check happens under the lock, so only the first caller
+        // writes a CREDIT entry; the rest observe PAID and become no-ops.
+        Payment payment = paymentRepository.lockById(command.paymentId())
+                .orElseThrow(() -> new PaymentException(PaymentErrorCode.PAYMENT_NOT_FOUND));
         if (payment.getStatus().name().equals("PAID")) {
-            return payment;
+            return new Confirmation(payment, false);
         }
         Instant now = clock.instant();
         payment.markPaid(command.transactionNo(), now);
@@ -181,7 +199,7 @@ public class PaymentService {
         ledgerRepository.save(entry);
         eventPublisher.publish(entry.pullEvents());
 
-        return saved;
+        return new Confirmation(saved, true);
     }
 
     private Payment attachInvoice(String paymentId, String invoiceUrl) {
@@ -198,7 +216,10 @@ public class PaymentService {
     }
 
     private Payment failInTransaction(FailPaymentCommand command) {
-        Payment payment = required(command.paymentId());
+        // Lock the row for the same reason confirmInTransaction does: a failure
+        // webhook racing a capture must not overwrite PAID with FAILED.
+        Payment payment = paymentRepository.lockById(command.paymentId())
+                .orElseThrow(() -> new PaymentException(PaymentErrorCode.PAYMENT_NOT_FOUND));
         if (payment.getStatus().name().equals("FAILED") || payment.getStatus().name().equals("PAID")
                 || payment.getStatus().name().equals("REFUNDED")) {
             return payment;
@@ -330,6 +351,17 @@ public class PaymentService {
     }
 
     private record RefundPreparation(Payment payment, RefundOperation operation, Payment completedPayment) {
+    }
+
+    private record Confirmation(Payment payment, boolean transitioned) {
+    }
+
+    private PaymentInitiation replayInitiation(Payment priorPayment, InitiatePaymentCommand command) {
+        if (!priorPayment.getOrderId().equals(command.orderId())
+                || !priorPayment.getUserId().equals(command.userId())) {
+            throw new PaymentException(PaymentErrorCode.PAYMENT_NOT_FOUND);
+        }
+        return new PaymentInitiation(priorPayment, null);
     }
 
     private <T> T inTransaction(Supplier<T> work) {

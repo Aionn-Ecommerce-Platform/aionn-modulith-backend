@@ -107,19 +107,19 @@ class InventoryItemControllerWebTest {
 
     @Test
     void getReturnsInventoryItem() throws Exception {
-        when(getInventoryItemInputPort.execute("SKU_1", "WH_1")).thenReturn(sampleResult(10, 7));
+        when(getInventoryItemInputPort.execute("user-1", "SKU_1", "WH_1")).thenReturn(sampleResult(10, 7));
 
         mockMvc.perform(get("/api/v1/inventory/items/SKU_1/WH_1")
                         .with(TestAuth.authUser("user-1")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.availableQty").value(7));
 
-        verify(getInventoryItemInputPort).execute("SKU_1", "WH_1");
+        verify(getInventoryItemInputPort).execute("user-1", "SKU_1", "WH_1");
     }
 
     @Test
     void getReturnsNotFoundWhenItemMissing() throws Exception {
-        when(getInventoryItemInputPort.execute("SKU_X", "WH_1"))
+        when(getInventoryItemInputPort.execute("user-1", "SKU_X", "WH_1"))
                 .thenThrow(new InventoryException(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND));
 
         mockMvc.perform(get("/api/v1/inventory/items/SKU_X/WH_1")

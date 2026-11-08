@@ -3,6 +3,11 @@ recommendation:
     view:
       base: ${RECOMMENDATION_WEIGHT_VIEW_BASE:1.0}
       half-life-days: ${RECOMMENDATION_WEIGHT_VIEW_HALF_LIFE_DAYS:14}
+    # Search intent is weaker than a view and decays faster: filtering for a
+    # category once says little compared with actually opening a product.
+    search:
+      base: ${RECOMMENDATION_WEIGHT_SEARCH_BASE:0.5}
+      half-life-days: ${RECOMMENDATION_WEIGHT_SEARCH_HALF_LIFE_DAYS:7}
     cart-add:
       base: ${RECOMMENDATION_WEIGHT_CART_ADD_BASE:4.0}
       half-life-days: ${RECOMMENDATION_WEIGHT_CART_ADD_HALF_LIFE_DAYS:30}

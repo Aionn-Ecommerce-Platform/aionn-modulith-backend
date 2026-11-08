@@ -41,6 +41,7 @@ public interface ProductAttributeQueryPort {
             List<String> skuIds,
             String imageUrl,
             BigDecimal priceFrom,
+            BigDecimal originalPriceFrom,
             String currency) {
 
         public ProductAttributes {

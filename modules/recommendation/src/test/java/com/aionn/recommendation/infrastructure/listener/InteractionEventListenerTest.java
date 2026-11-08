@@ -109,7 +109,7 @@ class InteractionEventListenerTest {
                 .toList();
 
         assertThat(handlers)
-                .hasSize(3)
+                .hasSize(4)
                 .allSatisfy(method -> {
                     assertThat(method.getParameterCount()).isEqualTo(1);
                     assertThat(IntegrationEvent.class).isAssignableFrom(method.getParameterTypes()[0]);

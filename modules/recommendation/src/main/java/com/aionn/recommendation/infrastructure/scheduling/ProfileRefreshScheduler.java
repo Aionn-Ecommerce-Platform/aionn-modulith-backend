@@ -17,18 +17,9 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Refreshes the profiles of users whose profile is stale relative to their own activity.
- *
- * <p>Incremental rather than full-table: profiles only change when their owner interacts, so rescanning
- * every user would waste most of its work. Which users qualify is decided by the query, which compares
- * each user's last interaction against their profile's {@code refreshed_at}, so the batch rotates through
- * the population instead of returning the same user IDs on every run.
- *
- * <p>The scan window starts narrow and widens only while it finds nobody. Narrow is the cheap case for a
- * busy catalogue, where recent activity alone fills the batch; widening is what keeps a quiet period, a
- * restart after downtime, or activity that predates the module from stranding those users on cold-start
- * recommendations until they happen to interact again. The window never grows past the profile lookback,
- * since interactions older than that are pruned and could not change the result.
+ * Refreshes profiles that are stale relative to their owner's activity. The query decides who qualifies
+ * (comparing last interaction against {@code refreshed_at}), so the batch rotates through the population.
+ * The scan window starts narrow and widens only while it finds nobody, bounded by the profile lookback.
  */
 @Slf4j
 @Component
@@ -71,8 +62,7 @@ public class ProfileRefreshScheduler {
                     failed++;
                 }
             }
-            // A user whose refresh keeps failing would otherwise be invisible: the sweep returns
-            // normally, and the worker only logs a warning per user.
+            // Failures are otherwise invisible: the sweep returns normally and the worker only warns per user.
             if (failed > 0) {
                 run.failed();
                 log.warn("Refreshed {} of {} affinity profile(s); {} failed",
@@ -87,13 +77,7 @@ public class ProfileRefreshScheduler {
         }
     }
 
-    /**
-     * Widens the scan window while it finds nobody to refresh, bounded by the profile lookback.
-     *
-     * <p>Widening is safe rather than merely cheap because the query excludes users whose profile is
-     * already newer than their last interaction, so a wider window surfaces stale profiles rather than
-     * re-doing work the previous run completed.
-     */
+    /** Widening is safe: the query excludes profiles already newer than their last interaction. */
     private List<String> staleUserIds(Instant now, int batchSize) {
         Duration window = Duration.ofMillis(properties.profileRefresh().delayMs())
                 .multipliedBy(WINDOW_SAFETY_FACTOR);

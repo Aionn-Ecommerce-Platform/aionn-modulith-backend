@@ -336,6 +336,7 @@ class RecommendationReadServiceTest {
                 "Product " + productId,
                 null,
                 BigDecimal.valueOf(1000),
+                null,
                 "VND",
                 BigDecimal.valueOf(0.5),
                 RecommendationReason.TRENDING,

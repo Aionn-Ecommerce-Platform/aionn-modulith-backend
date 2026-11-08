@@ -36,6 +36,8 @@ public class InventoryWarehouseSelectorAdapter implements WarehouseSelectorPort 
                 }
             }
         }
-        return Optional.of(warehouses.get(0).getWarehouseId());
+        // No warehouse has stock — return empty so the caller reports
+        // out-of-stock rather than reserving against a guaranteed-empty one.
+        return Optional.empty();
     }
 }

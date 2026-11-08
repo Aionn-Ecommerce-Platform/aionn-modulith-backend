@@ -10,11 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
-/**
- * Application service managing UCP identity links with fail-closed IDOR
- * security
- * and composite platform keys.
- */
+/** UCP identity links: fail-closed ownership checks and composite platform keys. */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -22,16 +18,7 @@ public class UcpIdentityApplicationService {
 
         private final UcpIdentityLinkPort identityLinkPort;
 
-        /**
-         * Creates or updates an identity link. Verifies that the authenticated caller
-         * matches the customerId, and ensures an existing platform binding cannot be
-         * hijacked
-         * by a different customer.
-         *
-         * @param request      the identity link request
-         * @param callerUserId authenticated caller user id
-         * @return created identity link response
-         */
+        /** Caller must own the customer, and an existing binding must not be hijacked. */
         public UcpIdentityLinkResponse linkIdentity(UcpIdentityLinkRequest request, String callerUserId) {
                 if (callerUserId == null || !callerUserId.equals(request.customerId())) {
                         log.warn("Access denied: Caller '{}' cannot link identity for customer '{}'", callerUserId,
@@ -56,15 +43,7 @@ public class UcpIdentityApplicationService {
                 return identityLinkPort.saveLink(request);
         }
 
-        /**
-         * Retrieves an identity link for the given platform and subject.
-         * Maps unauthorized caller access to 404 to avoid leaking subject existence.
-         *
-         * @param platformId      the platform identifier
-         * @param platformSubject the platform subject identifier
-         * @param callerUserId    authenticated caller user id
-         * @return link details
-         */
+        /** Maps unauthorized access to 404 so subject existence isn't leaked. */
         public UcpIdentityLinkResponse getLink(String platformId, String platformSubject, String callerUserId) {
                 return identityLinkPort.findByPlatformAndSubject(platformId, platformSubject)
                                 .filter(l -> callerUserId != null && callerUserId.equals(l.customerId()))
@@ -74,13 +53,6 @@ public class UcpIdentityApplicationService {
                                                 "error"));
         }
 
-        /**
-         * Revokes an existing identity link.
-         *
-         * @param platformId      the platform identifier
-         * @param platformSubject the platform subject identifier
-         * @param callerUserId    authenticated caller user id
-         */
         public void revokeLink(String platformId, String platformSubject, String callerUserId) {
                 identityLinkPort.findByPlatformAndSubject(platformId, platformSubject)
                                 .filter(l -> callerUserId != null && callerUserId.equals(l.customerId()))

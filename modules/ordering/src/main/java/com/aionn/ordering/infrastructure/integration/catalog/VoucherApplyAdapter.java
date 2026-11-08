@@ -19,7 +19,8 @@ public class VoucherApplyAdapter implements VoucherGateway {
             BigDecimal lineSubtotal, String currency, List<String> orderCategoryIds) {
         VoucherApplyPort.Discount result = voucherApplyPort.apply(userId, merchantId, voucherCode,
                 orderId, lineSubtotal, currency, orderCategoryIds);
-        return new Discount(result.amount(), result.currency(), result.applied(), result.reason());
+        return new Discount(result.amount(), result.currency(), result.applied(), result.reason(),
+                result.freeShipping());
     }
 
     @Override

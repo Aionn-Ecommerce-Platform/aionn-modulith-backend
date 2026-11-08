@@ -86,6 +86,7 @@ class ShopVoucherControllerWebTest {
 
     private static VoucherResult sample(String code) {
         return new VoucherResult(code, null, VoucherScope.SHOP, "mer-1",
+                com.aionn.promotion.domain.valueobject.VoucherType.ORDER_DISCOUNT,
                 new BigDecimal("30000"), "VND", 20, 0, 0,
                 NOW, NOW.plusSeconds(86400), NOW, NOW);
     }

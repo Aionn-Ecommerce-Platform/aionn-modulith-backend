@@ -20,19 +20,38 @@ public interface CatalogPricingGateway {
             String currency,
             boolean active,
             List<String> categoryIds,
-            String flashSaleRegistrationId) {
+            String flashSaleRegistrationId,
+            Parcel parcel) {
         public SkuPricing(String skuId, String merchantId, String warehouseId,
                 BigDecimal price, String currency, boolean active) {
-            this(skuId, merchantId, warehouseId, price, currency, active, List.of(), null);
+            this(skuId, merchantId, warehouseId, price, currency, active, List.of(), null, null);
         }
 
         public SkuPricing(String skuId, String merchantId, String warehouseId,
                 BigDecimal price, String currency, boolean active, List<String> categoryIds) {
-            this(skuId, merchantId, warehouseId, price, currency, active, categoryIds, null);
+            this(skuId, merchantId, warehouseId, price, currency, active, categoryIds, null, null);
+        }
+
+        public SkuPricing(String skuId, String merchantId, String warehouseId,
+                BigDecimal price, String currency, boolean active, List<String> categoryIds,
+                String flashSaleRegistrationId) {
+            this(skuId, merchantId, warehouseId, price, currency, active, categoryIds,
+                    flashSaleRegistrationId, null);
         }
 
         public SkuPricing {
             categoryIds = categoryIds == null ? List.of() : List.copyOf(categoryIds);
+        }
+
+        /** Parcel characteristics for a sellable unit; weightGram required at publish. */
+        public record Parcel(
+                Integer weightGram,
+                BigDecimal lengthCm,
+                BigDecimal widthCm,
+                BigDecimal heightCm) {
+            public boolean hasWeight() {
+                return weightGram != null && weightGram > 0;
+            }
         }
     }
 }

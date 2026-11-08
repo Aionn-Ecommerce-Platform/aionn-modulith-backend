@@ -9,6 +9,7 @@ import com.aionn.recommendation.application.port.out.observability.Recommendatio
 import com.aionn.recommendation.domain.model.RecommendationSlate;
 import com.aionn.recommendation.domain.model.UserAffinityProfile;
 import com.aionn.recommendation.domain.valueobject.RecommendationSurface;
+import com.aionn.sharedkernel.integration.port.promotion.FlashSaleQueryPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,22 +25,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Produces a ranked, hydrated slate for each surface.
- *
- * <p>
- * Returns the full over-fetched list rather than the requested page:
- * availability filtering happens
- * downstream in {@link RecommendationReadService}, and filtering a list of
- * exactly N would leave fewer
- * than N.
- *
- * <p>
- * {@code NOT_SUPPORTED} because each collaborator below opens its own short
- * read-only transaction.
- * Holding one across the whole request would keep a connection busy for the
- * duration, and would stay
- * open across the catalog call - which becomes a network hop once this module
- * is split out.
+ * Produces a ranked, over-fetched slate per surface; availability filtering happens downstream.
+ * {@code NOT_SUPPORTED} because each collaborator opens its own short read-only transaction.
  */
 @Slf4j
 @Service
@@ -53,12 +40,16 @@ public class RecommendationService {
     /** Largest page any surface will build. Mirrors the {@code @Max} on the controller's limit. */
     private static final int MAX_PAGE_SIZE = 50;
 
+    /** Cap the share of a cold-start slate that may be flash-sale products. */
+    private static final double MAX_FLASH_SALE_SHARE = 0.40;
+
     private final CandidateGenerationService candidateGeneration;
     private final ProfileRefreshService profileRefreshService;
     private final HybridRankingPolicy rankingPolicy;
     private final ColdStartPolicy coldStartPolicy;
     private final RankingWeightPolicy weights;
     private final RecommendationMetricsPort metrics;
+    private final FlashSaleQueryPort flashSaleQuery;
 
     public List<RecommendationItemResult> homeFeed(String userId, int limit) {
         int candidateLimit = candidateLimit(limit);
@@ -78,9 +69,7 @@ public class RecommendationService {
                 : Map.of();
         Map<String, BigDecimal> popularity = candidateGeneration.popularityScores(candidateLimit);
 
-        // Owning something is a reason not to be sold it again. Views and cart adds are
-        // not excluded:
-        // resurfacing a product the user browsed is exactly what the feed is for.
+        // Exclude owned products only; viewed/carted items are valid to resurface.
         Set<String> excluded = new HashSet<>(candidateGeneration.purchasedProductIds(userId));
 
         List<RecommendationItemResult> results = rankAndHydrate(
@@ -113,7 +102,6 @@ public class RecommendationService {
         Map<String, BigDecimal> collaborative = candidateGeneration.collaborativeScores(seedProductIds, candidateLimit);
         Map<String, BigDecimal> popularity = candidateGeneration.popularityScores(candidateLimit);
 
-        // Nothing already in the basket, and nothing the user has bought before.
         Set<String> excluded = new HashSet<>(seedProductIds);
         if (isRealUser(userId)) {
             excluded.addAll(candidateGeneration.purchasedProductIds(userId));
@@ -130,11 +118,7 @@ public class RecommendationService {
                 : results;
     }
 
-    /**
-     * Cold-start answer: recent momentum, topped up with new arrivals when momentum
-     * data is thin -
-     * which is the normal state of a freshly seeded catalog.
-     */
+    /** Cold start: recent momentum, topped up with new arrivals. */
     public List<RecommendationItemResult> trending(int limit) {
         return trending(limit, Set.of());
     }
@@ -152,6 +136,35 @@ public class RecommendationService {
                 ColdStartPolicy.SignalWeights.trendingWithNewArrivals(),
                 excluded == null ? Set.of() : excluded,
                 candidateLimit);
+    }
+
+    /**
+     * Applies the flash-sale cap to the ranked result so every candidate source respects it.
+     * Over-cap sale items are dropped, not re-scored.
+     */
+    private List<RecommendationItemResult> capFlashSaleShare(
+            List<RecommendationItemResult> results, int candidateLimit) {
+        if (results == null || results.isEmpty() || flashSaleQuery == null) {
+            return results;
+        }
+        Map<String, FlashSaleQueryPort.ProductFlashSale> onSale = flashSaleQuery
+                .findActiveByProductIds(results.stream().map(RecommendationItemResult::productId).toList());
+        if (onSale.isEmpty()) {
+            return results;
+        }
+        int saleBudget = Math.max(1, (int) Math.floor(results.size() * MAX_FLASH_SALE_SHARE));
+        List<RecommendationItemResult> nonSale = new ArrayList<>(results.size());
+        List<RecommendationItemResult> sale = new ArrayList<>();
+        for (RecommendationItemResult item : results) {
+            if (onSale.containsKey(item.productId())) {
+                sale.add(item);
+            } else {
+                nonSale.add(item);
+            }
+        }
+        // Non-sale first so the visible head can't be all flash-sale items.
+        nonSale.addAll(sale.subList(0, Math.min(saleBudget, sale.size())));
+        return nonSale;
     }
 
     private List<RecommendationItemResult> productSurface(
@@ -199,27 +212,14 @@ public class RecommendationService {
         return results.isEmpty() ? fallbackToTrending(surface, limit, Set.of(productId)) : results;
     }
 
-    /**
-     * Serves trending in place of a surface that produced nothing, and says so.
-     *
-     * <p>The counter is the only visible difference between "this catalogue has no co-purchase data yet"
-     * and "personalisation quietly stopped working": both render a perfectly reasonable-looking slate of
-     * popular products, so neither the caller nor the log can tell them apart. Counting cold starts too
-     * is deliberate - a profile pipeline that broke shows up here as a sustained spike, which is exactly
-     * when it needs to show up.
-     */
+    /** Falls back to trending and records the fallback so cold starts are distinguishable from breakage. */
     private List<RecommendationItemResult> fallbackToTrending(
             RecommendationSurface surface, int limit, Set<String> excluded) {
         metrics.recordTrendingFallback(surface);
         return trending(limit, excluded);
     }
 
-    /**
-     * Ranks, then attaches the display fields. Products catalog no longer exposes -
-     * unpublished, taken
-     * down, deleted - drop out here, because the interaction log keeps IDs that
-     * catalog may have retired.
-     */
+    /** Drops products catalog has retired, since the interaction log keeps stale IDs. */
     private List<RecommendationItemResult> rankAndHydrate(
             RecommendationSurface surface,
             HybridRankingPolicy.SignalScores signals,
@@ -249,24 +249,16 @@ public class RecommendationService {
                     product.name(),
                     product.imageUrl(),
                     product.priceFrom(),
+                    product.originalPriceFrom(),
                     product.currency(),
                     scored.score().value(),
                     scored.reason(),
                     product.skuIds()));
         }
-        return results;
+        return capFlashSaleShare(results, candidateLimit);
     }
 
-    /**
-     * Over-fetch so availability filtering downstream still leaves a full page.
-     *
-     * <p>The page size is clamped and the product taken in {@code long} because this is reachable from a
-     * public endpoint. An unclamped {@code limit * factor} overflows {@code int} for a large enough page
-     * size and comes back negative, and a negative capacity then fails the {@code ArrayList} the caller
-     * builds with it - a 500 on an anonymous request rather than a rejected parameter. Clamping here
-     * rather than relying on the controller keeps the invariant inside the service that depends on it.
-     * Must stay in step with the {@code @Max} on the controller's limit parameter.
-     */
+    /** Over-fetch so downstream availability filtering still leaves a full page; clamp to avoid int overflow. */
     private int candidateLimit(int limit) {
         int page = Math.clamp(limit, 1, MAX_PAGE_SIZE);
         return (int) Math.min((long) page * weights.candidateOverFetchFactor(), weights.maxCandidates());

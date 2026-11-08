@@ -60,10 +60,9 @@ public interface FlashSaleRegistrationRepository extends JpaRepository<FlashSale
 
     @Query("""
             SELECT r FROM FlashSaleRegistrationEntity r
-              JOIN PromotionCampaignEntity c ON c.campaignId = r.campaignId
               WHERE r.status = 'APPROVED'
-                AND c.status = 'RUNNING'
-              ORDER BY c.endDate ASC
+                AND r.campaignId IN :campaignIds
+              ORDER BY r.submittedAt ASC
             """)
-    List<FlashSaleRegistrationEntity> findAllApprovedRunning(Pageable pageable);
+    List<FlashSaleRegistrationEntity> findApprovedByCampaignIds(List<String> campaignIds);
 }

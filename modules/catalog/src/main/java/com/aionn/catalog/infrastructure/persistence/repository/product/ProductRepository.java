@@ -111,10 +111,17 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String> 
       SELECT p.* FROM products p
       WHERE p.status = 'PUBLISHED'
         AND (:q IS NULL OR p.name ILIKE CONCAT('%', :q, '%'))
+        AND (:minPrice IS NULL AND :maxPrice IS NULL OR EXISTS (
+          SELECT 1 FROM product_variants v WHERE v.product_id = p.product_id
+          GROUP BY v.product_id
+          HAVING (:minPrice IS NULL OR MIN(v.price) >= :minPrice)
+             AND (:maxPrice IS NULL OR MIN(v.price) <= :maxPrice)))
       ORDER BY p.updated_at DESC
       LIMIT :limit OFFSET :offset
       """, nativeQuery = true)
-  List<ProductEntity> searchPublished(@Param("q") String q, @Param("limit") int limit, @Param("offset") int offset);
+  List<ProductEntity> searchPublished(@Param("q") String q, @Param("minPrice") java.math.BigDecimal minPrice,
+      @Param("maxPrice") java.math.BigDecimal maxPrice,
+      @Param("limit") int limit, @Param("offset") int offset);
 
   @Query(value = """
       SELECT COUNT(*) FROM products p
@@ -145,6 +152,12 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String> 
         AND (:ratingMin IS NULL OR COALESCE((
           SELECT AVG(review.rating) FROM product_reviews review
           WHERE review.product_id = p.product_id AND review.status = 'VISIBLE'), 0) >= :ratingMin)
+        AND (:onSale = false OR EXISTS (
+          SELECT 1 FROM product_variants variant
+          WHERE variant.product_id = p.product_id
+            AND variant.original_price IS NOT NULL
+            AND variant.price IS NOT NULL
+            AND variant.original_price > variant.price))
       ORDER BY
         CASE WHEN :sort = 'PRICE_ASC' THEN (SELECT MIN(v.price) FROM product_variants v WHERE v.product_id = p.product_id) END ASC NULLS LAST,
         CASE WHEN :sort = 'PRICE_DESC' THEN (SELECT MIN(v.price) FROM product_variants v WHERE v.product_id = p.product_id) END DESC NULLS LAST,
@@ -165,6 +178,7 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String> 
       @Param("priceMax") java.math.BigDecimal priceMax,
       @Param("attributesJson") String attributesJson,
       @Param("ratingMin") Double ratingMin,
+      @Param("onSale") boolean onSale,
       @Param("sort") String sort,
       @Param("limit") int limit,
       @Param("offset") int offset);
@@ -191,6 +205,12 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String> 
         AND (:ratingMin IS NULL OR COALESCE((
           SELECT AVG(review.rating) FROM product_reviews review
           WHERE review.product_id = p.product_id AND review.status = 'VISIBLE'), 0) >= :ratingMin)
+        AND (:onSale = false OR EXISTS (
+          SELECT 1 FROM product_variants variant
+          WHERE variant.product_id = p.product_id
+            AND variant.original_price IS NOT NULL
+            AND variant.price IS NOT NULL
+            AND variant.original_price > variant.price))
       """, nativeQuery = true)
   long countFallback(
       @Param("q") String query,
@@ -201,7 +221,8 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String> 
       @Param("priceMin") java.math.BigDecimal priceMin,
       @Param("priceMax") java.math.BigDecimal priceMax,
       @Param("attributesJson") String attributesJson,
-      @Param("ratingMin") Double ratingMin);
+      @Param("ratingMin") Double ratingMin,
+      @Param("onSale") boolean onSale);
 
   @Query("SELECT p.status AS status, COUNT(p) AS cnt FROM ProductEntity p GROUP BY p.status")
   List<ProductStatusCount> countGroupedByStatus();

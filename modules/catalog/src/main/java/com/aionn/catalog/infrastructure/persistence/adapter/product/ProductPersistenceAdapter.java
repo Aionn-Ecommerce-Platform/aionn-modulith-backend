@@ -152,8 +152,14 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
 
     @Override
     public List<Product> searchPublished(String query, int limit, int offset) {
+        return searchPublished(query, null, null, limit, offset);
+    }
+
+    @Override
+    public List<Product> searchPublished(String query, java.math.BigDecimal priceMin,
+            java.math.BigDecimal priceMax, int limit, int offset) {
         String q = (query == null || query.isBlank()) ? null : query.trim();
-        return jpa.searchPublished(q, Math.max(1, limit), Math.max(0, offset)).stream()
+        return jpa.searchPublished(q, priceMin, priceMax, Math.max(1, limit), Math.max(0, offset)).stream()
                 .map(mapper::toDomain)
                 .toList();
     }
@@ -197,13 +203,14 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
         String categories = csv(filter.categoryIds());
         String attributesJson = jsonMapper.writeValueAsString(filter.attributes());
         String status = (filter.status() == null ? ProductStatus.PUBLISHED : filter.status()).name();
+        boolean onSale = Boolean.TRUE.equals(filter.onSale());
         List<Product> content = jpa.searchFallback(query, merchantId, status, brands, categories,
-                        filter.priceMin(), filter.priceMax(), attributesJson, filter.ratingMin(), filter.sort().name(),
-                        pagination.size(), pagination.offset()).stream()
+                        filter.priceMin(), filter.priceMax(), attributesJson, filter.ratingMin(), onSale,
+                        filter.sort().name(), pagination.size(), pagination.offset()).stream()
                 .map(mapper::toDomain)
                 .toList();
         long total = jpa.countFallback(query, merchantId, status, brands, categories,
-                filter.priceMin(), filter.priceMax(), attributesJson, filter.ratingMin());
+                filter.priceMin(), filter.priceMax(), attributesJson, filter.ratingMin(), onSale);
         return new FallbackPage(content, total);
     }
 

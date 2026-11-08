@@ -4,7 +4,10 @@ import com.aionn.ordering.infrastructure.persistence.entity.OrderEntity;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+
+import jakarta.persistence.LockModeType;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -16,6 +19,11 @@ public interface OrderRepository extends JpaRepository<OrderEntity, String> {
   @Override
   @EntityGraph(attributePaths = "items")
   Optional<OrderEntity> findById(String orderId);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @EntityGraph(attributePaths = "items")
+  @Query("SELECT o FROM OrderEntity o WHERE o.orderId = :orderId")
+  Optional<OrderEntity> findByIdForUpdate(String orderId);
 
   @EntityGraph(attributePaths = "items")
   Optional<OrderEntity> findByOrderSn(String orderSn);

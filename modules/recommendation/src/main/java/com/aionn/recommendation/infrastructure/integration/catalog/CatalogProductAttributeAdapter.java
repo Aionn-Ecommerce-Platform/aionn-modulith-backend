@@ -79,6 +79,7 @@ public class CatalogProductAttributeAdapter implements ProductAttributeQueryPort
                 view.skuIds(),
                 view.imageUrl(),
                 view.priceFrom(),
+                view.originalPriceFrom(),
                 view.currency());
     }
 }

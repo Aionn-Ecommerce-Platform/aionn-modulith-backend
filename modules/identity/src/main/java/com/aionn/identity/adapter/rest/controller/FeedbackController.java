@@ -33,10 +33,6 @@ public class FeedbackController {
     public ResponseEntity<ApiResponse<FeedbackResponse>> submit(
             Authentication authentication,
             @Valid @RequestBody SubmitFeedbackRequest request) {
-        // Spring Security populates an AnonymousAuthenticationToken for
-        // unauthenticated requests whose isAuthenticated() returns true and
-        // whose name is "anonymousUser" — treat that as no user, otherwise
-        // "anonymousUser" would end up in the SubmitFeedbackCommand.
         String userId = (authentication != null
                 && authentication.isAuthenticated()
                 && !(authentication instanceof AnonymousAuthenticationToken))

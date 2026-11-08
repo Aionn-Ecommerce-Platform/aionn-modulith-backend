@@ -13,6 +13,7 @@ import com.aionn.ucp.domain.model.UcpCheckoutSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
@@ -35,6 +36,7 @@ public class UcpOrderEventListener {
     private final UcpWebhookDispatcherPort webhookDispatcher;
     private final Clock clock;
 
+    @Async
     @EventListener
     public void onOrderPlaced(OrderPlacedIntegrationEvent event) {
         dispatchIfWebhookRegistered(event.orderId(), "order.placed", Map.of(
@@ -43,6 +45,7 @@ public class UcpOrderEventListener {
                 "currency", event.currency() != null ? event.currency() : ""));
     }
 
+    @Async
     @EventListener
     public void onOrderApproved(OrderApprovedIntegrationEvent event) {
         dispatchIfWebhookRegistered(event.orderId(), "order.approved", Map.of(
@@ -50,6 +53,7 @@ public class UcpOrderEventListener {
                 "payment_id", event.paymentId() != null ? event.paymentId() : ""));
     }
 
+    @Async
     @EventListener
     public void onOrderShipped(OrderShippedIntegrationEvent event) {
         dispatchIfWebhookRegistered(event.orderId(), "order.shipped", Map.of(
@@ -57,12 +61,14 @@ public class UcpOrderEventListener {
                 "shipment_id", event.shipmentId() != null ? event.shipmentId() : ""));
     }
 
+    @Async
     @EventListener
     public void onOrderCompleted(OrderCompletedIntegrationEvent event) {
         dispatchIfWebhookRegistered(event.orderId(), "order.completed", Map.of(
                 KEY_STATUS, "COMPLETED"));
     }
 
+    @Async
     @EventListener
     public void onOrderCancelled(OrderCancelledIntegrationEvent event) {
         dispatchIfWebhookRegistered(event.orderId(), "order.cancelled", Map.of(

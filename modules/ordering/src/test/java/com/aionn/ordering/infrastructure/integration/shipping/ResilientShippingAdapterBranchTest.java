@@ -1,5 +1,6 @@
 package com.aionn.ordering.infrastructure.integration.shipping;
 
+import com.aionn.ordering.application.port.out.ShippingGateway;
 import com.aionn.ordering.application.port.out.observability.OrderingMetricsPort;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -17,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -50,10 +52,11 @@ class ResilientShippingAdapterBranchTest {
     @Test
     void createAndRegisterRecordsFailureOnException() {
         doThrow(new RuntimeException("Error")).when(delegate)
-                .createAndRegister(anyString(), anyString(), anyString(), any(), any(), any(), anyString());
+                .createAndRegister(anyString(), anyString(), anyString(), any(), any(), any(), anyString(), anyList());
 
         assertThrows(RuntimeException.class, () ->
-                adapter.createAndRegister("ord-1", "m-1", "usr-1", null, BigDecimal.ZERO, BigDecimal.TEN, "VND"));
+                adapter.createAndRegister("ord-1", "m-1", "usr-1", null, BigDecimal.ZERO, BigDecimal.TEN, "VND",
+                        java.util.List.of(new ShippingGateway.Parcel(500, null, null, null, 1))));
 
         verify(metrics).gatewayOutcome("shipping", "failure");
     }

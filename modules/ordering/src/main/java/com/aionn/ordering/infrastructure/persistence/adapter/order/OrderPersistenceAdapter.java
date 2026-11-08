@@ -33,6 +33,11 @@ public class OrderPersistenceAdapter implements OrderPersistencePort {
     }
 
     @Override
+    public Optional<Order> findByIdForUpdate(String orderId) {
+        return jpa.findByIdForUpdate(orderId).map(mapper::toDomain);
+    }
+
+    @Override
     public Optional<Order> findByIdOrOrderSn(String idOrSn) {
         if (idOrSn == null || idOrSn.isBlank()) {
             return Optional.empty();

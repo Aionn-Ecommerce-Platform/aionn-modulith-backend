@@ -7,6 +7,7 @@ import org.mapstruct.factory.Mappers;
 import com.aionn.catalog.adapter.rest.dto.product.request.AssignBrandRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.AssignCategoriesRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.BulkPriceUpdateRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.ChangeVariantParcelRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.ChangeVariantPriceRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.CreateProductRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.DeactivateProductRequest;
@@ -23,6 +24,7 @@ import com.aionn.catalog.application.dto.common.PageResult;
 import com.aionn.catalog.application.dto.product.command.AssignBrandCommand;
 import com.aionn.catalog.application.dto.product.command.AssignCategoriesCommand;
 import com.aionn.catalog.application.dto.product.command.BulkPriceUpdateCommand;
+import com.aionn.catalog.application.dto.product.command.ChangeVariantParcelCommand;
 import com.aionn.catalog.application.dto.product.command.ChangeVariantPriceCommand;
 import com.aionn.catalog.application.dto.product.command.CloneProductCommand;
 import com.aionn.catalog.application.dto.product.command.CreateProductCommand;
@@ -99,6 +101,8 @@ class ProductControllerWebTest {
         @Mock
         private ChangeVariantPriceInputPort changeVariantPriceInputPort;
         @Mock
+        private com.aionn.catalog.application.port.in.product.ChangeVariantParcelInputPort changeVariantParcelInputPort;
+        @Mock
         private BulkPriceUpdateInputPort bulkPriceUpdateInputPort;
         @Mock
         private AssignBrandInputPort assignBrandInputPort;
@@ -148,6 +152,8 @@ class ProductControllerWebTest {
         private com.aionn.catalog.application.port.in.product.GetProductAnalyticsInputPort getProductAnalyticsInputPort;
         @Mock
         private com.aionn.catalog.application.port.in.product.SearchProductCatalogInputPort searchProductCatalogInputPort;
+        @Mock
+        private com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher integrationEventPublisher;
 
         private MockMvc mockMvc;
         private final JsonMapper objectMapper = JacksonMapperFactory.create();
@@ -156,7 +162,8 @@ class ProductControllerWebTest {
         void setUp() {
                 ProductController controller = new ProductController(
                                 createProductInputPort, cloneProductInputPort, defineVariantInputPort,
-                                changeVariantPriceInputPort, bulkPriceUpdateInputPort, assignBrandInputPort,
+                                changeVariantPriceInputPort, changeVariantParcelInputPort, bulkPriceUpdateInputPort,
+                                assignBrandInputPort,
                                 assignCategoriesInputPort, defineAttributesInputPort, publishProductInputPort,
                                 submitForReviewInputPort, rejectProductInputPort, deactivateProductInputPort,
                                 restoreProductInputPort, getProductInputPort, getProductsBySkuIdsInputPort,
@@ -166,7 +173,9 @@ class ProductControllerWebTest {
                                 getRelatedProductsInputPort, getPopularProductsInputPort,
                                 getPersonalizedProductsInputPort, trackProductViewInputPort,
                                 getProductAnalyticsInputPort, searchProductCatalogInputPort,
-                                Mappers.getMapper(ProductDtoMapper.class));
+                                Mappers.getMapper(ProductDtoMapper.class),
+                                integrationEventPublisher,
+                                java.time.Clock.systemUTC());
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new CatalogExceptionHandler())
                                 .setCustomArgumentResolvers(
@@ -214,7 +223,9 @@ class ProductControllerWebTest {
                                 .with(TestAuth.authMerchant("owner-1", MERCHANT_ID))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(new DefineVariantRequest(
-                                                "sku-1", Map.of("color", "red"), new BigDecimal("10.00"), "VND"))))
+                                                "sku-1", Map.of("color", "red"), new BigDecimal("10.00"), "VND",
+                                                500, BigDecimal.valueOf(15), BigDecimal.valueOf(10),
+                                                BigDecimal.valueOf(5)))))
                                 .andExpect(status().isOk());
         }
 
@@ -228,6 +239,29 @@ class ProductControllerWebTest {
                                 .content(objectMapper.writeValueAsString(new ChangeVariantPriceRequest(
                                                 new BigDecimal("20.00"), "VND"))))
                                 .andExpect(status().isOk());
+        }
+
+        @Test
+        void changeVariantParcelReturnsOk() throws Exception {
+                when(changeVariantParcelInputPort.execute(any(ChangeVariantParcelCommand.class)))
+                                .thenReturn(sample());
+
+                mockMvc.perform(put("/api/v1/catalog/products/" + PRODUCT_ID + "/variants/sku-1/parcel")
+                                .with(TestAuth.authMerchant("owner-1", MERCHANT_ID))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new ChangeVariantParcelRequest(
+                                                500, new BigDecimal("15"), new BigDecimal("10"),
+                                                new BigDecimal("5")))))
+                                .andExpect(status().isOk());
+        }
+
+        @Test
+        void changeVariantParcelRejectsMissingWeight() throws Exception {
+                mockMvc.perform(put("/api/v1/catalog/products/" + PRODUCT_ID + "/variants/sku-1/parcel")
+                                .with(TestAuth.authMerchant("owner-1", MERCHANT_ID))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"lengthCm\":15,\"widthCm\":10,\"heightCm\":5}"))
+                                .andExpect(status().isBadRequest());
         }
 
         @Test

@@ -27,11 +27,6 @@ import java.util.List;
 @Tag(name = "Geography", description = "Geographic reference data endpoints - countries, provinces, districts, wards")
 public class GeographyController {
 
-    // Geography is administrative reference data that changes on the order of
-    // months (province splits, ward renames); an hour of shared-cache is a
-    // reasonable trade between load reduction and staleness. Individual
-    // endpoints keep this cache header so browsers, CDNs, and API gateways
-    // can hold on to the payload without hammering the DB.
     private static final CacheControl GEOGRAPHY_CACHE =
             CacheControl.maxAge(Duration.ofHours(1)).cachePublic();
 

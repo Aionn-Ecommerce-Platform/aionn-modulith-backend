@@ -55,12 +55,13 @@ class PaymentPersistenceAdapterTest {
         PaymentEntity entity = new PaymentEntity();
 
         when(paymentDomainMapper.toEntity(domain, null)).thenReturn(entity);
-        when(paymentRepository.save(entity)).thenReturn(entity);
+        when(paymentRepository.saveAndFlush(entity)).thenReturn(entity);
         when(paymentDomainMapper.toDomain(entity)).thenReturn(domain);
 
         Payment result = adapter.save(domain);
 
         assertEquals(domain, result);
+        verify(paymentRepository).saveAndFlush(entity);
     }
 
     @Test

@@ -46,7 +46,7 @@ class RestClientUcpWebhookDispatcherTest {
                 when(requestBodyUriSpec.uri("https://example.com/webhook")).thenReturn(requestBodySpec);
                 when(requestBodySpec.contentType(org.springframework.http.MediaType.APPLICATION_JSON))
                                 .thenReturn(requestBodySpec);
-                when(requestBodySpec.body(event)).thenReturn(requestBodySpec);
+                when(requestBodySpec.body(org.mockito.ArgumentMatchers.anyString())).thenReturn(requestBodySpec);
                 when(requestBodySpec.retrieve()).thenReturn(responseSpec);
                 when(responseSpec.toBodilessEntity()).thenReturn(ResponseEntity.ok().build());
 
@@ -72,7 +72,7 @@ class RestClientUcpWebhookDispatcherTest {
                 when(requestBodyUriSpec.uri("https://example.com/webhook")).thenReturn(requestBodySpec);
                 when(requestBodySpec.contentType(org.springframework.http.MediaType.APPLICATION_JSON))
                                 .thenReturn(requestBodySpec);
-                when(requestBodySpec.body(event)).thenReturn(requestBodySpec);
+                when(requestBodySpec.body(org.mockito.ArgumentMatchers.anyString())).thenReturn(requestBodySpec);
                 when(requestBodySpec.retrieve()).thenReturn(responseSpec);
                 when(responseSpec.toBodilessEntity()).thenThrow(new RuntimeException("Connection refused"));
 
@@ -104,13 +104,73 @@ class RestClientUcpWebhookDispatcherTest {
 
                 RestClientUcpWebhookDispatcher builderArg = new RestClientUcpWebhookDispatcher(
                                 java.util.Optional.of(RestClient.builder()),
-                                java.util.Optional.of(metricsPort));
+                                java.util.Optional.of(metricsPort),
+                                java.util.Optional.empty(),
+                                java.util.Optional.empty());
                 assertThat(builderArg).isNotNull();
 
                 RestClientUcpWebhookDispatcher emptyOptionalArg = new RestClientUcpWebhookDispatcher(
                                 java.util.Optional.empty(),
+                                java.util.Optional.empty(),
+                                java.util.Optional.empty(),
                                 java.util.Optional.empty());
                 assertThat(emptyOptionalArg).isNotNull();
+        }
+
+        @Test
+        void dispatchSignsPayloadWhenSecretConfigured() {
+                java.time.Clock fixed = java.time.Clock.fixed(Instant.ofEpochSecond(1_700_000_000L),
+                                java.time.ZoneOffset.UTC);
+                RestClientUcpWebhookDispatcher signing = new RestClientUcpWebhookDispatcher(
+                                restClient, metricsPort, "whsec_test", fixed);
+
+                UcpWebhookEvent event = new UcpWebhookEvent(
+                                "evt_1", "order.shipped", "ord_1", Instant.now(), Map.of());
+
+                when(restClient.post()).thenReturn(requestBodyUriSpec);
+                when(requestBodyUriSpec.uri("https://example.com/webhook")).thenReturn(requestBodySpec);
+                when(requestBodySpec.contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                                .thenReturn(requestBodySpec);
+                when(requestBodySpec.body(org.mockito.ArgumentMatchers.anyString())).thenReturn(requestBodySpec);
+                when(requestBodySpec.header(org.mockito.ArgumentMatchers.eq("X-UCP-Timestamp"),
+                                org.mockito.ArgumentMatchers.anyString())).thenReturn(requestBodySpec);
+                when(requestBodySpec.header(org.mockito.ArgumentMatchers.eq("X-UCP-Signature"),
+                                org.mockito.ArgumentMatchers.anyString())).thenReturn(requestBodySpec);
+                when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+                when(responseSpec.toBodilessEntity()).thenReturn(ResponseEntity.ok().build());
+
+                assertThat(signing.dispatch("https://example.com/webhook", event)).isTrue();
+
+                // Timestamp header carries the fixed clock; signature header is the
+                // "t=<ts>,v1=<hex>" scheme over "<ts>.<body>".
+                org.mockito.ArgumentCaptor<String> tsCap = org.mockito.ArgumentCaptor.forClass(String.class);
+                org.mockito.ArgumentCaptor<String> sigCap = org.mockito.ArgumentCaptor.forClass(String.class);
+                verify(requestBodySpec).header(org.mockito.ArgumentMatchers.eq("X-UCP-Timestamp"),
+                                tsCap.capture());
+                verify(requestBodySpec).header(org.mockito.ArgumentMatchers.eq("X-UCP-Signature"),
+                                sigCap.capture());
+                assertThat(tsCap.getValue()).isEqualTo("1700000000");
+                assertThat(sigCap.getValue()).startsWith("t=1700000000,v1=").hasSizeGreaterThan("t=1700000000,v1=".length() + 60);
+        }
+
+        @Test
+        void dispatchOmitsSignatureHeadersWithoutSecret() {
+                UcpWebhookEvent event = new UcpWebhookEvent(
+                                "evt_1", "order.shipped", "ord_1", Instant.now(), Map.of());
+
+                when(restClient.post()).thenReturn(requestBodyUriSpec);
+                when(requestBodyUriSpec.uri("https://example.com/webhook")).thenReturn(requestBodySpec);
+                when(requestBodySpec.contentType(org.springframework.http.MediaType.APPLICATION_JSON))
+                                .thenReturn(requestBodySpec);
+                when(requestBodySpec.body(org.mockito.ArgumentMatchers.anyString())).thenReturn(requestBodySpec);
+                when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+                when(responseSpec.toBodilessEntity()).thenReturn(ResponseEntity.ok().build());
+
+                assertThat(dispatcher.dispatch("https://example.com/webhook", event)).isTrue();
+
+                verify(requestBodySpec, org.mockito.Mockito.never())
+                                .header(org.mockito.ArgumentMatchers.eq("X-UCP-Signature"),
+                                                org.mockito.ArgumentMatchers.anyString());
         }
 
         @Test
@@ -122,7 +182,7 @@ class RestClientUcpWebhookDispatcherTest {
                 when(requestBodyUriSpec.uri("https://example.com/webhook")).thenReturn(requestBodySpec);
                 when(requestBodySpec.contentType(org.springframework.http.MediaType.APPLICATION_JSON))
                                 .thenReturn(requestBodySpec);
-                when(requestBodySpec.body(event)).thenReturn(requestBodySpec);
+                when(requestBodySpec.body(org.mockito.ArgumentMatchers.anyString())).thenReturn(requestBodySpec);
                 when(requestBodySpec.retrieve()).thenReturn(responseSpec);
                 when(responseSpec.toBodilessEntity()).thenReturn(ResponseEntity.status(500).build());
 

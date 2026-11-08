@@ -7,17 +7,23 @@ import com.aionn.identity.infrastructure.config.properties.SocialAuthProperties;
 import com.aionn.sharedkernel.media.CloudinaryCredentialsProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.SmartInitializingSingleton;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
+
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
 public class IdentityProviderConfigurationValidator implements SmartInitializingSingleton {
+
+    private static final Set<String> LOCAL_DEV_PROFILES = Set.of("dev", "local", "test", "default");
 
     private final IdentityMediaProperties mediaProperties;
     private final CloudinaryCredentialsProperties cloudinaryProperties;
     private final KycProperties kycProperties;
     private final SocialAuthProperties socialAuthProperties;
     private final RegistrationProperties registrationProperties;
+    private final Environment environment;
 
     @Override
     public void afterSingletonsInstantiated() {
@@ -27,6 +33,42 @@ public class IdentityProviderConfigurationValidator implements SmartInitializing
         validateCaptcha();
         validateTwilio();
         validateImplementedProviders();
+        validateSharedStateProviders();
+    }
+
+    /**
+     * Rate-limit and OTP challenge state must live in shared storage (Redis) —
+     * an in-memory provider lets a caller bypass the limit simply by landing on
+     * a different instance, so it's only acceptable on a single-node local dev
+     * profile.
+     */
+    private void validateSharedStateProviders() {
+        if (!hasActiveProfile() || isLocalDevProfile()) {
+            return;
+        }
+        forbidMemory("identity.registration.ratelimit.provider");
+        forbidMemory("identity.account.otp-challenge.provider");
+    }
+
+    private void forbidMemory(String key) {
+        String value = environment.getProperty(key);
+        if ("memory".equalsIgnoreCase(value)) {
+            throw new IllegalStateException(key + "=memory is only allowed for local dev profiles "
+                    + LOCAL_DEV_PROFILES + " — multi-instance deployments must use redis.");
+        }
+    }
+
+    private boolean hasActiveProfile() {
+        return environment.getActiveProfiles().length > 0;
+    }
+
+    private boolean isLocalDevProfile() {
+        for (String profile : environment.getActiveProfiles()) {
+            if (LOCAL_DEV_PROFILES.contains(profile.toLowerCase())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void validateCloudinary() {

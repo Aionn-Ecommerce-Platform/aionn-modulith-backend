@@ -4,7 +4,6 @@ import com.aionn.promotion.application.dto.flashsale.command.FlashSaleCommands;
 import com.aionn.promotion.application.dto.flashsale.result.ActiveFlashSaleResult;
 import com.aionn.promotion.application.port.out.FlashSaleRegistrationPersistencePort;
 import com.aionn.promotion.application.port.out.PromotionCampaignPersistencePort;
-import com.aionn.promotion.domain.valueobject.CampaignStatus;
 import com.aionn.promotion.domain.exception.PromotionErrorCode;
 import com.aionn.promotion.domain.exception.PromotionException;
 import com.aionn.promotion.domain.model.FlashSaleRegistration;
@@ -147,21 +146,28 @@ public class FlashSaleService {
         @Transactional(readOnly = true)
         public List<ActiveFlashSaleResult> listActive(int limit) {
                 int safeLimit = Math.min(Math.max(limit, 1), 50);
-                List<FlashSaleRegistration> approved = registrationRepository.findAllApprovedRunning(safeLimit * 50);
-                if (approved.isEmpty()) {
+                // Limit RUNNING campaigns in the database first; then load their
+                // approved items in one query. Filtering registrations before the
+                // limit returned fewer (or zero) campaigns and triggered an N+1
+                // campaign lookup per group.
+                List<PromotionCampaign> campaigns = campaignRepository.findRunning(clock.instant(), safeLimit);
+                if (campaigns.isEmpty()) {
                         return List.of();
                 }
+                List<String> campaignIds = campaigns.stream()
+                                .map(PromotionCampaign::getCampaignId)
+                                .toList();
                 Map<String, List<FlashSaleRegistration>> byCampaign = new LinkedHashMap<>();
-                for (FlashSaleRegistration reg : approved) {
+                for (FlashSaleRegistration reg : registrationRepository.findApprovedByCampaignIds(campaignIds)) {
                         byCampaign.computeIfAbsent(reg.getCampaignId(), k -> new ArrayList<>()).add(reg);
                 }
                 List<ActiveFlashSaleResult> out = new ArrayList<>();
-                for (var entry : byCampaign.entrySet()) {
-                        PromotionCampaign campaign = campaignRepository.findById(entry.getKey()).orElse(null);
-                        if (campaign == null || campaign.getStatus() != CampaignStatus.RUNNING) {
+                for (PromotionCampaign campaign : campaigns) {
+                        List<FlashSaleRegistration> registrations = byCampaign.get(campaign.getCampaignId());
+                        if (registrations == null || registrations.isEmpty()) {
                                 continue;
                         }
-                        List<ActiveFlashSaleResult.Item> items = entry.getValue().stream()
+                        List<ActiveFlashSaleResult.Item> items = registrations.stream()
                                         .map(reg -> new ActiveFlashSaleResult.Item(
                                                         reg.getRegistrationId(), reg.getProductId(), reg.getSkuId(),
                                                         reg.getMerchantId(),
@@ -174,9 +180,6 @@ public class FlashSaleService {
                         out.add(new ActiveFlashSaleResult(
                                         campaign.getCampaignId(), campaign.getName(),
                                         campaign.getStartDate(), campaign.getEndDate(), items));
-                        if (out.size() >= safeLimit) {
-                                break;
-                        }
                 }
                 return out;
         }

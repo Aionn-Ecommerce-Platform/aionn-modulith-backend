@@ -1,5 +1,6 @@
 package com.aionn.ucp.adapter.rest.controller;
 
+import com.aionn.sharedkernel.adapter.web.support.idempotency.IdempotentRequest;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpCartRequest;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpCartResponse;
 import com.aionn.ucp.application.cart.UcpCartApplicationService;
@@ -31,6 +32,7 @@ public class UcpCartController {
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
+    @IdempotentRequest(ttlSeconds = 3600)
     public UcpCartResponse createCart(
             @Valid @RequestBody UcpCartRequest request,
             HttpServletRequest servletRequest) {
@@ -47,6 +49,7 @@ public class UcpCartController {
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @IdempotentRequest(ttlSeconds = 3600)
     public UcpCartResponse updateCart(
             @PathVariable("id") String id,
             @Valid @RequestBody UcpCartRequest request,
@@ -56,6 +59,7 @@ public class UcpCartController {
     }
 
     @PostMapping("/{id}/cancel")
+    @IdempotentRequest(ttlSeconds = 3600)
     public UcpCartResponse cancelCart(
             @PathVariable("id") String id,
             HttpServletRequest servletRequest) {
@@ -68,6 +72,13 @@ public class UcpCartController {
             return null;
         }
         Principal principal = request.getUserPrincipal();
-        return principal != null ? principal.getName() : null;
+        if (principal == null) {
+            return null;
+        }
+        String name = principal.getName();
+        if (name != null && name.startsWith("ucp:platform:")) {
+            return null;
+        }
+        return name;
     }
 }

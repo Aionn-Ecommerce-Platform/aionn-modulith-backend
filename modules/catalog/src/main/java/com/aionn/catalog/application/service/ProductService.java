@@ -38,6 +38,7 @@ import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.catalog.domain.model.Brand;
 import com.aionn.catalog.domain.model.Product;
+import com.aionn.catalog.domain.model.ProductVariant;
 import com.aionn.catalog.domain.valueobject.BrandStatus;
 import com.aionn.catalog.domain.valueobject.ProductStatus;
 import com.aionn.sharedkernel.application.port.EventPublisher;
@@ -92,7 +93,31 @@ public class ProductService {
 
     public Product clone(CloneProductCommand command) {
         Product source = ownedBy(command.productId(), command.merchantId());
-        Product clone = Product.create(IdGenerator.ulid(), command.merchantId(), source.getName(), clock);
+        String newId = IdGenerator.ulid();
+        List<ProductVariant> clonedVariants = source.variants().stream()
+                .map(v -> new ProductVariant(
+                        IdGenerator.ulid(),
+                        v.attributeValues(),
+                        v.price(),
+                        v.originalPrice()))
+                .toList();
+        Product clone = new Product(
+                newId,
+                command.merchantId(),
+                source.getName() + " (Copy)",
+                source.getBrandId(),
+                source.categoryIds(),
+                source.imageList(),
+                source.tags(),
+                source.collectionIds(),
+                source.attributes(),
+                clonedVariants,
+                source.getAiDescription(),
+                ProductStatus.DRAFT,
+                clock.instant(),
+                clock.instant(),
+                0L,
+                source.translations());
         Product saved = productRepository.save(clone);
         eventPublisher.publish(clone.pullEvents());
         return saved;
@@ -101,7 +126,12 @@ public class ProductService {
     public Product defineVariant(DefineVariantCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         Money price = Money.of(command.price(), command.currency());
-        product.defineVariant(command.skuId(), command.attributeValues(), price, clock);
+        ProductVariant.ParcelDimensions parcel = command.weightGram() == null
+                && command.lengthCm() == null && command.widthCm() == null && command.heightCm() == null
+                        ? null
+                        : new ProductVariant.ParcelDimensions(
+                                command.weightGram(), command.lengthCm(), command.widthCm(), command.heightCm());
+        product.defineVariant(command.skuId(), command.attributeValues(), price, parcel, clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
@@ -179,6 +209,17 @@ public class ProductService {
         return saved;
     }
 
+    public Product changeVariantParcel(
+            com.aionn.catalog.application.dto.product.command.ChangeVariantParcelCommand command) {
+        Product product = ownedBy(command.productId(), command.merchantId());
+        ProductVariant.ParcelDimensions parcel = new ProductVariant.ParcelDimensions(
+                command.weightGram(), command.lengthCm(), command.widthCm(), command.heightCm());
+        product.changeVariantParcel(command.skuId(), parcel, clock);
+        Product saved = productRepository.save(product);
+        eventPublisher.publish(product.pullEvents());
+        return saved;
+    }
+
     public BulkPriceUpdateResult bulkPriceUpdate(BulkPriceUpdateCommand command) {
         if (command.items() == null || command.items().isEmpty()) {
             return new BulkPriceUpdateResult(0, 0, List.of());
@@ -244,8 +285,8 @@ public class ProductService {
     }
 
     public Product publish(PublishProductCommand command) {
-        Product product = required(command.productId());
-        product.publish(command.adminId(), clock);
+        Product product = ownedBy(command.productId(), command.actorId());
+        product.publish(command.actorId(), clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
@@ -276,7 +317,7 @@ public class ProductService {
     }
 
     public Product restore(RestoreProductCommand command) {
-        Product product = ownedBy(command.productId(), command.merchantId());
+        Product product = required(command.productId());
         product.restore(clock);
         Product saved = productRepository.save(product);
         eventPublisher.publish(product.pullEvents());
@@ -361,8 +402,6 @@ public class ProductService {
                 .orElseGet(() -> UserBrowsingHistory.create(userId));
         history.trackView(product.categoryIds(), product.getBrandId());
         userBrowsingHistoryRepository.save(history);
-        // Appended to the outbox in this same transaction, so the view signal and the history update
-        // commit or roll back as one.
         integrationEventPublisher.publishProductViewed(
                 product.getProductId(),
                 userId,
@@ -442,7 +481,8 @@ public class ProductService {
                 new ProductPersistencePort.FallbackFilter(
                         criteria.q(), criteria.merchantId(), criteria.status(), criteria.brandIds(),
                         criteria.categoryIds(), criteria.priceMin(), criteria.priceMax(), criteria.attributes(),
-                        ProductPersistencePort.FallbackSort.valueOf(criteria.sort().name()), criteria.ratingMin()),
+                        ProductPersistencePort.FallbackSort.valueOf(criteria.sort().name()), criteria.ratingMin(),
+                        criteria.onSale()),
                 OffsetPagination.of(criteria.page(), criteria.size()));
         List<ProductResult> results = page.content().stream()
                 .map(productResultMapper::toResult)

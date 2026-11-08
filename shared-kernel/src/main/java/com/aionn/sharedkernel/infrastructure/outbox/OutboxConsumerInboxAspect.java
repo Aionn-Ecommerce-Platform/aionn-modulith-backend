@@ -15,15 +15,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Gives every Spring event-listener its own durable inbox entry. A successful
- * listener and its
- * marker commit atomically; if another listener fails, retrying the outbox
- * event skips only the
- * Gives every Spring event-listener its own durable inbox entry. A successful
- * listener and its
- * marker commit atomically; if another listener fails, retrying the outbox
- * event skips only the
- * listeners that already committed.
+ * Gives every Spring event-listener its own durable inbox entry. A successful listener and its marker
+ * commit atomically, so retrying an outbox event skips only listeners that already committed.
  */
 @Aspect
 @Component

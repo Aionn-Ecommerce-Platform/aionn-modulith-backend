@@ -33,6 +33,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.argThat;
 
 @ExtendWith(MockitoExtension.class)
 class UcpCheckoutApplicationServiceTest {
@@ -708,6 +709,88 @@ class UcpCheckoutApplicationServiceTest {
                                         assertThat(ucpEx.getStatusCode()).isEqualTo(409);
                                         assertThat(ucpEx.getErrorCode()).isEqualTo("conflict");
                                 });
+        }
+
+        @Test
+        void completeCheckoutWiresPaymentFulfillmentAndVoucherIntoPlaceCommand() {
+                Map<String, Object> instrument = Map.of(
+                                "id", "pi_1",
+                                "handler_id", "vnpay_handler",
+                                "type", "card",
+                                "selected", true);
+                Map<String, Object> payment = Map.of("instruments", List.of(instrument));
+
+                Map<String, Object> destination = Map.of(
+                                "id", "dest-1",
+                                "type", "shipping_address",
+                                "first_name", "Jane",
+                                "last_name", "Doe",
+                                "phone_number", "+84900000000",
+                                "street_address", "123 Main St",
+                                "address_locality", "Hanoi",
+                                "address_region", "HN",
+                                "address_country", "VN",
+                                "postal_code", "100000");
+                Map<String, Object> shippingMethod = Map.of(
+                                "type", "shipping",
+                                "selected_destination_id", "dest-1",
+                                "destinations", List.of(destination));
+                Map<String, Object> fulfillment = Map.of("methods", List.of(shippingMethod));
+
+                UcpCheckoutSession session = new UcpCheckoutSession(
+                                "chk-full", "user-1", null, "incomplete", "VND", Map.of("sku-1", 1),
+                                null, null, null, now, now, now.plusSeconds(3600), Map.of("sku-1", 5000L),
+                                payment, fulfillment, "SAVE10", 1L);
+                sessionPort.save(session);
+
+                PricingQueryPort.SkuPricing pricing = new PricingQueryPort.SkuPricing(
+                                "sku-1", "m-1", BigDecimal.valueOf(50.00), "VND", true);
+                when(pricingPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of("sku-1", pricing));
+
+                OrderPlacementPort.PlacedOrder placed = new OrderPlacementPort.PlacedOrder(
+                                "ord-full-1", 5000L, "VND", "PENDING", Map.of());
+                when(orderPlacementPort.placeHeadless(any())).thenReturn(placed);
+
+                UcpCheckoutResponse response = service.completeCheckout("chk-full", "user-1");
+
+                assertThat(response.status()).isEqualTo("completed");
+                verify(orderPlacementPort).placeHeadless(argThat(cmd -> {
+                        OrderPlacementPort.PlaceCommand c = (OrderPlacementPort.PlaceCommand) cmd;
+                        boolean paymentOk = "vnpay_handler".equals(c.paymentMethodId());
+                        boolean voucherOk = "SAVE10".equals(c.voucherCode());
+                        OrderPlacementPort.PlaceCommand.ShippingAddress a = c.shippingAddress();
+                        boolean addrOk = a != null
+                                        && "+84900000000".equals(a.phone())
+                                        && a.detailAddress() != null && a.detailAddress().contains("123 Main St")
+                                        && "VN".equals(a.countryCode());
+                        boolean idemOk = "chk-full".equals(c.idempotencyKey());
+                        return paymentOk && voucherOk && addrOk && idemOk;
+                }));
+        }
+
+        @Test
+        void completeCheckoutFallsBackToCodAndNullAddressWithoutPaymentOrFulfillment() {
+                UcpCheckoutSession session = new UcpCheckoutSession(
+                                "chk-cod", "user-1", null, "incomplete", "USD", Map.of("sku-1", 1),
+                                null, null, null, now, now, now.plusSeconds(3600), Map.of("sku-1", 1000L));
+                sessionPort.save(session);
+
+                PricingQueryPort.SkuPricing pricing = new PricingQueryPort.SkuPricing(
+                                "sku-1", "m-1", BigDecimal.valueOf(10.00), "USD", true);
+                when(pricingPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of("sku-1", pricing));
+
+                OrderPlacementPort.PlacedOrder placed = new OrderPlacementPort.PlacedOrder(
+                                "ord-cod-1", 1000L, "USD", "PENDING", Map.of());
+                when(orderPlacementPort.placeHeadless(any())).thenReturn(placed);
+
+                service.completeCheckout("chk-cod", "user-1");
+
+                verify(orderPlacementPort).placeHeadless(argThat(cmd -> {
+                        OrderPlacementPort.PlaceCommand c = (OrderPlacementPort.PlaceCommand) cmd;
+                        return "cod".equals(c.paymentMethodId())
+                                        && c.shippingAddress() == null
+                                        && c.voucherCode() == null;
+                }));
         }
 }
 

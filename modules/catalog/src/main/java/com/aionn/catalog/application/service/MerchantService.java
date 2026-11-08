@@ -56,9 +56,6 @@ public class MerchantService {
         String provinceCode = command.provinceCode();
         String provinceName = null;
         if (provinceCode != null && !provinceCode.isBlank()) {
-            // Validate against identity. Reject unknown codes so the catalog never
-            // stores a province that the storefront filter (which reads from
-            // /geography/provinces) cannot match.
             provinceName = addressLookupPort.resolveProvince(provinceCode)
                     .orElseThrow(() -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
                             "Unknown province code: " + command.provinceCode()))

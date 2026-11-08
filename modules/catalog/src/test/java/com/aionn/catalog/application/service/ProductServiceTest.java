@@ -117,11 +117,15 @@ class ProductServiceTest {
                                 Instant.now(), Instant.now());
         }
 
+        private static final com.aionn.catalog.domain.model.ProductVariant.ParcelDimensions PARCEL =
+                new com.aionn.catalog.domain.model.ProductVariant.ParcelDimensions(
+                        500, BigDecimal.valueOf(15), BigDecimal.valueOf(10), BigDecimal.valueOf(5));
+
         private Product publishableProduct() {
                 Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
                 product.categorize(List.of(CATEGORY_ID), FIXED);
                 product.defineVariant("sku-1", Map.of("color", "red"),
-                                Money.of(new BigDecimal("10.00"), "VND"), FIXED);
+                                Money.of(new BigDecimal("10.00"), "VND"), PARCEL, FIXED);
                 product.pullEvents();
                 return product;
         }
@@ -158,7 +162,8 @@ class ProductServiceTest {
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.defineVariant(new DefineVariantCommand(PRODUCT_ID, MERCHANT_ID, "sku-1",
-                                Map.of("color", "red"), new BigDecimal("10.00"), "VND"));
+                                Map.of("color", "red"), new BigDecimal("10.00"), "VND",
+                                500, BigDecimal.valueOf(15), BigDecimal.valueOf(10), BigDecimal.valueOf(5)));
 
                 assertThat(product.variants()).hasSize(1);
                 verify(eventPublisher).publish(anyCollection());
@@ -172,7 +177,8 @@ class ProductServiceTest {
 
                 assertThatThrownBy(() -> productService.defineVariant(new DefineVariantCommand(
                                 PRODUCT_ID, MERCHANT_ID, "sku-1", Map.of("color", "red"),
-                                new BigDecimal("10.00"), "VND")))
+                                new BigDecimal("10.00"), "VND",
+                                500, BigDecimal.valueOf(15), BigDecimal.valueOf(10), BigDecimal.valueOf(5))))
                                 .isInstanceOf(CatalogException.class)
                                 .extracting("errorCode")
                                 .isEqualTo(CatalogErrorCode.PRODUCT_FORBIDDEN.getCode());
@@ -312,7 +318,7 @@ class ProductServiceTest {
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
-                productService.publish(new PublishProductCommand(PRODUCT_ID, ADMIN_ID));
+                productService.publish(new PublishProductCommand(PRODUCT_ID, MERCHANT_ID));
 
                 assertThat(product.getStatus()).isEqualTo(ProductStatus.PUBLISHED);
                 verify(eventPublisher).publish(anyCollection());
@@ -796,7 +802,7 @@ class ProductServiceTest {
                 when(productRepository.findPublished(100, 100)).thenReturn(List.of());
                 com.aionn.catalog.application.dto.search.ProductSearchDocument doc = new com.aionn.catalog.application.dto.search.ProductSearchDocument(
                                 PRODUCT_ID, MERCHANT_ID, "Widget", null, null, List.of(CATEGORY_ID),
-                                List.of(), List.of(), List.of(), Map.of(), null, null, null, "PUBLISHED",
+                                List.of(), List.of(), List.of(), Map.of(), null, null, null, null, "PUBLISHED",
                                 java.time.Instant.now(), 0.0, 0L);
                 when(searchDocumentMapper.toSearchDocument(org.mockito.ArgumentMatchers.eq(product), any(), anyDouble(),
                                 anyLong()))

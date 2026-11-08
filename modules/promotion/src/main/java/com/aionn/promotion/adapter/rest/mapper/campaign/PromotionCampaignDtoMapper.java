@@ -43,6 +43,7 @@ public interface PromotionCampaignDtoMapper {
 
     default CampaignCommands.IssueVoucher toIssueVoucherCommand(String campaignId, IssueVoucherRequest request) {
         return new CampaignCommands.IssueVoucher(campaignId, request.voucherCode(), request.discountAmount(),
-                request.currency(), request.usageLimit(), request.validFrom(), request.validUntil());
+                request.currency(), request.usageLimit(), request.validFrom(), request.validUntil(),
+                request.type());
     }
 }

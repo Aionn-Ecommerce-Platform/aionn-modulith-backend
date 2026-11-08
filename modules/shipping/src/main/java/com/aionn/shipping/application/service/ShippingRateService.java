@@ -31,7 +31,10 @@ public class ShippingRateService {
         }
         ShippingRate rate = ShippingRate.configure(IdGenerator.ulid(),
                 command.zoneCode(), command.baseFee(),
-                command.currency() == null ? "VND" : command.currency(), command.condition(), clock);
+                command.currency() == null ? "VND" : command.currency(), command.condition(),
+                orDefault(command.baseWeightGram(), 1000), orDefault(command.stepWeightGram(), 500),
+                command.stepFee() == null ? java.math.BigDecimal.ZERO : command.stepFee(),
+                command.maxFee(), command.freeShippingThreshold(), clock);
         ShippingRate saved = repository.save(rate);
         eventPublisher.publish(rate.pullEvents());
         return saved;
@@ -41,6 +44,18 @@ public class ShippingRateService {
         ShippingRate rate = repository.findById(command.rateId())
                 .orElseThrow(() -> new ShippingException(ShippingErrorCode.RATE_NOT_FOUND));
         rate.update(command.baseFee(), command.condition(), clock);
+        if (command.baseWeightGram() != null || command.stepWeightGram() != null
+                || command.stepFee() != null || command.maxFee() != null
+                || command.freeShippingThreshold() != null) {
+            rate.updateWeightLadder(
+                    orDefault(command.baseWeightGram(), rate.getBaseWeightGram()),
+                    orDefault(command.stepWeightGram(), rate.getStepWeightGram()),
+                    command.stepFee() == null ? rate.getStepFee() : command.stepFee(),
+                    command.maxFee() == null ? rate.getMaxFee() : command.maxFee(),
+                    command.freeShippingThreshold() == null
+                            ? rate.getFreeShippingThreshold() : command.freeShippingThreshold(),
+                    clock);
+        }
         ShippingRate saved = repository.save(rate);
         eventPublisher.publish(rate.pullEvents());
         return saved;
@@ -50,5 +65,9 @@ public class ShippingRateService {
     public ShippingRate get(String rateId) {
         return repository.findById(rateId)
                 .orElseThrow(() -> new ShippingException(ShippingErrorCode.RATE_NOT_FOUND));
+    }
+
+    private static int orDefault(Integer value, int fallback) {
+        return value == null ? fallback : value;
     }
 }

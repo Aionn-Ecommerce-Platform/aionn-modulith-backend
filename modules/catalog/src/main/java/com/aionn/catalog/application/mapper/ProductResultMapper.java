@@ -119,8 +119,16 @@ public class ProductResultMapper {
 
     private static ProductResult.Variant toVariantResult(ProductVariant variant) {
         Money price = variant.price();
+        Money original = variant.originalPrice();
         BigDecimal amount = price != null ? price.amount() : null;
+        BigDecimal originalAmount = original != null ? original.amount() : null;
         String currency = price != null ? price.currency() : null;
-        return new ProductResult.Variant(variant.skuId(), variant.attributeValues(), amount, currency);
+        ProductVariant.ParcelDimensions parcel = variant.parcel();
+        return new ProductResult.Variant(variant.skuId(), variant.attributeValues(), amount,
+                originalAmount, currency,
+                parcel == null ? null : parcel.weightGram(),
+                parcel == null ? null : parcel.lengthCm(),
+                parcel == null ? null : parcel.widthCm(),
+                parcel == null ? null : parcel.heightCm());
     }
 }

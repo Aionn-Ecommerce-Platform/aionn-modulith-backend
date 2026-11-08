@@ -18,6 +18,14 @@ ROOT = Path(__file__).resolve().parents[2]
 BUNDLE = ROOT / "modules/ucp/src/test/resources/ucp-contract/2026-08-25"
 METADATA_FILES = {"manifest.json", "provenance.json"}
 
+# Documented normalizations applied when importing fixtures. The pinned upstream
+# release still ships generated scaffolds whose example payloads carry the
+# 2026-01-01 version, so the bundle normalizes those literals to the pinned
+# protocol version and records the normalization in manifest/provenance.
+NORMALIZATIONS: dict[str, tuple[tuple[bytes, bytes], ...]] = {
+    "protocol-version-pin": ((b"2026-01-01", b"2026-08-25"),),
+}
+
 
 def fail(message: str) -> None:
     print(f"FAIL: {message}", file=sys.stderr)
@@ -44,6 +52,21 @@ def upstream_bytes(upstream: Path, source_path: str) -> bytes:
     except (OSError, subprocess.CalledProcessError) as exc:
         detail = exc.stderr.decode(errors="replace").strip() if isinstance(exc, subprocess.CalledProcessError) else str(exc)
         fail(f"cannot read pinned upstream artifact {source_path}: {detail}")
+
+
+def normalize_upstream(content: bytes, rel: str, entry: dict[str, Any]) -> bytes:
+    names = entry.get("normalization", [])
+    if not isinstance(names, list) or not all(isinstance(name, str) for name in names):
+        fail(f"invalid normalization list for {rel}")
+    for name in names:
+        replacements = NORMALIZATIONS.get(name)
+        if replacements is None:
+            fail(f"unknown fixture normalization for {rel}: {name}")
+        if not rel.startswith("scaffolds/"):
+            fail(f"normalization is only allowed for imported scaffolds: {rel}")
+        for old, new in replacements:
+            content = content.replace(old, new)
+    return content
 
 
 def source_path_for(rel: str) -> str:
@@ -121,7 +144,7 @@ def main() -> None:
     entries = manifest.get("files")
     if not isinstance(entries, list) or not entries:
         fail("manifest does not list imported files")
-    expected: dict[str, dict[str, str]] = {}
+    expected: dict[str, dict[str, Any]] = {}
     for entry in entries:
         if not isinstance(entry, dict):
             fail("manifest contains a non-object file entry")
@@ -131,12 +154,15 @@ def main() -> None:
         source = entry.get("source_path", source_path_for(rel))
         if not isinstance(source, str) or not source:
             fail(f"invalid source_path for {rel}")
+        normalization = entry.get("normalization", [])
+        if not isinstance(normalization, list) or not all(isinstance(name, str) for name in normalization):
+            fail(f"invalid normalization list for {rel}")
         normalized = PurePosixPath(rel)
         if normalized.is_absolute() or ".." in normalized.parts or normalized.as_posix() != rel:
             fail(f"unsafe manifest bundle path: {rel}")
         if rel in expected:
             fail(f"duplicate manifest path: {rel}")
-        expected[rel] = {"sha256": digest, "source_path": source}
+        expected[rel] = {"sha256": digest, "source_path": source, "normalization": normalization}
 
     manifest_sources = {entry["source_path"] for entry in expected.values()}
     required_sources = {"LICENSE"}
@@ -163,7 +189,8 @@ def main() -> None:
         content = path.read_bytes()
         if sha256_bytes(content) != entry["sha256"]:
             fail(f"manifest hash mismatch: {rel}")
-        if content != upstream_bytes(upstream, entry["source_path"]):
+        expected_upstream = normalize_upstream(upstream_bytes(upstream, entry["source_path"]), rel, entry)
+        if content != expected_upstream:
             fail(f"imported bytes differ from pinned upstream: {rel} <- {entry['source_path']}")
         if path.suffix == ".json":
             read_json(path)

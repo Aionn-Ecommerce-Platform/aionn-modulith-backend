@@ -46,6 +46,12 @@ public final class CampaignCommands {
                         String currency,
                         int usageLimit,
                         Instant validFrom,
-                        Instant validUntil) implements Command {
+                        Instant validUntil,
+                        com.aionn.promotion.domain.valueobject.VoucherType type) implements Command {
+                public IssueVoucher(String campaignId, String voucherCode, BigDecimal discountAmount,
+                        String currency, int usageLimit, Instant validFrom, Instant validUntil) {
+                    this(campaignId, voucherCode, discountAmount, currency, usageLimit, validFrom, validUntil,
+                            com.aionn.promotion.domain.valueobject.VoucherType.ORDER_DISCOUNT);
+                }
         }
 }

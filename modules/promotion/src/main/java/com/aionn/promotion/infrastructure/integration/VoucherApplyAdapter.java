@@ -50,7 +50,8 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
         UserVoucher uv = userVoucherRepository.findByUserAndCode(userId, voucherCode).orElse(null);
         if (uv != null && uv.getStatus() == UserVoucherStatus.APPLIED) {
             if (orderId.equals(uv.getReservedOrderId()) && uv.getAppliedAmount() != null) {
-                return new Discount(uv.getAppliedAmount().amount(), uv.getAppliedAmount().currency(), true, null);
+                return new Discount(uv.getAppliedAmount().amount(), uv.getAppliedAmount().currency(), true, null,
+                        voucher.isFreeShipping());
             }
             return new Discount(BigDecimal.ZERO, currency, false, "voucher-already-used");
         }
@@ -89,7 +90,10 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
         }
 
         BigDecimal discount = voucher.getDiscountAmount().amount();
-        if (lineSubtotal != null && discount.compareTo(lineSubtotal) > 0) {
+        // Goods vouchers cannot exceed the goods they discount. A free-shipping
+        // voucher is capped against the shipping fee by the caller instead, so it
+        // must not be clamped to the (usually larger) line subtotal here.
+        if (!voucher.isFreeShipping() && lineSubtotal != null && discount.compareTo(lineSubtotal) > 0) {
             discount = lineSubtotal;
         }
         String discountCurrency = voucher.getDiscountAmount().currency();
@@ -100,10 +104,21 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
         uv.reserve(orderId, clock.instant().plus(Duration.ofMinutes(15)), clock);
         uv.apply(Money.of(discount, discountCurrency), clock);
 
+        // Consume the campaign budget the same way VoucherService.apply does —
+        // ordering goes through this adapter, so without it a platform campaign's
+        // budget would never be decremented at checkout.
+        if (voucher.getCampaignId() != null) {
+            PromotionCampaign campaign = campaignRepository.findById(voucher.getCampaignId()).orElse(null);
+            if (campaign != null) {
+                campaign.consumeBudget(Money.of(discount, discountCurrency), clock);
+                campaignRepository.save(campaign);
+            }
+        }
+
         voucherRepository.save(voucher);
         userVoucherRepository.save(uv);
 
-        return new Discount(discount, discountCurrency, true, null);
+        return new Discount(discount, discountCurrency, true, null, voucher.isFreeShipping());
     }
 
     @Override

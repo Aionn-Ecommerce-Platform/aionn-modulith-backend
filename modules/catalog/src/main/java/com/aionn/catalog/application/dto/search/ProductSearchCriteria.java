@@ -6,8 +6,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
-// Read-side filter for the faceted catalog search. Backed by the
-// ProductSearchIndex port (OpenSearch in production, in-memory otherwise).
 public record ProductSearchCriteria(
         String q,
         String merchantId,
@@ -20,7 +18,8 @@ public record ProductSearchCriteria(
         Sort sort,
         int page,
         int size,
-        Double ratingMin) {
+        Double ratingMin,
+        Boolean onSale) {
 
     public enum Sort {
         RELEVANCE,
@@ -60,7 +59,24 @@ public record ProductSearchCriteria(
             Sort sort,
             int page,
             int size) {
-        this(q, merchantId, status, categoryIds, brandIds, priceMin, priceMax, attributes, sort, page, size, null);
+        this(q, merchantId, status, categoryIds, brandIds, priceMin, priceMax, attributes, sort, page, size, null, null);
+    }
+
+    public ProductSearchCriteria(
+            String q,
+            String merchantId,
+            ProductStatus status,
+            List<String> categoryIds,
+            List<String> brandIds,
+            BigDecimal priceMin,
+            BigDecimal priceMax,
+            Map<String, List<String>> attributes,
+            Sort sort,
+            int page,
+            int size,
+            Double ratingMin) {
+        this(q, merchantId, status, categoryIds, brandIds, priceMin, priceMax, attributes, sort, page, size,
+                ratingMin, null);
     }
 
     public boolean hasText() {

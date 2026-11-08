@@ -1,14 +1,37 @@
 aionn:
   ucp:
     version: "2026-08-25"
-    rest-endpoint: "${UCP_REST_ENDPOINT:http://localhost:8080/ucp/v1}"
+    # Public base URL advertised through /.well-known/ucp. Leave unset unless the
+    # deployment has a real endpoint: a localhost fallback would publish an
+    # unreachable URL to every UCP agent. The dev profile opts into localhost.
+    rest-endpoint: "${UCP_REST_ENDPOINT:}"
     business-name: "${UCP_BUSINESS_NAME:Aionn Commerce}"
     allowed-schema-prefixes:
       - "https://ucp.dev/schemas/"
-    require-https: "${UCP_REQUIRE_HTTPS:false}"
+    # TLS terminates at the edge. server.forward-headers-strategy keeps
+    # request.isSecure() accurate behind the proxy, so plain HTTP is rejected by
+    # default. Local development overrides this in application-dev.yml.
+    require-https: "${UCP_REQUIRE_HTTPS:true}"
     capabilities:
       cart: false
       checkout: false
       catalog: false
       order: false
       identity-linking: false
+    # Platform/agent API keys, "platformId=secret" pairs, comma separated. Each
+    # maps a provisioned secret to the platform it stands for. Empty disables
+    # platform auth so local dev and the public discovery endpoint keep working.
+    #   UCP_PLATFORM_API_KEYS=plat_a=secretA,plat_b=secretB
+    platform-api-keys: ${UCP_PLATFORM_API_KEYS:}
+    # Store market currency — UCP minor-unit amounts (price filters, totals) are
+    # interpreted in this currency. Must equal the currency catalog pricing emits.
+    market-currency: ${UCP_MARKET_CURRENCY:VND}
+    # Shared secret signing outbound webhook payloads. Receiving platforms verify
+    # the HMAC over "<timestamp>.<body>" and reject forgeries/replays. Empty
+    # disables signing (dev only) — set it in any environment platforms consume.
+    webhook-secret: ${UCP_WEBHOOK_SECRET:}
+    # Periodic sweep that deletes expired checkout-session rows. The JPA adapter
+    # enforces expiry on read, so this only reclaims storage. ShedLock-bounded.
+    session-cleanup:
+      enabled: ${UCP_SESSION_CLEANUP_ENABLED:true}
+      delay-ms: ${UCP_SESSION_CLEANUP_DELAY_MS:3600000}

@@ -21,8 +21,8 @@ class InMemoryFacetProductSearchIndexTest {
         private static ProductSearchDocument doc(String id, String brandId, List<String> categories,
                         BigDecimal priceFrom, Map<String, String> attrs, long sold, double rating, String status) {
                 return new ProductSearchDocument(id, "m-1", "Widget " + id, "desc " + id, brandId, categories,
-                                List.of(), List.of("tag"), List.of(), attrs, priceFrom, priceFrom, "VND", status,
-                                Instant.now(), rating, sold);
+                                List.of(), List.of("tag"), List.of(), attrs, priceFrom, priceFrom, "VND", false,
+                                status, Instant.now(), rating, sold);
         }
 
         private static ProductSearchCriteria criteria(List<String> categoryIds, List<String> brandIds,

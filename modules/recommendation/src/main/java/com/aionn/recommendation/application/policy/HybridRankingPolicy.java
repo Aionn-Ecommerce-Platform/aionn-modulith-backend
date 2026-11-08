@@ -16,19 +16,7 @@ import java.util.Map;
 
 /**
  * Combines the three candidate signals into one ranked list.
- *
- * <p>
- * Each signal is min-max normalised across the candidate set before weighting.
- * This is what makes
- * the configured weights mean what they say: a raw popularity total can be in
- * the thousands while a
- * cosine similarity never exceeds one, so combining them unnormalised would let
- * popularity decide
- * every ranking regardless of its weight.
- *
- * <p>
- * Pure function of its inputs - no repository, clock or Spring context needed
- * to test it.
+ * Signals are min-max normalised before weighting, otherwise raw popularity would dominate.
  */
 @Component
 public class HybridRankingPolicy {
@@ -83,14 +71,7 @@ public class HybridRankingPolicy {
         source.forEach((productId, score) -> target.merge(productId, score.multiply(weight), BigDecimal::add));
     }
 
-    /**
-     * Attributes the recommendation to whichever weighted signal contributed most.
-     * Users are shown
-     * why a product appeared, so the explanation follows the arithmetic rather than
-     * the surface -
-     * except on the also-bought surface, where co-occurrence has a more specific
-     * name.
-     */
+    /** Attributes the recommendation to the signal that contributed most; also-bought gets a specific label. */
     private static RecommendationReason dominantReason(
             RecommendationSurface surface,
             String productId,
@@ -127,17 +108,8 @@ public class HybridRankingPolicy {
     }
 
     /**
-     * Min-max normalisation across the candidate set.
-     *
-     * <p>
-     * When every candidate scored the same - most often a single candidate - the
-     * signal provides no
-     * ordering information, so all candidates map to one. Relative ordering is
-     * unaffected either way
-     * because a constant shifts every candidate equally; mapping to one keeps the
-     * reported score
-     * meaningful rather than reporting 0.0 for a product the signal did in fact
-     * select.
+     * Min-max normalisation. A constant signal maps to one so a selected product still reports a
+     * meaningful score; relative ordering is unaffected.
      */
     private static Map<String, BigDecimal> normalize(Map<String, BigDecimal> raw) {
         if (raw == null || raw.isEmpty()) {

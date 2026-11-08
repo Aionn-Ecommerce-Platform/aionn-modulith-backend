@@ -29,6 +29,6 @@ public interface FlashSaleRegistrationPersistencePort {
     /** Returns approved registrations for SKUs of a single product. */
     List<FlashSaleRegistration> findApprovedRunningByProductIds(List<String> productIds);
 
-    /** Approved registrations whose campaign is currently RUNNING — for storefront listings. */
-    List<FlashSaleRegistration> findAllApprovedRunning(int limit);
+    /** Approved registrations belonging to the given (already limited) running campaigns. */
+    List<FlashSaleRegistration> findApprovedByCampaignIds(List<String> campaignIds);
 }

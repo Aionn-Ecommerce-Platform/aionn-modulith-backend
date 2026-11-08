@@ -241,6 +241,7 @@ class RecommendationControllerWebTest {
                                 "Product " + productId,
                                 "https://cdn.example.com/" + productId + ".jpg",
                                 BigDecimal.valueOf(34_990_000),
+                                null,
                                 "VND",
                                 BigDecimal.valueOf(0.91),
                                 reason,

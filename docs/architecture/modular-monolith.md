@@ -88,6 +88,7 @@ Application services depend only on domain types, application ports and policies
 - Asynchronous communication uses integration events from the shared kernel.
 - Do not move a module's private domain model into the shared kernel to bypass the dependency rule.
 - Adapters implementing shared integration ports need globally unique Spring bean names. Use a distinctive class name or an explicit component name.
+- An order is scoped to exactly one merchant. A cart or agent checkout containing SKUs from multiple merchants must be split by the caller; ordering rejects it with `ORD_109` before any reservation, payment, or voucher side effect. Parent/child orders are supported by the schema for future split orchestration, but no split placement flow exists.
 
 ## 5. Transactions and external I/O
 

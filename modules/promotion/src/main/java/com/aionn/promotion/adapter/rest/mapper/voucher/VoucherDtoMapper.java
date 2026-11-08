@@ -21,6 +21,7 @@ import java.util.List;
 public interface VoucherDtoMapper {
 
     @Mapping(target = "scope", expression = "java(result.scope() == null ? null : result.scope().name())")
+    @Mapping(target = "type", expression = "java(result.type() == null ? null : result.type().name())")
     VoucherResponse toResponse(VoucherResult result);
 
     List<VoucherResponse> toResponses(List<VoucherResult> results);
@@ -35,7 +36,7 @@ public interface VoucherDtoMapper {
             IssueVoucherRequest request) {
         return new VoucherCommands.IssueShopVoucher(ownerId, request.voucherCode(),
                 request.discountAmount(), request.currency(), request.usageLimit(),
-                request.validFrom(), request.validUntil());
+                request.validFrom(), request.validUntil(), request.type());
     }
 
     default VoucherCommands.ClaimVoucher toClaimCommand(String userId, String voucherCode) {

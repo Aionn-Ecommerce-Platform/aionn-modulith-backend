@@ -39,6 +39,10 @@ public interface ProductDomainMapper {
                         .price(Optional.ofNullable(variant.price()).map(Money::amount).orElse(null))
                         .originalPrice(Optional.ofNullable(variant.originalPrice()).map(Money::amount).orElse(null))
                         .currency(Optional.ofNullable(variant.price()).map(Money::currency).orElse(null))
+                        .weightGram(Optional.ofNullable(variant.parcel()).map(ProductVariant.ParcelDimensions::weightGram).orElse(null))
+                        .lengthCm(Optional.ofNullable(variant.parcel()).map(ProductVariant.ParcelDimensions::lengthCm).orElse(null))
+                        .widthCm(Optional.ofNullable(variant.parcel()).map(ProductVariant.ParcelDimensions::widthCm).orElse(null))
+                        .heightCm(Optional.ofNullable(variant.parcel()).map(ProductVariant.ParcelDimensions::heightCm).orElse(null))
                         .build();
                 variantEntities.add(ve);
             }
@@ -80,10 +84,17 @@ public interface ProductDomainMapper {
                 Money originalPrice = ve.getOriginalPrice() != null && ve.getCurrency() != null
                         ? Money.of(ve.getOriginalPrice(), ve.getCurrency())
                         : null;
+                ProductVariant.ParcelDimensions parcel =
+                        ve.getWeightGram() != null || ve.getLengthCm() != null
+                                || ve.getWidthCm() != null || ve.getHeightCm() != null
+                        ? new ProductVariant.ParcelDimensions(
+                                ve.getWeightGram(), ve.getLengthCm(), ve.getWidthCm(), ve.getHeightCm())
+                        : null;
                 variants.add(new ProductVariant(ve.getSkuId(),
                         ve.getAttributeValues() != null ? ve.getAttributeValues() : Map.of(),
                         price,
-                        originalPrice));
+                        originalPrice,
+                        parcel));
             }
         }
 

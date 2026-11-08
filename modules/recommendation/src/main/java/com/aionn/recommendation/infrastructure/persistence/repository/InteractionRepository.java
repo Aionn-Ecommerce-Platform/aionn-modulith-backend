@@ -13,25 +13,19 @@ import java.util.List;
 public interface InteractionRepository extends JpaRepository<InteractionEntity, String> {
 
     /**
-     * Append that tolerates its own retry.
-     *
-     * <p>{@code ON CONFLICT DO NOTHING} is what makes ingest idempotent under at-least-once outbox
-     * delivery: a redelivered event carries the same {@code sourceEventId}, hits the partial unique
-     * index, and is dropped by the database instead of adding a second row that every popularity and
-     * affinity sum would then count twice. Returns the number of rows actually written, so the caller
-     * can tell a fresh signal from a replay.
-     *
-     * <p>Written as a statement rather than {@code save()} because a JPA persist turns the conflict
-     * into a {@code DataIntegrityViolationException} that aborts the surrounding transaction.
+     * Append that tolerates at-least-once redelivery (same {@code sourceEventId} is dropped).
+     * Returns rows written, so the caller can tell a fresh signal from a replay. Must be a native
+     * statement: a JPA persist would turn the conflict into an exception that aborts the transaction.
      */
     @Modifying
     @Query(value = """
             INSERT INTO recommendation_interactions
                 (interaction_id, user_id, product_id, interaction_type, weight,
-                 occurred_at, created_at, source_event_id)
+                 occurred_at, created_at, source_event_id, category_ids, brand_id, keyword)
             VALUES (:#{#entity.interactionId}, :#{#entity.userId}, :#{#entity.productId},
                     :#{#entity.interactionType}, :#{#entity.weight}, :#{#entity.occurredAt},
-                    :#{#entity.createdAt}, :#{#entity.sourceEventId})
+                    :#{#entity.createdAt}, :#{#entity.sourceEventId},
+                    CAST(:#{#entity.categoryIdsJson} AS jsonb), :#{#entity.brandId}, :#{#entity.keyword})
             ON CONFLICT DO NOTHING
             """, nativeQuery = true)
     int appendIdempotent(@Param("entity") InteractionEntity entity);
@@ -56,18 +50,10 @@ public interface InteractionRepository extends JpaRepository<InteractionEntity, 
     List<String> findPurchasedProductIds(@Param("userId") String userId);
 
     /**
-     * Users whose profile is stale relative to ingested activity, most recently ingested first.
-     *
-     * <p>Joining the profile table is what makes the sweep fair. Selecting the first N user IDs in
-     * lexicographic order - which is what a plain {@code ORDER BY user_id LIMIT} does - returns the
-     * same N users on every run, so once active users in a window exceed the batch size everyone past
-     * that fixed prefix is never refreshed. Here a user leaves the result set as soon as their profile
-     * covers their latest ingested interaction, which lets the batch rotate through the whole
-     * population, and users with no profile row at all always qualify within the lookback.
-     *
-     * <p>Staleness uses ingestion time ({@code created_at}), not business time ({@code occurred_at}):
-     * delayed events may arrive after a refresh even though they occurred before it. Business time
-     * still determines which interactions fall within the lookback.
+     * Users whose profile is stale relative to ingested activity, newest first. Joining the profile
+     * table keeps the batch rotating: a plain {@code ORDER BY user_id LIMIT} would return the same
+     * users every run and starve the rest. Staleness uses {@code created_at} (ingestion time) because
+     * events can arrive late; {@code occurred_at} still bounds the lookback window.
      */
     @Query(value = """
             SELECT i.user_id
@@ -82,13 +68,7 @@ public interface InteractionRepository extends JpaRepository<InteractionEntity, 
     List<String> findUserIdsWithInteractionsSince(
             @Param("since") Instant since, @Param("limit") int limit);
 
-    /**
-     * Sums each interaction's weight after applying exponential decay, so a product that sold well
-     * last week outranks one that sold well six months ago.
-     *
-     * <p>{@code POWER(2, -age / half_life)} is evaluated per row in the database rather than by
-     * streaming every interaction into the JVM.
-     */
+    /** Sums decayed weights ({@code 2^(-age/half_life)}) per product so recent sales outrank old ones. */
     @Query(value = """
             SELECT product_id                                                   AS productId,
                    SUM(weight * POWER(
@@ -103,6 +83,7 @@ public interface InteractionRepository extends JpaRepository<InteractionEntity, 
                    COUNT(*) FILTER (WHERE interaction_type = 'PURCHASE')        AS purchaseCount
             FROM recommendation_interactions
             WHERE occurred_at >= :since
+              AND product_id IS NOT NULL
             GROUP BY product_id
             """, nativeQuery = true)
     List<PopularityProjection> aggregatePopularity(
@@ -113,20 +94,10 @@ public interface InteractionRepository extends JpaRepository<InteractionEntity, 
             @Param("purchaseHalfLife") long purchaseHalfLifeSeconds);
 
     /**
-     * Item-to-item cosine similarity over users who interacted strongly with both products:
-     * {@code |U_a n U_b| / sqrt(|U_a| * |U_b|)}.
-     *
-     * <p>{@code a.product_id < b.product_id} yields each unordered pair once. The
-     * {@code minCoOccurrence} floor removes pairs that share a single user, where cosine is high by
-     * arithmetic but meaningless as a signal.
-     *
-     * <p>The cap is applied to the symmetric expansion and then intersected, so a pair is returned
-     * only when it is in the top N of <em>both</em> endpoints. Capping one direction alone would not
-     * bound the stored table, because the caller writes each returned pair both ways. Ties break on
-     * the partner ID so repeated runs over unchanged data produce the same matrix.
-     *
-     * <p>The expansion CTE is named {@code expanded} rather than {@code symmetric} because the latter is
-     * a reserved word in Postgres ({@code BETWEEN SYMMETRIC}), which the parser rejects in that position.
+     * Item-to-item cosine similarity over users who interacted strongly with both products.
+     * {@code a.product_id < b.product_id} yields each unordered pair once; the cap must be applied to
+     * the symmetric expansion (then intersected) or the stored table is unbounded, because callers
+     * write each returned pair both ways. Ties break on partner ID for reproducible runs.
      */
     @Query(value = """
             WITH strong AS (
@@ -195,10 +166,7 @@ public interface InteractionRepository extends JpaRepository<InteractionEntity, 
             @Param("minCoOccurrence") int minCoOccurrence,
             @Param("maxNeighboursPerProduct") int maxNeighboursPerProduct);
 
-    /**
-     * Deletes in bounded batches so the sweep never holds a long lock on a table that the ingest
-     * listener writes to continuously.
-     */
+    /** Deletes in bounded batches so the sweep doesn't hold a long lock on a concurrently-written table. */
     @Modifying
     @Query(value = """
             DELETE FROM recommendation_interactions
@@ -216,28 +184,15 @@ public interface InteractionRepository extends JpaRepository<InteractionEntity, 
     int deleteByUserId(@Param("userId") String userId);
 
     /**
-     * Serialises everything this module does to one user's behavioural data.
-     *
-     * <p>Held until the calling transaction ends, which is what makes the erasure check in ingest and in
-     * the profile refresh authoritative rather than a race: without it, a refresh that read the user's
-     * interactions before an erasure committed would write the profile straight back afterwards, and an
-     * ingest that checked the mark before the erasure would append a row the erasure had already
-     * finished deleting.
-     *
-     * <p>An advisory lock rather than a row lock because the thing being protected is often the absence
-     * of a row. {@code hashtext} collisions between two user IDs are harmless - they only serialise two
-     * unrelated users against each other for the length of one short transaction.
-     *
-     * <p>Returns a value only because Spring Data needs a result type for a native query; the lock
-     * function itself returns {@code void}, so the expression is a constant.
+     * Serialises all work on one user's behavioural data until the transaction ends, making the erasure
+     * checks in ingest and profile refresh authoritative. An advisory lock, not a row lock, because the
+     * protected thing is often the absence of a row; hashtext collisions only serialise two unrelated
+     * users for one short transaction. Returns a constant because Spring Data needs a result type.
      */
     @Query(value = "SELECT pg_advisory_xact_lock(hashtext(:userId)) IS NOT NULL", nativeQuery = true)
     boolean lockUser(@Param("userId") String userId);
 
-    /**
-     * Records that an account's behavioural data was erased, so a late event or a stale sweep cannot
-     * recreate it. Idempotent: erasure is delivered at least once like every other integration event.
-     */
+    /** Erasure tombstone so a late event or stale sweep can't recreate the data. Idempotent. */
     @Modifying
     @Query(value = """
             INSERT INTO recommendation_erased_users (user_id, erased_at)

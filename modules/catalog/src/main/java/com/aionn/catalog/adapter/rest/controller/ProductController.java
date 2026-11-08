@@ -3,6 +3,7 @@ package com.aionn.catalog.adapter.rest.controller;
 import com.aionn.catalog.adapter.rest.dto.product.request.AssignBrandRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.AssignCategoriesRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.BulkPriceUpdateRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.ChangeVariantParcelRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.ChangeVariantPriceRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.CreateProductRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.DeactivateProductRequest;
@@ -28,6 +29,7 @@ import com.aionn.catalog.application.port.in.product.AssignBrandInputPort;
 import com.aionn.catalog.application.port.in.product.AssignCategoriesInputPort;
 import com.aionn.catalog.application.port.in.product.AssignCollectionsInputPort;
 import com.aionn.catalog.application.port.in.product.BulkPriceUpdateInputPort;
+import com.aionn.catalog.application.port.in.product.ChangeVariantParcelInputPort;
 import com.aionn.catalog.application.port.in.product.ChangeVariantPriceInputPort;
 import com.aionn.catalog.application.port.in.product.CloneProductInputPort;
 import com.aionn.catalog.application.port.in.product.CreateProductInputPort;
@@ -63,11 +65,16 @@ import com.aionn.catalog.application.port.in.product.UpdateAiMetadataInputPort;
 import com.aionn.catalog.application.port.in.product.UpdateMediaInputPort;
 import com.aionn.catalog.domain.valueobject.ProductStatus;
 import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.sharedkernel.integration.event.catalog.SearchPerformedIntegrationEvent;
+import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.sharedkernel.util.IdGenerator;
 import com.aionn.sharedkernel.adapter.web.response.PageMetadata;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -94,6 +101,7 @@ public class ProductController {
         private final CloneProductInputPort cloneProductInputPort;
         private final DefineVariantInputPort defineVariantInputPort;
         private final ChangeVariantPriceInputPort changeVariantPriceInputPort;
+        private final ChangeVariantParcelInputPort changeVariantParcelInputPort;
         private final BulkPriceUpdateInputPort bulkPriceUpdateInputPort;
         private final AssignBrandInputPort assignBrandInputPort;
         private final AssignCategoriesInputPort assignCategoriesInputPort;
@@ -120,6 +128,8 @@ public class ProductController {
         private final GetProductAnalyticsInputPort getProductAnalyticsInputPort;
         private final SearchProductCatalogInputPort searchProductCatalogInputPort;
         private final ProductDtoMapper productDtoMapper;
+        private final IntegrationEventPublisher integrationEventPublisher;
+        private final java.time.Clock clock;
 
         @PostMapping
         @PreAuthorize("isAuthenticated()")
@@ -167,6 +177,20 @@ public class ProductController {
                                 productDtoMapper.toChangeVariantPriceCommand(productId, merchantId, skuId, request));
                 return ResponseEntity
                                 .ok(ApiResponse.success(productDtoMapper.toResponse(result), "Variant price updated"));
+        }
+
+        @PutMapping("/{productId}/variants/{skuId}/parcel")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(summary = "Update variant shipping parcel characteristics")
+        public ResponseEntity<ApiResponse<ProductResponse>> changeVariantParcel(
+                        @CurrentMerchantId String merchantId,
+                        @PathVariable String productId,
+                        @PathVariable String skuId,
+                        @Valid @RequestBody ChangeVariantParcelRequest request) {
+                ProductResult result = changeVariantParcelInputPort.execute(
+                                productDtoMapper.toChangeVariantParcelCommand(productId, merchantId, skuId, request));
+                return ResponseEntity.ok(ApiResponse.success(
+                                productDtoMapper.toResponse(result), "Variant parcel updated"));
         }
 
         @PutMapping("/variants/prices")
@@ -293,8 +317,8 @@ public class ProductController {
         @Operation(summary = "List merchant products")
         public ResponseEntity<ApiResponse<List<ProductResponse>>> listMyProducts(
                         @CurrentMerchantId String merchantId,
-                        @RequestParam(defaultValue = "0") int page,
-                        @RequestParam(defaultValue = "20") int size) {
+                        @RequestParam(defaultValue = "0") @Min(0) int page,
+                        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
                 PageResult<ProductResult> results = listProductsByMerchantInputPort.execute(
                                 new ListProductsByMerchantQuery(merchantId, OffsetPagination.of(page, size)));
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
@@ -307,8 +331,8 @@ public class ProductController {
         @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
         @Operation(summary = "List products pending review")
         public ResponseEntity<ApiResponse<List<ProductResponse>>> listPendingReviews(
-                        @RequestParam(defaultValue = "0") int page,
-                        @RequestParam(defaultValue = "20") int size) {
+                        @RequestParam(defaultValue = "0") @Min(0) int page,
+                        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
                 PageResult<ProductResult> results = listProductsByStatusInputPort.execute(
                                 new ListProductsByStatusQuery(ProductStatus.PENDING_REVIEW,
                                                 OffsetPagination.of(page, size)));
@@ -385,8 +409,8 @@ public class ProductController {
         @Operation(summary = "Search products")
         public ResponseEntity<ApiResponse<List<ProductResponse>>> search(
                         @RequestParam(required = false, defaultValue = "") String keyword,
-                        @RequestParam(defaultValue = "0") int page,
-                        @RequestParam(defaultValue = "20") int size) {
+                        @RequestParam(defaultValue = "0") @Min(0) int page,
+                        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
                 PageResult<ProductResult> results = searchProductsInputPort.execute(
                                 new SearchProductsQuery(keyword,
                                                 OffsetPagination.of(page, size)));
@@ -463,6 +487,7 @@ public class ProductController {
         @GetMapping("/search/catalog")
         @Operation(summary = "Search product catalog with facets")
         public ResponseEntity<ApiResponse<ProductSearchResponse>> searchProductCatalog(
+                        Authentication authentication,
                         @RequestParam(required = false) String q,
                         @RequestParam(required = false) String merchantId,
                         @RequestParam(required = false) List<String> categoryIds,
@@ -470,9 +495,10 @@ public class ProductController {
                         @RequestParam(required = false) java.math.BigDecimal priceMin,
                         @RequestParam(required = false) java.math.BigDecimal priceMax,
                         @RequestParam(required = false) Double ratingMin,
+                        @RequestParam(required = false) Boolean onSale,
                         @RequestParam(required = false, defaultValue = "RELEVANCE") String sort,
-                        @RequestParam(defaultValue = "0") int page,
-                        @RequestParam(defaultValue = "20") int size,
+                        @RequestParam(defaultValue = "0") @Min(0) int page,
+                        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
                         @RequestParam(required = false) java.util.Map<String, String> allParams) {
                 ProductSearchCriteria.Sort sortEnum;
                 try {
@@ -496,9 +522,38 @@ public class ProductController {
                                 q, merchantId, ProductStatus.PUBLISHED,
                                 categoryIds == null ? List.of() : categoryIds,
                                 brandIds == null ? List.of() : brandIds,
-                                priceMin, priceMax, attributes, sortEnum, page, size, ratingMin);
+                                priceMin, priceMax, attributes, sortEnum, page, size, ratingMin, onSale);
                 ProductSearchResult result = searchProductCatalogInputPort.execute(criteria);
+                recordSearchIntent(
+                                authentication != null && authentication.isAuthenticated() ? authentication.getName() : null,
+                                q, categoryIds, brandIds);
                 return ResponseEntity.ok(
                                 ApiResponse.success(productDtoMapper.toSearchResponse(result), MSG_PRODUCTS_FETCHED));
+        }
+
+        /**
+         * Records a user's explicit search intent as a behavioural signal for the
+         * recommendation module. Only published when there is something to learn
+         * from - a keyword or a chosen facet - and only for real users; anonymous
+         * browsing is not personalised.
+         */
+        private void recordSearchIntent(String userId, String keyword,
+                        List<String> categoryIds, List<String> brandIds) {
+                if (userId == null || userId.isBlank() || "anonymousUser".equals(userId)) {
+                        return;
+                }
+                boolean hasKeyword = keyword != null && !keyword.isBlank();
+                boolean hasFacets = (categoryIds != null && !categoryIds.isEmpty())
+                                || (brandIds != null && !brandIds.isEmpty());
+                if (!hasKeyword && !hasFacets) {
+                        return;
+                }
+                integrationEventPublisher.publish(new SearchPerformedIntegrationEvent(
+                                IdGenerator.ulid(),
+                                userId,
+                                hasKeyword ? keyword.trim() : null,
+                                categoryIds == null ? List.of() : categoryIds,
+                                brandIds == null || brandIds.isEmpty() ? null : brandIds.get(0),
+                                clock.instant()));
         }
 }

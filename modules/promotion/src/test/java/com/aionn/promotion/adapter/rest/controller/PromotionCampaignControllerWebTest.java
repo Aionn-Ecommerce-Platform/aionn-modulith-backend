@@ -111,6 +111,7 @@ class PromotionCampaignControllerWebTest {
         private static VoucherResult voucherSample(String code) {
                 Instant now = Instant.parse("2026-06-25T00:00:00Z");
                 return new VoucherResult(code, "camp-1", VoucherScope.PLATFORM, null,
+                                com.aionn.promotion.domain.valueobject.VoucherType.ORDER_DISCOUNT,
                                 new BigDecimal("50000"), "VND", 100, 0, 0,
                                 now, now.plusSeconds(86400), now, now);
         }

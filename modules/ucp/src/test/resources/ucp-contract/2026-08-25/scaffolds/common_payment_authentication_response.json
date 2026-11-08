@@ -1,11 +1,11 @@
 {
   "ucp": {
-    "version": "2026-01-01",
+    "version": "2026-08-25",
     "status": "success",
     "capabilities": {
       "dev.ucp.common.payment.authentication": [
         {
-          "version": "2026-01-01",
+          "version": "2026-08-25",
           "extends": "dev.ucp.shopping.checkout"
         }
       ]
@@ -14,7 +14,7 @@
       "com.example.card": [
         {
           "id": "card_handler_1",
-          "version": "2026-01-01"
+          "version": "2026-08-25"
         }
       ]
     }

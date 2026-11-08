@@ -126,15 +126,16 @@ public class UcpCheckoutApplicationService {
         }
 
         synchronized (getCartLock(cartId)) {
-            // Reuse existing incomplete checkout session for the same cart to prevent
-            // duplicate conflicting sessions
+            // Reuse an incomplete session for the same cart to avoid conflicting sessions.
             Optional<UcpCheckoutSession> existingSession = sessionPort.findIncompleteByCartId(cartId);
             if (existingSession.isPresent() && !existingSession.get().isExpired(now)) {
                 UcpCheckoutSession session = existingSession.get();
                 verifyOwnership(session.userId(), authenticatedUserId, PATH_CART_ID);
                 ValidatedPricing validated = validateItemsAndDeterminePricing(cart.items());
+                String voucherCode = resolveVoucherCode(request, cart);
                 UcpCheckoutSession updated = session.withUpdatedItems(cart.items(), request.buyer(), request.context(),
-                        validated.currency(), now, validated.priceSnapshot());
+                        validated.currency(), now, validated.priceSnapshot(), request.payment(), request.fulfillment(),
+                        voucherCode);
                 boolean saved = sessionPort.updateIfMatches(updated, session.version(), session.status());
                 if (!saved) {
                     throw new UcpProtocolException(409, "conflict",
@@ -148,6 +149,7 @@ public class UcpCheckoutApplicationService {
             ValidatedPricing validated = validateItemsAndDeterminePricing(cart.items());
             String checkoutId = "chk_" + IdGenerator.ulid();
             Instant expiresAt = now.plus(CHECKOUT_TTL_HOURS, ChronoUnit.HOURS);
+            String voucherCode = resolveVoucherCode(request, cart);
 
             UcpCheckoutSession session = new UcpCheckoutSession(
                     checkoutId,
@@ -162,7 +164,11 @@ public class UcpCheckoutApplicationService {
                     now,
                     now,
                     expiresAt,
-                    validated.priceSnapshot());
+                    validated.priceSnapshot(),
+                    request.payment(),
+                    request.fulfillment(),
+                    voucherCode,
+                    1L);
 
             sessionPort.save(session);
             UcpCheckoutResponse response = buildCheckoutResponse(session);
@@ -196,7 +202,11 @@ public class UcpCheckoutApplicationService {
                 now,
                 now,
                 expiresAt,
-                validated.priceSnapshot());
+                validated.priceSnapshot(),
+                request.payment(),
+                request.fulfillment(),
+                request.voucherCode(),
+                1L);
 
         sessionPort.save(session);
         UcpCheckoutResponse response = buildCheckoutResponse(session);
@@ -243,7 +253,10 @@ public class UcpCheckoutApplicationService {
                     request.context() != null ? request.context() : existing.context(),
                     validated.currency(),
                     now,
-                    validated.priceSnapshot());
+                    validated.priceSnapshot(),
+                    request.payment() != null ? request.payment() : existing.payment(),
+                    request.fulfillment() != null ? request.fulfillment() : existing.fulfillment(),
+                    request.voucherCode() != null ? request.voucherCode() : existing.voucherCode());
 
             boolean saved = sessionPort.updateIfMatches(updated, existing.version(), existing.status());
             if (!saved) {
@@ -258,6 +271,11 @@ public class UcpCheckoutApplicationService {
     }
 
     public UcpCheckoutResponse completeCheckout(String checkoutId, String authenticatedUserId) {
+        return completeCheckout(checkoutId, null, authenticatedUserId);
+    }
+
+    public UcpCheckoutResponse completeCheckout(String checkoutId, UcpCheckoutRequest request,
+            String authenticatedUserId) {
         synchronized (getSessionLock(checkoutId)) {
             Instant now = clock.instant();
             UcpCheckoutSession existing = sessionPort.findById(checkoutId)
@@ -277,14 +295,15 @@ public class UcpCheckoutApplicationService {
                         PATH_STATUS);
             }
 
-            // Validate items and pricing before placing order
-            ValidatedPricing validated = validateItemsAndDeterminePricing(existing.items());
+            // Persist supplied fields before reserving the completing transition so the order matches.
+            UcpCheckoutSession effective = mergeCompleteRequest(existing, request, now);
 
-            // Reserve the session transition to a durable 'completing' state before
-            // invoking placeHeadless
-            UcpCheckoutSession completing = existing.isCompleting() ? existing : existing.withCompleting(now);
-            if (!existing.isCompleting()) {
-                boolean reserved = sessionPort.updateIfMatches(completing, existing.version(), existing.status());
+            ValidatedPricing validated = validateItemsAndDeterminePricing(effective.items());
+
+            // Reserve a durable 'completing' state before invoking placeHeadless.
+            UcpCheckoutSession completing = effective.isCompleting() ? effective : effective.withCompleting(now);
+            if (!effective.isCompleting()) {
+                boolean reserved = sessionPort.updateIfMatches(completing, effective.version(), effective.status());
                 if (!reserved) {
                     Optional<UcpCheckoutSession> latest = sessionPort.findById(checkoutId);
                     if (latest.isPresent() && latest.get().isCompleted()) {
@@ -301,13 +320,16 @@ public class UcpCheckoutApplicationService {
                     .map(e -> new OrderPlacementPort.PlaceCommand.Line(e.getKey(), e.getValue()))
                     .toList();
 
+            String paymentMethodId = resolvePaymentMethodId(completing);
+            OrderPlacementPort.PlaceCommand.ShippingAddress shippingAddress = resolveShippingAddress(completing);
+
             OrderPlacementPort.PlaceCommand command = new OrderPlacementPort.PlaceCommand(
                     completing.userId(),
                     orderLines,
-                    null,
-                    "cod",
+                    completing.voucherCode(),
+                    paymentMethodId,
                     completing.currency(),
-                    null,
+                    shippingAddress,
                     checkoutId);
 
             OrderPlacementPort.PlacedOrder placedOrder = orderPlacementPort.placeHeadless(command);
@@ -325,7 +347,7 @@ public class UcpCheckoutApplicationService {
             UcpCheckoutSession completed = completing.withCompleted(placedOrder.orderId(), now, completedPriceSnapshot);
             boolean saved = sessionPort.updateIfMatches(completed, completing.version(), completing.status());
             if (!saved) {
-                // Recovery: if CAS fails, associate the placed order and complete the session
+                // CAS failed: associate the placed order with the latest session and complete it.
                 Optional<UcpCheckoutSession> latest = sessionPort.findById(checkoutId);
                 if (latest.isPresent() && latest.get().isCompleted()) {
                     UcpCheckoutResponse response = buildCheckoutResponse(latest.get());
@@ -395,6 +417,199 @@ public class UcpCheckoutApplicationService {
             throw new UcpProtocolException(403, "access_denied",
                     "You are not authorized to access this checkout session", SEVERITY_ERROR, path);
         }
+    }
+
+    /**
+     * Merges supplied Complete Checkout fields; absent fields keep stored values. The version is kept
+     * because withCompleting bumps it in the same CAS write.
+     */
+    private UcpCheckoutSession mergeCompleteRequest(UcpCheckoutSession existing, UcpCheckoutRequest request,
+            Instant now) {
+        if (request == null) {
+            return existing;
+        }
+        boolean hasUpdates = request.payment() != null
+                || request.fulfillment() != null
+                || request.buyer() != null
+                || request.context() != null
+                || request.voucherCode() != null;
+        if (!hasUpdates) {
+            return existing;
+        }
+        return new UcpCheckoutSession(
+                existing.id(),
+                existing.userId(),
+                existing.cartId(),
+                existing.status(),
+                existing.currency(),
+                existing.items(),
+                request.buyer() != null ? request.buyer() : existing.buyer(),
+                request.context() != null ? request.context() : existing.context(),
+                existing.orderId(),
+                existing.createdAt(),
+                now,
+                existing.expiresAt(),
+                existing.priceSnapshot(),
+                request.payment() != null ? request.payment() : existing.payment(),
+                request.fulfillment() != null ? request.fulfillment() : existing.fulfillment(),
+                request.voucherCode() != null ? request.voucherCode() : existing.voucherCode(),
+                existing.version());
+    }
+
+    private String resolveVoucherCode(UcpCheckoutRequest request,
+            CartOperationsPort.CartSnapshot cart) {
+        if (request.voucherCode() != null && !request.voucherCode().isBlank()) {
+            return request.voucherCode().trim();
+        }
+        return cart != null ? cart.voucherCode() : null;
+    }
+
+    /**
+     * Resolves the payment method from the session's UCP payment block: the selected instrument's
+     * {@code handler_id}, falling back to COD when none is supplied.
+     */
+    private String resolvePaymentMethodId(UcpCheckoutSession session) {
+        Map<String, Object> payment = session.payment();
+        if (payment == null) {
+            return "cod";
+        }
+        Object instrumentsObj = payment.get("instruments");
+        if (!(instrumentsObj instanceof List<?> instruments) || instruments.isEmpty()) {
+            return "cod";
+        }
+        Map<String, Object> selected = null;
+        for (Object o : instruments) {
+            if (o instanceof Map<?, ?> m) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> instrument = (Map<String, Object>) m;
+                Object sel = instrument.get("selected");
+                if (Boolean.TRUE.equals(sel)) {
+                    selected = instrument;
+                    break;
+                }
+                if (selected == null) {
+                    selected = instrument;
+                }
+            }
+        }
+        if (selected == null) {
+            return "cod";
+        }
+        Object handlerId = selected.get("handler_id");
+        if (handlerId instanceof String s && !s.isBlank()) {
+            return s.trim();
+        }
+        Object type = selected.get("type");
+        if (type instanceof String s && !s.isBlank()) {
+            return s.trim();
+        }
+        return "cod";
+    }
+
+    /**
+     * Resolves the destination from the first shipping method's {@code selected_destination_id},
+     * falling back to its first destination. Returns null when no address was supplied.
+     */
+    private OrderPlacementPort.PlaceCommand.ShippingAddress resolveShippingAddress(UcpCheckoutSession session) {
+        Map<String, Object> fulfillment = session.fulfillment();
+        if (fulfillment == null) {
+            return null;
+        }
+        Object methodsObj = fulfillment.get("methods");
+        if (!(methodsObj instanceof List<?> methods)) {
+            return null;
+        }
+        for (Object o : methods) {
+            if (!(o instanceof Map<?, ?>)) {
+                continue;
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> method = (Map<String, Object>) o;
+            Object type = method.get("type");
+            if (!(type instanceof String t) || !"shipping".equalsIgnoreCase(t)) {
+                continue;
+            }
+            Map<String, Object> destination = pickDestination(method);
+            if (destination != null) {
+                return toShippingAddress(destination);
+            }
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> pickDestination(Map<String, Object> method) {
+        Object destinationsObj = method.get("destinations");
+        if (!(destinationsObj instanceof List<?> destinations) || destinations.isEmpty()) {
+            return null;
+        }
+        Object selectedId = method.get("selected_destination_id");
+        if (selectedId instanceof String sid && !sid.isBlank()) {
+            for (Object d : destinations) {
+                if (d instanceof Map<?, ?> m && sid.equals(((Map<String, Object>) m).get("id"))) {
+                    return (Map<String, Object>) m;
+                }
+            }
+        }
+        for (Object d : destinations) {
+            if (d instanceof Map<?, ?>) {
+                return (Map<String, Object>) d;
+            }
+        }
+        return null;
+    }
+
+    private OrderPlacementPort.PlaceCommand.ShippingAddress toShippingAddress(Map<String, Object> dest) {
+        String contactName = joinNames(str(dest.get("first_name")), str(dest.get("last_name")));
+        return new OrderPlacementPort.PlaceCommand.ShippingAddress(
+                str(dest.get("id")),
+                contactName,
+                str(dest.get("phone_number")),
+                buildDetailAddress(dest),
+                str(dest.get("address_locality")),
+                str(dest.get("address_region")),
+                str(dest.get("address_region")),
+                str(dest.get("address_country")));
+    }
+
+    private String buildDetailAddress(Map<String, Object> dest) {
+        String street = str(dest.get("street_address"));
+        String extended = str(dest.get("extended_address"));
+        String postal = str(dest.get("postal_code"));
+        StringBuilder sb = new StringBuilder();
+        if (street != null) {
+            sb.append(street);
+        }
+        if (extended != null) {
+            if (sb.length() > 0) {
+                sb.append(", ");
+            }
+            sb.append(extended);
+        }
+        if (postal != null) {
+            if (sb.length() > 0) {
+                sb.append(" ");
+            }
+            sb.append(postal);
+        }
+        return sb.length() > 0 ? sb.toString() : street;
+    }
+
+    private String joinNames(String first, String last) {
+        if (first == null && last == null) {
+            return null;
+        }
+        if (first == null) {
+            return last;
+        }
+        if (last == null) {
+            return first;
+        }
+        return first + " " + last;
+    }
+
+    private String str(Object o) {
+        return o instanceof String s && !s.isBlank() ? s.trim() : null;
     }
 
     private record ValidatedPricing(String currency, Map<String, Long> priceSnapshot) {
@@ -543,6 +758,8 @@ public class UcpCheckoutApplicationService {
                 links,
                 session.buyer(),
                 session.context(),
+                session.payment(),
+                session.fulfillment(),
                 orderConfirmation,
                 session.expiresAt() != null ? session.expiresAt().toString() : null,
                 null);

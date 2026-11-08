@@ -14,6 +14,7 @@ import com.aionn.ordering.application.port.out.ShippingGateway;
 import com.aionn.ordering.application.port.out.StockReservationGateway;
 import com.aionn.ordering.application.port.out.VoucherGateway;
 import com.aionn.ordering.application.port.out.integration.OrderingIntegrationEventPublisherPort;
+import com.aionn.ordering.domain.exception.OrderingErrorCode;
 import com.aionn.ordering.domain.exception.OrderingException;
 import com.aionn.ordering.domain.model.Order;
 import com.aionn.ordering.domain.model.OrderItem;
@@ -50,7 +51,6 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -184,23 +184,21 @@ class OrderServiceTest {
     }
 
     @Test
-    void rejectByMerchantRequiresOwnerToBeAMerchant() {
-        when(merchantQueryPort.findMerchantIdByOwnerId("ghost")).thenReturn(Optional.empty());
-
+    void rejectByMerchantRequiresMerchantId() {
+        // Command now carries the verified merchantId from @CurrentMerchantId;
+        // a blank one is rejected before any repository lookup.
         assertThrows(OrderingException.class,
-                () -> orderService.rejectByMerchant(new RejectOrderCommand(ORDER_ID, "ghost", "x")));
+                () -> orderService.rejectByMerchant(new RejectOrderCommand(ORDER_ID, " ", "x")));
     }
 
     @Test
     void rejectByMerchantSucceedsWhenOwnerOwnsTheMerchant() {
         Order order = pendingOrder();
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1"))
-                .thenReturn(Optional.of(MERCHANT_ID));
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
         when(orderRepository.save(order)).thenReturn(order);
 
         Order result = orderService.rejectByMerchant(
-                new RejectOrderCommand(ORDER_ID, "owner-1", "no stock"));
+                new RejectOrderCommand(ORDER_ID, MERCHANT_ID, "no stock"));
 
         assertEquals(OrderStatus.REJECTED, result.getStatus());
         verify(integrationEventPublisher).publishOrderCancelled(eq(ORDER_ID),
@@ -266,7 +264,8 @@ class OrderServiceTest {
 
         CatalogPricingGateway.SkuPricing skuPricing = new CatalogPricingGateway.SkuPricing(
                 "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true,
-                List.of(), "registration-1"
+                List.of(), "registration-1",
+                new CatalogPricingGateway.SkuPricing.Parcel(500, null, null, null)
         );
         when(catalogPricingGateway.resolve(List.of("sku-1"))).thenReturn(java.util.Map.of("sku-1", skuPricing));
 
@@ -275,7 +274,7 @@ class OrderServiceTest {
         );
         when(stockReservationGateway.reserveAll(anyString(), org.mockito.ArgumentMatchers.anyList(), eq(86400)))
                 .thenReturn(List.of(reservation));
-        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND")))
+        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND"), anyList(), any()))
                 .thenReturn(new ShippingGateway.ShippingQuote(BigDecimal.valueOf(30000), "VND"));
 
         when(orderRepository.save(org.mockito.ArgumentMatchers.any(Order.class)))
@@ -298,10 +297,11 @@ class OrderServiceTest {
                 null, "COD", "VND", address());
         var skuPricing = new CatalogPricingGateway.SkuPricing(
                 "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true,
-                List.of(), "registration-1");
+                List.of(), "registration-1",
+                new CatalogPricingGateway.SkuPricing.Parcel(500, null, null, null));
         when(catalogPricingGateway.resolve(List.of("sku-1")))
                 .thenReturn(java.util.Map.of("sku-1", skuPricing));
-        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND")))
+        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND"), anyList(), any()))
                 .thenReturn(new ShippingGateway.ShippingQuote(BigDecimal.TEN, "VND"));
         when(stockReservationGateway.reserveAll(anyString(), anyList(), eq(86400)))
                 .thenThrow(new StockReservationGateway.ReservationException("sku-1", "out of stock"));
@@ -347,7 +347,9 @@ class OrderServiceTest {
         when(cartService.loadOwned(USER_ID)).thenReturn(cart);
 
         CatalogPricingGateway.SkuPricing skuPricing = new CatalogPricingGateway.SkuPricing(
-                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true
+                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true,
+                List.of(), null,
+                new CatalogPricingGateway.SkuPricing.Parcel(500, null, null, null)
         );
         when(catalogPricingGateway.resolve(List.of("sku-1"))).thenReturn(java.util.Map.of("sku-1", skuPricing));
 
@@ -356,7 +358,7 @@ class OrderServiceTest {
         );
         when(stockReservationGateway.reserveAll(anyString(), org.mockito.ArgumentMatchers.anyList(), eq(86400)))
                 .thenReturn(List.of(reservation));
-        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND")))
+        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND"), anyList(), any()))
                 .thenReturn(new ShippingGateway.ShippingQuote(BigDecimal.valueOf(25000), "VND"));
 
         when(orderRepository.save(org.mockito.ArgumentMatchers.any(Order.class)))
@@ -376,9 +378,10 @@ class OrderServiceTest {
                 null, "COD", "VND", address());
         var skuPricing = new CatalogPricingGateway.SkuPricing(
                 "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true,
-                List.of("category-1"));
+                List.of("category-1"), null,
+                new CatalogPricingGateway.SkuPricing.Parcel(500, null, null, null));
         when(catalogPricingGateway.resolve(List.of("sku-1"))).thenReturn(java.util.Map.of("sku-1", skuPricing));
-        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND")))
+        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND"), anyList(), any()))
                 .thenThrow(new RuntimeException("carrier unavailable"));
 
         assertThrows(RuntimeException.class, () -> orderService.placeOrderHeadless(command));
@@ -395,14 +398,41 @@ class OrderServiceTest {
                 List.of(new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand.Line("sku-1", 1)),
                 null, "COD", "VND", address());
         var skuPricing = new CatalogPricingGateway.SkuPricing(
-                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true);
+                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true,
+                List.of(), null,
+                new CatalogPricingGateway.SkuPricing.Parcel(500, null, null, null));
         when(catalogPricingGateway.resolve(List.of("sku-1"))).thenReturn(java.util.Map.of("sku-1", skuPricing));
-        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND")))
+        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND"), anyList(), any()))
                 .thenReturn(quote);
 
         assertThrows(OrderingException.class, () -> orderService.placeOrderHeadless(command));
 
         verify(stockReservationGateway, never()).reserveAll(anyString(), any(), eq(86400));
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void placementRejectsMultiMerchantCartWithDedicatedErrorBeforeSideEffects() {
+        var command = new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand(
+                USER_ID,
+                List.of(
+                        new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand.Line("sku-1", 1),
+                        new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand.Line("sku-2", 1)),
+                null, "COD", "VND", address());
+        var firstMerchantSku = new CatalogPricingGateway.SkuPricing(
+                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true);
+        var secondMerchantSku = new CatalogPricingGateway.SkuPricing(
+                "sku-2", "merchant-2", "wh-2", BigDecimal.valueOf(200), "VND", true);
+        when(catalogPricingGateway.resolve(List.of("sku-1", "sku-2")))
+                .thenReturn(java.util.Map.of("sku-1", firstMerchantSku, "sku-2", secondMerchantSku));
+
+        assertThatThrownBy(() -> orderService.placeOrderHeadless(command))
+                .isInstanceOf(OrderingException.class)
+                .extracting("errorCode")
+                .isEqualTo(OrderingErrorCode.ORDER_MULTI_MERCHANT_NOT_SUPPORTED.getCode());
+
+        verify(shippingGateway, never()).quote(any(), any(), any(), any(), anyList(), any());
+        verify(stockReservationGateway, never()).reserveAll(anyString(), any(), any(Integer.class));
         verify(orderRepository, never()).save(any());
     }
 
@@ -424,7 +454,7 @@ class OrderServiceTest {
         Order replay = orderService.placeOrderHeadless(command);
 
         assertEquals(ORDER_ID, replay.getOrderId());
-        verify(shippingGateway, never()).quote(any(), any(), any(), any());
+        verify(shippingGateway, never()).quote(any(), any(), any(), any(), anyList(), any());
         verify(stockReservationGateway, never()).reserveAll(any(), any(), any(Integer.class));
         verify(placementOperationPort).complete(USER_ID, "client-order-1", ORDER_ID);
     }
@@ -444,11 +474,13 @@ class OrderServiceTest {
                 List.of(new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand.Line("sku-1", 1)),
                 "SAVE10", "COD", "VND", address());
         var skuPricing = new CatalogPricingGateway.SkuPricing(
-                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true);
+                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true,
+                List.of(), null,
+                new CatalogPricingGateway.SkuPricing.Parcel(500, null, null, null));
         var reservation = new StockReservationGateway.Reservation(
                 "res-1", "sku-1", "wh-1", 1, BigDecimal.valueOf(100), "VND");
         when(catalogPricingGateway.resolve(List.of("sku-1"))).thenReturn(java.util.Map.of("sku-1", skuPricing));
-        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND")))
+        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND"), anyList(), any()))
                 .thenReturn(new ShippingGateway.ShippingQuote(BigDecimal.TEN, "VND"));
         when(stockReservationGateway.reserveAll(anyString(), any(), eq(86400))).thenReturn(List.of(reservation));
         when(voucherGateway.apply(eq(USER_ID), eq(MERCHANT_ID), eq("SAVE10"), anyString(),
@@ -458,7 +490,9 @@ class OrderServiceTest {
 
         assertThrows(RuntimeException.class, () -> orderService.placeOrderHeadless(command));
 
-        verify(voucherGateway).release(eq(USER_ID), anyString(), eq("order-placement-failed"));
+        // The voucher writes joined the rolled-back order transaction, so it must
+        // not be released a second time by the external compensation path.
+        verify(voucherGateway, never()).release(anyString(), anyString(), anyString());
         verify(stockReservationGateway).release("res-1", "order-placement-failed");
     }
 
@@ -470,25 +504,24 @@ class OrderServiceTest {
                 "SAVE10", "COD", "VND", address());
         var skuPricing = new CatalogPricingGateway.SkuPricing(
                 "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true,
-                List.of("category-1"));
+                List.of("category-1"), null,
+                new CatalogPricingGateway.SkuPricing.Parcel(500, null, null, null));
         var reservation = new StockReservationGateway.Reservation(
                 "res-1", "sku-1", "wh-1", 1, BigDecimal.valueOf(100), "VND");
         when(catalogPricingGateway.resolve(List.of("sku-1"))).thenReturn(java.util.Map.of("sku-1", skuPricing));
-        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND")))
+        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND"), anyList(), any()))
                 .thenReturn(new ShippingGateway.ShippingQuote(BigDecimal.TEN, "VND"));
         when(stockReservationGateway.reserveAll(anyString(), any(), eq(86400))).thenReturn(List.of(reservation));
         when(voucherGateway.apply(eq(USER_ID), eq(MERCHANT_ID), eq("SAVE10"), anyString(),
                 eq(BigDecimal.valueOf(100)), eq("VND"), eq(List.of("category-1"))))
                 .thenReturn(new VoucherGateway.Discount(BigDecimal.TEN, "VND", true, null));
         when(orderRepository.save(any(Order.class))).thenThrow(new RuntimeException("database unavailable"));
-        doThrow(new RuntimeException("promotion unavailable"))
-                .when(voucherGateway).release(eq(USER_ID), anyString(), eq("order-placement-failed"));
         doThrow(new RuntimeException("inventory unavailable"))
                 .when(stockReservationGateway).release("res-1", "order-placement-failed");
 
         assertThrows(RuntimeException.class, () -> orderService.placeOrderHeadless(command));
 
-        verify(compensationTaskPort, times(2)).enqueue(any(CompensationTaskPort.Task.class));
+        verify(compensationTaskPort).enqueue(any(CompensationTaskPort.Task.class));
     }
 
     @Test
@@ -498,11 +531,13 @@ class OrderServiceTest {
                 List.of(new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand.Line("sku-1", 1)),
                 "SAVE10", "COD", "USD", address());
         var skuPricing = new CatalogPricingGateway.SkuPricing(
-                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "USD", true);
+                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "USD", true,
+                List.of(), null,
+                new CatalogPricingGateway.SkuPricing.Parcel(500, null, null, null));
         var reservation = new StockReservationGateway.Reservation(
                 "res-1", "sku-1", "wh-1", 1, BigDecimal.valueOf(100), "USD");
         when(catalogPricingGateway.resolve(List.of("sku-1"))).thenReturn(java.util.Map.of("sku-1", skuPricing));
-        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("USD")))
+        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("USD"), anyList(), any()))
                 .thenReturn(new ShippingGateway.ShippingQuote(BigDecimal.TEN, "USD"));
         when(stockReservationGateway.reserveAll(anyString(), any(), eq(86400))).thenReturn(List.of(reservation));
         when(voucherGateway.apply(eq(USER_ID), eq(MERCHANT_ID), eq("SAVE10"), anyString(),
@@ -513,9 +548,47 @@ class OrderServiceTest {
                 .isInstanceOf(OrderingException.class)
                 .hasMessageContaining("currency");
 
-        verify(voucherGateway).release(eq(USER_ID), anyString(), eq("order-placement-failed"));
+        verify(voucherGateway, never()).release(anyString(), anyString(), anyString());
         verify(stockReservationGateway).release("res-1", "order-placement-failed");
         verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void freeShippingVoucherWaivesTheFeeWithoutTouchingGoodsSubtotal() {
+        var command = new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand(
+                USER_ID,
+                List.of(new com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand.Line("sku-1", 1)),
+                "FREESHIP30K", "COD", "VND", address());
+        var skuPricing = new CatalogPricingGateway.SkuPricing(
+                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(200_000), "VND", true,
+                List.of(), null,
+                new CatalogPricingGateway.SkuPricing.Parcel(500, null, null, null));
+        var reservation = new StockReservationGateway.Reservation(
+                "res-1", "sku-1", "wh-1", 1, BigDecimal.valueOf(200_000), "VND");
+        when(catalogPricingGateway.resolve(List.of("sku-1"))).thenReturn(java.util.Map.of("sku-1", skuPricing));
+        when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND"), anyList(), any()))
+                .thenReturn(new ShippingGateway.ShippingQuote(BigDecimal.valueOf(35_000), "VND"));
+        when(stockReservationGateway.reserveAll(anyString(), any(), eq(86400))).thenReturn(List.of(reservation));
+        when(voucherGateway.apply(eq(USER_ID), eq(MERCHANT_ID), eq("FREESHIP30K"), anyString(),
+                any(BigDecimal.class), eq("VND"), anyList()))
+                .thenReturn(new VoucherGateway.Discount(BigDecimal.valueOf(30_000), "VND", true, null, true));
+
+        java.util.concurrent.atomic.AtomicReference<Order> saved =
+                new java.util.concurrent.atomic.AtomicReference<>();
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> {
+            Order o = inv.getArgument(0);
+            saved.set(o);
+            return o;
+        });
+
+        orderService.placeOrderHeadless(command);
+
+        Order order = saved.get();
+        // 35k fee waived by at most the voucher's 30k -> customer still pays 5k.
+        assertEquals(BigDecimal.valueOf(5_000), order.getShippingFee().amount());
+        // Goods subtotal is untouched by a shipping voucher.
+        assertEquals(0, order.getTotalAmount().amount()
+                .compareTo(BigDecimal.valueOf(205_000)));
     }
 
     @Test
@@ -524,7 +597,12 @@ class OrderServiceTest {
         ShippingAddress replacement = new ShippingAddress("addr-2", "User", "+84912345678",
                 "99 new street", "WARD-2", "DIST-2", "PROV-2", "VN");
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        when(shippingGateway.quote(ORDER_ID, MERCHANT_ID, replacement, "VND"))
+        when(catalogPricingGateway.resolve(List.of("sku-1"))).thenReturn(java.util.Map.of("sku-1",
+                new CatalogPricingGateway.SkuPricing(
+                        "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true,
+                        List.of(), null,
+                        new CatalogPricingGateway.SkuPricing.Parcel(500, null, null, null))));
+        when(shippingGateway.quote(eq(ORDER_ID), eq(MERCHANT_ID), eq(replacement), eq("VND"), anyList(), any()))
                 .thenReturn(new ShippingGateway.ShippingQuote(BigDecimal.valueOf(45000), "VND"));
         when(orderRepository.save(order)).thenReturn(order);
 
@@ -539,7 +617,7 @@ class OrderServiceTest {
     @Test
     void approvePaymentSucceedsOnPendingOrder() {
         Order order = pendingOrder();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
         when(orderRepository.save(org.mockito.ArgumentMatchers.any(Order.class))).thenReturn(order);
         when(cartService.loadOwned(USER_ID)).thenReturn(com.aionn.ordering.domain.model.Cart.create("cart-1", USER_ID, java.time.Instant.now()));
 
@@ -604,10 +682,9 @@ class OrderServiceTest {
     @Test
     void listByMerchantOwnerReturnsOrdersForMerchant() {
         Order order = pendingOrder();
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of(MERCHANT_ID));
         when(orderRepository.findByMerchant(MERCHANT_ID, 20)).thenReturn(List.of(order));
 
-        List<Order> results = orderService.listByMerchantOwner("owner-1", null, 20);
+        List<Order> results = orderService.listByMerchantOwner(MERCHANT_ID, null, 20);
 
         assertEquals(1, results.size());
     }
@@ -615,7 +692,7 @@ class OrderServiceTest {
     @Test
     void cancelOnPaymentFailureCancelsWhenPending() {
         Order order = pendingOrder();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
         when(orderRepository.save(org.mockito.ArgumentMatchers.any())).thenReturn(order);
 
         Order result = orderService.cancelOnPaymentFailure(ORDER_ID, "ERR_001", "payment gateway error");
@@ -634,22 +711,17 @@ class OrderServiceTest {
     }
 
     @Test
-    void listByMerchantOwnerThrowsWhenMerchantNotFound() {
-        when(merchantQueryPort.findMerchantIdByOwnerId("unknown-owner")).thenReturn(Optional.empty());
-
-        assertThrows(OrderingException.class, () -> orderService.listByMerchantOwner("unknown-owner", null, 10));
+    void listByMerchantOwnerThrowsWhenMerchantIdBlank() {
+        assertThrows(OrderingException.class, () -> orderService.listByMerchantOwner(" ", null, 10));
     }
 
     @Test
-    void getMerchantAnalyticsThrowsWhenMerchantNotFound() {
-        when(merchantQueryPort.findMerchantIdByOwnerId("unknown-owner")).thenReturn(Optional.empty());
-
-        assertThrows(OrderingException.class, () -> orderService.getMerchantAnalytics("unknown-owner", null, null));
+    void getMerchantAnalyticsThrowsWhenMerchantIdBlank() {
+        assertThrows(OrderingException.class, () -> orderService.getMerchantAnalytics(" ", null, null));
     }
 
     @Test
     void getMerchantAnalyticsReturnsCorrectResults() {
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of(MERCHANT_ID));
         var start = java.time.LocalDate.now().minusDays(6);
         var to = java.time.LocalDate.now();
         var analyticsRows = List.of(
@@ -659,7 +731,7 @@ class OrderServiceTest {
         );
         when(orderRepository.findMerchantAnalyticsRows(eq(MERCHANT_ID), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(analyticsRows);
 
-        var result = orderService.getMerchantAnalytics("owner-1", start, to);
+        var result = orderService.getMerchantAnalytics(MERCHANT_ID, start, to);
 
         assertEquals(1, result.totalOrders());
         assertEquals(1, result.completedOrders());
@@ -686,13 +758,12 @@ class OrderServiceTest {
 
     @Test
     void getMerchantTopProductsUsesClockForDefaultDateRange() {
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of(MERCHANT_ID));
         when(orderRepository.findMerchantTopProductRows(
                 eq(MERCHANT_ID), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(List.of(new OrderPersistencePort.TopProductRow(
                         "sku-1", 3, BigDecimal.valueOf(300))));
 
-        var result = orderService.getMerchantTopProducts("owner-1", null, null, 5);
+        var result = orderService.getMerchantTopProducts(MERCHANT_ID, null, null, 5);
 
         assertEquals(1, result.size());
         assertEquals("sku-1", result.getFirst().skuId());

@@ -36,6 +36,9 @@ public class ShopVoucherService {
         Voucher voucher = Voucher.issueForShop(
                 voucherCode,
                 merchantId,
+                command.type() == null
+                        ? com.aionn.promotion.domain.valueobject.VoucherType.ORDER_DISCOUNT
+                        : command.type(),
                 Money.of(command.discountAmount(), command.currency() == null ? "VND" : command.currency()),
                 command.usageLimit(), command.validFrom(), command.validUntil(), clock);
         Voucher saved = voucherRepository.save(voucher);

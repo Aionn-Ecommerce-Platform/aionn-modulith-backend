@@ -7,14 +7,8 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Classification-oriented product lookup for behavioural and content-based features.
- *
- * <p>Separate from {@link CatalogQueryPort}, which deliberately exposes only a flat purchasable view
- * (name, images, variants) and omits classification. Consumers here need the taxonomy - brand,
- * categories, price - to reason about similarity, so widening that port would blur its contract.
- *
- * <p>Only published products are returned; taken-down and unpublished ones are filtered by the
- * implementation.
+ * Classification-oriented product lookup for behavioural/content features, separate from
+ * {@link CatalogQueryPort}. Only published products are returned.
  */
 public interface CatalogProductAttributeQueryPort {
 
@@ -29,10 +23,7 @@ public interface CatalogProductAttributeQueryPort {
     /** Bulk SKU resolution, keyed by the input SKU ID. Unmatched SKUs are absent. */
     Map<String, String> findProductIdsBySkuIds(Collection<String> skuIds);
 
-    /**
-     * Published products matching any of the given categories or brands. Catalog owns the filtering so
-     * callers never query its tables directly.
-     */
+    /** Published products matching any category or brand; catalog owns the filtering. */
     List<ProductAttributeView> findByCategoriesOrBrands(
             Collection<String> categoryIds, Collection<String> brandIds, int limit);
 
@@ -40,8 +31,9 @@ public interface CatalogProductAttributeQueryPort {
     List<ProductAttributeView> findRecentlyPublished(int limit);
 
     /**
-     * @param priceFrom cheapest variant price, or null when no variant is priced
-     * @param skuIds    every variant SKU, so callers can check fulfilability against inventory
+     * @param priceFrom         cheapest variant price
+     * @param originalPriceFrom list price before discount, higher than {@code priceFrom} on sale
+     * @param skuIds            every variant SKU, for stock checks
      */
     record ProductAttributeView(
             String productId,
@@ -51,6 +43,7 @@ public interface CatalogProductAttributeQueryPort {
             List<String> skuIds,
             String imageUrl,
             BigDecimal priceFrom,
+            BigDecimal originalPriceFrom,
             String currency) {
 
         public ProductAttributeView {

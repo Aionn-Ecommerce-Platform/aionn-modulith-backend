@@ -25,6 +25,7 @@ public class RecommendationPolicyConfig {
     public InteractionWeightPolicy interactionWeightPolicy(RecommendationWeightProperties properties) {
         return type -> switch (type) {
             case VIEW -> toWeight(properties.view());
+            case SEARCH -> toWeight(properties.search());
             case CART_ADD -> toWeight(properties.cartAdd());
             case PURCHASE -> toWeight(properties.purchase());
         };

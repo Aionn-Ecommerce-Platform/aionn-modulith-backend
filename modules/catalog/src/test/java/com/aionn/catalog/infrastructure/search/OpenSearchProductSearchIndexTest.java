@@ -32,7 +32,7 @@ class OpenSearchProductSearchIndexTest {
     private static ProductSearchDocument doc() {
         return new ProductSearchDocument("p1", "m1", "Widget", "desc", "b1", List.of("c1"),
                 List.of(), List.of("tag"), List.of(), Map.of("color", "red"),
-                new BigDecimal("100"), new BigDecimal("100"), "VND", "PUBLISHED", Instant.now(), 4.0, 3L);
+                new BigDecimal("100"), new BigDecimal("100"), "VND", false, "PUBLISHED", Instant.now(), 4.0, 3L);
     }
 
     @BeforeEach

@@ -30,7 +30,13 @@ public final class VoucherCommands {
                         String currency,
                         int usageLimit,
                         Instant validFrom,
-                        Instant validUntil) implements Command {
+                        Instant validUntil,
+                        com.aionn.promotion.domain.valueobject.VoucherType type) implements Command {
+                        public IssueShopVoucher(String ownerId, String voucherCode, BigDecimal discountAmount,
+                                        String currency, int usageLimit, Instant validFrom, Instant validUntil) {
+                                this(ownerId, voucherCode, discountAmount, currency, usageLimit, validFrom,
+                                                validUntil, com.aionn.promotion.domain.valueobject.VoucherType.ORDER_DISCOUNT);
+                        }
         }
 
         public record ReserveVoucher(

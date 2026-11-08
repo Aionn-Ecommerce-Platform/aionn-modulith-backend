@@ -24,10 +24,7 @@ import java.util.Map;
 @Component
 public class InteractionPersistenceAdapter implements InteractionPersistencePort {
 
-    /**
-     * Postgres caps bind parameters at 65535; well under it, and far more than any
-     * real user has.
-     */
+    /** Postgres caps bind parameters at 65535; this is well under it. */
     private static final int MAX_USER_INTERACTIONS = 10_000;
 
     private final InteractionRepository jpa;
@@ -35,15 +32,9 @@ public class InteractionPersistenceAdapter implements InteractionPersistencePort
     private final Clock clock;
 
     /**
-     * Read-only phase of the offline rebuilds. Built here rather than declared as a bean so Boot's
-     * {@code TransactionAutoConfiguration} still supplies the unqualified {@code TransactionTemplate}
-     * that other modules inject - registering a second one would back that auto-configuration off and
-     * make every unqualified injection ambiguous.
-     *
-     * <p>The timeout overrides the application-wide {@code spring.transaction.default-timeout}, which
-     * is sized for a request. Both rebuilds scan the interaction log, so at volume they legitimately
-     * need longer; leaving them on the request budget makes the job start failing exactly when the
-     * data becomes worth computing.
+     * Read-only template for the offline rebuilds, built here rather than as a bean so Boot still
+     * supplies the unqualified {@code TransactionTemplate} other modules inject. The timeout is
+     * longer than the request default because both rebuilds scan the interaction log.
      */
     private final TransactionTemplate computeReads;
 
@@ -68,8 +59,7 @@ public class InteractionPersistenceAdapter implements InteractionPersistencePort
         }
         int written = jpa.appendIdempotent(mapper.toEntity(interaction, clock.instant()));
         if (written == 0) {
-            // A replay of an event already ingested. Not an error, and not worth a row in the log at
-            // info level: under a retry storm this is the common case.
+            // Replay of an already-ingested event; common under retry storms.
             log.debug("Ignored duplicate interaction from source event {}",
                     interaction.getSourceEventId());
         }

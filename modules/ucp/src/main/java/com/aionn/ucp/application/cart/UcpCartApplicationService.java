@@ -210,6 +210,13 @@ public class UcpCartApplicationService {
                 }
             }
 
+            // A SKU that became unavailable between add-to-cart and this read has
+            // no pricing — rendering it at price 0 would show the agent a free
+            // item. Surface it as unavailable instead.
+            if (pricing == null || !pricing.active()) {
+                throw new UcpProtocolException(400, "item_not_found",
+                        "Item no longer available: " + skuId, "error", "$.line_items[].item.id");
+            }
             long unitPriceMinor = 0;
             if (pricing != null) {
                 if (pricing.currency() != null) {

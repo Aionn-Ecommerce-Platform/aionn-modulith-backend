@@ -74,7 +74,8 @@ class ShippingRateControllerWebTest {
         mockMvc.perform(post("/api/v1/shipping/rates")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new ConfigureRateRequest(
-                                "HN", BigDecimal.valueOf(30000), "VND", "<=2kg"))))
+                                "HN", BigDecimal.valueOf(30000), "VND", "<=2kg",
+                                1000, 500, BigDecimal.valueOf(5000), null, null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.rateId").value("R_1"))
                 .andExpect(jsonPath("$.data.zoneCode").value("HN"))
@@ -91,7 +92,8 @@ class ShippingRateControllerWebTest {
         mockMvc.perform(post("/api/v1/shipping/rates")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new ConfigureRateRequest(
-                                "HN", BigDecimal.valueOf(30000), "VND", "<=2kg"))))
+                                "HN", BigDecimal.valueOf(30000), "VND", "<=2kg",
+                                1000, 500, BigDecimal.valueOf(5000), null, null))))
                 .andExpect(status().isConflict());
     }
 
@@ -103,7 +105,8 @@ class ShippingRateControllerWebTest {
         mockMvc.perform(put("/api/v1/shipping/rates/R_1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new UpdateRateRequest(
-                                BigDecimal.valueOf(50000), "<=5kg"))))
+                                BigDecimal.valueOf(50000), "<=5kg", 1000, 500,
+                                BigDecimal.valueOf(5000), null, null))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.baseFee").value(50000));
 
@@ -130,6 +133,7 @@ class ShippingRateControllerWebTest {
 
     private ShippingRateResult sample(String id, String zone, BigDecimal fee) {
         Instant now = Instant.now();
-        return new ShippingRateResult(id, zone, fee, "VND", "<=2kg", now, now);
+        return new ShippingRateResult(id, zone, fee, "VND", "<=2kg", 1000, 500,
+                BigDecimal.valueOf(5000), null, null, now, now);
     }
 }

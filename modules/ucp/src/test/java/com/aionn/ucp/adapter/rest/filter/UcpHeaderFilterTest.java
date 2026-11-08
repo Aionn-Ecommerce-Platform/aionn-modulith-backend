@@ -36,7 +36,7 @@ class UcpHeaderFilterTest {
                 "Aionn Test",
                 Set.of("https://ucp.dev/schemas/"),
                 false,
-                new UcpProperties.Capabilities(false, false, false, false, false));
+                new UcpProperties.Capabilities(false, false, false, false, false), "", "VND", "");
         filter = new UcpHeaderFilter(properties);
     }
 
@@ -126,7 +126,7 @@ class UcpHeaderFilterTest {
                 "Aionn Prod",
                 Set.of("https://ucp.dev/schemas/"),
                 true, // requireHttps = true
-                new UcpProperties.Capabilities(false, false, false, false, false));
+                new UcpProperties.Capabilities(false, false, false, false, false), "", "VND", "");
 
         UcpHeaderFilter secureFilter = new UcpHeaderFilter(secureProperties);
 
@@ -150,7 +150,7 @@ class UcpHeaderFilterTest {
                 "Aionn Prod",
                 Set.of("https://ucp.dev/schemas/"),
                 true,
-                new UcpProperties.Capabilities(false, false, false, false, false));
+                new UcpProperties.Capabilities(false, false, false, false, false), "", "VND", "");
 
         UcpHeaderFilter secureFilter = new UcpHeaderFilter(secureProperties);
 

@@ -11,6 +11,10 @@ public interface VoucherGateway {
 
     void release(String userId, String orderId, String reason);
 
-    record Discount(BigDecimal amount, String currency, boolean valid, String reason) {
+    record Discount(BigDecimal amount, String currency, boolean valid, String reason,
+            boolean freeShipping) {
+        public Discount(BigDecimal amount, String currency, boolean valid, String reason) {
+            this(amount, currency, valid, reason, false);
+        }
     }
 }

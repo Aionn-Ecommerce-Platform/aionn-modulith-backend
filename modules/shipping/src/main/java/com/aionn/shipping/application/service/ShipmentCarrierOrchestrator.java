@@ -20,8 +20,14 @@ public class ShipmentCarrierOrchestrator {
     private final CarrierClient carrierClient;
     private final MerchantQueryPort merchantQueryPort;
 
-    public Shipment registerWithCarrier(String shipmentId) {
+    public Shipment registerWithCarrier(String shipmentId, String merchantId) {
         Shipment shipment = shipmentService.loadShipment(shipmentId);
+        // Same ownership gate as cancelShipment: only the merchant who owns the
+        // shipment may register it with the carrier. merchantId is null only on
+        // the internal auto-register path (order placement), which is trusted.
+        if (merchantId != null) {
+            shipment.ensureOwnedByMerchant(merchantId);
+        }
         if (shipment.getTrackingCode() != null) {
             return shipment;
         }

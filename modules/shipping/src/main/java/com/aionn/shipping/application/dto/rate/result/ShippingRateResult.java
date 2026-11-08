@@ -9,7 +9,11 @@ public record ShippingRateResult(
         BigDecimal baseFee,
         String currency,
         String condition,
+        int baseWeightGram,
+        int stepWeightGram,
+        BigDecimal stepFee,
+        BigDecimal maxFee,
+        BigDecimal freeShippingThreshold,
         Instant createdAt,
         Instant updatedAt) {
 }
-

@@ -38,6 +38,7 @@ class ProductSearchIndexUpdaterTest {
         private static final String PRODUCT_ID = "01HZPRD0000000000000000001";
         private static final String MERCHANT_ID = "01HZMER0000000000000000001";
         private static final String ADMIN_ID = "01HZADM0000000000000000001";
+        private static final com.aionn.catalog.domain.model.ProductVariant.ParcelDimensions TEST_PARCEL = new com.aionn.catalog.domain.model.ProductVariant.ParcelDimensions(500, java.math.BigDecimal.valueOf(15), java.math.BigDecimal.valueOf(10), java.math.BigDecimal.valueOf(5));
 
         @Mock
         private ProductPersistencePort productRepository;
@@ -67,7 +68,7 @@ class ProductSearchIndexUpdaterTest {
         private Product publishedProduct() {
                 Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
                 product.categorize(List.of("c1"), FIXED);
-                product.defineVariant("sku-1", Map.of("color", "red"), Money.of(new BigDecimal("100"), "VND"), FIXED);
+                product.defineVariant("sku-1", Map.of("color", "red"), Money.of(new BigDecimal("100"), "VND"), TEST_PARCEL, FIXED);
                 product.publish(ADMIN_ID, FIXED);
                 product.pullEvents();
                 return product;
@@ -75,7 +76,7 @@ class ProductSearchIndexUpdaterTest {
 
         private ProductSearchDocument doc() {
                 return new ProductSearchDocument(PRODUCT_ID, MERCHANT_ID, "Widget", null, null, List.of("c1"),
-                                List.of(), List.of(), List.of(), Map.of(), null, null, null, "PUBLISHED", Instant.now(),
+                                List.of(), List.of(), List.of(), Map.of(), null, null, null, null, "PUBLISHED", Instant.now(),
                                 0.0, 0L);
         }
 

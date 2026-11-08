@@ -1,5 +1,6 @@
 package com.aionn.ucp.adapter.rest.controller;
 
+import com.aionn.sharedkernel.adapter.web.support.idempotency.IdempotentRequest;
 import com.aionn.ucp.adapter.rest.dto.checkout.UcpCheckoutRequest;
 import com.aionn.ucp.adapter.rest.dto.checkout.UcpCheckoutResponse;
 import com.aionn.ucp.application.checkout.UcpCheckoutApplicationService;
@@ -32,6 +33,7 @@ public class UcpCheckoutController {
     private final UcpCheckoutApplicationService checkoutService;
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @IdempotentRequest(ttlSeconds = 3600)
     public ResponseEntity<UcpCheckoutResponse> createCheckout(
             @Valid @RequestBody(required = false) UcpCheckoutRequest request,
             Authentication authentication) {
@@ -50,6 +52,7 @@ public class UcpCheckoutController {
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @IdempotentRequest(ttlSeconds = 3600)
     public ResponseEntity<UcpCheckoutResponse> updateCheckout(
             @PathVariable("id") String checkoutId,
             @Valid @RequestBody UcpCheckoutRequest request,
@@ -60,15 +63,18 @@ public class UcpCheckoutController {
     }
 
     @PostMapping(value = "/{id}/complete", produces = MediaType.APPLICATION_JSON_VALUE)
+    @IdempotentRequest(ttlSeconds = 3600)
     public ResponseEntity<UcpCheckoutResponse> completeCheckout(
             @PathVariable("id") String checkoutId,
+            @Valid @RequestBody(required = false) UcpCheckoutRequest request,
             Authentication authentication) {
         String userId = getAuthenticatedUserId(authentication);
-        UcpCheckoutResponse response = checkoutService.completeCheckout(checkoutId, userId);
+        UcpCheckoutResponse response = checkoutService.completeCheckout(checkoutId, request, userId);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping(value = "/{id}/cancel", produces = MediaType.APPLICATION_JSON_VALUE)
+    @IdempotentRequest(ttlSeconds = 3600)
     public ResponseEntity<UcpCheckoutResponse> cancelCheckout(
             @PathVariable("id") String checkoutId,
             Authentication authentication) {
@@ -78,10 +84,17 @@ public class UcpCheckoutController {
     }
 
     private String getAuthenticatedUserId(Authentication authentication) {
-        if (authentication != null && authentication.isAuthenticated()
-                && !"anonymousUser".equals(authentication.getPrincipal())) {
-            return authentication.getName();
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
+            return null;
         }
-        return null;
+        String name = authentication.getName();
+        // A platform/agent credential authenticates the request but is not a buyer
+        // identity — let the service fall back to the ucp:guest: namespace so the
+        // agent transacts on behalf of an anonymous buyer.
+        if (name != null && name.startsWith("ucp:platform:")) {
+            return null;
+        }
+        return name;
     }
 }

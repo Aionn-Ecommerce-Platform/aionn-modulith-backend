@@ -13,13 +13,9 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * A user's aggregated taste, rebuilt from the interaction log by the profile refresh job rather than
- * mutated per interaction: decay means every stored score would otherwise be stale the moment it is
- * written.
- *
- * <p>The price band is the signal catalog's browsing history misses entirely. Recommending a flagship
- * phone to someone who only ever buys accessories under 500k is useless however well the category
- * matches.
+ * A user's aggregated taste, rebuilt wholesale by the profile refresh job (decay makes incremental
+ * updates stale). The price band captures a signal browsing history misses: a flagship phone is a poor
+ * recommendation for someone who only buys sub-500k accessories.
  */
 @Getter
 public class UserAffinityProfile {
@@ -78,10 +74,7 @@ public class UserAffinityProfile {
                 : brandAffinities.getOrDefault(brandId, AffinityScore.ZERO);
     }
 
-    /**
-     * Best match across a product's categories. A product in several categories should be judged by
-     * its strongest link to the user, not diluted by its weakest.
-     */
+    /** A product in several categories is judged by its strongest link, not diluted by the weakest. */
     public AffinityScore bestCategoryAffinity(Iterable<String> productCategoryIds) {
         if (productCategoryIds == null) {
             return AffinityScore.ZERO;
@@ -96,11 +89,7 @@ public class UserAffinityProfile {
         return best;
     }
 
-    /**
-     * How well a price sits inside the user's observed band: 1 inside, tapering to 0 as it moves a
-     * full band-width away. Missing prices score neutral-zero rather than penalising the product,
-     * because an absent price is a catalog gap, not a signal about the user.
-     */
+    /** 1 inside the band, tapering to 0 one band-width away. A missing price scores zero, not a penalty. */
     public AffinityScore priceFit(BigDecimal price) {
         if (price == null || priceBandMin == null || priceBandMax == null) {
             return AffinityScore.ZERO;

@@ -42,15 +42,18 @@ public class ResilientShippingAdapter implements ShippingGateway {
     }
 
     @Override
-    public ShippingGateway.ShippingQuote quote(String orderId, String merchantId, ShippingAddress address, String currency) {
-        return execute("quote", () -> delegate.quote(orderId, merchantId, address, currency));
+    public ShippingGateway.ShippingQuote quote(String orderId, String merchantId, ShippingAddress address,
+            String currency, java.util.List<ShippingGateway.Parcel> parcels,
+            java.math.BigDecimal goodsSubtotal) {
+        return execute("quote", () -> delegate.quote(orderId, merchantId, address, currency, parcels, goodsSubtotal));
     }
 
     @Override
-    public ShippingGateway.Registration createAndRegister(String orderId, String merchantId, String userId,
-            ShippingAddress address, java.math.BigDecimal codAmount, java.math.BigDecimal shippingFee, String currency) {
+    public java.util.List<ShippingGateway.Registration> createAndRegister(String orderId, String merchantId,
+            String userId, ShippingAddress address, java.math.BigDecimal codAmount,
+            java.math.BigDecimal shippingFee, String currency, java.util.List<ShippingGateway.Parcel> parcels) {
         return execute("createAndRegister", () -> delegate.createAndRegister(orderId, merchantId, userId,
-                address, codAmount, shippingFee, currency));
+                address, codAmount, shippingFee, currency, parcels));
     }
 
     private <T> T execute(String operation, Supplier<T> action) {

@@ -124,6 +124,7 @@ public class CatalogProductAttributeQueryAdapter implements CatalogProductAttrib
         List<ProductVariant> variants = product.variants();
         List<String> skuIds = new ArrayList<>(variants.size());
         BigDecimal cheapest = null;
+        BigDecimal cheapestOriginal = null;
         String currency = null;
         for (ProductVariant variant : variants) {
             skuIds.add(variant.skuId());
@@ -131,12 +132,15 @@ public class CatalogProductAttributeQueryAdapter implements CatalogProductAttrib
             if (price == null) {
                 continue;
             }
+            Money original = variant.originalPrice();
             if (cheapest == null) {
                 cheapest = price.amount();
+                cheapestOriginal = original == null ? null : original.amount();
                 currency = price.currency();
             } else if (currency != null && currency.equalsIgnoreCase(price.currency())
                     && price.amount().compareTo(cheapest) < 0) {
                 cheapest = price.amount();
+                cheapestOriginal = original == null ? null : original.amount();
             }
         }
         List<String> images = product.imageList();
@@ -148,6 +152,7 @@ public class CatalogProductAttributeQueryAdapter implements CatalogProductAttrib
                 skuIds,
                 images.isEmpty() ? null : images.get(0),
                 cheapest,
+                cheapestOriginal,
                 currency);
     }
 }

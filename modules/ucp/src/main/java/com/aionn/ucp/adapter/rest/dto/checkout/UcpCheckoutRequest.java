@@ -15,5 +15,16 @@ public record UcpCheckoutRequest(
                 @JsonProperty("cart_id") String cartId,
                 @Valid @JsonProperty("line_items") List<UcpLineItemRequest> lineItems,
                 @JsonProperty("buyer") Map<String, Object> buyer,
-                @JsonProperty("context") Map<String, Object> context) {
+                @JsonProperty("context") Map<String, Object> context,
+                @JsonProperty("payment") Map<String, Object> payment,
+                @JsonProperty("fulfillment") Map<String, Object> fulfillment,
+                @JsonProperty("voucher_code") String voucherCode) {
+
+        public UcpCheckoutRequest(
+                        String cartId,
+                        List<UcpLineItemRequest> lineItems,
+                        Map<String, Object> buyer,
+                        Map<String, Object> context) {
+                this(cartId, lineItems, buyer, context, null, null, null);
+        }
 }

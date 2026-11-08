@@ -3,3 +3,10 @@ spring:
     locations:
       - classpath:db
       - classpath:db-demo
+
+# Local development serves UCP over plain HTTP from the dev server. Production
+# keeps the secure defaults from application-ucp.yml and terminates TLS at the edge.
+aionn:
+  ucp:
+    rest-endpoint: "${UCP_REST_ENDPOINT:http://localhost:8080/ucp/v1}"
+    require-https: "${UCP_REQUIRE_HTTPS:false}"

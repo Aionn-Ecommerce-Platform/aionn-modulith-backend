@@ -4,6 +4,7 @@ import com.aionn.catalog.adapter.rest.dto.product.request.AssignBrandRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.AssignCategoriesRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.AssignCollectionsRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.BulkPriceUpdateRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.ChangeVariantParcelRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.ChangeVariantPriceRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.CreateProductRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.DeactivateProductRequest;
@@ -23,6 +24,7 @@ import com.aionn.catalog.application.dto.product.command.AssignBrandCommand;
 import com.aionn.catalog.application.dto.product.command.AssignCategoriesCommand;
 import com.aionn.catalog.application.dto.product.command.AssignCollectionsCommand;
 import com.aionn.catalog.application.dto.product.command.BulkPriceUpdateCommand;
+import com.aionn.catalog.application.dto.product.command.ChangeVariantParcelCommand;
 import com.aionn.catalog.application.dto.product.command.ChangeVariantPriceCommand;
 import com.aionn.catalog.application.dto.product.command.CloneProductCommand;
 import com.aionn.catalog.application.dto.product.command.CreateProductCommand;
@@ -54,6 +56,9 @@ public interface ProductDtoMapper {
 
         ChangeVariantPriceCommand toChangeVariantPriceCommand(String productId, String merchantId, String skuId,
                         ChangeVariantPriceRequest request);
+
+        ChangeVariantParcelCommand toChangeVariantParcelCommand(String productId, String merchantId, String skuId,
+                        ChangeVariantParcelRequest request);
 
         default BulkPriceUpdateCommand toBulkPriceUpdateCommand(String merchantId, BulkPriceUpdateRequest request) {
                 List<BulkPriceUpdateCommand.Item> items = request.items().stream()

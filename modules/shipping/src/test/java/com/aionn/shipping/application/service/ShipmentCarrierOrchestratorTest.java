@@ -74,7 +74,7 @@ class ShipmentCarrierOrchestratorTest {
         when(carrierClient.register(any(), any(), any(), any(), any(), any(), any())).thenReturn(reg);
         when(shipmentService.applyRegistration("S_1", reg)).thenReturn(persisted);
 
-        Shipment result = orchestrator.registerWithCarrier("S_1");
+        Shipment result = orchestrator.registerWithCarrier("S_1", "M_1");
 
         assertThat(result).isSameAs(persisted);
         verify(carrierClient).register("S_1", "ORDER_1", ADDRESS, DIMENSIONS,
@@ -86,7 +86,7 @@ class ShipmentCarrierOrchestratorTest {
         Shipment shipment = registeredShipment();
         when(shipmentService.loadShipment("S_1")).thenReturn(shipment);
 
-        Shipment result = orchestrator.registerWithCarrier("S_1");
+        Shipment result = orchestrator.registerWithCarrier("S_1", "M_1");
 
         assertThat(result).isSameAs(shipment);
         verifyNoInteractions(carrierClient);
@@ -99,7 +99,7 @@ class ShipmentCarrierOrchestratorTest {
         when(carrierClient.register(any(), any(), any(), any(), any(), any(), any()))
                 .thenThrow(new RuntimeException("Carrier unavailable"));
 
-        assertThatThrownBy(() -> orchestrator.registerWithCarrier("S_1"))
+        assertThatThrownBy(() -> orchestrator.registerWithCarrier("S_1", "M_1"))
                 .isInstanceOf(ShippingException.class)
                 .hasMessageContaining("Carrier unavailable")
                 .extracting("errorCode")
@@ -114,7 +114,7 @@ class ShipmentCarrierOrchestratorTest {
         when(carrierClient.register(any(), any(), any(), any(), any(), any(), any()))
                 .thenThrow(new ShippingException(ShippingErrorCode.INVALID_ARGUMENT, "bad address"));
 
-        assertThatThrownBy(() -> orchestrator.registerWithCarrier("S_1"))
+        assertThatThrownBy(() -> orchestrator.registerWithCarrier("S_1", "M_1"))
                 .isInstanceOf(ShippingException.class)
                 .extracting("errorCode")
                 .isEqualTo(ShippingErrorCode.INVALID_ARGUMENT.getCode());
@@ -125,7 +125,7 @@ class ShipmentCarrierOrchestratorTest {
         when(shipmentService.loadShipment("MISSING"))
                 .thenThrow(new ShippingException(ShippingErrorCode.SHIPMENT_NOT_FOUND));
 
-        assertThatThrownBy(() -> orchestrator.registerWithCarrier("MISSING"))
+        assertThatThrownBy(() -> orchestrator.registerWithCarrier("MISSING", "M_1"))
                 .isInstanceOf(ShippingException.class)
                 .extracting("errorCode")
                 .isEqualTo(ShippingErrorCode.SHIPMENT_NOT_FOUND.getCode());

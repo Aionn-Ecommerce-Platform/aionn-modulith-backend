@@ -81,6 +81,8 @@ public record ProductResult(
                 attributes, variants, aiDescription, status, createdAt, updatedAt, soldCount, isBestSeller, 0.0, 0L);
     }
 
-    public record Variant(String skuId, Map<String, String> attributeValues, BigDecimal price, String currency) {
+    public record Variant(String skuId, Map<String, String> attributeValues, BigDecimal price,
+            BigDecimal originalPrice, String currency, Integer weightGram, BigDecimal lengthCm,
+            BigDecimal widthCm, BigDecimal heightCm) {
     }
 }

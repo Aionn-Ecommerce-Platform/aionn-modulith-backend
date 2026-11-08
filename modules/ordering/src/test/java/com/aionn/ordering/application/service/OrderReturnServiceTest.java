@@ -133,25 +133,24 @@ class OrderReturnServiceTest {
     @Test
     void rejectMovesReturnToRejected() {
         OrderReturn r = requestedReturn();
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1"))
-                .thenReturn(Optional.of(MERCHANT_ID));
         when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
         when(returnRepository.save(r)).thenReturn(r);
 
         OrderReturn result = service.reject(new RejectReturnCommand(
-                RETURN_ID, "owner-1", "no proof"));
+                RETURN_ID, MERCHANT_ID, "no proof"));
 
         assertEquals(ReturnStatus.REJECTED, result.getStatus());
         assertEquals(ReturnStatus.REJECTED, r.getStatus());
     }
 
     @Test
-    void rejectFailsWhenOwnerHasNoMerchant() {
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1"))
-                .thenReturn(Optional.empty());
+    void rejectFailsWhenMerchantDoesNotOwnReturn() {
+        // Return belongs to MERCHANT_ID; a different merchantId must be rejected.
+        OrderReturn r = requestedReturn();
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
 
         assertThrows(OrderingException.class,
-                () -> service.reject(new RejectReturnCommand(RETURN_ID, "owner-1", "n")));
+                () -> service.reject(new RejectReturnCommand(RETURN_ID, "other-merchant", "n")));
     }
 
     @Test
@@ -196,14 +195,13 @@ class OrderReturnServiceTest {
     @Test
     void approveReturnChangesStatusToApproved() {
         OrderReturn r = requestedReturn();
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of(MERCHANT_ID));
         when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
         when(returnRepository.save(r)).thenReturn(r);
         // refundAmount required by domain model; order has no paymentId so refund is skipped
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
         com.aionn.ordering.application.dto.returns.command.ApproveReturnCommand cmd =
                 new com.aionn.ordering.application.dto.returns.command.ApproveReturnCommand(
-                        RETURN_ID, "owner-1", java.math.BigDecimal.valueOf(150), "VND", "wh-1");
+                        RETURN_ID, MERCHANT_ID, java.math.BigDecimal.valueOf(150), "VND", "wh-1");
 
         var result = service.approve(cmd);
 
@@ -218,13 +216,12 @@ class OrderReturnServiceTest {
         OrderReturn r = new OrderReturn(RETURN_ID, ORDER_ID, USER_ID, MERCHANT_ID,
                 "broken", null, null, null, "wh-1", null,
                 ReturnStatus.APPROVED, Instant.now(), null, null);
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of(MERCHANT_ID));
         when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
         when(returnRepository.save(r)).thenReturn(r);
 
         var result = service.confirmItemReceived(
                 new com.aionn.ordering.application.dto.returns.command.ConfirmItemReceivedCommand(
-                        RETURN_ID, "owner-1", "GOOD"));
+                        RETURN_ID, MERCHANT_ID, "GOOD"));
 
         assertEquals(ReturnStatus.ITEM_RECEIVED, result.getStatus());
     }

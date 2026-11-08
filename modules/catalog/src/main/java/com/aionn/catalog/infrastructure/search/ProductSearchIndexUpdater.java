@@ -21,8 +21,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-// Keeps the faceted search index in sync after Product domain events commit.
-// Runs after commit so slow search latency never extends business transactions.
 @Component
 @RequiredArgsConstructor
 @Transactional(propagation = Propagation.NOT_SUPPORTED)

@@ -54,6 +54,8 @@ class RecommendationServiceTest {
     private ProfileRefreshService profileRefreshService;
     @Mock
     private RecommendationMetricsPort metrics;
+    @Mock
+    private com.aionn.sharedkernel.integration.port.promotion.FlashSaleQueryPort flashSaleQuery;
 
     private RecommendationService service() {
         return serviceWith(weights(3, 200));
@@ -66,7 +68,8 @@ class RecommendationServiceTest {
                 new HybridRankingPolicy(),
                 new ColdStartPolicy(thresholds(1, 5), weights),
                 weights,
-                metrics);
+                metrics,
+                flashSaleQuery);
     }
 
     @Test
@@ -490,6 +493,7 @@ class RecommendationServiceTest {
                 List.of("sku-" + productId),
                 null,
                 BigDecimal.valueOf(1_000_000),
+                null,
                 "VND");
     }
 

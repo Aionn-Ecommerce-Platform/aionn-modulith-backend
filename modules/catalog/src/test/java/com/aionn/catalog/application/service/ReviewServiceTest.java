@@ -52,6 +52,7 @@ class ReviewServiceTest {
     private static final String REVIEW_ID = "01HZREV0000000000000000001";
     private static final String PRODUCT_ID = "01HZPRD0000000000000000001";
     private static final String MERCHANT_ID = "01HZMER0000000000000000001";
+    private static final com.aionn.catalog.domain.model.ProductVariant.ParcelDimensions TEST_PARCEL = new com.aionn.catalog.domain.model.ProductVariant.ParcelDimensions(500, java.math.BigDecimal.valueOf(15), java.math.BigDecimal.valueOf(10), java.math.BigDecimal.valueOf(5));
     private static final String USER_ID = "user-1";
     private static final String OWNER_ID = "owner-1";
     private static final String ADMIN_ID = "admin-1";
@@ -77,7 +78,7 @@ class ReviewServiceTest {
     private Product productWithSku(String skuId) {
         Product p = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
         p.categorize(List.of("cat-1"), FIXED);
-        p.defineVariant(skuId, Map.of("color", "red"), Money.of(new BigDecimal("10"), "VND"), FIXED);
+        p.defineVariant(skuId, Map.of("color", "red"), Money.of(new BigDecimal("10"), "VND"), TEST_PARCEL, FIXED);
         p.pullEvents();
         return p;
     }

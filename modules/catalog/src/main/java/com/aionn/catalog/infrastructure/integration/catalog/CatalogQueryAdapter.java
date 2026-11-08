@@ -19,8 +19,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-// Catalog-side adapter that exposes product views to other modules without
-// leaking domain types. Callers consume flat ProductView records only.
 @Component
 @RequiredArgsConstructor
 public class CatalogQueryAdapter implements CatalogQueryPort {
@@ -30,11 +28,13 @@ public class CatalogQueryAdapter implements CatalogQueryPort {
     @Override
     @Transactional(readOnly = true)
     public List<ProductView> search(SearchCriteria criteria) {
-        List<Product> products = productRepository.searchPublished(criteria.query(), criteria.limit(), 0);
+        int fetchLimit = criteria.limit() + 1;
+        List<Product> products = productRepository.searchPublished(criteria.query(), criteria.minPrice(),
+                criteria.maxPrice(), fetchLimit, criteria.offset());
         List<ProductView> mapped = new ArrayList<>(products.size());
         for (Product p : products) {
             ProductView dto = toView(p);
-            if (dto != null && matchesPrice(dto, criteria.minPrice(), criteria.maxPrice())) {
+            if (dto != null) {
                 mapped.add(dto);
             }
         }
@@ -90,27 +90,6 @@ public class CatalogQueryAdapter implements CatalogQueryPort {
         return new LookupResult(views, notFound);
     }
 
-    private static boolean matchesPrice(ProductView dto, BigDecimal min, BigDecimal max) {
-        if (min == null && max == null) {
-            return true;
-        }
-        if (dto.variants().isEmpty()) {
-            return true;
-        }
-        BigDecimal cheapest = dto.variants().stream()
-                .map(VariantView::price)
-                .filter(java.util.Objects::nonNull)
-                .min(BigDecimal::compareTo)
-                .orElse(null);
-        if (cheapest == null) {
-            return true;
-        }
-        if (min != null && cheapest.compareTo(min) < 0) {
-            return false;
-        }
-        return max == null || cheapest.compareTo(max) <= 0;
-    }
-
     private static ProductView toView(Product p) {
         if (p.getStatus() == ProductStatus.TAKEN_DOWN) {
             return null;
@@ -121,13 +100,17 @@ public class CatalogQueryAdapter implements CatalogQueryPort {
             Money price = v.price();
             BigDecimal amount = price == null ? null : price.amount();
             String currency = price == null ? null : price.currency();
+            ProductVariant.ParcelDimensions parcel = v.parcel();
+            ParcelView parcelView = parcel == null ? null
+                    : new ParcelView(parcel.weightGram(), parcel.lengthCm(), parcel.widthCm(), parcel.heightCm());
             variants.add(new VariantView(
                     v.skuId(),
                     p.getName() + variantSuffix(v),
                     amount,
                     currency,
                     price != null,
-                    v.attributeValues() == null ? Map.of() : v.attributeValues()));
+                    v.attributeValues() == null ? Map.of() : v.attributeValues(),
+                    parcelView));
         }
         return new ProductView(
                 p.getProductId(),

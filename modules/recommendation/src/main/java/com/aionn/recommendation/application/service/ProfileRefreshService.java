@@ -7,6 +7,7 @@ import com.aionn.recommendation.application.port.out.UserAffinityProfilePersiste
 import com.aionn.recommendation.domain.model.UserAffinityProfile;
 import com.aionn.recommendation.domain.model.UserInteraction;
 import com.aionn.recommendation.domain.valueobject.AffinityScore;
+import com.aionn.recommendation.domain.valueobject.InteractionType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,11 +25,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Rebuilds one user's affinity profile from their interaction history.
- *
- * <p>Rebuilt wholesale rather than updated per interaction because every stored score decays
- * continuously: an incremental update would leave older scores frozen at the value they had when they
- * were last touched.
+ * Rebuilds one user's affinity profile from their interaction history. Rebuilt wholesale because
+ * every stored score decays continuously; incremental updates would freeze older scores.
  */
 @Slf4j
 @Service
@@ -47,10 +45,8 @@ public class ProfileRefreshService {
     @Transactional
     public void refresh(String userId, Duration lookback, int maxAffinities) {
         Instant now = clock.instant();
-        // The sweep reads its whole batch of user IDs before processing any of them, so an account can be
-        // erased between the two. Locking and checking under the lock is what stops this method from
-        // writing back the profile that erasure just deleted; without the lock the check is a race, since
-        // the interactions read below and the save at the end straddle it.
+        // The sweep reads its batch before processing, so an account can be erased meanwhile. Lock, then
+        // check under it, or this method writes back the profile erasure just deleted.
         interactionRepository.lockUser(userId);
         if (interactionRepository.isUserErased(userId)) {
             log.debug("Skipping profile refresh for an erased account");
@@ -61,8 +57,7 @@ public class ProfileRefreshService {
                 userId, now.minus(lookback), Integer.MAX_VALUE);
 
         if (interactions.isEmpty()) {
-            // Only clear a profile that already exists. There is nothing to correct for a user this module
-            // holds nothing on, and writing a row would create personal data where there was none.
+            // Clear an existing profile only; writing one for an unknown user would create personal data.
             if (profileRepository.existsByUserId(userId)) {
                 profileRepository.save(UserAffinityProfile.empty(userId), now);
             } else {
@@ -78,7 +73,11 @@ public class ProfileRefreshService {
             String userId, List<UserInteraction> interactions, Instant now, int maxAffinities) {
         Map<String, ProductAttributeQueryPort.ProductAttributes> attributes =
                 productAttributeQuery.findByProductIds(
-                        interactions.stream().map(UserInteraction::getProductId).distinct().toList());
+                        interactions.stream()
+                                .map(UserInteraction::getProductId)
+                                .filter(java.util.Objects::nonNull)
+                                .distinct()
+                                .toList());
 
         Map<String, BigDecimal> categoryWeights = new HashMap<>();
         Map<String, BigDecimal> brandWeights = new HashMap<>();
@@ -86,23 +85,33 @@ public class ProfileRefreshService {
         Instant lastInteractionAt = null;
 
         for (UserInteraction interaction : interactions) {
-            ProductAttributeQueryPort.ProductAttributes product =
-                    attributes.get(interaction.getProductId());
-            if (product == null) {
-                // Product was deleted or taken down; its history should not shape recommendations.
-                continue;
-            }
             BigDecimal decayed = weightPolicy.weightFor(interaction.getType())
                     .decayedAt(interaction.getOccurredAt(), now);
 
-            for (String categoryId : product.categoryIds()) {
-                categoryWeights.merge(categoryId, decayed, BigDecimal::add);
-            }
-            if (product.brandId() != null) {
-                brandWeights.merge(product.brandId(), decayed, BigDecimal::add);
-            }
-            if (product.priceFrom() != null) {
-                prices.add(product.priceFrom());
+            // Searches carry their facets directly, so they score categories/brands without a product.
+            if (interaction.getType() == InteractionType.SEARCH) {
+                for (String categoryId : interaction.getCategoryIds()) {
+                    categoryWeights.merge(categoryId, decayed, BigDecimal::add);
+                }
+                if (interaction.getBrandId() != null) {
+                    brandWeights.merge(interaction.getBrandId(), decayed, BigDecimal::add);
+                }
+            } else {
+                ProductAttributeQueryPort.ProductAttributes product =
+                        attributes.get(interaction.getProductId());
+                if (product == null) {
+                    // Deleted/taken-down product: its history must not shape recommendations.
+                    continue;
+                }
+                for (String categoryId : product.categoryIds()) {
+                    categoryWeights.merge(categoryId, decayed, BigDecimal::add);
+                }
+                if (product.brandId() != null) {
+                    brandWeights.merge(product.brandId(), decayed, BigDecimal::add);
+                }
+                if (product.priceFrom() != null) {
+                    prices.add(product.priceFrom());
+                }
             }
             if (lastInteractionAt == null || interaction.getOccurredAt().isAfter(lastInteractionAt)) {
                 lastInteractionAt = interaction.getOccurredAt();
@@ -125,11 +134,7 @@ public class ProfileRefreshService {
                 .orElseGet(() -> UserAffinityProfile.empty(userId));
     }
 
-    /**
-     * Keeps the strongest affinities and rescales them against the highest one, so the top interest
-     * always reads as 1.0 regardless of how much raw activity the user has. Without that, a heavy user
-     * and a light user with identical tastes would produce incomparable profiles.
-     */
+    /** Rescales against the top affinity so the strongest interest is always 1.0, making users comparable. */
     private static Map<String, AffinityScore> normalizeTop(Map<String, BigDecimal> weights, int limit) {
         if (weights.isEmpty()) {
             return Map.of();
@@ -150,10 +155,7 @@ public class ProfileRefreshService {
         return normalized;
     }
 
-    /**
-     * Percentile over the prices the user actually engaged with. p20..p80 rather than min..max so one
-     * unusually cheap or expensive product does not stretch the band to cover the whole catalog.
-     */
+    /** p20..p80 rather than min..max so one outlier doesn't stretch the price band across the catalog. */
     private static BigDecimal percentile(List<BigDecimal> values, int percentile) {
         if (values.isEmpty()) {
             return null;

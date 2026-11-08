@@ -18,13 +18,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Recomputes time-decayed popularity.
- *
- * <p>Answers "what has momentum right now", which is a different question from catalog's lifetime
- * {@code product_sold_counters}. A product can be a legitimate all-time best-seller and still not be
- * trending.
- */
+/** Recomputes time-decayed popularity ("momentum now"), which differs from catalog's lifetime sold counters. */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -35,14 +29,7 @@ public class PopularityService {
     private final InteractionWeightPolicy weightPolicy;
     private final Clock clock;
 
-    /**
-     * Recomputes the table.
-     *
-     * <p>Not {@code @Transactional}: the aggregate read and each write batch open their own short
-     * transaction in the persistence adapter. Wrapping the whole sweep in one transaction put it on the
-     * application-wide request-sized timeout, which the aggregate plus a per-product upsert exceeds
-     * once the interaction log is worth aggregating.
-     */
+    /** Not {@code @Transactional}: the aggregate read and each write batch use their own short transaction. */
     public int refresh(Duration lookback) {
         Instant now = clock.instant();
         Instant since = now.minus(lookback);
@@ -56,9 +43,7 @@ public class PopularityService {
                 interactionRepository.aggregatePopularity(since, now, halfLives);
         if (aggregates.isEmpty()) {
             log.debug("No interactions in the popularity window");
-            // Still sweep. An empty window is a statement that nothing has momentum, and returning early
-            // would leave the previous scores ranking products that stopped selling, indefinitely, for
-            // want of a single new interaction anywhere in the catalogue.
+            // Still sweep: empty window means nothing has momentum, and stale rows must go.
             int stale = popularityRepository.deleteComputedBefore(now);
             if (stale > 0) {
                 log.info("Dropped {} stale popularity row(s)", stale);
@@ -75,8 +60,7 @@ public class PopularityService {
                 now)));
 
         popularityRepository.upsertAll(popularities);
-        // Products with no interaction in the window keep no row: their momentum is genuinely zero,
-        // and leaving stale rows behind would let them outrank newly active products.
+        // Products silent in the window keep no row: stale rows would outrank newly active ones.
         int removed = popularityRepository.deleteComputedBefore(now);
         log.info("Refreshed popularity for {} product(s); dropped {} stale row(s)",
                 popularities.size(), removed);

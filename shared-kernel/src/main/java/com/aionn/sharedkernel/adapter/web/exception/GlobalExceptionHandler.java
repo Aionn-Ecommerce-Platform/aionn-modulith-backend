@@ -117,14 +117,8 @@ public class GlobalExceptionHandler {
 	}
 
 	/**
-	 * Native controller-method validation, available since Spring Framework 6.1.
-	 *
-	 * <p>Constraints declared on {@code @RequestParam} and {@code @PathVariable} arguments are enforced by
-	 * {@code HandlerMethodValidator} without needing a class-level {@code @Validated}, and the failure
-	 * arrives as this exception rather than as {@link MethodArgumentNotValidException}, which only covers
-	 * {@code @Valid @RequestBody}. Without an explicit mapping it falls through to
-	 * {@link #handleUnexpected}, so a caller sending {@code ?limit=0} is told the server broke instead of
-	 * that the request was invalid - and the server logs a stack trace at ERROR for ordinary bad input.
+	 * Native controller-method validation (Spring 6.1+): maps constraint failures on
+	 * {@code @RequestParam}/{@code @PathVariable} to 400 instead of the generic 500.
 	 */
 	@ExceptionHandler(HandlerMethodValidationException.class)
 	public ResponseEntity<ApiResponse<Map<String, Object>>> handleHandlerMethodValidation(
@@ -179,13 +173,7 @@ public class GlobalExceptionHandler {
 				"MISSING_PARAMETER", null, null);
 	}
 
-	/**
-	 * A request to the right path with the wrong verb.
-	 *
-	 * <p>Reported as 405 with the verbs the endpoint does accept. Left to {@link #handleUnexpected} it
-	 * becomes a 500, which sends whoever is debugging - a client author or an E2E script - looking for a
-	 * server fault that does not exist, when the only thing wrong is the method on the request line.
-	 */
+	/** Right path, wrong verb: report 405 with the supported methods. */
 	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
 	public ResponseEntity<ApiResponse<Map<String, Object>>> handleMethodNotSupported(
 			HttpRequestMethodNotSupportedException ex) {
@@ -232,13 +220,7 @@ public class GlobalExceptionHandler {
 				null);
 	}
 
-	/**
-	 * Names the offending parameter for the {@code fieldErrors} payload.
-	 *
-	 * <p>{@code getParameterName()} is only populated when a {@code ParameterNameDiscoverer} resolved it,
-	 * which needs {@code -parameters} at compile time. Falling back to the positional index keeps the
-	 * response honest about which argument failed instead of collapsing every violation onto one key.
-	 */
+	/** Falls back to the positional index when parameter names weren't compiled in ({@code -parameters}). */
 	private static String parameterName(ParameterValidationResult result) {
 		MethodParameter parameter = result.getMethodParameter();
 		String name = parameter.getParameterName();

@@ -15,16 +15,8 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
 /**
- * Resolves {@link CurrentMerchantId} parameters from the {@code X-Merchant-Id}
- * request header and verifies that the authenticated user owns the merchant.
- *
- * <p>
- * Mirrors the Catalog/Inventory resolvers. Ordering operations operating on
- * the merchant-side (confirmPreparation, rejectByMerchant, approveReturn,
- * listForMerchant, ...) need the real Merchant aggregate id (ULID), not the
- * user principal name. The frontend (multi-shop selector) sends the chosen
- * merchant via header on every merchant-scoped request.
- * </p>
+ * Resolves {@link CurrentMerchantId} from {@code X-Merchant-Id} and verifies the authenticated user owns
+ * that merchant (the frontend's multi-shop selector sends it on merchant-scoped requests).
  */
 @Component("orderingCurrentMerchantIdArgumentResolver")
 @RequiredArgsConstructor

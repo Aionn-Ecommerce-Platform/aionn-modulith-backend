@@ -20,6 +20,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.aionn.identity.infrastructure.security.web.BearerAuthenticationFilter;
+import com.aionn.ucp.adapter.rest.filter.UcpAgentAuthenticationFilter;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
@@ -30,12 +32,15 @@ public class ApiSecurityConfig {
 
         private final String allowedOrigins;
         private final BearerAuthenticationFilter bearerAuthenticationFilter;
+        private final ObjectProvider<UcpAgentAuthenticationFilter> ucpAgentAuthenticationFilter;
 
         public ApiSecurityConfig(
                         @Value("${SECURITY_CORS_ALLOWED_ORIGINS:}") String allowedOrigins,
-                        BearerAuthenticationFilter bearerAuthenticationFilter) {
+                        BearerAuthenticationFilter bearerAuthenticationFilter,
+                        ObjectProvider<UcpAgentAuthenticationFilter> ucpAgentAuthenticationFilter) {
                 this.allowedOrigins = allowedOrigins;
                 this.bearerAuthenticationFilter = bearerAuthenticationFilter;
+                this.ucpAgentAuthenticationFilter = ucpAgentAuthenticationFilter;
         }
 
         @Bean
@@ -98,6 +103,9 @@ public class ApiSecurityConfig {
                                 .formLogin(AbstractHttpConfigurer::disable)
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+                ucpAgentAuthenticationFilter.ifAvailable(
+                                filter -> http.addFilterAfter(filter, BearerAuthenticationFilter.class));
 
                 return http.build();
         }

@@ -36,9 +36,12 @@ public class PricingQueryAdapter implements PricingQueryPort {
                 }
                 String currency = variant.price() == null ? "VND" : variant.price().currency();
                 BigDecimal price = variant.price() == null ? null : variant.price().amount();
+                ProductVariant.ParcelDimensions pd = variant.parcel();
+                SkuPricing.Parcel parcel = pd == null ? null
+                        : new SkuPricing.Parcel(pd.weightGram(), pd.lengthCm(), pd.widthCm(), pd.heightCm());
                 result.put(variant.skuId(), new SkuPricing(
                         variant.skuId(), product.getMerchantId(), price, currency, active,
-                        product.categoryIds()));
+                        product.categoryIds(), parcel));
             }
         }
         return result;

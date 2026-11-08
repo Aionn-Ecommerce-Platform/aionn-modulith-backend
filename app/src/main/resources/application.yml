@@ -1,6 +1,10 @@
 server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful
+  # TLS terminates at the edge proxy. Honoring X-Forwarded-Proto keeps
+  # request.isSecure() accurate for UCP HTTPS enforcement behind that proxy.
+  # Set to none only when the application is exposed directly.
+  forward-headers-strategy: ${SERVER_FORWARD_HEADERS_STRATEGY:framework}
 
 spring:
   application:

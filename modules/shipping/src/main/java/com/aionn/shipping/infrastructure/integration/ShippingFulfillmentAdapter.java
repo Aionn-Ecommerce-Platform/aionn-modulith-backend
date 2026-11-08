@@ -7,12 +7,12 @@ import com.aionn.shipping.application.dto.shipment.result.ShipmentResult;
 import com.aionn.shipping.application.port.in.shipment.RegisterShipmentInputPort;
 import com.aionn.shipping.application.service.ShipmentService;
 import com.aionn.shipping.domain.valueobject.ShipmentAddress;
-import com.aionn.shipping.domain.valueobject.ShipmentDimensions;
-import com.aionn.shipping.infrastructure.config.ShippingProperties;
 import com.aionn.sharedkernel.integration.port.shipping.ShippingFulfillmentPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Slf4j
 @Component("shippingFulfillmentPortAdapter")
@@ -21,43 +21,55 @@ public class ShippingFulfillmentAdapter implements ShippingFulfillmentPort {
 
     private final ShipmentService shipmentService;
     private final RegisterShipmentInputPort registerShipmentInputPort;
-    private final ShippingProperties properties;
 
     @Override
-    public QuoteResult quote(String orderId, String merchantId, Address address, String currency) {
+    public QuoteResult quote(String orderId, String merchantId, Address address, String currency,
+            List<Parcel> parcels, java.math.BigDecimal goodsSubtotal) {
         ShippingQuoteResult result = shipmentService.quote(new QuoteShippingCommand(
-                orderId, toShipmentAddress(address), defaultDimensions(), currency));
+                orderId, toShipmentAddress(address), toCommandParcels(parcels), goodsSubtotal, currency));
         return new QuoteResult(result.fee(), result.currency());
     }
 
     @Override
-    public RegistrationResult createAndRegister(String orderId, String merchantId, String userId,
-            Address address, java.math.BigDecimal codAmount, java.math.BigDecimal shippingFee, String currency) {
+    public List<RegistrationResult> createAndRegister(String orderId, String merchantId, String userId,
+            Address address, java.math.BigDecimal codAmount, java.math.BigDecimal shippingFee,
+            String currency, List<Parcel> parcels) {
         CreateShipmentCommand command = new CreateShipmentCommand(
-                orderId, merchantId, null, userId, toShipmentAddress(address), defaultDimensions(),
+                orderId, merchantId, null, userId, toShipmentAddress(address),
+                toCommandParcels(parcels),
                 codAmount, shippingFee, currency == null ? "VND" : currency);
 
-        com.aionn.shipping.domain.model.Shipment created = shipmentService.createShipment(command);
-        ShipmentResult shipment;
-        try {
-            shipment = registerShipmentInputPort.execute(created.getShipmentId());
-        } catch (RuntimeException ex) {
+        List<com.aionn.shipping.domain.model.Shipment> created =
+                shipmentService.createShipmentsPerConsignment(command);
+        List<RegistrationResult> results = new java.util.ArrayList<>(created.size());
+        for (com.aionn.shipping.domain.model.Shipment shipment : created) {
             try {
-                shipmentService.applyCancel(created.getShipmentId(), "carrier-registration-failed");
-            } catch (RuntimeException compensateEx) {
-                log.error("Failed to compensate orphan shipment {} after carrier registration failed",
-                        created.getShipmentId(), compensateEx);
+                // Each physical parcel has its own carrier tracking code/label.
+                ShipmentResult registered = registerShipmentInputPort.executeByMerchant(
+                        shipment.getShipmentId(), merchantId);
+                results.add(new RegistrationResult(registered.shipmentId(), registered.trackingCode(),
+                        registered.carrierOrderId(), registered.labelUrl()));
+            } catch (RuntimeException ex) {
+                try {
+                    shipmentService.applyCancel(shipment.getShipmentId(), "carrier-registration-failed");
+                } catch (RuntimeException compensateEx) {
+                    log.error("Failed to compensate orphan shipment {} after carrier registration failed",
+                            shipment.getShipmentId(), compensateEx);
+                }
+                throw ex;
             }
-            throw ex;
         }
-
-        return new RegistrationResult(shipment.shipmentId(), shipment.trackingCode(),
-                shipment.carrierOrderId(), shipment.labelUrl());
+        return List.copyOf(results);
     }
 
-    private ShipmentDimensions defaultDimensions() {
-        ShippingProperties.DefaultDimensions d = properties.defaultDimensions();
-        return new ShipmentDimensions(d.weightGram(), d.lengthCm(), d.widthCm(), d.heightCm());
+    private List<QuoteShippingCommand.Parcel> toCommandParcels(List<Parcel> parcels) {
+        if (parcels == null) {
+            return List.of();
+        }
+        return parcels.stream()
+                .map(p -> new QuoteShippingCommand.Parcel(
+                        p.weightGram(), p.lengthCm(), p.widthCm(), p.heightCm(), p.qty()))
+                .toList();
     }
 
     private ShipmentAddress toShipmentAddress(Address addr) {

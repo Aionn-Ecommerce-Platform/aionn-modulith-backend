@@ -21,7 +21,10 @@ public class PaymentPersistenceAdapter implements PaymentPersistencePort {
     @Override
     public Payment save(Payment payment) {
         PaymentEntity existing = jpa.findById(payment.getPaymentId()).orElse(null);
-        return mapper.toDomain(jpa.save(mapper.toEntity(payment, existing)));
+        // Flush eagerly so unique/locking violations (for example a concurrent
+        // idempotency-key insert) surface at the call site and can be handled
+        // inside the service rather than after the transaction commits.
+        return mapper.toDomain(jpa.saveAndFlush(mapper.toEntity(payment, existing)));
     }
 
     @Override

@@ -17,6 +17,10 @@ import java.util.Set;
 public class NotificationProviderConfigurationValidator implements SmartInitializingSingleton {
 
     private static final Set<String> PRODUCTION_PROFILES = Set.of("prod");
+    // Profiles where a "logging"-only provider is acceptable (local dev/test).
+    // Anything else — staging, preprod, an unset profile — is treated as a real
+    // deployment and must not silently swallow notifications.
+    private static final Set<String> LOCAL_DEV_PROFILES = Set.of("dev", "local", "test", "default");
 
     private final NotificationEmailProperties emailProperties;
     private final NotificationSmsProperties smsProperties;
@@ -78,6 +82,13 @@ public class NotificationProviderConfigurationValidator implements SmartInitiali
         if (isProductionProfile()) {
             throw new IllegalStateException(key + "=" + provider + " is not allowed in production. " + advice);
         }
+        if (hasActiveProfile() && !isLocalDevProfile()) {
+            // Deploying outside local dev with a logging provider means real
+            // notifications silently vanish — fail fast instead of "succeeding"
+            // into a black hole. An unset profile is treated as local dev.
+            throw new IllegalStateException(key + "=" + provider + " is only allowed for local dev profiles "
+                    + LOCAL_DEV_PROFILES + ". " + advice);
+        }
         log.warn("{}={} - notifications will only be logged. {}", key, provider, advice);
     }
 
@@ -88,6 +99,19 @@ public class NotificationProviderConfigurationValidator implements SmartInitiali
     private boolean isProductionProfile() {
         for (String profile : environment.getActiveProfiles()) {
             if (PRODUCTION_PROFILES.contains(profile.toLowerCase())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasActiveProfile() {
+        return environment.getActiveProfiles().length > 0;
+    }
+
+    private boolean isLocalDevProfile() {
+        for (String profile : environment.getActiveProfiles()) {
+            if (LOCAL_DEV_PROFILES.contains(profile.toLowerCase())) {
                 return true;
             }
         }

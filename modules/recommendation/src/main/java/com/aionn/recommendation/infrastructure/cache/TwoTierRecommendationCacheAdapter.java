@@ -13,12 +13,8 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 /**
- * Routes each surface to the cache whose TTL matches the refresh cadence of the data behind it:
- * similarity is rebuilt hourly, popularity and profiles every fifteen minutes.
- *
- * <p>Hit and miss are counted here rather than left to the cache implementation because the useful
- * dimension is the surface, not the cache instance: similar and also-bought share one cache but are
- * separate products with separate hit rates.
+ * Routes each surface to the cache whose TTL matches its data: similarity rebuilds hourly,
+ * popularity and profiles every fifteen minutes. Hits/misses are counted per surface.
  */
 @Component
 public class TwoTierRecommendationCacheAdapter implements RecommendationCachePort {
@@ -54,9 +50,7 @@ public class TwoTierRecommendationCacheAdapter implements RecommendationCachePor
     @Override
     public List<RecommendationItemResult> getOrLoadTrending(
             Supplier<List<RecommendationItemResult>> loader) {
-        // One entry for everyone: the slate has no per-user component. Kept on its own cache rather
-        // than the home feed's because its TTL follows the popularity rebuild, not the per-user feed,
-        // and because a cold-start visitor should not populate a per-user entry.
+        // One shared entry; separate cache because its TTL follows the popularity rebuild.
         return load(trendingCache, RecommendationSurface.HOME, TRENDING_KEY, loader);
     }
 
@@ -65,10 +59,7 @@ public class TwoTierRecommendationCacheAdapter implements RecommendationCachePor
         homeFeedCache.evict(userId);
     }
 
-    /**
-     * Read-through with the hit or miss attributed to the surface being served, which is the dimension
-     * worth graphing: similar and also-bought share one cache instance but are separate products.
-     */
+    /** Read-through with hit/miss attributed to the surface being served. */
     private List<RecommendationItemResult> load(
             TwoTierCache<String, List<RecommendationItemResult>> cache,
             RecommendationSurface surface,
@@ -88,13 +79,8 @@ public class TwoTierRecommendationCacheAdapter implements RecommendationCachePor
     }
 
     /**
-     * Also-bought shares the similar-products cache and its TTL, which is set by the hourly similarity
-     * rebuild that feeds both. The two cannot collide because the caller prefixes also-bought keys.
-     *
-     * <p>Cart lands here too, for want of a better TTL, but the read path never asks for it: cart
-     * suggestions are deliberately uncached, because the basket is the input and a key over a set of SKUs
-     * would almost never repeat between users. Routing it rather than throwing keeps this port usable if
-     * that decision is ever revisited.
+     * Also-bought shares the similar-products cache and TTL. Cart also lands here, but the read path
+     * never asks for it because cart suggestions are deliberately uncached.
      */
     private TwoTierCache<String, List<RecommendationItemResult>> cacheFor(
             RecommendationSurface surface) {

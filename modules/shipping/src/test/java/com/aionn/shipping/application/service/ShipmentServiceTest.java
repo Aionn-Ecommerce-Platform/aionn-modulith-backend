@@ -64,6 +64,9 @@ class ShipmentServiceTest {
                         "John Doe", "0912345678", "123 Main", "00001", "001", "HN", "VN");
         private static final ShipmentDimensions DIMENSIONS = new ShipmentDimensions(
                         500, BigDecimal.valueOf(20), BigDecimal.valueOf(15), BigDecimal.valueOf(10));
+        private static final java.util.List<QuoteShippingCommand.Parcel> PARCELS = java.util.List.of(
+                        new QuoteShippingCommand.Parcel(500, BigDecimal.valueOf(20), BigDecimal.valueOf(15),
+                                        BigDecimal.valueOf(10), 1));
 
         @BeforeEach
         void setUp() {
@@ -82,7 +85,7 @@ class ShipmentServiceTest {
                 when(shipmentRepository.save(any(Shipment.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 service.createShipment(new CreateShipmentCommand("ORDER_1", "M_1", null, "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND"));
+                                ADDRESS, PARCELS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND"));
 
                 verify(shipmentRepository).save(any(Shipment.class));
                 verify(eventPublisher).publish(anyCollection());
@@ -95,12 +98,30 @@ class ShipmentServiceTest {
                 when(rateRepository.findByZoneCode("HN")).thenReturn(Optional.of(rate));
 
                 ShippingQuoteResult result = service.quote(new QuoteShippingCommand(
-                                "ORDER_1", ADDRESS, DIMENSIONS, "VND"));
+                                "ORDER_1", ADDRESS, PARCELS, "VND"));
 
                 assertThat(result.fee()).isEqualByComparingTo(BigDecimal.valueOf(25000));
                 assertThat(result.source()).isEqualTo("configured-rate");
                 assertThat(result.zoneCode()).isEqualTo("HN");
                 verify(transactionTemplate).execute(any());
+        }
+
+        @Test
+        void configuredWeightRateUsesChargeableWeightAndFreeshipThreshold() {
+                ShippingRate rate = ShippingRate.configure("R_1", "HN", BigDecimal.valueOf(30000), "VND", null,
+                                1000, 500, BigDecimal.valueOf(5000), null, BigDecimal.valueOf(500000), FIXED);
+                when(rateRepository.findByZoneCode("HN")).thenReturn(Optional.of(rate));
+                var parcels = List.of(new QuoteShippingCommand.Parcel(
+                                1200, BigDecimal.valueOf(20), BigDecimal.valueOf(15), BigDecimal.valueOf(10), 1));
+
+                ShippingQuoteResult regular = service.quote(new QuoteShippingCommand(
+                                "ORDER_1", ADDRESS, parcels, BigDecimal.valueOf(100000), "VND"));
+                ShippingQuoteResult free = service.quote(new QuoteShippingCommand(
+                                "ORDER_1", ADDRESS, parcels, BigDecimal.valueOf(500000), "VND"));
+
+                assertThat(regular.fee()).isEqualByComparingTo(BigDecimal.valueOf(35000));
+                assertThat(free.fee()).isEqualByComparingTo(BigDecimal.ZERO);
+                verify(carrierClient, org.mockito.Mockito.never()).quote(any(), any(), any());
         }
 
         @Test
@@ -113,7 +134,7 @@ class ShipmentServiceTest {
                                 .thenReturn(carrierQuote);
 
                 ShippingQuoteResult result = service.quote(new QuoteShippingCommand(
-                                "ORDER_1", ADDRESS, DIMENSIONS, "VND"));
+                                "ORDER_1", ADDRESS, PARCELS, "VND"));
 
                 assertThat(result.fee()).isEqualByComparingTo(BigDecimal.valueOf(40000));
                 assertThat(result.source()).isEqualTo("carrier");
@@ -295,7 +316,7 @@ class ShipmentServiceTest {
                 when(shipmentRepository.save(any(Shipment.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 Shipment created = service.createShipment(new CreateShipmentCommand("ORDER_1", " ", "OWNER_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND"));
+                                ADDRESS, PARCELS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND"));
 
                 assertThat(created.getMerchantId()).isEqualTo("M_9");
         }
@@ -305,7 +326,7 @@ class ShipmentServiceTest {
                 when(merchantQueryPort.findMerchantIdByOwnerId("OWNER_X")).thenReturn(Optional.empty());
 
                 assertThatThrownBy(() -> service.createShipment(new CreateShipmentCommand(
-                                "ORDER_1", null, "OWNER_X", "U_1", ADDRESS, DIMENSIONS,
+                                "ORDER_1", null, "OWNER_X", "U_1", ADDRESS, PARCELS,
                                 BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND")))
                                 .isInstanceOf(ShippingException.class)
                                 .extracting("errorCode")
@@ -433,7 +454,7 @@ class ShipmentServiceTest {
                                                 "carrier-detail", null, null));
 
                 ShippingQuoteResult result = service.quote(new QuoteShippingCommand(
-                                "ORDER_1", ADDRESS, DIMENSIONS, null));
+                                "ORDER_1", ADDRESS, PARCELS, null));
 
                 assertThat(result.currency()).isEqualTo("VND");
                 verify(carrierClient).quote(ADDRESS, DIMENSIONS, "VND");

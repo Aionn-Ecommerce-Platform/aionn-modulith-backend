@@ -191,12 +191,15 @@ public class InventoryItemController {
 
     @GetMapping("/{skuId}/{warehouseId}")
     @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Get inventory item")
+    @Operation(summary = "Get inventory item",
+            description = "Returns a single warehouse's stock; only the warehouse owner may read it.")
     public ResponseEntity<ApiResponse<InventoryItemResponse>> get(
+            Authentication authentication,
             @PathVariable String skuId,
             @PathVariable String warehouseId) {
         return ResponseEntity.ok(ApiResponse.success(
-                dtoMapper.toResponse(getInventoryItemInputPort.execute(skuId, warehouseId)),
+                dtoMapper.toResponse(getInventoryItemInputPort.execute(
+                        authentication.getName(), skuId, warehouseId)),
                 "Inventory item fetched"));
     }
 }

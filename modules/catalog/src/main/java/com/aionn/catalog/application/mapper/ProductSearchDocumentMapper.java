@@ -12,30 +12,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * Pure mapper for converting Product domain model to ProductSearchDocument.
- * 
- * <p>
- * This mapper performs only data transformation without any business logic,
- * database queries, or side effects. Rating and sold count data must be
- * provided
- * by the caller.
- * </p>
- */
+/** Pure mapper: no business logic, queries or side effects; rating/soldCount come from the caller. */
 @Component
 public class ProductSearchDocumentMapper {
 
-    /**
-     * Converts a Product domain model to a search document for indexing.
-     * 
-     * @param product              The product domain model
-     * @param filterableAttributes Map of filterable attributes for faceted search
-     * @param rating               The average rating score (must be pre-calculated
-     *                             by caller)
-     * @param soldCount            The total sold count (must be pre-calculated by
-     *                             caller)
-     * @return ProductSearchDocument ready for search indexing
-     */
     public ProductSearchDocument toSearchDocument(
             Product product,
             Map<String, String> filterableAttributes,
@@ -55,6 +35,15 @@ public class ProductSearchDocumentMapper {
                 .map(Money::currency)
                 .findFirst()
                 .orElse(null);
+        // True when a variant's original price exceeds its sell price (standing discount).
+        boolean hasDiscount = product.variants().stream()
+                .anyMatch(v -> {
+                    Money price = v.price();
+                    Money original = v.originalPrice();
+                    return price != null && original != null
+                            && original.amount() != null && price.amount() != null
+                            && original.amount().compareTo(price.amount()) > 0;
+                });
 
         Locale locale = LocaleContextHolder.getLocale();
         String name = product.getName();
@@ -84,6 +73,7 @@ public class ProductSearchDocumentMapper {
                 priceFrom,
                 priceTo,
                 currency,
+                hasDiscount,
                 product.getStatus().name(),
                 product.getUpdatedAt(),
                 rating,

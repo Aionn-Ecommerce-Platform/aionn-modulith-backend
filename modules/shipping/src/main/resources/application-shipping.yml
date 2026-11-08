@@ -23,9 +23,3 @@ shipping:
     delay-ms: ${SHIPPING_AUTO_DELIVERY_DELAY_MS:1200000}
     transit-threshold-seconds: ${SHIPPING_AUTO_DELIVERY_THRESHOLD_SECONDS:1200}
     batch-size: ${SHIPPING_AUTO_DELIVERY_BATCH:50}
-
-  default-dimensions:
-    weight-gram: ${SHIPPING_DEFAULT_DIM_WEIGHT_GRAM:500}
-    length-cm: ${SHIPPING_DEFAULT_DIM_LENGTH_CM:20}
-    width-cm: ${SHIPPING_DEFAULT_DIM_WIDTH_CM:15}
-    height-cm: ${SHIPPING_DEFAULT_DIM_HEIGHT_CM:10}
