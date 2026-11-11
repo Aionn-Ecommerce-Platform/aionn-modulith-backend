@@ -18,7 +18,7 @@ import com.aionn.promotion.application.port.in.campaign.GetCampaignInputPort;
 import com.aionn.promotion.application.port.in.campaign.IssueCampaignVoucherInputPort;
 import com.aionn.promotion.application.port.in.campaign.ListCampaignVouchersInputPort;
 import com.aionn.promotion.application.port.in.campaign.ListCampaignsByStatusInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

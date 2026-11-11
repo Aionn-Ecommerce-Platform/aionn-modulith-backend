@@ -1,13 +1,16 @@
 package com.aionn.catalog.adapter.rest.controller;
 
+import com.aionn.catalog.adapter.rest.mapper.media.CatalogMediaDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.catalog.adapter.rest.exception.CatalogExceptionHandler;
-import com.aionn.catalog.adapter.rest.mapper.media.CatalogMediaDtoMapperImpl;
 import com.aionn.catalog.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.catalog.adapter.rest.support.TestAuth;
 import com.aionn.catalog.adapter.rest.support.session.CurrentOwnerIdArgumentResolver;
 import com.aionn.catalog.application.dto.media.result.UploadSignatureResult;
 import com.aionn.catalog.application.port.in.media.GenerateProductMediaUploadSignatureInputPort;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,7 +40,7 @@ class CatalogMediaControllerWebTest {
     void setUp() {
         CatalogMediaController controller = new CatalogMediaController(
                 generateProductMediaUploadSignatureInputPort,
-                new CatalogMediaDtoMapperImpl());
+                Mappers.getMapper(CatalogMediaDtoMapper.class));
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new CatalogExceptionHandler())
                 .setCustomArgumentResolvers(new CurrentOwnerIdArgumentResolver())

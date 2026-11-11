@@ -1,7 +1,7 @@
 package com.aionn.catalog.infrastructure.persistence.adapter.merchant;
 
 import com.aionn.catalog.application.port.out.merchant.MerchantPersistencePort;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantOwnershipVerifierPort;
+import com.aionn.contracts.port.catalog.MerchantOwnershipVerifierPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

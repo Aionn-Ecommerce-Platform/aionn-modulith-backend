@@ -1,6 +1,8 @@
 package com.aionn.promotion.application.service;
 
 import com.aionn.promotion.application.dto.voucher.command.VoucherCommands;
+import com.aionn.promotion.application.policy.PromotionDefaultsPolicy;
+import com.aionn.promotion.application.policy.PromotionLimitPolicy;
 import com.aionn.promotion.application.port.out.VoucherPersistencePort;
 import com.aionn.promotion.domain.exception.PromotionErrorCode;
 import com.aionn.promotion.domain.exception.PromotionException;
@@ -8,7 +10,7 @@ import com.aionn.promotion.domain.model.Voucher;
 import com.aionn.promotion.domain.valueobject.VoucherScope;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.Money;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -43,9 +45,16 @@ class ShopVoucherServiceTest {
     private MerchantQueryPort merchantQueryPort;
     @Mock
     private EventPublisher eventPublisher;
+    @Mock
+    private PromotionDefaultsPolicy defaultsPolicy;
+    @Mock
+    private PromotionLimitPolicy limitPolicy;
 
     private ShopVoucherService service() {
-        return new ShopVoucherService(voucherRepository, merchantQueryPort, eventPublisher, CLOCK);
+        org.mockito.Mockito.lenient().when(defaultsPolicy.defaultCurrency()).thenReturn("VND");
+        org.mockito.Mockito.lenient().when(limitPolicy.maxListLimit()).thenReturn(100);
+        return new ShopVoucherService(voucherRepository, merchantQueryPort, eventPublisher,
+                defaultsPolicy, limitPolicy, CLOCK);
     }
 
     private static VoucherCommands.IssueShopVoucher issueCommand(String code) {

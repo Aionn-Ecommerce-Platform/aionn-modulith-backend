@@ -1,5 +1,7 @@
 package com.aionn.promotion.infrastructure.persistence.entity;
 
+import jakarta.persistence.Version;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -19,7 +21,10 @@ import java.time.Instant;
 @Entity
 @Table(name = "user_vouchers", indexes = {
         @Index(name = "idx_user_vouchers_user", columnList = "user_id"),
-        @Index(name = "idx_user_vouchers_user_voucher", columnList = "user_id, voucher_code", unique = true),
+        // Uniqueness is enforced in SQL by a functional index on
+        // COALESCE(entitlement_key, '') so a null entitlement still yields one
+        // voucher per user+code while each distinct key mints its own.
+        @Index(name = "idx_user_vouchers_user_voucher", columnList = "user_id, voucher_code", unique = false),
         @Index(name = "idx_user_vouchers_status_expires", columnList = "status, reserved_expires_at"),
         @Index(name = "idx_user_vouchers_order", columnList = "reserved_order_id")
 })
@@ -39,6 +44,9 @@ public class UserVoucherEntity {
 
     @Column(name = "user_id", length = 50, nullable = false)
     private String userId;
+
+    @Column(name = "entitlement_key", length = 100)
+    private String entitlementKey;
 
     @Column(name = "status", length = 20, nullable = false)
     private String status;
@@ -72,7 +80,7 @@ public class UserVoucherEntity {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @jakarta.persistence.Version
+    @Version
     @Column(name = "version", nullable = false)
     private long version;
 }

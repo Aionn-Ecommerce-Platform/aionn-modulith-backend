@@ -1,5 +1,10 @@
 package com.aionn.catalog.infrastructure.persistence.adapter.attribute;
 
+import com.aionn.catalog.domain.exception.CatalogErrorCode;
+import com.aionn.catalog.domain.exception.CatalogException;
+import org.assertj.core.api.Assertions;
+import org.springframework.dao.DataIntegrityViolationException;
+
 import com.aionn.catalog.domain.model.AttributeTemplate;
 import com.aionn.catalog.infrastructure.persistence.entity.AttributeTemplateEntity;
 import com.aionn.catalog.infrastructure.persistence.mapper.AttributeTemplateDomainMapper;
@@ -94,11 +99,11 @@ class AttributeTemplatePersistenceAdapterTest {
         AttributeTemplate domain = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), FIXED);
         AttributeTemplateEntity entity = new AttributeTemplateEntity();
         when(mapper.toEntity(domain)).thenReturn(entity);
-        when(jpa.save(entity)).thenThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate"));
+        when(jpa.save(entity)).thenThrow(new DataIntegrityViolationException("duplicate"));
 
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> adapter.save(domain))
-                .isInstanceOf(com.aionn.catalog.domain.exception.CatalogException.class)
+        Assertions.assertThatThrownBy(() -> adapter.save(domain))
+                .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
-                .isEqualTo(com.aionn.catalog.domain.exception.CatalogErrorCode.INVALID_ARGUMENT.getCode());
+                .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
     }
 }

@@ -3,11 +3,13 @@ package com.aionn.chat.application.service;
 import com.aionn.chat.application.dto.conversation.command.ConversationCommands;
 import com.aionn.chat.application.dto.conversation.result.ConversationResult;
 import com.aionn.chat.application.mapper.ChatResultMapper;
+import com.aionn.chat.application.policy.ChatConversationPolicy;
 import com.aionn.chat.application.port.out.ConversationPersistencePort;
 import com.aionn.chat.application.port.out.MessagePersistencePort;
 import com.aionn.chat.domain.exception.ChatErrorCode;
 import com.aionn.chat.domain.exception.ChatException;
 import com.aionn.chat.domain.model.Conversation;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +28,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -46,15 +49,23 @@ class ConversationServiceTest {
         @Mock
         private MessagePersistencePort messageRepository;
         @Mock
+        private MerchantQueryPort merchantQueryPort;
+        @Mock
         private ChatResultMapper mapper;
         @Mock
         private EventPublisher eventPublisher;
         @Mock
         private ChatParticipantResolver participantResolver;
+        @Mock
+        private ChatConversationPolicy conversationPolicy;
 
         private ConversationService service() {
-                return new ConversationService(conversationRepository, messageRepository, mapper,
-                                eventPublisher, participantResolver, CLOCK);
+                when(conversationPolicy.getUnreadScanLimit()).thenReturn(100);
+                when(merchantQueryPort.findOwnerIdByMerchantId(anyString()))
+                                .thenReturn(Optional.of("owner-1"));
+                return new ConversationService(conversationRepository, messageRepository,
+                                merchantQueryPort, mapper, eventPublisher, participantResolver,
+                                conversationPolicy, CLOCK);
         }
 
         private static Conversation conversation() {
@@ -70,7 +81,7 @@ class ConversationServiceTest {
         }
 
         private void mapperEchoes() {
-                when(mapper.toResult(any(Conversation.class), anyLong()))
+                when(mapper.toResult(any(Conversation.class), anyLong(), anyBoolean()))
                                 .thenAnswer(invocation -> resultFor(
                                                 ((Conversation) invocation.getArgument(0)).getConversationId(),
                                                 invocation.getArgument(1)));
@@ -109,6 +120,21 @@ class ConversationServiceTest {
 
                 verify(conversationRepository).save(any(Conversation.class));
                 verify(eventPublisher).publish(anyCollection());
+        }
+
+        @Test
+        void startOrGetRejectsUnknownMerchant() {
+                mapperEchoes();
+                identityResolver();
+                ConversationService service = service();
+                when(merchantQueryPort.findOwnerIdByMerchantId("mer-1"))
+                                .thenReturn(Optional.empty());
+
+                assertThatThrownBy(() -> service.startOrGet(new ConversationCommands.StartConversation(
+                                "buyer-1", "Buyer", null, "mer-1", "Shop", null, "buyer-1")))
+                                .isInstanceOf(ChatException.class);
+
+                verify(conversationRepository, never()).save(any());
         }
 
         @Test
@@ -221,9 +247,12 @@ class ConversationServiceTest {
                 when(participantResolver.merchantIdOrNull("owner-1")).thenReturn("mer-1");
                 when(conversationRepository.findByParticipant("owner-1", "mer-1", true, 25))
                                 .thenReturn(List.of(conversation()));
+                when(messageRepository.countUnreadForConversations(any()))
+                                .thenReturn(Map.of("conv-1", 0L));
 
                 assertThat(service().listForUser("owner-1", true, 25)).hasSize(1);
                 verify(conversationRepository).findByParticipant("owner-1", "mer-1", true, 25);
+                verify(messageRepository).countUnreadForConversations(any());
         }
 
         @Test
@@ -235,11 +264,12 @@ class ConversationServiceTest {
                 when(participantResolver.merchantIdOrNull("buyer-1")).thenReturn(null);
                 when(conversationRepository.findByParticipant("buyer-1", null, false, 100))
                                 .thenReturn(List.of(first, second));
-                when(messageRepository.countUnread(eq("conv-1"), eq("buyer-1"), any())).thenReturn(3L);
-                when(messageRepository.countUnread(eq("conv-2"), eq("buyer-1"), any())).thenReturn(0L);
+                when(messageRepository.countUnreadForConversations(any()))
+                                .thenReturn(Map.of("conv-1", 3L, "conv-2", 0L));
 
                 Map<String, Long> counts = service().getUnreadCounts("buyer-1");
 
                 assertThat(counts).containsEntry("conv-1", 3L).containsEntry("conv-2", 0L);
+                verify(messageRepository).countUnreadForConversations(any());
         }
 }

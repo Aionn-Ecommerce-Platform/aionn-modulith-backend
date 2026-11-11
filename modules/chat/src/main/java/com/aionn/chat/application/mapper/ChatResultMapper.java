@@ -1,5 +1,7 @@
 package com.aionn.chat.application.mapper;
 
+import java.util.List;
+
 import com.aionn.chat.application.dto.autoreply.result.AutoReplyResult;
 import com.aionn.chat.application.dto.block.result.BlockResult;
 import com.aionn.chat.application.dto.conversation.result.ConversationResult;
@@ -25,9 +27,9 @@ public interface ChatResultMapper {
         @Mapping(target = "metadata", source = "payload.metadata")
         MessageResult toResult(Message m);
 
-        java.util.List<MessageResult> toMessageResults(java.util.List<Message> messages);
+        List<MessageResult> toMessageResults(List<Message> messages);
 
-        java.util.List<BlockResult> toBlockResults(java.util.List<UserBlock> blocks);
+        List<BlockResult> toBlockResults(List<UserBlock> blocks);
 
         @Mapping(target = "unreadCount", source = "unreadCount")
         @Mapping(target = "conversationId", source = "c.conversationId")
@@ -39,10 +41,10 @@ public interface ChatResultMapper {
         @Mapping(target = "lastMessageType", source = "c.lastMessageType")
         @Mapping(target = "lastMessageSenderId", source = "c.lastMessageSenderId")
         @Mapping(target = "lastMessageAt", source = "c.lastMessageAt")
-        @Mapping(target = "archived", source = "c.archived")
+        @Mapping(target = "archived", source = "archived")
         @Mapping(target = "createdAt", source = "c.createdAt")
         @Mapping(target = "updatedAt", source = "c.updatedAt")
-        ConversationResult toResult(Conversation c, long unreadCount);
+        ConversationResult toResult(Conversation c, long unreadCount, boolean archived);
 
         ConversationResult.ParticipantResult toParticipantResult(Participant p);
 

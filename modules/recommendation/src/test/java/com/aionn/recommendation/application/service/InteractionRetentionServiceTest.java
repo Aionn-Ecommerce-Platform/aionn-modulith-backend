@@ -1,6 +1,8 @@
 package com.aionn.recommendation.application.service;
 
 import com.aionn.recommendation.application.port.out.InteractionPersistencePort;
+import com.aionn.recommendation.application.port.out.ItemSimilarityPersistencePort;
+import com.aionn.recommendation.application.port.out.PopularityPersistencePort;
 import com.aionn.recommendation.application.port.out.RecommendationCachePort;
 import com.aionn.recommendation.application.port.out.UserAffinityProfilePersistencePort;
 import org.junit.jupiter.api.Test;
@@ -28,20 +30,25 @@ class InteractionRetentionServiceTest {
 
     @Mock private InteractionPersistencePort interactionRepository;
     @Mock private UserAffinityProfilePersistencePort profileRepository;
+    @Mock private ItemSimilarityPersistencePort similarityRepository;
+    @Mock private PopularityPersistencePort popularityRepository;
     @Mock private RecommendationCachePort cache;
 
     private InteractionRetentionService service() {
         return new InteractionRetentionService(
                 interactionRepository,
                 profileRepository,
+                similarityRepository,
+                popularityRepository,
                 cache,
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
     void pruningIsMeasuredBackwardsFromNowRatherThanAStoredCutoff() {
-        when(interactionRepository.deleteOlderThan(eq(NOW.minus(Duration.ofDays(180))), anyInt()))
-                .thenReturn(7);
+        when(interactionRepository.pruneOlderThan(eq(NOW.minus(Duration.ofDays(180))), anyInt()))
+                .thenReturn(new InteractionPersistencePort.PrunedInteractions(7,
+                        java.util.List.of("user-1"), java.util.List.of("product-1")));
 
         assertThat(service().prune(Duration.ofDays(180), 500)).isEqualTo(7);
     }
@@ -50,9 +57,28 @@ class InteractionRetentionServiceTest {
     void theBatchSizeReachesTheRepositorySoASweepNeverLocksTheWholeTable() {
         // The ingest path writes to the same table; an unbounded delete would block it for the length of
         // the sweep.
+        when(interactionRepository.pruneOlderThan(eq(NOW.minus(Duration.ofDays(180))), anyInt()))
+                .thenReturn(new InteractionPersistencePort.PrunedInteractions(0,
+                        java.util.List.of(), java.util.List.of()));
         service().prune(Duration.ofDays(180), 500);
 
-        verify(interactionRepository).deleteOlderThan(NOW.minus(Duration.ofDays(180)), 500);
+        verify(interactionRepository).pruneOlderThan(NOW.minus(Duration.ofDays(180)), 500);
+    }
+
+    @Test
+    void pruningInvalidatesProfilesSimilarityPopularityAndCachedSlatesImmediately() {
+        when(interactionRepository.pruneOlderThan(eq(NOW.minus(Duration.ofDays(180))), anyInt()))
+                .thenReturn(new InteractionPersistencePort.PrunedInteractions(7,
+                        java.util.List.of("user-1"), java.util.List.of("product-1")));
+
+        service().prune(Duration.ofDays(180), 500);
+
+        verify(profileRepository).deleteByUserIds(java.util.List.of("user-1"));
+        verify(similarityRepository).deleteByProductIds(java.util.List.of("product-1"));
+        verify(popularityRepository).deleteByProductIds(java.util.List.of("product-1"));
+        verify(cache).evictUserFeed("user-1");
+        verify(cache).evictProduct("product-1");
+        verify(cache).evictTrending();
     }
 
     @Test

@@ -2,9 +2,9 @@ package com.aionn.recommendation.infrastructure.config;
 
 import com.aionn.recommendation.application.dto.result.RecommendationItemResult;
 import com.aionn.recommendation.infrastructure.config.properties.RecommendationCacheProperties;
-import com.aionn.sharedkernel.infrastructure.cache.core.TwoTierCache;
-import com.aionn.sharedkernel.infrastructure.cache.core.TwoTierCacheProperties;
-import com.aionn.sharedkernel.infrastructure.cache.factory.TwoTierCacheFactory;
+import com.aionn.platform.infrastructure.cache.core.TwoTierCache;
+import com.aionn.platform.infrastructure.cache.core.TwoTierCacheProperties;
+import com.aionn.platform.infrastructure.cache.factory.TwoTierCacheFactory;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

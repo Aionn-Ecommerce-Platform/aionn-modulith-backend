@@ -1,5 +1,7 @@
 package com.aionn.recommendation.domain.valueobject;
 
+import org.assertj.core.data.Offset;
+
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -26,7 +28,7 @@ class InteractionWeightTest {
 
         BigDecimal decayed = weight.decayedAt(NOW.minus(Duration.ofDays(30)), NOW);
 
-        assertThat(decayed).isCloseTo(BigDecimal.valueOf(2), org.assertj.core.data.Offset.offset(
+        assertThat(decayed).isCloseTo(BigDecimal.valueOf(2), Offset.offset(
                 BigDecimal.valueOf(0.0001)));
     }
 
@@ -36,7 +38,7 @@ class InteractionWeightTest {
 
         BigDecimal decayed = weight.decayedAt(NOW.minus(Duration.ofDays(28)), NOW);
 
-        assertThat(decayed).isCloseTo(BigDecimal.ONE, org.assertj.core.data.Offset.offset(
+        assertThat(decayed).isCloseTo(BigDecimal.ONE, Offset.offset(
                 BigDecimal.valueOf(0.0001)));
     }
 
@@ -74,7 +76,7 @@ class InteractionWeightTest {
         InteractionWeight weight = InteractionWeight.of(BigDecimal.valueOf(2), Duration.ofMillis(500));
         BigDecimal decayed = weight.decayedAt(NOW.minus(Duration.ofMillis(500)), NOW);
 
-        assertThat(decayed).isCloseTo(BigDecimal.ONE, org.assertj.core.data.Offset.offset(
+        assertThat(decayed).isCloseTo(BigDecimal.ONE, Offset.offset(
                 BigDecimal.valueOf(0.0001)));
     }
 
@@ -85,7 +87,7 @@ class InteractionWeightTest {
         InteractionWeight weight = InteractionWeight.of(BigDecimal.valueOf(4), largeDuration);
         BigDecimal decayed = weight.decayedAt(NOW.minus(largeDuration), NOW);
 
-        assertThat(decayed).isCloseTo(BigDecimal.valueOf(2), org.assertj.core.data.Offset.offset(
+        assertThat(decayed).isCloseTo(BigDecimal.valueOf(2), Offset.offset(
                 BigDecimal.valueOf(0.0001)));
     }
 

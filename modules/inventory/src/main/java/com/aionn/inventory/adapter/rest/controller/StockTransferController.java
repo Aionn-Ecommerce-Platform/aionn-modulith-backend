@@ -10,7 +10,7 @@ import com.aionn.inventory.application.port.in.transfer.CancelTransferInputPort;
 import com.aionn.inventory.application.port.in.transfer.CompleteTransferInputPort;
 import com.aionn.inventory.application.port.in.transfer.GetTransferInputPort;
 import com.aionn.inventory.application.port.in.transfer.InitiateTransferInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -71,9 +71,11 @@ public class StockTransferController {
     @GetMapping("/{transferId}")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get transfer details")
-    public ResponseEntity<ApiResponse<StockTransferResponse>> get(@PathVariable String transferId) {
+    public ResponseEntity<ApiResponse<StockTransferResponse>> get(
+            Authentication authentication,
+            @PathVariable String transferId) {
         return ResponseEntity.ok(ApiResponse.success(
-                dtoMapper.toResponse(getTransferInputPort.execute(transferId)),
+                dtoMapper.toResponse(getTransferInputPort.execute(authentication.getName(), transferId)),
                 "Transfer details fetched"));
     }
 }

@@ -1,5 +1,6 @@
 package com.aionn.shipping.infrastructure.carrier;
 
+import com.aionn.shipping.application.policy.ShippingDefaultsPolicy;
 import com.aionn.shipping.application.port.out.CarrierClient;
 import com.aionn.shipping.domain.exception.ShippingErrorCode;
 import com.aionn.shipping.domain.exception.ShippingException;
@@ -20,7 +21,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -41,12 +41,16 @@ class GhnCarrierClientTest {
     @Mock
     private GhnAddressResolver addressResolver;
 
+    @Mock
+    private ShippingDefaultsPolicy defaultsPolicy;
+
     private GhnStubServer stub;
 
     @BeforeEach
     void setUp() {
         stub = GhnStubServer.start();
         when(addressResolver.resolve(any())).thenReturn(new GhnAddressResolver.ResolvedGhn(201, 1454, "21211"));
+        when(defaultsPolicy.defaultCurrency()).thenReturn("VND");
     }
 
     @AfterEach
@@ -60,7 +64,7 @@ class GhnCarrierClientTest {
     }
 
     private GhnCarrierClient client(Integer serviceId) {
-        return new GhnCarrierClient(properties(serviceId), addressResolver, objectMapper);
+        return new GhnCarrierClient(properties(serviceId), addressResolver, objectMapper, defaultsPolicy);
     }
 
     private GhnCarrierClient client() {
@@ -74,48 +78,6 @@ class GhnCarrierClientTest {
 
     private static ShipmentDimensions dimensions() {
         return new ShipmentDimensions(500, new BigDecimal("20"), new BigDecimal("15"), new BigDecimal("10"));
-    }
-
-    // --- init -----------------------------------------------------------------
-
-    @Test
-    void initRejectsMissingToken() {
-        GhnProperties props = new GhnProperties(stub.baseUrl(), " ", "shop-9", 1454, "21211",
-                null, 2, 2, null, null, null);
-        GhnCarrierClient carrier = new GhnCarrierClient(props, addressResolver, objectMapper);
-
-        assertThatThrownBy(carrier::init)
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("GHN_API_TOKEN");
-    }
-
-    @Test
-    void initRejectsMissingShopId() {
-        GhnProperties props = new GhnProperties(stub.baseUrl(), "token", "", 1454, "21211",
-                null, 2, 2, null, null, null);
-        GhnCarrierClient carrier = new GhnCarrierClient(props, addressResolver, objectMapper);
-
-        assertThatThrownBy(carrier::init)
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("GHN_SHOP_ID");
-    }
-
-    @Test
-    void initRejectsMissingSenderAddress() {
-        GhnProperties props = new GhnProperties(stub.baseUrl(), "token", "shop-9", null, null,
-                null, 2, 2, null, null, null);
-        GhnCarrierClient carrier = new GhnCarrierClient(props, addressResolver, objectMapper);
-
-        assertThatThrownBy(carrier::init)
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("GHN_FROM_DISTRICT_ID");
-    }
-
-    @Test
-    void initPassesWhenFullyConfigured() {
-        GhnCarrierClient carrier = client();
-
-        assertThatCode(carrier::init).doesNotThrowAnyException();
     }
 
     // --- quote ----------------------------------------------------------------
@@ -225,7 +187,7 @@ class GhnCarrierClientTest {
         assertThat(registration.carrierOrderId()).isEqualTo("GHN123");
         assertThat(registration.expectedDate()).isEqualTo(Instant.parse("2026-02-01T00:00:00Z"));
         assertThat(stub.bodyReceivedAt(CREATE_PATH))
-                .contains("\"client_order_code\":\"ORD1\"")
+                .contains("\"client_order_code\":\"SHP1\"")
                 .contains("\"note\":\"Shipment SHP1\"")
                 .contains("\"cod_amount\":150000")
                 .contains("\"to_name\":\"Receiver\"")
@@ -369,7 +331,7 @@ class GhnCarrierClientTest {
                 .isInstanceOf(ShippingException.class)
                 .hasMessageContaining("order not found")
                 .extracting("errorCode")
-                .isEqualTo(ShippingErrorCode.SHIPMENT_CARRIER_ERROR.getCode());
+                .isEqualTo(ShippingErrorCode.SHIPMENT_CARRIER_REJECTED.getCode());
     }
 
     @Test
@@ -403,7 +365,7 @@ class GhnCarrierClientTest {
     void transportFailureIsWrappedAsCarrierError() {
         GhnProperties unreachable = new GhnProperties("http://127.0.0.1:1", "token", "shop-9",
                 1454, "21211", null, 2, 2, null, null, null);
-        GhnCarrierClient carrier = new GhnCarrierClient(unreachable, addressResolver, objectMapper);
+        GhnCarrierClient carrier = new GhnCarrierClient(unreachable, addressResolver, objectMapper, defaultsPolicy);
 
         assertThatThrownBy(() -> carrier.fetchLabel("GHN123"))
                 .isInstanceOf(ShippingException.class)

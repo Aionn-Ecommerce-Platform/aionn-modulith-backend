@@ -11,6 +11,7 @@ public enum ShippingErrorCode {
     SHIPMENT_ALREADY_PICKED_UP("SHP_003", "Shipment has already been picked up"),
     SHIPMENT_CARRIER_ERROR("SHP_004", "Carrier returned an error"),
     SHIPMENT_FORBIDDEN("SHP_005", "Shipment is not owned by the caller"),
+    SHIPMENT_CARRIER_REJECTED("SHP_006", "Carrier rejected the shipment request"),
 
     RATE_NOT_FOUND("SHP_101", "Shipping rate not found for the given zone"),
     RATE_DUPLICATE("SHP_102", "Shipping rate already configured for that zone"),

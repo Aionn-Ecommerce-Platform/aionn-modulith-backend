@@ -2,11 +2,11 @@ package com.aionn.inventory.infrastructure.integration.inventory;
 
 import com.aionn.inventory.domain.event.InventoryItemEvents;
 import com.aionn.inventory.domain.event.StockReservationEvents;
-import com.aionn.sharedkernel.integration.event.inventory.SafetyStockBreachedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.inventory.StockCommittedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.inventory.StockReleasedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.inventory.StockReservationFailedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.inventory.StockReservedIntegrationEvent;
+import com.aionn.contracts.event.inventory.SafetyStockBreachedIntegrationEvent;
+import com.aionn.contracts.event.inventory.StockCommittedIntegrationEvent;
+import com.aionn.contracts.event.inventory.StockReleasedIntegrationEvent;
+import com.aionn.contracts.event.inventory.StockReservationFailedIntegrationEvent;
+import com.aionn.contracts.event.inventory.StockReservedIntegrationEvent;
 import com.aionn.sharedkernel.util.IdGenerator;
 import org.springframework.stereotype.Component;
 
@@ -19,7 +19,7 @@ public class InventoryIntegrationEventMapper {
                 domainEvent.reservationId(),
                 domainEvent.skuId(),
                 domainEvent.warehouseId(),
-                null,
+                domainEvent.orderId(),
                 domainEvent.qty(),
                 domainEvent.expiresAt(),
                 domainEvent.occurredAt());
@@ -31,7 +31,7 @@ public class InventoryIntegrationEventMapper {
                 IdGenerator.ulid(),
                 domainEvent.skuId(),
                 domainEvent.warehouseId(),
-                null,
+                domainEvent.orderId(),
                 domainEvent.qty(),
                 domainEvent.reason(),
                 domainEvent.occurredAt());

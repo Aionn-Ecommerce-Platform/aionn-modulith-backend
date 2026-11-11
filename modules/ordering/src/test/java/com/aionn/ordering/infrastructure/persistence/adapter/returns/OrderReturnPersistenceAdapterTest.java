@@ -46,7 +46,7 @@ class OrderReturnPersistenceAdapterTest {
         when(orderReturn.getReturnId()).thenReturn("return-1");
         when(jpa.findById("return-1")).thenReturn(Optional.empty());
         when(mapper.toEntity(orderReturn, null)).thenReturn(entity);
-        when(jpa.save(entity)).thenReturn(savedEntity);
+        when(jpa.saveAndFlush(entity)).thenReturn(savedEntity);
         when(mapper.toDomain(savedEntity)).thenReturn(savedReturn);
 
         OrderReturn result = adapter.save(orderReturn);
@@ -54,7 +54,7 @@ class OrderReturnPersistenceAdapterTest {
         assertThat(result).isEqualTo(savedReturn);
         verify(jpa).findById("return-1");
         verify(mapper).toEntity(orderReturn, null);
-        verify(jpa).save(entity);
+        verify(jpa).saveAndFlush(entity);
     }
 
     @Test
@@ -68,7 +68,7 @@ class OrderReturnPersistenceAdapterTest {
         when(orderReturn.getReturnId()).thenReturn("return-1");
         when(jpa.findById("return-1")).thenReturn(Optional.of(existingEntity));
         when(mapper.toEntity(orderReturn, existingEntity)).thenReturn(entity);
-        when(jpa.save(entity)).thenReturn(savedEntity);
+        when(jpa.saveAndFlush(entity)).thenReturn(savedEntity);
         when(mapper.toDomain(savedEntity)).thenReturn(savedReturn);
 
         OrderReturn result = adapter.save(orderReturn);

@@ -16,18 +16,30 @@ public class JdbcOrderPlacementOperationAdapter implements OrderPlacementOperati
     @Override
     @Transactional
     public Operation start(String userId, String key, String requestHash, String proposedOrderId) {
-        jdbc.update("""
+        int inserted = jdbc.update("""
                 INSERT INTO order_placement_operations
                     (user_id, idempotency_key, request_hash, order_id)
                 VALUES (?, ?, ?, ?)
                 ON CONFLICT (user_id, idempotency_key) DO NOTHING
                 """, userId, key, requestHash, proposedOrderId);
-        List<Operation> operations = jdbc.query("""
+        List<java.util.Map<String, Object>> rows = jdbc.queryForList("""
                 SELECT order_id, request_hash, status FROM order_placement_operations
                  WHERE user_id = ? AND idempotency_key = ?
-                """, (rs, row) -> new Operation(rs.getString("order_id"), rs.getString("request_hash"),
-                        "COMPLETED".equals(rs.getString("status"))), userId, key);
-        Operation operation = operations.getFirst();
+                """, userId, key);
+        var row = rows.getFirst();
+        String status = (String) row.get("status");
+        boolean completed = "COMPLETED".equals(status);
+        boolean claimed = inserted > 0;
+        if (!claimed && !completed) {
+            int takeover = jdbc.update("""
+                    UPDATE order_placement_operations SET updated_at = NOW()
+                     WHERE user_id = ? AND idempotency_key = ? AND status = 'PENDING'
+                       AND updated_at < NOW() - INTERVAL '2 minutes'
+                    """, userId, key);
+            claimed = takeover == 1;
+        }
+        Operation operation = new Operation(
+                (String) row.get("order_id"), (String) row.get("request_hash"), completed, claimed);
         if (!operation.requestHash().equals(requestHash)) {
             throw new IllegalArgumentException("Idempotency key was already used with a different order request");
         }

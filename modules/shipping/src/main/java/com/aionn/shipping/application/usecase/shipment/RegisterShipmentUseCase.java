@@ -1,5 +1,9 @@
 package com.aionn.shipping.application.usecase.shipment;
 
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
+import com.aionn.shipping.domain.exception.ShippingErrorCode;
+import com.aionn.shipping.domain.exception.ShippingException;
+
 import com.aionn.shipping.application.dto.shipment.result.ShipmentResult;
 import com.aionn.shipping.application.mapper.ShipmentResultMapper;
 import com.aionn.shipping.application.port.in.shipment.RegisterShipmentInputPort;
@@ -13,9 +17,21 @@ public class RegisterShipmentUseCase implements RegisterShipmentInputPort {
 
     private final ShipmentCarrierOrchestrator shipmentCarrierOrchestrator;
     private final ShipmentResultMapper shipmentResultMapper;
+    private final MerchantQueryPort merchantQueryPort;
 
     @Override
-    public ShipmentResult execute(String shipmentId) {
-        return shipmentResultMapper.toResult(shipmentCarrierOrchestrator.registerWithCarrier(shipmentId));
+    public ShipmentResult execute(String shipmentId, String ownerId) {
+        // ownerId is the authenticated user id; resolve it to the merchant they
+        // own so the orchestrator can verify shipment ownership. A non-merchant
+        // (or unresolvable) ownerId is forbidden, not silently bypassed.
+        String merchantId = merchantQueryPort.findMerchantIdByOwnerId(ownerId)
+                .orElseThrow(() -> new ShippingException(
+                        ShippingErrorCode.SHIPMENT_FORBIDDEN));
+        return shipmentResultMapper.toResult(shipmentCarrierOrchestrator.registerWithCarrier(shipmentId, merchantId));
+    }
+
+    @Override
+    public ShipmentResult executeByMerchant(String shipmentId, String merchantId) {
+        return shipmentResultMapper.toResult(shipmentCarrierOrchestrator.registerWithCarrier(shipmentId, merchantId));
     }
 }

@@ -2,6 +2,7 @@ package com.aionn.ucp.adapter.rest.filter;
 
 import com.aionn.ucp.adapter.rest.dto.UcpErrorResponse;
 import com.aionn.ucp.adapter.rest.dto.UcpMessage;
+import com.aionn.ucp.application.UcpProtocolConstants;
 import com.aionn.ucp.application.port.out.UcpMetricsPort;
 import com.aionn.ucp.infrastructure.config.UcpProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -152,7 +153,7 @@ public class UcpHeaderFilter extends OncePerRequestFilter {
 
     private void writeErrorResponse(HttpServletResponse response, HttpStatus status, String code, String message)
             throws IOException {
-        String version = properties != null ? properties.version() : "2026-08-25";
+        String version = properties != null ? properties.version() : UcpProtocolConstants.VERSION;
         UcpErrorResponse errorResponse = UcpErrorResponse.of(version, code, message, UcpMessage.SEVERITY_UNRECOVERABLE);
 
         response.setStatus(status.value());

@@ -1,6 +1,7 @@
 package com.aionn.recommendation.application.service;
 
 import com.aionn.recommendation.application.policy.RankingWeightPolicy;
+import com.aionn.recommendation.application.policy.RecommendationServingPolicy;
 import com.aionn.recommendation.application.port.out.InteractionPersistencePort;
 import com.aionn.recommendation.application.port.out.ItemSimilarityPersistencePort;
 import com.aionn.recommendation.application.port.out.PopularityPersistencePort;
@@ -22,15 +23,9 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
-/**
- * Builds the three raw signal maps that hybrid ranking consumes.
- *
- * <p>
- * Split out from {@link RecommendationService} so the orchestrator can stay
- * non-transactional while
- * every database read here runs in its own short read-only transaction.
- */
+/** Builds the raw signal maps consumed by hybrid ranking, each read in its own short read-only transaction. */
 @Service
 @RequiredArgsConstructor
 public class CandidateGenerationService {
@@ -40,11 +35,9 @@ public class CandidateGenerationService {
     private final PopularityPersistencePort popularityRepository;
     private final ProductAttributeQueryPort productAttributeQuery;
     private final RankingWeightPolicy weights;
+    private final RecommendationServingPolicy servingPolicy;
     private final Clock clock;
 
-    /**
-     * Products the user recently engaged with; these seed the collaborative lookup.
-     */
     @Transactional(readOnly = true)
     public List<String> recentSeedProductIds(String userId, Duration lookback, int limit) {
         return interactionRepository.findByUser(userId, clock.instant().minus(lookback), limit)
@@ -54,19 +47,11 @@ public class CandidateGenerationService {
                 .toList();
     }
 
-    /**
-     * Already-purchased products, excluded from slates so the feed does not re-sell
-     * what they own.
-     */
     @Transactional(readOnly = true)
     public List<String> purchasedProductIds(String userId) {
         return interactionRepository.findPurchasedProductIds(userId);
     }
 
-    /**
-     * Maps cart SKUs to their owning products, preserving order and dropping
-     * unresolvable ones.
-     */
     @Transactional(readOnly = true)
     public List<String> resolveProductIds(Collection<String> skuIds) {
         if (skuIds == null || skuIds.isEmpty()) {
@@ -77,13 +62,7 @@ public class CandidateGenerationService {
                 .toList();
     }
 
-    /**
-     * Collaborative candidates: neighbours of products the user already engaged
-     * with, scored by
-     * similarity. When one product is a neighbour of several seeds, the scores add
-     * - agreement across
-     * seeds is a stronger signal than a single strong link.
-     */
+    /** Similarity scores accumulate across seeds: agreement is a stronger signal than one link. */
     @Transactional(readOnly = true)
     public Map<String, BigDecimal> collaborativeScores(Collection<String> seedProductIds, int limit) {
         if (seedProductIds == null || seedProductIds.isEmpty()) {
@@ -118,11 +97,6 @@ public class CandidateGenerationService {
         return scores;
     }
 
-    /**
-     * Content candidates: products sharing the user's preferred categories or
-     * brands, scored on
-     * category affinity, brand affinity and price-band fit.
-     */
     @Transactional(readOnly = true)
     public Map<String, BigDecimal> contentScores(UserAffinityProfile profile, int limit) {
         if (profile == null || profile.hasNoSignal()) {
@@ -155,12 +129,38 @@ public class CandidateGenerationService {
     public Map<String, BigDecimal> newArrivalScores(int limit) {
         List<ProductAttributeQueryPort.ProductAttributes> recent = productAttributeQuery.findRecentlyPublished(limit);
         Map<String, BigDecimal> scores = LinkedHashMap.newLinkedHashMap(recent.size());
-        // Rank by recency: the port returns newest first, so a descending positional
-        // score preserves
-        // that order once the map is normalised.
+        // Port returns newest first, so a descending positional score preserves recency.
         int rank = recent.size();
         for (ProductAttributeQueryPort.ProductAttributes product : recent) {
             scores.put(product.productId(), BigDecimal.valueOf(rank--));
+        }
+        return scores;
+    }
+
+    /** Fallback pool for product surfaces with no behavioural co-occurrence. */
+    @Transactional(readOnly = true)
+    public Map<String, BigDecimal> categoryCandidates(String productId, int limit) {
+        Optional<ProductAttributeQueryPort.ProductAttributes> targetOpt = productAttributeQuery.findByProductId(productId);
+        if (targetOpt.isEmpty()) {
+            return Map.of();
+        }
+        ProductAttributeQueryPort.ProductAttributes target = targetOpt.get();
+        List<String> categories = target.categoryIds();
+        if (categories == null || categories.isEmpty()) {
+            return Map.of();
+        }
+
+        // Match any category: catalog does not guarantee ordering, so don't infer specificity.
+        List<ProductAttributeQueryPort.ProductAttributes> candidates = productAttributeQuery
+                .findCandidatesByCategoriesOrBrands(categories, List.of(),
+                        limit + servingPolicy.categoryCandidateOvershoot());
+
+        Map<String, BigDecimal> scores = new LinkedHashMap<>();
+        int rank = candidates.size();
+        for (ProductAttributeQueryPort.ProductAttributes candidate : candidates) {
+            if (!candidate.productId().equals(productId)) {
+                scores.put(candidate.productId(), BigDecimal.valueOf(rank--));
+            }
         }
         return scores;
     }

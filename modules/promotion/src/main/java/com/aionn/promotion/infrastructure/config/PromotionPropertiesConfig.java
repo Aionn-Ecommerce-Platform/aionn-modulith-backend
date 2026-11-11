@@ -2,6 +2,7 @@ package com.aionn.promotion.infrastructure.config;
 
 import com.aionn.promotion.infrastructure.config.properties.PromotionDefaultsProperties;
 import com.aionn.promotion.infrastructure.config.properties.PromotionFlashSaleProperties;
+import com.aionn.promotion.infrastructure.config.properties.PromotionLimitProperties;
 import com.aionn.promotion.infrastructure.config.properties.PromotionSchedulerProperties;
 import com.aionn.promotion.infrastructure.config.properties.PromotionVoucherProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -12,7 +13,8 @@ import org.springframework.context.annotation.Configuration;
         PromotionDefaultsProperties.class,
         PromotionFlashSaleProperties.class,
         PromotionVoucherProperties.class,
-        PromotionSchedulerProperties.class
+        PromotionSchedulerProperties.class,
+        PromotionLimitProperties.class
 })
 public class PromotionPropertiesConfig {
 }

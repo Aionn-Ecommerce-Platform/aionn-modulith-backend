@@ -34,11 +34,6 @@ public class AddressPersistenceAdapter implements AddressPersistencePort {
     }
 
     @Override
-    public long countByUserId(String userId) {
-        return addressRepository.countByUser_UserId(userId);
-    }
-
-    @Override
     @Transactional(propagation = Propagation.REQUIRED)
     public Address createAtomically(Address address, long maxAddressNumbers, boolean makeDefaultWhenFirst) {
         UserEntity userEntity = userRepository.findByIdForUpdate(address.userId())
@@ -88,14 +83,19 @@ public class AddressPersistenceAdapter implements AddressPersistencePort {
     }
 
     @Override
-    public Optional<Address> findByAddressIdAndUserId(String addressId, String userId) {
-        return addressRepository.findByAddressIdAndUser_UserId(addressId, userId)
-                .map(addressDomainMapper::toDomain);
+    @Transactional(propagation = Propagation.REQUIRED)
+    public Address setDefault(Address address) {
+        UserEntity userEntity = userRepository.findByIdForUpdate(address.userId())
+                .orElseThrow(() -> new IdentityException(IdentityErrorCode.USER_NOT_FOUND));
+        addressRepository.clearDefaultAddressByUserId(address.userId());
+        var entity = addressDomainMapper.toEntity(address, userEntity);
+        return addressDomainMapper.toDomain(addressRepository.save(entity));
     }
 
     @Override
-    public void clearDefaultByUserId(String userId) {
-        addressRepository.clearDefaultAddressByUserId(userId);
+    public Optional<Address> findByAddressIdAndUserId(String addressId, String userId) {
+        return addressRepository.findByAddressIdAndUser_UserId(addressId, userId)
+                .map(addressDomainMapper::toDomain);
     }
 
     @Override

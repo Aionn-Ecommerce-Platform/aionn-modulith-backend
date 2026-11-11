@@ -7,5 +7,16 @@ import java.math.BigDecimal;
 public record UpdateRateCommand(
         String rateId,
         BigDecimal baseFee,
-        String condition) implements Command {
+        String condition,
+        Integer baseWeightGram,
+        Integer stepWeightGram,
+        BigDecimal stepFee,
+        BigDecimal maxFee,
+        BigDecimal freeShippingThreshold,
+        BigDecimal expressExtraFee,
+        Integer expressEtaDays) implements Command {
+
+    public UpdateRateCommand(String rateId, BigDecimal baseFee, String condition) {
+        this(rateId, baseFee, condition, null, null, null, null, null, null, null);
+    }
 }

@@ -1,5 +1,7 @@
 package com.aionn.promotion.application.dto.campaign.command;
 
+import com.aionn.promotion.domain.valueobject.VoucherType;
+
 import com.aionn.promotion.domain.valueobject.CampaignType;
 import com.aionn.sharedkernel.application.command.Command;
 
@@ -46,6 +48,12 @@ public final class CampaignCommands {
                         String currency,
                         int usageLimit,
                         Instant validFrom,
-                        Instant validUntil) implements Command {
+                        Instant validUntil,
+                        VoucherType type) implements Command {
+                public IssueVoucher(String campaignId, String voucherCode, BigDecimal discountAmount,
+                        String currency, int usageLimit, Instant validFrom, Instant validUntil) {
+                    this(campaignId, voucherCode, discountAmount, currency, usageLimit, validFrom, validUntil,
+                            VoucherType.ORDER_DISCOUNT);
+                }
         }
 }

@@ -1,5 +1,7 @@
 package com.aionn.identity.application.service;
 
+import java.util.stream.Collectors;
+
 import com.aionn.identity.application.dto.user.command.UpdateAvatarCommand;
 import com.aionn.identity.application.dto.user.command.UpdateDisplayNameCommand;
 import com.aionn.identity.application.dto.user.query.GetMyProfileQuery;
@@ -153,7 +155,7 @@ class ProfileServiceTest {
         return new UserProfileView(
                 user.getUserId(), user.getEmail(), user.getPhone(), user.getUsername(),
                 user.getDisplayName(), user.getAvatarUrl(),
-                user.getRoles().stream().map(Enum::name).collect(java.util.stream.Collectors.toSet()),
+                user.getRoles().stream().map(Enum::name).collect(Collectors.toSet()),
                 user.getStatus().name(),
                 user.getEmailVerifiedAt(), user.getPhoneVerifiedAt(), user.getCreatedAt());
     }

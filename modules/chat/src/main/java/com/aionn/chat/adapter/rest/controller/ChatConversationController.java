@@ -12,7 +12,7 @@ import com.aionn.chat.application.port.in.conversation.ListMyConversationsQueryP
 import com.aionn.chat.application.port.in.conversation.MarkConversationReadInputPort;
 import com.aionn.chat.application.port.in.conversation.StartConversationInputPort;
 import com.aionn.chat.application.port.in.conversation.UnarchiveConversationInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

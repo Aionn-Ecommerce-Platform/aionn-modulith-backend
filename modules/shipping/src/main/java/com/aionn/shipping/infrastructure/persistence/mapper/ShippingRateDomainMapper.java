@@ -10,6 +10,8 @@ public class ShippingRateDomainMapper {
     public ShippingRate toDomain(ShippingRateEntity e) {
         return new ShippingRate(
                 e.getRateId(), e.getZoneCode(), e.getBaseFee(), e.getCurrency(), e.getCondition(),
+                e.getBaseWeightGram(), e.getStepWeightGram(), e.getStepFee(), e.getMaxFee(),
+                e.getFreeShippingThreshold(), e.getExpressExtraFee(), e.getExpressEtaDays(),
                 e.getCreatedAt(), e.getUpdatedAt());
     }
 
@@ -22,6 +24,13 @@ public class ShippingRateDomainMapper {
                         .build();
         entity.setBaseFee(r.getBaseFee());
         entity.setCondition(r.getCondition());
+        entity.setBaseWeightGram(r.getBaseWeightGram());
+        entity.setStepWeightGram(r.getStepWeightGram());
+        entity.setStepFee(r.getStepFee());
+        entity.setMaxFee(r.getMaxFee());
+        entity.setFreeShippingThreshold(r.getFreeShippingThreshold());
+        entity.setExpressExtraFee(r.getExpressExtraFee());
+        entity.setExpressEtaDays(r.getExpressEtaDays());
         return entity;
     }
 }

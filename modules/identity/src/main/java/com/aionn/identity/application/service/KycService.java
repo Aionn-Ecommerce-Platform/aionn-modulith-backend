@@ -4,6 +4,8 @@ import com.aionn.identity.application.dto.kyc.command.SumsubWebhookCommand;
 import com.aionn.identity.application.dto.kyc.result.KycVerificationSessionResult;
 import com.aionn.identity.application.policy.KycPolicy;
 import com.aionn.identity.application.port.out.kyc.ExternalKycVerificationPort;
+import com.aionn.identity.application.port.out.kyc.KycDocumentStoragePort;
+import com.aionn.identity.application.port.out.kyc.KycDocumentUrlProviderPort;
 import com.aionn.identity.application.port.out.kyc.KycPersistencePort;
 import com.aionn.identity.application.port.out.user.UserPersistencePort;
 import com.aionn.identity.domain.exception.IdentityErrorCode;
@@ -40,6 +42,8 @@ public class KycService {
     private final UserPersistencePort userPersistencePort;
     private final KycPolicy kycPolicy;
     private final ExternalKycVerificationPort externalKycVerificationPort;
+    private final KycDocumentUrlProviderPort kycDocumentUrlProvider;
+    private final KycDocumentStoragePort kycDocumentStoragePort;
 
     private final Clock clock;
     @Transactional(readOnly = true)
@@ -121,6 +125,7 @@ public class KycService {
     public KycProfile adminApprove(String kycId, String adminId, String note) {
         KycProfile kyc = kycPersistencePort.findById(kycId)
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.KYC_NOT_FOUND));
+        rejectManualDecisionForManagedProfile(kyc);
         try {
             kyc.adminApprove(adminId, note, clock);
         } catch (IllegalStateException ex) {
@@ -132,12 +137,25 @@ public class KycService {
     public KycProfile adminReject(String kycId, String adminId, String reason) {
         KycProfile kyc = kycPersistencePort.findById(kycId)
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.KYC_NOT_FOUND));
+        rejectManualDecisionForManagedProfile(kyc);
         try {
             kyc.adminReject(adminId, reason);
         } catch (IllegalStateException ex) {
             throw new IdentityException(IdentityErrorCode.KYC_INVALID_STATUS_TRANSITION, ex.getMessage());
         }
         return kycPersistencePort.save(kyc);
+    }
+
+    /**
+     * Final decisions for provider-managed profiles belong to the provider webhook. Allowing an
+     * admin to approve/reject them would let an operator override a decision the provider is
+     * still responsible for, so those requests are refused.
+     */
+    private void rejectManualDecisionForManagedProfile(KycProfile kyc) {
+        if (kyc.isManagedExternally()) {
+            throw new IdentityException(IdentityErrorCode.KYC_MANAGED_EXTERNALLY,
+                    "Final decisions for provider-managed KYC profiles are set by the provider");
+        }
     }
 
     public KycProfile adminMarkInReview(String kycId, String adminId, String note) {
@@ -169,6 +187,12 @@ public class KycService {
         if (url == null || url.isBlank()) {
             throw new IdentityException(IdentityErrorCode.KYC_DOCUMENT_REQUIRED, "KYC document URL is required");
         }
+        validateDocumentUrl(url);
+        if (publicId != null && !publicId.isBlank()
+                && !kycDocumentStoragePort.isOwnedBy(publicId, userId)) {
+            throw new IdentityException(IdentityErrorCode.KYC_DOCUMENT_OWNERSHIP_INVALID,
+                    "KYC document does not belong to this user");
+        }
 
         KycDocument document = new KycDocument(
                 IdGenerator.ulid(),
@@ -181,13 +205,35 @@ public class KycService {
         KycDocument saved = kycPersistencePort.saveDocument(document);
         kyc.attachBlobUrlIfEmpty(url);
         kycPersistencePort.save(kyc);
-        return saved;
+        return withSignedUrl(saved);
     }
 
     @Transactional(readOnly = true)
     public List<KycDocument> listDocuments(String userId, String kycId) {
         getKycByUser(kycId, userId);
-        return kycPersistencePort.findDocumentsByKycId(kycId);
+        return kycPersistencePort.findDocumentsByKycId(kycId).stream()
+                .map(this::withSignedUrl)
+                .toList();
+    }
+
+    /**
+     * KYC documents are private assets. The API exposes a short-lived signed URL instead of
+     * the raw storage URL/public id so neither can be reused to enumerate or fetch documents.
+     */
+    private KycDocument withSignedUrl(KycDocument document) {
+        String signedUrl = kycDocumentUrlProvider.signedDownloadUrl(
+                document.getPublicId(), document.getUrl());
+        if (signedUrl == null || signedUrl.isBlank()) {
+            return document;
+        }
+        return new KycDocument(
+                document.getDocumentId(),
+                document.getKycId(),
+                document.getType(),
+                signedUrl,
+                document.getPublicId(),
+                document.getStatus(),
+                document.getUploadedAt());
     }
 
     public KycProfile submit(String userId, String kycId) {
@@ -297,8 +343,23 @@ public class KycService {
         return true;
     }
 
-    private static String normalizeProfileDocumentType(String docType) {
-        if (docType == null || docType.isBlank()) {
+    private static void validateDocumentUrl(String url) {
+        try {
+            java.net.URI uri = java.net.URI.create(url.trim());
+            String scheme = uri.getScheme();
+            if (scheme == null
+                    || !("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme))
+                    || uri.getHost() == null) {
+                throw new IdentityException(IdentityErrorCode.KYC_DOCUMENT_URL_INVALID,
+                        "KYC document URL must be an absolute HTTP(S) URL");
+            }
+        } catch (IllegalArgumentException ex) {
+            throw new IdentityException(IdentityErrorCode.KYC_DOCUMENT_URL_INVALID,
+                    "KYC document URL must be an absolute HTTP(S) URL");
+        }
+    }
+
+    private static String normalizeProfileDocumentType(String docType) {        if (docType == null || docType.isBlank()) {
             throw new IdentityException(IdentityErrorCode.KYC_DOCUMENT_TYPE_INVALID);
         }
         String normalized = docType.trim().toUpperCase();

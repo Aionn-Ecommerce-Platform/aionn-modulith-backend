@@ -1,5 +1,7 @@
 package com.aionn.identity.infrastructure.auth.social.google;
 
+import java.time.Clock;
+
 import com.aionn.identity.application.port.out.social.SocialUserProfile;
 import com.aionn.identity.domain.exception.IdentityException;
 import com.aionn.identity.infrastructure.config.properties.SocialAuthProperties;
@@ -28,7 +30,7 @@ class RemoteGoogleSocialTokenVerifierTest {
     private RemoteGoogleSocialTokenVerifier newVerifier(String clientId) {
         SocialAuthProperties props = new SocialAuthProperties(
                 new SocialAuthProperties.Google("remote", clientId, TOKEN_INFO_URL));
-        return new RemoteGoogleSocialTokenVerifier(props, java.time.Clock.systemUTC());
+        return new RemoteGoogleSocialTokenVerifier(props, Clock.systemUTC());
     }
 
     private MockRestServiceServer bindMockServer(RemoteGoogleSocialTokenVerifier verifier) {

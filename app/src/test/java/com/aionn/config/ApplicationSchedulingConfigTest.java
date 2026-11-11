@@ -1,9 +1,15 @@
 package com.aionn.config;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.MapPropertySource;
+import org.springframework.core.env.PropertySource;
+import org.springframework.core.env.StandardEnvironment;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.type.MethodMetadata;
@@ -15,6 +21,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -28,13 +35,18 @@ import static org.assertj.core.api.Assertions.assertThat;
  * If that bean is absent or single-threaded, all background work in the application serialises onto one
  * thread and a slow job stalls the outbox dispatcher, which stops integration-event delivery entirely -
  * including order, payment and shipping events that have nothing to do with the job that blocked them.
+ *
+ * <p>The assertions read the shipped configuration rather than a constant, so the number tested is the
+ * number production runs. A YAML edit that shrinks the pool below the job count fails here.
  */
 class ApplicationSchedulingConfigTest {
+
+    private static final String POOL_SIZE_PROPERTY = "spring.task.scheduling.pool.size";
 
     private final ApplicationSchedulingConfig config = new ApplicationSchedulingConfig();
 
     @Test
-    void thePoolHasAThreadForEveryJobThatWouldOtherwiseShareOne() throws IOException {
+    void theConfiguredPoolHasAThreadForEveryJobThatWouldOtherwiseShareOne() throws IOException {
         // This is the invariant that makes the topology safe, and it is the one that silently rots: adding
         // a seventeenth job to a sixteen-thread pool does not fail anything at build time, it just means
         // two jobs can now queue behind each other.
@@ -43,8 +55,8 @@ class ApplicationSchedulingConfigTest {
         assertThat(jobs)
                 .as("scheduled jobs resolving to the default scheduler")
                 .isNotEmpty();
-        assertThat(ApplicationSchedulingConfig.DEFAULT_POOL_SIZE)
-                .as("pool size must cover every job found: %s", jobs)
+        assertThat(configuredPoolSize())
+                .as("spring.task.scheduling.pool.size must cover every job found: %s", jobs)
                 .isGreaterThanOrEqualTo(jobs.size());
     }
 
@@ -64,6 +76,8 @@ class ApplicationSchedulingConfigTest {
         // also present that lookup is ambiguous, and it then falls back to exactly this bean name. The
         // registration below is that fallback path, exercised rather than asserted from reflection.
         try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
+            context.getEnvironment().getPropertySources()
+                    .addFirst(new MapPropertySource("scheduling-test", Map.of(POOL_SIZE_PROPERTY, "24")));
             context.register(OutboxSchedulerStub.class, ApplicationSchedulingConfig.class);
             context.refresh();
 
@@ -84,9 +98,9 @@ class ApplicationSchedulingConfigTest {
 
     @Test
     void businessJobsActuallyRunConcurrently() throws Exception {
-        // Uses the production default rather than a small stand-in, so this is the configured pool being
-        // shown to deliver the concurrency the topology depends on.
-        int poolSize = ApplicationSchedulingConfig.DEFAULT_POOL_SIZE;
+        // Uses the shipped configuration rather than a small stand-in, so this is the pool production
+        // gets being shown to deliver the concurrency the topology depends on.
+        int poolSize = configuredPoolSize();
         ThreadPoolTaskScheduler scheduler = config.taskScheduler(poolSize);
         try {
             scheduler.initialize();
@@ -132,6 +146,22 @@ class ApplicationSchedulingConfigTest {
             zero.shutdown();
             configured.shutdown();
         }
+    }
+
+    /**
+     * Reads the value the application actually starts with: the YAML entry, with its
+     * {@code ${SCHEDULER_POOL_SIZE:...}} placeholder resolved the same way Spring resolves it.
+     */
+    private static int configuredPoolSize() throws IOException {
+        List<PropertySource<?>> sources = new YamlPropertySourceLoader()
+                .load("application", new ClassPathResource("application.yml"));
+        ConfigurableEnvironment environment = new StandardEnvironment();
+        sources.forEach(source -> environment.getPropertySources().addLast(source));
+        String raw = environment.getProperty(POOL_SIZE_PROPERTY);
+        if (raw == null) {
+            throw new AssertionError(POOL_SIZE_PROPERTY + " is not configured in application.yml");
+        }
+        return Integer.parseInt(environment.resolvePlaceholders(raw).trim());
     }
 
     /**

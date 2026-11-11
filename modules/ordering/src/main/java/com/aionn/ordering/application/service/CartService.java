@@ -1,5 +1,7 @@
 package com.aionn.ordering.application.service;
 
+import java.time.Clock;
+
 import com.aionn.ordering.application.dto.cart.command.AddItemCommand;
 import com.aionn.ordering.application.dto.cart.command.ApplyVoucherCommand;
 import com.aionn.ordering.application.dto.cart.command.ClearCartCommand;
@@ -27,7 +29,7 @@ public class CartService {
     private final CartPersistencePort cartRepository;
     private final EventPublisher eventPublisher;
     private final CartIntegrationEventPublisherPort integrationEventPublisher;
-    private final java.time.Clock clock;
+    private final Clock clock;
 
     public Cart addItem(AddItemCommand command) {
         Cart cart = loadOrCreate(command.userId());

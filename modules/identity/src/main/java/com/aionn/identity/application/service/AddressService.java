@@ -134,7 +134,6 @@ public class AddressService {
 		if (address.isDefault()) {
 			return address;
 		}
-		addressPersistencePort.clearDefaultByUserId(userId);
 
 		Address updatedAddress = new Address(
 				address.addressId(),
@@ -154,7 +153,7 @@ public class AddressService {
 				address.createdAt(),
 				nowUtc());
 
-		return addressPersistencePort.save(updatedAddress);
+		return addressPersistencePort.setDefault(updatedAddress);
 	}
 
 	private static void validatePhone(String phone) {

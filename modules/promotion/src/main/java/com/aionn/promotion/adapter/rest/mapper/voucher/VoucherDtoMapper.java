@@ -1,6 +1,7 @@
 package com.aionn.promotion.adapter.rest.mapper.voucher;
 
 import com.aionn.promotion.adapter.rest.dto.voucher.ApplyVoucherRequest;
+import com.aionn.promotion.adapter.rest.dto.voucher.GrantVoucherRequest;
 import com.aionn.promotion.adapter.rest.dto.voucher.IssueVoucherRequest;
 import com.aionn.promotion.adapter.rest.dto.voucher.ReleaseVoucherRequest;
 import com.aionn.promotion.adapter.rest.dto.voucher.ReserveVoucherRequest;
@@ -20,6 +21,7 @@ import java.util.List;
 public interface VoucherDtoMapper {
 
     @Mapping(target = "scope", expression = "java(result.scope() == null ? null : result.scope().name())")
+    @Mapping(target = "type", expression = "java(result.type() == null ? null : result.type().name())")
     VoucherResponse toResponse(VoucherResult result);
 
     List<VoucherResponse> toResponses(List<VoucherResult> results);
@@ -34,7 +36,7 @@ public interface VoucherDtoMapper {
             IssueVoucherRequest request) {
         return new VoucherCommands.IssueShopVoucher(ownerId, request.voucherCode(),
                 request.discountAmount(), request.currency(), request.usageLimit(),
-                request.validFrom(), request.validUntil());
+                request.validFrom(), request.validUntil(), request.type());
     }
 
     default VoucherCommands.ClaimVoucher toClaimCommand(String userId, String voucherCode) {
@@ -58,5 +60,10 @@ public interface VoucherDtoMapper {
             ReleaseVoucherRequest request) {
         return new VoucherCommands.ReleaseVoucher(userId, voucherCode, request.orderId(),
                 request.reason());
+    }
+
+    default VoucherCommands.GrantVoucher toGrantCommand(GrantVoucherRequest request) {
+        return new VoucherCommands.GrantVoucher(
+                request.userId(), request.voucherCode(), request.reason(), request.entitlementKey());
     }
 }

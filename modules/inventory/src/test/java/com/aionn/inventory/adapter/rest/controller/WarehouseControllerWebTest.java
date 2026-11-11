@@ -1,11 +1,19 @@
 package com.aionn.inventory.adapter.rest.controller;
 
+import com.aionn.inventory.adapter.rest.support.session.CurrentMerchantIdArgumentResolver;
+import com.aionn.inventory.application.dto.warehouse.query.ListWarehousesByOwnerQuery;
+import com.aionn.contracts.port.catalog.MerchantOwnershipVerifierPort;
+import org.mockito.Mockito;
+
+import com.aionn.inventory.adapter.rest.mapper.warehouse.WarehouseDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.inventory.adapter.rest.dto.warehouse.request.AdjustPriorityRequest;
 import com.aionn.inventory.adapter.rest.dto.warehouse.request.AdminReasonRequest;
 import com.aionn.inventory.adapter.rest.dto.warehouse.request.ChangeWarehouseStatusRequest;
 import com.aionn.inventory.adapter.rest.dto.warehouse.request.CreateWarehouseRequest;
 import com.aionn.inventory.adapter.rest.exception.InventoryExceptionHandler;
-import com.aionn.inventory.adapter.rest.mapper.warehouse.WarehouseDtoMapperImpl;
 import com.aionn.inventory.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.inventory.adapter.rest.support.TestAuth;
 import com.aionn.inventory.adapter.rest.support.session.CurrentAdminIdArgumentResolver;
@@ -17,7 +25,7 @@ import com.aionn.inventory.application.dto.warehouse.result.WarehouseResult;
 import com.aionn.inventory.application.port.in.warehouse.*;
 import com.aionn.inventory.domain.exception.InventoryErrorCode;
 import com.aionn.inventory.domain.exception.InventoryException;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,7 +60,7 @@ class WarehouseControllerWebTest {
     @Mock private LiftWarehouseSuspensionInputPort liftWarehouseSuspensionInputPort;
     @Mock private GetWarehouseInputPort getWarehouseInputPort;
     @Mock private ListWarehousesByOwnerInputPort listWarehousesByOwnerInputPort;
-    @Mock private com.aionn.sharedkernel.integration.port.catalog.MerchantOwnershipVerifierPort merchantOwnershipVerifierPort;
+    @Mock private MerchantOwnershipVerifierPort merchantOwnershipVerifierPort;
 
     private MockMvc mockMvc;
     private final JsonMapper objectMapper = JacksonMapperFactory.create();
@@ -67,16 +75,16 @@ class WarehouseControllerWebTest {
                 liftWarehouseSuspensionInputPort,
                 getWarehouseInputPort,
                 listWarehousesByOwnerInputPort,
-                new WarehouseDtoMapperImpl()
+                Mappers.getMapper(WarehouseDtoMapper.class)
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new InventoryExceptionHandler())
                 .setMessageConverters(new JacksonJsonHttpMessageConverter(objectMapper))
                 .setCustomArgumentResolvers(new CurrentAdminIdArgumentResolver(),
-                        new com.aionn.inventory.adapter.rest.support.session.CurrentMerchantIdArgumentResolver(merchantOwnershipVerifierPort))
+                        new CurrentMerchantIdArgumentResolver(merchantOwnershipVerifierPort))
                 .addInterceptors(new MockSecurityInterceptor())
                 .build();
-        org.mockito.Mockito.lenient().when(merchantOwnershipVerifierPort.isOwnedBy(any(), any())).thenReturn(true);
+        Mockito.lenient().when(merchantOwnershipVerifierPort.isOwnedBy(any(), any())).thenReturn(true);
     }
 
     @Test
@@ -157,7 +165,7 @@ class WarehouseControllerWebTest {
     @Test
     void listMineReturnsCallerOwnedWarehouses() throws Exception {
         when(listWarehousesByOwnerInputPort.execute(
-                new com.aionn.inventory.application.dto.warehouse.query.ListWarehousesByOwnerQuery("M_1")))
+                new ListWarehousesByOwnerQuery("M_1")))
                 .thenReturn(List.of(sample("WH_1", "ACTIVE", 1), sample("WH_2", "ACTIVE", 2)));
 
         mockMvc.perform(get("/api/v1/inventory/warehouses")

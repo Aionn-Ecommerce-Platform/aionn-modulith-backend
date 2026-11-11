@@ -1,8 +1,8 @@
 package com.aionn.inventory.adapter.rest.exception;
 
 import com.aionn.inventory.domain.exception.InventoryException;
-import com.aionn.sharedkernel.adapter.web.exception.AbstractModuleExceptionHandler;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.exception.AbstractModuleExceptionHandler;
+import com.aionn.platform.web.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -26,7 +26,7 @@ public class InventoryExceptionHandler extends AbstractModuleExceptionHandler {
         registerErrors(HttpStatus.FORBIDDEN,
                 "INV_002", "INV_204");
         registerErrors(HttpStatus.BAD_REQUEST,
-                "INV_003", "INV_103", "INV_104", "INV_106", "INV_107",
+                "INV_003", "INV_103", "INV_104", "INV_106", "INV_107", "INV_108",
                 "INV_202", "INV_203", "INV_302", "INV_401", "INV_900");
         setDefaultStatus(HttpStatus.UNPROCESSABLE_CONTENT);
     }

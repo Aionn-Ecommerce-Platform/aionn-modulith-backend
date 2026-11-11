@@ -9,11 +9,23 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SpringShippingDefaultsPolicy implements ShippingDefaultsPolicy {
 
+    private static final String FALLBACK_CURRENCY = "VND";
+
     private final ShippingDefaultsProperties properties;
 
     @Override
     public String defaultCurrency() {
         String currency = properties.currency();
-        return (currency == null || currency.isBlank()) ? "VND" : currency.trim().toUpperCase();
+        return (currency == null || currency.isBlank()) ? FALLBACK_CURRENCY : currency.trim().toUpperCase();
+    }
+
+    @Override
+    public int defaultBaseWeightGram() {
+        return properties.baseWeightGram();
+    }
+
+    @Override
+    public int defaultStepWeightGram() {
+        return properties.stepWeightGram();
     }
 }

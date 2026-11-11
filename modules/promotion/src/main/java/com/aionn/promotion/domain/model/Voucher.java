@@ -7,6 +7,7 @@ import com.aionn.promotion.domain.exception.PromotionErrorCode;
 import com.aionn.promotion.domain.exception.PromotionException;
 import com.aionn.sharedkernel.domain.vo.Money;
 import com.aionn.promotion.domain.valueobject.VoucherScope;
+import com.aionn.promotion.domain.valueobject.VoucherType;
 import lombok.Getter;
 
 import java.time.Clock;
@@ -19,6 +20,7 @@ public class Voucher extends AggregateRoot {
     private final String campaignId;
     private final VoucherScope scope;
     private final String merchantId;
+    private final VoucherType type;
     private final Money discountAmount;
     private final int usageLimit;
     private int usedCount;
@@ -31,6 +33,14 @@ public class Voucher extends AggregateRoot {
     public Voucher(String voucherCode, String campaignId, VoucherScope scope, String merchantId, Money discountAmount,
             int usageLimit, int usedCount, int reservedCount,
             Instant validFrom, Instant validUntil, Instant createdAt, Instant updatedAt) {
+        this(voucherCode, campaignId, scope, merchantId, VoucherType.ORDER_DISCOUNT, discountAmount, usageLimit,
+                usedCount, reservedCount, validFrom, validUntil, createdAt, updatedAt);
+    }
+
+    public Voucher(String voucherCode, String campaignId, VoucherScope scope, String merchantId, VoucherType type,
+            Money discountAmount, int usageLimit, int usedCount, int reservedCount,
+            Instant validFrom, Instant validUntil, Instant createdAt, Instant updatedAt) {
+        this.type = type == null ? VoucherType.ORDER_DISCOUNT : type;
         this.voucherCode = voucherCode;
         this.campaignId = campaignId;
         this.scope = scope;
@@ -47,15 +57,27 @@ public class Voucher extends AggregateRoot {
 
     public static Voucher issue(String voucherCode, String campaignId, Money discountAmount,
             int usageLimit, Instant validFrom, Instant validUntil, Clock clock) {
+        return issue(voucherCode, campaignId, VoucherType.ORDER_DISCOUNT, discountAmount, usageLimit,
+                validFrom, validUntil, clock);
+    }
+
+    public static Voucher issue(String voucherCode, String campaignId, VoucherType type, Money discountAmount,
+            int usageLimit, Instant validFrom, Instant validUntil, Clock clock) {
+        Guard.notBlank(voucherCode, () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
+                "voucherCode must not be blank"));
+        Guard.require(discountAmount != null && discountAmount.isPositive(),
+                () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
+                        "discountAmount must be positive"));
         Guard.require(usageLimit > 0,
                 () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT, "usageLimit must be > 0"));
         Guard.require(validUntil == null || validFrom == null || validFrom.isBefore(validUntil),
                 () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
                         "validFrom must be before validUntil"));
         Instant now = clock.instant();
-        Voucher v = new Voucher(voucherCode, campaignId, VoucherScope.PLATFORM, null, discountAmount, usageLimit, 0, 0,
+        Voucher v = new Voucher(voucherCode, campaignId, VoucherScope.PLATFORM, null,
+                type == null ? VoucherType.ORDER_DISCOUNT : type, discountAmount, usageLimit, 0, 0,
                 validFrom, validUntil, now, now);
-        v.registerEvent(new PromotionEvents.VoucherIssued(voucherCode, campaignId,
+        v.registerEvent(new PromotionEvents.VoucherIssued(voucherCode, campaignId, null,
                 discountAmount.amount(), discountAmount.currency(),
                 usageLimit, validUntil, now));
         return v;
@@ -63,18 +85,36 @@ public class Voucher extends AggregateRoot {
 
     public static Voucher issueForShop(String voucherCode, String merchantId, Money discountAmount,
             int usageLimit, Instant validFrom, Instant validUntil, Clock clock) {
-        Guard.notBlank(merchantId, "merchantId");
+        return issueForShop(voucherCode, merchantId, VoucherType.ORDER_DISCOUNT, discountAmount, usageLimit,
+                validFrom, validUntil, clock);
+    }
+
+    public static Voucher issueForShop(String voucherCode, String merchantId, VoucherType type, Money discountAmount,
+            int usageLimit, Instant validFrom, Instant validUntil, Clock clock) {
+        Guard.notBlank(voucherCode, () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
+                "voucherCode must not be blank"));
+        Guard.notBlank(merchantId, () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
+                "merchantId must not be blank"));
+        Guard.require(discountAmount != null && discountAmount.isPositive(),
+                () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
+                        "discountAmount must be positive"));
         Guard.require(usageLimit > 0,
                 () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT, "usageLimit must be > 0"));
         Guard.require(validUntil == null || validFrom == null || validFrom.isBefore(validUntil),
                 () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
                         "validFrom must be before validUntil"));
         Instant now = clock.instant();
-        Voucher voucher = new Voucher(voucherCode, null, VoucherScope.SHOP, merchantId, discountAmount,
+        Voucher voucher = new Voucher(voucherCode, null, VoucherScope.SHOP, merchantId,
+                type == null ? VoucherType.ORDER_DISCOUNT : type, discountAmount,
                 usageLimit, 0, 0, validFrom, validUntil, now, now);
-        voucher.registerEvent(new PromotionEvents.VoucherIssued(voucherCode, null,
+        voucher.registerEvent(new PromotionEvents.VoucherIssued(voucherCode, null, merchantId,
                 discountAmount.amount(), discountAmount.currency(), usageLimit, validUntil, now));
         return voucher;
+    }
+
+    /** True when this voucher reduces the shipping fee rather than the goods. */
+    public boolean isFreeShipping() {
+        return type == VoucherType.FREE_SHIPPING;
     }
 
     public boolean appliesToMerchant(String targetMerchantId) {

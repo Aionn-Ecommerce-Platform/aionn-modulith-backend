@@ -1,7 +1,10 @@
 package com.aionn.promotion.adapter.rest.controller;
 
+import com.aionn.promotion.adapter.rest.mapper.flashsale.FlashSaleDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.promotion.adapter.rest.exception.PromotionExceptionHandler;
-import com.aionn.promotion.adapter.rest.mapper.flashsale.FlashSaleDtoMapperImpl;
 import com.aionn.promotion.adapter.rest.support.session.CurrentAdminIdArgumentResolver;
 import com.aionn.promotion.adapter.rest.support.session.CurrentUserIdArgumentResolver;
 import com.aionn.promotion.application.dto.flashsale.command.FlashSaleCommands;
@@ -22,7 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -74,7 +77,7 @@ class FlashSaleControllerWebTest {
                 registerFlashSaleInputPort, approveFlashSaleInputPort, rejectFlashSaleInputPort,
                 cancelFlashSaleInputPort, listMyFlashSaleRegistrationsInputPort,
                 listFlashSaleRegistrationsByStatusInputPort, getFlashSaleRegistrationInputPort,
-                listActiveFlashSalesInputPort, new FlashSaleDtoMapperImpl());
+                listActiveFlashSalesInputPort, Mappers.getMapper(FlashSaleDtoMapper.class));
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new PromotionExceptionHandler())

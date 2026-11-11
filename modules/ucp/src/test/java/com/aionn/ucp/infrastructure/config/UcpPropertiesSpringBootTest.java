@@ -23,6 +23,12 @@ class UcpPropertiesSpringBootTest {
     void springBootBindsUcpPropertiesWithoutErrors() {
         assertThat(properties).isNotNull();
         assertThat(properties.capabilities()).isNotNull();
-        assertThat(properties.capabilities().identityLinking()).isFalse();
+        // Production controllers back every advertised capability, so they are on
+        // by default; deployments disable individual ones via UCP_CAPABILITY_*.
+        assertThat(properties.capabilities().identityLinking()).isTrue();
+        assertThat(properties.capabilities().cart()).isTrue();
+        assertThat(properties.capabilities().checkout()).isTrue();
+        assertThat(properties.capabilities().catalog()).isTrue();
+        assertThat(properties.capabilities().order()).isTrue();
     }
 }

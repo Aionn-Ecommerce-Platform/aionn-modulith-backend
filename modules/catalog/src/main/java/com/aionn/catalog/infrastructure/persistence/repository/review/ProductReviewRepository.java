@@ -1,5 +1,7 @@
 package com.aionn.catalog.infrastructure.persistence.repository.review;
 
+import org.springframework.data.repository.query.Param;
+
 import com.aionn.catalog.infrastructure.persistence.entity.ProductReviewEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -51,4 +53,15 @@ public interface ProductReviewRepository extends JpaRepository<ProductReviewEnti
 
     @Query("SELECT r.rating, COUNT(r) FROM ProductReviewEntity r WHERE r.productId = :productId AND r.status = 'VISIBLE' GROUP BY r.rating")
     List<Object[]> countRatingsGroupByRating(String productId);
+
+    @Query("SELECT r.productId, COALESCE(AVG(r.rating), 0.0), COUNT(r) FROM ProductReviewEntity r WHERE r.productId IN :productIds AND r.status = 'VISIBLE' GROUP BY r.productId")
+    List<Object[]> getRatingStatsByProductIds(@Param("productIds") List<String> productIds);
+
+    @Query("""
+            SELECT COALESCE(AVG(r.rating), 0.0), COUNT(r)
+              FROM ProductReviewEntity r
+             WHERE r.status = 'VISIBLE'
+               AND r.productId IN (SELECT p.productId FROM ProductEntity p WHERE p.merchantId = :merchantId)
+            """)
+    Object[] getMerchantRatingStats(@Param("merchantId") String merchantId);
 }

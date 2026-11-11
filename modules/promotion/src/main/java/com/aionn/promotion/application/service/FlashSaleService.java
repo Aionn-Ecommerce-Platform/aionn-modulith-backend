@@ -2,9 +2,10 @@ package com.aionn.promotion.application.service;
 
 import com.aionn.promotion.application.dto.flashsale.command.FlashSaleCommands;
 import com.aionn.promotion.application.dto.flashsale.result.ActiveFlashSaleResult;
+import com.aionn.promotion.application.policy.PromotionDefaultsPolicy;
+import com.aionn.promotion.application.policy.PromotionLimitPolicy;
 import com.aionn.promotion.application.port.out.FlashSaleRegistrationPersistencePort;
 import com.aionn.promotion.application.port.out.PromotionCampaignPersistencePort;
-import com.aionn.promotion.domain.valueobject.CampaignStatus;
 import com.aionn.promotion.domain.exception.PromotionErrorCode;
 import com.aionn.promotion.domain.exception.PromotionException;
 import com.aionn.promotion.domain.model.FlashSaleRegistration;
@@ -13,10 +14,11 @@ import com.aionn.promotion.domain.valueobject.CampaignType;
 import com.aionn.promotion.domain.valueobject.FlashSaleRegistrationStatus;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.Money;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
-import com.aionn.sharedkernel.integration.port.catalog.PricingQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.PricingQueryPort;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +40,8 @@ public class FlashSaleService {
         private final PricingQueryPort pricingQueryPort;
         private final Clock clock;
         private final EventPublisher eventPublisher;
+        private final PromotionDefaultsPolicy defaultsPolicy;
+        private final PromotionLimitPolicy limitPolicy;
 
         public FlashSaleRegistration register(FlashSaleCommands.RegisterFlashSale command) {
                 String merchantId = merchantQueryPort.findMerchantIdByOwnerId(command.ownerId())
@@ -49,6 +53,10 @@ public class FlashSaleService {
                 if (campaign.getType() != CampaignType.FLASH_SALE) {
                         throw new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
                                         "Campaign is not a flash-sale");
+                }
+                if (campaign.getEndDate().isBefore(clock.instant())) {
+                        throw new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
+                                        "Flash-sale campaign has already ended");
                 }
 
                 registrationRepository.findActiveBySkuAndCampaign(command.campaignId(), command.skuId())
@@ -74,7 +82,12 @@ public class FlashSaleService {
                                 command.skuId(),
                                 salePrice,
                                 command.saleStock(), clock);
-                FlashSaleRegistration saved = registrationRepository.save(reg);
+                FlashSaleRegistration saved;
+                try {
+                        saved = registrationRepository.save(reg);
+                } catch (DataIntegrityViolationException ex) {
+                        throw new PromotionException(PromotionErrorCode.FLASH_SALE_DUPLICATE);
+                }
                 eventPublisher.publish(reg.pullEvents());
                 return saved;
         }
@@ -118,13 +131,13 @@ public class FlashSaleService {
                 String merchantId = merchantQueryPort.findMerchantIdByOwnerId(ownerId)
                                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
                                                 "No merchant registered for the authenticated user"));
-                int safeLimit = Math.min(Math.max(limit, 1), 200);
+                int safeLimit = Math.min(Math.max(limit, 1), limitPolicy.maxRegistrationLimit());
                 return registrationRepository.findByMerchant(merchantId, status, safeLimit);
         }
 
         @Transactional(readOnly = true)
         public List<FlashSaleRegistration> listByStatus(FlashSaleRegistrationStatus status, int limit) {
-                int safeLimit = Math.min(Math.max(limit, 1), 200);
+                int safeLimit = Math.min(Math.max(limit, 1), limitPolicy.maxRegistrationLimit());
                 return registrationRepository.findByStatus(status, safeLimit);
         }
 
@@ -146,37 +159,41 @@ public class FlashSaleService {
 
         @Transactional(readOnly = true)
         public List<ActiveFlashSaleResult> listActive(int limit) {
-                int safeLimit = Math.min(Math.max(limit, 1), 50);
-                List<FlashSaleRegistration> approved = registrationRepository.findAllApprovedRunning(safeLimit * 50);
-                if (approved.isEmpty()) {
+                int safeLimit = Math.min(Math.max(limit, 1), limitPolicy.maxActiveFlashSaleLimit());
+                // Limit RUNNING campaigns in the database first; then load their
+                // approved items in one query. Filtering registrations before the
+                // limit returned fewer (or zero) campaigns and triggered an N+1
+                // campaign lookup per group.
+                List<PromotionCampaign> campaigns = campaignRepository.findRunning(clock.instant(), safeLimit);
+                if (campaigns.isEmpty()) {
                         return List.of();
                 }
+                List<String> campaignIds = campaigns.stream()
+                                .map(PromotionCampaign::getCampaignId)
+                                .toList();
                 Map<String, List<FlashSaleRegistration>> byCampaign = new LinkedHashMap<>();
-                for (FlashSaleRegistration reg : approved) {
+                for (FlashSaleRegistration reg : registrationRepository.findApprovedByCampaignIds(campaignIds)) {
                         byCampaign.computeIfAbsent(reg.getCampaignId(), k -> new ArrayList<>()).add(reg);
                 }
                 List<ActiveFlashSaleResult> out = new ArrayList<>();
-                for (var entry : byCampaign.entrySet()) {
-                        PromotionCampaign campaign = campaignRepository.findById(entry.getKey()).orElse(null);
-                        if (campaign == null || campaign.getStatus() != CampaignStatus.RUNNING) {
+                for (PromotionCampaign campaign : campaigns) {
+                        List<FlashSaleRegistration> registrations = byCampaign.get(campaign.getCampaignId());
+                        if (registrations == null || registrations.isEmpty()) {
                                 continue;
                         }
-                        List<ActiveFlashSaleResult.Item> items = entry.getValue().stream()
+                        List<ActiveFlashSaleResult.Item> items = registrations.stream()
                                         .map(reg -> new ActiveFlashSaleResult.Item(
                                                         reg.getRegistrationId(), reg.getProductId(), reg.getSkuId(),
                                                         reg.getMerchantId(),
                                                         reg.getSalePrice() == null ? BigDecimal.ZERO
                                                                         : reg.getSalePrice().amount(),
-                                                        reg.getSalePrice() == null ? "VND"
+                                                        reg.getSalePrice() == null ? defaultsPolicy.defaultCurrency()
                                                                         : reg.getSalePrice().currency(),
                                                         reg.getSaleStock(), reg.getSoldCount()))
                                         .toList();
                         out.add(new ActiveFlashSaleResult(
                                         campaign.getCampaignId(), campaign.getName(),
                                         campaign.getStartDate(), campaign.getEndDate(), items));
-                        if (out.size() >= safeLimit) {
-                                break;
-                        }
                 }
                 return out;
         }

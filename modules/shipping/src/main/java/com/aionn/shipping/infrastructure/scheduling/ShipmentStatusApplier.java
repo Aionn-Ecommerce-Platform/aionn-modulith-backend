@@ -55,8 +55,19 @@ public class ShipmentStatusApplier {
         switch (after) {
             case PICKED_UP -> integrationEventPublisher.publishDispatched(
                     saved.getShipmentId(), saved.getOrderId(), saved.getTrackingCode());
-            case DELIVERED -> integrationEventPublisher.publishDelivered(
-                    saved.getShipmentId(), saved.getOrderId(), detail.signatureUrl(), saved.getDeliveredAt());
+            case DELIVERED -> {
+                boolean late = saved.getExpectedDeliveryDate() != null
+                        && saved.getDeliveredAt() != null
+                        && saved.getDeliveredAt().isAfter(saved.getExpectedDeliveryDate());
+                integrationEventPublisher.publishDelivered(
+                        saved.getShipmentId(),
+                        saved.getOrderId(),
+                        saved.getUserId(),
+                        detail.signatureUrl(),
+                        saved.getDeliveredAt(),
+                        saved.getExpectedDeliveryDate(),
+                        late);
+            }
             case DELIVERY_FAILED -> integrationEventPublisher.publishDeliveryFailed(
                     saved.getShipmentId(), saved.getOrderId(), detail.reason(), saved.getAttemptCount());
             default -> {

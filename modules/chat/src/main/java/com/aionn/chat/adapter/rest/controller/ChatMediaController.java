@@ -4,7 +4,7 @@ import com.aionn.chat.adapter.rest.dto.media.response.UploadSignatureResponse;
 import com.aionn.chat.adapter.rest.mapper.media.ChatMediaDtoMapper;
 import com.aionn.chat.adapter.rest.support.session.CurrentUserId;
 import com.aionn.chat.application.port.in.media.GenerateChatMediaUploadSignatureInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

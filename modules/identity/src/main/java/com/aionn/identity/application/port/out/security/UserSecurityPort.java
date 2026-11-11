@@ -11,7 +11,7 @@ public interface UserSecurityPort {
 
     Optional<UserSecurityData> findByIdentity(String identity);
 
-    void recordFailedLoginAttempt(String userId, int failedAttempts, Instant lockedUntil);
+    void recordFailedLoginAttempt(String userId, int maxAttempts, Instant lockedUntil);
 
     void resetFailedLoginAttempts(String userId);
 

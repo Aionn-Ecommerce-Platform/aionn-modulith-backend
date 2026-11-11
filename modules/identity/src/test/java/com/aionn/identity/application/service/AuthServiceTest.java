@@ -1,5 +1,8 @@
 package com.aionn.identity.application.service;
 
+import com.aionn.sharedkernel.testing.fixture.TestClocks;
+import java.time.ZoneOffset;
+
 import com.aionn.identity.application.dto.auth.command.LinkSocialCommand;
 import com.aionn.identity.application.dto.auth.command.LoginCommand;
 import com.aionn.identity.application.dto.auth.command.LogoutAllCommand;
@@ -14,6 +17,7 @@ import com.aionn.identity.application.dto.auth.result.RefreshAccessTokenResult;
 import com.aionn.identity.application.dto.auth.result.SocialLoginResult;
 import com.aionn.identity.application.mapper.AuthResultMapper;
 import com.aionn.identity.application.policy.AuthPolicy;
+import com.aionn.identity.application.policy.MfaCodeFormatPolicy;
 import com.aionn.identity.application.port.out.auth.AccessTokenIssuerPort;
 import com.aionn.identity.application.port.out.auth.AuthSessionPersistencePort;
 import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
@@ -23,6 +27,7 @@ import com.aionn.identity.application.port.out.security.MfaPersistencePort;
 import com.aionn.identity.application.port.out.security.AbuseRateLimiterPort;
 import com.aionn.identity.application.port.out.security.PasswordHasherPort;
 import com.aionn.identity.application.port.out.security.TotpManagerPort;
+import com.aionn.identity.application.port.out.security.TotpReplayGuardPort;
 import com.aionn.identity.application.port.out.security.UserSecurityPort;
 import com.aionn.identity.application.port.out.social.SocialLinkPersistencePort;
 import com.aionn.identity.application.port.out.social.SocialTokenVerifierPort;
@@ -48,6 +53,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anySet;
@@ -66,7 +72,7 @@ class AuthServiceTest {
     private static final String USER_ID = "user-1";
     private static final String SESSION_ID = "session-1";
     private static final Clock TEST_CLOCK = Clock.fixed(
-            Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
+            Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
 
     @Mock
     private UserPersistencePort userPersistencePort;
@@ -83,11 +89,15 @@ class AuthServiceTest {
     @Mock
     private TotpManagerPort totpManager;
     @Mock
+    private TotpReplayGuardPort totpReplayGuard;
+    @Mock
     private AccessTokenIssuerPort accessTokenIssuer;
     @Mock
     private SocialTokenVerifierPort socialTokenVerifier;
     @Mock
     private AuthPolicy authPolicy;
+    @Mock
+    private MfaCodeFormatPolicy mfaCodeFormatPolicy;
     @Mock
     private RefreshTokenStorePort refreshTokenStore;
     @Mock
@@ -105,10 +115,14 @@ class AuthServiceTest {
     void setUp() {
         lenient().when(abuseRateLimiter.check(anyString(), anyString(), any(Integer.class), any(Integer.class)))
                 .thenReturn(true);
+        lenient().when(mfaCodeFormatPolicy.totpCodeLength()).thenReturn(6);
+        lenient().when(mfaCodeFormatPolicy.backupCodeLength()).thenReturn(8);
+        lenient().when(totpReplayGuard.claim(anyString(), anyString())).thenReturn(true);
         authService = new AuthService(
                 userPersistencePort, userSecurityPort, authSessionPersistencePort,
                 socialLinkPersistencePort, mfaPersistencePort, passwordHasher,
-                totpManager, accessTokenIssuer, socialTokenVerifier, authPolicy,
+                totpManager, totpReplayGuard, accessTokenIssuer, socialTokenVerifier, authPolicy,
+                mfaCodeFormatPolicy,
                 refreshTokenStore, authResultMapper, tokenBlacklist, identityMetrics, abuseRateLimiter,
                 TEST_CLOCK);
     }
@@ -141,6 +155,35 @@ class AuthServiceTest {
 
         assertThrows(IdentityException.class,
                 () -> authService.logoutAll(new LogoutAllCommand(USER_ID)));
+    }
+
+    @Test
+    void socialSignupTranslatesAUniquenessRace() {
+        when(socialTokenVerifier.verifyAndExtract(AuthProvider.GOOGLE, "token"))
+                .thenReturn(new SocialUserProfile("puid", "new@example.com", "New User"));
+        when(socialLinkPersistencePort.findByProviderAndProviderUserId(AuthProvider.GOOGLE, "puid"))
+                .thenReturn(Optional.empty());
+        when(userPersistencePort.findByIdentity("new@example.com")).thenReturn(Optional.empty());
+        when(userPersistencePort.save(any(IdentityUser.class)))
+                .thenThrow(new org.springframework.dao.DataIntegrityViolationException("dup"));
+
+        assertErrorCode(IdentityErrorCode.ACCOUNT_ALREADY_EXISTS,
+                () -> authService.socialLogin(new SocialLoginCommand("google", "token", "ip", "ua")));
+    }
+
+    @Test
+    void logoutAllSkipsSessionsThatAreAlreadyRevoked() {
+        AuthSession revoked = AuthSession.createNew("s3", USER_ID, "ip", "ua",
+                Instant.now(TEST_CLOCK).plus(Duration.ofDays(7)), TEST_CLOCK);
+        revoked.revoke();
+        when(userPersistencePort.existsById(USER_ID)).thenReturn(true);
+        when(authSessionPersistencePort.findByUserId(USER_ID)).thenReturn(List.of(revoked));
+        when(authResultMapper.toLogoutAllResult(0)).thenReturn(new LogoutAllResult(0));
+
+        LogoutAllResult result = authService.logoutAll(new LogoutAllCommand(USER_ID));
+
+        assertThat(result.revokedSessions()).isZero();
+        verify(refreshTokenStore, never()).revokeBySessionId("s3");
     }
 
     @Test
@@ -188,7 +231,7 @@ class AuthServiceTest {
     }
 
     private static IdentityUser activeUser() {
-        return IdentityUser.createNew(USER_ID, "u@example.com", null, "user", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED);
+        return IdentityUser.createNew(USER_ID, "u@example.com", null, "user", TestClocks.FIXED);
     }
 
     private static UserSecurityPort.UserSecurityData security(boolean mfaEnabled, String mfaSecret) {
@@ -283,7 +326,8 @@ class AuthServiceTest {
         assertErrorCode(IdentityErrorCode.INVALID_CREDENTIALS,
                 () -> authService.login(new LoginCommand("u@example.com", "bad", null, "ip", "ua")));
 
-        verify(userSecurityPort).recordFailedLoginAttempt(USER_ID, 1, null);
+        verify(userSecurityPort).recordFailedLoginAttempt(
+                eq(USER_ID), eq(5), any(Instant.class));
         verify(identityMetrics).loginAttempt("failed");
     }
 
@@ -297,7 +341,8 @@ class AuthServiceTest {
         assertErrorCode(IdentityErrorCode.INVALID_CREDENTIALS,
                 () -> authService.login(new LoginCommand("u@example.com", "pw", null, "ip", "ua")));
 
-        verify(userSecurityPort).recordFailedLoginAttempt(USER_ID, 1, null);
+        verify(userSecurityPort).recordFailedLoginAttempt(
+                eq(USER_ID), eq(5), any(Instant.class));
     }
 
     @Test
@@ -326,7 +371,8 @@ class AuthServiceTest {
         assertErrorCode(IdentityErrorCode.OTP_REQUIRED,
                 () -> authService.login(new LoginCommand("u@example.com", "pw", null, "ip", "ua")));
 
-        verify(userSecurityPort).recordFailedLoginAttempt(USER_ID, 1, null);
+        verify(userSecurityPort).recordFailedLoginAttempt(
+                eq(USER_ID), eq(5), any(Instant.class));
     }
 
     @Test
@@ -340,6 +386,23 @@ class AuthServiceTest {
 
         assertErrorCode(IdentityErrorCode.OTP_INVALID,
                 () -> authService.login(new LoginCommand("u@example.com", "pw", "000000", "ip", "ua")));
+    }
+
+    @Test
+    void loginRejectsReplayedTotpCode() {
+        when(userSecurityPort.findByIdentity("u@example.com")).thenReturn(Optional.of(security(true, "secret")));
+        when(passwordHasher.matches("pw", "hash")).thenReturn(true);
+        when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+        when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(security(true, "secret")));
+        when(totpManager.verifyCode("secret", "123456")).thenReturn(true);
+        when(totpReplayGuard.claim(USER_ID, "123456")).thenReturn(false);
+        when(authPolicy.getMaxFailedLoginAttempts()).thenReturn(5);
+
+        assertErrorCode(IdentityErrorCode.OTP_INVALID,
+                () -> authService.login(new LoginCommand("u@example.com", "pw", "123456", "ip", "ua")));
+
+        verify(userSecurityPort).recordFailedLoginAttempt(
+                eq(USER_ID), eq(5), any(Instant.class));
     }
 
     @Test
@@ -419,8 +482,14 @@ class AuthServiceTest {
         when(socialLinkPersistencePort.findByProviderAndProviderUserId(AuthProvider.GOOGLE, "puid"))
                 .thenReturn(Optional.empty());
         when(userPersistencePort.findByIdentity("new@example.com")).thenReturn(Optional.empty());
-        when(userPersistencePort.save(any(IdentityUser.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(userPersistencePort.findById(anyString())).thenReturn(Optional.empty());
+        AtomicReference<IdentityUser> savedUser = new AtomicReference<>();
+        when(userPersistencePort.save(any(IdentityUser.class))).thenAnswer(inv -> {
+            IdentityUser user = inv.getArgument(0);
+            savedUser.set(user);
+            return user;
+        });
+        when(userPersistencePort.findById(anyString()))
+                .thenAnswer(inv -> Optional.ofNullable(savedUser.get()));
         when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
         when(authResultMapper.toSocialLoginResult(any(AuthSession.class), eq("access-token"), anyString(),
@@ -561,7 +630,7 @@ class AuthServiceTest {
 
     @Test
     void unlinkSocialRejectsWhenItIsTheOnlyLoginMethod() {
-        IdentityUser noCredentials = IdentityUser.createNew(USER_ID, null, null, "user", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED);
+        IdentityUser noCredentials = IdentityUser.createNew(USER_ID, null, null, "user", TestClocks.FIXED);
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(noCredentials));
         when(socialLinkPersistencePort.findByUserIdAndProvider(USER_ID, AuthProvider.GOOGLE))
                 .thenReturn(Optional.of(SocialLink.createNew("sl-1", USER_ID, AuthProvider.GOOGLE, "puid", TEST_CLOCK)));
@@ -654,6 +723,32 @@ class AuthServiceTest {
 
         assertErrorCode(IdentityErrorCode.VERIFICATION_TOKEN_INVALID,
                 () -> authService.refreshToken(new RefreshTokenCommand("rt", null, "ip", "ua")));
+    }
+
+    @Test
+    void refreshTokenReuseRevokesTheWholeFamily() {
+        when(refreshTokenStore.consumeSessionId("rt")).thenReturn(Optional.empty());
+        when(refreshTokenStore.findConsumedSessionId("rt")).thenReturn(Optional.of(SESSION_ID));
+
+        assertErrorCode(IdentityErrorCode.VERIFICATION_TOKEN_INVALID,
+                () -> authService.refreshToken(new RefreshTokenCommand("rt", null, "ip", "ua")));
+
+        verify(refreshTokenStore).revokeBySessionId(SESSION_ID);
+    }
+
+    @Test
+    void refreshTokenRejectsSuspendedUserAndRevokesSession() {
+        IdentityUser banned = activeUser();
+        banned.ban();
+        when(refreshTokenStore.consumeSessionId("rt")).thenReturn(Optional.of(SESSION_ID));
+        when(authSessionPersistencePort.findById(SESSION_ID)).thenReturn(Optional.of(activeSession()));
+        when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(banned));
+
+        assertErrorCode(IdentityErrorCode.USER_INACTIVE,
+                () -> authService.refreshToken(new RefreshTokenCommand("rt", null, "ip", "ua")));
+
+        verify(authSessionPersistencePort).save(any(AuthSession.class));
+        verify(refreshTokenStore).revokeBySessionId(SESSION_ID);
     }
 
     @Test

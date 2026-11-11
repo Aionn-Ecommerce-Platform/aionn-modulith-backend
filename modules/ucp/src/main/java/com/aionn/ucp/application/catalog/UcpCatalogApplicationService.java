@@ -1,6 +1,6 @@
 package com.aionn.ucp.application.catalog;
 
-import com.aionn.sharedkernel.integration.port.catalog.CatalogQueryPort;
+import com.aionn.contracts.port.catalog.CatalogQueryPort;
 import com.aionn.ucp.adapter.rest.dto.UcpMessage;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpResponseMetadata;
 import com.aionn.ucp.adapter.rest.dto.catalog.UcpCatalogLookupRequest;
@@ -10,7 +10,10 @@ import com.aionn.ucp.adapter.rest.dto.catalog.UcpCatalogSearchRequest;
 import com.aionn.ucp.adapter.rest.dto.catalog.UcpCatalogSearchResponse;
 import com.aionn.ucp.adapter.rest.dto.catalog.UcpProductDetailRequest;
 import com.aionn.ucp.adapter.rest.dto.catalog.UcpProductDetailResponse;
+import com.aionn.ucp.application.UcpProtocolConstants;
+import com.aionn.ucp.application.policy.UcpProtocolPolicy;
 import com.aionn.ucp.application.port.out.UcpSchemaValidationPort;
+import com.aionn.ucp.application.port.out.UcpMarketCurrencyPort;
 import com.aionn.ucp.domain.exception.UcpProtocolException;
 import com.aionn.ucp.domain.util.UcpCurrencyUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,59 +26,79 @@ import java.util.*;
 @Service
 public class UcpCatalogApplicationService {
 
-    private static final String PROTOCOL_VERSION = "2026-08-25";
-    private static final String CATALOG_SEARCH_SCHEMA_URI = "https://ucp.dev/schemas/shopping/catalog_search.json#/$defs/search_response";
-    private static final String CATALOG_LOOKUP_SCHEMA_URI = "https://ucp.dev/schemas/shopping/catalog_lookup.json#/$defs/lookup_response";
-    private static final String GET_PRODUCT_SCHEMA_URI = "https://ucp.dev/schemas/shopping/catalog_lookup.json#/$defs/get_product_response";
-
     private static final String MATCH_EXACT = "exact";
     private static final String MATCH_FEATURED = "featured";
-    private static final int DEFAULT_SEARCH_LIMIT = 10;
-    private static final int MAX_SEARCH_LIMIT = 100;
-    private static final String DEFAULT_CURRENCY = "USD";
     private static final String STATUS_IN_STOCK = "in_stock";
     private static final String STATUS_OUT_OF_STOCK = "out_of_stock";
+    private static final int MAX_LOOKUP_IDS = 100;
 
     private final CatalogQueryPort catalogQueryPort;
     private final UcpSchemaValidationPort schemaValidator;
     private final ObjectMapper objectMapper;
     private final String version;
+    private final String marketCurrency;
+    private final UcpProtocolPolicy protocolPolicy;
 
+    @Autowired
     public UcpCatalogApplicationService(
             CatalogQueryPort catalogQueryPort,
-            @Autowired(required = false) UcpSchemaValidationPort schemaValidator) {
+            @Autowired(required = false) UcpSchemaValidationPort schemaValidator,
+            UcpMarketCurrencyPort marketCurrencyPort,
+            UcpProtocolPolicy protocolPolicy) {
         this.catalogQueryPort = catalogQueryPort;
         this.schemaValidator = schemaValidator;
         this.objectMapper = new ObjectMapper();
-        this.version = PROTOCOL_VERSION;
+        this.version = UcpProtocolConstants.VERSION;
+        this.protocolPolicy = protocolPolicy;
+        String configured = marketCurrencyPort == null ? null : marketCurrencyPort.marketCurrency();
+        this.marketCurrency = configured != null && !configured.isBlank()
+                ? configured
+                : protocolPolicy.marketCurrency();
+    }
+
+    public UcpCatalogApplicationService(
+            CatalogQueryPort catalogQueryPort,
+            UcpSchemaValidationPort schemaValidator,
+            UcpProtocolPolicy protocolPolicy) {
+        this(catalogQueryPort, schemaValidator, null, protocolPolicy);
     }
 
     public UcpCatalogSearchResponse searchCatalog(UcpCatalogSearchRequest request) {
-        int limit = DEFAULT_SEARCH_LIMIT;
-        if (request != null && request.pagination() != null && request.pagination().limit() != null) {
-            limit = Math.clamp(request.pagination().limit(), 1, MAX_SEARCH_LIMIT);
+        int limit = protocolPolicy.catalogSearchDefaultLimit();
+        int offset = 0;
+        if (request != null && request.pagination() != null) {
+            if (request.pagination().limit() != null) {
+                limit = Math.clamp(request.pagination().limit(), 1, protocolPolicy.catalogSearchMaxLimit());
+            }
+            offset = decodeCursor(request.pagination().cursor());
         }
 
+        // Price bounds arrive as minor units in the store's market currency
+        // (VND), not USD — converting with USD would be off by 100x for VND's
+        // zero fraction digits.
         BigDecimal minPrice = null;
         BigDecimal maxPrice = null;
         if (request != null && request.filters() != null && request.filters().price() != null) {
-            minPrice = UcpCurrencyUtil.fromMinorUnits(request.filters().price().min(), DEFAULT_CURRENCY);
-            maxPrice = UcpCurrencyUtil.fromMinorUnits(request.filters().price().max(), DEFAULT_CURRENCY);
+            minPrice = UcpCurrencyUtil.fromMinorUnits(request.filters().price().min(), marketCurrency);
+            maxPrice = UcpCurrencyUtil.fromMinorUnits(request.filters().price().max(), marketCurrency);
         }
 
         String query = request != null ? request.query() : null;
-        CatalogQueryPort.SearchCriteria criteria = new CatalogQueryPort.SearchCriteria(query, limit, minPrice,
-                maxPrice);
+        CatalogQueryPort.SearchCriteria criteria = new CatalogQueryPort.SearchCriteria(
+                query, limit, minPrice, maxPrice, offset);
 
+        // The adapter over-fetches one row; a surplus row means a next page exists.
         List<CatalogQueryPort.ProductView> views = catalogQueryPort.search(criteria);
-        List<UcpProductDto> products = views.stream()
+        boolean hasNextPage = views.size() > limit;
+        List<CatalogQueryPort.ProductView> page = hasNextPage ? views.subList(0, limit) : views;
+
+        List<UcpProductDto> products = page.stream()
                 .map(v -> toProductDto(v, null, false))
                 .flatMap(Optional::stream)
                 .toList();
 
-        boolean hasNextPage = views.size() >= limit;
-        String nextCursor = hasNextPage ? ("cursor_" + limit) : null;
-        UcpPaginationResponseDto pagination = new UcpPaginationResponseDto(hasNextPage, nextCursor, views.size());
+        String nextCursor = hasNextPage ? encodeCursor(offset + page.size()) : null;
+        UcpPaginationResponseDto pagination = new UcpPaginationResponseDto(hasNextPage, nextCursor, page.size());
 
         UcpCatalogSearchResponse response = new UcpCatalogSearchResponse(
                 UcpResponseMetadata.success(version),
@@ -85,13 +108,39 @@ public class UcpCatalogApplicationService {
                 null,
                 null);
 
-        validateSchema(CATALOG_SEARCH_SCHEMA_URI, response);
+        validateSchema(UcpProtocolConstants.CATALOG_SEARCH_SCHEMA_URI, response);
         return response;
+    }
+
+    private static final String CURSOR_PREFIX = "cursor_";
+
+    private static String encodeCursor(int offset) {
+        return CURSOR_PREFIX + offset;
+    }
+
+    /**
+     * Decodes an opaque {@code cursor_<offset>} token back to its offset. A missing
+     * or malformed cursor resumes from the first page rather than failing — cursor
+     * is an opaque transport token, not a validation surface.
+     */
+    private static int decodeCursor(String cursor) {
+        if (cursor == null || cursor.isBlank() || !cursor.startsWith(CURSOR_PREFIX)) {
+            return 0;
+        }
+        try {
+            return Math.max(0, Integer.parseInt(cursor.substring(CURSOR_PREFIX.length())));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     public UcpCatalogLookupResponse lookupCatalog(UcpCatalogLookupRequest request) {
         if (request == null || request.ids() == null || request.ids().isEmpty()) {
             throw new UcpProtocolException(400, "invalid_request", "Missing required field: ids", "error", "$.ids");
+        }
+        if (request.ids().size() > MAX_LOOKUP_IDS) {
+            throw new UcpProtocolException(400, "invalid_request",
+                    "Lookup accepts at most " + MAX_LOOKUP_IDS + " ids", "error", "$.ids");
         }
 
         CatalogQueryPort.LookupResult result = catalogQueryPort.lookupByProductOrSkuIds(request.ids());
@@ -114,7 +163,7 @@ public class UcpCatalogApplicationService {
                 messages,
                 null);
 
-        validateSchema(CATALOG_LOOKUP_SCHEMA_URI, response);
+        validateSchema(UcpProtocolConstants.CATALOG_LOOKUP_SCHEMA_URI, response);
         return response;
     }
 
@@ -155,7 +204,7 @@ public class UcpCatalogApplicationService {
                 null,
                 null);
 
-        validateSchema(GET_PRODUCT_SCHEMA_URI, response);
+        validateSchema(UcpProtocolConstants.GET_PRODUCT_SCHEMA_URI, response);
         return response;
     }
 
@@ -201,7 +250,7 @@ public class UcpCatalogApplicationService {
                 return v.currency();
             }
         }
-        return DEFAULT_CURRENCY;
+        return marketCurrency;
     }
 
     private List<UcpVariantDto> mapVariants(

@@ -1,10 +1,13 @@
 package com.aionn.inventory.adapter.rest.controller;
 
+import com.aionn.inventory.adapter.rest.mapper.transfer.StockTransferDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.inventory.adapter.rest.dto.transfer.request.CancelTransferRequest;
 import com.aionn.inventory.adapter.rest.dto.transfer.request.CompleteTransferRequest;
 import com.aionn.inventory.adapter.rest.dto.transfer.request.InitiateTransferRequest;
 import com.aionn.inventory.adapter.rest.exception.InventoryExceptionHandler;
-import com.aionn.inventory.adapter.rest.mapper.transfer.StockTransferDtoMapperImpl;
 import com.aionn.inventory.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.inventory.adapter.rest.support.TestAuth;
 import com.aionn.inventory.application.dto.transfer.command.CancelTransferCommand;
@@ -15,7 +18,7 @@ import com.aionn.inventory.application.port.in.transfer.CancelTransferInputPort;
 import com.aionn.inventory.application.port.in.transfer.CompleteTransferInputPort;
 import com.aionn.inventory.application.port.in.transfer.GetTransferInputPort;
 import com.aionn.inventory.application.port.in.transfer.InitiateTransferInputPort;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,7 +58,7 @@ class StockTransferControllerWebTest {
                 completeTransferInputPort,
                 cancelTransferInputPort,
                 getTransferInputPort,
-                new StockTransferDtoMapperImpl()
+                Mappers.getMapper(StockTransferDtoMapper.class)
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new InventoryExceptionHandler())
@@ -113,9 +116,10 @@ class StockTransferControllerWebTest {
 
     @Test
     void getReturnsTransfer() throws Exception {
-        when(getTransferInputPort.execute("T_1")).thenReturn(sample("T_1", "INITIATED"));
+        when(getTransferInputPort.execute("owner-1", "T_1")).thenReturn(sample("T_1", "INITIATED"));
 
-        mockMvc.perform(get("/api/v1/inventory/transfers/T_1"))
+        mockMvc.perform(get("/api/v1/inventory/transfers/T_1")
+                        .with(TestAuth.authUser("owner-1", "ROLE_MERCHANT")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.transferId").value("T_1"));
     }

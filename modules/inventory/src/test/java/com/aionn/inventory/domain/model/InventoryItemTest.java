@@ -95,6 +95,28 @@ class InventoryItemTest {
     }
 
     @Test
+    void recordAuditRejectsLockedItem() {
+        InventoryItem item = InventoryItem.initialize(KEY, 10, FIXED_CLOCK);
+        item.emergencyLock("admin", "audit", FIXED_CLOCK);
+
+        assertThatThrownBy(() -> item.recordAudit("audit-1", 8, FIXED_CLOCK))
+                .isInstanceOf(InventoryException.class)
+                .extracting("errorCode")
+                .isEqualTo(InventoryErrorCode.INVENTORY_LOCKED.getCode());
+    }
+
+    @Test
+    void recordAuditRejectsQuantityBelowReserved() {
+        InventoryItem item = InventoryItem.initialize(KEY, 10, FIXED_CLOCK);
+        item.reserve(4, FIXED_CLOCK);
+
+        assertThatThrownBy(() -> item.recordAudit("audit-1", 3, FIXED_CLOCK))
+                .isInstanceOf(InventoryException.class)
+                .extracting("errorCode")
+                .isEqualTo(InventoryErrorCode.INVENTORY_AUDIT_BELOW_RESERVED.getCode());
+    }
+
+    @Test
     void adjustWithManualIncreaseUpdatesBothQuantities() {
         InventoryItem item = InventoryItem.initialize(KEY, 10, FIXED_CLOCK);
 

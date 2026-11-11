@@ -10,11 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
-/**
- * Application service managing UCP identity links with fail-closed IDOR
- * security
- * and composite platform keys.
- */
+/** UCP identity links: fail-closed ownership checks and composite platform keys. */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -22,20 +18,23 @@ public class UcpIdentityApplicationService {
 
         private final UcpIdentityLinkPort identityLinkPort;
 
-        /**
-         * Creates or updates an identity link. Verifies that the authenticated caller
-         * matches the customerId, and ensures an existing platform binding cannot be
-         * hijacked
-         * by a different customer.
-         *
-         * @param request      the identity link request
-         * @param callerUserId authenticated caller user id
-         * @return created identity link response
-         */
+        /** Caller must own the customer, and an existing binding must not be hijacked. */
         public UcpIdentityLinkResponse linkIdentity(UcpIdentityLinkRequest request, String callerUserId) {
-                if (callerUserId == null || !callerUserId.equals(request.customerId())) {
-                        log.warn("Access denied: Caller '{}' cannot link identity for customer '{}'", callerUserId,
-                                        request.customerId());
+                return linkIdentity(request, callerUserId, null);
+        }
+
+        /**
+         * Buyer JWTs act for their own customer id; provisioned platform credentials may link only
+         * subjects under their own platform id.
+         */
+        public UcpIdentityLinkResponse linkIdentity(UcpIdentityLinkRequest request, String callerUserId,
+                        String callerPlatformId) {
+                boolean customerCaller = callerUserId != null && callerUserId.equals(request.customerId());
+                boolean platformCaller = callerUserId == null && callerPlatformId != null
+                                && callerPlatformId.equals(request.platformId());
+                if (!customerCaller && !platformCaller) {
+                        log.warn("Access denied: Caller user='{}' platform='{}' cannot link identity for customer '{}'",
+                                        callerUserId, callerPlatformId, request.customerId());
                         throw new UcpProtocolException(403, "access_denied",
                                         "Caller is not authorized to link identity for customer: "
                                                         + request.customerId(),
@@ -56,34 +55,29 @@ public class UcpIdentityApplicationService {
                 return identityLinkPort.saveLink(request);
         }
 
-        /**
-         * Retrieves an identity link for the given platform and subject.
-         * Maps unauthorized caller access to 404 to avoid leaking subject existence.
-         *
-         * @param platformId      the platform identifier
-         * @param platformSubject the platform subject identifier
-         * @param callerUserId    authenticated caller user id
-         * @return link details
-         */
+        /** Maps unauthorized access to 404 so subject existence isn't leaked. */
         public UcpIdentityLinkResponse getLink(String platformId, String platformSubject, String callerUserId) {
+                return getLink(platformId, platformSubject, callerUserId, null);
+        }
+
+        public UcpIdentityLinkResponse getLink(String platformId, String platformSubject, String callerUserId,
+                        String callerPlatformId) {
                 return identityLinkPort.findByPlatformAndSubject(platformId, platformSubject)
-                                .filter(l -> callerUserId != null && callerUserId.equals(l.customerId()))
+                                .filter(l -> isAuthorized(l, callerUserId, callerPlatformId))
                                 .orElseThrow(() -> new UcpProtocolException(404, "link_not_found",
                                                 "Identity link not found for platform: " + platformId + ", subject: "
                                                                 + platformSubject,
                                                 "error"));
         }
 
-        /**
-         * Revokes an existing identity link.
-         *
-         * @param platformId      the platform identifier
-         * @param platformSubject the platform subject identifier
-         * @param callerUserId    authenticated caller user id
-         */
         public void revokeLink(String platformId, String platformSubject, String callerUserId) {
+                revokeLink(platformId, platformSubject, callerUserId, null);
+        }
+
+        public void revokeLink(String platformId, String platformSubject, String callerUserId,
+                        String callerPlatformId) {
                 identityLinkPort.findByPlatformAndSubject(platformId, platformSubject)
-                                .filter(l -> callerUserId != null && callerUserId.equals(l.customerId()))
+                                .filter(l -> isAuthorized(l, callerUserId, callerPlatformId))
                                 .orElseThrow(() -> new UcpProtocolException(404, "link_not_found",
                                                 "Identity link not found for platform: " + platformId + ", subject: "
                                                                 + platformSubject,
@@ -92,5 +86,13 @@ public class UcpIdentityApplicationService {
                 identityLinkPort.revokeLink(platformId, platformSubject);
                 log.info("Successfully revoked identity link for platform '{}' subject '{}'", platformId,
                                 platformSubject);
+        }
+
+        private static boolean isAuthorized(UcpIdentityLinkResponse link, String callerUserId,
+                        String callerPlatformId) {
+                if (callerUserId != null) {
+                        return callerUserId.equals(link.customerId());
+                }
+                return callerPlatformId != null && callerPlatformId.equals(link.platformId());
         }
 }

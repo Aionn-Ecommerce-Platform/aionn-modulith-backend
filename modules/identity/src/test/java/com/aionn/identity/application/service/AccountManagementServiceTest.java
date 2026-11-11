@@ -1,5 +1,9 @@
 package com.aionn.identity.application.service;
 
+import com.aionn.identity.domain.valueobject.UserStatus;
+import com.aionn.sharedkernel.testing.fixture.TestClocks;
+import java.time.ZoneOffset;
+
 import com.aionn.identity.application.dto.user.command.CancelAccountDeletionCommand;
 import com.aionn.identity.application.dto.user.command.RequestAccountDeletionCommand;
 import com.aionn.identity.application.dto.user.command.RequestDataExportCommand;
@@ -22,7 +26,14 @@ import com.aionn.identity.domain.model.AuthSession;
 import com.aionn.identity.domain.model.IdentityUser;
 import com.aionn.identity.domain.valueobject.OtpChannel;
 import com.aionn.identity.domain.valueobject.UserOtpPurpose;
-import com.aionn.sharedkernel.integration.port.notification.IdentityNotificationPort;
+import com.aionn.contracts.port.notification.IdentityNotificationPort;
+import com.aionn.identity.application.port.out.security.MfaPersistencePort;
+import com.aionn.identity.application.port.out.security.PasswordHasherPort;
+import com.aionn.identity.application.port.out.security.TotpManagerPort;
+import com.aionn.identity.application.port.out.security.TotpReplayGuardPort;
+import com.aionn.identity.application.port.out.security.UserSecurityPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.ordering.OrderQueryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -71,6 +82,20 @@ class AccountManagementServiceTest {
         private AccountManagementPolicy accountManagementPolicy;
         @Mock
         private UserResultMapper userResultMapper;
+        @Mock
+        private UserSecurityPort userSecurityPort;
+        @Mock
+        private PasswordHasherPort passwordHasher;
+        @Mock
+        private TotpManagerPort totpManager;
+        @Mock
+        private TotpReplayGuardPort totpReplayGuard;
+        @Mock
+        private MfaPersistencePort mfaPersistencePort;
+        @Mock
+        private OrderQueryPort orderQueryPort;
+        @Mock
+        private MerchantQueryPort merchantQueryPort;
 
         private static final Instant FIXED_NOW = Instant.parse("2026-07-12T10:00:00Z");
 
@@ -83,11 +108,18 @@ class AccountManagementServiceTest {
                                 userOtpChallengeStore, accountDeletionPort, dataExportPort,
                                 authSessionPersistencePort, refreshTokenStore,
                                 accountManagementPolicy, userResultMapper,
-                                Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
+                                userSecurityPort, passwordHasher, totpManager,
+                                totpReplayGuard,
+                                mfaPersistencePort, orderQueryPort, merchantQueryPort,
+                                Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+                org.mockito.Mockito.lenient()
+                                .when(userOtpChallengeStore.tryAcquireAttempt(
+                                                any(), any(), any(Integer.class), any()))
+                                .thenReturn(true);
         }
 
         private static IdentityUser activeUser() {
-                return IdentityUser.createNew(USER_ID, "u@example.com", null, "user", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED);
+                return IdentityUser.createNew(USER_ID, "u@example.com", null, "user", TestClocks.FIXED);
         }
 
         @Test
@@ -95,6 +127,10 @@ class AccountManagementServiceTest {
                 DeletionRequestView view = new DeletionRequestView(
                                 "req-1", "PENDING", FIXED_NOW, FIXED_NOW.plus(Duration.ofDays(30)));
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, null, UserStatus.ACTIVE, false, null, null, 0)));
+                when(orderQueryPort.hasOpenOrdersForUser(USER_ID)).thenReturn(false);
+                when(merchantQueryPort.findMerchantIdByOwnerId(USER_ID)).thenReturn(Optional.empty());
                 when(accountDeletionPort.findPendingByUserId(USER_ID)).thenReturn(Optional.empty());
                 when(accountManagementPolicy.getDeletionGraceDays()).thenReturn(30);
                 when(accountDeletionPort.save(eq(USER_ID), any(Instant.class))).thenReturn(view);
@@ -109,6 +145,10 @@ class AccountManagementServiceTest {
         @Test
         void requestAccountDeletionRejectsWhenAlreadyPending() {
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, null, UserStatus.ACTIVE, false, null, null, 0)));
+                when(orderQueryPort.hasOpenOrdersForUser(USER_ID)).thenReturn(false);
+                when(merchantQueryPort.findMerchantIdByOwnerId(USER_ID)).thenReturn(Optional.empty());
                 when(accountDeletionPort.findPendingByUserId(USER_ID))
                                 .thenReturn(Optional.of(new DeletionRequestView(
                                                 "req-old", "PENDING", FIXED_NOW,
@@ -121,10 +161,24 @@ class AccountManagementServiceTest {
         }
 
         @Test
+        void requestAccountDeletionRejectsWhenHasOpenOrders() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, null, UserStatus.ACTIVE, false, null, null, 0)));
+                when(orderQueryPort.hasOpenOrdersForUser(USER_ID)).thenReturn(true);
+
+                RequestAccountDeletionCommand command = new RequestAccountDeletionCommand(USER_ID);
+                IdentityException ex = assertThrows(IdentityException.class,
+                                () -> service.requestAccountDeletion(command));
+
+                assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.ACCOUNT_HAS_OPEN_ORDERS.getCode());
+                verify(accountDeletionPort, never()).save(any(), any());
+        }
+
+        @Test
         void cancelAccountDeletionDelegatesToPort() {
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
-                when(accountDeletionPort.findPendingByUserId(USER_ID)).thenReturn(Optional.of(
-                                new DeletionRequestView("r", "PENDING", FIXED_NOW, FIXED_NOW)));
+                when(accountDeletionPort.cancel(USER_ID)).thenReturn(true);
 
                 service.cancelAccountDeletion(new CancelAccountDeletionCommand(USER_ID));
 
@@ -134,7 +188,7 @@ class AccountManagementServiceTest {
         @Test
         void cancelAccountDeletionThrowsWhenNothingToCancel() {
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
-                when(accountDeletionPort.findPendingByUserId(USER_ID)).thenReturn(Optional.empty());
+                when(accountDeletionPort.cancel(USER_ID)).thenReturn(false);
 
                 assertThrows(IdentityException.class,
                                 () -> service.cancelAccountDeletion(new CancelAccountDeletionCommand(USER_ID)));
@@ -143,7 +197,8 @@ class AccountManagementServiceTest {
         @Test
         void requestDataExportRejectsWhenAlreadyInProgress() {
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
-                when(dataExportPort.hasActiveRequest(USER_ID)).thenReturn(true);
+                when(dataExportPort.save(USER_ID))
+                                .thenThrow(new IdentityException(IdentityErrorCode.DATA_EXPORT_ALREADY_IN_PROGRESS));
 
                 assertThrows(IdentityException.class,
                                 () -> service.requestDataExport(new RequestDataExportCommand(USER_ID)));
@@ -152,9 +207,8 @@ class AccountManagementServiceTest {
         @Test
         void requestDataExportPersistsAndReturnsView() {
                 DataExportRequestView view = new DataExportRequestView(
-                                "exp-1", "PENDING", FIXED_NOW);
+                                "exp-1", "COMPLETED", FIXED_NOW);
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
-                when(dataExportPort.hasActiveRequest(USER_ID)).thenReturn(false);
                 when(dataExportPort.save(USER_ID)).thenReturn(view);
 
                 DataExportRequestView result = service.requestDataExport(
@@ -164,7 +218,7 @@ class AccountManagementServiceTest {
         }
 
         private static IdentityUser bannedUser() {
-                IdentityUser user = IdentityUser.createNew(USER_ID, "u@example.com", null, "user", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED);
+                IdentityUser user = IdentityUser.createNew(USER_ID, "u@example.com", null, "user", TestClocks.FIXED);
                 user.ban();
                 return user;
         }
@@ -187,7 +241,7 @@ class AccountManagementServiceTest {
         private static AuthSession activeSession() {
                 return AuthSession.createNew("session-1", USER_ID, "ip", "ua",
                                 FIXED_NOW.plus(Duration.ofDays(7)),
-                                Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
+                                Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
         }
 
         private static UserProfileView profileView() {
@@ -214,7 +268,7 @@ class AccountManagementServiceTest {
         @Test
         void sendVerifyPrimaryEmailOtpThrowsWhenNoPrimaryEmail() {
                 when(userPersistencePort.findById(USER_ID))
-                                .thenReturn(Optional.of(IdentityUser.createNew(USER_ID, null, null, "user", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED)));
+                                .thenReturn(Optional.of(IdentityUser.createNew(USER_ID, null, null, "user", TestClocks.FIXED)));
 
                 assertErrorCode(IdentityErrorCode.EMAIL_REQUIRED,
                                 () -> service.sendVerifyPrimaryEmailOtp(USER_ID));
@@ -312,6 +366,23 @@ class AccountManagementServiceTest {
         }
 
         @Test
+        void confirmVerifyPrimaryEmailOtpFailsWhenAtomicAttemptBudgetIsExhausted() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userOtpChallengeStore.find(USER_ID, UserOtpPurpose.VERIFY_PRIMARY_EMAIL)).thenReturn(
+                                Optional.of(challenge(UserOtpPurpose.VERIFY_PRIMARY_EMAIL, OtpChannel.EMAIL,
+                                                "u@example.com", "123456", null, future(), 0)));
+                when(accountManagementPolicy.getOtpMaxAttempts()).thenReturn(5);
+                when(userOtpChallengeStore.tryAcquireAttempt(
+                                eq(USER_ID), eq(UserOtpPurpose.VERIFY_PRIMARY_EMAIL), eq(5), any()))
+                                .thenReturn(false);
+
+                assertErrorCode(IdentityErrorCode.OTP_ATTEMPTS_EXCEEDED,
+                                () -> service.confirmVerifyPrimaryEmailOtp(USER_ID, "123456"));
+
+                verify(userOtpChallengeStore).delete(USER_ID, UserOtpPurpose.VERIFY_PRIMARY_EMAIL);
+        }
+
+        @Test
         void requestEmailChangeOtpSendsToNewEmail() {
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
                 when(userPersistencePort.findByIdentity("new@example.com")).thenReturn(Optional.empty());
@@ -335,7 +406,7 @@ class AccountManagementServiceTest {
         void requestEmailChangeOtpRejectsEmailUsedByAnotherUser() {
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
                 when(userPersistencePort.findByIdentity("new@example.com")).thenReturn(
-                                Optional.of(IdentityUser.createNew("other", "new@example.com", null, "other", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED)));
+                                Optional.of(IdentityUser.createNew("other", "new@example.com", null, "other", TestClocks.FIXED)));
 
                 assertErrorCode(IdentityErrorCode.EMAIL_ALREADY_EXISTS,
                                 () -> service.requestEmailChangeOtp(USER_ID, "new@example.com"));
@@ -378,7 +449,7 @@ class AccountManagementServiceTest {
                                 Optional.of(challenge(UserOtpPurpose.CHANGE_EMAIL, OtpChannel.EMAIL,
                                                 "new@example.com", "123456", "new@example.com", future(), 0)));
                 when(userPersistencePort.findByIdentity("new@example.com")).thenReturn(
-                                Optional.of(IdentityUser.createNew("other", "new@example.com", null, "other", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED)));
+                                Optional.of(IdentityUser.createNew("other", "new@example.com", null, "other", TestClocks.FIXED)));
 
                 assertErrorCode(IdentityErrorCode.EMAIL_ALREADY_EXISTS,
                                 () -> service.confirmEmailChange(USER_ID, "123456"));
@@ -441,5 +512,270 @@ class AccountManagementServiceTest {
 
                 assertErrorCode(IdentityErrorCode.PHONE_ALREADY_EXISTS,
                                 () -> service.confirmPhoneChange(USER_ID, "123456"));
+        }
+
+        @Test
+        void requestAccountDeletionRejectsInvalidPassword() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, "hash", UserStatus.ACTIVE, false, null, null, 0)));
+                when(passwordHasher.matches("wrong", "hash")).thenReturn(false);
+
+                assertErrorCode(IdentityErrorCode.INVALID_CREDENTIALS,
+                                () -> service.requestAccountDeletion(
+                                                new RequestAccountDeletionCommand(USER_ID, "wrong", null)));
+        }
+
+        @Test
+        void requestAccountDeletionRejectsMissingMfaCode() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, null, UserStatus.ACTIVE, true, "secret", null, 0)));
+
+                assertErrorCode(IdentityErrorCode.OTP_REQUIRED,
+                                () -> service.requestAccountDeletion(
+                                                new RequestAccountDeletionCommand(USER_ID, null, " ")));
+        }
+
+        @Test
+        void requestAccountDeletionAcceptsValidBackupCode() {
+                DeletionRequestView view = new DeletionRequestView(
+                                "req-mfa", "PENDING", FIXED_NOW, FIXED_NOW.plus(Duration.ofDays(30)));
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, null, UserStatus.ACTIVE, true, "secret", null, 0)));
+                when(totpManager.verifyCode("secret", "backup")).thenReturn(false);
+                when(mfaPersistencePort.findActiveBackupCodes(USER_ID))
+                                .thenReturn(List.of(new MfaPersistencePort.BackupCodeData("backup-1", "hash")));
+                when(passwordHasher.matches("backup", "hash")).thenReturn(true);
+                when(mfaPersistencePort.markBackupCodeUsed(eq("backup-1"), any(Instant.class))).thenReturn(true);
+                when(orderQueryPort.hasOpenOrdersForUser(USER_ID)).thenReturn(false);
+                when(merchantQueryPort.findMerchantIdByOwnerId(USER_ID)).thenReturn(Optional.empty());
+                when(accountDeletionPort.findPendingByUserId(USER_ID)).thenReturn(Optional.empty());
+                when(accountManagementPolicy.getDeletionGraceDays()).thenReturn(30);
+                when(accountDeletionPort.save(eq(USER_ID), any(Instant.class))).thenReturn(view);
+
+                assertThat(service.requestAccountDeletion(
+                                new RequestAccountDeletionCommand(USER_ID, null, "backup"))).isSameAs(view);
+        }
+
+        @Test
+        void requestAccountDeletionRejectsInvalidMfaCode() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, null, UserStatus.ACTIVE, true, "secret", null, 0)));
+                when(totpManager.verifyCode("secret", "bad")).thenReturn(false);
+                when(mfaPersistencePort.findActiveBackupCodes(USER_ID)).thenReturn(List.of());
+
+                assertErrorCode(IdentityErrorCode.OTP_INVALID,
+                                () -> service.requestAccountDeletion(
+                                                new RequestAccountDeletionCommand(USER_ID, null, "bad")));
+        }
+
+        @Test
+        void requestAccountDeletionRejectsWhenMerchantHasOpenOrders() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, null, UserStatus.ACTIVE, false, null, null, 0)));
+                when(orderQueryPort.hasOpenOrdersForUser(USER_ID)).thenReturn(false);
+                when(merchantQueryPort.findMerchantIdByOwnerId(USER_ID)).thenReturn(Optional.of("merchant-1"));
+                when(orderQueryPort.hasOpenOrdersForMerchant("merchant-1")).thenReturn(true);
+
+                assertErrorCode(IdentityErrorCode.ACCOUNT_HAS_OPEN_ORDERS,
+                                () -> service.requestAccountDeletion(new RequestAccountDeletionCommand(USER_ID)));
+        }
+
+        @Test
+        void sendingAVerificationOtpRequiresAnEmailAddress() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(
+                                IdentityUser.createNew(USER_ID, null, "+84900000000", "user", TestClocks.FIXED)));
+
+                assertErrorCode(IdentityErrorCode.EMAIL_REQUIRED,
+                                () -> service.sendVerifyPrimaryEmailOtp(USER_ID));
+                verify(userOtpChallengeStore, never()).save(any());
+        }
+
+        @Test
+        void requestingAnEmailChangeRejectsABlankAddress() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+
+                assertErrorCode(IdentityErrorCode.EMAIL_REQUIRED,
+                                () -> service.requestEmailChangeOtp(USER_ID, " "));
+        }
+
+        @Test
+        void requestingAnEmailChangeRejectsAnAddressOwnedByAnotherUser() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userPersistencePort.findByIdentity("other@example.com")).thenReturn(Optional.of(
+                                IdentityUser.createNew("other", "other@example.com", null, "other",
+                                                TestClocks.FIXED)));
+
+                assertErrorCode(IdentityErrorCode.EMAIL_ALREADY_EXISTS,
+                                () -> service.requestEmailChangeOtp(USER_ID, "other@example.com"));
+                verify(userOtpChallengeStore, never()).save(any());
+        }
+
+        @Test
+        void requestingAPhoneChangeRejectsABlankNumber() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+
+                assertErrorCode(IdentityErrorCode.PHONE_REQUIRED,
+                                () -> service.requestPhoneChangeOtp(USER_ID, " "));
+        }
+
+        @Test
+        void confirmingAnEmailChangeTranslatesAUniqueConstraintRace() {
+                IdentityUser user = activeUser();
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(user));
+                when(userOtpChallengeStore.find(USER_ID, UserOtpPurpose.CHANGE_EMAIL))
+                                .thenReturn(Optional.of(new UserOtpChallenge(USER_ID,
+                                                UserOtpPurpose.CHANGE_EMAIL, OtpChannel.EMAIL,
+                                                "u@example.com", "123456", "new@example.com",
+                                                FIXED_NOW.plus(Duration.ofMinutes(5)), 0)));
+                when(userPersistencePort.findByIdentity("new@example.com")).thenReturn(Optional.empty());
+                when(userPersistencePort.save(user))
+                                .thenThrow(new org.springframework.dao.DataIntegrityViolationException("dup"));
+
+                assertErrorCode(IdentityErrorCode.EMAIL_ALREADY_EXISTS,
+                                () -> service.confirmEmailChange(USER_ID, "123456"));
+        }
+
+        @Test
+        void aMissingDataExportPayloadIsReported() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(dataExportPort.findPayload("missing", USER_ID)).thenReturn(Optional.empty());
+
+                assertErrorCode(IdentityErrorCode.DATA_EXPORT_NOT_FOUND,
+                                () -> service.getDataExport(USER_ID, "missing"));
+        }
+
+        @Test
+        void aStoredDataExportPayloadIsReturned() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(dataExportPort.findPayload("req-1", USER_ID)).thenReturn(Optional.of(
+                                new DataExportPort.DataExportPayload("req-1", "application/json",
+                                                "{\"profile\":{}}", FIXED_NOW)));
+
+                var view = service.getDataExport(USER_ID, "req-1");
+
+                assertThat(view.payload()).isEqualTo("{\"profile\":{}}");
+                assertThat(view.contentType()).isEqualTo("application/json");
+        }
+
+        @Test
+        void aBlankPasswordIsRejectedWhenTheAccountHasOne() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, "hash", UserStatus.ACTIVE,
+                                                false, null, null, 0)));
+
+                assertErrorCode(IdentityErrorCode.INVALID_CREDENTIALS,
+                                () -> service.requestAccountDeletion(
+                                                new RequestAccountDeletionCommand(USER_ID, " ", null)));
+        }
+
+        @Test
+        void aMissingPasswordIsRejectedWhenTheAccountHasOne() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, "hash", UserStatus.ACTIVE,
+                                                false, null, null, 0)));
+
+                assertErrorCode(IdentityErrorCode.INVALID_CREDENTIALS,
+                                () -> service.requestAccountDeletion(
+                                                new RequestAccountDeletionCommand(USER_ID, null, null)));
+        }
+
+        @Test
+        void aBlankStoredPasswordHashSkipsPasswordVerification() {
+                DeletionRequestView view = new DeletionRequestView(
+                                "req-blank", "PENDING", FIXED_NOW, FIXED_NOW.plus(Duration.ofDays(30)));
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, "  ", UserStatus.ACTIVE,
+                                                false, null, null, 0)));
+                when(orderQueryPort.hasOpenOrdersForUser(USER_ID)).thenReturn(false);
+                when(merchantQueryPort.findMerchantIdByOwnerId(USER_ID)).thenReturn(Optional.empty());
+                when(accountDeletionPort.findPendingByUserId(USER_ID)).thenReturn(Optional.empty());
+                when(accountManagementPolicy.getDeletionGraceDays()).thenReturn(30);
+                when(accountDeletionPort.save(eq(USER_ID), any(Instant.class))).thenReturn(view);
+
+                assertThat(service.requestAccountDeletion(
+                                new RequestAccountDeletionCommand(USER_ID, "unused", null))).isSameAs(view);
+        }
+
+        @Test
+        void requestAccountDeletionAcceptsAValidTotpCode() {
+                DeletionRequestView view = new DeletionRequestView(
+                                "req-totp", "PENDING", FIXED_NOW, FIXED_NOW.plus(Duration.ofDays(30)));
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, null, UserStatus.ACTIVE,
+                                                true, "secret", null, 0)));
+                when(totpManager.verifyCode("secret", "123456")).thenReturn(true);
+                when(totpReplayGuard.claim(USER_ID, "123456")).thenReturn(true);
+                when(orderQueryPort.hasOpenOrdersForUser(USER_ID)).thenReturn(false);
+                when(merchantQueryPort.findMerchantIdByOwnerId(USER_ID)).thenReturn(Optional.empty());
+                when(accountDeletionPort.findPendingByUserId(USER_ID)).thenReturn(Optional.empty());
+                when(accountManagementPolicy.getDeletionGraceDays()).thenReturn(30);
+                when(accountDeletionPort.save(eq(USER_ID), any(Instant.class))).thenReturn(view);
+
+                assertThat(service.requestAccountDeletion(
+                                new RequestAccountDeletionCommand(USER_ID, null, "123456"))).isSameAs(view);
+        }
+
+        @Test
+        void requestAccountDeletionRejectsAReplayedTotpCode() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, null, UserStatus.ACTIVE,
+                                                true, "secret", null, 0)));
+                when(totpManager.verifyCode("secret", "654321")).thenReturn(true);
+                when(totpReplayGuard.claim(USER_ID, "654321")).thenReturn(false);
+                when(mfaPersistencePort.findActiveBackupCodes(USER_ID)).thenReturn(List.of());
+
+                assertErrorCode(IdentityErrorCode.OTP_INVALID,
+                                () -> service.requestAccountDeletion(
+                                                new RequestAccountDeletionCommand(USER_ID, null, "654321")));
+        }
+
+        @Test
+        void requestAccountDeletionProceedsWhenTheMerchantHasNoOpenOrders() {
+                DeletionRequestView view = new DeletionRequestView(
+                                "req-merchant", "PENDING", FIXED_NOW, FIXED_NOW.plus(Duration.ofDays(30)));
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, null, UserStatus.ACTIVE,
+                                                false, null, null, 0)));
+                when(orderQueryPort.hasOpenOrdersForUser(USER_ID)).thenReturn(false);
+                when(merchantQueryPort.findMerchantIdByOwnerId(USER_ID)).thenReturn(Optional.of("merchant-1"));
+                when(orderQueryPort.hasOpenOrdersForMerchant("merchant-1")).thenReturn(false);
+                when(accountDeletionPort.findPendingByUserId(USER_ID)).thenReturn(Optional.empty());
+                when(accountManagementPolicy.getDeletionGraceDays()).thenReturn(30);
+                when(accountDeletionPort.save(eq(USER_ID), any(Instant.class))).thenReturn(view);
+
+                assertThat(service.requestAccountDeletion(
+                                new RequestAccountDeletionCommand(USER_ID))).isSameAs(view);
+        }
+
+        @Test
+        void confirmEmailChangeSkipsSessionsThatAreAlreadyRevoked() {
+                UserProfileView expected = profileView();
+                AuthSession revoked = activeSession();
+                revoked.revoke();
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userOtpChallengeStore.find(USER_ID, UserOtpPurpose.CHANGE_EMAIL)).thenReturn(
+                                Optional.of(challenge(UserOtpPurpose.CHANGE_EMAIL, OtpChannel.EMAIL,
+                                                "new@example.com", "123456", "new@example.com", future(), 0)));
+                when(userPersistencePort.findByIdentity("new@example.com")).thenReturn(Optional.empty());
+                when(userPersistencePort.save(any(IdentityUser.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(authSessionPersistencePort.findByUserId(USER_ID)).thenReturn(List.of(revoked));
+                when(userResultMapper.toUserProfileView(any(IdentityUser.class))).thenReturn(expected);
+
+                UserProfileView result = service.confirmEmailChange(USER_ID, "123456");
+
+                assertThat(result).isSameAs(expected);
+                verify(refreshTokenStore, never()).revokeBySessionId(anyString());
+                verify(authSessionPersistencePort).saveAll(List.of(revoked));
         }
 }

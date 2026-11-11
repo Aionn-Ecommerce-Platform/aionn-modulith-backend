@@ -1,0 +1,59 @@
+plugins {
+    id 'java-library'
+}
+
+def lombokVersion = '1.18.30'
+
+dependencies {
+    api project(':shared:kernel')
+    api project(':shared:contracts')
+
+    api platform("org.springframework.boot:spring-boot-dependencies:${springBootVersion}")
+
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    compileOnly 'jakarta.persistence:jakarta.persistence-api'
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    compileOnly 'jakarta.validation:jakarta.validation-api'
+    compileOnly 'jakarta.annotation:jakarta.annotation-api'
+    compileOnly 'org.springframework.data:spring-data-jpa'
+    compileOnly 'org.springframework:spring-context'
+    compileOnly 'org.springframework:spring-web'
+    compileOnly 'org.springframework:spring-webmvc'
+    compileOnly 'org.springframework:spring-tx'
+    compileOnly 'org.springframework:spring-jdbc'
+    compileOnly 'org.springframework:spring-aop'
+    compileOnly 'org.aspectj:aspectjweaver'
+    compileOnly 'io.micrometer:micrometer-core'
+    compileOnly 'org.springframework.security:spring-security-core'
+    compileOnly 'org.springframework.security:spring-security-web'
+
+    api 'com.fasterxml.jackson.core:jackson-databind'
+    api 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    api 'com.fasterxml.jackson.core:jackson-annotations'
+    api 'tools.jackson.core:jackson-databind'
+    api 'net.javacrumbs.shedlock:shedlock-spring:7.7.0'
+    implementation 'net.javacrumbs.shedlock:shedlock-provider-jdbc-template:7.7.0'
+
+    api 'com.github.ben-manes.caffeine:caffeine:3.1.8'
+    compileOnly 'org.springframework.data:spring-data-redis'
+    compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
+    compileOnly 'org.springframework.boot:spring-boot-webmvc'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework:spring-web'
+    testImplementation 'org.springframework:spring-webmvc'
+    testImplementation 'org.springframework.security:spring-security-core'
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation 'jakarta.validation:jakarta.validation-api'
+    testImplementation 'org.springframework.data:spring-data-redis'
+    testImplementation 'org.springframework:spring-jdbc'
+    testImplementation 'org.springframework:spring-aop'
+    testImplementation 'org.aspectj:aspectjweaver'
+    testImplementation 'io.micrometer:micrometer-core'
+    testImplementation 'net.jqwik:jqwik:1.9.2'
+    testImplementation 'com.tngtech.archunit:archunit-junit5:1.3.0'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}

@@ -1,6 +1,7 @@
 package com.aionn.identity.infrastructure.persistence.adapter.kyc;
 
 import com.aionn.identity.application.port.out.kyc.KycPersistencePort;
+import com.aionn.identity.application.policy.IdentityValidationConstants;
 import com.aionn.identity.domain.model.KycDocument;
 import com.aionn.identity.domain.model.KycProfile;
 import com.aionn.identity.domain.valueobject.KycStatus;
@@ -72,7 +73,7 @@ public class KycPersistenceAdapter implements KycPersistencePort {
 
     @Override
     public List<KycProfile> findByStatus(KycStatus status, int limit) {
-        int safeLimit = Math.max(1, Math.min(limit, 200));
+        int safeLimit = Math.max(1, Math.min(limit, IdentityValidationConstants.ADMIN_KYC_LIST_MAX_LIMIT));
         return kycRepository
                 .findByStatusOrderBySubmittedAtDesc(status.name(), PageRequest.of(0, safeLimit))
                 .stream()

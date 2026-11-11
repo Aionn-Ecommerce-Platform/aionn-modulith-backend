@@ -48,6 +48,15 @@ public class OrderItemEntity {
     @Column(name = "reservation_id", length = 50)
     private String reservationId;
 
+    @Column(name = "product_name", length = 500)
+    private String productName;
+
+    @Column(name = "image_url", columnDefinition = "TEXT")
+    private String imageUrl;
+
+    @Column(name = "variant_label", length = 255)
+    private String variantLabel;
+
     @Embeddable
     @Getter
     @Setter

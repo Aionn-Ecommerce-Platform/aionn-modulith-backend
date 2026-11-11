@@ -4,7 +4,6 @@ import com.aionn.identity.application.policy.AgentPolicy;
 import com.aionn.identity.application.policy.IdentityValidationConstants;
 import com.aionn.identity.application.port.out.agent.AgentAuditPort;
 import com.aionn.identity.application.port.out.agent.AgentPersistencePort;
-import com.aionn.identity.application.port.out.security.PasswordHasherPort;
 import com.aionn.identity.domain.exception.IdentityErrorCode;
 import com.aionn.identity.domain.exception.IdentityException;
 import com.aionn.identity.domain.model.AgentIdentity;
@@ -12,6 +11,7 @@ import com.aionn.identity.domain.model.SecurityAudit;
 import com.aionn.identity.domain.valueobject.AgentStatus;
 import com.aionn.identity.domain.valueobject.SecurityAuditEventType;
 import com.aionn.sharedkernel.util.IdGenerator;
+import com.aionn.sharedkernel.util.Sha256Hasher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,23 +33,26 @@ public class AgentService {
     private final AgentPersistencePort agentPersistencePort;
     private final AgentAuditPort agentAuditPort;
     private final AgentPolicy agentPolicy;
-    private final PasswordHasherPort passwordHasher;
-
     private final Clock clock;
+
+    private static final int AGENT_NAME_SUFFIX_LENGTH = 8;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    public AgentIdentity create(String ownerUserId) {
+    public record Created(AgentIdentity agent, String apiKey) {
+    }
+
+    public Created create(String ownerUserId) {
         log.info("Creating agent for owner: {}", ownerUserId);
         byte[] keyBytes = new byte[IdentityValidationConstants.AGENT_KEY_BYTES];
         SECURE_RANDOM.nextBytes(keyBytes);
-        String secureKey = Base64.getEncoder().encodeToString(keyBytes);
-        String keyHash = passwordHasher.hash(secureKey);
+        String apiKey = Base64.getEncoder().encodeToString(keyBytes);
+        String keyHash = Sha256Hasher.hexDigest(apiKey);
 
         Instant now = nowUtc();
         AgentIdentity agentIdentity = AgentIdentity.builder()
                 .id(IdGenerator.ulid())
                 .ownerId(ownerUserId)
-                .name("Agent-" + IdGenerator.ulid().substring(0, 8))
+                .name("Agent-" + IdGenerator.ulid().substring(0, AGENT_NAME_SUFFIX_LENGTH))
                 .keyHash(keyHash)
                 .permissions("{\"scope\":\"basic\"}")
                 .status(AgentStatus.ACTIVE)
@@ -60,7 +63,7 @@ public class AgentService {
 
         AgentIdentity saved = agentPersistencePort.save(agentIdentity);
         log.info("Agent created successfully: {}", saved.getId());
-        return saved;
+        return new Created(saved, apiKey);
     }
 
     public AgentIdentity updatePermissions(String ownerUserId, String agentId, String permissionsJson) {
@@ -95,7 +98,7 @@ public class AgentService {
     public List<SecurityAudit> getAgentAuditLogs(String ownerUserId, String agentId) {
         log.debug("Retrieving audit logs for agent: {} owned by: {}", agentId, ownerUserId);
         getOwnedAgent(ownerUserId, agentId);
-        return agentAuditPort.findByAgentId(agentId, 100);
+        return agentAuditPort.findByAgentId(agentId, agentPolicy.getAuditLogLimit());
     }
 
     @Transactional(readOnly = true)
@@ -121,6 +124,7 @@ public class AgentService {
         return agentPersistencePort.findByIdAndOwnerId(agentId, ownerUserId)
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.AGENT_NOT_FOUND, "Agent not found"));
     }
+
     private Instant nowUtc() {
         return clock.instant();
     }

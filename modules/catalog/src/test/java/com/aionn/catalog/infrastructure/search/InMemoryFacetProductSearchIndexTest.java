@@ -1,5 +1,8 @@
 package com.aionn.catalog.infrastructure.search;
 
+import com.aionn.catalog.domain.valueobject.ProductStatus;
+import java.util.HashMap;
+
 import com.aionn.catalog.application.dto.search.ProductSearchCriteria;
 import com.aionn.catalog.application.dto.search.ProductSearchDocument;
 import com.aionn.catalog.application.port.out.search.ProductSearchIndex;
@@ -21,8 +24,8 @@ class InMemoryFacetProductSearchIndexTest {
         private static ProductSearchDocument doc(String id, String brandId, List<String> categories,
                         BigDecimal priceFrom, Map<String, String> attrs, long sold, double rating, String status) {
                 return new ProductSearchDocument(id, "m-1", "Widget " + id, "desc " + id, brandId, categories,
-                                List.of(), List.of("tag"), List.of(), attrs, priceFrom, priceFrom, "VND", status,
-                                Instant.now(), rating, sold);
+                                List.of(), List.of("tag"), List.of(), attrs, priceFrom, priceFrom, "VND", false,
+                                status, Instant.now(), rating, sold);
         }
 
         private static ProductSearchCriteria criteria(List<String> categoryIds, List<String> brandIds,
@@ -170,7 +173,7 @@ class InMemoryFacetProductSearchIndexTest {
         @Test
         void searchHonoursExplicitStatus() {
                 ProductSearchCriteria c = new ProductSearchCriteria(null, null,
-                                com.aionn.catalog.domain.valueobject.ProductStatus.HIDDEN, List.of(), List.of(),
+                                ProductStatus.HIDDEN, List.of(), List.of(),
                                 null, null, Map.of(), ProductSearchCriteria.Sort.RELEVANCE, 0, 20);
 
                 assertThat(index.search(c).get().productIds()).containsExactly("p3");
@@ -217,7 +220,7 @@ class InMemoryFacetProductSearchIndexTest {
 
         @Test
         void searchIgnoresAttributeFilterWithEmptyValues() {
-                java.util.Map<String, List<String>> attrs = new java.util.HashMap<>();
+                Map<String, List<String>> attrs = new HashMap<>();
                 attrs.put("color", List.of());
 
                 Optional<ProductSearchIndex.SearchHits> hits = index.search(

@@ -1,9 +1,13 @@
 package com.aionn.ordering.infrastructure.integration.cart;
 
+import com.aionn.sharedkernel.domain.model.EventEnvelope;
+import java.util.Collection;
+import org.mockito.ArgumentMatchers;
+
 import com.aionn.ordering.application.port.out.CartPersistencePort;
 import com.aionn.ordering.domain.model.Cart;
 import com.aionn.sharedkernel.application.port.EventPublisher;
-import com.aionn.sharedkernel.integration.port.ordering.CartOperationsPort;
+import com.aionn.contracts.port.ordering.CartOperationsPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -98,7 +102,7 @@ class OrderingCartAdapterTest {
         assertThat(snapshot.items()).containsOnly(Map.entry("new-sku", 3));
         verify(cartRepository).save(cart);
         verify(eventPublisher).publish(
-                org.mockito.ArgumentMatchers.<java.util.Collection<com.aionn.sharedkernel.domain.model.EventEnvelope>>any());
+                ArgumentMatchers.<Collection<EventEnvelope>>any());
     }
 
     @Test
@@ -113,6 +117,6 @@ class OrderingCartAdapterTest {
         assertThat(snapshot.items()).isEmpty();
         verify(cartRepository).save(cart);
         verify(eventPublisher).publish(
-                org.mockito.ArgumentMatchers.<java.util.Collection<com.aionn.sharedkernel.domain.model.EventEnvelope>>any());
+                ArgumentMatchers.<Collection<EventEnvelope>>any());
     }
 }

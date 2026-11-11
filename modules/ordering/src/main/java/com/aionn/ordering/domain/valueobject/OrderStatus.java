@@ -1,17 +1,8 @@
 package com.aionn.ordering.domain.valueobject;
 
 /**
- * Order lifecycle as derived from the EventStorming spec.
- *
- * <pre>
- *   PENDING        - just placed, awaiting reservation/payment
- *   APPROVED       - reservations + payment all confirmed
- *   PREPARING      - merchant accepted, packing
- *   SHIPPED        - handed off to carrier
- *   COMPLETED      - delivered
- *   CANCELLED      - by user / merchant / auto / system
- *   REJECTED       - merchant rejected (out of stock surprise)
- * </pre>
+ * Order lifecycle: PENDING (awaiting reservation/payment) → APPROVED → PREPARING → SHIPPED →
+ * COMPLETED, with CANCELLED/REJECTED as terminal alternatives. Used by the state machine below.
  */
 public enum OrderStatus {
     PENDING,

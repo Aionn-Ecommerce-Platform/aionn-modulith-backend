@@ -52,6 +52,7 @@ CREATE TABLE user_vouchers (
     user_voucher_id      VARCHAR(50) PRIMARY KEY,
     voucher_code         VARCHAR(50) NOT NULL,
     user_id              VARCHAR(50) NOT NULL,
+    entitlement_key      VARCHAR(100),
     status               VARCHAR(20) NOT NULL DEFAULT 'CLAIMED',
     reserved_order_id    VARCHAR(50),
     applied_amount       NUMERIC(18,2),
@@ -66,7 +67,10 @@ CREATE TABLE user_vouchers (
     CONSTRAINT fk_user_vouchers_voucher FOREIGN KEY (voucher_code) REFERENCES vouchers(voucher_code)
 );
 CREATE INDEX idx_user_vouchers_user                ON user_vouchers(user_id);
-CREATE UNIQUE INDEX idx_user_vouchers_user_voucher ON user_vouchers(user_id, voucher_code);
+-- A null entitlement keeps the one-voucher-per-user-per-code rule; each
+-- distinct key (one per late order) mints its own voucher.
+CREATE UNIQUE INDEX idx_user_vouchers_user_voucher
+    ON user_vouchers(user_id, voucher_code, COALESCE(entitlement_key, ''));
 CREATE INDEX idx_user_vouchers_status_expires      ON user_vouchers(status, reserved_expires_at);
 CREATE INDEX idx_user_vouchers_order               ON user_vouchers(reserved_order_id);
 

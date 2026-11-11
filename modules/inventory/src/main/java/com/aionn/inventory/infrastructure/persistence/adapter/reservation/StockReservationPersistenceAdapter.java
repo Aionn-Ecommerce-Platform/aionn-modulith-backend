@@ -24,7 +24,7 @@ public class StockReservationPersistenceAdapter implements StockReservationPersi
     public StockReservation save(StockReservation reservation) {
         StockReservationEntity existing = jpa.findById(reservation.getReservationId()).orElse(null);
         StockReservationEntity entity = mapper.toEntity(reservation, existing);
-        return mapper.toDomain(jpa.save(entity));
+        return mapper.toDomain(jpa.saveAndFlush(entity));
     }
 
     @Override
@@ -35,6 +35,14 @@ public class StockReservationPersistenceAdapter implements StockReservationPersi
     @Override
     public Optional<StockReservation> lockForUpdate(String reservationId) {
         return jpa.lockForUpdate(reservationId).map(mapper::toDomain);
+    }
+
+    @Override
+    public Optional<StockReservation> findActiveReservation(
+            String orderId, String skuId, String warehouseId) {
+        return jpa.findActiveReservation(orderId, skuId, warehouseId, PageRequest.of(0, 1)).stream()
+                .findFirst()
+                .map(mapper::toDomain);
     }
 
     @Override

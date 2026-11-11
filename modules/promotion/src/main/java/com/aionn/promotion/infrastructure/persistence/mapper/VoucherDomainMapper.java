@@ -14,6 +14,7 @@ public class VoucherDomainMapper {
                 e.getCampaignId(),
                 e.getScope(),
                 e.getMerchantId(),
+                e.getType(),
                 Money.of(e.getDiscountAmount(), e.getCurrency()),
                 e.getUsageLimit(),
                 e.getUsedCount(),
@@ -31,6 +32,7 @@ public class VoucherDomainMapper {
                         .campaignId(v.getCampaignId())
                         .scope(v.getScope())
                         .merchantId(v.getMerchantId())
+                        .type(v.getType())
                         .discountAmount(v.getDiscountAmount().amount())
                         .currency(v.getDiscountAmount().currency())
                         .usageLimit(v.getUsageLimit())

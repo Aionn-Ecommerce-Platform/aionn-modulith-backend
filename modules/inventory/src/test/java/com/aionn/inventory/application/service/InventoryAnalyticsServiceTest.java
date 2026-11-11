@@ -3,7 +3,7 @@ package com.aionn.inventory.application.service;
 import com.aionn.inventory.application.dto.analytics.result.LowStockAlertResult;
 import com.aionn.inventory.application.port.out.InventoryItemPersistencePort;
 import com.aionn.inventory.application.port.out.InventoryItemPersistencePort.LowStockItem;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -51,7 +51,8 @@ class InventoryAnalyticsServiceTest {
     void getMerchantLowStockThrowsExceptionWhenMerchantNotFound() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.empty());
 
-        assertThrows(IllegalStateException.class, () -> analyticsService.getMerchantLowStock("owner-1"));
+        assertThrows(com.aionn.inventory.domain.exception.InventoryException.class,
+                () -> analyticsService.getMerchantLowStock("owner-1"));
         verifyNoInteractions(inventoryRepository);
     }
 }

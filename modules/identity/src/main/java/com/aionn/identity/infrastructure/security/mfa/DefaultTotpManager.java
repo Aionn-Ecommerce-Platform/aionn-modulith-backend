@@ -1,6 +1,7 @@
 package com.aionn.identity.infrastructure.security.mfa;
 
 import com.aionn.identity.application.port.out.security.TotpManagerPort;
+import com.aionn.identity.application.policy.IdentityValidationConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -19,7 +20,7 @@ public class DefaultTotpManager implements TotpManagerPort {
     private static final String BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
     private static final String HMAC_ALGORITHM = "HmacSHA1";
     private static final int SECRET_BYTES = 20;
-    private static final int CODE_DIGITS = 6;
+    private static final int CODE_DIGITS = IdentityValidationConstants.TOTP_CODE_LENGTH;
     private static final int PERIOD_SECONDS = 30;
     private static final int WINDOW_STEPS = 1;
 
@@ -35,7 +36,7 @@ public class DefaultTotpManager implements TotpManagerPort {
 
     @Override
     public boolean verifyCode(String secret, String code) {
-        if (secret == null || secret.isBlank() || code == null || !code.matches("\\d{6}")) {
+        if (secret == null || secret.isBlank() || code == null || !code.matches("\\d{" + CODE_DIGITS + "}")) {
             return false;
         }
         long currentCounter = clock.instant().getEpochSecond() / PERIOD_SECONDS;

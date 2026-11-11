@@ -1,5 +1,7 @@
 package com.aionn.catalog.application.service;
 
+import java.time.ZoneOffset;
+
 import com.aionn.catalog.application.dto.attribute.command.ConfigureFilterableCommand;
 import com.aionn.catalog.application.dto.attribute.command.CreateAttributeTemplateCommand;
 import com.aionn.catalog.application.port.out.attribute.AttributeTemplatePersistencePort;
@@ -44,7 +46,7 @@ class AttributeTemplateServiceTest {
         private EventPublisher eventPublisher;
 
         @Spy
-        private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
+        private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
 
         @InjectMocks
         private AttributeTemplateService attributeTemplateService;

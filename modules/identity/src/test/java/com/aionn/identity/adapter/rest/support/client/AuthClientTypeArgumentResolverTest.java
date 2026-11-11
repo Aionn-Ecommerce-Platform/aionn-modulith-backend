@@ -1,5 +1,9 @@
 package com.aionn.identity.adapter.rest.support.client;
 
+import jakarta.servlet.http.HttpServletRequest;
+import org.mockito.Mockito;
+import org.springframework.web.context.request.NativeWebRequest;
+
 import com.aionn.identity.infrastructure.config.properties.AuthProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -73,8 +77,8 @@ class AuthClientTypeArgumentResolverTest {
     void resolveArgumentHandlesNullNativeRequest() throws Exception {
         var resolver = new AuthClientTypeArgumentResolver(authProperties);
 
-        var webRequest = org.mockito.Mockito.mock(org.springframework.web.context.request.NativeWebRequest.class);
-        when(webRequest.getNativeRequest(jakarta.servlet.http.HttpServletRequest.class)).thenReturn(null);
+        var webRequest = Mockito.mock(NativeWebRequest.class);
+        when(webRequest.getNativeRequest(HttpServletRequest.class)).thenReturn(null);
 
         Object result = resolver.resolveArgument(
                 new MethodParameter(Sample.class.getMethod("handle", String.class, String.class), 0),

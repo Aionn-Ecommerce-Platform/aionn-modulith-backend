@@ -6,7 +6,7 @@ import com.aionn.catalog.adapter.rest.mapper.searchhistory.SearchHistoryDtoMappe
 import com.aionn.catalog.adapter.rest.support.session.CurrentOwnerId;
 import com.aionn.catalog.application.port.in.searchhistory.GetRecentSearchesInputPort;
 import com.aionn.catalog.application.port.in.searchhistory.RecordSearchesInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

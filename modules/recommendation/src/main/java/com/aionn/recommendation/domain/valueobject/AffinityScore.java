@@ -7,12 +7,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 /**
- * A normalised score in [0,1].
- *
- * <p>Normalisation is a correctness requirement, not tidiness: hybrid ranking adds a cosine
- * similarity (always <= 1) to a decayed popularity total (potentially in the thousands). Without a
- * shared scale, popularity would swallow the configured weights and the other signals would have no
- * effect.
+ * A normalised score in [0,1]. Normalisation is a correctness requirement: hybrid ranking combines a
+ * cosine (<=1) with a popularity total (thousands), and without a shared scale popularity would swallow
+ * the configured weights.
  */
 public record AffinityScore(BigDecimal value) implements Comparable<AffinityScore> {
 
@@ -41,11 +38,7 @@ public record AffinityScore(BigDecimal value) implements Comparable<AffinityScor
         return new AffinityScore(BigDecimal.valueOf(value));
     }
 
-    /**
-     * Min-max normalisation against an observed range. A zero-width range means every candidate
-     * scored the same, so the signal carries no ranking information and collapses to zero rather
-     * than to an arbitrary constant.
-     */
+    /** Min-max against an observed range; a zero-width range carries no ranking info, so it collapses to zero. */
     public static AffinityScore normalize(BigDecimal raw, BigDecimal min, BigDecimal max) {
         if (raw == null || min == null || max == null) {
             return ZERO;

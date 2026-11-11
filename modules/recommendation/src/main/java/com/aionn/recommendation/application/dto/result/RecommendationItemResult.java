@@ -17,10 +17,28 @@ public record RecommendationItemResult(
         String name,
         String imageUrl,
         BigDecimal priceFrom,
+        BigDecimal originalPriceFrom,
         String currency,
         BigDecimal score,
         RecommendationReason reason,
-        List<String> skuIds) {
+        List<String> skuIds,
+        Double rating,
+        Long reviewCount,
+        Long soldCount) {
+
+    public RecommendationItemResult(
+            String productId,
+            String name,
+            String imageUrl,
+            BigDecimal priceFrom,
+            BigDecimal originalPriceFrom,
+            String currency,
+            BigDecimal score,
+            RecommendationReason reason,
+            List<String> skuIds) {
+        this(productId, name, imageUrl, priceFrom, originalPriceFrom, currency, score, reason, skuIds,
+                null, null, 0L);
+    }
 
     public RecommendationItemResult {
         skuIds = skuIds == null ? List.of() : List.copyOf(skuIds);

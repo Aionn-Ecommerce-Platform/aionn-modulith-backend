@@ -58,6 +58,9 @@ public class Warehouse extends AggregateRoot {
     }
 
     public void changeStatus(WarehouseStatus next, Clock clock) {
+        Guard.require(status != WarehouseStatus.SUSPENDED,
+                () -> new InventoryException(InventoryErrorCode.WAREHOUSE_INVALID_TRANSITION,
+                        "Suspended warehouses can only be reactivated by an admin via liftSuspension"));
         Guard.require(next != WarehouseStatus.SUSPENDED,
                 () -> new InventoryException(InventoryErrorCode.WAREHOUSE_INVALID_TRANSITION,
                         "Use suspend(adminId, reason) for SUSPENDED"));

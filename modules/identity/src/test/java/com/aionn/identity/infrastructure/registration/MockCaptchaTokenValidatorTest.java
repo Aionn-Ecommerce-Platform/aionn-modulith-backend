@@ -13,7 +13,7 @@ class MockCaptchaTokenValidatorTest {
     private MockCaptchaTokenValidator validatorWithExpectedToken(String expectedToken) {
         RegistrationProperties properties = new RegistrationProperties(
                 5, 60, 300, 30, 30L, "+84",
-                new RateLimit(3, 300, 1, 60),
+                new RateLimit(3, 300, 1, 60, 10, 300, 5, 300),
                 new Captcha("mock", expectedToken, "", ""),
                 new Twilio(false, "", "", ""));
         return new MockCaptchaTokenValidator(properties);

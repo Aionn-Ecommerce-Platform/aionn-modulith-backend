@@ -1,8 +1,14 @@
 package com.aionn.promotion.adapter.rest.controller;
 
+import com.aionn.promotion.domain.valueobject.VoucherType;
+
+import com.aionn.promotion.adapter.rest.mapper.voucher.VoucherDtoMapper;
+
+import com.aionn.promotion.adapter.rest.mapper.campaign.PromotionCampaignDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.promotion.adapter.rest.exception.PromotionExceptionHandler;
-import com.aionn.promotion.adapter.rest.mapper.campaign.PromotionCampaignDtoMapperImpl;
-import com.aionn.promotion.adapter.rest.mapper.voucher.VoucherDtoMapperImpl;
 import com.aionn.promotion.adapter.rest.support.session.CurrentAdminIdArgumentResolver;
 import com.aionn.promotion.application.dto.campaign.command.CampaignCommands;
 import com.aionn.promotion.application.dto.campaign.result.CampaignResult;
@@ -23,7 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -76,7 +82,7 @@ class PromotionCampaignControllerWebTest {
                                 cancelCampaignInputPort, configureCampaignConditionInputPort,
                                 issueCampaignVoucherInputPort, getCampaignInputPort,
                                 listCampaignsByStatusInputPort, listCampaignVouchersInputPort,
-                                new PromotionCampaignDtoMapperImpl(), new VoucherDtoMapperImpl());
+                                Mappers.getMapper(PromotionCampaignDtoMapper.class), Mappers.getMapper(VoucherDtoMapper.class));
 
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new PromotionExceptionHandler())
@@ -107,6 +113,7 @@ class PromotionCampaignControllerWebTest {
         private static VoucherResult voucherSample(String code) {
                 Instant now = Instant.parse("2026-06-25T00:00:00Z");
                 return new VoucherResult(code, "camp-1", VoucherScope.PLATFORM, null,
+                                VoucherType.ORDER_DISCOUNT,
                                 new BigDecimal("50000"), "VND", 100, 0, 0,
                                 now, now.plusSeconds(86400), now, now);
         }

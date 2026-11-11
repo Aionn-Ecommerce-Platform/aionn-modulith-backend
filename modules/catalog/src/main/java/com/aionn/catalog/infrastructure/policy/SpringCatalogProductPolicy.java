@@ -22,4 +22,14 @@ public class SpringCatalogProductPolicy implements CatalogProductPolicy {
     public long getBestSellerThreshold() {
         return properties.bestSellerThreshold();
     }
+
+    @Override
+    public int getSearchIndexBatchSize() {
+        return properties.reindexPageSize();
+    }
+
+    @Override
+    public String getCloneNameSuffix() {
+        return properties.cloneNameSuffix();
+    }
 }

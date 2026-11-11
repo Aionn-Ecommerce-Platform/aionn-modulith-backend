@@ -5,7 +5,7 @@ import com.aionn.chat.adapter.rest.dto.autoreply.response.AutoReplyResponse;
 import com.aionn.chat.adapter.rest.mapper.autoreply.AutoReplyDtoMapper;
 import com.aionn.chat.application.port.in.autoreply.GetAutoReplyQueryPort;
 import com.aionn.chat.application.port.in.autoreply.UpdateAutoReplyInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

@@ -1,5 +1,8 @@
 package com.aionn.identity.infrastructure.kyc;
 
+import com.aionn.sharedkernel.testing.fixture.TestClocks;
+import java.time.Clock;
+
 import com.aionn.identity.application.port.out.kyc.ExternalKycVerificationPort.ExternalKycApplicant;
 import com.aionn.identity.application.port.out.kyc.ExternalKycVerificationPort.ExternalKycSession;
 import com.aionn.identity.domain.exception.IdentityException;
@@ -45,7 +48,7 @@ class SumsubKycVerificationAdapterTest {
     }
 
     private SumsubKycVerificationAdapter adapter(KycProperties properties) {
-        return new SumsubKycVerificationAdapter(properties, objectMapper, java.time.Clock.systemUTC());
+        return new SumsubKycVerificationAdapter(properties, objectMapper, Clock.systemUTC());
     }
 
     private MockRestServiceServer bindMockServer(SumsubKycVerificationAdapter adapter) {
@@ -66,7 +69,7 @@ class SumsubKycVerificationAdapterTest {
     }
 
     private IdentityUser user() {
-        return IdentityUser.createNew("user-1", "u@example.com", "0900000000", "username", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED);
+        return IdentityUser.createNew("user-1", "u@example.com", "0900000000", "username", TestClocks.FIXED);
     }
 
     private static String hmacHex(String algorithm, String secret, byte[] payload) {

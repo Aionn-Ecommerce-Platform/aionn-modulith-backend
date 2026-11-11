@@ -1,8 +1,10 @@
 package com.aionn.catalog.infrastructure.media;
 
+import java.time.Clock;
+
 import com.aionn.catalog.application.dto.media.result.UploadSignatureResult;
 import com.aionn.catalog.infrastructure.config.properties.CatalogCloudinaryProperties;
-import com.aionn.sharedkernel.media.CloudinaryCredentialsProperties;
+import com.aionn.platform.media.CloudinaryCredentialsProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -21,7 +23,7 @@ class CloudinaryProductMediaUploadSignatureProviderTest {
                 "demo-cloud", "api-key", "api-secret", "https://api.cloudinary.com/v1_1");
         CatalogCloudinaryProperties folders = new CatalogCloudinaryProperties(
                 "aionn/catalog/products", "aionn/catalog/reviews");
-        provider = new CloudinaryProductMediaUploadSignatureProvider(credentials, folders, java.time.Clock.systemUTC());
+        provider = new CloudinaryProductMediaUploadSignatureProvider(credentials, folders, Clock.systemUTC());
     }
 
     @Test

@@ -4,7 +4,7 @@ import com.aionn.shipping.domain.exception.ShippingErrorCode;
 import com.aionn.shipping.domain.exception.ShippingException;
 import com.aionn.shipping.domain.valueobject.ShipmentAddress;
 import com.aionn.shipping.infrastructure.carrier.config.GhnProperties;
-import com.aionn.sharedkernel.integration.port.identity.AddressLookupPort;
+import com.aionn.contracts.port.identity.AddressLookupPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -200,7 +200,7 @@ class GhnAddressResolverTest {
                 .isInstanceOf(ShippingException.class)
                 .hasMessageContaining("no matching province")
                 .extracting("errorCode")
-                .isEqualTo(ShippingErrorCode.SHIPMENT_CARRIER_ERROR.getCode());
+                .isEqualTo(ShippingErrorCode.INVALID_ARGUMENT.getCode());
     }
 
     @Test

@@ -7,11 +7,15 @@ import com.aionn.recommendation.infrastructure.config.properties.RecommendationJ
 import com.aionn.recommendation.infrastructure.persistence.mapper.InteractionDomainMapper;
 import com.aionn.recommendation.infrastructure.persistence.repository.InteractionRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -24,37 +28,34 @@ import java.util.Map;
 @Component
 public class InteractionPersistenceAdapter implements InteractionPersistencePort {
 
-    /**
-     * Postgres caps bind parameters at 65535; well under it, and far more than any
-     * real user has.
-     */
+    /** Postgres caps bind parameters at 65535; this is well under it. */
     private static final int MAX_USER_INTERACTIONS = 10_000;
 
     private final InteractionRepository jpa;
     private final InteractionDomainMapper mapper;
+    private final JdbcTemplate jdbc;
+    private final NamedParameterJdbcTemplate namedJdbc;
     private final Clock clock;
 
     /**
-     * Read-only phase of the offline rebuilds. Built here rather than declared as a bean so Boot's
-     * {@code TransactionAutoConfiguration} still supplies the unqualified {@code TransactionTemplate}
-     * that other modules inject - registering a second one would back that auto-configuration off and
-     * make every unqualified injection ambiguous.
-     *
-     * <p>The timeout overrides the application-wide {@code spring.transaction.default-timeout}, which
-     * is sized for a request. Both rebuilds scan the interaction log, so at volume they legitimately
-     * need longer; leaving them on the request budget makes the job start failing exactly when the
-     * data becomes worth computing.
+     * Read-only template for the offline rebuilds, built here rather than as a bean so Boot still
+     * supplies the unqualified {@code TransactionTemplate} other modules inject. The timeout is
+     * longer than the request default because both rebuilds scan the interaction log.
      */
     private final TransactionTemplate computeReads;
 
     public InteractionPersistenceAdapter(
             InteractionRepository jpa,
             InteractionDomainMapper mapper,
+            JdbcTemplate jdbc,
+            NamedParameterJdbcTemplate namedJdbc,
             Clock clock,
             PlatformTransactionManager transactionManager,
             RecommendationJobProperties jobProperties) {
         this.jpa = jpa;
         this.mapper = mapper;
+        this.jdbc = jdbc;
+        this.namedJdbc = namedJdbc;
         this.clock = clock;
         this.computeReads = new TransactionTemplate(transactionManager);
         this.computeReads.setReadOnly(true);
@@ -68,8 +69,7 @@ public class InteractionPersistenceAdapter implements InteractionPersistencePort
         }
         int written = jpa.appendIdempotent(mapper.toEntity(interaction, clock.instant()));
         if (written == 0) {
-            // A replay of an event already ingested. Not an error, and not worth a row in the log at
-            // info level: under a retry storm this is the common case.
+            // Replay of an already-ingested event; common under retry storms.
             log.debug("Ignored duplicate interaction from source event {}",
                     interaction.getSourceEventId());
         }
@@ -140,6 +140,37 @@ public class InteractionPersistenceAdapter implements InteractionPersistencePort
     @Override
     public int deleteOlderThan(Instant cutoff, int batchSize) {
         return jpa.deleteOlderThan(cutoff, Math.max(1, batchSize));
+    }
+
+    @Override
+    public PrunedInteractions pruneOlderThan(Instant cutoff, int batchSize) {
+        int safeBatch = Math.max(1, batchSize);
+        List<Map<String, Object>> rows = jdbc.query("""
+                SELECT interaction_id, user_id, product_id
+                  FROM recommendation_interactions
+                 WHERE occurred_at < ?
+                 ORDER BY occurred_at
+                 LIMIT ?
+                """, (rs, rowNum) -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("id", rs.getString("interaction_id"));
+                    row.put("user", rs.getString("user_id"));
+                    row.put("product", rs.getString("product_id"));
+                    return row;
+                }, Timestamp.from(cutoff), safeBatch);
+        if (rows.isEmpty()) {
+            return new PrunedInteractions(0, List.of(), List.of());
+        }
+
+        List<String> ids = rows.stream().map(row -> (String) row.get("id")).toList();
+        List<String> users = rows.stream().map(row -> (String) row.get("user"))
+                .filter(v -> v != null).distinct().toList();
+        List<String> products = rows.stream().map(row -> (String) row.get("product"))
+                .filter(v -> v != null).distinct().toList();
+        int deleted = namedJdbc.update(
+                "DELETE FROM recommendation_interactions WHERE interaction_id IN (:ids)",
+                new MapSqlParameterSource("ids", ids));
+        return new PrunedInteractions(deleted, users, products);
     }
 
     @Override

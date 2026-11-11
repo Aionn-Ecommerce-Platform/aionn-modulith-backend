@@ -1,9 +1,14 @@
 package com.aionn.identity.application.service;
 
+import com.aionn.sharedkernel.testing.fixture.TestClocks;
+import java.time.ZoneOffset;
+
 import com.aionn.identity.application.dto.kyc.command.SumsubWebhookCommand;
 import com.aionn.identity.application.dto.kyc.result.KycVerificationSessionResult;
 import com.aionn.identity.application.policy.KycPolicy;
 import com.aionn.identity.application.port.out.kyc.ExternalKycVerificationPort;
+import com.aionn.identity.application.port.out.kyc.KycDocumentStoragePort;
+import com.aionn.identity.application.port.out.kyc.KycDocumentUrlProviderPort;
 import com.aionn.identity.application.port.out.kyc.KycPersistencePort;
 import com.aionn.identity.application.port.out.user.UserPersistencePort;
 import com.aionn.identity.domain.exception.IdentityException;
@@ -35,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @ExtendWith(MockitoExtension.class)
 class KycServiceTest {
     private static final Clock TEST_CLOCK = Clock.fixed(
-            Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
+            Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
 
     private static final String USER_ID = "user-1";
     private static final String KYC_ID = "kyc-1";
@@ -48,6 +53,10 @@ class KycServiceTest {
     private KycPolicy kycPolicy;
     @Mock
     private ExternalKycVerificationPort externalKycVerificationPort;
+    @Mock
+    private KycDocumentUrlProviderPort kycDocumentUrlProvider;
+    @Mock
+    private KycDocumentStoragePort kycDocumentStoragePort;
 
     private KycService kycService;
 
@@ -55,11 +64,11 @@ class KycServiceTest {
     void setUp() {
         kycService = new KycService(
                 kycPersistencePort, userPersistencePort, kycPolicy, externalKycVerificationPort,
-                TEST_CLOCK);
+                kycDocumentUrlProvider, kycDocumentStoragePort, TEST_CLOCK);
     }
 
     private static IdentityUser activeUser() {
-        return IdentityUser.createNew(USER_ID, "u@example.com", null, "user", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED);
+        return IdentityUser.createNew(USER_ID, "u@example.com", null, "user", TestClocks.FIXED);
     }
 
     private static KycProfile draftProfile() {
@@ -74,6 +83,13 @@ class KycServiceTest {
     private static KycProfile submittedProfile() {
         KycProfile k = draftProfile();
         k.attachExternalProvider("SUMSUB", "applicant-1", "basic", "init", "corr-1", TEST_CLOCK);
+        return k;
+    }
+
+    /** Local (non-provider) profile in SUBMITTED state for admin-review tests. */
+    private static KycProfile localSubmittedProfile() {
+        KycProfile k = draftProfile();
+        k.submit(TEST_CLOCK);
         return k;
     }
 
@@ -143,10 +159,11 @@ class KycServiceTest {
                 KYC_ID,
                 KycDocumentType.ID_FRONT,
                 "https://cdn.test/front.jpg",
-                "identity/kyc/front",
+                "identity/kyc/user-1/front",
                 KycDocumentStatus.UPLOADED,
                 Instant.now());
         when(kycPersistencePort.findByKycIdAndUserId(KYC_ID, USER_ID)).thenReturn(Optional.of(profile));
+        when(kycDocumentStoragePort.isOwnedBy("identity/kyc/user-1/front", USER_ID)).thenReturn(true);
         when(kycPersistencePort.saveDocument(any(KycDocument.class))).thenReturn(savedDocument);
         when(kycPersistencePort.save(profile)).thenReturn(profile);
 
@@ -155,7 +172,7 @@ class KycServiceTest {
                 KYC_ID,
                 "ID_FRONT",
                 "https://cdn.test/front.jpg",
-                "identity/kyc/front");
+                "identity/kyc/user-1/front");
 
         assertThat(result).isSameAs(savedDocument);
         assertThat(profile.getBlobUrl()).isEqualTo("https://cdn.test/front.jpg");
@@ -193,7 +210,7 @@ class KycServiceTest {
 
     @Test
     void adminApproveTransitionsSubmittedToApproved() {
-        KycProfile profile = submittedProfile();
+        KycProfile profile = localSubmittedProfile();
         when(kycPersistencePort.findById(KYC_ID)).thenReturn(Optional.of(profile));
         when(kycPersistencePort.save(profile)).thenReturn(profile);
 
@@ -210,6 +227,30 @@ class KycServiceTest {
 
         assertThrows(IdentityException.class,
                 () -> kycService.adminApprove(KYC_ID, "admin", "n"));
+    }
+
+    @Test
+    void adminCannotApproveProviderManagedProfile() {
+        KycProfile profile = submittedProfile();
+        when(kycPersistencePort.findById(KYC_ID)).thenReturn(Optional.of(profile));
+
+        IdentityException ex = assertThrows(IdentityException.class,
+                () -> kycService.adminApprove(KYC_ID, "admin", "n"));
+
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.KYC_MANAGED_EXTERNALLY.getCode());
+        verify(kycPersistencePort, never()).save(any());
+    }
+
+    @Test
+    void adminCannotRejectProviderManagedProfile() {
+        KycProfile profile = submittedProfile();
+        when(kycPersistencePort.findById(KYC_ID)).thenReturn(Optional.of(profile));
+
+        IdentityException ex = assertThrows(IdentityException.class,
+                () -> kycService.adminReject(KYC_ID, "admin", "n"));
+
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.KYC_MANAGED_EXTERNALLY.getCode());
+        verify(kycPersistencePort, never()).save(any());
     }
 
     @Test
@@ -309,7 +350,7 @@ class KycServiceTest {
 
     @Test
     void adminRejectTransitionsSubmittedToRejected() {
-        KycProfile profile = submittedProfile();
+        KycProfile profile = localSubmittedProfile();
         when(kycPersistencePort.findById(KYC_ID)).thenReturn(Optional.of(profile));
         when(kycPersistencePort.save(profile)).thenReturn(profile);
 
@@ -375,6 +416,33 @@ class KycServiceTest {
     }
 
     @Test
+    void attachDocumentRejectsNonHttpUrl() {
+        KycProfile profile = draftProfile();
+        when(kycPersistencePort.findByKycIdAndUserId(KYC_ID, USER_ID)).thenReturn(Optional.of(profile));
+
+        IdentityException ex = assertThrows(IdentityException.class, () -> kycService.attachDocument(
+                USER_ID, KYC_ID, "ID_FRONT", "javascript:alert(1)", null));
+
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.KYC_DOCUMENT_URL_INVALID.getCode());
+        verify(kycPersistencePort, never()).saveDocument(any());
+    }
+
+    @Test
+    void attachDocumentRejectsAssetOwnedByAnotherUser() {
+        KycProfile profile = draftProfile();
+        when(kycPersistencePort.findByKycIdAndUserId(KYC_ID, USER_ID)).thenReturn(Optional.of(profile));
+        when(kycDocumentStoragePort.isOwnedBy("identity/kyc/other-user/front", USER_ID))
+                .thenReturn(false);
+
+        IdentityException ex = assertThrows(IdentityException.class, () -> kycService.attachDocument(
+                USER_ID, KYC_ID, "ID_FRONT", "https://cdn.test/front.jpg",
+                "identity/kyc/other-user/front"));
+
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.KYC_DOCUMENT_OWNERSHIP_INVALID.getCode());
+        verify(kycPersistencePort, never()).saveDocument(any());
+    }
+
+    @Test
     void listDocumentsReturnsPersistedDocuments() {
         KycProfile profile = draftProfile();
         KycDocument document = new KycDocument("doc-1", KYC_ID, KycDocumentType.ID_FRONT,
@@ -400,8 +468,7 @@ class KycServiceTest {
     }
 
     @Test
-    void submitAcceptsPassportWithSinglePassportDocument() {
-        KycProfile profile = new KycProfile(
+    void submitAcceptsPassportWithSinglePassportDocument() {        KycProfile profile = new KycProfile(
                 KYC_ID, USER_ID, "PASSPORT",
                 null, KycStatus.DRAFT,
                 null, null, null, null, null,
@@ -511,6 +578,56 @@ class KycServiceTest {
 
         assertThat(profile.getStatus()).isEqualTo(KycStatus.APPROVED);
         verify(kycPersistencePort).save(profile);
+    }
+
+    @Test
+    void listDocumentsUsesTheSignedUrlWhenAvailable() {
+        KycDocument document = new KycDocument("doc-1", KYC_ID, KycDocumentType.ID_FRONT,
+                "https://cdn.test/front.jpg", "identity/kyc/user-1/front",
+                KycDocumentStatus.UPLOADED, Instant.now());
+        when(kycPersistencePort.findByKycIdAndUserId(KYC_ID, USER_ID))
+                .thenReturn(Optional.of(draftProfile()));
+        when(kycPersistencePort.findDocumentsByKycId(KYC_ID)).thenReturn(List.of(document));
+        when(kycDocumentUrlProvider.signedDownloadUrl("identity/kyc/user-1/front",
+                "https://cdn.test/front.jpg")).thenReturn("https://signed.test/front");
+
+        List<KycDocument> documents = kycService.listDocuments(USER_ID, KYC_ID);
+
+        assertThat(documents).singleElement()
+                .satisfies(result -> assertThat(result.getUrl()).isEqualTo("https://signed.test/front"));
+    }
+
+    @Test
+    void listDocumentsKeepsTheStoredUrlWhenSigningIsUnavailable() {
+        KycDocument document = new KycDocument("doc-1", KYC_ID, KycDocumentType.ID_FRONT,
+                "https://cdn.test/front.jpg", "identity/kyc/user-1/front",
+                KycDocumentStatus.UPLOADED, Instant.now());
+        when(kycPersistencePort.findByKycIdAndUserId(KYC_ID, USER_ID))
+                .thenReturn(Optional.of(draftProfile()));
+        when(kycPersistencePort.findDocumentsByKycId(KYC_ID)).thenReturn(List.of(document));
+        when(kycDocumentUrlProvider.signedDownloadUrl(any(), any())).thenReturn(" ");
+
+        assertThat(kycService.listDocuments(USER_ID, KYC_ID)).singleElement()
+                .satisfies(result -> assertThat(result.getUrl()).isEqualTo("https://cdn.test/front.jpg"));
+    }
+
+    @Test
+    void attachDocumentRejectsAMalformedUrl() {
+        when(kycPersistencePort.findByKycIdAndUserId(KYC_ID, USER_ID))
+                .thenReturn(Optional.of(draftProfile()));
+
+        assertThat(assertThrows(IdentityException.class, () -> kycService.attachDocument(
+                USER_ID, KYC_ID, "ID_FRONT", "http://", null)).getErrorCode())
+                .isEqualTo(IdentityErrorCode.KYC_DOCUMENT_URL_INVALID.getCode());
+    }
+
+    @Test
+    void planKycCreationRejectsABlankDocumentType() {
+        when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+
+        assertThat(assertThrows(IdentityException.class,
+                () -> kycService.planKycCreation(USER_ID, " ")).getErrorCode())
+                .isEqualTo(IdentityErrorCode.KYC_DOCUMENT_TYPE_INVALID.getCode());
     }
 
     private static SumsubWebhookCommand webhookCommand(String applicantId, String reviewAnswer) {

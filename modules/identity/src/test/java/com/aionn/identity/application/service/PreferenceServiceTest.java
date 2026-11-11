@@ -57,7 +57,7 @@ class PreferenceServiceTest {
     @Test
     void updateGeneralReplacesGeneralFieldsAndKeepsOthers() {
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
-        when(preferencePersistencePort.findById(USER_ID)).thenReturn(Optional.of(existing(
+        when(preferencePersistencePort.findByIdForUpdate(USER_ID)).thenReturn(Optional.of(existing(
                 "vi", "VND", "Asia/Ho_Chi_Minh", "light", "{\"push\":true}", "{}")));
         when(preferencePersistencePort.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -75,7 +75,7 @@ class PreferenceServiceTest {
     @Test
     void updateNotificationsReplacesOnlyNotificationField() {
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
-        when(preferencePersistencePort.findById(USER_ID)).thenReturn(Optional.of(existing(
+        when(preferencePersistencePort.findByIdForUpdate(USER_ID)).thenReturn(Optional.of(existing(
                 "vi", "VND", "Asia/Ho_Chi_Minh", "light", "{\"push\":true}", "{}")));
         when(preferencePersistencePort.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -90,7 +90,7 @@ class PreferenceServiceTest {
     @Test
     void updateAiPrivacyReplacesOnlyAiPrivacyField() {
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
-        when(preferencePersistencePort.findById(USER_ID)).thenReturn(Optional.of(existing(
+        when(preferencePersistencePort.findByIdForUpdate(USER_ID)).thenReturn(Optional.of(existing(
                 "vi", "VND", "Asia/Ho_Chi_Minh", "light", "{}", "{\"a\":1}")));
         when(preferencePersistencePort.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -130,7 +130,7 @@ class PreferenceServiceTest {
         UserPreferenceResult before = new UserPreferenceResult(
                 USER_ID, "vi", "VND", "UTC", "light", "{}", "{}",
                 Instant.now().minus(Duration.ofDays(1)));
-        when(preferencePersistencePort.findById(USER_ID)).thenReturn(Optional.of(before));
+        when(preferencePersistencePort.findByIdForUpdate(USER_ID)).thenReturn(Optional.of(before));
         when(preferencePersistencePort.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         ArgumentCaptor<UserPreferenceResult> captor = ArgumentCaptor.forClass(UserPreferenceResult.class);

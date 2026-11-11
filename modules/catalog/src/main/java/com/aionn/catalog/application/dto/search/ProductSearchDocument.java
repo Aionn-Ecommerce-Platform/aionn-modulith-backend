@@ -5,8 +5,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-// Search index document. Denormalized product view optimized for lexical
-// search and facet filtering. priceFrom drives the "cheapest matching" ranker.
 public record ProductSearchDocument(
         String productId,
         String merchantId,
@@ -21,6 +19,7 @@ public record ProductSearchDocument(
         BigDecimal priceFrom,
         BigDecimal priceTo,
         String currency,
+        Boolean hasDiscount,
         String status,
         Instant updatedAt,
         Double rating,

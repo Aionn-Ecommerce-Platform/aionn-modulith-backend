@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -33,6 +34,10 @@ class ResilientShippingAdapterTest {
         return new ShippingAddress("a-1", "John", "+84912345678", "12 Main St", "WARD", "DIST", "PROV", "VN");
     }
 
+    private static List<ShippingGateway.Parcel> parcels() {
+        return List.of(new ShippingGateway.Parcel(500, null, null, null, 1));
+    }
+
     @BeforeEach
     void setUp() {
         RetryRegistry retryRegistry = RetryRegistry.ofDefaults();
@@ -43,9 +48,9 @@ class ResilientShippingAdapterTest {
     @Test
     void quoteDelegatesAndRecordsMetricsOnSuccess() {
         ShippingGateway.ShippingQuote quote = new ShippingGateway.ShippingQuote(BigDecimal.TEN, "VND");
-        when(delegate.quote("ord-1", "m-1", address(), "VND")).thenReturn(quote);
+        when(delegate.quote("ord-1", "m-1", address(), "VND", parcels(), null)).thenReturn(quote);
 
-        ShippingGateway.ShippingQuote result = adapter.quote("ord-1", "m-1", address(), "VND");
+        ShippingGateway.ShippingQuote result = adapter.quote("ord-1", "m-1", address(), "VND", parcels(), null);
 
         assertEquals(quote, result);
         verify(metrics).gatewayOutcome("shipping", "success");
@@ -54,12 +59,12 @@ class ResilientShippingAdapterTest {
     @Test
     void createAndRegisterDelegatesAndRecordsMetricsOnSuccess() {
         ShippingGateway.Registration registration = new ShippingGateway.Registration("ship-100", "TRACK-1", "CARRIER-1", "http://label");
-        when(delegate.createAndRegister("ord-1", "m-1", "usr-1", address(), BigDecimal.ZERO, BigDecimal.TEN, "VND"))
-                .thenReturn(registration);
+        when(delegate.createAndRegister("ord-1", "m-1", "usr-1", address(), BigDecimal.ZERO, BigDecimal.TEN, "VND", parcels()))
+                .thenReturn(List.of(registration));
 
-        ShippingGateway.Registration result = adapter.createAndRegister("ord-1", "m-1", "usr-1", address(), BigDecimal.ZERO, BigDecimal.TEN, "VND");
+        List<ShippingGateway.Registration> result = adapter.createAndRegister("ord-1", "m-1", "usr-1", address(), BigDecimal.ZERO, BigDecimal.TEN, "VND", parcels());
 
-        assertEquals(registration, result);
+        assertEquals(List.of(registration), result);
         verify(metrics).gatewayOutcome("shipping", "success");
     }
 }

@@ -20,7 +20,7 @@ public record PromotionCondition(
     }
 
     public boolean matches(BigDecimal orderValue, List<String> orderCategoryIds) {
-        if (minOrderValue != null && orderValue.compareTo(minOrderValue) < 0) {
+        if (minOrderValue != null && (orderValue == null || orderValue.compareTo(minOrderValue) < 0)) {
             return false;
         }
         if (!applicableCategoryIds.isEmpty()) {

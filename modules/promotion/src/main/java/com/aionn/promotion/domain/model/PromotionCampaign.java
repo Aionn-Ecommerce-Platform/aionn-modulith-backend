@@ -60,13 +60,15 @@ public class PromotionCampaign extends AggregateRoot {
 
     public static PromotionCampaign create(String campaignId, String name, CampaignType type,
             Money budget, Instant startDate, Instant endDate, String createdBy, Clock clock) {
+        Guard.notBlank(name, () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
+                "name must not be blank"));
         if (startDate == null || endDate == null || !startDate.isBefore(endDate)) {
             throw new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
                     "startDate must be before endDate");
         }
-        if (budget == null) {
+        if (budget == null || !budget.isPositive()) {
             throw new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
-                    "budget must not be null");
+                    "budget must be positive");
         }
         Instant now = clock.instant();
         if (startDate.isBefore(now.minusSeconds(60))) {

@@ -5,6 +5,8 @@ import com.aionn.identity.application.dto.admin.result.UserListResult;
 import com.aionn.identity.application.dto.common.PageResult;
 import com.aionn.identity.application.mapper.AdminResultMapper;
 import com.aionn.identity.application.port.out.admin.AdminUserPersistencePort;
+import com.aionn.identity.application.port.out.auth.AuthSessionPersistencePort;
+import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
 import com.aionn.identity.domain.exception.IdentityErrorCode;
 import com.aionn.identity.domain.exception.IdentityException;
 import com.aionn.identity.domain.model.IdentityUser;
@@ -39,13 +41,18 @@ class AdminUserServiceTest {
     @Mock
     private AdminUserPersistencePort adminUserPersistencePort;
     @Mock
+    private AuthSessionPersistencePort authSessionPersistencePort;
+    @Mock
+    private RefreshTokenStorePort refreshTokenStore;
+    @Mock
     private AdminResultMapper adminResultMapper;
 
     private AdminUserService adminUserService;
 
     @BeforeEach
     void setUp() {
-        adminUserService = new AdminUserService(adminUserPersistencePort, adminResultMapper);
+        adminUserService = new AdminUserService(adminUserPersistencePort,
+                authSessionPersistencePort, refreshTokenStore, adminResultMapper);
     }
 
     @Test
@@ -99,15 +106,25 @@ class AdminUserServiceTest {
     }
 
     @Test
-    void updateStatusUpdatesUserStatus() {
+    void updateStatusUpdatesUserStatusAndRevokesSessions() {
         IdentityUser user = newUser(Set.of(UserRole.BUYER));
         when(adminUserPersistencePort.findById(USER_ID)).thenReturn(Optional.of(user));
         when(adminUserPersistencePort.save(any(IdentityUser.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
+        when(authSessionPersistencePort.findByUserId(USER_ID)).thenReturn(List.of());
 
         String status = adminUserService.updateStatus(USER_ID, UserStatus.BANNED);
 
         assertThat(status).isEqualTo("BANNED");
+        verify(authSessionPersistencePort).findByUserId(USER_ID);
+    }
+
+    @Test
+    void updateStatusRejectsManualDeletion() {
+        var ex = assertThrows(IdentityException.class,
+                () -> adminUserService.updateStatus(USER_ID, UserStatus.DELETED));
+
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.INVALID_USER_STATUS.getCode());
     }
 
     @Test
@@ -171,6 +188,70 @@ class AdminUserServiceTest {
         var ex = assertThrows(IdentityException.class, () -> adminUserService.getUserById(USER_ID));
 
         assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.USER_NOT_FOUND.getCode());
+    }
+
+    @Test
+    void updateRolesRejectsMissingOrNullRoles() {
+        when(adminUserPersistencePort.findById(USER_ID))
+                .thenReturn(Optional.of(newUser(Set.of(UserRole.BUYER))));
+        Set<UserRole> withNull = new java.util.HashSet<>();
+        withNull.add(null);
+
+        assertThat(assertThrows(IdentityException.class,
+                () -> adminUserService.updateRoles(USER_ID, null)).getErrorCode())
+                .isEqualTo(IdentityErrorCode.INVALID_USER_ROLE.getCode());
+        assertThat(assertThrows(IdentityException.class,
+                () -> adminUserService.updateRoles(USER_ID, Set.of())).getErrorCode())
+                .isEqualTo(IdentityErrorCode.INVALID_USER_ROLE.getCode());
+        assertThat(assertThrows(IdentityException.class,
+                () -> adminUserService.updateRoles(USER_ID, withNull)).getErrorCode())
+                .isEqualTo(IdentityErrorCode.INVALID_USER_ROLE.getCode());
+    }
+
+    @Test
+    void updateStatusRejectsDeletedAccounts() {
+        IdentityUser deleted = new IdentityUser(
+                USER_ID, "alice@example.com", "+84912345678", "alice", "hash", "Alice", null,
+                Set.of(UserRole.BUYER), UserStatus.DELETED, null, null, null, Instant.now());
+        when(adminUserPersistencePort.findById(USER_ID)).thenReturn(Optional.of(deleted));
+
+        assertThat(assertThrows(IdentityException.class,
+                () -> adminUserService.updateStatus(USER_ID, UserStatus.ACTIVE)).getErrorCode())
+                .isEqualTo(IdentityErrorCode.INVALID_USER_STATUS.getCode());
+    }
+
+    @Test
+    void updateStatusToActiveKeepsSessionsAlive() {
+        IdentityUser user = newUser(Set.of(UserRole.BUYER));
+        when(adminUserPersistencePort.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(adminUserPersistencePort.save(any(IdentityUser.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        String status = adminUserService.updateStatus(USER_ID, UserStatus.ACTIVE);
+
+        assertThat(status).isEqualTo("ACTIVE");
+        verify(authSessionPersistencePort, org.mockito.Mockito.never()).findByUserId(any());
+    }
+
+    @Test
+    void updateStatusRevokesOnlyActiveSessions() {
+        IdentityUser user = newUser(Set.of(UserRole.BUYER));
+        com.aionn.identity.domain.model.AuthSession active = com.aionn.identity.domain.model.AuthSession
+                .createNew("session-active", USER_ID, "ip", "ua", Instant.now().plus(Duration.ofDays(7)),
+                        java.time.Clock.fixed(Instant.now(), java.time.ZoneOffset.UTC));
+        com.aionn.identity.domain.model.AuthSession revoked = com.aionn.identity.domain.model.AuthSession
+                .createNew("session-revoked", USER_ID, "ip", "ua", Instant.now().plus(Duration.ofDays(7)),
+                        java.time.Clock.fixed(Instant.now(), java.time.ZoneOffset.UTC));
+        revoked.revoke();
+        when(adminUserPersistencePort.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(adminUserPersistencePort.save(any(IdentityUser.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(authSessionPersistencePort.findByUserId(USER_ID)).thenReturn(List.of(active, revoked));
+
+        adminUserService.updateStatus(USER_ID, UserStatus.BANNED);
+
+        verify(refreshTokenStore, org.mockito.Mockito.never()).revokeBySessionId("session-revoked");
+        verify(authSessionPersistencePort).saveAll(List.of(active, revoked));
     }
 
     private IdentityUser newUser(Set<UserRole> roles) {

@@ -12,8 +12,8 @@ import com.aionn.ordering.application.dto.order.result.MerchantOrderAnalyticsRes
 import com.aionn.ordering.application.dto.order.result.PlatformOrderAnalyticsResult;
 import com.aionn.ordering.application.dto.order.result.TopProductResult;
 import com.aionn.ordering.application.port.in.order.*;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
-import com.aionn.sharedkernel.adapter.web.support.idempotency.IdempotentRequest;
+import com.aionn.platform.web.response.ApiResponse;
+import com.aionn.platform.web.support.idempotency.IdempotentRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

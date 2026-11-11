@@ -10,7 +10,7 @@ import com.aionn.catalog.application.port.in.attribute.ConfigureFilterableInputP
 import com.aionn.catalog.application.port.in.attribute.CreateAttributeTemplateInputPort;
 import com.aionn.catalog.application.port.in.attribute.GetAttributeTemplateByCategoryInputPort;
 import com.aionn.catalog.application.port.in.attribute.GetAttributeTemplateInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

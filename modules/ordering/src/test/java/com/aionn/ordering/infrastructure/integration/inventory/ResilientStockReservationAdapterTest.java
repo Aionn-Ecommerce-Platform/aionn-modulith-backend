@@ -2,7 +2,7 @@ package com.aionn.ordering.infrastructure.integration.inventory;
 
 import com.aionn.ordering.application.port.out.StockReservationGateway;
 import com.aionn.ordering.application.port.out.observability.OrderingMetricsPort;
-import com.aionn.sharedkernel.integration.port.inventory.InventoryStockReservationPort;
+import com.aionn.contracts.port.inventory.InventoryStockReservationPort;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.retry.RetryRegistry;
 import org.junit.jupiter.api.BeforeEach;

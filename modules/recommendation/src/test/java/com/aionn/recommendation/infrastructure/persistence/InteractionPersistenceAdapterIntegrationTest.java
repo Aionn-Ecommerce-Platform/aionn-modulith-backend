@@ -1,5 +1,7 @@
 package com.aionn.recommendation.infrastructure.persistence;
 
+import com.aionn.recommendation.infrastructure.persistence.entity.InteractionEntity;
+
 import com.aionn.recommendation.application.port.out.InteractionPersistencePort;
 import com.aionn.recommendation.domain.model.UserInteraction;
 import com.aionn.recommendation.domain.valueobject.InteractionType;
@@ -442,7 +444,7 @@ class InteractionPersistenceAdapterIntegrationTest {
     private void persist(
             String userId, String productId, InteractionType type, double weight,
             Instant occurredAt, Instant createdAt) {
-        repository.save(com.aionn.recommendation.infrastructure.persistence.entity.InteractionEntity
+        repository.save(InteractionEntity
                 .builder()
                 .interactionId(IdGenerator.ulid())
                 .userId(userId)

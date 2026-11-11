@@ -1,8 +1,9 @@
 package com.aionn.recommendation.application.service;
 
 import com.aionn.recommendation.application.dto.result.RecommendationItemResult;
+import com.aionn.recommendation.application.policy.RecommendationServingPolicy;
 import com.aionn.recommendation.application.port.out.RecommendationCachePort;
-import com.aionn.recommendation.application.port.out.StockAvailabilityQueryPort;
+import com.aionn.recommendation.application.port.out.RecommendationStockAvailabilityPort;
 import com.aionn.recommendation.application.port.out.observability.RecommendationMetricsPort;
 import com.aionn.recommendation.domain.valueobject.RecommendationSurface;
 import lombok.RequiredArgsConstructor;
@@ -18,16 +19,9 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 /**
- * Read-side entry point for every recommendation surface: cache the ranked slate, then filter by
- * availability and truncate.
- *
- * <p>The ordering matters. Ranking is expensive and stable for minutes, so it is cached. Availability
- * is cheap and changes by the second, so it is applied on every request outside the cache. Reversing
- * that would serve out-of-stock products for the whole TTL.
- *
- * <p>{@code NOT_SUPPORTED}: the availability call must not run inside a transaction. It is an
- * in-process adapter today but becomes a network call when this module is split out, and per
- * {@code docs/architecture/modular-monolith.md} a read-only transaction is still a transaction.
+ * Read-side entry point: serve the cached ranked slate, then filter by availability and truncate.
+ * Ordering matters: ranking is cached, availability is applied per request. {@code NOT_SUPPORTED}
+ * keeps the availability call outside any transaction.
  */
 @Slf4j
 @Service
@@ -35,54 +29,46 @@ import java.util.function.Supplier;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 public class RecommendationReadService {
 
-    /**
-     * Slates are always computed at the largest size any caller may request, then truncated per
-     * request. This keeps one cache entry per user or product rather than one per (subject, limit)
-     * pair, which matters for two reasons: eviction can address an entry by subject alone, and a
-     * client changing its page size does not miss the cache. Must stay in step with the {@code @Max}
-     * on the controller's limit parameter.
-     */
-    private static final int CACHEABLE_SLATE_SIZE = 50;
-
     private final RecommendationService recommendationService;
     private final RecommendationCachePort cache;
-    private final StockAvailabilityQueryPort stockAvailability;
+    private final RecommendationStockAvailabilityPort stockAvailability;
     private final RecommendationMetricsPort metrics;
+    private final RecommendationServingPolicy servingPolicy;
 
     public List<RecommendationItemResult> homeFeed(String userId, int limit) {
         if (!isRealUser(userId)) {
             return trending(limit);
         }
+        int slateSize = servingPolicy.maxPageSize();
         return timed(RecommendationSurface.HOME, () -> filterAndTruncate(
                 cache.getOrLoad(
                         RecommendationSurface.HOME,
                         userId,
-                        () -> recommendationService.homeFeed(userId, CACHEABLE_SLATE_SIZE)),
+                        () -> recommendationService.homeFeed(userId, slateSize)),
                 limit));
     }
 
     public List<RecommendationItemResult> similarProducts(String productId, int limit) {
+        int slateSize = servingPolicy.maxPageSize();
         return timed(RecommendationSurface.SIMILAR, () -> filterAndTruncate(
                 cache.getOrLoad(
                         RecommendationSurface.SIMILAR,
                         productId,
-                        () -> recommendationService.similarProducts(productId, CACHEABLE_SLATE_SIZE)),
+                        () -> recommendationService.similarProducts(productId, slateSize)),
                 limit));
     }
 
     public List<RecommendationItemResult> alsoBought(String productId, int limit) {
+        int slateSize = servingPolicy.maxPageSize();
         return timed(RecommendationSurface.ALSO_BOUGHT, () -> filterAndTruncate(
                 cache.getOrLoad(
                         RecommendationSurface.ALSO_BOUGHT,
                         "also-bought:" + productId,
-                        () -> recommendationService.alsoBought(productId, CACHEABLE_SLATE_SIZE)),
+                        () -> recommendationService.alsoBought(productId, slateSize)),
                 limit));
     }
 
-    /**
-     * Cart suggestions are not cached: the basket is the input, so the key would be a set of SKUs that
-     * rarely repeats between users. A near-zero hit rate would cost memory without saving work.
-     */
+    /** Not cached: the SKU-set key rarely repeats, so hit rate would be near zero. */
     public List<RecommendationItemResult> cartSuggestions(
             String userId, List<String> cartSkuIds, int limit) {
         return timed(RecommendationSurface.CART, () -> filterAndTruncate(
@@ -90,19 +76,14 @@ public class RecommendationReadService {
     }
 
     public List<RecommendationItemResult> trending(int limit) {
+        int slateSize = servingPolicy.maxPageSize();
         return timed(RecommendationSurface.HOME, () -> filterAndTruncate(
                 cache.getOrLoadTrending(
-                        () -> recommendationService.trending(CACHEABLE_SLATE_SIZE)),
+                        () -> recommendationService.trending(slateSize)),
                 limit));
     }
 
-    /**
-     * Times the whole request path for one surface, not just the ranking.
-     *
-     * <p>The availability filter runs on every request by design, so it is part of what a caller waits
-     * for and part of what regresses when the inventory lookup gets slower. Measuring the ranking alone
-     * would hide that behind a cache hit rate that looks fine.
-     */
+    /** Times the whole request path, including the per-request availability filter. */
     private List<RecommendationItemResult> timed(
             RecommendationSurface surface, Supplier<List<RecommendationItemResult>> work) {
         long startedAt = System.nanoTime();
@@ -123,14 +104,7 @@ public class RecommendationReadService {
         }
     }
 
-    /**
-     * Drops products with no fulfillable SKU, then cuts the over-fetched slate down to the requested
-     * page size.
-     *
-     * <p>The page size is clamped against the slate before it is used as a capacity. This is reachable
-     * from a public endpoint, and a negative limit would otherwise be handed straight to
-     * {@code new ArrayList<>(...)} - a 500 on an anonymous request instead of an empty page.
-     */
+    /** Drops products with no available SKU, then truncates; clamps limit to avoid a negative capacity. */
     private List<RecommendationItemResult> filterAndTruncate(
             List<RecommendationItemResult> slate, int limit) {
         if (slate == null || slate.isEmpty()) {
@@ -155,10 +129,7 @@ public class RecommendationReadService {
         return results;
     }
 
-    /**
-     * A product with no SKUs at all is kept: that is a catalog modelling gap, and hiding it would
-     * silently shrink every slate. A product that does have SKUs needs at least one in stock.
-     */
+    /** Keep products with no SKUs (catalog gap); otherwise require at least one in stock. */
     private static boolean hasAvailableSku(RecommendationItemResult item, Set<String> availableSkus) {
         return item.skuIds().isEmpty() || item.skuIds().stream().anyMatch(availableSkus::contains);
     }

@@ -13,7 +13,7 @@ import com.aionn.catalog.application.port.in.brand.DeleteBrandInputPort;
 import com.aionn.catalog.application.port.in.brand.GetBrandInputPort;
 import com.aionn.catalog.application.port.in.brand.ListBrandsInputPort;
 import com.aionn.catalog.application.port.in.brand.UpdateBrandInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,7 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.aionn.catalog.adapter.rest.mapper.brand.BrandDtoMapper;
-import com.aionn.sharedkernel.adapter.web.response.PageMetadata;
+import com.aionn.platform.web.response.PageMetadata;
 import java.util.List;
 
 @RestController

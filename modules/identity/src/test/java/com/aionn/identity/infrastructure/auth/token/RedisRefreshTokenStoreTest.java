@@ -76,6 +76,31 @@ class RedisRefreshTokenStoreTest {
         verify(redisTemplate, never()).delete(any(String.class));
     }
 
+    @Test
+    void consumeSessionIdStoresReplayMarkerAndRemovesSessionIndexEntry() throws Exception {
+        String tokenId = "refresh-token-id";
+        String tokenHash = sha256(tokenId);
+        when(redisTemplate.execute(
+                org.mockito.ArgumentMatchers.<RedisScript<String>>any(),
+                org.mockito.ArgumentMatchers.<List<String>>any()))
+                .thenReturn("session-1");
+        when(redisTemplate.opsForSet()).thenReturn(setOperations);
+
+        assertThat(store.consumeSessionId(tokenId)).contains("session-1");
+
+        verify(setOperations).remove("identity:auth:refresh:session:session-1", tokenHash);
+    }
+
+    @Test
+    void findConsumedSessionIdReadsTheTombstone() throws Exception {
+        String tokenId = "refresh-token-id";
+        String consumedKey = "identity:auth:refresh:consumed:" + sha256(tokenId);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(consumedKey)).thenReturn("session-1");
+
+        assertThat(store.findConsumedSessionId(tokenId)).contains("session-1");
+    }
+
     private static String sha256(String value) throws Exception {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         return HexFormat.of().formatHex(md.digest(value.getBytes(StandardCharsets.UTF_8)));

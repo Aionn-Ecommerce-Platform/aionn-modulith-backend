@@ -1,5 +1,8 @@
 package com.aionn.identity.infrastructure.persistence.entity;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -47,11 +50,11 @@ public class UserPreferenceEntity implements Persistable<String> {
     @Column(name = "theme", length = 20)
     private String theme;
 
-    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "notification_settings", columnDefinition = "jsonb")
     private String notificationSettings;
 
-    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "ai_privacy_settings", columnDefinition = "jsonb")
     private String aiPrivacySettings;
 

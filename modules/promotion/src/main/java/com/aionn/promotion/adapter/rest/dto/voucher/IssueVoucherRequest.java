@@ -1,5 +1,7 @@
 package com.aionn.promotion.adapter.rest.dto.voucher;
 
+import com.aionn.promotion.domain.valueobject.VoucherType;
+
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -15,6 +17,8 @@ public record IssueVoucherRequest(
         @Size(min = 3, max = 3) String currency,
         @Positive int usageLimit,
         Instant validFrom,
-        Instant validUntil) {
+        Instant validUntil,
+        /** ORDER_DISCOUNT (default) reduces goods; FREE_SHIPPING waives shipping up to the amount. */
+        VoucherType type) {
 }
 

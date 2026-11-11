@@ -1,6 +1,7 @@
 package com.aionn.promotion.application.service;
 
 import com.aionn.promotion.application.dto.campaign.command.CampaignCommands;
+import com.aionn.promotion.application.policy.PromotionDefaultsPolicy;
 import com.aionn.promotion.application.port.out.PromotionCampaignPersistencePort;
 import com.aionn.promotion.application.port.out.VoucherPersistencePort;
 import com.aionn.promotion.domain.exception.PromotionErrorCode;
@@ -45,9 +46,13 @@ class PromotionCampaignServiceTest {
     private VoucherPersistencePort voucherRepository;
     @Mock
     private EventPublisher eventPublisher;
+    @Mock
+    private PromotionDefaultsPolicy defaultsPolicy;
 
     private PromotionCampaignService service() {
-        return new PromotionCampaignService(campaignRepository, voucherRepository, eventPublisher, CLOCK);
+        org.mockito.Mockito.lenient().when(defaultsPolicy.defaultCurrency()).thenReturn("VND");
+        return new PromotionCampaignService(campaignRepository, voucherRepository, eventPublisher,
+                defaultsPolicy, CLOCK);
     }
 
     private static PromotionCampaign draft() {

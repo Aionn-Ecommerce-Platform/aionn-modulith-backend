@@ -1,5 +1,7 @@
 package com.aionn.payment.infrastructure.persistence.entity;
 
+import jakarta.persistence.Version;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -69,7 +71,7 @@ public class MerchantPayoutEntity {
     @Column(name = "failure_reason", columnDefinition = "TEXT")
     private String failureReason;
 
-    @jakarta.persistence.Version
+    @Version
     @Column(name = "version", nullable = false)
     private long version;
 }

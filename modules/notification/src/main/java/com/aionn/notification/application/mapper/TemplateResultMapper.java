@@ -1,5 +1,8 @@
 package com.aionn.notification.application.mapper;
 
+import java.util.List;
+
+
 import com.aionn.notification.application.dto.template.result.TemplateResult;
 import com.aionn.notification.domain.model.NotificationTemplate;
 import org.mapstruct.Mapper;
@@ -13,5 +16,5 @@ public interface TemplateResultMapper {
     @Mapping(target = "placeholders", expression = "java(java.util.List.copyOf(template.getPlaceholders()))")
     TemplateResult toResult(NotificationTemplate template);
 
-    java.util.List<TemplateResult> toResults(java.util.List<NotificationTemplate> templates);
+    List<TemplateResult> toResults(List<NotificationTemplate> templates);
 }

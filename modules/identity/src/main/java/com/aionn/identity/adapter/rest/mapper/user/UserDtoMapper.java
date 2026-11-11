@@ -2,6 +2,7 @@ package com.aionn.identity.adapter.rest.mapper.user;
 
 import com.aionn.identity.adapter.rest.dto.user.request.ChangeAvatarRequest;
 import com.aionn.identity.adapter.rest.dto.user.request.ChangeDisplayNameRequest;
+import com.aionn.identity.adapter.rest.dto.user.request.RequestAccountDeletionRequest;
 import com.aionn.identity.adapter.rest.dto.user.response.DataExportRequestResponse;
 import com.aionn.identity.adapter.rest.dto.user.response.DeletionRequestResponse;
 import com.aionn.identity.adapter.rest.dto.user.response.UserProfileResponse;
@@ -20,21 +21,27 @@ import org.mapstruct.Mapper;
 @Mapper(componentModel = "spring")
 public interface UserDtoMapper {
 
-    // Query
     GetMyProfileQuery toGetMyProfileQuery(String userId);
 
-    // Request -> Command
     UpdateDisplayNameCommand toUpdateDisplayNameCommand(String userId, ChangeDisplayNameRequest request);
 
     UpdateAvatarCommand toUpdateAvatarCommand(String userId, ChangeAvatarRequest request);
 
-    RequestAccountDeletionCommand toRequestAccountDeletionCommand(String userId);
+    default RequestAccountDeletionCommand toRequestAccountDeletionCommand(String userId, RequestAccountDeletionRequest request) {
+        return new RequestAccountDeletionCommand(
+                userId,
+                request != null ? request.password() : null,
+                request != null ? request.mfaCode() : null);
+    }
+
+    default RequestAccountDeletionCommand toRequestAccountDeletionCommand(String userId) {
+        return new RequestAccountDeletionCommand(userId, null, null);
+    }
 
     CancelAccountDeletionCommand toCancelAccountDeletionCommand(String userId);
 
     RequestDataExportCommand toRequestDataExportCommand(String userId);
 
-    // View -> Response
     UserProfileResponse toProfileResponse(UserProfileView view);
 
     DeletionRequestResponse toDeletionRequestResponse(DeletionRequestView view);

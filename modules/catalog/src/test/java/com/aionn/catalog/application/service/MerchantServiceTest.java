@@ -1,5 +1,12 @@
 package com.aionn.catalog.application.service;
 
+import com.aionn.catalog.application.dto.merchant.command.ActivateMerchantCommand;
+import com.aionn.catalog.application.dto.merchant.command.SuspendMerchantCommand;
+import com.aionn.catalog.application.dto.merchant.command.UpdateMerchantCommissionRateCommand;
+import com.aionn.catalog.application.port.out.observability.CatalogMetricsPort;
+import com.aionn.catalog.application.port.out.settings.CatalogSettingsPort;
+import java.time.ZoneOffset;
+
 import com.aionn.catalog.application.dto.merchant.command.CloseMerchantCommand;
 import com.aionn.catalog.application.dto.merchant.command.RegisterMerchantCommand;
 import com.aionn.catalog.application.dto.merchant.command.UpdateMerchantProfileCommand;
@@ -8,8 +15,8 @@ import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.catalog.domain.model.Merchant;
 import com.aionn.sharedkernel.application.port.EventPublisher;
-import com.aionn.sharedkernel.integration.port.identity.AddressLookupPort;
-import com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort;
+import com.aionn.contracts.port.identity.AddressLookupPort;
+import com.aionn.contracts.port.ordering.OrderQueryPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -43,12 +50,12 @@ class MerchantServiceTest {
         @Mock
         private AddressLookupPort addressLookupPort;
         @Mock
-        private com.aionn.catalog.application.port.out.settings.CatalogSettingsPort catalogSettingsPort;
+        private CatalogSettingsPort catalogSettingsPort;
         @Mock
-        private com.aionn.catalog.application.port.out.observability.CatalogMetricsPort metricsPort;
+        private CatalogMetricsPort metricsPort;
 
         @Spy
-        private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
+        private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
 
         @InjectMocks
         private MerchantService merchantService;
@@ -141,7 +148,7 @@ class MerchantServiceTest {
                 when(merchantRepository.save(merchant)).thenReturn(merchant);
 
                 Merchant result = merchantService.suspend(
-                                new com.aionn.catalog.application.dto.merchant.command.SuspendMerchantCommand(
+                                new SuspendMerchantCommand(
                                                 "m-1", "admin-1", "violation"));
 
                 assertThat(result.getName()).isEqualTo("Acme");
@@ -158,7 +165,7 @@ class MerchantServiceTest {
                 when(merchantRepository.save(merchant)).thenReturn(merchant);
 
                 Merchant result = merchantService.activate(
-                                new com.aionn.catalog.application.dto.merchant.command.ActivateMerchantCommand(
+                                new ActivateMerchantCommand(
                                                 "m-1", "admin-1", "reinstate"));
 
                 assertThat(result.getName()).isEqualTo("Acme");
@@ -209,7 +216,7 @@ class MerchantServiceTest {
                 when(merchantRepository.save(merchant)).thenReturn(merchant);
 
                 Merchant result = merchantService.updateCommissionRate(
-                                new com.aionn.catalog.application.dto.merchant.command.UpdateMerchantCommissionRateCommand(
+                                new UpdateMerchantCommissionRateCommand(
                                                 "m-1", new BigDecimal("0.0800")));
 
                 assertThat(result.getName()).isEqualTo("Acme");

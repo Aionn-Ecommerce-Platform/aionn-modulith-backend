@@ -64,13 +64,21 @@ public class FeedbackService {
     public Feedback adminReply(String feedbackId, String adminId, String reply,
             FeedbackStatus newStatus) {
         Feedback feedback = requireFeedback(feedbackId);
-        feedback.reply(adminId, reply, newStatus, nowUtc());
+        try {
+            feedback.reply(adminId, reply, newStatus, nowUtc());
+        } catch (IllegalStateException ex) {
+            throw new IdentityException(IdentityErrorCode.INVALID_FEEDBACK_STATUS_TRANSITION, ex.getMessage());
+        }
         return feedbackPersistencePort.save(feedback);
     }
 
     public Feedback adminChangeStatus(String feedbackId, String adminId, FeedbackStatus newStatus) {
         Feedback feedback = requireFeedback(feedbackId);
-        feedback.changeStatus(adminId, newStatus, nowUtc());
+        try {
+            feedback.changeStatus(adminId, newStatus, nowUtc());
+        } catch (IllegalStateException ex) {
+            throw new IdentityException(IdentityErrorCode.INVALID_FEEDBACK_STATUS_TRANSITION, ex.getMessage());
+        }
         return feedbackPersistencePort.save(feedback);
     }
 

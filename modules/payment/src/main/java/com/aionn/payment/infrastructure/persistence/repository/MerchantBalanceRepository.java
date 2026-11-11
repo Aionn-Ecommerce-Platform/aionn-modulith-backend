@@ -1,5 +1,7 @@
 package com.aionn.payment.infrastructure.persistence.repository;
 
+import org.springframework.data.domain.Pageable;
+
 import com.aionn.payment.infrastructure.persistence.entity.MerchantBalanceEntity;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -36,10 +38,10 @@ public interface MerchantBalanceRepository
             @Param("now") Instant now);
 
     @Query("SELECT b FROM MerchantBalanceEntity b WHERE b.available >= :minAvailable AND b.currency = :currency")
-    java.util.List<MerchantBalanceEntity> findEligibleForAutoPayout(
-            @Param("minAvailable") java.math.BigDecimal minAvailable,
+    List<MerchantBalanceEntity> findEligibleForAutoPayout(
+            @Param("minAvailable") BigDecimal minAvailable,
             @Param("currency") String currency,
-            org.springframework.data.domain.Pageable pageable);
+            Pageable pageable);
 
     @Query(value = """
             SELECT b.merchant_id AS merchantId,

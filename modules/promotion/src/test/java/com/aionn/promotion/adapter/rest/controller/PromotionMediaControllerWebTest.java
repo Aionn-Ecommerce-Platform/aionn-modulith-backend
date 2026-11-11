@@ -1,7 +1,10 @@
 package com.aionn.promotion.adapter.rest.controller;
 
+import com.aionn.promotion.adapter.rest.mapper.media.PromotionMediaDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.promotion.adapter.rest.exception.PromotionExceptionHandler;
-import com.aionn.promotion.adapter.rest.mapper.media.PromotionMediaDtoMapperImpl;
 import com.aionn.promotion.application.dto.media.result.UploadSignatureResult;
 import com.aionn.promotion.application.port.in.media.GenerateBannerUploadSignatureInputPort;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -30,7 +33,7 @@ class PromotionMediaControllerWebTest {
     @BeforeEach
     void setUp() {
         PromotionMediaController controller = new PromotionMediaController(
-                generateBannerUploadSignatureInputPort, new PromotionMediaDtoMapperImpl());
+                generateBannerUploadSignatureInputPort, Mappers.getMapper(PromotionMediaDtoMapper.class));
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new PromotionExceptionHandler())

@@ -2,7 +2,7 @@ package com.aionn.payment.adapter.rest.controller;
 
 import com.aionn.payment.adapter.rest.support.session.CurrentUserId;
 import com.aionn.payment.application.port.in.stripeconnect.CreateStripeConnectOnboardingLinkInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

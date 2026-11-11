@@ -12,6 +12,9 @@ public interface MerchantPayoutPersistencePort {
 
     Optional<MerchantPayout> findById(String payoutId);
 
+    /** Row-locked read used to serialise complete/fail transitions. */
+    Optional<MerchantPayout> findByIdForUpdate(String payoutId);
+
     List<MerchantPayout> findByMerchant(String merchantId, int limit);
 
     List<MerchantPayout> findByStatus(PayoutStatus status, int limit);

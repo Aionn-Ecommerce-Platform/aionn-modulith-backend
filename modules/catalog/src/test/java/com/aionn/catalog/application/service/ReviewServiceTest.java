@@ -1,5 +1,8 @@
 package com.aionn.catalog.application.service;
 
+import com.aionn.catalog.domain.model.ProductVariant;
+import java.time.ZoneOffset;
+
 import com.aionn.catalog.application.dto.common.PageResult;
 import com.aionn.catalog.application.dto.review.command.AdminDeleteReviewCommand;
 import com.aionn.catalog.application.dto.review.command.DeleteReviewCommand;
@@ -23,7 +26,7 @@ import com.aionn.catalog.domain.valueobject.ReviewStatus;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.Money;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
-import com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort;
+import com.aionn.contracts.port.ordering.OrderQueryPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -52,6 +55,7 @@ class ReviewServiceTest {
     private static final String REVIEW_ID = "01HZREV0000000000000000001";
     private static final String PRODUCT_ID = "01HZPRD0000000000000000001";
     private static final String MERCHANT_ID = "01HZMER0000000000000000001";
+    private static final ProductVariant.ParcelDimensions TEST_PARCEL = new ProductVariant.ParcelDimensions(500, BigDecimal.valueOf(15), BigDecimal.valueOf(10), BigDecimal.valueOf(5));
     private static final String USER_ID = "user-1";
     private static final String OWNER_ID = "owner-1";
     private static final String ADMIN_ID = "admin-1";
@@ -69,7 +73,7 @@ class ReviewServiceTest {
     private EventPublisher eventPublisher;
 
     @Spy
-    private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
+    private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
 
     @InjectMocks
     private ReviewService reviewService;
@@ -77,7 +81,7 @@ class ReviewServiceTest {
     private Product productWithSku(String skuId) {
         Product p = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
         p.categorize(List.of("cat-1"), FIXED);
-        p.defineVariant(skuId, Map.of("color", "red"), Money.of(new BigDecimal("10"), "VND"), FIXED);
+        p.defineVariant(skuId, Map.of("color", "red"), Money.of(new BigDecimal("10"), "VND"), TEST_PARCEL, FIXED);
         p.pullEvents();
         return p;
     }

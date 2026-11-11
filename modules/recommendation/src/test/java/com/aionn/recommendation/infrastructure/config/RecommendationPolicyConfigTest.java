@@ -6,6 +6,7 @@ import com.aionn.recommendation.application.policy.RankingWeightPolicy;
 import com.aionn.recommendation.domain.valueobject.InteractionType;
 import com.aionn.recommendation.infrastructure.config.properties.RecommendationColdStartProperties;
 import com.aionn.recommendation.infrastructure.config.properties.RecommendationRankingProperties;
+import com.aionn.recommendation.infrastructure.config.properties.RecommendationServingProperties;
 import com.aionn.recommendation.infrastructure.config.properties.RecommendationWeightProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -150,6 +151,7 @@ class RecommendationPolicyConfigTest {
     @EnableConfigurationProperties({
             RecommendationColdStartProperties.class,
             RecommendationRankingProperties.class,
+            RecommendationServingProperties.class,
             RecommendationWeightProperties.class})
     static class PoliciesUnderTest {
     }

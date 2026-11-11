@@ -1,7 +1,7 @@
 package com.aionn.recommendation.infrastructure.integration.catalog;
 
 import com.aionn.recommendation.application.port.out.ProductAttributeQueryPort;
-import com.aionn.sharedkernel.integration.port.catalog.CatalogProductAttributeQueryPort;
+import com.aionn.contracts.port.catalog.CatalogProductAttributeQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -79,6 +79,10 @@ public class CatalogProductAttributeAdapter implements ProductAttributeQueryPort
                 view.skuIds(),
                 view.imageUrl(),
                 view.priceFrom(),
-                view.currency());
+                view.originalPriceFrom(),
+                view.currency(),
+                view.rating(),
+                view.reviewCount(),
+                view.soldCount());
     }
 }

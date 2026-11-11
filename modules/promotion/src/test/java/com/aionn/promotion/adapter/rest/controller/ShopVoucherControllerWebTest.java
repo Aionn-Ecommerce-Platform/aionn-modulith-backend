@@ -1,7 +1,12 @@
 package com.aionn.promotion.adapter.rest.controller;
 
+import com.aionn.promotion.domain.valueobject.VoucherType;
+
+import com.aionn.promotion.adapter.rest.mapper.voucher.VoucherDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.promotion.adapter.rest.exception.PromotionExceptionHandler;
-import com.aionn.promotion.adapter.rest.mapper.voucher.VoucherDtoMapperImpl;
 import com.aionn.promotion.adapter.rest.support.session.CurrentUserIdArgumentResolver;
 import com.aionn.promotion.application.dto.analytics.result.MerchantVoucherAnalyticsResult;
 import com.aionn.promotion.application.dto.voucher.command.VoucherCommands;
@@ -18,7 +23,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -61,7 +66,7 @@ class ShopVoucherControllerWebTest {
         ShopVoucherController controller = new ShopVoucherController(
                 issueShopVoucherInputPort, listMyShopVouchersInputPort,
                 listShopVouchersByMerchantInputPort, getMerchantVoucherAnalyticsInputPort,
-                new VoucherDtoMapperImpl());
+                Mappers.getMapper(VoucherDtoMapper.class));
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new PromotionExceptionHandler())
@@ -83,6 +88,7 @@ class ShopVoucherControllerWebTest {
 
     private static VoucherResult sample(String code) {
         return new VoucherResult(code, null, VoucherScope.SHOP, "mer-1",
+                VoucherType.ORDER_DISCOUNT,
                 new BigDecimal("30000"), "VND", 20, 0, 0,
                 NOW, NOW.plusSeconds(86400), NOW, NOW);
     }

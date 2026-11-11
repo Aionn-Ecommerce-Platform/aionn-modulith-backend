@@ -1,5 +1,7 @@
 package com.aionn.payment.infrastructure.persistence.entity;
 
+import jakarta.persistence.Version;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.IdClass;
@@ -46,7 +48,7 @@ public class MerchantBalanceEntity {
     @Column(name = "receivable", nullable = false, precision = 18, scale = 2)
     private BigDecimal receivable;
 
-    @jakarta.persistence.Version
+    @Version
     @Column(name = "version", nullable = false)
     private long version;
 

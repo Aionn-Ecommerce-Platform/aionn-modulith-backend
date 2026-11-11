@@ -16,11 +16,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -136,5 +139,18 @@ class UcpCartControllerTest {
     mockMvc.perform(post("/ucp/v1/carts/cart_123/cancel"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value("cart_123"));
+  }
+
+  @Test
+  void platformCredentialOwnsGuestCart() throws Exception {
+    when(cartService.getCart("cart_123", "ucp:platform:plat_a")).thenReturn(sampleResponse("cart_123"));
+
+    UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+        "ucp:platform:plat_a", null, List.of(new SimpleGrantedAuthority("ROLE_UCP_PLATFORM")));
+
+    mockMvc.perform(get("/ucp/v1/carts/cart_123").principal(auth))
+        .andExpect(status().isOk());
+
+    verify(cartService).getCart("cart_123", "ucp:platform:plat_a");
   }
 }

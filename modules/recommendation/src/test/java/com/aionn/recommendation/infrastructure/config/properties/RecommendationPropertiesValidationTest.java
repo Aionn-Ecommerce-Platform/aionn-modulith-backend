@@ -73,6 +73,19 @@ class RecommendationPropertiesValidationTest {
     }
 
     @Test
+    void theShippedServingConfigurationStartsWithDocumentedValues() {
+        runner.run(context -> {
+            assertThat(context).hasNotFailed();
+            RecommendationServingProperties serving = context.getBean(RecommendationServingProperties.class);
+            assertThat(serving.seedLookbackDays()).isEqualTo(30);
+            assertThat(serving.seedLimit()).isEqualTo(20);
+            assertThat(serving.maxPageSize()).isEqualTo(50);
+            assertThat(serving.maxFlashSaleShare()).isEqualByComparingTo("0.40");
+            assertThat(serving.categoryCandidateOvershoot()).isEqualTo(5);
+        });
+    }
+
+    @Test
     void theShippedJobScheduleAndCacheConfigurationStartsWithDocumentedValues() {
         runner.run(context -> {
             assertThat(context).hasNotFailed();
@@ -188,6 +201,7 @@ class RecommendationPropertiesValidationTest {
             RecommendationJobProperties.class,
             RecommendationRankingProperties.class,
             RecommendationSchedulingProperties.class,
+            RecommendationServingProperties.class,
             RecommendationWeightProperties.class})
     static class PropertiesUnderTest {
     }

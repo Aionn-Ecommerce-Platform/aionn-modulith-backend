@@ -2,7 +2,7 @@ package com.aionn.shipping.adapter.rest.support.session;
 
 import com.aionn.shipping.domain.exception.ShippingErrorCode;
 import com.aionn.shipping.domain.exception.ShippingException;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantOwnershipVerifierPort;
+import com.aionn.contracts.port.catalog.MerchantOwnershipVerifierPort;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.MethodParameter;

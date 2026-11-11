@@ -9,6 +9,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.mockito.Mockito.when;
 
 import com.aionn.identity.application.port.out.auth.AccessTokenClaims;
+import com.aionn.identity.application.port.out.auth.AccessTokenIssuerPort;
+import com.aionn.identity.application.port.out.auth.AuthSessionPersistencePort;
+import com.aionn.identity.application.port.out.auth.TokenBlacklistPort;
+import com.aionn.identity.application.port.out.user.UserPersistencePort;
+import com.aionn.identity.domain.model.AuthSession;
+import com.aionn.identity.domain.model.IdentityUser;
+import com.aionn.identity.domain.valueobject.AuthSessionStatus;
+import com.aionn.identity.infrastructure.security.web.BearerAuthenticationFilter;
+import com.aionn.platform.infrastructure.outbox.OutboxDeadLetterService;
+import com.aionn.ucp.adapter.rest.controller.DiscoveryController;
+import com.aionn.ucp.adapter.rest.controller.UcpOrderController;
+import com.aionn.ucp.application.order.UcpOrderApplicationService;
+import com.aionn.ucp.infrastructure.schema.PinnedBusinessProfileValidator;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,6 +36,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -34,17 +48,23 @@ class ApiSecurityConfigIntegrationTest {
         @Autowired
         private MockMvc mockMvc;
 
-        @org.springframework.test.context.bean.override.mockito.MockitoBean
-        private com.aionn.identity.application.port.out.auth.AccessTokenIssuerPort tokenIssuer;
+        @MockitoBean
+        private AccessTokenIssuerPort tokenIssuer;
 
-        @org.springframework.test.context.bean.override.mockito.MockitoBean
-        private com.aionn.identity.application.port.out.auth.TokenBlacklistPort tokenBlacklist;
+        @MockitoBean
+        private TokenBlacklistPort tokenBlacklist;
 
-        @org.springframework.test.context.bean.override.mockito.MockitoBean
-        private com.aionn.sharedkernel.infrastructure.outbox.OutboxDeadLetterService outboxDeadLetterService;
+        @MockitoBean
+        private AuthSessionPersistencePort authSessionPersistencePort;
 
-        @org.springframework.test.context.bean.override.mockito.MockitoBean
-        private com.aionn.ucp.application.order.UcpOrderApplicationService ucpOrderApplicationService;
+        @MockitoBean
+        private UserPersistencePort userPersistencePort;
+
+        @MockitoBean
+        private OutboxDeadLetterService outboxDeadLetterService;
+
+        @MockitoBean
+        private UcpOrderApplicationService ucpOrderApplicationService;
 
         @Test
         void unmatchedRequestRequiresAuthenticationAndReceivesSecurityHeaders() throws Exception {
@@ -102,6 +122,13 @@ class ApiSecurityConfigIntegrationTest {
                 when(tokenIssuer.parseClaims("valid-token"))
                                 .thenReturn(Optional.of(
                                                 new AccessTokenClaims("user-1", "session-1", null, List.of("USER"))));
+                when(authSessionPersistencePort.findById("session-1"))
+                                .thenReturn(Optional.of(new AuthSession("session-1", "user-1", "127.0.0.1",
+                                                "agent", AuthSessionStatus.ACTIVE, java.time.Instant.now(),
+                                                java.time.Instant.now(), java.time.Instant.now().plusSeconds(3600))));
+                IdentityUser user = org.mockito.Mockito.mock(IdentityUser.class);
+                when(user.isActive()).thenReturn(true);
+                when(userPersistencePort.findById("user-1")).thenReturn(Optional.of(user));
 
                 mockMvc.perform(get("/test/ping").header("Authorization", "Bearer valid-token"))
                                 .andExpect(status().isNotFound());
@@ -135,10 +162,10 @@ class ApiSecurityConfigIntegrationTest {
                         DataRedisAutoConfiguration.class
         })
         @Import({ ApiSecurityConfig.class,
-                        com.aionn.identity.infrastructure.security.web.BearerAuthenticationFilter.class,
-                        com.aionn.ucp.adapter.rest.controller.DiscoveryController.class,
-                        com.aionn.ucp.adapter.rest.controller.UcpOrderController.class,
-                        com.aionn.ucp.infrastructure.schema.PinnedBusinessProfileValidator.class })
+                        BearerAuthenticationFilter.class,
+                        DiscoveryController.class,
+                        UcpOrderController.class,
+                        PinnedBusinessProfileValidator.class })
         static class TestApplication {
         }
 }

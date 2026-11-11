@@ -17,6 +17,7 @@ import com.aionn.catalog.application.dto.review.command.UpdateReviewCommand;
 import com.aionn.catalog.application.dto.review.result.ReviewResult;
 import com.aionn.catalog.application.dto.review.result.ReviewEligibilityResult;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
 
@@ -47,6 +48,9 @@ public interface ReviewDtoMapper {
         return new RestoreReviewCommand(adminId, reviewId);
     }
 
+    @Mapping(target = "userName", ignore = true)
+    @Mapping(target = "userDisplayName", ignore = true)
+    @Mapping(target = "userAvatarUrl", ignore = true)
     ReviewResponse toResponse(ReviewResult result);
 
     List<ReviewResponse> toResponses(List<ReviewResult> results);

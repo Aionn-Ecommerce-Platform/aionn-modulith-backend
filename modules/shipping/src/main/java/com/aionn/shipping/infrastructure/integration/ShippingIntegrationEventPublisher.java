@@ -1,10 +1,10 @@
 package com.aionn.shipping.infrastructure.integration;
 
 import com.aionn.shipping.application.port.out.integration.ShippingIntegrationEventPublisherPort;
-import com.aionn.sharedkernel.integration.event.shipping.ShipmentDeliveredIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.shipping.ShipmentDeliveryFailedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.shipping.ShipmentDispatchedIntegrationEvent;
-import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.contracts.event.shipping.ShipmentDeliveredIntegrationEvent;
+import com.aionn.contracts.event.shipping.ShipmentDeliveryFailedIntegrationEvent;
+import com.aionn.contracts.event.shipping.ShipmentDispatchedIntegrationEvent;
+import com.aionn.contracts.publisher.IntegrationEventPublisher;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -27,8 +27,28 @@ public class ShippingIntegrationEventPublisher implements ShippingIntegrationEve
 
     @Override
     public void publishDelivered(String shipmentId, String orderId, String signatureUrl, Instant deliveredAt) {
+        publishDelivered(shipmentId, orderId, null, signatureUrl, deliveredAt, null, false);
+    }
+
+    @Override
+    public void publishDelivered(
+            String shipmentId,
+            String orderId,
+            String userId,
+            String signatureUrl,
+            Instant deliveredAt,
+            Instant expectedDeliveryDate,
+            boolean lateDelivery) {
         integrationEventPublisher.publish(new ShipmentDeliveredIntegrationEvent(
-                IdGenerator.ulid(), shipmentId, orderId, signatureUrl, deliveredAt, clock.instant()));
+                IdGenerator.ulid(),
+                shipmentId,
+                orderId,
+                userId,
+                signatureUrl,
+                deliveredAt,
+                expectedDeliveryDate,
+                lateDelivery,
+                clock.instant()));
     }
 
     @Override

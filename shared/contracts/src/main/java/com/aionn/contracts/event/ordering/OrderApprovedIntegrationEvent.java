@@ -1,0 +1,17 @@
+package com.aionn.contracts.event.ordering;
+
+import com.aionn.contracts.event.IntegrationEvent;
+
+import java.time.Instant;
+
+public record OrderApprovedIntegrationEvent(
+        String eventId,
+        String orderId,
+        String paymentId,
+        Instant occurredAt) implements IntegrationEvent.OrderScoped {
+
+    public OrderApprovedIntegrationEvent {
+        eventId = IntegrationEvent.requireEventId(eventId);
+        occurredAt = IntegrationEvent.defaultOccurredAt(occurredAt);
+    }
+}

@@ -1,5 +1,7 @@
 package com.aionn.payment.infrastructure.provider;
 
+import java.math.BigDecimal;
+
 import com.aionn.payment.application.port.out.PaymentProviderClient;
 import com.aionn.payment.application.port.out.observability.PaymentMetricsPort;
 import com.aionn.payment.domain.exception.PaymentException;
@@ -75,7 +77,7 @@ class PaymentProviderRoutersTest {
 
         PaymentProviderClient.AuthorizationRequest req = new PaymentProviderClient.AuthorizationRequest(
                 "pay-1", "order-1", "user-1", null, null,
-                java.math.BigDecimal.TEN, "USD", "key-1", null);
+                BigDecimal.TEN, "USD", "key-1", null);
         PaymentProviderClient.Authorization expected = new PaymentProviderClient.Authorization(
                 true, "pi_123", null, null, null);
         when(stripeClient.authorize(req)).thenReturn(expected);
@@ -95,7 +97,7 @@ class PaymentProviderRoutersTest {
 
         PaymentProviderClient.AuthorizationRequest req = new PaymentProviderClient.AuthorizationRequest(
                 "pay-1", "order-1", "user-1", null, null,
-                java.math.BigDecimal.TEN, "USD", "key-1", null);
+                BigDecimal.TEN, "USD", "key-1", null);
         when(stripeClient.authorize(req)).thenThrow(new RuntimeException("network error"));
 
         assertThrows(RuntimeException.class, () -> resilient.authorize(req));
@@ -110,7 +112,7 @@ class PaymentProviderRoutersTest {
                 stripeClient, retryRegistry, cbRegistry, metrics);
 
         PaymentProviderClient.RefundRequest req = new PaymentProviderClient.RefundRequest(
-                "pay-1", "pi_123", java.math.BigDecimal.TEN, "USD", "test reason", "refund-key");
+                "pay-1", "pi_123", BigDecimal.TEN, "USD", "test reason", "refund-key");
         PaymentProviderClient.Refund expected = new PaymentProviderClient.Refund(true, "re_1", null);
         when(stripeClient.refund(req)).thenReturn(expected);
 
@@ -127,7 +129,7 @@ class PaymentProviderRoutersTest {
         ResilientPaymentProviderClient resilient = new ResilientPaymentProviderClient(
                 stripeClient, retryRegistry, cbRegistry, metrics);
         PaymentProviderClient.RefundRequest req = new PaymentProviderClient.RefundRequest(
-                "pay-1", "pi_123", java.math.BigDecimal.TEN, "USD", "test reason", "refund-key");
+                "pay-1", "pi_123", BigDecimal.TEN, "USD", "test reason", "refund-key");
         when(stripeClient.refund(req)).thenThrow(new RuntimeException("response lost"));
 
         assertThrows(RuntimeException.class, () -> resilient.refund(req));
@@ -144,9 +146,9 @@ class PaymentProviderRoutersTest {
                 stripeClient, retryRegistry, cbRegistry, metrics);
         PaymentProviderClient.AuthorizationRequest authorizationRequest = new PaymentProviderClient.AuthorizationRequest(
                 "pay-1", "order-1", "user-1", null, null,
-                java.math.BigDecimal.TEN, "USD", "key-1", null);
+                BigDecimal.TEN, "USD", "key-1", null);
         PaymentProviderClient.RefundRequest refundRequest = new PaymentProviderClient.RefundRequest(
-                "pay-1", "pi_123", java.math.BigDecimal.TEN, "USD", "test reason", "refund-key");
+                "pay-1", "pi_123", BigDecimal.TEN, "USD", "test reason", "refund-key");
         when(stripeClient.authorize(authorizationRequest)).thenReturn(
                 new PaymentProviderClient.Authorization(true, "pi_123", null, null, null));
         when(stripeClient.refund(refundRequest)).thenReturn(
@@ -168,7 +170,7 @@ class PaymentProviderRoutersTest {
 
         PaymentProviderClient.WebhookEvent expected = new PaymentProviderClient.WebhookEvent(
                 "stripe.payment_intent.succeeded", "pay-1", "pi_1",
-                java.math.BigDecimal.TEN, "USD", true, null, null);
+                BigDecimal.TEN, "USD", true, null, null);
         when(stripeClient.verifyAndParse("body", "sig")).thenReturn(expected);
 
         PaymentProviderClient.WebhookEvent result = resilient.verifyAndParse("body", "sig");
@@ -184,10 +186,10 @@ class PaymentProviderRoutersTest {
         ResilientPaymentProviderClient resilient = new ResilientPaymentProviderClient(
                 stripeClient, retryRegistry, cbRegistry, metrics);
 
-        when(stripeClient.generateInvoice("pay-1", "order-1", java.math.BigDecimal.TEN, "USD"))
+        when(stripeClient.generateInvoice("pay-1", "order-1", BigDecimal.TEN, "USD"))
                 .thenReturn("https://invoice.url");
 
-        String result = resilient.generateInvoice("pay-1", "order-1", java.math.BigDecimal.TEN, "USD");
+        String result = resilient.generateInvoice("pay-1", "order-1", BigDecimal.TEN, "USD");
 
         assertEquals("https://invoice.url", result);
         verify(metrics).providerOutcome("stripe", "generateInvoice", "success");

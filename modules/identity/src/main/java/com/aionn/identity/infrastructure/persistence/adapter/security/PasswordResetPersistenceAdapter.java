@@ -25,20 +25,14 @@ public class PasswordResetPersistenceAdapter implements PasswordResetPort {
     }
 
     @Override
-    public Optional<PasswordResetTokenData> findPasswordResetTokenHash(String tokenHash) {
-        return tokenStore.find(tokenHash)
-                .map(data -> new PasswordResetTokenData(data.userId(), data.expiresAt()));
-    }
-
-    @Override
     public Optional<PasswordResetTokenData> consumePasswordResetTokenHash(String tokenHash) {
         return tokenStore.consume(tokenHash)
                 .map(data -> new PasswordResetTokenData(data.userId(), data.expiresAt()));
     }
 
     @Override
-    public void deletePasswordResetTokenHash(String tokenHash) {
-        tokenStore.delete(tokenHash);
+    public void deletePasswordResetTokensForUser(String userId) {
+        tokenStore.deleteForUser(userId);
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.aionn.shipping.infrastructure.carrier;
 
 import com.aionn.shipping.application.port.out.CarrierClient;
+import com.aionn.shipping.application.policy.ShippingDefaultsPolicy;
 import com.aionn.shipping.domain.exception.ShippingErrorCode;
 import com.aionn.shipping.domain.exception.ShippingException;
 import com.aionn.shipping.domain.valueobject.ShipmentAddress;
@@ -8,7 +9,6 @@ import com.aionn.shipping.domain.valueobject.ShipmentDimensions;
 import com.aionn.shipping.infrastructure.carrier.config.GhnProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -52,23 +52,10 @@ public class GhnCarrierClient implements CarrierClient {
     private final GhnProperties properties;
     private final GhnAddressResolver addressResolver;
     private final ObjectMapper objectMapper;
+    private final ShippingDefaultsPolicy defaultsPolicy;
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();
-
-    @PostConstruct
-    void init() {
-        if (properties.token() == null || properties.token().isBlank()) {
-            throw new IllegalStateException("GHN token is missing. Set GHN_API_TOKEN in the environment.");
-        }
-        if (properties.shopId() == null || properties.shopId().isBlank()) {
-            throw new IllegalStateException("GHN shop id is missing. Set GHN_SHOP_ID in the environment.");
-        }
-        if (properties.fromDistrictId() == null || properties.fromWardCode() == null) {
-            throw new IllegalStateException(
-                    "GHN sender address is missing. Set GHN_FROM_DISTRICT_ID and GHN_FROM_WARD_CODE.");
-        }
-    }
 
     @Override
     public Quote quote(ShipmentAddress address, ShipmentDimensions dimensions, String currency) {
@@ -102,8 +89,8 @@ public class GhnCarrierClient implements CarrierClient {
         if (expectedDeliveryDate == null) {
             log.warn("GHN leadtime missing/unparsable. request={} response={}", leadtimeBody, leadtime);
         }
-        return new Quote(fee, currency == null ? "VND" : currency, address.provinceCode(), "ghn",
-                expectedDeliveryDate, orderDate);
+        return new Quote(fee, currency == null ? defaultsPolicy.defaultCurrency() : currency,
+                address.provinceCode(), "ghn", expectedDeliveryDate, orderDate);
     }
 
     @Override
@@ -120,7 +107,7 @@ public class GhnCarrierClient implements CarrierClient {
         body.put("payment_type_id", properties.paymentTypeId());
         body.put("note", "Shipment " + shipmentId);
         body.put("required_note", properties.requiredNote());
-        body.put("client_order_code", orderId);
+        body.put("client_order_code", shipmentId);
         body.put("to_name", address.fullName());
         body.put("to_phone", address.phone());
         body.put("to_address", address.addressLine());
@@ -150,13 +137,15 @@ public class GhnCarrierClient implements CarrierClient {
         target.put(FIELD_HEIGHT, dimensions.heightCm().intValue());
     }
 
-    private static long toGhnCodAmount(BigDecimal amount, String currency) {
+    private long toGhnCodAmount(BigDecimal amount, String currency) {
         if (amount == null) {
             return 0;
         }
-        if (!"VND".equalsIgnoreCase(currency) || amount.signum() < 0 || amount.stripTrailingZeros().scale() > 0) {
+        String supportedCurrency = defaultsPolicy.defaultCurrency();
+        if (!supportedCurrency.equalsIgnoreCase(currency)
+                || amount.signum() < 0 || amount.stripTrailingZeros().scale() > 0) {
             throw new ShippingException(ShippingErrorCode.INVALID_ARGUMENT,
-                    "GHN COD amount must be a non-negative whole VND amount");
+                    "GHN COD amount must be a non-negative whole " + supportedCurrency + " amount");
         }
         try {
             return amount.longValueExact();
@@ -225,7 +214,9 @@ public class GhnCarrierClient implements CarrierClient {
             if (response.statusCode() != 200 || code != 200) {
                 String message = root.has("message") ? root.get("message").asText() : response.body();
                 log.warn("{} failed: status={} code={} message={}", label, response.statusCode(), code, message);
-                throw new ShippingException(ShippingErrorCode.SHIPMENT_CARRIER_ERROR,
+                throw new ShippingException(isClientRejection(response.statusCode(), code)
+                        ? ShippingErrorCode.SHIPMENT_CARRIER_REJECTED
+                        : ShippingErrorCode.SHIPMENT_CARRIER_ERROR,
                         label + " failed: " + message);
             }
             return root.has("data") ? root.get("data") : root;
@@ -241,6 +232,15 @@ public class GhnCarrierClient implements CarrierClient {
             throw new ShippingException(ShippingErrorCode.SHIPMENT_CARRIER_ERROR,
                     label + " error: " + ex.getMessage());
         }
+    }
+
+    private static boolean isClientRejection(int httpStatus, int bodyCode) {
+        // Auth failures and rate limiting are infrastructure problems, not bad payloads.
+        return isBadRequest(httpStatus) || isBadRequest(bodyCode);
+    }
+
+    private static boolean isBadRequest(int code) {
+        return code >= 400 && code < 500 && code != 401 && code != 403 && code != 429;
     }
 
     private static Instant parseInstant(String iso) {

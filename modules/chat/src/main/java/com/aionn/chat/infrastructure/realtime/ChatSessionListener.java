@@ -21,7 +21,7 @@ public class ChatSessionListener {
     @EventListener
     public void onConnect(SessionConnectedEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
-        Principal user = accessor.getUser();
+        Principal user = accessor.getUser() != null ? accessor.getUser() : event.getUser();
         String sessionId = accessor.getSessionId();
         if (user == null || sessionId == null) {
             log.debug("STOMP connect ignored - no principal/session");
@@ -34,7 +34,7 @@ public class ChatSessionListener {
     @EventListener
     public void onDisconnect(SessionDisconnectEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
-        Principal user = accessor.getUser();
+        Principal user = accessor.getUser() != null ? accessor.getUser() : event.getUser();
         String sessionId = accessor.getSessionId();
         if (user == null || sessionId == null) {
             return;

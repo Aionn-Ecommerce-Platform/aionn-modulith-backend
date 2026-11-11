@@ -1,5 +1,14 @@
 package com.aionn.payment.adapter.rest.controller;
 
+import com.aionn.payment.adapter.rest.dto.payment.request.InitiatePaymentRequest;
+import com.aionn.payment.adapter.rest.mapper.payment.PaymentDtoMapper;
+import com.aionn.payment.application.port.in.payment.GetPaymentForUserInputPort;
+import com.aionn.payment.application.port.in.payment.InitiatePaymentInputPort;
+import com.aionn.payment.application.port.in.payment.ListPaymentsByOrderInputPort;
+import com.aionn.payment.application.port.in.payment.RefundPaymentInputPort;
+import com.aionn.payment.domain.valueobject.PaymentGatewayKind;
+import org.mockito.Mockito;
+
 import com.aionn.payment.adapter.rest.dto.payment.request.RefundRequest;
 import com.aionn.payment.adapter.rest.dto.payment.response.PaymentResponse;
 import com.aionn.payment.adapter.rest.exception.PaymentExceptionHandler;
@@ -15,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -40,15 +49,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PaymentControllerWebTest {
 
     @Mock
-    private com.aionn.payment.application.port.in.payment.InitiatePaymentInputPort initiatePaymentInputPort;
+    private InitiatePaymentInputPort initiatePaymentInputPort;
     @Mock
-    private com.aionn.payment.application.port.in.payment.RefundPaymentInputPort refundPaymentInputPort;
+    private RefundPaymentInputPort refundPaymentInputPort;
     @Mock
-    private com.aionn.payment.application.port.in.payment.GetPaymentForUserInputPort getPaymentForUserInputPort;
+    private GetPaymentForUserInputPort getPaymentForUserInputPort;
     @Mock
-    private com.aionn.payment.application.port.in.payment.ListPaymentsByOrderInputPort listPaymentsByOrderInputPort;
+    private ListPaymentsByOrderInputPort listPaymentsByOrderInputPort;
     @Mock
-    private com.aionn.payment.adapter.rest.mapper.payment.PaymentDtoMapper paymentDtoMapper;
+    private PaymentDtoMapper paymentDtoMapper;
 
     private MockMvc mockMvc;
 
@@ -104,10 +113,10 @@ class PaymentControllerWebTest {
         PaymentResponse response = sampleResponse("pay-1", "INITIATED");
         InitiatePaymentCommand command = new InitiatePaymentCommand(
                 "order-1", "user-123", null,
-                com.aionn.payment.domain.valueobject.PaymentGatewayKind.STRIPE, "idem-1");
+                PaymentGatewayKind.STRIPE, "idem-1");
         
-        org.mockito.Mockito.lenient().when(paymentDtoMapper.toCommand(
-                any(com.aionn.payment.adapter.rest.dto.payment.request.InitiatePaymentRequest.class),
+        Mockito.lenient().when(paymentDtoMapper.toCommand(
+                any(InitiatePaymentRequest.class),
                 any(String.class), any(String.class))).thenReturn(command);
         when(initiatePaymentInputPort.execute(any(InitiatePaymentCommand.class))).thenReturn(result);
         when(paymentDtoMapper.toResponse(result)).thenReturn(response);
@@ -147,9 +156,9 @@ class PaymentControllerWebTest {
     void initiateMissingMethodReturnsNotFound() throws Exception {
         InitiatePaymentCommand command = new InitiatePaymentCommand(
                 "order-1", "user-123", "missing",
-                com.aionn.payment.domain.valueobject.PaymentGatewayKind.STRIPE, "idem-9");
-        org.mockito.Mockito.lenient().when(paymentDtoMapper.toCommand(
-                any(com.aionn.payment.adapter.rest.dto.payment.request.InitiatePaymentRequest.class),
+                PaymentGatewayKind.STRIPE, "idem-9");
+        Mockito.lenient().when(paymentDtoMapper.toCommand(
+                any(InitiatePaymentRequest.class),
                 any(String.class), any(String.class))).thenReturn(command);
         
         when(initiatePaymentInputPort.execute(any(InitiatePaymentCommand.class)))
@@ -175,7 +184,7 @@ class PaymentControllerWebTest {
         PaymentResponse response = sampleResponse("pay-2", "REFUNDED");
         RefundPaymentCommand command = new RefundPaymentCommand(
                 "pay-2", new BigDecimal("100.00"), "VND", "duplicate", "refund-key-1");
-        org.mockito.Mockito.lenient().when(paymentDtoMapper.toCommand(
+        Mockito.lenient().when(paymentDtoMapper.toCommand(
                 any(String.class), any(RefundRequest.class), any(String.class))).thenReturn(command);
 
         when(refundPaymentInputPort.execute(any(RefundPaymentCommand.class))).thenReturn(result);

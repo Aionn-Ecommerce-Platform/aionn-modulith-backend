@@ -63,7 +63,7 @@ class InventoryWarehouseSelectorAdapterTest {
     }
 
     @Test
-    void selectWarehouseFallsBackToFirstWarehouseWhenNoStockAvailable() {
+    void selectWarehouseReturnsEmptyWhenNoWarehouseHasStock() {
         Warehouse w1 = Warehouse.create("WH_1", "M_1", "addr-1", 1, FIXED);
         Warehouse w2 = Warehouse.create("WH_2", "M_1", "addr-2", 2, FIXED);
         when(warehouseRepository.findByMerchantOrderByPriority("M_1")).thenReturn(List.of(w1, w2));
@@ -73,8 +73,8 @@ class InventoryWarehouseSelectorAdapterTest {
         when(inventoryItemRepository.findBySkuAcrossWarehouses("SKU_1", List.of("WH_1", "WH_2")))
                 .thenReturn(List.of(item1, item2));
 
-        Optional<String> result = adapter.selectWarehouseForSku("M_1", "SKU_1");
-
-        assertThat(result).hasValue("WH_1");
+        // Out-of-stock is reported as empty so callers fail fast rather than
+        // reserving against a guaranteed-empty warehouse.
+        assertThat(adapter.selectWarehouseForSku("M_1", "SKU_1")).isEmpty();
     }
 }

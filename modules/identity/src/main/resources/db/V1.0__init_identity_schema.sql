@@ -1,8 +1,8 @@
 CREATE TABLE users (
     user_id VARCHAR(26) PRIMARY KEY,
-    email VARCHAR(100) UNIQUE,
-    phone VARCHAR(20) UNIQUE,
-    username VARCHAR(50) UNIQUE,
+    email VARCHAR(100),
+    phone VARCHAR(20),
+    username VARCHAR(50),
     password_hash VARCHAR(255),
     display_name VARCHAR(100),
     avatar_url TEXT,
@@ -10,7 +10,7 @@ CREATE TABLE users (
     email_verified_at TIMESTAMPTZ,
     phone_verified_at TIMESTAMPTZ,
     mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE,
-    mfa_secret VARCHAR(64),
+    mfa_secret VARCHAR(255),
     failed_login_attempts INT NOT NULL DEFAULT 0,
     locked_until TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -114,6 +114,7 @@ CREATE TABLE user_consents (
 CREATE TABLE agent_identities (
     agent_id VARCHAR(26) PRIMARY KEY,
     owner_id VARCHAR(26) NOT NULL,
+    name VARCHAR(128) NOT NULL,
     key_hash VARCHAR(255) NOT NULL,
     permissions JSONB,
     status VARCHAR(20),
@@ -231,6 +232,8 @@ CREATE INDEX idx_backup_user_id ON backup_codes(user_id);
 
 CREATE INDEX idx_audit_user_id ON security_audits(user_id);
 CREATE INDEX idx_audit_event_type ON security_audits(event_type);
+CREATE INDEX IF NOT EXISTS idx_security_audits_device_id
+    ON security_audits (device_id);
 
 CREATE INDEX idx_session_user_id ON auth_sessions(user_id);
 CREATE INDEX idx_session_status ON auth_sessions(status);
@@ -244,6 +247,7 @@ CREATE INDEX idx_user_consents_type ON user_consents(consent_type);
 
 CREATE INDEX idx_agent_owner_id ON agent_identities(owner_id);
 CREATE INDEX idx_agent_status ON agent_identities(status);
+CREATE UNIQUE INDEX uk_agent_key_hash ON agent_identities(key_hash);
 
 CREATE INDEX idx_account_deletion_user_id ON account_deletion_requests(user_id);
 CREATE INDEX idx_account_deletion_status ON account_deletion_requests(status);
@@ -11233,3 +11237,17 @@ CREATE INDEX idx_user_feedbacks_created_at ON user_feedbacks(created_at DESC);
 
 ALTER TABLE user_feedbacks
     ADD COLUMN admin_reply TEXT;
+
+-- Soft-deleted users keep no identifying contact fields and must not block
+-- re-registration, so uniqueness is enforced only on live accounts.
+CREATE UNIQUE INDEX uq_users_active_email_ci
+    ON users (lower(email))
+    WHERE deleted_at IS NULL AND email IS NOT NULL;
+
+CREATE UNIQUE INDEX uq_users_active_phone
+    ON users (phone)
+    WHERE deleted_at IS NULL AND phone IS NOT NULL;
+
+CREATE UNIQUE INDEX uq_users_active_username_ci
+    ON users (lower(username))
+    WHERE deleted_at IS NULL AND username IS NOT NULL;

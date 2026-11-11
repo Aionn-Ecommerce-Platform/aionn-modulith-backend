@@ -9,7 +9,7 @@ import com.aionn.payment.application.dto.payout.command.RequestPayoutCommand;
 import com.aionn.payment.application.port.in.payout.GetMerchantBalanceInputPort;
 import com.aionn.payment.application.port.in.payout.ListMerchantPayoutsInputPort;
 import com.aionn.payment.application.port.in.payout.RequestPayoutInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -41,7 +41,7 @@ public class MerchantPayoutController {
     @Operation(summary = "Get my balance")
     public ResponseEntity<ApiResponse<MerchantBalanceResponse>> getBalance(
             @CurrentUserId String ownerId,
-            @RequestParam(defaultValue = "VND") String currency) {
+            @RequestParam(required = false) String currency) {
         return ResponseEntity.ok(ApiResponse.success(
                 payoutDtoMapper.toResponse(getMerchantBalanceInputPort.execute(ownerId, currency)),
                 "Balance fetched"));

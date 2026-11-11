@@ -14,8 +14,11 @@ import com.aionn.shipping.application.dto.shipment.command.CreateShipmentCommand
 import com.aionn.shipping.application.dto.shipment.command.FetchLabelCommand;
 import com.aionn.shipping.application.dto.shipment.command.QuoteShippingCommand;
 import com.aionn.shipping.application.dto.shipment.command.ResolveIssueCommand;
+import com.aionn.shipping.application.dto.rate.result.ShippingQuoteResult;
 import com.aionn.shipping.application.dto.shipment.result.ShipmentResult;
+import com.aionn.shipping.application.service.ParcelResolver;
 import com.aionn.shipping.application.port.in.shipment.QuoteShippingInputPort;
+import com.aionn.shipping.application.usecase.shipment.QuoteShippingUseCase;
 import com.aionn.shipping.application.port.in.shipment.CreateShipmentInputPort;
 import com.aionn.shipping.application.port.in.shipment.RegisterShipmentInputPort;
 import com.aionn.shipping.application.port.in.shipment.FetchLabelInputPort;
@@ -23,7 +26,7 @@ import com.aionn.shipping.application.port.in.shipment.CancelShipmentInputPort;
 import com.aionn.shipping.application.port.in.shipment.ResolveIssueInputPort;
 import com.aionn.shipping.application.port.in.shipment.GetShipmentInputPort;
 import com.aionn.shipping.application.port.in.shipment.ListShipmentsByOrderInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -55,16 +58,23 @@ public class ShipmentController {
         private final ListShipmentsByOrderInputPort listShipmentsByOrderInputPort;
         private final ShipmentDtoMapper shipmentDtoMapper;
         private final ShippingRateDtoMapper shippingRateDtoMapper;
+        private final ParcelResolver parcelResolver;
 
         @PostMapping("/quote")
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "Quote shipping fee",
-                        description = "orderId is optional so checkout can request a quote before creating an order")
+                        description = "orderId is optional so checkout can request a quote before creating an order; "
+                                + "items carry skuId+qty, parcel dims are resolved from the catalog server-side")
         public ResponseEntity<ApiResponse<ShippingQuoteResponse>> quote(
                         @Valid @RequestBody QuoteShippingRequest request) {
-                QuoteShippingCommand command = shippingRateDtoMapper.toCommand(request);
+                List<QuoteShippingUseCase.ItemRequest> items = request.items().stream()
+                                .map(i -> new QuoteShippingUseCase.ItemRequest(i.skuId(), i.qty()))
+                                .toList();
+                ShippingQuoteResult result = quoteShippingInputPort.executeForItems(
+                                request.orderId(), request.address(), items, request.goodsSubtotal(),
+                                request.currency());
                 return ResponseEntity.ok(ApiResponse.success(
-                                shippingRateDtoMapper.toResponse(quoteShippingInputPort.execute(command)),
+                                shippingRateDtoMapper.toResponse(result),
                                 "Quote computed"));
         }
 
@@ -74,7 +84,13 @@ public class ShipmentController {
         public ResponseEntity<ApiResponse<ShipmentResponse>> create(
                         @CurrentUserId String ownerId,
                         @Valid @RequestBody CreateShipmentRequest request) {
-                CreateShipmentCommand command = shipmentDtoMapper.toCommand(request, ownerId);
+                List<ParcelResolver.Item> items = request.items().stream()
+                                .map(i -> new ParcelResolver.Item(i.skuId(), i.qty()))
+                                .toList();
+                List<QuoteShippingCommand.Parcel> parcels = parcelResolver.resolveParcels(items);
+                CreateShipmentCommand command = new CreateShipmentCommand(
+                                request.orderId(), null, ownerId, request.userId(), request.address(), parcels,
+                                request.codAmount(), request.shippingFee(), request.currency());
                 return ApiResponse.createdResponse("Shipment created",
                                 shipmentDtoMapper.toResponse(createShipmentInputPort.execute(command)));
         }
@@ -82,8 +98,10 @@ public class ShipmentController {
         @PostMapping("/{shipmentId}/register")
         @PreAuthorize("hasAuthority('ROLE_MERCHANT')")
         @Operation(summary = "Register shipment with carrier")
-        public ResponseEntity<ApiResponse<ShipmentResponse>> register(@PathVariable String shipmentId) {
-                ShipmentResult result = registerShipmentInputPort.execute(shipmentId);
+        public ResponseEntity<ApiResponse<ShipmentResponse>> register(
+                        @CurrentUserId String userId,
+                        @PathVariable String shipmentId) {
+                ShipmentResult result = registerShipmentInputPort.execute(shipmentId, userId);
                 return ResponseEntity.ok(ApiResponse.success(
                                 shipmentDtoMapper.toResponse(result),
                                 "Shipment registered with carrier"));

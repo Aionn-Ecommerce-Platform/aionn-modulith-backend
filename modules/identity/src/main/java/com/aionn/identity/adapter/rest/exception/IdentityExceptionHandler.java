@@ -1,8 +1,8 @@
 package com.aionn.identity.adapter.rest.exception;
 
 import com.aionn.identity.domain.exception.IdentityException;
-import com.aionn.sharedkernel.adapter.web.exception.AbstractModuleExceptionHandler;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.exception.AbstractModuleExceptionHandler;
+import com.aionn.platform.web.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -23,9 +23,9 @@ public class IdentityExceptionHandler extends AbstractModuleExceptionHandler {
                                 "IDENTITY_003", "IDENTITY_109", "IDENTITY_201", "IDENTITY_205",
                                 "IDENTITY_208", "IDENTITY_215", "IDENTITY_217", "IDENTITY_218",
                                 "IDENTITY_219", "IDENTITY_302", "IDENTITY_401", "IDENTITY_501",
-                                "IDENTITY_601");
+                                "IDENTITY_601", "IDENTITY_231");
                 registerErrors(HttpStatus.CONFLICT,
-                                "IDENTITY_001", "IDENTITY_002", "IDENTITY_005", "IDENTITY_108",
+                                "IDENTITY_001", "IDENTITY_002", "IDENTITY_005", "IDENTITY_007", "IDENTITY_108",
                                 "IDENTITY_110", "IDENTITY_112", "IDENTITY_207", "IDENTITY_214",
                                 "IDENTITY_216", "IDENTITY_221", "IDENTITY_228", "IDENTITY_303", "IDENTITY_402",
                                 "IDENTITY_403");
@@ -41,7 +41,7 @@ public class IdentityExceptionHandler extends AbstractModuleExceptionHandler {
                                 "IDENTITY_209", "IDENTITY_211", "IDENTITY_212", "IDENTITY_213",
                                 "IDENTITY_222", "IDENTITY_223", "IDENTITY_226", "IDENTITY_227",
                                 "IDENTITY_301", "IDENTITY_304", "IDENTITY_404", "IDENTITY_405",
-                                "IDENTITY_602");
+                                "IDENTITY_411", "IDENTITY_412", "IDENTITY_602", "IDENTITY_603");
                 registerErrors(HttpStatus.TOO_MANY_REQUESTS, "IDENTITY_103", "IDENTITY_107");
                 registerErrors(HttpStatus.BAD_GATEWAY, "IDENTITY_406");
                 setDefaultStatus(HttpStatus.UNPROCESSABLE_CONTENT);

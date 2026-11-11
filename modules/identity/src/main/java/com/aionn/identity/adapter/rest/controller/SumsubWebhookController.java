@@ -2,7 +2,7 @@ package com.aionn.identity.adapter.rest.controller;
 
 import com.aionn.identity.application.dto.kyc.command.SumsubWebhookCommand;
 import com.aionn.identity.application.port.in.kyc.HandleSumsubWebhookInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Hidden;

@@ -5,6 +5,7 @@ import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 import com.aionn.promotion.domain.exception.PromotionErrorCode;
 import com.aionn.promotion.domain.exception.PromotionException;
 import com.aionn.promotion.domain.valueobject.VoucherScope;
+import com.aionn.promotion.domain.valueobject.VoucherType;
 import com.aionn.sharedkernel.domain.vo.Money;
 import org.junit.jupiter.api.Test;
 
@@ -192,5 +193,31 @@ class VoucherTest {
 
         assertThat(voucher.getUpdatedAt()).isNotNull();
         assertThat(voucher.getReservedCount()).isZero();
+    }
+
+    @Test
+    void issueDefaultsToGoodsDiscountType() {
+        Voucher voucher = platform(10, null, null);
+
+        assertThat(voucher.getType()).isEqualTo(VoucherType.ORDER_DISCOUNT);
+        assertThat(voucher.isFreeShipping()).isFalse();
+    }
+
+    @Test
+    void issueCanCreateAFreeShippingVoucher() {
+        Voucher voucher = Voucher.issue("FREESHIP30K", "CAMP_1", VoucherType.FREE_SHIPPING,
+                DISCOUNT, 10, null, null, CLOCK);
+
+        assertThat(voucher.getType()).isEqualTo(VoucherType.FREE_SHIPPING);
+        assertThat(voucher.isFreeShipping()).isTrue();
+    }
+
+    @Test
+    void shopVoucherCanBeFreeShipping() {
+        Voucher voucher = Voucher.issueForShop("SHOP_FS", "MERCHANT_1", VoucherType.FREE_SHIPPING,
+                DISCOUNT, 10, null, null, CLOCK);
+
+        assertThat(voucher.isFreeShipping()).isTrue();
+        assertThat(voucher.getScope()).isEqualTo(VoucherScope.SHOP);
     }
 }

@@ -118,24 +118,19 @@ class UserSecurityAdapterTest {
     }
 
     @Test
-    void recordFailedLoginAttemptUpdatesUserWhenPresent() {
-        UserEntity user = mock(UserEntity.class);
+    void recordFailedLoginAttemptUsesAtomicIncrement() {
         Instant lockedUntil = Instant.now().plus(Duration.ofMinutes(15));
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
 
-        adapter.recordFailedLoginAttempt(USER_ID, 3, lockedUntil);
+        adapter.recordFailedLoginAttempt(USER_ID, 5, lockedUntil);
 
-        verify(user).setFailedLoginAttempts(3);
-        verify(user).setLockedUntil(lockedUntil);
-        verify(userRepository).save(user);
+        verify(userRepository).incrementFailedLoginAttempts(USER_ID, 5, lockedUntil);
     }
 
     @Test
-    void recordFailedLoginAttemptDoesNothingWhenMissing() {
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
-
+    void recordFailedLoginAttemptDoesNotLoadOrSaveTheEntity() {
         adapter.recordFailedLoginAttempt(USER_ID, 3, Instant.now());
 
+        verify(userRepository, never()).findById(USER_ID);
         verify(userRepository, never()).save(any());
     }
 

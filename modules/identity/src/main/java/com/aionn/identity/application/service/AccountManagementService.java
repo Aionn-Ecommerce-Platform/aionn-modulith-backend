@@ -4,6 +4,7 @@ import com.aionn.identity.application.dto.user.command.CancelAccountDeletionComm
 import com.aionn.identity.application.dto.user.command.RequestAccountDeletionCommand;
 import com.aionn.identity.application.dto.user.command.RequestDataExportCommand;
 import com.aionn.identity.application.dto.user.view.DataExportRequestView;
+import com.aionn.identity.application.dto.user.view.DataExportPayloadView;
 import com.aionn.identity.application.dto.user.view.DeletionRequestView;
 import com.aionn.identity.application.dto.user.view.UserProfileView;
 import com.aionn.identity.application.mapper.UserResultMapper;
@@ -12,7 +13,14 @@ import com.aionn.identity.application.port.out.auth.AuthSessionPersistencePort;
 import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
 import com.aionn.identity.application.port.out.integration.IdentityIntegrationEventPublisherPort;
 import com.aionn.identity.application.port.out.user.UserOtpChallengeStorePort;
-import com.aionn.sharedkernel.integration.port.notification.IdentityNotificationPort;
+import com.aionn.contracts.port.notification.IdentityNotificationPort;
+import com.aionn.identity.application.port.out.security.MfaPersistencePort;
+import com.aionn.identity.application.port.out.security.PasswordHasherPort;
+import com.aionn.identity.application.port.out.security.TotpManagerPort;
+import com.aionn.identity.application.port.out.security.TotpReplayGuardPort;
+import com.aionn.identity.application.port.out.security.UserSecurityPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.ordering.OrderQueryPort;
 import com.aionn.identity.domain.valueobject.UserOtpPurpose;
 import com.aionn.identity.application.port.out.user.UserPersistencePort;
 import com.aionn.identity.application.port.out.user.AccountDeletionPort;
@@ -27,10 +35,10 @@ import com.aionn.identity.domain.valueobject.OtpChannel;
 import com.aionn.sharedkernel.util.OtpGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.Instant;
 import java.time.Clock;
 import java.time.Duration;
@@ -51,10 +59,17 @@ public class AccountManagementService {
     private final RefreshTokenStorePort refreshTokenStore;
     private final AccountManagementPolicy accountManagementPolicy;
     private final UserResultMapper userResultMapper;
+    private final UserSecurityPort userSecurityPort;
+    private final PasswordHasherPort passwordHasher;
+    private final TotpManagerPort totpManager;
+    private final TotpReplayGuardPort totpReplayGuard;
+    private final MfaPersistencePort mfaPersistencePort;
+    private final OrderQueryPort orderQueryPort;
+    private final MerchantQueryPort merchantQueryPort;
 
     private final Clock clock;
     public DeletionRequestView requestAccountDeletion(RequestAccountDeletionCommand command) {
-        return requestAccountDeletion(command.userId());
+        return requestAccountDeletion(command.userId(), command.password(), command.mfaCode());
     }
 
     public void cancelAccountDeletion(CancelAccountDeletionCommand command) {
@@ -138,7 +153,12 @@ public class AccountManagementService {
 
         String oldEmail = user.getEmail();
         user.updateEmail(challenge.pendingValue());
-        IdentityUser saved = userPersistencePort.save(user);
+        IdentityUser saved;
+        try {
+            saved = userPersistencePort.save(user);
+        } catch (DataIntegrityViolationException ex) {
+            throw new IdentityException(IdentityErrorCode.EMAIL_ALREADY_EXISTS);
+        }
         userOtpChallengeStore.delete(userId, UserOtpPurpose.CHANGE_EMAIL);
 
         revokeAllSessions(userId);
@@ -184,7 +204,12 @@ public class AccountManagementService {
 
         String oldPhone = user.getPhone();
         user.updatePhone(challenge.pendingValue());
-        IdentityUser saved = userPersistencePort.save(user);
+        IdentityUser saved;
+        try {
+            saved = userPersistencePort.save(user);
+        } catch (DataIntegrityViolationException ex) {
+            throw new IdentityException(IdentityErrorCode.PHONE_ALREADY_EXISTS);
+        }
         userOtpChallengeStore.delete(userId, UserOtpPurpose.CHANGE_PHONE);
 
         revokeAllSessions(userId);
@@ -193,8 +218,16 @@ public class AccountManagementService {
         return userResultMapper.toUserProfileView(saved);
     }
 
-    private DeletionRequestView requestAccountDeletion(String userId) {
+    private DeletionRequestView requestAccountDeletion(String userId, String password, String mfaCode) {
         getActiveUser(userId);
+
+        UserSecurityPort.UserSecurityData userSecurity = userSecurityPort.findById(userId)
+                .orElseThrow(() -> new IdentityException(IdentityErrorCode.USER_NOT_FOUND));
+
+        verifyPasswordForDeletion(userSecurity, password);
+        verifyMfaForDeletion(userId, userSecurity, mfaCode);
+        verifyNoOpenOrdersForDeletion(userId);
+
         if (accountDeletionPort.findPendingByUserId(userId).isPresent()) {
             throw new IdentityException(IdentityErrorCode.ACCOUNT_DELETION_ALREADY_REQUESTED);
         }
@@ -205,23 +238,79 @@ public class AccountManagementService {
         return result;
     }
 
+    private void verifyPasswordForDeletion(UserSecurityPort.UserSecurityData userSecurity, String password) {
+        String passwordHash = userSecurity.passwordHash();
+        if (passwordHash != null && !passwordHash.isBlank()
+                && (password == null || password.isBlank() || !passwordHasher.matches(password, passwordHash))) {
+            throw new IdentityException(IdentityErrorCode.INVALID_CREDENTIALS);
+        }
+    }
+
+    private void verifyMfaForDeletion(String userId, UserSecurityPort.UserSecurityData userSecurity, String mfaCode) {
+        if (!userSecurity.mfaEnabled()) {
+            return;
+        }
+        if (mfaCode == null || mfaCode.isBlank()) {
+            throw new IdentityException(IdentityErrorCode.OTP_REQUIRED, "MFA code is required");
+        }
+        String normalizedCode = mfaCode.trim();
+        if (totpManager.verifyCode(userSecurity.mfaSecret(), normalizedCode)
+                && totpReplayGuard.claim(userId, normalizedCode)) {
+            return;
+        }
+        if (!markMatchingBackupCodeUsed(userId, normalizedCode)) {
+            throw new IdentityException(IdentityErrorCode.OTP_INVALID, "Invalid MFA code");
+        }
+    }
+
+    private boolean markMatchingBackupCodeUsed(String userId, String mfaCode) {
+        return mfaPersistencePort.findActiveBackupCodes(userId).stream()
+                .filter(code -> passwordHasher.matches(mfaCode, code.codeHash()))
+                .findFirst()
+                .map(code -> mfaPersistencePort.markBackupCodeUsed(code.backupCodeId(), nowUtc()))
+                .orElse(false);
+    }
+
+    private void verifyNoOpenOrdersForDeletion(String userId) {
+        if (orderQueryPort != null && orderQueryPort.hasOpenOrdersForUser(userId)) {
+            throw new IdentityException(IdentityErrorCode.ACCOUNT_HAS_OPEN_ORDERS,
+                    "Cannot request account deletion while you have active or pending orders");
+        }
+
+        if (merchantQueryPort != null && orderQueryPort != null) {
+            merchantQueryPort.findMerchantIdByOwnerId(userId).ifPresent(merchantId -> {
+                if (orderQueryPort.hasOpenOrdersForMerchant(merchantId)) {
+                    throw new IdentityException(IdentityErrorCode.ACCOUNT_HAS_OPEN_ORDERS,
+                            "Cannot request account deletion while your store has active or pending orders");
+                }
+            });
+        }
+    }
+
     private void cancelAccountDeletion(String userId) {
         getActiveUser(userId);
-        if (accountDeletionPort.findPendingByUserId(userId).isEmpty()) {
+        if (!accountDeletionPort.cancel(userId)) {
             throw new IdentityException(IdentityErrorCode.ACCOUNT_DELETION_NOT_FOUND);
         }
-        accountDeletionPort.cancel(userId);
         log.info("Account deletion canceled for user: {}", userId);
     }
 
     private DataExportRequestView requestDataExport(String userId) {
         getActiveUser(userId);
-        if (dataExportPort.hasActiveRequest(userId)) {
-            throw new IdentityException(IdentityErrorCode.DATA_EXPORT_ALREADY_IN_PROGRESS);
-        }
+        // The adapter owns the active-request check because it first fails stale rows from older
+        // deployments, then serializes concurrent requests on the user row.
         DataExportRequestView result = dataExportPort.save(userId);
         log.info("Data export requested for user: {}", userId);
         return result;
+    }
+
+    @Transactional(readOnly = true)
+    public DataExportPayloadView getDataExport(String userId, String requestId) {
+        getActiveUser(userId);
+        var payload = dataExportPort.findPayload(requestId, userId)
+                .orElseThrow(() -> new IdentityException(IdentityErrorCode.DATA_EXPORT_NOT_FOUND));
+        return new DataExportPayloadView(payload.requestId(), payload.contentType(),
+                payload.payload(), payload.completedAt());
     }
 
     private void revokeAllSessions(String userId) {
@@ -247,6 +336,12 @@ public class AccountManagementService {
         if (challenge.expiresAt().isBefore(nowUtc())) {
             userOtpChallengeStore.delete(challenge.userId(), challenge.purpose());
             throw new IdentityException(IdentityErrorCode.OTP_EXPIRED);
+        }
+        if (!userOtpChallengeStore.tryAcquireAttempt(
+                challenge.userId(), challenge.purpose(),
+                accountManagementPolicy.getOtpMaxAttempts(), challenge.expiresAt())) {
+            userOtpChallengeStore.delete(challenge.userId(), challenge.purpose());
+            throw new IdentityException(IdentityErrorCode.OTP_ATTEMPTS_EXCEEDED);
         }
         if (!challenge.otpCode().equals(otpCode)) {
             int attempts = challenge.attempts() + 1;

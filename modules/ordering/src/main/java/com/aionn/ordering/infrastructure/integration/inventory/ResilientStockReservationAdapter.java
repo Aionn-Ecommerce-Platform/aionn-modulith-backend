@@ -1,5 +1,7 @@
 package com.aionn.ordering.infrastructure.integration.inventory;
 
+import com.aionn.contracts.port.inventory.InventoryStockReservationPort;
+
 import com.aionn.ordering.application.port.out.StockReservationGateway;
 import com.aionn.ordering.application.port.out.observability.OrderingMetricsPort;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
@@ -25,13 +27,13 @@ public class ResilientStockReservationAdapter implements StockReservationGateway
 
     private static final String INSTANCE = "ordering-inventory";
 
-    private final com.aionn.sharedkernel.integration.port.inventory.InventoryStockReservationPort inventoryStockReservation;
+    private final InventoryStockReservationPort inventoryStockReservation;
     private final Retry retry;
     private final CircuitBreaker circuitBreaker;
     private final OrderingMetricsPort metrics;
 
     public ResilientStockReservationAdapter(
-            com.aionn.sharedkernel.integration.port.inventory.InventoryStockReservationPort inventoryStockReservation,
+            InventoryStockReservationPort inventoryStockReservation,
             RetryRegistry retryRegistry,
             CircuitBreakerRegistry circuitBreakerRegistry,
             OrderingMetricsPort metrics) {
@@ -45,17 +47,17 @@ public class ResilientStockReservationAdapter implements StockReservationGateway
     public List<Reservation> reserveAll(String orderId, List<ReservationLine> lines, int ttlSeconds) {
         Supplier<List<Reservation>> action = () -> {
             try {
-                List<com.aionn.sharedkernel.integration.port.inventory.InventoryStockReservationPort.ReservationLine> mapped = lines.stream()
-                        .map(l -> new com.aionn.sharedkernel.integration.port.inventory.InventoryStockReservationPort.ReservationLine(
+                List<InventoryStockReservationPort.ReservationLine> mapped = lines.stream()
+                        .map(l -> new InventoryStockReservationPort.ReservationLine(
                                 l.skuId(), l.warehouseId(), l.qty(), l.unitPrice(), l.currency()))
                         .toList();
-                List<com.aionn.sharedkernel.integration.port.inventory.InventoryStockReservationPort.Reservation> result =
+                List<InventoryStockReservationPort.Reservation> result =
                         inventoryStockReservation.reserveAll(orderId, mapped, ttlSeconds);
                 return result.stream()
                         .map(r -> new Reservation(r.reservationId(), r.skuId(), r.warehouseId(),
                                 r.qty(), r.unitPrice(), r.currency()))
                         .toList();
-            } catch (com.aionn.sharedkernel.integration.port.inventory.InventoryStockReservationPort.ReservationException ex) {
+            } catch (InventoryStockReservationPort.ReservationException ex) {
                 throw new ReservationException(ex.getSkuId(), ex.getMessage());
             }
         };

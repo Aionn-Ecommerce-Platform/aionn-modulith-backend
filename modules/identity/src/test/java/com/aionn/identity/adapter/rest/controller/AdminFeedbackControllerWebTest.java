@@ -18,13 +18,13 @@ import com.aionn.identity.application.port.in.feedback.GetFeedbackAnalyticsQuery
 import com.aionn.identity.application.port.in.feedback.ListAdminFeedbackQueryPort;
 import com.aionn.identity.application.port.in.feedback.ReplyFeedbackInputPort;
 import com.aionn.identity.domain.valueobject.FeedbackStatus;
-import com.aionn.sharedkernel.adapter.web.response.PageMetadata;
+import com.aionn.platform.web.response.PageMetadata;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;

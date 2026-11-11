@@ -1,5 +1,11 @@
 package com.aionn.ucp.adapter.rest.advice;
 
+import org.springframework.http.HttpInputMessage;
+import org.springframework.http.HttpMethod;
+import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.aionn.ucp.adapter.rest.dto.UcpErrorResponse;
@@ -27,7 +33,7 @@ class UcpControllerAdviceTest {
                 "Aionn Test",
                 Set.of("https://ucp.dev/schemas/"),
                 false,
-                new UcpProperties.Capabilities(false, false, false, false, false));
+                new UcpProperties.Capabilities(false, false, false, false, false), "", "VND", "");
         advice = new UcpControllerAdvice(properties);
     }
 
@@ -57,7 +63,7 @@ class UcpControllerAdviceTest {
     @Test
     void translatesMalformedJson() {
         HttpMessageNotReadableException ex = new HttpMessageNotReadableException(
-                "Malformed JSON", (org.springframework.http.HttpInputMessage) null);
+                "Malformed JSON", (HttpInputMessage) null);
 
         ResponseEntity<UcpErrorResponse> response = advice.handleMalformedJson(ex);
 
@@ -88,7 +94,7 @@ class UcpControllerAdviceTest {
     @Test
     void translatesNotFound() {
         NoResourceFoundException ex = new NoResourceFoundException(
-                org.springframework.http.HttpMethod.GET, "/ucp/v1/unknown", "Resource not found");
+                HttpMethod.GET, "/ucp/v1/unknown", "Resource not found");
 
         ResponseEntity<UcpErrorResponse> response = advice.handleNoResourceFound(ex);
 
@@ -113,11 +119,11 @@ class UcpControllerAdviceTest {
 
     @Test
     void translatesValidationExceptionWithFieldErrors() {
-        org.springframework.validation.BeanPropertyBindingResult bindingResult = new org.springframework.validation.BeanPropertyBindingResult(
+        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(
                 new Object(), "target");
-        bindingResult.addError(new org.springframework.validation.FieldError("target", "field1", "Field1 is required"));
+        bindingResult.addError(new FieldError("target", "field1", "Field1 is required"));
 
-        org.springframework.web.bind.MethodArgumentNotValidException ex = new org.springframework.web.bind.MethodArgumentNotValidException(
+        MethodArgumentNotValidException ex = new MethodArgumentNotValidException(
                 null, bindingResult);
 
         ResponseEntity<UcpErrorResponse> response = advice.handleValidationException(ex);
@@ -129,10 +135,10 @@ class UcpControllerAdviceTest {
 
     @Test
     void translatesValidationExceptionWithoutFieldErrors() {
-        org.springframework.validation.BeanPropertyBindingResult bindingResult = new org.springframework.validation.BeanPropertyBindingResult(
+        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(
                 new Object(), "target");
 
-        org.springframework.web.bind.MethodArgumentNotValidException ex = new org.springframework.web.bind.MethodArgumentNotValidException(
+        MethodArgumentNotValidException ex = new MethodArgumentNotValidException(
                 null, bindingResult);
 
         ResponseEntity<UcpErrorResponse> response = advice.handleValidationException(ex);

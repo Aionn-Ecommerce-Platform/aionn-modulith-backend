@@ -22,6 +22,8 @@ public interface ProductPersistencePort {
 
     long countByMerchant(String merchantId);
 
+    long countByMerchantAndStatus(String merchantId, ProductStatus status);
+
     List<Product> listByStatus(ProductStatus status, OffsetPagination pagination);
 
     long countByStatus(ProductStatus status);
@@ -44,6 +46,14 @@ public interface ProductPersistencePort {
 
     List<Product> searchPublished(String query, int limit, int offset);
 
+    /**
+     * Free-text + price-range search over published products. The price window is
+     * pushed into the query so LIMIT/OFFSET paginates an already-filtered set —
+     * required for cursor paging to be correct. A product matches when its
+     * cheapest variant falls within [priceMin, priceMax]; null bounds = unbounded.
+     */
+    List<Product> searchPublished(String query, BigDecimal priceMin, BigDecimal priceMax, int limit, int offset);
+
     long countSearchPublished(String query);
 
     List<Product> findByIdsPreserveOrder(List<String> productIds);
@@ -60,7 +70,8 @@ public interface ProductPersistencePort {
             BigDecimal priceMax,
             Map<String, List<String>> attributes,
             FallbackSort sort,
-            Double ratingMin) {
+            Double ratingMin,
+            Boolean onSale) {
         public FallbackFilter {
             attributes = attributes == null ? Map.of() : Map.copyOf(attributes);
             sort = sort == null ? FallbackSort.RELEVANCE : sort;

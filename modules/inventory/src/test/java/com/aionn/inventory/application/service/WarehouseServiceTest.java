@@ -1,5 +1,8 @@
 package com.aionn.inventory.application.service;
 
+import java.util.List;
+import org.mockito.Mockito;
+
 import com.aionn.inventory.application.dto.warehouse.command.*;
 import com.aionn.inventory.application.port.out.WarehousePersistencePort;
 import com.aionn.inventory.domain.exception.InventoryErrorCode;
@@ -44,7 +47,7 @@ class WarehouseServiceTest {
 
     @BeforeEach
     void stubClock() {
-        org.mockito.Mockito.lenient().when(clock.instant()).thenReturn(FIXED_NOW);
+        Mockito.lenient().when(clock.instant()).thenReturn(FIXED_NOW);
     }
 
     @Test
@@ -159,7 +162,7 @@ class WarehouseServiceTest {
     void listByOwner_returnsSortedList() {
         Warehouse w1 = Warehouse.create("W_1", "M_1", "addr1", 1, FIXED);
         Warehouse w2 = Warehouse.create("W_2", "M_1", "addr2", 2, FIXED);
-        when(warehouseRepository.findByMerchantOrderByPriority("M_1")).thenReturn(java.util.List.of(w1, w2));
+        when(warehouseRepository.findByMerchantOrderByPriority("M_1")).thenReturn(List.of(w1, w2));
 
         warehouseService.listByOwner("M_1");
 

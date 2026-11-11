@@ -1,5 +1,8 @@
 package com.aionn.payment.infrastructure.persistence.adapter.settlement;
 
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+
 import com.aionn.payment.domain.model.MerchantBalance;
 import com.aionn.payment.infrastructure.persistence.entity.MerchantBalanceEntity;
 import com.aionn.payment.infrastructure.persistence.repository.MerchantBalanceRepository;
@@ -25,7 +28,7 @@ class MerchantBalancePersistenceAdapterTest {
 
     private MerchantBalancePersistenceAdapter adapter;
 
-    @org.junit.jupiter.api.BeforeEach
+    @BeforeEach
     void setUp() {
         adapter = new MerchantBalancePersistenceAdapter(jpa, Clock.systemUTC());
     }
@@ -85,7 +88,7 @@ class MerchantBalancePersistenceAdapterTest {
         when(row.getActualReceivable()).thenReturn(BigDecimal.ZERO);
         when(row.getLedgerReceivable()).thenReturn(BigDecimal.ZERO);
         when(jpa.count()).thenReturn(1L);
-        when(jpa.findReconciliationMismatches()).thenReturn(java.util.List.of(row));
+        when(jpa.findReconciliationMismatches()).thenReturn(List.of(row));
 
         assertEquals(1L, adapter.countBalances());
         var mismatches = adapter.findReconciliationMismatches();

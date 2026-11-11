@@ -64,13 +64,6 @@ class AddressPersistenceAdapterTest {
     }
 
     @Test
-    void countByUserIdDelegates() {
-        when(addressRepository.countByUser_UserId(USER_ID)).thenReturn(3L);
-
-        assertThat(adapter.countByUserId(USER_ID)).isEqualTo(3L);
-    }
-
-    @Test
     void createAtomicallyThrowsWhenUserMissing() {
         Address address = address(false);
         when(userRepository.findByIdForUpdate(USER_ID)).thenReturn(Optional.empty());
@@ -175,13 +168,6 @@ class AddressPersistenceAdapterTest {
         when(addressRepository.findByAddressIdAndUser_UserId(ADDRESS_ID, USER_ID)).thenReturn(Optional.empty());
 
         assertThat(adapter.findByAddressIdAndUserId(ADDRESS_ID, USER_ID)).isEmpty();
-    }
-
-    @Test
-    void clearDefaultByUserIdDelegates() {
-        adapter.clearDefaultByUserId(USER_ID);
-
-        verify(addressRepository).clearDefaultAddressByUserId(USER_ID);
     }
 
     @Test

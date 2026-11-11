@@ -1,5 +1,7 @@
 package com.aionn.shipping.infrastructure.scheduling;
 
+import org.mockito.ArgumentMatchers;
+
 import com.aionn.shipping.application.port.out.CarrierClient;
 import com.aionn.shipping.application.port.out.ShipmentPersistencePort;
 import com.aionn.shipping.application.port.out.integration.ShippingIntegrationEventPublisherPort;
@@ -136,7 +138,7 @@ class ShipmentStatusApplierTest {
         applier.apply("S_1", ShipmentStatus.DELIVERED, detail());
 
         verify(shipment).markDelivered("sig", clock);
-        verify(integrationEventPublisher).publishDelivered(any(), any(), any(), any());
+        verify(integrationEventPublisher).publishDelivered(any(), any(), any(), any(), any(), any(), ArgumentMatchers.anyBoolean());
     }
 
     @Test
@@ -147,7 +149,7 @@ class ShipmentStatusApplierTest {
 
         verify(shipment).recordDeliveryFailure("reason", clock);
         verify(integrationEventPublisher).publishDeliveryFailed(any(), any(), any(),
-                org.mockito.ArgumentMatchers.anyInt());
+                ArgumentMatchers.anyInt());
     }
 
     @Test

@@ -17,9 +17,6 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Optional;
 
-// Wraps the concrete search index with retry + circuit breaker so a flaky
-// backend never propagates failures into business transactions. Write ops
-// swallow failures; search falls back to Optional.empty for a JPA fallback.
 @Slf4j
 @Component
 @Primary

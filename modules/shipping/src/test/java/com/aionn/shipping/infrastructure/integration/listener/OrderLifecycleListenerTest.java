@@ -1,9 +1,11 @@
 package com.aionn.shipping.infrastructure.integration.listener;
 
-import com.aionn.shipping.application.port.out.shipment.ShipmentRepositoryPort;
-import com.aionn.shipping.application.service.ShipmentService;
+import java.time.Instant;
+
+import com.aionn.shipping.application.port.out.ShipmentPersistencePort;
+import com.aionn.shipping.application.service.ShipmentCarrierOrchestrator;
 import com.aionn.shipping.domain.model.Shipment;
-import com.aionn.sharedkernel.integration.event.ordering.OrderCancelledIntegrationEvent;
+import com.aionn.contracts.event.ordering.OrderCancelledIntegrationEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,10 +21,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class OrderLifecycleListenerTest {
 
     @Mock
-    private ShipmentRepositoryPort shipmentRepository;
+    private ShipmentPersistencePort shipmentRepository;
 
     @Mock
-    private ShipmentService shipmentService;
+    private ShipmentCarrierOrchestrator shipmentCarrierOrchestrator;
 
     @Mock
     private Shipment shipment1;
@@ -34,7 +36,7 @@ class OrderLifecycleListenerTest {
 
     @BeforeEach
     void setUp() {
-        listener = new OrderLifecycleListener(shipmentRepository, shipmentService);
+        listener = new OrderLifecycleListener(shipmentRepository, shipmentCarrierOrchestrator);
     }
 
     @Test
@@ -45,7 +47,7 @@ class OrderLifecycleListenerTest {
                 "REASON_1",
                 "System cancellation",
                 OrderCancelledIntegrationEvent.CancellationType.AUTO_CANCELLED,
-                java.time.Instant.now()
+                Instant.now()
         );
 
         when(shipmentRepository.findByOrderId("O_1")).thenReturn(List.of(shipment1, shipment2));
@@ -55,8 +57,8 @@ class OrderLifecycleListenerTest {
 
         listener.onOrderCancelled(event);
 
-        verify(shipmentService).applyCancel("S_1", "AUTO_CANCELLED:REASON_1");
-        verify(shipmentService, never()).applyCancel(eq("S_2"), anyString());
+        verify(shipmentCarrierOrchestrator).cancelShipmentSystem("S_1", "AUTO_CANCELLED:REASON_1");
+        verify(shipmentCarrierOrchestrator, never()).cancelShipmentSystem(eq("S_2"), anyString());
     }
 
     @Test
@@ -67,16 +69,17 @@ class OrderLifecycleListenerTest {
                 "REASON_1",
                 "Customer cancellation",
                 OrderCancelledIntegrationEvent.CancellationType.USER_CANCELLED,
-                java.time.Instant.now()
+                Instant.now()
         );
 
         when(shipmentRepository.findByOrderId("O_1")).thenReturn(List.of(shipment1));
         when(shipment1.isCancellable()).thenReturn(true);
         when(shipment1.getShipmentId()).thenReturn("S_1");
-        doThrow(new RuntimeException("Error")).when(shipmentService).applyCancel("S_1", "USER_CANCELLED:REASON_1");
+        doThrow(new RuntimeException("Error")).when(shipmentCarrierOrchestrator)
+                .cancelShipmentSystem("S_1", "USER_CANCELLED:REASON_1");
 
         assertThrows(IllegalStateException.class, () -> listener.onOrderCancelled(event));
 
-        verify(shipmentService).applyCancel("S_1", "USER_CANCELLED:REASON_1");
+        verify(shipmentCarrierOrchestrator).cancelShipmentSystem("S_1", "USER_CANCELLED:REASON_1");
     }
 }

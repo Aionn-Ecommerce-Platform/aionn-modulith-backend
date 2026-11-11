@@ -1,5 +1,9 @@
 package com.aionn.catalog.domain.model;
 
+import java.time.Clock;
+import java.time.ZoneOffset;
+import java.util.HashMap;
+
 import com.aionn.catalog.domain.event.ProductEvents;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
@@ -20,12 +24,15 @@ class ProductTest {
 
     private static final String PRODUCT_ID = "01HZPRD0000000000000000001";
     private static final String MERCHANT_ID = "01HZMER0000000000000000001";
+    private static final ProductVariant.ParcelDimensions PARCEL =
+            new ProductVariant.ParcelDimensions(500, BigDecimal.valueOf(15),
+                    BigDecimal.valueOf(10), BigDecimal.valueOf(5));
 
     private Product publishableProduct() {
         Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
         product.categorize(List.of("cat-1"), FIXED);
         product.defineVariant("sku-1", Map.of("color", "red"),
-                Money.of(new BigDecimal("10.00"), "VND"), FIXED);
+                Money.of(new BigDecimal("10.00"), "VND"), PARCEL, FIXED);
         product.pullEvents();
         return product;
     }
@@ -95,11 +102,11 @@ class ProductTest {
         Product product = publishableProduct();
         var originalVariants = List.copyOf(product.variants());
         var originalUpdatedAt = product.getUpdatedAt();
-        Map<String, String> attributeValues = new java.util.HashMap<>();
+        Map<String, String> attributeValues = new HashMap<>();
         attributeValues.put("color", null);
         Money price = Money.of(new BigDecimal("12.00"), "VND");
-        var laterClock = java.time.Clock.fixed(
-                originalUpdatedAt.plusSeconds(60), java.time.ZoneOffset.UTC);
+        var laterClock = Clock.fixed(
+                originalUpdatedAt.plusSeconds(60), ZoneOffset.UTC);
 
         assertThatThrownBy(() -> product.defineVariant("sku-2", attributeValues, price, laterClock))
                 .isInstanceOf(NullPointerException.class);
@@ -206,6 +213,34 @@ class ProductTest {
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.PRODUCT_PUBLISH_REQUIREMENTS.getCode());
+    }
+
+    @Test
+    void publishRejectsVariantMissingShippingWeight() {
+        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
+        product.categorize(List.of("cat-1"), FIXED);
+        product.defineVariant("sku-1", Map.of("color", "red"),
+                Money.of(new BigDecimal("10.00"), "VND"), FIXED);
+
+        assertThatThrownBy(() -> product.publish("admin-1", FIXED))
+                .isInstanceOf(CatalogException.class)
+                .hasMessageContaining("shipping weight")
+                .extracting("errorCode")
+                .isEqualTo(CatalogErrorCode.PRODUCT_PUBLISH_REQUIREMENTS.getCode());
+    }
+
+    @Test
+    void defineVariantRejectsIncompleteParcelBox() {
+        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
+        product.categorize(List.of("cat-1"), FIXED);
+
+        assertThatThrownBy(() -> product.defineVariant("sku-1", Map.of("color", "red"),
+                Money.of(new BigDecimal("10.00"), "VND"),
+                new ProductVariant.ParcelDimensions(500, BigDecimal.TEN, null, null), FIXED))
+                .isInstanceOf(CatalogException.class)
+                .hasMessageContaining("parcel dimensions")
+                .extracting("errorCode")
+                .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
     }
 
     @Test

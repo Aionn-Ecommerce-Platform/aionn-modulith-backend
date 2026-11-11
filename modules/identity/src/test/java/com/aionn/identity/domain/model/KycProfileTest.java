@@ -1,5 +1,7 @@
 package com.aionn.identity.domain.model;
 
+import java.time.ZoneOffset;
+
 import com.aionn.identity.domain.valueobject.KycReviewAnswer;
 import com.aionn.identity.domain.valueobject.KycStatus;
 import org.junit.jupiter.api.Test;
@@ -11,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class KycProfileTest {
     private static final Clock CLOCK = Clock.fixed(
-            Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
+            Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
 
     private static KycProfile draft() {
         return new KycProfile(
@@ -130,7 +132,21 @@ class KycProfileTest {
         KycProfile kyc = submitted();
         kyc.syncExternalReview("completed", "corr-2", KycReviewAnswer.GREEN, "ok", null, CLOCK);
 
-        assertThrows(IllegalStateException.class,
-                () -> kyc.syncExternalReview("completed", "corr-3", KycReviewAnswer.RED, "fraud", null, CLOCK));
+        kyc.syncExternalReview("completed", "corr-3", KycReviewAnswer.RED, "fraud", null, CLOCK);
+
+        assertThat(kyc.getStatus()).isEqualTo(KycStatus.APPROVED);
+        assertThat(kyc.getRejectReason()).isNull();
+    }
+
+    @Test
+    void duplicateExternalDecisionIsIdempotent() {
+        KycProfile kyc = submitted();
+        kyc.syncExternalReview("completed", "corr-2", KycReviewAnswer.GREEN, "ok", null, CLOCK);
+        Instant firstApprovedAt = kyc.getApprovedAt();
+
+        kyc.syncExternalReview("completed", "corr-2", KycReviewAnswer.GREEN, "ok", null, CLOCK);
+
+        assertThat(kyc.getStatus()).isEqualTo(KycStatus.APPROVED);
+        assertThat(kyc.getApprovedAt()).isEqualTo(firstApprovedAt);
     }
 }

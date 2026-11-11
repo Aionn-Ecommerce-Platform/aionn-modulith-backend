@@ -2,6 +2,7 @@ package com.aionn.ucp.adapter.rest.advice;
 
 import com.aionn.ucp.adapter.rest.dto.UcpErrorResponse;
 import com.aionn.ucp.adapter.rest.dto.UcpMessage;
+import com.aionn.ucp.application.UcpProtocolConstants;
 import com.aionn.ucp.domain.exception.UcpProtocolException;
 import com.aionn.ucp.infrastructure.config.UcpProperties;
 import java.util.ArrayList;
@@ -35,7 +36,7 @@ public class UcpControllerAdvice {
 
         @Autowired
         public UcpControllerAdvice(@Autowired(required = false) UcpProperties properties) {
-                this.version = properties != null ? properties.version() : "2026-08-25";
+                this.version = properties != null ? properties.version() : UcpProtocolConstants.VERSION;
         }
 
         @ExceptionHandler(UcpProtocolException.class)

@@ -45,8 +45,8 @@ class ResilientCatalogPricingAdapterTest {
 
     @BeforeEach
     void setUp() {
-        retry = io.github.resilience4j.retry.Retry.ofDefaults("ordering-catalog");
-        circuitBreaker = io.github.resilience4j.circuitbreaker.CircuitBreaker.ofDefaults("ordering-catalog");
+        retry = Retry.ofDefaults("ordering-catalog");
+        circuitBreaker = CircuitBreaker.ofDefaults("ordering-catalog");
 
         when(retryRegistry.retry("ordering-catalog")).thenReturn(retry);
         when(circuitBreakerRegistry.circuitBreaker("ordering-catalog")).thenReturn(circuitBreaker);

@@ -10,7 +10,8 @@ import com.aionn.ordering.adapter.rest.support.session.CurrentMerchantId;
 import com.aionn.ordering.adapter.rest.support.session.CurrentUserId;
 import com.aionn.ordering.application.dto.returns.command.ConfirmItemReceivedCommand;
 import com.aionn.ordering.application.port.in.returns.*;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.ordering.application.service.OrderReturnService;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -39,6 +40,7 @@ public class OrderReturnController {
         private final ConfirmItemReceivedInputPort confirmItemReceivedInputPort;
         private final GetReturnInputPort getReturnInputPort;
         private final ListReturnsInputPort listReturnsInputPort;
+        private final OrderReturnService returnService;
         private final OrderingDtoMapper dtoMapper;
 
         @PostMapping("/orders/{orderId}")
@@ -108,9 +110,9 @@ public class OrderReturnController {
         @PreAuthorize("isAuthenticated()")
         @Operation(summary = "List return requests for the merchant")
         public ResponseEntity<ApiResponse<List<OrderReturnResponse>>> listMerchant(
-                        @CurrentMerchantId String ownerId,
+                        @CurrentMerchantId String merchantId,
                         @RequestParam(defaultValue = "50") int limit) {
-                List<OrderReturnResponse> responses = listReturnsInputPort.execute(ownerId, "MERCHANT", limit).stream()
+                List<OrderReturnResponse> responses = listReturnsInputPort.execute(merchantId, "MERCHANT", limit).stream()
                                 .map(dtoMapper::toResponse)
                                 .toList();
                 return ResponseEntity.ok(ApiResponse.success(responses, "Returns fetched"));
@@ -124,5 +126,25 @@ public class OrderReturnController {
                         @PathVariable String returnId) {
                 OrderReturnResponse response = dtoMapper.toResponse(getReturnInputPort.execute(returnId, userId));
                 return ResponseEntity.ok(ApiResponse.success(response, "Return fetched"));
+        }
+
+        @GetMapping("/{returnId}/items")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(summary = "List items selected for a partial return")
+        public ResponseEntity<ApiResponse<List<ReturnItemResponse>>> items(
+                        @CurrentUserId String userId,
+                        @PathVariable String returnId) {
+                List<ReturnItemResponse> items = returnService.listSelectedItems(returnId, userId).stream()
+                                .map(item -> new ReturnItemResponse(item.skuId(), item.qty(),
+                                                item.unitPrice(), item.refundAmount()))
+                                .toList();
+                return ResponseEntity.ok(ApiResponse.success(items, "Return items fetched"));
+        }
+
+        public record ReturnItemResponse(
+                        String skuId,
+                        int qty,
+                        java.math.BigDecimal unitPrice,
+                        java.math.BigDecimal refundAmount) {
         }
 }

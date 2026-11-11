@@ -1,8 +1,15 @@
 package com.aionn.identity.infrastructure.security.web;
 
+import java.util.stream.Collectors;
+
 import com.aionn.identity.application.port.out.auth.AccessTokenClaims;
 import com.aionn.identity.application.port.out.auth.AccessTokenIssuerPort;
+import com.aionn.identity.application.port.out.auth.AuthSessionPersistencePort;
 import com.aionn.identity.application.port.out.auth.TokenBlacklistPort;
+import com.aionn.identity.application.port.out.user.UserPersistencePort;
+import com.aionn.identity.domain.model.AuthSession;
+import com.aionn.identity.domain.model.IdentityUser;
+import com.aionn.identity.domain.valueobject.AuthSessionStatus;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +23,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -33,7 +44,14 @@ class BearerAuthenticationFilterTest {
     @Mock
     private TokenBlacklistPort tokenBlacklist;
     @Mock
+    private AuthSessionPersistencePort authSessionPersistencePort;
+    @Mock
+    private UserPersistencePort userPersistencePort;
+    @Mock
     private FilterChain chain;
+
+    private static final Clock CLOCK =
+            Clock.fixed(Instant.parse("2026-08-05T10:00:00Z"), ZoneOffset.UTC);
 
     private BearerAuthenticationFilter filter;
     private MockHttpServletRequest request;
@@ -41,9 +59,20 @@ class BearerAuthenticationFilterTest {
 
     @BeforeEach
     void setUp() {
-        filter = new BearerAuthenticationFilter(tokenIssuer, tokenBlacklist);
+        filter = new BearerAuthenticationFilter(tokenIssuer, tokenBlacklist,
+                authSessionPersistencePort, userPersistencePort, CLOCK);
         request = new MockHttpServletRequest();
         response = new MockHttpServletResponse();
+    }
+
+    private void activeSessionAndUser(String userId, String sessionId) {
+        AuthSession session = new AuthSession(sessionId, userId, "127.0.0.1", "agent",
+                AuthSessionStatus.ACTIVE, CLOCK.instant(), CLOCK.instant(),
+                CLOCK.instant().plus(Duration.ofHours(1)));
+        when(authSessionPersistencePort.findById(sessionId)).thenReturn(Optional.of(session));
+        IdentityUser user = org.mockito.Mockito.mock(IdentityUser.class);
+        when(user.isActive()).thenReturn(true);
+        when(userPersistencePort.findById(userId)).thenReturn(Optional.of(user));
     }
 
     @AfterEach
@@ -121,6 +150,7 @@ class BearerAuthenticationFilterTest {
         when(tokenIssuer.parseClaims("good-token")).thenReturn(Optional.of(
                 new AccessTokenClaims("user-1", "session-1", "jti-1", List.of("BUYER", "MERCHANT"))));
         when(tokenBlacklist.isBlacklisted("jti-1")).thenReturn(false);
+        activeSessionAndUser("user-1", "session-1");
 
         filter.doFilter(request, response, chain);
 
@@ -130,27 +160,60 @@ class BearerAuthenticationFilterTest {
         assertThat(auth.getPrincipal()).isEqualTo("user-1");
         Set<String> roles = auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
         assertThat(roles).contains("ROLE_BUYER");
         assertThat(roles).contains("ROLE_MERCHANT");
         assertThat(request.getAttribute(SecurityRequestAttributeKeys.SESSION_ID)).isEqualTo("session-1");
     }
 
     @Test
-    void emptyRolesFallsBackToRoleUser() throws Exception {
+    void emptyRolesCreatesAuthenticatedPrincipalWithoutImplicitRole() throws Exception {
         request.addHeader("Authorization", "Bearer t");
         when(tokenIssuer.parseClaims("t")).thenReturn(Optional.of(
                 new AccessTokenClaims("user-1", "session-1", "jti", List.of())));
         when(tokenBlacklist.isBlacklisted("jti")).thenReturn(false);
+        activeSessionAndUser("user-1", "session-1");
 
         filter.doFilter(request, response, chain);
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         assertThat(auth).isNotNull();
-        Set<String> roles = auth.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(java.util.stream.Collectors.toSet());
-        assertThat(roles).isEqualTo(Set.of("ROLE_USER"));
+        assertThat(auth.getAuthorities()).isEmpty();
+    }
+
+    @Test
+    void revokedSessionSkipsAuthentication() throws Exception {
+        request.addHeader("Authorization", "Bearer t");
+        when(tokenIssuer.parseClaims("t")).thenReturn(Optional.of(
+                new AccessTokenClaims("user-1", "session-1", "jti", List.of("BUYER"))));
+        when(tokenBlacklist.isBlacklisted("jti")).thenReturn(false);
+        AuthSession revoked = new AuthSession("session-1", "user-1", "127.0.0.1", "agent",
+                AuthSessionStatus.REVOKED, CLOCK.instant(), CLOCK.instant(),
+                CLOCK.instant().plus(Duration.ofHours(1)));
+        when(authSessionPersistencePort.findById("session-1")).thenReturn(Optional.of(revoked));
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    void suspendedUserSkipsAuthentication() throws Exception {
+        request.addHeader("Authorization", "Bearer t");
+        when(tokenIssuer.parseClaims("t")).thenReturn(Optional.of(
+                new AccessTokenClaims("user-1", "session-1", "jti", List.of("BUYER"))));
+        when(tokenBlacklist.isBlacklisted("jti")).thenReturn(false);
+        AuthSession active = new AuthSession("session-1", "user-1", "127.0.0.1", "agent",
+                AuthSessionStatus.ACTIVE, CLOCK.instant(), CLOCK.instant(),
+                CLOCK.instant().plus(Duration.ofHours(1)));
+        when(authSessionPersistencePort.findById("session-1")).thenReturn(Optional.of(active));
+        IdentityUser user = org.mockito.Mockito.mock(IdentityUser.class);
+        when(user.isActive()).thenReturn(false);
+        when(userPersistencePort.findById("user-1")).thenReturn(Optional.of(user));
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     @Test
@@ -162,5 +225,47 @@ class BearerAuthenticationFilterTest {
         filter.doFilter(request, response, chain);
 
         verify(chain, times(2)).doFilter(request, response);
+    }
+
+    @Test
+    void anExistingAuthenticationIsNotOverwritten() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                        "existing", "n/a"));
+        request.addHeader("Authorization", "Bearer token");
+
+        filter.doFilter(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        verify(tokenIssuer, org.mockito.Mockito.never()).parseClaims(org.mockito.ArgumentMatchers.anyString());
+        assertThat(SecurityContextHolder.getContext().getAuthentication().getName())
+                .isEqualTo("existing");
+    }
+
+    @Test
+    void aFailingBlacklistCheckFailsClosed() throws Exception {
+        request.addHeader("Authorization", "Bearer token");
+        when(tokenIssuer.parseClaims("token")).thenReturn(Optional.of(
+                new AccessTokenClaims("user-1", "session-1", "jti-1", List.of("BUYER"))));
+        when(tokenBlacklist.isBlacklisted("jti-1"))
+                .thenThrow(new RuntimeException("redis down"));
+
+        filter.doFilter(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    void tokensWithoutAJtiSkipTheBlacklistCheck() throws Exception {
+        request.addHeader("Authorization", "Bearer token");
+        when(tokenIssuer.parseClaims("token")).thenReturn(Optional.of(
+                new AccessTokenClaims("user-1", "session-1", null, List.of("BUYER"))));
+        activeSessionAndUser("user-1", "session-1");
+
+        filter.doFilter(request, response, chain);
+
+        verify(tokenBlacklist, org.mockito.Mockito.never()).isBlacklisted(org.mockito.ArgumentMatchers.anyString());
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
     }
 }

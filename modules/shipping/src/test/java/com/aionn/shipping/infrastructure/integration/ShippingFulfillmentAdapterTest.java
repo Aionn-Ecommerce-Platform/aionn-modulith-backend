@@ -1,5 +1,9 @@
 package com.aionn.shipping.infrastructure.integration;
 
+import com.aionn.shipping.domain.model.Shipment;
+import com.aionn.shipping.domain.valueobject.ShipmentAddress;
+import com.aionn.shipping.domain.valueobject.ShipmentDimensions;
+
 import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 import com.aionn.shipping.application.dto.rate.result.ShippingQuoteResult;
@@ -7,9 +11,9 @@ import com.aionn.shipping.application.dto.shipment.command.CreateShipmentCommand
 import com.aionn.shipping.application.dto.shipment.command.QuoteShippingCommand;
 import com.aionn.shipping.application.dto.shipment.result.ShipmentResult;
 import com.aionn.shipping.application.port.in.shipment.RegisterShipmentInputPort;
+import com.aionn.shipping.application.service.ShipmentCarrierOrchestrator;
 import com.aionn.shipping.application.service.ShipmentService;
-import com.aionn.shipping.infrastructure.config.ShippingProperties;
-import com.aionn.sharedkernel.integration.port.shipping.ShippingFulfillmentPort;
+import com.aionn.contracts.port.shipping.ShippingFulfillmentPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,10 +22,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,22 +38,19 @@ class ShippingFulfillmentAdapterTest {
         private RegisterShipmentInputPort registerShipmentInputPort;
 
         @Mock
-        private ShippingProperties properties;
-
-        @Mock
-        private ShippingProperties.DefaultDimensions defaultDimensions;
+        private ShipmentCarrierOrchestrator shipmentCarrierOrchestrator;
 
         private ShippingFulfillmentAdapter adapter;
 
+        private static List<ShippingFulfillmentPort.Parcel> parcels() {
+                return List.of(new ShippingFulfillmentPort.Parcel(
+                                500, BigDecimal.valueOf(15), BigDecimal.valueOf(10), BigDecimal.valueOf(5), 1));
+        }
+
         @BeforeEach
         void setUp() {
-                lenient().when(properties.defaultDimensions()).thenReturn(defaultDimensions);
-                lenient().when(defaultDimensions.weightGram()).thenReturn(100);
-                lenient().when(defaultDimensions.lengthCm()).thenReturn(BigDecimal.TEN);
-                lenient().when(defaultDimensions.widthCm()).thenReturn(BigDecimal.TEN);
-                lenient().when(defaultDimensions.heightCm()).thenReturn(BigDecimal.TEN);
-
-                adapter = new ShippingFulfillmentAdapter(shipmentService, registerShipmentInputPort, properties);
+                adapter = new ShippingFulfillmentAdapter(shipmentService, registerShipmentInputPort,
+                                shipmentCarrierOrchestrator);
         }
 
         @Test
@@ -61,7 +62,7 @@ class ShippingFulfillmentAdapterTest {
                 var address = new ShippingFulfillmentPort.Address(
                                 "John", "0912", "Addr", "W_1", "D_1", "P_1", "VN");
 
-                var result = adapter.quote("O_1", "M_1", address, "VND");
+                var result = adapter.quote("O_1", "M_1", address, "VND", parcels(), null);
 
                 assertThat(result.fee()).isEqualByComparingTo(BigDecimal.valueOf(20000));
                 assertThat(result.currency()).isEqualTo("VND");
@@ -70,11 +71,11 @@ class ShippingFulfillmentAdapterTest {
         @Test
         void createAndRegisterCallsServiceAndReturnsResult() {
                 Instant now = Instant.now();
-                var addressVal = new com.aionn.shipping.domain.valueobject.ShipmentAddress(
+                var addressVal = new ShipmentAddress(
                                 "John", "0912", "Addr", "W_1", "D_1", "P_1", "VN");
-                var dimensionsVal = new com.aionn.shipping.domain.valueobject.ShipmentDimensions(
-                                100, BigDecimal.TEN, BigDecimal.TEN, BigDecimal.TEN);
-                com.aionn.shipping.domain.model.Shipment createdShipment = com.aionn.shipping.domain.model.Shipment
+                var dimensionsVal = new ShipmentDimensions(
+                                500, BigDecimal.valueOf(15), BigDecimal.valueOf(10), BigDecimal.valueOf(5));
+                Shipment createdShipment = Shipment
                                 .request(
                                                 "S_1", "O_1", "M_1", "U_1", addressVal, dimensionsVal,
                                                 BigDecimal.ZERO, BigDecimal.valueOf(20000), "VND", FIXED);
@@ -83,18 +84,21 @@ class ShippingFulfillmentAdapterTest {
                                 BigDecimal.ZERO, BigDecimal.valueOf(20000), "VND", "REGISTERED",
                                 null, null, null, 0, null, null, null, null, null, null, now, now);
 
-                when(shipmentService.createShipment(any(CreateShipmentCommand.class))).thenReturn(createdShipment);
-                when(registerShipmentInputPort.execute("S_1")).thenReturn(registeredResult);
+                when(shipmentService.createShipmentsPerConsignment(any(CreateShipmentCommand.class)))
+                                .thenReturn(List.of(createdShipment));
+                when(registerShipmentInputPort.executeByMerchant("S_1", "M_1")).thenReturn(registeredResult);
 
                 var address = new ShippingFulfillmentPort.Address(
                                 "John", "0912", "Addr", "W_1", "D_1", "P_1", "VN");
 
                 var result = adapter.createAndRegister(
-                                "O_1", "M_1", "U_1", address, BigDecimal.ZERO, BigDecimal.valueOf(20000), "VND");
+                                "O_1", "M_1", "U_1", address, BigDecimal.ZERO, BigDecimal.valueOf(20000), "VND",
+                                parcels());
 
-                assertThat(result.shipmentId()).isEqualTo("S_1");
-                assertThat(result.trackingCode()).isEqualTo("TR_1");
-                assertThat(result.carrierOrderId()).isEqualTo("C_1");
-                assertThat(result.labelUrl()).isEqualTo("L_1");
+                assertThat(result).hasSize(1);
+                assertThat(result.get(0).shipmentId()).isEqualTo("S_1");
+                assertThat(result.get(0).trackingCode()).isEqualTo("TR_1");
+                assertThat(result.get(0).carrierOrderId()).isEqualTo("C_1");
+                assertThat(result.get(0).labelUrl()).isEqualTo("L_1");
         }
 }

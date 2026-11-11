@@ -1,5 +1,7 @@
 package com.aionn.notification.application.mapper;
 
+import java.util.List;
+
 import com.aionn.notification.application.dto.provider.result.ProviderResult;
 import com.aionn.notification.domain.model.NotificationProvider;
 import org.mapstruct.Mapper;
@@ -12,5 +14,5 @@ public interface ProviderResultMapper {
     @Mapping(target = "config", expression = "java(java.util.Map.copyOf(provider.getConfig()))")
     ProviderResult toResult(NotificationProvider provider);
 
-    java.util.List<ProviderResult> toResults(java.util.List<NotificationProvider> providers);
+    List<ProviderResult> toResults(List<NotificationProvider> providers);
 }

@@ -6,10 +6,12 @@ import com.aionn.shipping.application.port.out.CarrierClient;
 import com.aionn.shipping.domain.exception.ShippingErrorCode;
 import com.aionn.shipping.domain.exception.ShippingException;
 import com.aionn.shipping.domain.model.Shipment;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.shipping.domain.valueobject.ShipmentStatus;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -20,10 +22,23 @@ public class ShipmentCarrierOrchestrator {
     private final CarrierClient carrierClient;
     private final MerchantQueryPort merchantQueryPort;
 
-    public Shipment registerWithCarrier(String shipmentId) {
-        Shipment shipment = shipmentService.loadShipment(shipmentId);
+    // The row lock is held for the remote call on purpose: it serialises concurrent
+    // registration attempts so only one carrier order is ever created per shipment.
+    @Transactional
+    public Shipment registerWithCarrier(String shipmentId, String merchantId) {
+        Shipment shipment = shipmentService.loadShipmentForUpdate(shipmentId);
+        // Same ownership gate as cancelShipment: only the merchant who owns the
+        // shipment may register it with the carrier. merchantId is null only on
+        // the internal auto-register path (order placement), which is trusted.
+        if (merchantId != null) {
+            shipment.ensureOwnedByMerchant(merchantId);
+        }
         if (shipment.getTrackingCode() != null) {
             return shipment;
+        }
+        if (!shipment.getStatus().canTransitionTo(ShipmentStatus.REGISTERED)) {
+            throw new ShippingException(ShippingErrorCode.SHIPMENT_INVALID_STATE,
+                    "Cannot register shipment in status " + shipment.getStatus());
         }
         CarrierClient.Registration reg;
         try {
@@ -59,13 +74,28 @@ public class ShipmentCarrierOrchestrator {
         String merchantId = merchantQueryPort.findMerchantIdByOwnerId(command.ownerId())
                 .orElseThrow(() -> new ShippingException(ShippingErrorCode.SHIPMENT_FORBIDDEN));
         shipment.ensureOwnedByMerchant(merchantId);
+        return cancelWithCarrier(shipment, command.reason());
+    }
+
+    /** Internal cancellation path used when the owning order is cancelled. */
+    public Shipment cancelShipmentSystem(String shipmentId, String reason) {
+        Shipment shipment = shipmentService.loadShipment(shipmentId);
+        return cancelWithCarrier(shipment, reason);
+    }
+
+    private Shipment cancelWithCarrier(Shipment shipment, String reason) {
+        if (!shipment.getStatus().canTransitionTo(ShipmentStatus.CANCELLED)) {
+            throw new ShippingException(ShippingErrorCode.SHIPMENT_ALREADY_PICKED_UP,
+                    "Shipment cannot be cancelled in status " + shipment.getStatus());
+        }
         if (shipment.getTrackingCode() != null) {
             try {
-                carrierClient.cancel(shipment.getTrackingCode(), command.reason());
+                carrierClient.cancel(shipment.getTrackingCode(), reason);
             } catch (RuntimeException ex) {
-                log.warn("Carrier cancel failed for {}: {}", shipment.getTrackingCode(), ex.getMessage());
+                throw new ShippingException(ShippingErrorCode.SHIPMENT_CARRIER_ERROR,
+                        "Carrier cancellation failed: " + ex.getMessage());
             }
         }
-        return shipmentService.applyCancel(command.shipmentId(), command.reason());
+        return shipmentService.applyCancel(shipment.getShipmentId(), reason);
     }
 }

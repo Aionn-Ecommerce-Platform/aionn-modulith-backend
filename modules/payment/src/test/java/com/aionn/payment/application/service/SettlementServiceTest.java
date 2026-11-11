@@ -1,12 +1,15 @@
 package com.aionn.payment.application.service;
 
+import java.util.List;
+
 import com.aionn.payment.application.port.out.MerchantBalancePersistencePort;
 import com.aionn.payment.application.port.out.SettlementLedgerPersistencePort;
+import com.aionn.payment.application.policy.PaymentSettlementPolicy;
 import com.aionn.payment.domain.model.MerchantBalance;
 import com.aionn.payment.domain.model.SettlementLedgerEntry;
 
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
-import com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.ordering.OrderQueryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,6 +38,8 @@ class SettlementServiceTest {
     private OrderQueryPort orderQueryPort;
     @Mock
     private MerchantQueryPort merchantQueryPort;
+    @Mock
+    private PaymentSettlementPolicy settlementPolicy;
 
     private Clock clock;
     private SettlementService service;
@@ -42,7 +47,9 @@ class SettlementServiceTest {
     @BeforeEach
     void setUp() {
         clock = FIXED;
-        service = new SettlementService(balanceRepo, ledgerRepo, orderQueryPort, merchantQueryPort, clock);
+        lenient().when(settlementPolicy.defaultCommissionRate()).thenReturn(new BigDecimal("0.0500"));
+        service = new SettlementService(balanceRepo, ledgerRepo, orderQueryPort, merchantQueryPort,
+                settlementPolicy, clock);
     }
 
     @Test
@@ -114,7 +121,7 @@ class SettlementServiceTest {
                 "VND", null, clock.instant());
 
         when(orderQueryPort.findOrderSummary("order-1")).thenReturn(Optional.of(summary));
-        when(ledgerRepo.findByOrder("order-1")).thenReturn(java.util.List.of(sale));
+        when(ledgerRepo.findByOrder("order-1")).thenReturn(List.of(sale));
 
         MerchantBalance balance = new MerchantBalance("merch-1", "VND", BigDecimal.valueOf(95), BigDecimal.ZERO, 0L, clock.instant(), clock.instant());
         when(balanceRepo.lockForUpdate("merch-1", "VND")).thenReturn(Optional.of(balance));
@@ -130,7 +137,7 @@ class SettlementServiceTest {
         SettlementLedgerEntry sale = new SettlementLedgerEntry("sle-1", "merch-1", "order-1", "pay-1", null,
                 SettlementLedgerEntry.SettlementKind.SALE, BigDecimal.valueOf(100), BigDecimal.valueOf(5), BigDecimal.valueOf(95), "VND", null, clock.instant());
 
-        when(ledgerRepo.findByOrder("order-1")).thenReturn(java.util.List.of(sale));
+        when(ledgerRepo.findByOrder("order-1")).thenReturn(List.of(sale));
         MerchantBalance balance = new MerchantBalance("merch-1", "VND", BigDecimal.ZERO, BigDecimal.valueOf(100), 0L, clock.instant(), clock.instant());
         when(balanceRepo.lockForUpdate("merch-1", "VND")).thenReturn(Optional.of(balance));
 
@@ -151,7 +158,7 @@ class SettlementServiceTest {
                 BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.valueOf(-95),
                 "VND", null, clock.instant());
         when(orderQueryPort.findOrderSummary("order-1")).thenReturn(Optional.of(summary));
-        when(ledgerRepo.findByOrder("order-1")).thenReturn(java.util.List.of(sale));
+        when(ledgerRepo.findByOrder("order-1")).thenReturn(List.of(sale));
         MerchantBalance balance = MerchantBalance.empty("merch-1", "VND", clock.instant());
         when(balanceRepo.lockForUpdate("merch-1", "VND")).thenReturn(Optional.of(balance));
 
@@ -174,8 +181,8 @@ class SettlementServiceTest {
                 SettlementLedgerEntry.SettlementKind.REFUND, BigDecimal.valueOf(50), BigDecimal.ZERO,
                 BigDecimal.valueOf(-48), "VND", null, clock.instant());
         when(ledgerRepo.findByOrder("order-1"))
-                .thenReturn(java.util.List.of(sale))
-                .thenReturn(java.util.List.of(sale, firstRefund));
+                .thenReturn(List.of(sale))
+                .thenReturn(List.of(sale, firstRefund));
         MerchantBalance balance = new MerchantBalance(
                 "merch-1", "VND", BigDecimal.ZERO, BigDecimal.valueOf(47), 0L,
                 clock.instant(), clock.instant());
@@ -194,7 +201,7 @@ class SettlementServiceTest {
         SettlementLedgerEntry sale = new SettlementLedgerEntry("sle-1", "merch-1", "order-1", "pay-1", null,
                 SettlementLedgerEntry.SettlementKind.SALE, BigDecimal.valueOf(100), BigDecimal.valueOf(5),
                 BigDecimal.valueOf(95), "VND", null, clock.instant());
-        when(ledgerRepo.findByOrder("order-1")).thenReturn(java.util.List.of(sale));
+        when(ledgerRepo.findByOrder("order-1")).thenReturn(List.of(sale));
         MerchantBalance balance = new MerchantBalance(
                 "merch-1", "VND", BigDecimal.valueOf(55), BigDecimal.valueOf(40), 0L,
                 clock.instant(), clock.instant());
@@ -214,7 +221,7 @@ class SettlementServiceTest {
         SettlementLedgerEntry sale = new SettlementLedgerEntry("sle-1", "merch-1", "order-1", "pay-1", null,
                 SettlementLedgerEntry.SettlementKind.SALE, BigDecimal.valueOf(100), BigDecimal.valueOf(5),
                 BigDecimal.valueOf(95), "VND", null, clock.instant());
-        when(ledgerRepo.findByOrder("order-1")).thenReturn(java.util.List.of(sale));
+        when(ledgerRepo.findByOrder("order-1")).thenReturn(List.of(sale));
         MerchantBalance balance = new MerchantBalance(
                 "merch-1", "VND", BigDecimal.TEN, BigDecimal.TEN, 0L,
                 clock.instant(), clock.instant());

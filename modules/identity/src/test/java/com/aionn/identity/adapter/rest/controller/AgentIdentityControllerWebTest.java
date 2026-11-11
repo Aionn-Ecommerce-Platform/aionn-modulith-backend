@@ -6,6 +6,7 @@ import com.aionn.identity.adapter.rest.dto.agent.response.AgentAuditLogResponse;
 import com.aionn.identity.adapter.rest.dto.agent.response.AgentIdentityResponse;
 import com.aionn.identity.adapter.rest.exception.IdentityExceptionHandler;
 import com.aionn.identity.adapter.rest.mapper.agent.AgentIdentityDtoMapper;
+import com.aionn.identity.adapter.rest.support.response.NoStoreResponseFactory;
 import com.aionn.identity.adapter.rest.support.MockAuthenticationArgumentResolver;
 import com.aionn.identity.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.identity.application.dto.agent.command.CreateAgentIdentityCommand;
@@ -23,14 +24,14 @@ import com.aionn.identity.application.port.in.agent.ListMyAgentIdentitiesQueryPo
 import com.aionn.identity.application.port.in.agent.RevokeAgentInputPort;
 import com.aionn.identity.application.port.in.agent.SuspendAgentInputPort;
 import com.aionn.identity.application.port.in.agent.UpdateAgentPermissionsInputPort;
-import com.aionn.sharedkernel.adapter.web.support.clientip.ClientIpArgumentResolver;
-import com.aionn.sharedkernel.infrastructure.web.ClientIpResolver;
+import com.aionn.platform.web.support.clientip.ClientIpArgumentResolver;
+import com.aionn.platform.infrastructure.web.ClientIpResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -79,7 +80,7 @@ class AgentIdentityControllerWebTest {
         AgentIdentityController controller = new AgentIdentityController(
                 listMyAgentIdentitiesQueryPort, getAgentIdentityQueryPort, createAgentIdentityInputPort,
                 updateAgentPermissionsInputPort, suspendAgentInputPort, getAgentAuditLogsQueryPort,
-                revokeAgentInputPort, agentIdentityDtoMapper);
+                revokeAgentInputPort, agentIdentityDtoMapper, new NoStoreResponseFactory());
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new IdentityExceptionHandler())
@@ -93,10 +94,14 @@ class AgentIdentityControllerWebTest {
     }
 
     private AgentIdentityResult sampleResult(String agentId) {
+        return sampleResult(agentId, null);
+    }
+
+    private AgentIdentityResult sampleResult(String agentId, String apiKey) {
         Instant now = Instant.now();
         return new AgentIdentityResult(
                 agentId,
-                "hash-" + agentId,
+                apiKey,
                 "{\"scopes\":[\"orders:read\"]}",
                 "ACTIVE",
                 now.plus(Duration.ofDays(30)),
@@ -104,10 +109,14 @@ class AgentIdentityControllerWebTest {
     }
 
     private AgentIdentityResponse sampleResponse(String agentId) {
+        return sampleResponse(agentId, null);
+    }
+
+    private AgentIdentityResponse sampleResponse(String agentId, String apiKey) {
         Instant now = Instant.now();
         return new AgentIdentityResponse(
                 agentId,
-                "hash-" + agentId,
+                apiKey,
                 "{\"scopes\":[\"orders:read\"]}",
                 "ACTIVE",
                 now.plus(Duration.ofDays(30)),
@@ -153,8 +162,8 @@ class AgentIdentityControllerWebTest {
 
     @Test
     void createCreatesAgentForCurrentUser() throws Exception {
-        AgentIdentityResult result = sampleResult("agent-new");
-        AgentIdentityResponse response = sampleResponse("agent-new");
+        AgentIdentityResult result = sampleResult("agent-new", "raw-api-key");
+        AgentIdentityResponse response = sampleResponse("agent-new", "raw-api-key");
         CreateAgentIdentityCommand command = new CreateAgentIdentityCommand(
                 "alice@example.com", "Shopping Assistant");
 
@@ -173,6 +182,9 @@ class AgentIdentityControllerWebTest {
                         """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.agentId").value("agent-new"))
+                .andExpect(jsonPath("$.data.apiKey").value("raw-api-key"))
+                .andExpect(header().string("Cache-Control",
+                                org.hamcrest.Matchers.containsString("no-store")))
                 .andExpect(jsonPath("$.message").value("Agent identity created"));
 
         verify(createAgentIdentityInputPort).execute(command);
@@ -237,10 +249,10 @@ class AgentIdentityControllerWebTest {
     @Test
     void suspendSuspendsAgent() throws Exception {
         AgentIdentityResult result = new AgentIdentityResult(
-                "agent-1", "hash-x", "{}", "SUSPENDED",
+                "agent-1", null, "{}", "SUSPENDED",
                 Instant.now().plus(Duration.ofDays(30)), Instant.now());
         AgentIdentityResponse response = new AgentIdentityResponse(
-                "agent-1", "hash-x", "{}", "SUSPENDED",
+                "agent-1", null, "{}", "SUSPENDED",
                 Instant.now().plus(Duration.ofDays(30)), Instant.now());
         SuspendAgentCommand command = new SuspendAgentCommand("alice@example.com", "agent-1");
 

@@ -1,5 +1,7 @@
 package com.aionn.identity.domain.model;
 
+import java.time.ZoneOffset;
+
 import com.aionn.identity.domain.valueobject.AuthProvider;
 import org.junit.jupiter.api.Test;
 
@@ -10,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class SocialLinkTest {
     private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");
-    private static final Clock CLOCK = Clock.fixed(NOW, java.time.ZoneOffset.UTC);
+    private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
     @Test
     void createNewStampsCreatedAtWithinBoundaries() {

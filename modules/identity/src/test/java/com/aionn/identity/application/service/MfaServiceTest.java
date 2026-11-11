@@ -9,6 +9,7 @@ import com.aionn.identity.application.port.out.security.MfaPersistencePort;
 import com.aionn.identity.application.port.out.security.PasswordHasherPort;
 import com.aionn.identity.application.port.out.security.SecurityAuditPort;
 import com.aionn.identity.application.port.out.security.TotpManagerPort;
+import com.aionn.identity.application.port.out.security.TotpReplayGuardPort;
 import com.aionn.identity.application.port.out.security.UserSecurityPort;
 import com.aionn.identity.application.port.out.observability.IdentityMetricsPort;
 import com.aionn.identity.domain.exception.IdentityErrorCode;
@@ -51,6 +52,8 @@ class MfaServiceTest {
         @Mock
         private TotpManagerPort totpManager;
         @Mock
+        private TotpReplayGuardPort totpReplayGuard;
+        @Mock
         private MfaPolicy mfaPolicy;
         @Mock
         private IdentityMetricsPort identityMetrics;
@@ -59,12 +62,16 @@ class MfaServiceTest {
 
         @BeforeEach
         void setUp() {
+                org.mockito.Mockito.lenient()
+                                .when(totpReplayGuard.claim(anyString(), anyString()))
+                                .thenReturn(true);
                 mfaService = new MfaService(
                                 userSecurityPort,
                                 mfaPersistencePort,
                                 securityAuditPort,
                                 passwordHasher,
                                 totpManager,
+                                totpReplayGuard,
                                 mfaPolicy,
                                 identityMetrics,
                                 Clock.systemUTC());
@@ -128,6 +135,7 @@ class MfaServiceTest {
                 when(passwordHasher.matches("pwd", "hash")).thenReturn(true);
                 when(totpManager.verifyCode("SECRET", "123456")).thenReturn(true);
                 when(mfaPolicy.getBackupCodeCount()).thenReturn(8);
+                when(mfaPolicy.getBackupCodeLength()).thenReturn(8);
                 when(passwordHasher.hash(anyString())).thenReturn("hashed");
 
                 MfaResult result = mfaService.enableMfa(USER_ID, "pwd", "123456", "1.1.1.1");
@@ -190,8 +198,23 @@ class MfaServiceTest {
         }
 
         @Test
-        void disableMfaUsesBackupCodeWhenTotpFails() {
+        void disableMfaRejectsReplayedTotpCode() {
                 var data = new UserSecurityPort.UserSecurityData(
+                                USER_ID, "hash", UserStatus.ACTIVE, true, "SECRET", null, 0);
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(data));
+                when(passwordHasher.matches("pwd", "hash")).thenReturn(true);
+                when(totpManager.verifyCode("SECRET", "123456")).thenReturn(true);
+                when(totpReplayGuard.claim(USER_ID, "123456")).thenReturn(false);
+
+                var ex = assertThrows(IdentityException.class,
+                                () -> mfaService.disableMfa(USER_ID, "pwd", "123456", null));
+
+                assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.OTP_INVALID.getCode());
+                verify(mfaPersistencePort, never()).clearMfa(USER_ID);
+        }
+
+        @Test
+        void disableMfaUsesBackupCodeWhenTotpFails() {                var data = new UserSecurityPort.UserSecurityData(
                                 USER_ID, "hash", UserStatus.ACTIVE, true, "SECRET", null, 0);
                 when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(data));
                 when(passwordHasher.matches("pwd", "hash")).thenReturn(true);
@@ -229,6 +252,7 @@ class MfaServiceTest {
                 when(passwordHasher.matches("pwd", "hash")).thenReturn(true);
                 when(totpManager.verifyCode("SECRET", "123456")).thenReturn(true);
                 when(mfaPolicy.getBackupCodeCount()).thenReturn(8);
+                when(mfaPolicy.getBackupCodeLength()).thenReturn(8);
                 when(passwordHasher.hash(anyString())).thenReturn("hashed");
 
                 List<String> codes = mfaService.regenerateBackupCodes(USER_ID, "pwd", "123456", null);

@@ -5,9 +5,13 @@ import com.aionn.identity.application.dto.admin.result.UserListResult;
 import com.aionn.identity.application.dto.common.PageResult;
 import com.aionn.identity.application.mapper.AdminResultMapper;
 import com.aionn.identity.application.port.out.admin.AdminUserPersistencePort;
+import com.aionn.identity.application.port.out.auth.AuthSessionPersistencePort;
+import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
 import com.aionn.identity.domain.exception.IdentityErrorCode;
 import com.aionn.identity.domain.exception.IdentityException;
+import com.aionn.identity.domain.model.AuthSession;
 import com.aionn.identity.domain.model.IdentityUser;
+import com.aionn.identity.domain.valueobject.AuthSessionStatus;
 import com.aionn.identity.domain.valueobject.UserRole;
 import com.aionn.identity.domain.valueobject.UserStatus;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
@@ -17,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Objects;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -27,6 +32,8 @@ import java.util.stream.Collectors;
 public class AdminUserService {
 
     private final AdminUserPersistencePort adminUserPersistencePort;
+    private final AuthSessionPersistencePort authSessionPersistencePort;
+    private final RefreshTokenStorePort refreshTokenStore;
     private final AdminResultMapper adminResultMapper;
 
     public Set<String> updateRoles(String userId, Set<UserRole> roles) {
@@ -54,10 +61,32 @@ public class AdminUserService {
 
     public String updateStatus(String userId, UserStatus status) {
         log.info("Updating status for user: {} to {}", userId, status);
+        if (UserStatus.DELETED.equals(status)) {
+            throw new IdentityException(IdentityErrorCode.INVALID_USER_STATUS,
+                    "Use the account deletion flow to delete an account");
+        }
         IdentityUser user = getUser(userId);
+        if (UserStatus.DELETED.equals(user.getStatus())) {
+            throw new IdentityException(IdentityErrorCode.INVALID_USER_STATUS,
+                    "Deleted accounts cannot be restored");
+        }
         user.updateStatus(requireStatus(status));
         IdentityUser saved = adminUserPersistencePort.save(user);
+        if (!UserStatus.ACTIVE.equals(status)) {
+            revokeAllSessions(userId);
+        }
         return saved.getStatus().name();
+    }
+
+    private void revokeAllSessions(String userId) {
+        List<AuthSession> sessions = authSessionPersistencePort.findByUserId(userId);
+        for (AuthSession session : sessions) {
+            if (AuthSessionStatus.ACTIVE.equals(session.getStatus())) {
+                session.revoke();
+                refreshTokenStore.revokeBySessionId(session.getSessionId());
+            }
+        }
+        authSessionPersistencePort.saveAll(sessions);
     }
 
     public void unlockAccount(String userId) {

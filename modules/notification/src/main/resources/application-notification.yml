@@ -26,6 +26,7 @@ management:
 notification:
   defaults:
     locale: ${NOTIFICATION_DEFAULT_LOCALE:vi-VN}
+    english-locale: ${NOTIFICATION_ENGLISH_LOCALE:en-US}
 
   email:
     provider: ${NOTIFICATION_EMAIL_PROVIDER:logging}
@@ -41,11 +42,14 @@ notification:
 
   push:
     provider: ${NOTIFICATION_PUSH_PROVIDER:logging}
+    web-push-public-key: ${NOTIFICATION_WEB_PUSH_PUBLIC_KEY:}
 
   recipient:
     provider: ${NOTIFICATION_RECIPIENT_PROVIDER:identity}
 
   retry:
+    # Delivery is attempted immediately on notificationTaskExecutor. This sweep is the durability net
+    # for rejected submissions, provider failures, restarts and retries, so keep it enabled.
     enabled: ${NOTIFICATION_RETRY_ENABLED:true}
     delay-ms: ${NOTIFICATION_RETRY_DELAY_MS:30000}
     batch-size: ${NOTIFICATION_RETRY_BATCH:100}

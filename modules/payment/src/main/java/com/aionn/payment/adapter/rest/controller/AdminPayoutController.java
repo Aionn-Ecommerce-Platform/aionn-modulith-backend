@@ -7,7 +7,7 @@ import com.aionn.payment.adapter.rest.mapper.payout.PayoutDtoMapper;
 import com.aionn.payment.application.port.in.payout.CompletePayoutInputPort;
 import com.aionn.payment.application.port.in.payout.FailPayoutInputPort;
 import com.aionn.payment.application.port.in.payout.ListPayoutsByStatusInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

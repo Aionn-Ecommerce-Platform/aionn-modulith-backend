@@ -1,7 +1,10 @@
 package com.aionn.chat.adapter.rest.controller;
 
+import com.aionn.chat.adapter.rest.mapper.autoreply.AutoReplyDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.chat.adapter.rest.exception.ChatExceptionHandler;
-import com.aionn.chat.adapter.rest.mapper.autoreply.AutoReplyDtoMapperImpl;
 import com.aionn.chat.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.chat.adapter.rest.support.session.CurrentUserIdArgumentResolver;
 import com.aionn.chat.application.dto.autoreply.command.AutoReplyCommands;
@@ -17,7 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -56,7 +59,7 @@ class AutoReplyControllerWebTest {
         @BeforeEach
         void setUp() {
                 AutoReplyController controller = new AutoReplyController(
-                                getAutoReplyQueryPort, updateAutoReplyInputPort, new AutoReplyDtoMapperImpl());
+                                getAutoReplyQueryPort, updateAutoReplyInputPort, Mappers.getMapper(AutoReplyDtoMapper.class));
 
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new ChatExceptionHandler())

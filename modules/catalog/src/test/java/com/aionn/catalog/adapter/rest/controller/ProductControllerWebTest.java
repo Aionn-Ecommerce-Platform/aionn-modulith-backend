@@ -1,8 +1,47 @@
 package com.aionn.catalog.adapter.rest.controller;
 
+import com.aionn.catalog.adapter.rest.dto.product.request.AssignCollectionsRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.EmergencyTakedownRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.UpdateAiMetadataRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.UpdateMediaRequest;
+import com.aionn.catalog.adapter.rest.support.MockOwnershipVerifier;
+import com.aionn.catalog.application.dto.analytics.result.ProductAnalyticsResult;
+import com.aionn.catalog.application.dto.product.command.AssignCollectionsCommand;
+import com.aionn.catalog.application.dto.product.command.EmergencyTakedownCommand;
+import com.aionn.catalog.application.dto.product.command.RemoveVariantCommand;
+import com.aionn.catalog.application.dto.product.command.TrackProductViewCommand;
+import com.aionn.catalog.application.dto.product.command.UpdateAiMetadataCommand;
+import com.aionn.catalog.application.dto.product.command.UpdateMediaCommand;
+import com.aionn.catalog.application.dto.product.query.GetPersonalizedProductsQuery;
+import com.aionn.catalog.application.dto.product.query.GetPopularProductsQuery;
+import com.aionn.catalog.application.dto.product.query.GetRelatedProductsQuery;
+import com.aionn.catalog.application.dto.product.query.SearchProductsQuery;
+import com.aionn.catalog.application.dto.search.ProductSearchCriteria;
+import com.aionn.catalog.application.dto.search.ProductSearchResult;
+import com.aionn.catalog.application.port.in.product.AssignCollectionsInputPort;
+import com.aionn.catalog.application.port.in.product.ChangeVariantParcelInputPort;
+import com.aionn.catalog.application.port.in.product.EmergencyTakedownInputPort;
+import com.aionn.catalog.application.port.in.product.GetPersonalizedProductsInputPort;
+import com.aionn.catalog.application.port.in.product.GetPopularProductsInputPort;
+import com.aionn.catalog.application.port.in.product.GetProductAnalyticsInputPort;
+import com.aionn.catalog.application.port.in.product.GetRelatedProductsInputPort;
+import com.aionn.catalog.application.port.in.product.RemoveVariantInputPort;
+import com.aionn.catalog.application.port.in.product.SearchProductCatalogInputPort;
+import com.aionn.catalog.application.port.in.product.SearchProductsInputPort;
+import com.aionn.catalog.application.port.in.product.TrackProductViewInputPort;
+import com.aionn.catalog.application.port.in.product.UpdateAiMetadataInputPort;
+import com.aionn.catalog.application.port.in.product.UpdateMediaInputPort;
+import com.aionn.contracts.publisher.IntegrationEventPublisher;
+import java.time.Clock;
+
+import com.aionn.catalog.adapter.rest.mapper.product.ProductDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.catalog.adapter.rest.dto.product.request.AssignBrandRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.AssignCategoriesRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.BulkPriceUpdateRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.ChangeVariantParcelRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.ChangeVariantPriceRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.CreateProductRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.DeactivateProductRequest;
@@ -10,7 +49,6 @@ import com.aionn.catalog.adapter.rest.dto.product.request.DefineAttributesReques
 import com.aionn.catalog.adapter.rest.dto.product.request.DefineVariantRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.RejectProductRequest;
 import com.aionn.catalog.adapter.rest.exception.CatalogExceptionHandler;
-import com.aionn.catalog.adapter.rest.mapper.product.ProductDtoMapperImpl;
 import com.aionn.catalog.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.catalog.adapter.rest.support.TestAuth;
 import com.aionn.catalog.adapter.rest.support.session.CurrentAdminIdArgumentResolver;
@@ -20,6 +58,7 @@ import com.aionn.catalog.application.dto.common.PageResult;
 import com.aionn.catalog.application.dto.product.command.AssignBrandCommand;
 import com.aionn.catalog.application.dto.product.command.AssignCategoriesCommand;
 import com.aionn.catalog.application.dto.product.command.BulkPriceUpdateCommand;
+import com.aionn.catalog.application.dto.product.command.ChangeVariantParcelCommand;
 import com.aionn.catalog.application.dto.product.command.ChangeVariantPriceCommand;
 import com.aionn.catalog.application.dto.product.command.CloneProductCommand;
 import com.aionn.catalog.application.dto.product.command.CreateProductCommand;
@@ -55,7 +94,7 @@ import com.aionn.catalog.application.port.in.product.RestoreProductInputPort;
 import com.aionn.catalog.application.port.in.product.SubmitForReviewInputPort;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -96,6 +135,8 @@ class ProductControllerWebTest {
         @Mock
         private ChangeVariantPriceInputPort changeVariantPriceInputPort;
         @Mock
+        private ChangeVariantParcelInputPort changeVariantParcelInputPort;
+        @Mock
         private BulkPriceUpdateInputPort bulkPriceUpdateInputPort;
         @Mock
         private AssignBrandInputPort assignBrandInputPort;
@@ -122,29 +163,31 @@ class ProductControllerWebTest {
         @Mock
         private ListProductsByStatusInputPort listProductsByStatusInputPort;
         @Mock
-        private com.aionn.catalog.application.port.in.product.RemoveVariantInputPort removeVariantInputPort;
+        private RemoveVariantInputPort removeVariantInputPort;
         @Mock
-        private com.aionn.catalog.application.port.in.product.UpdateMediaInputPort updateMediaInputPort;
+        private UpdateMediaInputPort updateMediaInputPort;
         @Mock
-        private com.aionn.catalog.application.port.in.product.UpdateAiMetadataInputPort updateAiMetadataInputPort;
+        private UpdateAiMetadataInputPort updateAiMetadataInputPort;
         @Mock
-        private com.aionn.catalog.application.port.in.product.AssignCollectionsInputPort assignCollectionsInputPort;
+        private AssignCollectionsInputPort assignCollectionsInputPort;
         @Mock
-        private com.aionn.catalog.application.port.in.product.EmergencyTakedownInputPort emergencyTakedownInputPort;
+        private EmergencyTakedownInputPort emergencyTakedownInputPort;
         @Mock
-        private com.aionn.catalog.application.port.in.product.SearchProductsInputPort searchProductsInputPort;
+        private SearchProductsInputPort searchProductsInputPort;
         @Mock
-        private com.aionn.catalog.application.port.in.product.GetRelatedProductsInputPort getRelatedProductsInputPort;
+        private GetRelatedProductsInputPort getRelatedProductsInputPort;
         @Mock
-        private com.aionn.catalog.application.port.in.product.GetPopularProductsInputPort getPopularProductsInputPort;
+        private GetPopularProductsInputPort getPopularProductsInputPort;
         @Mock
-        private com.aionn.catalog.application.port.in.product.GetPersonalizedProductsInputPort getPersonalizedProductsInputPort;
+        private GetPersonalizedProductsInputPort getPersonalizedProductsInputPort;
         @Mock
-        private com.aionn.catalog.application.port.in.product.TrackProductViewInputPort trackProductViewInputPort;
+        private TrackProductViewInputPort trackProductViewInputPort;
         @Mock
-        private com.aionn.catalog.application.port.in.product.GetProductAnalyticsInputPort getProductAnalyticsInputPort;
+        private GetProductAnalyticsInputPort getProductAnalyticsInputPort;
         @Mock
-        private com.aionn.catalog.application.port.in.product.SearchProductCatalogInputPort searchProductCatalogInputPort;
+        private SearchProductCatalogInputPort searchProductCatalogInputPort;
+        @Mock
+        private IntegrationEventPublisher integrationEventPublisher;
 
         private MockMvc mockMvc;
         private final JsonMapper objectMapper = JacksonMapperFactory.create();
@@ -153,7 +196,8 @@ class ProductControllerWebTest {
         void setUp() {
                 ProductController controller = new ProductController(
                                 createProductInputPort, cloneProductInputPort, defineVariantInputPort,
-                                changeVariantPriceInputPort, bulkPriceUpdateInputPort, assignBrandInputPort,
+                                changeVariantPriceInputPort, changeVariantParcelInputPort, bulkPriceUpdateInputPort,
+                                assignBrandInputPort,
                                 assignCategoriesInputPort, defineAttributesInputPort, publishProductInputPort,
                                 submitForReviewInputPort, rejectProductInputPort, deactivateProductInputPort,
                                 restoreProductInputPort, getProductInputPort, getProductsBySkuIdsInputPort,
@@ -163,12 +207,14 @@ class ProductControllerWebTest {
                                 getRelatedProductsInputPort, getPopularProductsInputPort,
                                 getPersonalizedProductsInputPort, trackProductViewInputPort,
                                 getProductAnalyticsInputPort, searchProductCatalogInputPort,
-                                new ProductDtoMapperImpl());
+                                Mappers.getMapper(ProductDtoMapper.class),
+                                integrationEventPublisher,
+                                Clock.systemUTC());
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new CatalogExceptionHandler())
                                 .setCustomArgumentResolvers(
                                                 new CurrentMerchantIdArgumentResolver(
-                                                                new com.aionn.catalog.adapter.rest.support.MockOwnershipVerifier()),
+                                                                new MockOwnershipVerifier()),
                                                 new CurrentAdminIdArgumentResolver(),
                                                 new CurrentOwnerIdArgumentResolver())
                                 .addInterceptors(new MockSecurityInterceptor())
@@ -211,7 +257,9 @@ class ProductControllerWebTest {
                                 .with(TestAuth.authMerchant("owner-1", MERCHANT_ID))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(new DefineVariantRequest(
-                                                "sku-1", Map.of("color", "red"), new BigDecimal("10.00"), "VND"))))
+                                                "sku-1", Map.of("color", "red"), new BigDecimal("10.00"), "VND",
+                                                500, BigDecimal.valueOf(15), BigDecimal.valueOf(10),
+                                                BigDecimal.valueOf(5)))))
                                 .andExpect(status().isOk());
         }
 
@@ -225,6 +273,29 @@ class ProductControllerWebTest {
                                 .content(objectMapper.writeValueAsString(new ChangeVariantPriceRequest(
                                                 new BigDecimal("20.00"), "VND"))))
                                 .andExpect(status().isOk());
+        }
+
+        @Test
+        void changeVariantParcelReturnsOk() throws Exception {
+                when(changeVariantParcelInputPort.execute(any(ChangeVariantParcelCommand.class)))
+                                .thenReturn(sample());
+
+                mockMvc.perform(put("/api/v1/catalog/products/" + PRODUCT_ID + "/variants/sku-1/parcel")
+                                .with(TestAuth.authMerchant("owner-1", MERCHANT_ID))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new ChangeVariantParcelRequest(
+                                                500, new BigDecimal("15"), new BigDecimal("10"),
+                                                new BigDecimal("5")))))
+                                .andExpect(status().isOk());
+        }
+
+        @Test
+        void changeVariantParcelRejectsMissingWeight() throws Exception {
+                mockMvc.perform(put("/api/v1/catalog/products/" + PRODUCT_ID + "/variants/sku-1/parcel")
+                                .with(TestAuth.authMerchant("owner-1", MERCHANT_ID))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"lengthCm\":15,\"widthCm\":10,\"heightCm\":5}"))
+                                .andExpect(status().isBadRequest());
         }
 
         @Test
@@ -384,7 +455,7 @@ class ProductControllerWebTest {
         @Test
         void removeVariantReturnsOk() throws Exception {
                 when(removeVariantInputPort.execute(
-                                 any(com.aionn.catalog.application.dto.product.command.RemoveVariantCommand.class)))
+                                 any(RemoveVariantCommand.class)))
                                 .thenReturn(sample());
 
                 mockMvc.perform(post("/api/v1/catalog/products/" + PRODUCT_ID + "/variants/sku-1/remove")
@@ -395,59 +466,59 @@ class ProductControllerWebTest {
         @Test
         void updateMediaReturnsOk() throws Exception {
                 when(updateMediaInputPort.execute(
-                                any(com.aionn.catalog.application.dto.product.command.UpdateMediaCommand.class)))
+                                any(UpdateMediaCommand.class)))
                                 .thenReturn(sample());
 
                 mockMvc.perform(put("/api/v1/catalog/products/" + PRODUCT_ID + "/media")
                                 .with(TestAuth.authMerchant("owner-1", MERCHANT_ID))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(
-                                                new com.aionn.catalog.adapter.rest.dto.product.request.UpdateMediaRequest(
-                                                                java.util.List.of("img1", "img2")))))
+                                                new UpdateMediaRequest(
+                                                                List.of("img1", "img2")))))
                                 .andExpect(status().isOk());
         }
 
         @Test
         void updateAiMetadataReturnsOk() throws Exception {
                 when(updateAiMetadataInputPort.execute(
-                                any(com.aionn.catalog.application.dto.product.command.UpdateAiMetadataCommand.class)))
+                                any(UpdateAiMetadataCommand.class)))
                                 .thenReturn(sample());
 
                 mockMvc.perform(put("/api/v1/catalog/products/" + PRODUCT_ID + "/ai-metadata")
                                 .with(TestAuth.authMerchant("owner-1", MERCHANT_ID))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(
-                                                new com.aionn.catalog.adapter.rest.dto.product.request.UpdateAiMetadataRequest(
-                                                                java.util.List.of("premium"), "handmade"))))
+                                                new UpdateAiMetadataRequest(
+                                                                List.of("premium"), "handmade"))))
                                 .andExpect(status().isOk());
         }
 
         @Test
         void assignCollectionsReturnsOk() throws Exception {
                 when(assignCollectionsInputPort.execute(
-                                any(com.aionn.catalog.application.dto.product.command.AssignCollectionsCommand.class)))
+                                any(AssignCollectionsCommand.class)))
                                 .thenReturn(sample());
 
                 mockMvc.perform(put("/api/v1/catalog/products/" + PRODUCT_ID + "/collections")
                                 .with(TestAuth.authMerchant("owner-1", MERCHANT_ID))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(
-                                                new com.aionn.catalog.adapter.rest.dto.product.request.AssignCollectionsRequest(
-                                                                java.util.List.of("coll-1")))))
+                                                new AssignCollectionsRequest(
+                                                                List.of("coll-1")))))
                                 .andExpect(status().isOk());
         }
 
         @Test
         void emergencyTakedownReturnsOk() throws Exception {
                 when(emergencyTakedownInputPort.execute(
-                                any(com.aionn.catalog.application.dto.product.command.EmergencyTakedownCommand.class)))
+                                any(EmergencyTakedownCommand.class)))
                                 .thenReturn(sample());
 
                 mockMvc.perform(post("/api/v1/catalog/products/" + PRODUCT_ID + "/takedown")
                                 .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(
-                                                new com.aionn.catalog.adapter.rest.dto.product.request.EmergencyTakedownRequest(
+                                                new EmergencyTakedownRequest(
                                                                 "abuse"))))
                                 .andExpect(status().isOk());
         }
@@ -455,8 +526,8 @@ class ProductControllerWebTest {
         @Test
         void searchReturnsOk() throws Exception {
                 when(searchProductsInputPort.execute(
-                                any(com.aionn.catalog.application.dto.product.query.SearchProductsQuery.class)))
-                                .thenReturn(new PageResult<>(java.util.List.of(sample()), 0, 20, 1));
+                                any(SearchProductsQuery.class)))
+                                .thenReturn(new PageResult<>(List.of(sample()), 0, 20, 1));
 
                 mockMvc.perform(get("/api/v1/catalog/products/search").param("keyword", "widget"))
                                 .andExpect(status().isOk())
@@ -466,7 +537,7 @@ class ProductControllerWebTest {
         @Test
         void getRelatedProductsReturnsOk() throws Exception {
                 when(getRelatedProductsInputPort.execute(
-                                any(com.aionn.catalog.application.dto.product.query.GetRelatedProductsQuery.class)))
+                                any(GetRelatedProductsQuery.class)))
                                 .thenReturn(List.of(sample()));
 
                 mockMvc.perform(get("/api/v1/catalog/products/" + PRODUCT_ID + "/recommendations").param("limit", "5"))
@@ -477,7 +548,7 @@ class ProductControllerWebTest {
         @Test
         void getPopularProductsReturnsOk() throws Exception {
                 when(getPopularProductsInputPort.execute(
-                                any(com.aionn.catalog.application.dto.product.query.GetPopularProductsQuery.class)))
+                                any(GetPopularProductsQuery.class)))
                                 .thenReturn(List.of(sample()));
 
                 mockMvc.perform(get("/api/v1/catalog/products/recommendations/popular"))
@@ -488,7 +559,7 @@ class ProductControllerWebTest {
         @Test
         void getPersonalizedProductsReturnsOk() throws Exception {
                 when(getPersonalizedProductsInputPort.execute(
-                                any(com.aionn.catalog.application.dto.product.query.GetPersonalizedProductsQuery.class)))
+                                any(GetPersonalizedProductsQuery.class)))
                                 .thenReturn(List.of(sample()));
 
                 mockMvc.perform(get("/api/v1/catalog/products/recommendations/personalized")
@@ -504,13 +575,13 @@ class ProductControllerWebTest {
                                 .andExpect(status().isOk());
 
                 verify(trackProductViewInputPort).execute(
-                                any(com.aionn.catalog.application.dto.product.command.TrackProductViewCommand.class));
+                                any(TrackProductViewCommand.class));
         }
 
         @Test
         void adminAnalyticsReturnsOk() throws Exception {
                 when(getProductAnalyticsInputPort.execute()).thenReturn(
-                                new com.aionn.catalog.application.dto.analytics.result.ProductAnalyticsResult(
+                                new ProductAnalyticsResult(
                                                 1, 2, 3, 4, 5, 4.5, List.of()));
 
                 mockMvc.perform(get("/api/v1/catalog/products/admin/analytics")
@@ -521,11 +592,11 @@ class ProductControllerWebTest {
 
         @Test
         void searchCatalogReturnsOk() throws Exception {
-                com.aionn.catalog.application.dto.search.ProductSearchResult result = com.aionn.catalog.application.dto.search.ProductSearchResult
+                ProductSearchResult result = ProductSearchResult
                                 .of(
                                                 new PageResult<>(List.of(sample()), 0, 20, 1));
                 when(searchProductCatalogInputPort.execute(
-                                any(com.aionn.catalog.application.dto.search.ProductSearchCriteria.class)))
+                                any(ProductSearchCriteria.class)))
                                 .thenReturn(result);
 
                 mockMvc.perform(get("/api/v1/catalog/products/search/catalog")

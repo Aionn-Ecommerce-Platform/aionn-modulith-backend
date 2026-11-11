@@ -11,5 +11,11 @@ public interface AccountDeletionPort {
 
     Optional<DeletionRequestView> findPendingByUserId(String userId);
 
-    void cancel(String userId);
+    /**
+     * Cancels the pending request under a row lock.
+     *
+     * @return {@code true} when a pending request was cancelled, {@code false} when the
+     *         processor already claimed/completed it
+     */
+    boolean cancel(String userId);
 }

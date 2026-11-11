@@ -11,6 +11,7 @@ public final class StockReservationEvents {
             String reservationId,
             String skuId,
             String warehouseId,
+            String orderId,
             int qty,
             Instant expiresAt,
             Instant occurredAt) implements InventoryEvent {
@@ -20,6 +21,7 @@ public final class StockReservationEvents {
             String reservationId,
             String skuId,
             String warehouseId,
+            String orderId,
             int qty,
             String reason,
             Instant occurredAt) implements InventoryEvent {

@@ -1,5 +1,7 @@
 package com.aionn.chat.infrastructure.persistence.entity;
 
+import jakarta.persistence.Version;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -18,6 +20,7 @@ import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Entity
 @Table(name = "chat_conversations", indexes = {
@@ -62,8 +65,9 @@ public class ConversationEntity {
     @Column(name = "last_message_at")
     private Instant lastMessageAt;
 
-    @Column(name = "is_archived", nullable = false)
-    private boolean archived;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "archived_participants", columnDefinition = "jsonb", nullable = false)
+    private Set<String> archivedParticipants;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -73,7 +77,7 @@ public class ConversationEntity {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @jakarta.persistence.Version
+    @Version
     @Column(name = "version", nullable = false)
     private long version;
 }

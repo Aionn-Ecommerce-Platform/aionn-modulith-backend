@@ -1,9 +1,12 @@
 package com.aionn.inventory.adapter.rest.controller;
 
+import com.aionn.inventory.adapter.rest.mapper.reservation.StockReservationDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.inventory.adapter.rest.dto.reservation.request.ReleaseReservationRequest;
 import com.aionn.inventory.adapter.rest.dto.reservation.request.ReserveStockRequest;
 import com.aionn.inventory.adapter.rest.exception.InventoryExceptionHandler;
-import com.aionn.inventory.adapter.rest.mapper.reservation.StockReservationDtoMapperImpl;
 import com.aionn.inventory.application.dto.reservation.command.CommitReservationCommand;
 import com.aionn.inventory.application.dto.reservation.command.ReleaseReservationCommand;
 import com.aionn.inventory.application.dto.reservation.command.ReserveStockCommand;
@@ -14,7 +17,7 @@ import com.aionn.inventory.application.port.in.reservation.ReleaseReservationInp
 import com.aionn.inventory.application.port.in.reservation.ReserveStockInputPort;
 import com.aionn.inventory.domain.exception.InventoryErrorCode;
 import com.aionn.inventory.domain.exception.InventoryException;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,7 +58,7 @@ class StockReservationControllerWebTest {
                 commitReservationInputPort,
                 releaseReservationInputPort,
                 getReservationInputPort,
-                new StockReservationDtoMapperImpl()
+                Mappers.getMapper(StockReservationDtoMapper.class)
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new InventoryExceptionHandler())

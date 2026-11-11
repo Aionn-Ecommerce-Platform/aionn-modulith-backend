@@ -1,9 +1,9 @@
 package com.aionn.shipping.infrastructure.integration.listener;
 
-import com.aionn.shipping.application.port.out.shipment.ShipmentRepositoryPort;
-import com.aionn.shipping.application.service.ShipmentService;
+import com.aionn.shipping.application.port.out.ShipmentPersistencePort;
+import com.aionn.shipping.application.service.ShipmentCarrierOrchestrator;
 import com.aionn.shipping.domain.model.Shipment;
-import com.aionn.sharedkernel.integration.event.ordering.OrderCancelledIntegrationEvent;
+import com.aionn.contracts.event.ordering.OrderCancelledIntegrationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -16,8 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OrderLifecycleListener {
 
-    private final ShipmentRepositoryPort shipmentRepository;
-    private final ShipmentService shipmentService;
+    private final ShipmentPersistencePort shipmentRepository;
+    private final ShipmentCarrierOrchestrator shipmentCarrierOrchestrator;
 
     @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -32,9 +32,7 @@ public class OrderLifecycleListener {
                 continue;
             }
             try {
-                // System-driven cancel from upstream order cancellation: bypass
-                // merchant ownership check by going straight to applyCancel.
-                shipmentService.applyCancel(shipment.getShipmentId(), reason);
+                shipmentCarrierOrchestrator.cancelShipmentSystem(shipment.getShipmentId(), reason);
             } catch (Exception ex) {
                 log.warn("Cannot auto-cancel shipment {} for order {}: {}",
                         shipment.getShipmentId(), orderId, ex.getMessage());

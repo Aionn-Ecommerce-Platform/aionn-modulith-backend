@@ -1,7 +1,7 @@
 package com.aionn.ordering.infrastructure.integration.listener;
 
-import com.aionn.sharedkernel.integration.event.inventory.StockCommittedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.inventory.StockReservationFailedIntegrationEvent;
+import com.aionn.contracts.event.inventory.StockCommittedIntegrationEvent;
+import com.aionn.contracts.event.inventory.StockReservationFailedIntegrationEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;

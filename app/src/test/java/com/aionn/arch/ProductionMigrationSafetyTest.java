@@ -30,7 +30,21 @@ class ProductionMigrationSafetyTest {
                             stmt -> stmt.equals("update users set email = null, phone = null, username = 'deleted_' || user_id, password_hash = null, display_name = 'deleted user', avatar_url = null, email_verified_at = null, phone_verified_at = null, mfa_enabled = false, mfa_secret = null, failed_login_attempts = 0, locked_until = null, deleted_at = coalesce(deleted_at, now()) where status = 'deleted'"))),
             "modules/promotion/src/main/resources/db/V8.5__harden_banner_assets_and_ordering.sql", List.of(
                     new ApprovedBackfill("promotion_banners",
-                            stmt -> stmt.equals("update promotion_banners set image_public_id = 'legacy/promotion/banners/' || banner_id where image_public_id is null or btrim(image_public_id) = ''"))));
+                            stmt -> stmt.equals("update promotion_banners set image_public_id = 'legacy/promotion/banners/' || banner_id where image_public_id is null or btrim(image_public_id) = ''"))),
+            "modules/promotion/src/main/resources/db/V8.2__late_delivery_compensation_voucher.sql", List.of(
+                    new ApprovedBackfill("promotion_campaigns",
+                            stmt -> stmt.startsWith("insert into promotion_campaigns")
+                                    && stmt.contains("cmp_late_delivery")),
+                    new ApprovedBackfill("vouchers",
+                            stmt -> stmt.startsWith("insert into vouchers")
+                                    && stmt.contains("latedelivery15k"))),
+            "modules/chat/src/main/resources/db/V10.1__chat_participant_archives.sql", List.of(
+                    new ApprovedBackfill("chat_conversations",
+                            stmt -> stmt.toLowerCase(Locale.ROOT)
+                                    .startsWith("update chat_conversations set archived_participants"))),
+            "modules/catalog/src/main/resources/db/V2.6__product_slug.sql", List.of(
+                    new ApprovedBackfill("products",
+                            stmt -> stmt.startsWith("update products set slug = left("))));
 
     private static final Set<String> DEMO_TABLES = Set.of(
             "users",

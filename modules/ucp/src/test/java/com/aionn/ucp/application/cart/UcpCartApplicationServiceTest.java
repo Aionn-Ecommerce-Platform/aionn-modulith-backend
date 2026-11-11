@@ -1,12 +1,13 @@
 package com.aionn.ucp.application.cart;
 
-import com.aionn.sharedkernel.integration.port.catalog.CatalogQueryPort;
-import com.aionn.sharedkernel.integration.port.catalog.PricingQueryPort;
-import com.aionn.sharedkernel.integration.port.ordering.CartOperationsPort;
+import com.aionn.contracts.port.catalog.CatalogQueryPort;
+import com.aionn.contracts.port.catalog.PricingQueryPort;
+import com.aionn.contracts.port.ordering.CartOperationsPort;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpCartRequest;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpCartResponse;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpItemRequest;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpLineItemRequest;
+import com.aionn.ucp.application.TestUcpProtocolPolicy;
 import com.aionn.ucp.application.port.out.UcpSchemaValidationPort;
 import com.aionn.ucp.domain.exception.UcpProtocolException;
 import java.math.BigDecimal;
@@ -54,7 +55,7 @@ class UcpCartApplicationServiceTest {
         void setUp() {
                 clock = Clock.fixed(now, ZoneId.of("UTC"));
                 service = new UcpCartApplicationService(cartPort, pricingPort, catalogQueryPort, schemaValidator,
-                                clock);
+                                new TestUcpProtocolPolicy(), clock);
         }
 
         @Test

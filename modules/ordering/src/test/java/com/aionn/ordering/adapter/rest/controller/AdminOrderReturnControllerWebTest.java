@@ -1,5 +1,8 @@
 package com.aionn.ordering.adapter.rest.controller;
 
+import com.aionn.ordering.application.dto.returns.result.ReturnAnalyticsResult;
+import java.time.LocalDate;
+
 import com.aionn.ordering.adapter.rest.dto.response.OrderReturnResponse;
 import com.aionn.ordering.adapter.rest.exception.OrderingExceptionHandler;
 import com.aionn.ordering.adapter.rest.mapper.OrderingDtoMapper;
@@ -11,13 +14,13 @@ import com.aionn.ordering.application.port.in.returns.AdminListReturnsInputPort;
 import com.aionn.ordering.application.port.in.returns.AdminRejectReturnInputPort;
 import com.aionn.ordering.application.port.in.returns.AdminReturnAnalyticsInputPort;
 import com.aionn.ordering.domain.valueobject.ReturnStatus;
-import com.aionn.sharedkernel.adapter.web.exception.GlobalExceptionHandler;
+import com.aionn.platform.web.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -90,8 +93,8 @@ class AdminOrderReturnControllerWebTest {
 
         @Test
         void analyticsReturnsSuccess() throws Exception {
-                var result = new com.aionn.ordering.application.dto.returns.result.ReturnAnalyticsResult(
-                                java.time.LocalDate.now().minusDays(29), java.time.LocalDate.now(),
+                var result = new ReturnAnalyticsResult(
+                                LocalDate.now().minusDays(29), LocalDate.now(),
                                 0, 0, 0.0, BigDecimal.ZERO, "VND", List.of(), List.of());
                 when(adminReturnAnalyticsInputPort.execute(any(), any())).thenReturn(result);
 

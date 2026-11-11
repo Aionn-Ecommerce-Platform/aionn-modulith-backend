@@ -24,7 +24,9 @@ class InteractionPersistenceAdapterTest {
         RecommendationJobProperties properties = mock(RecommendationJobProperties.class);
         when(properties.execution()).thenReturn(new RecommendationJobProperties.Execution(60, 500));
         InteractionPersistenceAdapter adapter = new InteractionPersistenceAdapter(
-                repository, mapper, clock, mock(PlatformTransactionManager.class), properties);
+                repository, mapper, mock(org.springframework.jdbc.core.JdbcTemplate.class),
+                mock(org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate.class), clock,
+                mock(PlatformTransactionManager.class), properties);
 
         assertThatThrownBy(() -> adapter.append(null))
                 .isInstanceOf(IllegalArgumentException.class)

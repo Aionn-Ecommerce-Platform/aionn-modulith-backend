@@ -1,9 +1,12 @@
 package com.aionn.catalog.infrastructure.integration;
+
+import com.aionn.catalog.domain.exception.CatalogException;
+
 import com.aionn.catalog.infrastructure.integration.merchant.CatalogMerchantQueryAdapter;
 
 import com.aionn.catalog.application.port.out.merchant.MerchantPersistencePort;
 import com.aionn.catalog.domain.model.Merchant;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort.StripeConnectInfo;
+import com.aionn.contracts.port.catalog.MerchantQueryPort.StripeConnectInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -119,7 +122,7 @@ class CatalogMerchantQueryAdapterTest {
         when(merchantRepository.findById("m-1")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> adapter.saveStripeAccountId("m-1", "acct_test"))
-                .isInstanceOf(com.aionn.catalog.domain.exception.CatalogException.class);
+                .isInstanceOf(CatalogException.class);
 
         verify(merchantRepository, never()).save(any(Merchant.class));
     }
@@ -143,6 +146,6 @@ class CatalogMerchantQueryAdapterTest {
         when(merchantRepository.findById("m-1")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> adapter.updateStripeCapabilities("m-1", true, true))
-                .isInstanceOf(com.aionn.catalog.domain.exception.CatalogException.class);
+                .isInstanceOf(CatalogException.class);
     }
 }

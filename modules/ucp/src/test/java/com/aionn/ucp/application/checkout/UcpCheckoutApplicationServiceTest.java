@@ -1,13 +1,17 @@
 package com.aionn.ucp.application.checkout;
 
-import com.aionn.sharedkernel.integration.port.catalog.CatalogQueryPort;
-import com.aionn.sharedkernel.integration.port.catalog.PricingQueryPort;
-import com.aionn.sharedkernel.integration.port.ordering.CartOperationsPort;
-import com.aionn.sharedkernel.integration.port.ordering.OrderPlacementPort;
+import org.mockito.Mockito;
+
+import com.aionn.contracts.port.catalog.CatalogQueryPort;
+import com.aionn.contracts.port.catalog.PricingQueryPort;
+import com.aionn.contracts.port.identity.AddressLookupPort;
+import com.aionn.contracts.port.ordering.CartOperationsPort;
+import com.aionn.contracts.port.ordering.OrderPlacementPort;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpItemRequest;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpLineItemRequest;
 import com.aionn.ucp.adapter.rest.dto.checkout.UcpCheckoutRequest;
 import com.aionn.ucp.adapter.rest.dto.checkout.UcpCheckoutResponse;
+import com.aionn.ucp.application.TestUcpProtocolPolicy;
 import com.aionn.ucp.application.port.out.UcpCheckoutSessionPort;
 import com.aionn.ucp.application.port.out.UcpSchemaValidationPort;
 import com.aionn.ucp.domain.exception.UcpProtocolException;
@@ -33,6 +37,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.argThat;
 
 @ExtendWith(MockitoExtension.class)
 class UcpCheckoutApplicationServiceTest {
@@ -70,6 +75,7 @@ class UcpCheckoutApplicationServiceTest {
                                 catalogQueryPort,
                                 orderPlacementPort,
                                 schemaValidator,
+                                new TestUcpProtocolPolicy(),
                                 clock);
         }
 
@@ -582,9 +588,10 @@ class UcpCheckoutApplicationServiceTest {
 
         @Test
         void updateCheckoutThrowsConflictWhenConcurrentModificationOccurs() {
-                UcpCheckoutSessionPort mockPort = org.mockito.Mockito.mock(UcpCheckoutSessionPort.class);
+                UcpCheckoutSessionPort mockPort = Mockito.mock(UcpCheckoutSessionPort.class);
                 UcpCheckoutApplicationService mockService = new UcpCheckoutApplicationService(
-                                mockPort, cartPort, pricingPort, catalogQueryPort, orderPlacementPort, schemaValidator, clock);
+                                mockPort, cartPort, pricingPort, catalogQueryPort, orderPlacementPort, schemaValidator,
+                                new TestUcpProtocolPolicy(), clock);
 
                 UcpCheckoutSession session = new UcpCheckoutSession(
                                 "chk-conflict", "user-1", null, "incomplete", "USD", Map.of("sku-1", 1),
@@ -615,9 +622,10 @@ class UcpCheckoutApplicationServiceTest {
 
         @Test
         void completeCheckoutThrowsConflictWhenReservationFails() {
-                UcpCheckoutSessionPort mockPort = org.mockito.Mockito.mock(UcpCheckoutSessionPort.class);
+                UcpCheckoutSessionPort mockPort = Mockito.mock(UcpCheckoutSessionPort.class);
                 UcpCheckoutApplicationService mockService = new UcpCheckoutApplicationService(
-                                mockPort, cartPort, pricingPort, catalogQueryPort, orderPlacementPort, schemaValidator, clock);
+                                mockPort, cartPort, pricingPort, catalogQueryPort, orderPlacementPort, schemaValidator,
+                                new TestUcpProtocolPolicy(), clock);
 
                 UcpCheckoutSession session = new UcpCheckoutSession(
                                 "chk-res-fail", "user-1", null, "incomplete", "USD", Map.of("sku-1", 1),
@@ -640,14 +648,15 @@ class UcpCheckoutApplicationServiceTest {
                                         assertThat(ucpEx.getErrorCode()).isEqualTo("conflict");
                                 });
 
-                org.mockito.Mockito.verify(orderPlacementPort, org.mockito.Mockito.never()).placeHeadless(any());
+                Mockito.verify(orderPlacementPort, Mockito.never()).placeHeadless(any());
         }
 
         @Test
         void completeCheckoutRecoversWhenCompletionCasFails() {
-                UcpCheckoutSessionPort mockPort = org.mockito.Mockito.mock(UcpCheckoutSessionPort.class);
+                UcpCheckoutSessionPort mockPort = Mockito.mock(UcpCheckoutSessionPort.class);
                 UcpCheckoutApplicationService mockService = new UcpCheckoutApplicationService(
-                                mockPort, cartPort, pricingPort, catalogQueryPort, orderPlacementPort, schemaValidator, clock);
+                                mockPort, cartPort, pricingPort, catalogQueryPort, orderPlacementPort, schemaValidator,
+                                new TestUcpProtocolPolicy(), clock);
 
                 UcpCheckoutSession session = new UcpCheckoutSession(
                                 "chk-recover", "user-1", null, "incomplete", "USD", Map.of("sku-1", 1),
@@ -676,14 +685,15 @@ class UcpCheckoutApplicationServiceTest {
                 assertThat(response.status()).isEqualTo("completed");
                 assertThat(response.order()).isNotNull();
                 assertThat(response.order().id()).isEqualTo("ord-99");
-                org.mockito.Mockito.verify(mockPort).save(any());
+                Mockito.verify(mockPort).save(any());
         }
 
         @Test
         void createOrReuseFromCartThrowsConflictWhenConcurrentModificationOccurs() {
-                UcpCheckoutSessionPort mockPort = org.mockito.Mockito.mock(UcpCheckoutSessionPort.class);
+                UcpCheckoutSessionPort mockPort = Mockito.mock(UcpCheckoutSessionPort.class);
                 UcpCheckoutApplicationService mockService = new UcpCheckoutApplicationService(
-                                mockPort, cartPort, pricingPort, catalogQueryPort, orderPlacementPort, schemaValidator, clock);
+                                mockPort, cartPort, pricingPort, catalogQueryPort, orderPlacementPort, schemaValidator,
+                                new TestUcpProtocolPolicy(), clock);
 
                 when(cartPort.findCartById("cart-conflict")).thenReturn(Optional.of(
                                 new CartOperationsPort.CartSnapshot("cart-conflict", "user-1", Map.of("sku-1", 1), null, now, now)));
@@ -708,6 +718,163 @@ class UcpCheckoutApplicationServiceTest {
                                         assertThat(ucpEx.getStatusCode()).isEqualTo(409);
                                         assertThat(ucpEx.getErrorCode()).isEqualTo("conflict");
                                 });
+        }
+
+        @Test
+        void completeCheckoutWiresPaymentFulfillmentAndVoucherIntoPlaceCommand() {
+                Map<String, Object> instrument = Map.of(
+                                "id", "pi_1",
+                                "handler_id", "vnpay_handler",
+                                "type", "card",
+                                "selected", true);
+                Map<String, Object> payment = Map.of("instruments", List.of(instrument));
+
+                Map<String, Object> destination = Map.of(
+                                "id", "dest-1",
+                                "type", "shipping_address",
+                                "first_name", "Jane",
+                                "last_name", "Doe",
+                                "phone_number", "+84900000000",
+                                "street_address", "123 Main St",
+                                "address_locality", "Hanoi",
+                                "address_region", "HN",
+                                "address_country", "VN",
+                                "postal_code", "100000");
+                Map<String, Object> shippingMethod = Map.of(
+                                "type", "shipping",
+                                "selected_destination_id", "dest-1",
+                                "destinations", List.of(destination));
+                Map<String, Object> fulfillment = Map.of("methods", List.of(shippingMethod));
+
+                UcpCheckoutSession session = new UcpCheckoutSession(
+                                "chk-full", "user-1", null, "incomplete", "VND", Map.of("sku-1", 1),
+                                null, null, null, now, now, now.plusSeconds(3600), Map.of("sku-1", 5000L),
+                                payment, fulfillment, "SAVE10", 1L);
+                sessionPort.save(session);
+
+                PricingQueryPort.SkuPricing pricing = new PricingQueryPort.SkuPricing(
+                                "sku-1", "m-1", BigDecimal.valueOf(50.00), "VND", true);
+                when(pricingPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of("sku-1", pricing));
+
+                OrderPlacementPort.PlacedOrder placed = new OrderPlacementPort.PlacedOrder(
+                                "ord-full-1", 5000L, "VND", "PENDING", Map.of());
+                when(orderPlacementPort.placeHeadless(any())).thenReturn(placed);
+
+                UcpCheckoutResponse response = service.completeCheckout("chk-full", "user-1");
+
+                assertThat(response.status()).isEqualTo("completed");
+                verify(orderPlacementPort).placeHeadless(argThat(cmd -> {
+                        OrderPlacementPort.PlaceCommand c = (OrderPlacementPort.PlaceCommand) cmd;
+                        boolean paymentOk = "vnpay_handler".equals(c.paymentMethodId());
+                        boolean voucherOk = "SAVE10".equals(c.voucherCode());
+                        OrderPlacementPort.PlaceCommand.ShippingAddress a = c.shippingAddress();
+                        boolean addrOk = a != null
+                                        && "+84900000000".equals(a.phone())
+                                        && a.detailAddress() != null && a.detailAddress().contains("123 Main St")
+                                        && "VN".equals(a.countryCode());
+                        boolean idemOk = "chk-full".equals(c.idempotencyKey());
+                        return paymentOk && voucherOk && addrOk && idemOk;
+                }));
+        }
+
+        @Test
+        void completeCheckoutFallsBackToCodAndNullAddressWithoutPaymentOrFulfillment() {
+                UcpCheckoutSession session = new UcpCheckoutSession(
+                                "chk-cod", "user-1", null, "incomplete", "USD", Map.of("sku-1", 1),
+                                null, null, null, now, now, now.plusSeconds(3600), Map.of("sku-1", 1000L));
+                sessionPort.save(session);
+
+                PricingQueryPort.SkuPricing pricing = new PricingQueryPort.SkuPricing(
+                                "sku-1", "m-1", BigDecimal.valueOf(10.00), "USD", true);
+                when(pricingPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of("sku-1", pricing));
+
+                OrderPlacementPort.PlacedOrder placed = new OrderPlacementPort.PlacedOrder(
+                                "ord-cod-1", 1000L, "USD", "PENDING", Map.of());
+                when(orderPlacementPort.placeHeadless(any())).thenReturn(placed);
+
+                service.completeCheckout("chk-cod", "user-1");
+
+                verify(orderPlacementPort).placeHeadless(argThat(cmd -> {
+                        OrderPlacementPort.PlaceCommand c = (OrderPlacementPort.PlaceCommand) cmd;
+                        return "cod".equals(c.paymentMethodId())
+                                        && c.shippingAddress() == null
+                                        && c.voucherCode() == null;
+                }));
+        }
+
+        @Test
+        void completeCheckoutResolvesVietnamAddressNamesToCodes() {
+                UcpCheckoutSession session = new UcpCheckoutSession(
+                                "chk-addr", "user-1", null, "incomplete", "VND", Map.of("sku-1", 1),
+                                null, null, null, now, now, now.plusSeconds(3600), Map.of("sku-1", 5000L),
+                                null,
+                                Map.of("methods", List.of(Map.of(
+                                                "type", "shipping",
+                                                "destinations", List.of(Map.of(
+                                                                "id", "dest-1",
+                                                                "first_name", "Jane",
+                                                                "phone_number", "+84900000000",
+                                                                "street_address", "123 Le Loi",
+                                                                "address_locality", "Ben Nghe",
+                                                                "address_region", "Ho Chi Minh",
+                                                                "address_country", "VN"))))),
+                                null, 1L);
+                sessionPort.save(session);
+
+                PricingQueryPort.SkuPricing pricing = new PricingQueryPort.SkuPricing(
+                                "sku-1", "m-1", BigDecimal.valueOf(50.00), "VND", true);
+                when(pricingPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of("sku-1", pricing));
+                when(orderPlacementPort.placeHeadless(any())).thenReturn(
+                                new OrderPlacementPort.PlacedOrder("ord-addr", 5000L, "VND", "PENDING", Map.of()));
+
+                AddressLookupPort lookup = Mockito.mock(AddressLookupPort.class);
+                when(lookup.resolveByNames("VN", "Ho Chi Minh", "Ben Nghe")).thenReturn(Optional.of(
+                                new AddressLookupPort.ResolvedAddress(
+                                                "79", "Ho Chi Minh", "760", "District 1", "26734", "Ben Nghe")));
+
+                UcpCheckoutApplicationService resolvedService = new UcpCheckoutApplicationService(
+                                sessionPort, cartPort, pricingPort, catalogQueryPort, orderPlacementPort,
+                                schemaValidator, new TestUcpProtocolPolicy(), clock, lookup);
+
+                resolvedService.completeCheckout("chk-addr", "user-1");
+
+                verify(orderPlacementPort).placeHeadless(argThat(cmd -> {
+                        OrderPlacementPort.PlaceCommand c = (OrderPlacementPort.PlaceCommand) cmd;
+                        return "26734".equals(c.shippingAddress().wardCode())
+                                        && "760".equals(c.shippingAddress().districtCode())
+                                        && "79".equals(c.shippingAddress().provinceCode());
+                }));
+        }
+
+        @Test
+        void completeCheckoutRejectsUnresolvableVietnamAddress() {
+                UcpCheckoutSession session = new UcpCheckoutSession(
+                                "chk-bad-addr", "user-1", null, "incomplete", "VND", Map.of("sku-1", 1),
+                                null, null, null, now, now, now.plusSeconds(3600), Map.of("sku-1", 5000L),
+                                null,
+                                Map.of("methods", List.of(Map.of(
+                                                "type", "shipping",
+                                                "destinations", List.of(Map.of(
+                                                                "address_locality", "Unknown",
+                                                                "address_region", "Unknown",
+                                                                "address_country", "VN"))))),
+                                null, 1L);
+                sessionPort.save(session);
+
+                PricingQueryPort.SkuPricing pricing = new PricingQueryPort.SkuPricing(
+                                "sku-1", "m-1", BigDecimal.valueOf(50.00), "VND", true);
+                when(pricingPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of("sku-1", pricing));
+
+                AddressLookupPort lookup = Mockito.mock(AddressLookupPort.class);
+                when(lookup.resolveByNames("VN", "Unknown", "Unknown")).thenReturn(Optional.empty());
+
+                UcpCheckoutApplicationService resolvedService = new UcpCheckoutApplicationService(
+                                sessionPort, cartPort, pricingPort, catalogQueryPort, orderPlacementPort,
+                                schemaValidator, new TestUcpProtocolPolicy(), clock, lookup);
+
+                assertThatThrownBy(() -> resolvedService.completeCheckout("chk-bad-addr", "user-1"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> assertThat(((UcpProtocolException) ex).getStatusCode()).isEqualTo(400));
         }
 }
 

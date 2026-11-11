@@ -1,10 +1,6 @@
 package com.aionn.recommendation.domain.valueobject;
 
-/**
- * Why a product was recommended. Deliberately an enum rather than free text: the REST layer hands it
- * to clients that localise the wording, so an English sentence produced here could not be
- * translated.
- */
+/** Why a product was recommended. An enum, not free text, so clients can localise the wording. */
 public enum RecommendationReason {
 
     /** Recent momentum across all users; also the cold-start answer. */

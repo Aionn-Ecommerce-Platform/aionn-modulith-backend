@@ -13,6 +13,9 @@ public interface OrderPersistencePort {
 
     Optional<Order> findById(String orderId);
 
+    /** Pessimistic read lock for check-then-act transitions (approve/cancel). */
+    Optional<Order> findByIdForUpdate(String orderId);
+
     Optional<Order> findByIdOrOrderSn(String idOrSn);
 
     List<Order> findByUser(String userId, int limit);

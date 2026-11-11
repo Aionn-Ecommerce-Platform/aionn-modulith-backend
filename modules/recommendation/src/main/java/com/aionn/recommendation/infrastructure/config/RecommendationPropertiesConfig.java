@@ -5,6 +5,7 @@ import com.aionn.recommendation.infrastructure.config.properties.RecommendationC
 import com.aionn.recommendation.infrastructure.config.properties.RecommendationJobProperties;
 import com.aionn.recommendation.infrastructure.config.properties.RecommendationRankingProperties;
 import com.aionn.recommendation.infrastructure.config.properties.RecommendationSchedulingProperties;
+import com.aionn.recommendation.infrastructure.config.properties.RecommendationServingProperties;
 import com.aionn.recommendation.infrastructure.config.properties.RecommendationWeightProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
@@ -16,7 +17,8 @@ import org.springframework.context.annotation.Configuration;
         RecommendationColdStartProperties.class,
         RecommendationJobProperties.class,
         RecommendationSchedulingProperties.class,
-        RecommendationCacheProperties.class
+        RecommendationCacheProperties.class,
+        RecommendationServingProperties.class
 })
 public class RecommendationPropertiesConfig {
 }

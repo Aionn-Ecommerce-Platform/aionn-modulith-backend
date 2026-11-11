@@ -1,5 +1,7 @@
 package com.aionn.identity.adapter.rest.controller;
 
+import org.hamcrest.Matchers;
+
 import com.aionn.identity.adapter.rest.dto.admin.request.UpdateRolesRequest;
 import com.aionn.identity.adapter.rest.dto.admin.request.UpdateUserStatusRequest;
 import com.aionn.identity.adapter.rest.dto.admin.response.UserDetailResponse;
@@ -28,15 +30,15 @@ import com.aionn.identity.application.port.in.admin.UpdateUserStatusInputPort;
 import com.aionn.identity.application.port.in.security.UnlockAccountInputPort;
 import com.aionn.identity.domain.valueobject.UserRole;
 import com.aionn.identity.domain.valueobject.UserStatus;
-import com.aionn.sharedkernel.adapter.web.response.PageMetadata;
-import com.aionn.sharedkernel.adapter.web.support.clientip.ClientIpArgumentResolver;
-import com.aionn.sharedkernel.infrastructure.web.ClientIpResolver;
+import com.aionn.platform.web.response.PageMetadata;
+import com.aionn.platform.web.support.clientip.ClientIpArgumentResolver;
+import com.aionn.platform.infrastructure.web.ClientIpResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -202,7 +204,7 @@ class AdminUserControllerWebTest {
                                                 """))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.data.roles",
-                                                org.hamcrest.Matchers.containsInAnyOrder("MERCHANT", "BUYER")))
+                                                Matchers.containsInAnyOrder("MERCHANT", "BUYER")))
                                 .andExpect(jsonPath("$.message").value("Roles updated"));
 
                 verify(updateUserRolesInputPort).execute(command);

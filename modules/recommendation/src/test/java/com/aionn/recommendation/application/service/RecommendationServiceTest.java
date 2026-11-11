@@ -1,10 +1,13 @@
 package com.aionn.recommendation.application.service;
 
+import com.aionn.contracts.port.promotion.FlashSaleQueryPort;
+
 import com.aionn.recommendation.application.dto.result.RecommendationItemResult;
 import com.aionn.recommendation.application.policy.ColdStartPolicy;
 import com.aionn.recommendation.application.policy.ColdStartThresholdPolicy;
 import com.aionn.recommendation.application.policy.HybridRankingPolicy;
 import com.aionn.recommendation.application.policy.RankingWeightPolicy;
+import com.aionn.recommendation.application.policy.RecommendationServingPolicy;
 import com.aionn.recommendation.application.port.out.ProductAttributeQueryPort;
 import com.aionn.recommendation.application.port.out.observability.RecommendationMetricsPort;
 import com.aionn.recommendation.domain.model.UserAffinityProfile;
@@ -54,6 +57,8 @@ class RecommendationServiceTest {
     private ProfileRefreshService profileRefreshService;
     @Mock
     private RecommendationMetricsPort metrics;
+    @Mock
+    private FlashSaleQueryPort flashSaleQuery;
 
     private RecommendationService service() {
         return serviceWith(weights(3, 200));
@@ -66,7 +71,9 @@ class RecommendationServiceTest {
                 new HybridRankingPolicy(),
                 new ColdStartPolicy(thresholds(1, 5), weights),
                 weights,
-                metrics);
+                servingPolicy(50),
+                metrics,
+                flashSaleQuery);
     }
 
     @Test
@@ -426,6 +433,27 @@ class RecommendationServiceTest {
         verify(candidateGeneration).collaborativeScores(anyCollection(), eq(3));
     }
 
+    @Test
+    void similarProductsFallsBackToCategoryCandidatesWhenCollaborativeIsEmpty() {
+        when(candidateGeneration.productExists("p-1")).thenReturn(true);
+        when(candidateGeneration.collaborativeScores(anyCollection(), anyInt())).thenReturn(Map.of());
+        when(candidateGeneration.categoryCandidates(eq("p-1"), anyInt()))
+                .thenReturn(Map.of("p-cat-1", score(0.8), "p-cat-2", score(0.5)));
+        when(candidateGeneration.popularityScoresFor(anyCollection())).thenReturn(Map.of());
+        hydrationEchoesEveryProduct();
+
+        List<RecommendationItemResult> results = service().similarProducts("p-1", LIMIT);
+
+        assertThat(results).extracting(RecommendationItemResult::productId)
+                .containsExactly("p-cat-1", "p-cat-2");
+        // Category-only matches can no longer be labelled as bought together; the
+        // dominant signal wins the reason, so the content match takes
+        // MATCHES_YOUR_INTERESTS while the popularity tiebreaker takes TRENDING.
+        assertThat(results)
+                .noneMatch(r -> r.reason() == RecommendationReason.SIMILAR_TO_VIEWED
+                        || r.reason() == RecommendationReason.FREQUENTLY_BOUGHT_TOGETHER);
+    }
+
     private void establishedProfile() {
         when(profileRefreshService.profileOf("user-1")).thenReturn(new UserAffinityProfile(
                 "user-1",
@@ -469,6 +497,7 @@ class RecommendationServiceTest {
                 List.of("sku-" + productId),
                 null,
                 BigDecimal.valueOf(1_000_000),
+                null,
                 "VND");
     }
 
@@ -490,8 +519,36 @@ class RecommendationServiceTest {
         };
     }
 
-    private static RankingWeightPolicy weights(int overFetchFactor, int maxCandidates) {
-        return new RankingWeightPolicy() {
+    private static RecommendationServingPolicy servingPolicy(int maxPageSize) {
+        return new RecommendationServingPolicy() {
+            @Override
+            public int seedLookbackDays() {
+                return 30;
+            }
+
+            @Override
+            public int seedLimit() {
+                return 20;
+            }
+
+            @Override
+            public int maxPageSize() {
+                return maxPageSize;
+            }
+
+            @Override
+            public BigDecimal maxFlashSaleShare() {
+                return new BigDecimal("0.40");
+            }
+
+            @Override
+            public int categoryCandidateOvershoot() {
+                return 5;
+            }
+        };
+    }
+
+    private static RankingWeightPolicy weights(int overFetchFactor, int maxCandidates) {        return new RankingWeightPolicy() {
             @Override
             public BigDecimal collaborativeWeight() {
                 return BigDecimal.valueOf(0.50);

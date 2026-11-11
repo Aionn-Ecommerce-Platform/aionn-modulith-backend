@@ -1,5 +1,7 @@
 package com.aionn.inventory.application.service;
 
+import org.mockito.Mockito;
+
 import com.aionn.inventory.application.dto.transfer.command.CancelTransferCommand;
 import com.aionn.inventory.application.dto.transfer.command.CompleteTransferCommand;
 import com.aionn.inventory.application.dto.transfer.command.InitiateTransferCommand;
@@ -14,7 +16,7 @@ import com.aionn.inventory.domain.model.StockTransfer;
 import com.aionn.inventory.domain.model.Warehouse;
 import com.aionn.inventory.domain.valueobject.InventoryItemKey;
 import com.aionn.sharedkernel.application.port.EventPublisher;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -59,7 +61,7 @@ class StockTransferServiceTest {
 
     @BeforeEach
     void stubClock() {
-        org.mockito.Mockito.lenient().when(clock.instant()).thenReturn(FIXED_NOW);
+        Mockito.lenient().when(clock.instant()).thenReturn(FIXED_NOW);
     }
 
     @Test

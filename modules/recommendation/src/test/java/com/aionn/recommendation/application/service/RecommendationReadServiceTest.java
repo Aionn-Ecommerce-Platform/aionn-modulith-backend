@@ -1,8 +1,9 @@
 package com.aionn.recommendation.application.service;
 
 import com.aionn.recommendation.application.dto.result.RecommendationItemResult;
+import com.aionn.recommendation.application.policy.RecommendationServingPolicy;
 import com.aionn.recommendation.application.port.out.RecommendationCachePort;
-import com.aionn.recommendation.application.port.out.StockAvailabilityQueryPort;
+import com.aionn.recommendation.application.port.out.RecommendationStockAvailabilityPort;
 import com.aionn.recommendation.application.port.out.observability.RecommendationMetricsPort;
 import com.aionn.recommendation.domain.valueobject.RecommendationReason;
 import com.aionn.recommendation.domain.valueobject.RecommendationSurface;
@@ -39,12 +40,41 @@ class RecommendationReadServiceTest {
 
     @Mock private RecommendationService recommendationService;
     @Mock private RecommendationCachePort cache;
-    @Mock private StockAvailabilityQueryPort stockAvailability;
+    @Mock private RecommendationStockAvailabilityPort stockAvailability;
     @Mock private RecommendationMetricsPort metrics;
 
     private RecommendationReadService service() {
         return new RecommendationReadService(
-                recommendationService, cache, stockAvailability, metrics);
+                recommendationService, cache, stockAvailability, metrics, servingPolicy());
+    }
+
+    private static RecommendationServingPolicy servingPolicy() {
+        return new RecommendationServingPolicy() {
+            @Override
+            public int seedLookbackDays() {
+                return 30;
+            }
+
+            @Override
+            public int seedLimit() {
+                return 20;
+            }
+
+            @Override
+            public int maxPageSize() {
+                return 50;
+            }
+
+            @Override
+            public BigDecimal maxFlashSaleShare() {
+                return new BigDecimal("0.40");
+            }
+
+            @Override
+            public int categoryCandidateOvershoot() {
+                return 5;
+            }
+        };
     }
 
     @Test
@@ -336,6 +366,7 @@ class RecommendationReadServiceTest {
                 "Product " + productId,
                 null,
                 BigDecimal.valueOf(1000),
+                null,
                 "VND",
                 BigDecimal.valueOf(0.5),
                 RecommendationReason.TRENDING,

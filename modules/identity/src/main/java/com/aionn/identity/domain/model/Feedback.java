@@ -80,20 +80,28 @@ public class Feedback {
     }
 
     public void reply(String adminId, String reply, FeedbackStatus newStatus, Instant handledAt) {
+        FeedbackStatus targetStatus = newStatus != null
+                ? newStatus
+                : (this.status == FeedbackStatus.OPEN ? FeedbackStatus.IN_REVIEW : this.status);
+        requireTransition(targetStatus);
         this.adminReply = reply;
         this.handledBy = adminId;
         this.handledAt = handledAt;
-        if (newStatus != null) {
-            this.status = newStatus;
-        } else if (this.status == FeedbackStatus.OPEN) {
-            this.status = FeedbackStatus.IN_REVIEW;
-        }
+        this.status = targetStatus;
     }
 
     public void changeStatus(String adminId, FeedbackStatus newStatus, Instant handledAt) {
+        requireTransition(newStatus);
         this.status = newStatus;
         this.handledBy = adminId;
         this.handledAt = handledAt;
+    }
+
+    private void requireTransition(FeedbackStatus newStatus) {
+        if (!this.status.canTransitionTo(newStatus)) {
+            throw new IllegalStateException(
+                    "Feedback cannot transition from " + this.status + " to " + newStatus);
+        }
     }
 
     public String getFeedbackId() {

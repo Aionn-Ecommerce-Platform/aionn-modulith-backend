@@ -7,7 +7,6 @@ public record KycDocumentResponse(
         String kycId,
         String type,
         String url,
-        String publicId,
         String status,
         Instant uploadedAt) {
 }

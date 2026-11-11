@@ -6,5 +6,7 @@ public record UploadSignatureResponse(
         String apiKey,
         String cloudName,
         String uploadUrl,
-        String folder) {
+        String folder,
+        String allowedFormats,
+        long maxFileSize) {
 }

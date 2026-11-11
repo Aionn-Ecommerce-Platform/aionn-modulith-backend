@@ -1,5 +1,10 @@
 package com.aionn.catalog.infrastructure.search;
 
+import org.mockito.ArgumentMatchers;
+import org.opensearch.client.opensearch.core.DeleteRequest;
+import org.opensearch.client.opensearch.core.IndexRequest;
+import org.opensearch.client.opensearch.core.SearchRequest;
+
 import com.aionn.catalog.application.dto.search.ProductSearchCriteria;
 import com.aionn.catalog.application.dto.search.ProductSearchDocument;
 import com.aionn.catalog.infrastructure.config.properties.CatalogSearchProperties;
@@ -32,7 +37,7 @@ class OpenSearchProductSearchIndexTest {
     private static ProductSearchDocument doc() {
         return new ProductSearchDocument("p1", "m1", "Widget", "desc", "b1", List.of("c1"),
                 List.of(), List.of("tag"), List.of(), Map.of("color", "red"),
-                new BigDecimal("100"), new BigDecimal("100"), "VND", "PUBLISHED", Instant.now(), 4.0, 3L);
+                new BigDecimal("100"), new BigDecimal("100"), "VND", false, "PUBLISHED", Instant.now(), 4.0, 3L);
     }
 
     @BeforeEach
@@ -48,7 +53,7 @@ class OpenSearchProductSearchIndexTest {
     void indexSendsDocument() throws IOException {
         index.index(doc());
         verify(client)
-                .index(org.mockito.ArgumentMatchers.<org.opensearch.client.opensearch.core.IndexRequest<Object>>any());
+                .index(ArgumentMatchers.<IndexRequest<Object>>any());
     }
 
     @Test
@@ -71,13 +76,13 @@ class OpenSearchProductSearchIndexTest {
     @Test
     void removeDeletesById() throws IOException {
         index.remove("p1");
-        verify(client).delete(any(org.opensearch.client.opensearch.core.DeleteRequest.class));
+        verify(client).delete(any(DeleteRequest.class));
     }
 
     @Test
     void indexWrapsIoException() throws IOException {
         when(client
-                .index(org.mockito.ArgumentMatchers.<org.opensearch.client.opensearch.core.IndexRequest<Object>>any()))
+                .index(ArgumentMatchers.<IndexRequest<Object>>any()))
                 .thenThrow(new IOException("down"));
         ProductSearchDocument document = doc();
 
@@ -86,8 +91,8 @@ class OpenSearchProductSearchIndexTest {
 
     @Test
     void searchReturnsEmptyWhenClientFails() throws IOException {
-        when(client.search(any(org.opensearch.client.opensearch.core.SearchRequest.class),
-                org.mockito.ArgumentMatchers.eq(ProductSearchDocument.class)))
+        when(client.search(any(SearchRequest.class),
+                ArgumentMatchers.eq(ProductSearchDocument.class)))
                 .thenThrow(new IOException("cluster down"));
 
         ProductSearchCriteria criteria = new ProductSearchCriteria(
@@ -100,8 +105,8 @@ class OpenSearchProductSearchIndexTest {
 
     @Test
     void searchWithEachSortOptionRunsQueryBuilder() throws IOException {
-        when(client.search(any(org.opensearch.client.opensearch.core.SearchRequest.class),
-                org.mockito.ArgumentMatchers.eq(ProductSearchDocument.class)))
+        when(client.search(any(SearchRequest.class),
+                ArgumentMatchers.eq(ProductSearchDocument.class)))
                 .thenThrow(new IOException("cluster down"));
 
         for (ProductSearchCriteria.Sort sort : ProductSearchCriteria.Sort.values()) {

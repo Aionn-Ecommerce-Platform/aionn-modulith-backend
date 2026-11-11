@@ -80,8 +80,11 @@ public class FlashSaleRegistrationPersistenceAdapter implements FlashSaleRegistr
     }
 
     @Override
-    public List<FlashSaleRegistration> findAllApprovedRunning(int limit) {
-        return jpa.findAllApprovedRunning(PageRequest.of(0, Math.max(1, limit))).stream()
+    public List<FlashSaleRegistration> findApprovedByCampaignIds(List<String> campaignIds) {
+        if (campaignIds == null || campaignIds.isEmpty()) {
+            return List.of();
+        }
+        return jpa.findApprovedByCampaignIds(campaignIds).stream()
                 .map(mapper::toDomain)
                 .toList();
     }

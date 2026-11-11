@@ -1,8 +1,12 @@
 package com.aionn.promotion.infrastructure.integration;
 
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
+
 import com.aionn.promotion.application.port.out.PromotionCampaignPersistencePort;
 import com.aionn.promotion.application.port.out.UserVoucherPersistencePort;
 import com.aionn.promotion.application.port.out.VoucherPersistencePort;
+import com.aionn.promotion.application.policy.VoucherReservationPolicy;
 import com.aionn.promotion.domain.model.UserVoucher;
 import com.aionn.promotion.domain.model.Voucher;
 import com.aionn.promotion.domain.model.PromotionCampaign;
@@ -33,8 +37,14 @@ class VoucherApplyAdapterTest {
     private final VoucherPersistencePort voucherRepository = mock(VoucherPersistencePort.class);
     private final UserVoucherPersistencePort userVoucherRepository = mock(UserVoucherPersistencePort.class);
     private final PromotionCampaignPersistencePort campaignRepository = mock(PromotionCampaignPersistencePort.class);
+    private final VoucherReservationPolicy reservationPolicy = mock(VoucherReservationPolicy.class);
     private final VoucherApplyAdapter adapter = new VoucherApplyAdapter(
-            voucherRepository, userVoucherRepository, campaignRepository, CLOCK);
+            voucherRepository, userVoucherRepository, campaignRepository, reservationPolicy, CLOCK);
+
+    {
+        when(reservationPolicy.expiresFrom(any()))
+                .thenReturn(CLOCK.instant().plusSeconds(900));
+    }
 
     @Test
     void applyCommitsOneSlotAndReleaseRestoresCapacity() {
@@ -42,21 +52,21 @@ class VoucherApplyAdapterTest {
                 1, CLOCK.instant().minusSeconds(60), CLOCK.instant().plusSeconds(3600), CLOCK);
         when(voucherRepository.lockByCode("SAVE10")).thenReturn(Optional.of(voucher));
         when(voucherRepository.findByCode("SAVE10")).thenReturn(Optional.of(voucher));
-        when(userVoucherRepository.findByUserAndCode("user-1", "SAVE10")).thenReturn(Optional.empty());
+        when(userVoucherRepository.findByUserAndCodeForUpdate("user-1", "SAVE10")).thenReturn(Optional.empty());
         when(userVoucherRepository.save(any(UserVoucher.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         var discount = adapter.apply("user-1", "merchant-1", "SAVE10", "order-1",
-                BigDecimal.valueOf(100), "VND", java.util.List.of());
+                BigDecimal.valueOf(100), "VND", List.of());
 
         assertThat(discount.applied()).isTrue();
         assertThat(voucher.getReservedCount()).isZero();
         assertThat(voucher.getUsedCount()).isEqualTo(1);
-        var captor = org.mockito.ArgumentCaptor.forClass(UserVoucher.class);
-        verify(userVoucherRepository, org.mockito.Mockito.atLeastOnce()).save(captor.capture());
+        var captor = ArgumentCaptor.forClass(UserVoucher.class);
+        verify(userVoucherRepository, Mockito.atLeastOnce()).save(captor.capture());
         UserVoucher applied = captor.getAllValues().get(captor.getAllValues().size() - 1);
         assertThat(applied.getStatus()).isEqualTo(UserVoucherStatus.APPLIED);
 
-        when(userVoucherRepository.findByReservedOrderId("order-1")).thenReturn(Optional.of(applied));
+        when(userVoucherRepository.findByReservedOrderIdForUpdate("order-1")).thenReturn(Optional.of(applied));
         adapter.release("user-1", "order-1", "placement-failed");
 
         assertThat(voucher.getUsedCount()).isZero();
@@ -70,8 +80,8 @@ class VoucherApplyAdapterTest {
                 2, CLOCK.instant().minusSeconds(60), CLOCK.instant().plusSeconds(3600), CLOCK);
         PromotionCampaign campaign = runningCampaign(List.of("category-1"));
         when(voucherRepository.lockByCode("CATEGORY10")).thenReturn(Optional.of(voucher));
-        when(campaignRepository.findById("campaign-1")).thenReturn(Optional.of(campaign));
-        when(userVoucherRepository.findByUserAndCode("user-1", "CATEGORY10")).thenReturn(Optional.empty());
+        when(campaignRepository.findByIdForUpdate("campaign-1")).thenReturn(Optional.of(campaign));
+        when(userVoucherRepository.findByUserAndCodeForUpdate("user-1", "CATEGORY10")).thenReturn(Optional.empty());
         when(userVoucherRepository.save(any(UserVoucher.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         var discount = adapter.apply("user-1", "merchant-1", "CATEGORY10", "order-1",
@@ -85,7 +95,7 @@ class VoucherApplyAdapterTest {
         Voucher voucher = Voucher.issue("CATEGORY10", "campaign-1", Money.of(BigDecimal.TEN, "VND"),
                 2, CLOCK.instant().minusSeconds(60), CLOCK.instant().plusSeconds(3600), CLOCK);
         when(voucherRepository.lockByCode("CATEGORY10")).thenReturn(Optional.of(voucher));
-        when(campaignRepository.findById("campaign-1")).thenReturn(Optional.of(runningCampaign(List.of("category-1"))));
+        when(campaignRepository.findByIdForUpdate("campaign-1")).thenReturn(Optional.of(runningCampaign(List.of("category-1"))));
 
         var discount = adapter.apply("user-1", "merchant-1", "CATEGORY10", "order-1",
                 BigDecimal.valueOf(100), "VND", List.of("other-category"));
@@ -102,14 +112,14 @@ class VoucherApplyAdapterTest {
         applied.reserve("order-1", CLOCK.instant().plusSeconds(900), CLOCK);
         applied.apply(Money.of(BigDecimal.TEN, "VND"), CLOCK);
         when(voucherRepository.lockByCode("CATEGORY10")).thenReturn(Optional.of(voucher));
-        when(userVoucherRepository.findByUserAndCode("user-1", "CATEGORY10")).thenReturn(Optional.of(applied));
+        when(userVoucherRepository.findByUserAndCodeForUpdate("user-1", "CATEGORY10")).thenReturn(Optional.of(applied));
 
         var discount = adapter.apply("user-1", "merchant-1", "CATEGORY10", "order-1",
                 BigDecimal.valueOf(100), "VND", List.of("category-1"));
 
         assertThat(discount.applied()).isTrue();
         assertThat(discount.amount()).isEqualByComparingTo(BigDecimal.TEN);
-        verify(campaignRepository, never()).findById(any());
+        verify(campaignRepository, never()).findByIdForUpdate(any());
     }
 
     private static PromotionCampaign runningCampaign(List<String> categoryIds) {
@@ -123,3 +133,4 @@ class VoucherApplyAdapterTest {
         return campaign;
     }
 }
+

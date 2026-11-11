@@ -51,9 +51,12 @@ public interface InventoryItemRepository
      * round trips. Which warehouse serves an order is decided later by the warehouse selector, so only
      * the SKU set is needed here.
      */
-    @Query("SELECT DISTINCT i.id.skuId FROM InventoryItemEntity i "
-            + "WHERE i.id.skuId IN :skuIds AND i.availableQty > 0 AND i.locked = false")
-    List<String> findAvailableSkuIds(@Param("skuIds") Collection<String> skuIds);
+    @Query("SELECT DISTINCT i.id.skuId FROM InventoryItemEntity i, WarehouseEntity w "
+            + "WHERE w.warehouseId = i.id.warehouseId "
+            + "AND w.status = :warehouseStatus "
+            + "AND i.id.skuId IN :skuIds AND i.availableQty > 0 AND i.locked = false")
+    List<String> findAvailableSkuIds(@Param("skuIds") Collection<String> skuIds,
+            @Param("warehouseStatus") String warehouseStatus);
 
     Page<InventoryItemEntity> findByIdWarehouseIdOrderByIdSkuIdAsc(String warehouseId, Pageable pageable);
 

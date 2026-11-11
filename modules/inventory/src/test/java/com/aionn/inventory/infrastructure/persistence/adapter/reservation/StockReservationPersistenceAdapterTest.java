@@ -46,7 +46,7 @@ class StockReservationPersistenceAdapterTest {
         StockReservationEntity entity = new StockReservationEntity();
         when(jpa.findById(RESERVATION_ID)).thenReturn(Optional.empty());
         when(mapper.toEntity(eq(domain), any())).thenReturn(entity);
-        when(jpa.save(entity)).thenReturn(entity);
+        when(jpa.saveAndFlush(entity)).thenReturn(entity);
         when(mapper.toDomain(entity)).thenReturn(domain);
 
         StockReservation saved = adapter.save(domain);
@@ -87,3 +87,4 @@ class StockReservationPersistenceAdapterTest {
         assertThat(adapter.findExpired(now, 100)).containsExactly(domain);
     }
 }
+

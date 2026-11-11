@@ -7,13 +7,14 @@ import com.aionn.identity.adapter.rest.dto.feedback.response.FeedbackResponse;
 import com.aionn.identity.adapter.rest.mapper.feedback.FeedbackDtoMapper;
 import com.aionn.identity.application.dto.common.PageResult;
 import com.aionn.identity.application.dto.feedback.result.FeedbackResult;
+import com.aionn.identity.application.policy.IdentityValidationConstants;
 import com.aionn.identity.application.port.in.feedback.ChangeFeedbackStatusInputPort;
 import com.aionn.identity.application.port.in.feedback.GetFeedbackAnalyticsQueryPort;
 import com.aionn.identity.application.port.in.feedback.GetAdminFeedbackQueryPort;
 import com.aionn.identity.application.port.in.feedback.ListAdminFeedbackQueryPort;
 import com.aionn.identity.application.port.in.feedback.ReplyFeedbackInputPort;
 import com.aionn.identity.domain.valueobject.FeedbackStatus;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -71,7 +72,7 @@ public class AdminFeedbackController {
     public ResponseEntity<ApiResponse<List<FeedbackResponse>>> list(
             @RequestParam(required = false) FeedbackStatus status,
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+            @RequestParam(defaultValue = "20") @Min(1) @Max(IdentityValidationConstants.ADMIN_PAGE_MAX_SIZE) int size) {
         PageResult<FeedbackResult> result = listAdminFeedbackQueryPort.execute(status, page, size);
         return ResponseEntity.ok(ApiResponse.successWithPaging(
                 feedbackDtoMapper.toResponses(result.content()),

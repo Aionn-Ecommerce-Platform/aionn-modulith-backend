@@ -25,7 +25,7 @@ public interface RegistrationDtoMapper {
 
 	RegistrationSessionResponse toInitiateResponse(InitiateRegistrationResult result);
 
-	VerifyRegistrationOtpCommand toVerifyOtpCommand(String regId, VerifyOtpRequest request);
+	VerifyRegistrationOtpCommand toVerifyOtpCommand(String regId, VerifyOtpRequest request, String ipAddress);
 
 	VerifyOtpResponse toVerifyOtpResponse(VerifyRegistrationOtpResult result);
 

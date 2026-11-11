@@ -64,6 +64,9 @@ CREATE TABLE stock_reservations (
 );
 CREATE INDEX idx_stock_reservations_order          ON stock_reservations(order_id);
 CREATE INDEX idx_stock_reservations_status_expires ON stock_reservations(status, expires_at);
+CREATE UNIQUE INDEX uq_stock_reservations_active
+    ON stock_reservations(order_id, sku_id, warehouse_id)
+    WHERE status = 'RESERVED' AND order_id IS NOT NULL;
 
 CREATE TABLE stock_adjustments (
     adj_id        VARCHAR(50) PRIMARY KEY,

@@ -2,7 +2,7 @@ package com.aionn.identity.infrastructure.integration.address;
 
 import com.aionn.identity.application.port.out.address.AddressPersistencePort;
 import com.aionn.identity.domain.model.Address;
-import com.aionn.sharedkernel.integration.port.identity.UserAddressLookupPort;
+import com.aionn.contracts.port.identity.UserAddressLookupPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

@@ -1,5 +1,8 @@
 package com.aionn.identity.application.service;
 
+import com.aionn.identity.application.policy.IdentityValidationConstants;
+import java.util.stream.Collectors;
+
 import com.aionn.identity.application.dto.registration.command.CompleteRegistrationCommand;
 import com.aionn.identity.application.dto.registration.command.InitiateRegistrationCommand;
 import com.aionn.identity.application.dto.registration.command.ResendRegistrationOtpCommand;
@@ -14,7 +17,7 @@ import com.aionn.identity.application.port.out.auth.AccessTokenIssuerPort;
 import com.aionn.identity.application.port.out.auth.AuthSessionPersistencePort;
 import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
 import com.aionn.identity.application.port.out.observability.IdentityMetricsPort;
-import com.aionn.sharedkernel.integration.port.notification.IdentityNotificationPort;
+import com.aionn.contracts.port.notification.IdentityNotificationPort;
 import com.aionn.identity.application.port.out.registration.CaptchaTokenValidatorPort;
 import com.aionn.identity.application.port.out.registration.RegistrationLockManagerPort;
 import com.aionn.identity.application.port.out.registration.RegistrationRateLimiterPort;
@@ -31,6 +34,7 @@ import com.aionn.sharedkernel.domain.vo.PhoneNumber;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,6 +68,7 @@ public class RegistrationService {
     private final IdentityMetricsPort identityMetrics;
 
     private final Clock clock;
+
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public InitiateRegistrationResult initiate(InitiateRegistrationCommand command) {
         log.debug("Initiating registration for identity: {}", command.identity());
@@ -105,6 +110,12 @@ public class RegistrationService {
     }
 
     public VerifyRegistrationOtpResult verifyOtp(VerifyRegistrationOtpCommand command) {
+        enforceRegistrationActionRateLimit(
+                "OTP_VERIFY_IP",
+                command.ipAddress(),
+                registrationPolicy.getVerifyIpMaxAttempts(),
+                registrationPolicy.getVerifyIpWindowSeconds());
+
         var session = registrationSessionStore.findByRegId(command.regId())
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.REGISTRATION_SESSION_NOT_FOUND));
 
@@ -112,17 +123,29 @@ public class RegistrationService {
             return registrationResultMapper.toVerifyOtpResult(session.getRegId(), session.getVerificationToken());
         }
 
+        if (!registrationSessionStore.tryAcquireVerifyAttempt(
+                command.regId(), session.getMaxVerifyAttempts(), session.getExpiredAt())) {
+            throw new IdentityException(IdentityErrorCode.OTP_ATTEMPTS_EXCEEDED);
+        }
+
         try {
             session.verify(command.otpCode(), clock);
         } finally {
             registrationSessionStore.save(session);
         }
+        registrationSessionStore.resetVerifyAttempts(command.regId());
         identityMetrics.registrationLifecycle("otp_verified");
         return registrationResultMapper.toVerifyOtpResult(session.getRegId(), session.getVerificationToken());
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public ResendRegistrationOtpResult resendOtp(ResendRegistrationOtpCommand command) {
+        enforceRegistrationActionRateLimit(
+                "OTP_RESEND_IP",
+                command.ipAddress(),
+                registrationPolicy.getResendIpMaxAttempts(),
+                registrationPolicy.getResendIpWindowSeconds());
+
         var session = registrationSessionStore.findByRegId(command.regId())
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.REGISTRATION_SESSION_NOT_FOUND));
 
@@ -132,6 +155,7 @@ public class RegistrationService {
 
         session.resend(newOtp.getCode(), newOtp.getResendAvailableAt(), newOtp.getExpiredAt(), clock);
         registrationSessionStore.save(session);
+        registrationSessionStore.resetVerifyAttempts(command.regId());
         notificationPort.sendRegistrationOtp(session.getPhoneNumber(), newOtp.getCode());
 
         String responseOtpCode = registrationPolicy.isExposeOtpInResponse() ? newOtp.getCode() : null;
@@ -158,7 +182,14 @@ public class RegistrationService {
         validateUniqueIdentity(phoneNumber, command.username());
 
         IdentityUser user = createUser(phoneNumber, command.username(), command.password());
-        IdentityUser savedUser = userPersistencePort.save(user);
+        IdentityUser savedUser;
+        try {
+            savedUser = userPersistencePort.save(user);
+        } catch (DataIntegrityViolationException ex) {
+            // Two registrations can pass the pre-check and race on the unique index.
+            log.warn("Registration lost a uniqueness race for phone/username", ex);
+            throw new IdentityException(IdentityErrorCode.ACCOUNT_ALREADY_EXISTS);
+        }
 
         AuthSession authSession = createAuthSession(
                 savedUser.getUserId(),
@@ -170,7 +201,7 @@ public class RegistrationService {
                 savedUser.getUserId(),
                 savedSession.getSessionId(),
                 savedSession.getExpiresAt(),
-                savedUser.getRoles().stream().map(Enum::name).collect(java.util.stream.Collectors.toSet()));
+                savedUser.getRoles().stream().map(Enum::name).collect(Collectors.toSet()));
         String refreshToken = issueRefreshToken(savedSession);
         Instant accessTokenExpiresAt = extractAccessTokenExpiry(accessToken);
 
@@ -220,6 +251,16 @@ public class RegistrationService {
         }
     }
 
+    private void enforceRegistrationActionRateLimit(
+            String scope, String ipAddress, int maxAttempts, int windowSeconds) {
+        if (maxAttempts <= 0 || ipAddress == null || ipAddress.isBlank()) {
+            return;
+        }
+        if (!registrationRateLimiter.check(scope, ipAddress, maxAttempts, windowSeconds)) {
+            throw new IdentityException(IdentityErrorCode.RATE_LIMIT_EXCEEDED);
+        }
+    }
+
     private IdentityUser createUser(String phoneNumber, String username, String password) {
         IdentityUser user = IdentityUser.createNew(
                 IdGenerator.ulid(),
@@ -244,7 +285,7 @@ public class RegistrationService {
     }
 
     private String issueRefreshToken(AuthSession session) {
-        byte[] bytes = new byte[com.aionn.identity.application.policy.IdentityValidationConstants.REFRESH_TOKEN_BYTES];
+        byte[] bytes = new byte[IdentityValidationConstants.REFRESH_TOKEN_BYTES];
         SECURE_RANDOM.nextBytes(bytes);
         String tokenId = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 

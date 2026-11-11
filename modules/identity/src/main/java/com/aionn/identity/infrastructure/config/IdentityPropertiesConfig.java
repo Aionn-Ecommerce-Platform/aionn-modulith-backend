@@ -7,6 +7,8 @@ import com.aionn.identity.infrastructure.config.properties.AuthCookieProperties;
 import com.aionn.identity.infrastructure.config.properties.AuthProperties;
 import com.aionn.identity.infrastructure.config.properties.AuthSessionProperties;
 import com.aionn.identity.infrastructure.config.properties.CloudinaryProperties;
+import com.aionn.identity.infrastructure.config.properties.ConsentProperties;
+import com.aionn.identity.infrastructure.config.properties.DataExportProperties;
 import com.aionn.identity.infrastructure.config.properties.GeographyCacheProperties;
 import com.aionn.identity.infrastructure.config.properties.IdentityMediaProperties;
 import com.aionn.identity.infrastructure.config.properties.JwtProperties;
@@ -26,6 +28,8 @@ import org.springframework.context.annotation.Configuration;
                 AuthProperties.class,
                 AuthSessionProperties.class,
                 CloudinaryProperties.class,
+                ConsentProperties.class,
+                DataExportProperties.class,
                 GeographyCacheProperties.class,
                 IdentityMediaProperties.class,
                 JwtProperties.class,

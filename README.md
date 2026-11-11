@@ -9,7 +9,11 @@ The project is structured as a multi-module Gradle build:
 ```text
 aionn-modulith-backend/
 ├── app/                  # Application composition root, Spring Boot startup, security & configuration
-├── shared-kernel/        # Inter-module contracts, application ports, shared Value Objects, outbox primitives
+├── shared/
+│   ├── kernel/           # Shared Value Objects, domain primitives, outbox contracts
+│   ├── contracts/        # Inter-module integration events and query ports
+│   ├── infrastructure/   # Web, outbox, caching and provider adapters shared by modules
+│   └── bom/              # Published platform BOM for the shared modules
 ├── modules/
 │   ├── identity/         # User accounts, authentication, JWT tokens, RBAC, address management
 │   ├── catalog/          # Products, categories, brands, variants, OpenSearch indexing
@@ -39,36 +43,35 @@ aionn-modulith-backend/
 
 ### 1. Environment Configuration
 
-Copy the sample environment variables:
+Create the per-module environment files in `envs/` (11 files, git-ignored):
 
 ```powershell
-Copy-Item .env.example .env
+powershell -ExecutionPolicy Bypass -File scripts/dev/init-local-env.ps1
 ```
 
-_(Alternatively, initialize per-module environment files in `envs/`: `powershell -ExecutionPolicy Bypass -File scripts/dev/init-local-env.ps1`)_
+Then replace the local credentials in `envs/common.env` (database/Redis passwords, provider keys). A `envs/<module>.env` file only needs the keys that differ from `common.env`; anything unset falls back to the application YAML defaults.
 
 ### 2. Start Infrastructure Dependencies
 
 Spin up PostgreSQL 16, Redis 7, and OpenSearch 2.18:
 
 ```powershell
-docker compose --env-file .env -f docker/docker-compose.yml up -d
+docker compose --env-file envs/common.env -f docker/docker-compose.yml up -d
 ```
 
 ### 3. Run the Backend Application
 
-```powershell
-# Set dev profile and export environment variables
-$env:SPRING_PROFILES_ACTIVE = "dev"
-Get-Content .env | Where-Object { $_ -and -not $_.StartsWith('#') } | ForEach-Object {
-    $name, $value = $_ -split '=', 2
-    [Environment]::SetEnvironmentVariable($name, $value, 'Process')
-}
+Spring Boot does not read `envs/*.env` by itself, so start the application through a wrapper that exports them:
 
-./gradlew.bat :app:bootRun
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/dev/start-local-backend.ps1
 ```
 
-_(Or run directly via script: `powershell -ExecutionPolicy Bypass -File scripts/dev/start-local-backend.ps1`)_
+```bash
+make run
+```
+
+Running `./gradlew :app:bootRun` directly only sees variables already exported in your shell; without them the YAML defaults apply (PostgreSQL 5434, Redis 6379), which do not match the Compose ports.
 
 Once started:
 

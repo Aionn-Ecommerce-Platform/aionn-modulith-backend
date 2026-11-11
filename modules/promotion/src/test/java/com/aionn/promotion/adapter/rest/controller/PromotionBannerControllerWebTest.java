@@ -1,7 +1,12 @@
 package com.aionn.promotion.adapter.rest.controller;
 
+import com.aionn.promotion.application.dto.common.PageResult;
+
+import com.aionn.promotion.adapter.rest.mapper.banner.PromotionBannerDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.promotion.adapter.rest.exception.PromotionExceptionHandler;
-import com.aionn.promotion.adapter.rest.mapper.banner.PromotionBannerDtoMapperImpl;
 import com.aionn.promotion.application.dto.banner.command.BannerCommands;
 import com.aionn.promotion.application.dto.banner.result.PromotionBannerResult;
 import com.aionn.promotion.application.port.in.banner.CreateBannerInputPort;
@@ -16,7 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -58,7 +63,7 @@ class PromotionBannerControllerWebTest {
         PromotionBannerController controller = new PromotionBannerController(
                 listActiveBannersInputPort, listAllBannersInputPort, getBannerInputPort,
                 createBannerInputPort, updateBannerInputPort, deleteBannerInputPort,
-                new PromotionBannerDtoMapperImpl());
+                Mappers.getMapper(PromotionBannerDtoMapper.class));
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new PromotionExceptionHandler())
@@ -75,7 +80,7 @@ class PromotionBannerControllerWebTest {
     @Test
     void publicListReturnsActiveBanners() throws Exception {
         when(listActiveBannersInputPort.execute(any()))
-                .thenReturn(new com.aionn.promotion.application.dto.common.PageResult<>(
+                .thenReturn(new PageResult<>(
                         List.of(sample("BAN_1")), 0, 20, 1));
 
         mockMvc.perform(get("/api/v1/promotions/banners"))
@@ -88,7 +93,7 @@ class PromotionBannerControllerWebTest {
     @Test
     void adminListReturnsAllBanners() throws Exception {
         when(listAllBannersInputPort.execute(any()))
-                .thenReturn(new com.aionn.promotion.application.dto.common.PageResult<>(
+                .thenReturn(new PageResult<>(
                         List.of(sample("BAN_1"), sample("BAN_2")), 0, 20, 2));
 
         mockMvc.perform(get("/api/v1/promotions/banners/admin"))

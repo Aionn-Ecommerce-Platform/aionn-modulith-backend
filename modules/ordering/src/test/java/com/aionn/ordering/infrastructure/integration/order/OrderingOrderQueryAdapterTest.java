@@ -2,7 +2,7 @@ package com.aionn.ordering.infrastructure.integration.order;
 
 import com.aionn.ordering.infrastructure.persistence.entity.OrderEntity;
 import com.aionn.ordering.infrastructure.persistence.repository.OrderRepository;
-import com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort;
+import com.aionn.contracts.port.ordering.OrderQueryPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -41,6 +41,19 @@ class OrderingOrderQueryAdapterTest {
         when(orderJpaRepository.existsByMerchantIdAndStatusNotIn(eq("m-1"), anyList())).thenReturn(true);
 
         assertTrue(adapter.hasOpenOrdersForMerchant("m-1"));
+    }
+
+    @Test
+    void hasOpenOrdersForUserReturnsFalseWhenBlank() {
+        assertFalse(adapter.hasOpenOrdersForUser(null));
+        assertFalse(adapter.hasOpenOrdersForUser("  "));
+    }
+
+    @Test
+    void hasOpenOrdersForUserQueriesRepository() {
+        when(orderJpaRepository.existsByUserIdAndStatusNotIn(eq("usr-1"), anyList())).thenReturn(true);
+
+        assertTrue(adapter.hasOpenOrdersForUser("usr-1"));
     }
 
     @Test

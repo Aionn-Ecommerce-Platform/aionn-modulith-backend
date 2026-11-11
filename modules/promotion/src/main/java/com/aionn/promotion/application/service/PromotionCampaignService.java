@@ -1,6 +1,7 @@
 package com.aionn.promotion.application.service;
 
 import com.aionn.promotion.application.dto.campaign.command.CampaignCommands;
+import com.aionn.promotion.application.policy.PromotionDefaultsPolicy;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.promotion.application.port.out.PromotionCampaignPersistencePort;
 import com.aionn.promotion.application.port.out.VoucherPersistencePort;
@@ -13,6 +14,7 @@ import com.aionn.promotion.domain.valueobject.PromotionCondition;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,10 +31,12 @@ public class PromotionCampaignService {
     private final PromotionCampaignPersistencePort campaignRepository;
     private final VoucherPersistencePort voucherRepository;
     private final EventPublisher eventPublisher;
+    private final PromotionDefaultsPolicy defaultsPolicy;
     private final Clock clock;
 
     public PromotionCampaign create(CampaignCommands.CreateCampaign command) {
-        Money budget = Money.of(command.budget(), command.currency() == null ? "VND" : command.currency());
+        Money budget = Money.of(command.budget(),
+                command.currency() == null ? defaultsPolicy.defaultCurrency() : command.currency());
         PromotionCampaign c = PromotionCampaign.create(IdGenerator.ulid(),
                 command.name(), command.type(), budget,
                 command.startDate(), command.endDate(), command.createdBy(), clock);
@@ -85,9 +89,18 @@ public class PromotionCampaignService {
         }
         Money discount = Money.of(command.discountAmount(),
                 command.currency() == null ? campaign.getBudget().currency() : command.currency());
-        Voucher v = Voucher.issue(command.voucherCode(), campaign.getCampaignId(),
+        if (!discount.currency().equalsIgnoreCase(campaign.getBudget().currency())) {
+            throw new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
+                    "Voucher currency must match the campaign budget currency");
+        }
+        Voucher v = Voucher.issue(command.voucherCode(), campaign.getCampaignId(), command.type(),
                 discount, command.usageLimit(), command.validFrom(), command.validUntil(), clock);
-        Voucher saved = voucherRepository.save(v);
+        Voucher saved;
+        try {
+            saved = voucherRepository.save(v);
+        } catch (DataIntegrityViolationException ex) {
+            throw new PromotionException(PromotionErrorCode.VOUCHER_DUPLICATE_CODE);
+        }
         eventPublisher.publish(v.pullEvents());
         return saved;
     }

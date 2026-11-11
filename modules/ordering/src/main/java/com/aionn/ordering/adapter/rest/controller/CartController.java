@@ -7,7 +7,7 @@ import com.aionn.ordering.adapter.rest.dto.response.CartResponse;
 import com.aionn.ordering.adapter.rest.mapper.OrderingDtoMapper;
 import com.aionn.ordering.adapter.rest.support.session.CurrentUserId;
 import com.aionn.ordering.application.port.in.cart.*;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

@@ -9,15 +9,18 @@ public interface AddressPersistencePort {
 
     List<Address> findByUserId(String userId);
 
-    long countByUserId(String userId);
-
     Address createAtomically(Address address, long maxAddressNumbers, boolean makeDefaultWhenFirst);
 
     Address save(Address address);
 
-    Optional<Address> findByAddressIdAndUserId(String addressId, String userId);
+    /**
+     * Makes the supplied address the only default for its owner. The owner row is locked for
+     * the duration so concurrent operations cannot both clear-then-set and leave zero/two
+     * defaults (which would also trip the partial unique index).
+     */
+    Address setDefault(Address address);
 
-    void clearDefaultByUserId(String userId);
+    Optional<Address> findByAddressIdAndUserId(String addressId, String userId);
 
     void delete(Address address);
 }

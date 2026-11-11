@@ -1,10 +1,10 @@
 package com.aionn.shipping.infrastructure.integration;
 
 import com.aionn.shipping.domain.event.ShipmentEvents;
-import com.aionn.sharedkernel.integration.event.shipping.ShipmentCancelledIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.shipping.ShipmentDeliveredIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.shipping.ShipmentDispatchedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.shipping.ShipmentRegisteredIntegrationEvent;
+import com.aionn.contracts.event.shipping.ShipmentCancelledIntegrationEvent;
+import com.aionn.contracts.event.shipping.ShipmentDeliveredIntegrationEvent;
+import com.aionn.contracts.event.shipping.ShipmentDispatchedIntegrationEvent;
+import com.aionn.contracts.event.shipping.ShipmentRegisteredIntegrationEvent;
 import org.springframework.stereotype.Component;
 
 @Component

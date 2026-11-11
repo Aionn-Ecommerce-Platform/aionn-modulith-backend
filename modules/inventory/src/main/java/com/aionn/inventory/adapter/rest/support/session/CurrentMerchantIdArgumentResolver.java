@@ -2,7 +2,7 @@ package com.aionn.inventory.adapter.rest.support.session;
 
 import com.aionn.inventory.domain.exception.InventoryErrorCode;
 import com.aionn.inventory.domain.exception.InventoryException;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantOwnershipVerifierPort;
+import com.aionn.contracts.port.catalog.MerchantOwnershipVerifierPort;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.MethodParameter;

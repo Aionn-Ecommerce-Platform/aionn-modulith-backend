@@ -1,8 +1,19 @@
 recommendation:
+  serving:
+    seed-lookback-days: ${RECOMMENDATION_SERVING_SEED_LOOKBACK_DAYS:30}
+    seed-limit: ${RECOMMENDATION_SERVING_SEED_LIMIT:20}
+    max-page-size: ${RECOMMENDATION_SERVING_MAX_PAGE_SIZE:50}
+    max-flash-sale-share: ${RECOMMENDATION_SERVING_MAX_FLASH_SALE_SHARE:0.40}
+    category-candidate-overshoot: ${RECOMMENDATION_SERVING_CATEGORY_CANDIDATE_OVERSHOOT:5}
   weights:
     view:
       base: ${RECOMMENDATION_WEIGHT_VIEW_BASE:1.0}
       half-life-days: ${RECOMMENDATION_WEIGHT_VIEW_HALF_LIFE_DAYS:14}
+    # Search intent is weaker than a view and decays faster: filtering for a
+    # category once says little compared with actually opening a product.
+    search:
+      base: ${RECOMMENDATION_WEIGHT_SEARCH_BASE:0.5}
+      half-life-days: ${RECOMMENDATION_WEIGHT_SEARCH_HALF_LIFE_DAYS:7}
     cart-add:
       base: ${RECOMMENDATION_WEIGHT_CART_ADD_BASE:4.0}
       half-life-days: ${RECOMMENDATION_WEIGHT_CART_ADD_HALF_LIFE_DAYS:30}

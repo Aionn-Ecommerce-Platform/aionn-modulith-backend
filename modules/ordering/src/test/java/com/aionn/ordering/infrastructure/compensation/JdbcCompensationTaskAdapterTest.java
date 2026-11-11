@@ -4,6 +4,7 @@ import com.aionn.ordering.application.port.out.CompensationTaskPort.Task;
 import com.aionn.ordering.application.port.out.CompensationTaskPort.Type;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -41,10 +42,9 @@ class JdbcCompensationTaskAdapterTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void findByIdMapsARetryableRow() throws Exception {
-        ArgumentCaptor<RowMapper<Task>> mapper = ArgumentCaptor.forClass(RowMapper.class);
-        when(jdbc.query(anyString(), any(RowMapper.class), eq("task-1"))).thenReturn(List.of());
+        ArgumentCaptor<RowMapper<Task>> mapper = ArgumentCaptor.captor();
+        when(jdbc.query(anyString(), ArgumentMatchers.<RowMapper<Task>>any(), eq("task-1"))).thenReturn(List.of());
 
         adapter.findById("task-1");
 
@@ -68,18 +68,16 @@ class JdbcCompensationTaskAdapterTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void findByIdReturnsEmptyWhenNoRowIsRetryable() {
-        when(jdbc.query(anyString(), any(RowMapper.class), eq("missing"))).thenReturn(List.of());
+        when(jdbc.query(anyString(), ArgumentMatchers.<RowMapper<Task>>any(), eq("missing"))).thenReturn(List.of());
 
         assertThat(adapter.findById("missing")).isEmpty();
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void findByIdReturnsTheFirstMatchingRow() {
         Task task = new Task("task-1", Type.RESERVATION_RELEASE, "res-1", "user-1", "order-1", "aborted", 1);
-        when(jdbc.query(anyString(), any(RowMapper.class), eq("task-1"))).thenReturn(List.of(task));
+        when(jdbc.query(anyString(), ArgumentMatchers.<RowMapper<Task>>any(), eq("task-1"))).thenReturn(List.of(task));
 
         assertThat(adapter.findById("task-1")).contains(task);
     }

@@ -1,0 +1,31 @@
+package com.aionn.contracts.event.payment;
+
+import com.aionn.contracts.event.IntegrationEvent;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Objects;
+
+public record PaymentPaidIntegrationEvent(
+        String eventId,
+        String paymentId,
+        String orderId,
+        BigDecimal amount,
+        String currency,
+        String gateway,
+        String transactionNo,
+        Instant occurredAt) implements IntegrationEvent.PaymentScoped {
+
+    public PaymentPaidIntegrationEvent {
+        eventId = IntegrationEvent.requireEventId(eventId);
+        amount = Objects.requireNonNull(amount, "amount must not be null");
+        if (amount.signum() < 0) {
+            throw new IllegalArgumentException("amount must not be negative");
+        }
+        currency = Objects.requireNonNull(currency, "currency must not be null");
+        if (currency.isBlank()) {
+            throw new IllegalArgumentException("currency must not be blank");
+        }
+        occurredAt = IntegrationEvent.defaultOccurredAt(occurredAt);
+    }
+}

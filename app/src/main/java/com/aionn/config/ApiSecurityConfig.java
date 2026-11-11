@@ -1,25 +1,31 @@
 package com.aionn.config;
 
-import com.aionn.sharedkernel.infrastructure.web.security.SecurityIpProperties;
+import com.aionn.platform.infrastructure.web.security.SecurityIpProperties;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import java.util.Arrays;
 import java.util.List;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.aionn.identity.infrastructure.security.web.BearerAuthenticationFilter;
+import com.aionn.ucp.adapter.rest.filter.UcpAgentAuthenticationFilter;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
@@ -30,20 +36,30 @@ public class ApiSecurityConfig {
 
         private final String allowedOrigins;
         private final BearerAuthenticationFilter bearerAuthenticationFilter;
+        private final ObjectProvider<UcpAgentAuthenticationFilter> ucpAgentAuthenticationFilter;
 
         public ApiSecurityConfig(
                         @Value("${SECURITY_CORS_ALLOWED_ORIGINS:}") String allowedOrigins,
-                        BearerAuthenticationFilter bearerAuthenticationFilter) {
+                        BearerAuthenticationFilter bearerAuthenticationFilter,
+                        ObjectProvider<UcpAgentAuthenticationFilter> ucpAgentAuthenticationFilter) {
                 this.allowedOrigins = allowedOrigins;
                 this.bearerAuthenticationFilter = bearerAuthenticationFilter;
+                this.ucpAgentAuthenticationFilter = ucpAgentAuthenticationFilter;
         }
 
         @Bean
-        @SuppressWarnings("java:S4502")
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+                CookieCsrfTokenRepository csrfTokenRepository = new CookieCsrfTokenRepository();
+                csrfTokenRepository.setCookieCustomizer(cookie -> cookie
+                                .httpOnly(true)
+                                .sameSite("Lax")
+                                .path("/"));
                 http
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                                .csrf(AbstractHttpConfigurer::disable)
+                                .csrf(csrf -> csrf
+                                                .csrfTokenRepository(csrfTokenRepository)
+                                                .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                                                .requireCsrfProtectionMatcher(ApiSecurityConfig::requiresCsrfProtection))
                                 .headers(headers -> headers
                                                 .contentTypeOptions(opt -> {
                                                 })
@@ -68,6 +84,7 @@ public class ApiSecurityConfig {
                                                 .permitAll()
                                                 .requestMatchers(HttpMethod.GET,
                                                                 "/.well-known/ucp",
+                                                                "/api/v1/auth/csrf",
                                                                 "/api/v1/geography/**",
                                                                 "/api/v1/catalog/**",
                                                                 "/api/v1/inventory/items",
@@ -99,6 +116,9 @@ public class ApiSecurityConfig {
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
+                ucpAgentAuthenticationFilter.ifAvailable(
+                                filter -> http.addFilterAfter(filter, BearerAuthenticationFilter.class));
+
                 return http.build();
         }
 
@@ -121,7 +141,11 @@ public class ApiSecurityConfig {
                                 "X-Request-Id",
                                 "Idempotency-Key",
                                 "X-Idempotency-Key",
+                                "X-UCP-Api-Key",
+                                "UCP-Agent",
+                                "UCP-Version",
                                 "X-Forwarded-For",
+                                "X-XSRF-TOKEN",
                                 "Origin"));
                 cfg.setExposedHeaders(List.of("X-Request-Id", "Idempotent-Replay"));
                 cfg.setAllowCredentials(true);
@@ -132,8 +156,25 @@ public class ApiSecurityConfig {
                 return source;
         }
 
-        private List<String> resolveAllowedOrigins() {
-                return Arrays.stream(allowedOrigins.split(","))
+        /**
+         * CSRF is required only when the request authenticates through the HttpOnly refresh cookie.
+         * Bearer-authenticated requests cannot be forged cross-site: a browser never attaches the
+         * {@code Authorization} header on its own, so they stay exempt.
+         */
+        static boolean requiresCsrfProtection(HttpServletRequest request) {
+                String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
+                if (authorization != null && !authorization.isBlank()) {
+                        return false;
+                }
+                Cookie[] cookies = request.getCookies();
+                if (cookies == null) {
+                        return false;
+                }
+                return Arrays.stream(cookies)
+                                .anyMatch(cookie -> "refresh_token".equals(cookie.getName()));
+        }
+
+        private List<String> resolveAllowedOrigins() {                return Arrays.stream(allowedOrigins.split(","))
                                 .map(String::trim)
                                 .filter(value -> !value.isBlank())
                                 .toList();

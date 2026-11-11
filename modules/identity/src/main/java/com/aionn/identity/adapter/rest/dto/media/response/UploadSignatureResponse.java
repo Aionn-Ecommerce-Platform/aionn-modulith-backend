@@ -6,7 +6,8 @@ public record UploadSignatureResponse(
         String apiKey,
         String cloudName,
         String uploadUrl,
-        String folder) {
+        String folder,
+        String type) {
 }
 
 

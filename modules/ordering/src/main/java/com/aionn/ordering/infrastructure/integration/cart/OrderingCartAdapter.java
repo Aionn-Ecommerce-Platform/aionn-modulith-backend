@@ -3,7 +3,7 @@ package com.aionn.ordering.infrastructure.integration.cart;
 import com.aionn.ordering.application.port.out.CartPersistencePort;
 import com.aionn.ordering.domain.model.Cart;
 import com.aionn.sharedkernel.application.port.EventPublisher;
-import com.aionn.sharedkernel.integration.port.ordering.CartOperationsPort;
+import com.aionn.contracts.port.ordering.CartOperationsPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;

@@ -1,5 +1,7 @@
 package com.aionn.identity.infrastructure.persistence.adapter.analytics;
 
+import java.time.temporal.ChronoUnit;
+
 import com.aionn.identity.application.dto.analytics.result.FeedbackAnalyticsResult;
 import com.aionn.identity.application.dto.analytics.result.KycAnalyticsResult;
 import com.aionn.identity.application.dto.analytics.result.UserAnalyticsResult;
@@ -85,10 +87,13 @@ public class IdentityAnalyticsAdapter
         for (var row : kycRepository.countByStatus()) {
             long cnt = row.getCnt() == null ? 0 : row.getCnt();
             switch (row.getStatus()) {
-                case "PENDING" -> pending = cnt;
+                case "SUBMITTED" -> {
+                    submitted = cnt;
+                    pending += cnt;
+                }
+                case "IN_REVIEW" -> pending += cnt;
                 case "APPROVED" -> approved = cnt;
                 case "REJECTED" -> rejected = cnt;
-                case "SUBMITTED" -> submitted = cnt;
                 default -> {
                 }
             }
@@ -169,7 +174,7 @@ public class IdentityAnalyticsAdapter
         if (from.isAfter(to)) {
             throw new IllegalArgumentException("from must be on or before to");
         }
-        if (java.time.temporal.ChronoUnit.DAYS.between(from, to) > MAX_RANGE_DAYS) {
+        if (ChronoUnit.DAYS.between(from, to) > MAX_RANGE_DAYS) {
             throw new IllegalArgumentException(
                     "Analytics range must not exceed " + MAX_RANGE_DAYS + " days");
         }

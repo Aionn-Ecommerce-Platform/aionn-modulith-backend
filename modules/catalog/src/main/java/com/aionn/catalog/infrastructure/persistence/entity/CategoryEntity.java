@@ -1,5 +1,11 @@
 package com.aionn.catalog.infrastructure.persistence.entity;
 
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.OneToMany;
+import java.util.ArrayList;
+import java.util.List;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -56,7 +62,7 @@ public class CategoryEntity {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
-    @jakarta.persistence.OneToMany(mappedBy = "category", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true, fetch = jakarta.persistence.FetchType.LAZY)
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
-    private java.util.List<CategoryTranslationEntity> translations = new java.util.ArrayList<>();
+    private List<CategoryTranslationEntity> translations = new ArrayList<>();
 }

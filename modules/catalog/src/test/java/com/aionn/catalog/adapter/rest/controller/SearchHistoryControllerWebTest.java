@@ -1,5 +1,7 @@
 package com.aionn.catalog.adapter.rest.controller;
 
+import java.util.Map;
+
 import com.aionn.catalog.adapter.rest.exception.CatalogExceptionHandler;
 import com.aionn.catalog.adapter.rest.mapper.searchhistory.SearchHistoryDtoMapper;
 import com.aionn.catalog.adapter.rest.support.MockSecurityInterceptor;
@@ -8,7 +10,7 @@ import com.aionn.catalog.adapter.rest.support.session.CurrentOwnerIdArgumentReso
 import com.aionn.catalog.application.dto.searchhistory.command.RecordSearchesCommand;
 import com.aionn.catalog.application.port.in.searchhistory.GetRecentSearchesInputPort;
 import com.aionn.catalog.application.port.in.searchhistory.RecordSearchesInputPort;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -77,7 +79,7 @@ class SearchHistoryControllerWebTest {
                         .with(TestAuth.authUser(USER_ID, "BUYER"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                java.util.Map.of("queries", List.of("tablet", "laptop")))))
+                                Map.of("queries", List.of("tablet", "laptop")))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.queries[0]").value("tablet"));
 
@@ -99,7 +101,7 @@ class SearchHistoryControllerWebTest {
         mockMvc.perform(post("/api/v1/catalog/search-history")
                         .with(TestAuth.authUser(USER_ID, "BUYER"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(java.util.Map.of(
+                        .content(objectMapper.writeValueAsString(Map.of(
                                 "queries", List.of("1", "2", "3", "4", "5", "6")))))
                 .andExpect(status().isBadRequest());
     }

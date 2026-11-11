@@ -1,5 +1,7 @@
 package com.aionn.identity.infrastructure.auth.jwt;
 
+import java.time.Clock;
+
 import com.aionn.identity.application.port.out.auth.AccessTokenClaims;
 import com.aionn.identity.infrastructure.config.properties.JwtProperties;
 import org.junit.jupiter.api.Test;
@@ -17,7 +19,7 @@ class AccessTokenIssuerAdapterTest {
     private static final String ISSUER = "aionn-identity-test";
 
     private final AccessTokenIssuerAdapter adapter = new AccessTokenIssuerAdapter(
-            new JwtProperties(ISSUER, SECRET, 15), java.time.Clock.systemUTC());
+            new JwtProperties(ISSUER, SECRET, 15), Clock.systemUTC());
 
     @Test
     void issuedTokenIsParsable() {
@@ -40,7 +42,7 @@ class AccessTokenIssuerAdapterTest {
     @Test
     void parseClaimsRejectsTokenSignedByDifferentSecret() {
         var altAdapter = new AccessTokenIssuerAdapter(
-                new JwtProperties(ISSUER, "different-secret-also-32-bytes-long-12345678", 15), java.time.Clock.systemUTC());
+                new JwtProperties(ISSUER, "different-secret-also-32-bytes-long-12345678", 15), Clock.systemUTC());
         String token = altAdapter.issueAccessToken(
                 "user-1", "session-1", Instant.now().plus(1, ChronoUnit.HOURS), Set.of());
 
@@ -52,7 +54,7 @@ class AccessTokenIssuerAdapterTest {
     @Test
     void parseClaimsRejectsTokenWithDifferentIssuer() {
         var altAdapter = new AccessTokenIssuerAdapter(
-                new JwtProperties("other-issuer", SECRET, 15), java.time.Clock.systemUTC());
+                new JwtProperties("other-issuer", SECRET, 15), Clock.systemUTC());
         String token = altAdapter.issueAccessToken(
                 "user-1", "session-1", Instant.now().plus(1, ChronoUnit.HOURS), Set.of());
 
@@ -94,7 +96,7 @@ class AccessTokenIssuerAdapterTest {
 
     @Test
     void issuingFailsWithoutSecret() {
-        var badAdapter = new AccessTokenIssuerAdapter(new JwtProperties(ISSUER, "", 15), java.time.Clock.systemUTC());
+        var badAdapter = new AccessTokenIssuerAdapter(new JwtProperties(ISSUER, "", 15), Clock.systemUTC());
 
         assertThrows(IllegalStateException.class,
                 () -> badAdapter.issueAccessToken("user-1", "session-1",

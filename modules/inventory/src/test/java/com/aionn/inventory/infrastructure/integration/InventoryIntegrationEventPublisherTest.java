@@ -6,8 +6,8 @@ import com.aionn.inventory.application.port.out.WarehousePersistencePort;
 import com.aionn.inventory.domain.event.InventoryItemEvents;
 import com.aionn.inventory.domain.event.StockReservationEvents;
 import com.aionn.inventory.domain.model.Warehouse;
-import com.aionn.sharedkernel.integration.event.inventory.*;
-import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.contracts.event.inventory.*;
+import com.aionn.contracts.publisher.IntegrationEventPublisher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -40,7 +40,7 @@ class InventoryIntegrationEventPublisherTest {
     @Test
     void onStockReservedPublishesIntegrationEvent() {
         StockReservationEvents.StockReserved domainEvent = new StockReservationEvents.StockReserved(
-                "res-1", "sku-1", "wh-1", 10, OCCURRED_AT.plusSeconds(3600), OCCURRED_AT
+                "res-1", "sku-1", "wh-1", "ORDER_1", 10, OCCURRED_AT.plusSeconds(3600), OCCURRED_AT
         );
         StockReservedIntegrationEvent integrationEvent = mock(StockReservedIntegrationEvent.class);
         when(mapper.toIntegrationEvent(domainEvent)).thenReturn(integrationEvent);
@@ -53,7 +53,7 @@ class InventoryIntegrationEventPublisherTest {
     @Test
     void onStockReservationFailedPublishesIntegrationEvent() {
         StockReservationEvents.StockReservationFailed domainEvent = new StockReservationEvents.StockReservationFailed(
-                "res-1", "sku-1", "wh-1", 10, "reason", OCCURRED_AT
+                "res-1", "sku-1", "wh-1", "ORDER_1", 10, "reason", OCCURRED_AT
         );
         StockReservationFailedIntegrationEvent integrationEvent = mock(StockReservationFailedIntegrationEvent.class);
         when(mapper.toIntegrationEvent(domainEvent)).thenReturn(integrationEvent);

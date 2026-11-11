@@ -4,9 +4,11 @@ import com.aionn.payment.application.port.out.StripeConnectPort;
 import com.aionn.payment.domain.exception.PaymentErrorCode;
 import com.aionn.payment.domain.exception.PaymentException;
 import com.aionn.payment.infrastructure.provider.config.StripeConnectProperties;
+import com.aionn.payment.infrastructure.provider.config.StripeProperties;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Account;
 import com.stripe.model.AccountLink;
+import com.stripe.net.RequestOptions;
 import com.stripe.param.AccountCreateParams;
 import com.stripe.param.AccountLinkCreateParams;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,7 @@ import java.util.Optional;
 public class StripeConnectAdapter implements StripeConnectPort {
 
     private final StripeConnectProperties properties;
+    private final StripeProperties stripeProperties;
 
     @Override
     public String createExpressAccount(String merchantId) {
@@ -32,7 +35,7 @@ public class StripeConnectAdapter implements StripeConnectPort {
                             .setTransfers(AccountCreateParams.Capabilities.Transfers.builder()
                                     .setRequested(true).build())
                             .build())
-                    .build());
+                    .build(), requestOptions());
             return account.getId();
         } catch (StripeException ex) {
             throw providerFailure(ex);
@@ -47,7 +50,7 @@ public class StripeConnectAdapter implements StripeConnectPort {
                     .setRefreshUrl(properties.refreshUrl())
                     .setReturnUrl(properties.returnUrl())
                     .setType(AccountLinkCreateParams.Type.ACCOUNT_ONBOARDING)
-                    .build());
+                    .build(), requestOptions());
             return link.getUrl();
         } catch (StripeException ex) {
             throw providerFailure(ex);
@@ -57,7 +60,7 @@ public class StripeConnectAdapter implements StripeConnectPort {
     @Override
     public Optional<AccountCapabilities> fetchAccountCapabilities(String stripeAccountId) {
         try {
-            Account account = Account.retrieve(stripeAccountId);
+            Account account = Account.retrieve(stripeAccountId, requestOptions());
             String merchantId = account.getMetadata() == null ? null : account.getMetadata().get("merchantId");
             return Optional.of(new AccountCapabilities(account.getId(), merchantId,
                     Boolean.TRUE.equals(account.getChargesEnabled()),
@@ -70,5 +73,9 @@ public class StripeConnectAdapter implements StripeConnectPort {
     private PaymentException providerFailure(StripeException ex) {
         return new PaymentException(PaymentErrorCode.PAYMENT_GATEWAY_ERROR,
                 "Stripe Connect error: " + ex.getMessage());
+    }
+
+    private RequestOptions requestOptions() {
+        return RequestOptions.builder().setApiKey(stripeProperties.apiKey()).build();
     }
 }

@@ -1,8 +1,8 @@
 package com.aionn.ucp.application.cart;
 
-import com.aionn.sharedkernel.integration.port.catalog.CatalogQueryPort;
-import com.aionn.sharedkernel.integration.port.catalog.PricingQueryPort;
-import com.aionn.sharedkernel.integration.port.ordering.CartOperationsPort;
+import com.aionn.contracts.port.catalog.CatalogQueryPort;
+import com.aionn.contracts.port.catalog.PricingQueryPort;
+import com.aionn.contracts.port.ordering.CartOperationsPort;
 import com.aionn.sharedkernel.util.IdGenerator;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpCartRequest;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpCartResponse;
@@ -11,6 +11,8 @@ import com.aionn.ucp.adapter.rest.dto.cart.UcpLineItemRequest;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpLineItemResponse;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpResponseMetadata;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpTotalResponse;
+import com.aionn.ucp.application.UcpProtocolConstants;
+import com.aionn.ucp.application.policy.UcpProtocolPolicy;
 import com.aionn.ucp.application.port.out.UcpSchemaValidationPort;
 import com.aionn.ucp.domain.exception.UcpProtocolException;
 import com.aionn.ucp.domain.util.UcpCurrencyUtil;
@@ -18,7 +20,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,14 +29,14 @@ import org.springframework.stereotype.Service;
 @Service
 public class UcpCartApplicationService {
 
-    public static final String CART_SCHEMA_URI = "https://ucp.dev/schemas/shopping/cart.json";
-    public static final String PROTOCOL_VERSION = "2026-08-25";
-    private static final long CART_EXPIRY_DAYS = 7;
+    public static final String CART_SCHEMA_URI = UcpProtocolConstants.CART_SCHEMA_URI;
+    private static final int MAX_LINE_ITEMS = 100;
 
     private final CartOperationsPort cartPort;
     private final PricingQueryPort pricingPort;
     private final CatalogQueryPort catalogQueryPort;
     private final UcpSchemaValidationPort schemaValidator;
+    private final UcpProtocolPolicy protocolPolicy;
     private final Clock clock;
     private final ObjectMapper objectMapper;
 
@@ -44,11 +45,13 @@ public class UcpCartApplicationService {
             PricingQueryPort pricingPort,
             CatalogQueryPort catalogQueryPort,
             UcpSchemaValidationPort schemaValidator,
+            UcpProtocolPolicy protocolPolicy,
             Clock clock) {
         this.cartPort = cartPort;
         this.pricingPort = pricingPort;
         this.catalogQueryPort = catalogQueryPort;
         this.schemaValidator = schemaValidator;
+        this.protocolPolicy = protocolPolicy;
         this.clock = clock;
         this.objectMapper = new ObjectMapper();
     }
@@ -126,6 +129,10 @@ public class UcpCartApplicationService {
             throw new UcpProtocolException(400, "invalid_request", "Cart must contain at least one line item", "error",
                     "$.line_items");
         }
+        if (lineItems.size() > MAX_LINE_ITEMS) {
+            throw new UcpProtocolException(400, "invalid_request",
+                    "Cart must contain at most " + MAX_LINE_ITEMS + " line items", "error", "$.line_items");
+        }
 
         List<String> skuIds = new ArrayList<>();
         for (int i = 0; i < lineItems.size(); i++) {
@@ -146,7 +153,7 @@ public class UcpCartApplicationService {
         for (int i = 0; i < skuIds.size(); i++) {
             String skuId = skuIds.get(i);
             PricingQueryPort.SkuPricing pricing = pricingMap.get(skuId);
-            if (pricing == null || !pricing.active()) {
+            if (pricing == null || !pricing.active() || pricing.price() == null) {
                 throw new UcpProtocolException(400, "item_not_found", "Item not found or inactive: " + skuId, "error",
                         "$.line_items[" + i + "].item.id");
             }
@@ -188,7 +195,7 @@ public class UcpCartApplicationService {
         Map<String, PricingQueryPort.SkuPricing> pricingMap = skuIds.isEmpty() ? Map.of()
                 : pricingPort.resolvePricing(skuIds);
 
-        String currency = "USD";
+        String currency = protocolPolicy.marketCurrency();
         String resolvedCurrency = null;
         List<UcpLineItemResponse> lineItemResponses = new ArrayList<>();
         long calculatedSubtotal = 0;
@@ -210,19 +217,23 @@ public class UcpCartApplicationService {
                 }
             }
 
-            long unitPriceMinor = 0;
-            if (pricing != null) {
-                if (pricing.currency() != null) {
-                    if (resolvedCurrency != null && !resolvedCurrency.equalsIgnoreCase(pricing.currency())) {
-                        throw new UcpProtocolException(400, "mixed_currency_not_supported",
-                                "Cart contains items with mixed currencies: " + resolvedCurrency + " and "
-                                        + pricing.currency(),
-                                "error", "$.line_items");
-                    }
-                    resolvedCurrency = pricing.currency();
-                }
-                unitPriceMinor = toMinorUnits(pricing.price(), resolvedCurrency != null ? resolvedCurrency : "USD");
+            // A SKU that became unavailable or unpriced between add-to-cart and this
+            // read must not be rendered at price 0.
+            if (pricing == null || !pricing.active() || pricing.price() == null) {
+                throw new UcpProtocolException(400, "item_not_found",
+                        "Item no longer available: " + skuId, "error", "$.line_items[].item.id");
             }
+            if (pricing.currency() != null) {
+                if (resolvedCurrency != null && !resolvedCurrency.equalsIgnoreCase(pricing.currency())) {
+                    throw new UcpProtocolException(400, "mixed_currency_not_supported",
+                            "Cart contains items with mixed currencies: " + resolvedCurrency + " and "
+                                    + pricing.currency(),
+                            "error", "$.line_items");
+                }
+                resolvedCurrency = pricing.currency();
+            }
+            long unitPriceMinor = toMinorUnits(pricing.price(),
+                    resolvedCurrency != null ? resolvedCurrency : protocolPolicy.marketCurrency());
 
             long itemTotal = unitPriceMinor * qty;
             calculatedSubtotal += itemTotal;
@@ -243,10 +254,10 @@ public class UcpCartApplicationService {
                 UcpTotalResponse.subtotal(calculatedSubtotal),
                 UcpTotalResponse.total(calculatedSubtotal));
 
-        UcpResponseMetadata ucpMetadata = UcpResponseMetadata.success(PROTOCOL_VERSION);
+        UcpResponseMetadata ucpMetadata = UcpResponseMetadata.success(UcpProtocolConstants.VERSION);
 
         Instant expiresAtInstant = (snapshot.createdAt() != null ? snapshot.createdAt() : clock.instant())
-                .plus(CART_EXPIRY_DAYS, ChronoUnit.DAYS);
+                .plus(protocolPolicy.cartExpiry());
 
         if (resolvedCurrency != null) {
             currency = resolvedCurrency;
@@ -268,9 +279,10 @@ public class UcpCartApplicationService {
 
     private void validateResponseSchema(UcpCartResponse response) {
         try {
-            schemaValidator.validate(CART_SCHEMA_URI, objectMapper.valueToTree(response));
+            schemaValidator.validate(UcpProtocolConstants.CART_SCHEMA_URI, objectMapper.valueToTree(response));
+        } catch (UcpProtocolException e) {
+            throw e;
         } catch (Exception e) {
-            // Re-throw if validation failed
             throw new UcpProtocolException(500, "schema_validation_error",
                     "Generated cart response failed schema validation: " + e.getMessage(), "error");
         }

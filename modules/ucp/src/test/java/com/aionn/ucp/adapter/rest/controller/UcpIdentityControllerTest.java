@@ -74,6 +74,29 @@ class UcpIdentityControllerTest {
         }
 
         @Test
+        void postLinkReturnsCreatedForMatchingPlatformCredential() throws Exception {
+                UcpIdentityLinkRequest request = new UcpIdentityLinkRequest(
+                                "google_assistant", "sub_123", "cust_456", List.of("orders.read"), Map.of());
+                UcpIdentityLinkResponse response = new UcpIdentityLinkResponse(
+                                "link_1", "google_assistant", "sub_123", "cust_456", "ACTIVE",
+                                List.of("orders.read"), Instant.now(), null, Map.of());
+
+                when(identityService.linkIdentity(any(), eq(null), eq("google_assistant")))
+                                .thenReturn(response);
+
+                UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                                "ucp:platform:google_assistant", null,
+                                List.of(new SimpleGrantedAuthority("ROLE_UCP_PLATFORM")));
+
+                mockMvc.perform(post("/ucp/v1/identity/links")
+                                .principal(auth)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.linkId").value("link_1"));
+        }
+
+        @Test
         void getLinkReturnsOkWhenAuthorized() throws Exception {
                 UcpIdentityLinkResponse response = new UcpIdentityLinkResponse(
                                 "link_1", "google_assistant", "sub_123", "cust_456", "ACTIVE",

@@ -10,13 +10,14 @@ import com.aionn.identity.adapter.rest.mapper.registration.RegistrationDtoMapper
 import com.aionn.identity.adapter.rest.support.client.AuthClientType;
 import com.aionn.identity.adapter.rest.support.client.ClientUserAgent;
 import com.aionn.identity.adapter.rest.support.response.AuthTokenResponseHandler;
+import com.aionn.identity.adapter.rest.support.response.NoStoreResponseFactory;
 import com.aionn.identity.application.port.in.registration.CompleteRegistrationInputPort;
 import com.aionn.identity.application.port.in.registration.InitiateRegistrationInputPort;
 import com.aionn.identity.application.port.in.registration.ResendRegistrationOtpInputPort;
 import com.aionn.identity.application.port.in.registration.VerifyRegistrationOtpInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
-import com.aionn.sharedkernel.adapter.web.support.clientip.ClientIp;
-import com.aionn.sharedkernel.adapter.web.support.idempotency.IdempotentRequest;
+import com.aionn.platform.web.response.ApiResponse;
+import com.aionn.platform.web.support.clientip.ClientIp;
+import com.aionn.platform.web.support.idempotency.IdempotentRequest;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,6 +38,7 @@ public class RegistrationController {
 	private final ResendRegistrationOtpInputPort resendRegistrationOtpInputPort;
 	private final RegistrationDtoMapper registrationDtoMapper;
 	private final AuthTokenResponseHandler authTokenResponseHandler;
+	private final NoStoreResponseFactory noStoreResponseFactory;
 
 	@Operation(summary = "Initiate registration", description = "Start registration and send OTP to user")
 	@PostMapping("/initiate")
@@ -46,15 +48,18 @@ public class RegistrationController {
 			@ClientIp String ipAddress) {
 		var result = initiateRegistrationInputPort.execute(registrationDtoMapper.toInitiateCommand(request, ipAddress));
 		RegistrationSessionResponse response = registrationDtoMapper.toInitiateResponse(result);
-		return ApiResponse.createdResponse("Registration initiated successfully!", response);
+		return noStoreResponseFactory.created(
+				ApiResponse.created("Registration initiated successfully!", response));
 	}
 
 	@Operation(summary = "Verify OTP", description = "Verify OTP for a registration session")
 	@PostMapping("/{regId}/verify-otp")
 	public ResponseEntity<ApiResponse<VerifyOtpResponse>> verifyOtp(
 			@PathVariable String regId,
-			@Valid @RequestBody VerifyOtpRequest request) {
-		var result = verifyRegistrationOtpInputPort.execute(registrationDtoMapper.toVerifyOtpCommand(regId, request));
+			@Valid @RequestBody VerifyOtpRequest request,
+			@ClientIp String ipAddress) {
+		var result = verifyRegistrationOtpInputPort.execute(
+				registrationDtoMapper.toVerifyOtpCommand(regId, request, ipAddress));
 		VerifyOtpResponse response = registrationDtoMapper.toVerifyOtpResponse(result);
 		return ResponseEntity.ok(ApiResponse.success(response, "OTP verified successfully!"));
 	}
@@ -81,7 +86,7 @@ public class RegistrationController {
 			@ClientIp String ipAddress) {
 		var result = resendRegistrationOtpInputPort.execute(registrationDtoMapper.toResendOtpCommand(regId, ipAddress));
 		RegistrationSessionResponse response = registrationDtoMapper.toResendOtpResponse(result);
-		return ResponseEntity.ok(ApiResponse.success(response, "OTP resent successfully!"));
+		return noStoreResponseFactory.ok(ApiResponse.success(response, "OTP resent successfully!"));
 	}
 
 }

@@ -1,5 +1,6 @@
 package com.aionn.catalog.application.dto.merchant.result;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 public record MerchantResult(
@@ -11,6 +12,7 @@ public record MerchantResult(
         String provinceCode,
         String provinceName,
         String status,
+        BigDecimal commissionRate,
         Instant createdAt,
         Instant updatedAt) {
 }

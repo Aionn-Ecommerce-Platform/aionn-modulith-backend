@@ -54,7 +54,7 @@ class VoucherAutoReleaseWorkerTest {
     void releasesTheReservationAndReturnsTheVoucherSlot() {
         UserVoucher uv = reservedUserVoucher();
         Voucher voucher = reservedVoucher();
-        when(userVoucherRepository.findById("UV-1")).thenReturn(Optional.of(uv));
+        when(userVoucherRepository.findByIdForUpdate("UV-1")).thenReturn(Optional.of(uv));
         when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(voucher));
 
         boolean released = worker.releaseOne("UV-1");
@@ -74,7 +74,7 @@ class VoucherAutoReleaseWorkerTest {
 
     @Test
     void skipsAUserVoucherThatNoLongerExists() {
-        when(userVoucherRepository.findById("missing")).thenReturn(Optional.empty());
+        when(userVoucherRepository.findByIdForUpdate("missing")).thenReturn(Optional.empty());
 
         assertThat(worker.releaseOne("missing")).isFalse();
 
@@ -85,7 +85,7 @@ class VoucherAutoReleaseWorkerTest {
     @Test
     void skipsAUserVoucherThatHoldsNoReservation() {
         UserVoucher claimedOnly = UserVoucher.claim("UV-2", "V-1", "user-1", CLOCK);
-        when(userVoucherRepository.findById("UV-2")).thenReturn(Optional.of(claimedOnly));
+        when(userVoucherRepository.findByIdForUpdate("UV-2")).thenReturn(Optional.of(claimedOnly));
 
         assertThat(worker.releaseOne("UV-2")).isFalse();
 
@@ -96,7 +96,7 @@ class VoucherAutoReleaseWorkerTest {
     @Test
     void stillReleasesTheUserVoucherWhenTheVoucherRowIsGone() {
         UserVoucher uv = reservedUserVoucher();
-        when(userVoucherRepository.findById("UV-1")).thenReturn(Optional.of(uv));
+        when(userVoucherRepository.findByIdForUpdate("UV-1")).thenReturn(Optional.of(uv));
         when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.empty());
 
         assertThat(worker.releaseOne("UV-1")).isTrue();

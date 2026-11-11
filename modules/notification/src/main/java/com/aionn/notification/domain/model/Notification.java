@@ -17,7 +17,7 @@ import java.time.Instant;
 @Getter
 public class Notification extends AggregateRoot {
 
-    private static final int MAX_RETRY = 3;
+    public static final int MAX_RETRY = 3;
 
     private final String notiId;
     private final String userId;
@@ -96,6 +96,9 @@ public class Notification extends AggregateRoot {
     }
 
     public void markSent(Clock clock) {
+        if (status == NotificationStatus.SENT || status == NotificationStatus.READ) {
+            return;
+        }
         ensureTransition(NotificationStatus.SENT);
         Instant now = clock.instant();
         this.status = NotificationStatus.SENT;
@@ -105,6 +108,10 @@ public class Notification extends AggregateRoot {
     }
 
     public void markFailed(String reason, Clock clock) {
+        if (status == NotificationStatus.SENT || status == NotificationStatus.READ
+                || status == NotificationStatus.DELETED) {
+            return;
+        }
         this.retryCount++;
         this.lastFailureReason = reason;
         Instant now = clock.instant();
@@ -121,6 +128,9 @@ public class Notification extends AggregateRoot {
     }
 
     public void markDeliveryUnknown(String reason, Clock clock) {
+        if (status == NotificationStatus.FAILED) {
+            return;
+        }
         ensureTransition(NotificationStatus.FAILED);
         retryCount++;
         lastFailureReason = "DELIVERY_OUTCOME_UNKNOWN:" + reason;

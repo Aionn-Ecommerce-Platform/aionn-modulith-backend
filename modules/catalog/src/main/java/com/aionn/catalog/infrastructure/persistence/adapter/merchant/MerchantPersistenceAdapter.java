@@ -24,7 +24,9 @@ public class MerchantPersistenceAdapter implements MerchantPersistencePort {
 
     @Override
     public Merchant save(Merchant merchant) {
-        var saved = jpa.save(mapper.toEntity(merchant));
+        MerchantEntity entity = mapper.toEntity(merchant);
+        jpa.findById(merchant.getMerchantId()).ifPresent(existing -> entity.setVersion(existing.getVersion()));
+        var saved = jpa.save(entity);
         return mapper.toDomain(saved);
     }
 

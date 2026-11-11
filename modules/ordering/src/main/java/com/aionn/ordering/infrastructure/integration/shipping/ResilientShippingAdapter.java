@@ -1,5 +1,8 @@
 package com.aionn.ordering.infrastructure.integration.shipping;
 
+import java.math.BigDecimal;
+import java.util.List;
+
 import com.aionn.ordering.application.port.out.observability.OrderingMetricsPort;
 import com.aionn.ordering.application.port.out.ShippingGateway;
 import com.aionn.ordering.domain.valueobject.ShippingAddress;
@@ -42,15 +45,26 @@ public class ResilientShippingAdapter implements ShippingGateway {
     }
 
     @Override
-    public ShippingGateway.ShippingQuote quote(String orderId, String merchantId, ShippingAddress address, String currency) {
-        return execute("quote", () -> delegate.quote(orderId, merchantId, address, currency));
+    public ShippingGateway.ShippingQuote quote(String orderId, String merchantId, ShippingAddress address,
+            String currency, List<ShippingGateway.Parcel> parcels,
+            BigDecimal goodsSubtotal) {
+        return execute("quote", () -> delegate.quote(orderId, merchantId, address, currency, parcels, goodsSubtotal));
     }
 
     @Override
-    public ShippingGateway.Registration createAndRegister(String orderId, String merchantId, String userId,
-            ShippingAddress address, java.math.BigDecimal codAmount, java.math.BigDecimal shippingFee, String currency) {
+    public ShippingGateway.ShippingQuote quote(String orderId, String merchantId, ShippingAddress address,
+            String currency, List<ShippingGateway.Parcel> parcels,
+            BigDecimal goodsSubtotal, String serviceCode) {
+        return execute("quote", () -> delegate.quote(orderId, merchantId, address, currency, parcels,
+                goodsSubtotal, serviceCode));
+    }
+
+    @Override
+    public List<ShippingGateway.Registration> createAndRegister(String orderId, String merchantId,
+            String userId, ShippingAddress address, BigDecimal codAmount,
+            BigDecimal shippingFee, String currency, List<ShippingGateway.Parcel> parcels) {
         return execute("createAndRegister", () -> delegate.createAndRegister(orderId, merchantId, userId,
-                address, codAmount, shippingFee, currency));
+                address, codAmount, shippingFee, currency, parcels));
     }
 
     private <T> T execute(String operation, Supplier<T> action) {

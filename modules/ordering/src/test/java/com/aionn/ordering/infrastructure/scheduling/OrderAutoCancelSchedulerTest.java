@@ -33,10 +33,9 @@ class OrderAutoCancelSchedulerTest {
         private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
         private OrderingProperties createPropertiesWithAutoCancel(int timeoutMinutes, int batchSize) {
-                OrderingProperties.Reservation reservation = new OrderingProperties.Reservation(86400);
                 OrderingProperties.AutoCancel autoCancel = new OrderingProperties.AutoCancel(
                                 true, timeoutMinutes, 60000L, batchSize);
-                return new OrderingProperties(reservation, autoCancel);
+                return new OrderingProperties(autoCancel);
         }
 
         @Test

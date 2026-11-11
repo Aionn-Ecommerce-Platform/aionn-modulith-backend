@@ -1,0 +1,56 @@
+plugins {
+    id 'java-platform'
+    id 'maven-publish'
+}
+
+version = findProperty('sharedVersion') ?: '0.1.0'
+
+dependencies {
+    constraints {
+        api project(':shared:kernel')
+        api project(':shared:contracts')
+        api project(':shared:infrastructure')
+    }
+}
+
+publishing {
+    publications {
+        mavenBom(MavenPublication) {
+            from components.javaPlatform
+            artifactId = 'shared-bom'
+            pom {
+                name = 'Aionn Shared BOM'
+                description = 'Dependency management for Aionn shared kernel, contracts, and infrastructure'
+                url = 'https://github.com/Aionn-Ecommerce-Platform/aionn-modulith-backend'
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'aionn-ecommerce-platform'
+                        name = 'Aionn Ecommerce Platform'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:https://github.com/Aionn-Ecommerce-Platform/aionn-modulith-backend.git'
+                    developerConnection = 'scm:git:ssh://git@github.com/Aionn-Ecommerce-Platform/aionn-modulith-backend.git'
+                    url = 'https://github.com/Aionn-Ecommerce-Platform/aionn-modulith-backend'
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = 'GitHubPackages'
+            url = uri(findProperty('githubPackagesUrl')
+                    ?: "https://maven.pkg.github.com/${System.getenv('GITHUB_REPOSITORY') ?: 'Aionn-Ecommerce-Platform/aionn-modulith-backend'}")
+            credentials {
+                username = System.getenv('GITHUB_ACTOR') ?: findProperty('gpr.user')
+                password = System.getenv('GITHUB_TOKEN') ?: findProperty('gpr.key')
+            }
+        }
+    }
+}

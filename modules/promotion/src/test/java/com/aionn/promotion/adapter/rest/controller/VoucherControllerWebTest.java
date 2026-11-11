@@ -1,13 +1,17 @@
 package com.aionn.promotion.adapter.rest.controller;
 
+import com.aionn.promotion.adapter.rest.mapper.voucher.VoucherDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.promotion.adapter.rest.exception.PromotionExceptionHandler;
-import com.aionn.promotion.adapter.rest.mapper.voucher.VoucherDtoMapperImpl;
 import com.aionn.promotion.adapter.rest.support.session.CurrentUserIdArgumentResolver;
 import com.aionn.promotion.application.dto.voucher.command.VoucherCommands;
 import com.aionn.promotion.application.dto.voucher.result.UserVoucherResult;
 import com.aionn.promotion.application.port.in.voucher.ApplyVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.ClaimVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.GetMyVoucherInputPort;
+import com.aionn.promotion.application.port.in.voucher.GrantVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.ListMyVouchersInputPort;
 import com.aionn.promotion.application.port.in.voucher.ReleaseVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.ReserveVoucherInputPort;
@@ -17,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -54,6 +58,8 @@ class VoucherControllerWebTest {
         private ListMyVouchersInputPort listMyVouchersInputPort;
         @Mock
         private GetMyVoucherInputPort getMyVoucherInputPort;
+        @Mock
+        private GrantVoucherInputPort grantVoucherInputPort;
 
         private MockMvc mockMvc;
 
@@ -62,7 +68,8 @@ class VoucherControllerWebTest {
                 VoucherController controller = new VoucherController(
                                 claimVoucherInputPort, reserveVoucherInputPort, applyVoucherInputPort,
                                 releaseVoucherInputPort, listMyVouchersInputPort, getMyVoucherInputPort,
-                                new VoucherDtoMapperImpl());
+                                grantVoucherInputPort,
+                                Mappers.getMapper(VoucherDtoMapper.class));
 
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new PromotionExceptionHandler())
@@ -199,5 +206,26 @@ class VoucherControllerWebTest {
                 mockMvc.perform(get("/api/v1/promotions/vouchers/me/V-9"))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.data.voucherCode").value("V-9"));
+        }
+
+        @Test
+        void adminGrantReturnsUserVoucher() throws Exception {
+                when(grantVoucherInputPort.execute(any(VoucherCommands.GrantVoucher.class)))
+                                .thenReturn(sample("LATEDELIVERY15K", "CLAIMED"));
+
+                mockMvc.perform(post("/api/v1/promotions/vouchers/admin/grant")
+                                .contentType(APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                  "userId": "user-1",
+                                                  "voucherCode": "LATEDELIVERY15K",
+                                                  "reason": "Late delivery compensation"
+                                                }
+                                                """))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.data.voucherCode").value("LATEDELIVERY15K"))
+                                .andExpect(jsonPath("$.data.status").value("CLAIMED"));
+
+                verify(grantVoucherInputPort).execute(any(VoucherCommands.GrantVoucher.class));
         }
 }

@@ -1,5 +1,7 @@
 package com.aionn.payment.infrastructure.persistence.adapter.payment;
 
+import java.util.List;
+
 import com.aionn.payment.domain.model.Payment;
 import com.aionn.payment.infrastructure.persistence.entity.PaymentEntity;
 import com.aionn.payment.infrastructure.persistence.mapper.PaymentDomainMapper;
@@ -55,12 +57,13 @@ class PaymentPersistenceAdapterTest {
         PaymentEntity entity = new PaymentEntity();
 
         when(paymentDomainMapper.toEntity(domain, null)).thenReturn(entity);
-        when(paymentRepository.save(entity)).thenReturn(entity);
+        when(paymentRepository.saveAndFlush(entity)).thenReturn(entity);
         when(paymentDomainMapper.toDomain(entity)).thenReturn(domain);
 
         Payment result = adapter.save(domain);
 
         assertEquals(domain, result);
+        verify(paymentRepository).saveAndFlush(entity);
     }
 
     @Test
@@ -82,10 +85,10 @@ class PaymentPersistenceAdapterTest {
         PaymentEntity entity = new PaymentEntity();
         Payment domain = mock(Payment.class);
 
-        when(paymentRepository.findByOrderId("order-1")).thenReturn(java.util.List.of(entity));
+        when(paymentRepository.findByOrderId("order-1")).thenReturn(List.of(entity));
         when(paymentDomainMapper.toDomain(entity)).thenReturn(domain);
 
-        java.util.List<Payment> results = adapter.findByOrderId("order-1");
+        List<Payment> results = adapter.findByOrderId("order-1");
 
         assertEquals(1, results.size());
         assertEquals(domain, results.get(0));

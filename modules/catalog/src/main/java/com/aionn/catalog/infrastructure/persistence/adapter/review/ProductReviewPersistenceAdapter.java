@@ -1,5 +1,7 @@
 package com.aionn.catalog.infrastructure.persistence.adapter.review;
 
+import java.util.Locale;
+
 import com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort;
 import com.aionn.catalog.domain.model.ProductReview;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
@@ -143,9 +145,36 @@ public class ProductReviewPersistenceAdapter implements ProductReviewPersistence
             distribution.put(i, 0L);
         }
         for (Object[] row : jpa.countRatingsGroupByRating(productId)) {
-            distribution.put(((Number) row[0]).intValue(), ((Number) row[1]).longValue());
+            int rating = ((Number) row[0]).intValue();
+            long count = ((Number) row[1]).longValue();
+            distribution.put(rating, count);
         }
         return distribution;
+    }
+
+        @Override
+    public Map<String, RatingStats> getRatingStatsByProductIds(List<String> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return Map.of();
+        }
+        List<Object[]> rows = jpa.getRatingStatsByProductIds(productIds);
+        Map<String, RatingStats> stats = new HashMap<>();
+        for (Object[] row : rows) {
+            String productId = (String) row[0];
+            double avg = ((Number) row[1]).doubleValue();
+            long count = ((Number) row[2]).longValue();
+            stats.put(productId, new RatingStats(avg, count));
+        }
+        return stats;
+    }
+
+    @Override
+    public MerchantRatingStats getMerchantRatingStats(String merchantId) {
+        Object[] row = jpa.getMerchantRatingStats(merchantId);
+        if (row == null || row.length < 2) {
+            return new MerchantRatingStats(0.0, 0L);
+        }
+        return new MerchantRatingStats(((Number) row[0]).doubleValue(), ((Number) row[1]).longValue());
     }
 
     private static boolean isDuplicateReviewViolation(DataIntegrityViolationException exception) {
@@ -153,7 +182,7 @@ public class ProductReviewPersistenceAdapter implements ProductReviewPersistence
         while (current != null) {
             String message = current.getMessage();
             if (message != null) {
-                String normalized = message.toLowerCase(java.util.Locale.ROOT);
+                String normalized = message.toLowerCase(Locale.ROOT);
                 if (normalized.contains("uq_reviews_user_product")
                         || (normalized.contains("user_id") && normalized.contains("product_id"))) {
                     return true;

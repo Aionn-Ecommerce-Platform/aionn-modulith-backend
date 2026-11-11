@@ -11,6 +11,12 @@ public interface RefreshTokenStorePort {
 
     Optional<String> consumeSessionId(String tokenId);
 
+    /**
+     * Returns the session id associated with a token that was already consumed. Used to detect
+     * replay of a rotated refresh token and revoke the whole token family.
+     */
+    Optional<String> findConsumedSessionId(String tokenId);
+
     void revoke(String tokenId);
 
     void revokeBySessionId(String sessionId);

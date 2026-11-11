@@ -14,7 +14,10 @@ dependencyResolutionManagement {
 
 rootProject.name = 'aionn-modulith-backend'
 
-include 'shared-kernel'
+include 'shared:kernel'
+include 'shared:contracts'
+include 'shared:infrastructure'
+include 'shared:bom'
 include 'modules:identity'
 include 'modules:catalog'
 include 'modules:inventory'

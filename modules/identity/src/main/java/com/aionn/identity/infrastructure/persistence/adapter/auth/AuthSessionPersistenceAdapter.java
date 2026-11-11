@@ -1,5 +1,8 @@
 package com.aionn.identity.infrastructure.persistence.adapter.auth;
 
+import com.aionn.identity.infrastructure.persistence.entity.AuthSessionEntity;
+import java.util.stream.Collectors;
+
 import com.aionn.identity.application.port.out.auth.AuthSessionPersistencePort;
 import com.aionn.identity.domain.model.AuthSession;
 import com.aionn.identity.infrastructure.persistence.entity.UserEntity;
@@ -58,10 +61,10 @@ public class AuthSessionPersistenceAdapter implements AuthSessionPersistencePort
             return List.of();
         }
         List<String> ids = sessions.stream().map(AuthSession::getSessionId).toList();
-        Map<String, com.aionn.identity.infrastructure.persistence.entity.AuthSessionEntity> managed =
+        Map<String, AuthSessionEntity> managed =
                 authSessionRepository.findAllById(ids).stream()
-                        .collect(java.util.stream.Collectors.toMap(
-                                com.aionn.identity.infrastructure.persistence.entity.AuthSessionEntity::getSessionId,
+                        .collect(Collectors.toMap(
+                                AuthSessionEntity::getSessionId,
                                 e -> e));
         Map<String, UserEntity> userRefs = new HashMap<>();
         var entities = sessions.stream()

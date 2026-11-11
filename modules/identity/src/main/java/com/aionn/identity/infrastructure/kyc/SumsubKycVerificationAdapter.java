@@ -1,5 +1,8 @@
 package com.aionn.identity.infrastructure.kyc;
 
+import java.security.MessageDigest;
+import org.springframework.http.HttpMethod;
+
 import com.aionn.identity.application.port.out.kyc.ExternalKycVerificationPort;
 import com.aionn.identity.domain.exception.IdentityErrorCode;
 import com.aionn.identity.domain.exception.IdentityException;
@@ -142,9 +145,9 @@ public class SumsubKycVerificationAdapter implements ExternalKycVerificationPort
 
         String calculated = hmacHex(algorithm, config.webhookSecret(), payload);
         // Constant-time comparison to avoid leaking the HMAC digest via timing.
-        byte[] expected = calculated.toLowerCase().getBytes(java.nio.charset.StandardCharsets.US_ASCII);
-        byte[] actual = digest.toLowerCase().getBytes(java.nio.charset.StandardCharsets.US_ASCII);
-        if (!java.security.MessageDigest.isEqual(expected, actual)) {
+        byte[] expected = calculated.toLowerCase().getBytes(StandardCharsets.US_ASCII);
+        byte[] actual = digest.toLowerCase().getBytes(StandardCharsets.US_ASCII);
+        if (!MessageDigest.isEqual(expected, actual)) {
             throw new IdentityException(IdentityErrorCode.KYC_WEBHOOK_SIGNATURE_INVALID);
         }
     }
@@ -161,7 +164,7 @@ public class SumsubKycVerificationAdapter implements ExternalKycVerificationPort
                 .build();
 
         try {
-            String response = client.method(org.springframework.http.HttpMethod.valueOf(method))
+            String response = client.method(HttpMethod.valueOf(method))
                     .uri(pathWithQuery)
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)

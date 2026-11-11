@@ -1,8 +1,27 @@
 package com.aionn.payment.infrastructure.provider;
 
+import com.aionn.payment.domain.exception.PaymentException;
+import java.lang.reflect.Field;
+import java.net.http.HttpClient;
+import java.net.http.HttpHeaders;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.Optional;
+import javax.net.ssl.SSLSession;
+import java.util.SortedMap;
+import java.util.stream.Collectors;
+import java.util.TreeMap;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
+
 import com.aionn.payment.application.port.out.PaymentProviderClient;
 import com.aionn.payment.domain.valueobject.PaymentGatewayKind;
 import com.aionn.payment.infrastructure.provider.config.VnpayProperties;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +34,7 @@ import java.time.Clock;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.eq;
 
 @ExtendWith(MockitoExtension.class)
 class VnpayPaymentProviderClientTest {
@@ -60,7 +80,7 @@ class VnpayPaymentProviderClientTest {
     void authorizeShouldThrowWhenNotConfigured() {
         when(properties.tmnCode()).thenReturn(null);
 
-        assertThrows(com.aionn.payment.domain.exception.PaymentException.class,
+        assertThrows(PaymentException.class,
                 () -> client.authorize(new PaymentProviderClient.AuthorizationRequest(
                         "pay-1", "order-1", "user-1", null, null, BigDecimal.TEN, "VND", "k", null)));
     }
@@ -95,19 +115,19 @@ class VnpayPaymentProviderClientTest {
         when(properties.hashSecret()).thenReturn(secret);
         when(properties.currCode()).thenReturn("VND");
 
-        java.util.SortedMap<String, String> params = new java.util.TreeMap<>();
+        SortedMap<String, String> params = new TreeMap<>();
         params.put("vnp_Amount", "10000000");
         params.put("vnp_TxnRef", "pay-123");
         params.put("vnp_TransactionNo", "txn-456");
         params.put("vnp_ResponseCode", "00");
 
         String hashData = params.entrySet().stream()
-                .map(e -> java.net.URLEncoder.encode(e.getKey(), java.nio.charset.StandardCharsets.UTF_8)
-                        + "=" + java.net.URLEncoder.encode(e.getValue(), java.nio.charset.StandardCharsets.UTF_8))
-                .collect(java.util.stream.Collectors.joining("&"));
+                .map(e -> URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8)
+                        + "=" + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
+                .collect(Collectors.joining("&"));
         String computedHash = VnpayPaymentProviderClient.hmacSHA512(secret, hashData);
 
-        String body = hashData + "&vnp_SecureHash=" + java.net.URLEncoder.encode(computedHash, java.nio.charset.StandardCharsets.UTF_8);
+        String body = hashData + "&vnp_SecureHash=" + URLEncoder.encode(computedHash, StandardCharsets.UTF_8);
         PaymentProviderClient.WebhookEvent event = client.verifyAndParse(body, null);
 
         assertNotNull(event);
@@ -123,18 +143,18 @@ class VnpayPaymentProviderClientTest {
         when(properties.hashSecret()).thenReturn(secret);
         when(properties.currCode()).thenReturn("VND");
 
-        java.util.SortedMap<String, String> params = new java.util.TreeMap<>();
+        SortedMap<String, String> params = new TreeMap<>();
         params.put("vnp_Amount", "10000000");
         params.put("vnp_TxnRef", "pay-123");
         params.put("vnp_ResponseCode", "24");
 
         String hashData = params.entrySet().stream()
-                .map(e -> java.net.URLEncoder.encode(e.getKey(), java.nio.charset.StandardCharsets.UTF_8)
-                        + "=" + java.net.URLEncoder.encode(e.getValue(), java.nio.charset.StandardCharsets.UTF_8))
-                .collect(java.util.stream.Collectors.joining("&"));
+                .map(e -> URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8)
+                        + "=" + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
+                .collect(Collectors.joining("&"));
         String computedHash = VnpayPaymentProviderClient.hmacSHA512(secret, hashData);
 
-        String body = hashData + "&vnp_SecureHash=" + java.net.URLEncoder.encode(computedHash, java.nio.charset.StandardCharsets.UTF_8);
+        String body = hashData + "&vnp_SecureHash=" + URLEncoder.encode(computedHash, StandardCharsets.UTF_8);
         PaymentProviderClient.WebhookEvent event = client.verifyAndParse(body, null);
 
         assertNotNull(event);
@@ -172,7 +192,7 @@ class VnpayPaymentProviderClientTest {
         when(properties.tmnCode()).thenReturn("TMN123");
         when(properties.hashSecret()).thenReturn(null);
 
-        assertThrows(com.aionn.payment.domain.exception.PaymentException.class,
+        assertThrows(PaymentException.class,
                 () -> client.authorize(new PaymentProviderClient.AuthorizationRequest(
                         "pay-1", "order-1", "user-1", null, null, BigDecimal.TEN, "VND", "k", null)));
     }
@@ -223,13 +243,13 @@ class VnpayPaymentProviderClientTest {
         when(properties.apiUrl()).thenReturn("https://sandbox.vnpayment.vn/merchant_webapi/api/transaction");
 
         String successBody = "{\"vnp_ResponseCode\":\"00\",\"vnp_Message\":\"Approve Success\"}";
-        java.net.http.HttpResponse<String> mockResponse = mockHttpResponse(200, successBody);
-        java.net.http.HttpClient mockHttpClient = mockHttpClient(mockResponse);
+        HttpResponse<String> mockResponse = mockHttpResponse(200, successBody);
+        HttpClient mockHttpClient = mockHttpClient(mockResponse);
         injectHttpClient(client, mockHttpClient);
 
-        when(objectMapper.writeValueAsString(org.mockito.ArgumentMatchers.any())).thenReturn("{}");
-        when(objectMapper.readValue(successBody, java.util.Map.class))
-                .thenReturn(java.util.Map.of("vnp_ResponseCode", "00", "vnp_Message", "Approve Success"));
+        when(objectMapper.writeValueAsString(ArgumentMatchers.any())).thenReturn("{}");
+        when(objectMapper.readValue(eq(successBody), ArgumentMatchers.<TypeReference<Map<String, Object>>>any()))
+                .thenReturn(Map.of("vnp_ResponseCode", "00", "vnp_Message", "Approve Success"));
 
         PaymentProviderClient.Refund refund = client.refund(
                 new PaymentProviderClient.RefundRequest(
@@ -247,13 +267,13 @@ class VnpayPaymentProviderClientTest {
         when(properties.apiUrl()).thenReturn("https://sandbox.vnpayment.vn/merchant_webapi/api/transaction");
 
         String failBody = "{\"vnp_ResponseCode\":\"02\",\"vnp_Message\":\"Order already refunded\"}";
-        java.net.http.HttpResponse<String> mockResponse = mockHttpResponse(200, failBody);
-        java.net.http.HttpClient mockHttpClient = mockHttpClient(mockResponse);
+        HttpResponse<String> mockResponse = mockHttpResponse(200, failBody);
+        HttpClient mockHttpClient = mockHttpClient(mockResponse);
         injectHttpClient(client, mockHttpClient);
 
-        when(objectMapper.writeValueAsString(org.mockito.ArgumentMatchers.any())).thenReturn("{}");
-        when(objectMapper.readValue(failBody, java.util.Map.class))
-                .thenReturn(java.util.Map.of("vnp_ResponseCode", "02", "vnp_Message", "Order already refunded"));
+        when(objectMapper.writeValueAsString(ArgumentMatchers.any())).thenReturn("{}");
+        when(objectMapper.readValue(eq(failBody), ArgumentMatchers.<TypeReference<Map<String, Object>>>any()))
+                .thenReturn(Map.of("vnp_ResponseCode", "02", "vnp_Message", "Order already refunded"));
 
         PaymentProviderClient.Refund refund = client.refund(
                 new PaymentProviderClient.RefundRequest(
@@ -270,11 +290,11 @@ class VnpayPaymentProviderClientTest {
         when(properties.version()).thenReturn("2.1.0");
         when(properties.apiUrl()).thenReturn("https://sandbox.vnpayment.vn/merchant_webapi/api/transaction");
 
-        java.net.http.HttpResponse<String> mockResponse = mockHttpResponse(500, "Internal Error");
-        java.net.http.HttpClient mockHttpClient = mockHttpClient(mockResponse);
+        HttpResponse<String> mockResponse = mockHttpResponse(500, "Internal Error");
+        HttpClient mockHttpClient = mockHttpClient(mockResponse);
         injectHttpClient(client, mockHttpClient);
 
-        when(objectMapper.writeValueAsString(org.mockito.ArgumentMatchers.any())).thenReturn("{}");
+        when(objectMapper.writeValueAsString(ArgumentMatchers.any())).thenReturn("{}");
 
         PaymentProviderClient.Refund refund = client.refund(
                 new PaymentProviderClient.RefundRequest(
@@ -284,27 +304,62 @@ class VnpayPaymentProviderClientTest {
         assertFalse(refund.accepted());
     }
 
-    @SuppressWarnings("unchecked")
-    private static java.net.http.HttpResponse<String> mockHttpResponse(int statusCode, String body) {
-        java.net.http.HttpResponse<String> response = org.mockito.Mockito.mock(java.net.http.HttpResponse.class);
-        org.mockito.Mockito.when(response.statusCode()).thenReturn(statusCode);
-        org.mockito.Mockito.when(response.body()).thenReturn(body);
-        return response;
+    private static HttpResponse<String> mockHttpResponse(int statusCode, String body) {
+        return new HttpResponse<>() {
+            @Override
+            public int statusCode() {
+                return statusCode;
+            }
+
+            @Override
+            public HttpRequest request() {
+                return null;
+            }
+
+            @Override
+            public Optional<HttpResponse<String>> previousResponse() {
+                return Optional.empty();
+            }
+
+            @Override
+            public HttpHeaders headers() {
+                return HttpHeaders.of(Map.of(), (name, value) -> true);
+            }
+
+            @Override
+            public String body() {
+                return body;
+            }
+
+            @Override
+            public Optional<SSLSession> sslSession() {
+                return Optional.empty();
+            }
+
+            @Override
+            public URI uri() {
+                return URI.create("https://sandbox.vnpayment.vn");
+            }
+
+            @Override
+            public HttpClient.Version version() {
+                return HttpClient.Version.HTTP_1_1;
+            }
+        };
     }
 
-    @SuppressWarnings("unchecked")
-    private static java.net.http.HttpClient mockHttpClient(java.net.http.HttpResponse<String> response) throws Exception {
-        java.net.http.HttpClient httpClient = org.mockito.Mockito.mock(java.net.http.HttpClient.class);
-        org.mockito.Mockito.when(httpClient.send(
-                org.mockito.ArgumentMatchers.any(java.net.http.HttpRequest.class),
-                org.mockito.ArgumentMatchers.any(java.net.http.HttpResponse.BodyHandler.class)))
+    private static HttpClient mockHttpClient(HttpResponse<String> response) throws Exception {
+        HttpClient httpClient = Mockito.mock(HttpClient.class);
+        Mockito.when(httpClient.send(
+                ArgumentMatchers.any(HttpRequest.class),
+                ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
                 .thenReturn(response);
         return httpClient;
     }
 
-    private static void injectHttpClient(VnpayPaymentProviderClient client, java.net.http.HttpClient httpClient)
+    private static void injectHttpClient(VnpayPaymentProviderClient client, HttpClient httpClient)
             throws Exception {
-        java.lang.reflect.Field field = VnpayPaymentProviderClient.class.getDeclaredField("httpClient");
+        Field field = VnpayPaymentProviderClient.class.getDeclaredField("httpClient");
         field.setAccessible(true);
         field.set(client, httpClient);
     }

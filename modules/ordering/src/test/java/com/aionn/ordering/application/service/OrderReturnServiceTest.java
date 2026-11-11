@@ -1,10 +1,25 @@
 package com.aionn.ordering.application.service;
 
+import com.aionn.ordering.application.dto.returns.command.ApproveReturnCommand;
+import com.aionn.ordering.application.dto.returns.command.ConfirmItemReceivedCommand;
+import com.aionn.ordering.domain.valueobject.ReturnRefundStatus;
+import java.lang.reflect.Field;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import org.mockito.ArgumentMatchers;
+
 import com.aionn.ordering.application.dto.returns.command.RejectReturnCommand;
 import com.aionn.ordering.application.dto.returns.command.RequestReturnCommand;
 import com.aionn.ordering.application.port.out.OrderPersistencePort;
+import com.aionn.ordering.application.port.out.OrderReturnItemPersistencePort;
 import com.aionn.ordering.application.port.out.OrderReturnPersistencePort;
 import com.aionn.ordering.application.port.out.PaymentGateway;
+import com.aionn.ordering.application.policy.OrderDefaultsPolicy;
+import com.aionn.ordering.application.policy.OrderingAnalyticsPolicy;
+import com.aionn.ordering.application.policy.RefundRetryPolicy;
+import com.aionn.ordering.application.policy.ReturnWindowPolicy;
 import com.aionn.ordering.domain.exception.OrderingException;
 import com.aionn.ordering.domain.model.Order;
 import com.aionn.ordering.domain.model.OrderItem;
@@ -13,7 +28,7 @@ import com.aionn.ordering.domain.valueobject.ReturnStatus;
 import com.aionn.ordering.domain.valueobject.ShippingAddress;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.Money;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,22 +63,38 @@ class OrderReturnServiceTest {
 
     @Mock private OrderPersistencePort orderRepository;
     @Mock private OrderReturnPersistencePort returnRepository;
+    @Mock private OrderReturnItemPersistencePort returnItemRepository;
     @Mock private EventPublisher eventPublisher;
     @Mock private MerchantQueryPort merchantQueryPort;
+    @Mock private ReturnWindowPolicy returnWindowPolicy;
+    @Mock private RefundRetryPolicy refundRetryPolicy;
+    @Mock private OrderDefaultsPolicy orderDefaultsPolicy;
+    @Mock private OrderingAnalyticsPolicy analyticsPolicy;
     @Mock private PaymentGateway paymentGateway;
-    @Mock private java.time.Clock clock;
+    @Mock private Clock clock;
     @Mock private TransactionTemplate transactionTemplate;
 
     private OrderReturnService service;
 
     @BeforeEach
     void setUp() {
-        lenient().when(clock.instant()).thenReturn(java.time.Instant.parse("2026-07-18T12:00:00Z"));
+        lenient().when(clock.instant()).thenReturn(Instant.parse("2026-07-18T12:00:00Z"));
+        lenient().when(returnWindowPolicy.isWithinWindow(any(), any())).thenAnswer(invocation -> {
+            Instant completedAt = invocation.getArgument(0);
+            Instant now = invocation.getArgument(1);
+            return !now.isAfter(completedAt.plus(Duration.ofDays(7)));
+        });
+        lenient().when(refundRetryPolicy.maxAttempts()).thenReturn(5);
+        lenient().when(refundRetryPolicy.batchSize()).thenReturn(100);
+        lenient().when(orderDefaultsPolicy.defaultCurrency()).thenReturn("VND");
+        lenient().when(analyticsPolicy.zone()).thenReturn(ZoneId.of("Asia/Ho_Chi_Minh"));
+        lenient().when(analyticsPolicy.platformDefaultRangeDays()).thenReturn(30);
         lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation ->
                 ((TransactionCallback<?>) invocation.getArgument(0)).doInTransaction(null));
         service = new OrderReturnService(
-                orderRepository, returnRepository, eventPublisher,
-                merchantQueryPort, paymentGateway, clock, transactionTemplate);
+                orderRepository, returnRepository, returnItemRepository, eventPublisher,
+                merchantQueryPort, returnWindowPolicy, refundRetryPolicy,
+                orderDefaultsPolicy, analyticsPolicy, paymentGateway, clock, transactionTemplate);
     }
 
     private static ShippingAddress address() {
@@ -133,25 +164,24 @@ class OrderReturnServiceTest {
     @Test
     void rejectMovesReturnToRejected() {
         OrderReturn r = requestedReturn();
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1"))
-                .thenReturn(Optional.of(MERCHANT_ID));
         when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
         when(returnRepository.save(r)).thenReturn(r);
 
         OrderReturn result = service.reject(new RejectReturnCommand(
-                RETURN_ID, "owner-1", "no proof"));
+                RETURN_ID, MERCHANT_ID, "no proof"));
 
         assertEquals(ReturnStatus.REJECTED, result.getStatus());
         assertEquals(ReturnStatus.REJECTED, r.getStatus());
     }
 
     @Test
-    void rejectFailsWhenOwnerHasNoMerchant() {
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1"))
-                .thenReturn(Optional.empty());
+    void rejectFailsWhenMerchantDoesNotOwnReturn() {
+        // Return belongs to MERCHANT_ID; a different merchantId must be rejected.
+        OrderReturn r = requestedReturn();
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
 
         assertThrows(OrderingException.class,
-                () -> service.reject(new RejectReturnCommand(RETURN_ID, "owner-1", "n")));
+                () -> service.reject(new RejectReturnCommand(RETURN_ID, "other-merchant", "n")));
     }
 
     @Test
@@ -196,19 +226,18 @@ class OrderReturnServiceTest {
     @Test
     void approveReturnChangesStatusToApproved() {
         OrderReturn r = requestedReturn();
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of(MERCHANT_ID));
         when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
         when(returnRepository.save(r)).thenReturn(r);
         // refundAmount required by domain model; order has no paymentId so refund is skipped
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
-        com.aionn.ordering.application.dto.returns.command.ApproveReturnCommand cmd =
-                new com.aionn.ordering.application.dto.returns.command.ApproveReturnCommand(
-                        RETURN_ID, "owner-1", java.math.BigDecimal.valueOf(150), "VND", "wh-1");
+        ApproveReturnCommand cmd =
+                new ApproveReturnCommand(
+                        RETURN_ID, MERCHANT_ID, BigDecimal.valueOf(150), "VND", "wh-1");
 
         var result = service.approve(cmd);
 
         assertEquals(ReturnStatus.APPROVED, result.getStatus());
-        assertEquals(com.aionn.ordering.domain.valueobject.ReturnRefundStatus.REFUNDED,
+        assertEquals(ReturnRefundStatus.REFUNDED,
                 result.getRefundStatus());
         verify(returnRepository, times(2)).save(r);
     }
@@ -218,13 +247,12 @@ class OrderReturnServiceTest {
         OrderReturn r = new OrderReturn(RETURN_ID, ORDER_ID, USER_ID, MERCHANT_ID,
                 "broken", null, null, null, "wh-1", null,
                 ReturnStatus.APPROVED, Instant.now(), null, null);
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of(MERCHANT_ID));
         when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
         when(returnRepository.save(r)).thenReturn(r);
 
         var result = service.confirmItemReceived(
-                new com.aionn.ordering.application.dto.returns.command.ConfirmItemReceivedCommand(
-                        RETURN_ID, "owner-1", "GOOD"));
+                new ConfirmItemReceivedCommand(
+                        RETURN_ID, MERCHANT_ID, "GOOD"));
 
         assertEquals(ReturnStatus.ITEM_RECEIVED, result.getStatus());
     }
@@ -232,19 +260,18 @@ class OrderReturnServiceTest {
     @Test
     void listMerchantReturnsMerchantReturns() {
         OrderReturn r = requestedReturn();
-        when(merchantQueryPort.findMerchantIdByOwnerId(USER_ID)).thenReturn(Optional.of(MERCHANT_ID));
-        when(returnRepository.findByMerchantId(MERCHANT_ID, 50)).thenReturn(java.util.List.of(r));
+        when(returnRepository.findByMerchantId(MERCHANT_ID, 50)).thenReturn(List.of(r));
 
-        var results = service.listMerchant(USER_ID, 50);
+        var results = service.listMerchant(MERCHANT_ID, 50);
 
         assertEquals(1, results.size());
     }
 
     @Test
-    void listMerchantThrowsWhenNoMerchant() {
-        when(merchantQueryPort.findMerchantIdByOwnerId(USER_ID)).thenReturn(Optional.empty());
+    void listMerchantReturnsEmptyForUnknownMerchant() {
+        when(returnRepository.findByMerchantId(MERCHANT_ID, 10)).thenReturn(List.of());
 
-        assertThrows(OrderingException.class, () -> service.listMerchant(USER_ID, 10));
+        assertEquals(0, service.listMerchant(MERCHANT_ID, 10).size());
     }
 
     @Test
@@ -283,7 +310,7 @@ class OrderReturnServiceTest {
         // refundAmount required; order has no paymentId so refund call is skipped
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
 
-        var result = service.adminApprove(RETURN_ID, java.math.BigDecimal.valueOf(150), "VND", "wh-1");
+        var result = service.adminApprove(RETURN_ID, BigDecimal.valueOf(150), "VND", "wh-1");
 
         assertEquals(ReturnStatus.APPROVED, result.getStatus());
     }
@@ -315,12 +342,12 @@ class OrderReturnServiceTest {
 
     @Test
     void adminAnalyticsReturnsCorrectStats() {
-        java.time.LocalDate to = java.time.LocalDate.now();
-        java.time.LocalDate from = to.minusDays(5);
+        LocalDate to = LocalDate.now();
+        LocalDate from = to.minusDays(5);
         var mockRows = List.of(
-                new com.aionn.ordering.application.port.out.OrderReturnPersistencePort.ReturnAnalyticsRow(
-                        "APPROVED", "damaged", java.math.BigDecimal.valueOf(100), "VND"),
-                new com.aionn.ordering.application.port.out.OrderReturnPersistencePort.ReturnAnalyticsRow(
+                new OrderReturnPersistencePort.ReturnAnalyticsRow(
+                        "APPROVED", "damaged", BigDecimal.valueOf(100), "VND"),
+                new OrderReturnPersistencePort.ReturnAnalyticsRow(
                         "REQUESTED", null, null, null)
         );
         when(returnRepository.findReturnAnalyticsRows(any(), any())).thenReturn(mockRows);
@@ -331,7 +358,7 @@ class OrderReturnServiceTest {
         assertEquals(2, result.totalReturns());
         assertEquals(10L, result.totalCompletedOrders());
         assertEquals(0.2, result.returnRate());
-        assertEquals(java.math.BigDecimal.valueOf(100), result.totalRefundAmount());
+        assertEquals(BigDecimal.valueOf(100), result.totalRefundAmount());
         assertEquals("VND", result.currency());
     }
 
@@ -339,7 +366,7 @@ class OrderReturnServiceTest {
     void requestReturnThrowsExpiredWindow() {
         Order order = completedOrder();
         // Force completedAt to be 10 days prior to clock.instant() (2026-07-18T12:00:00Z)
-        java.lang.reflect.Field field;
+        Field field;
         try {
             field = Order.class.getDeclaredField("completedAt");
             field.setAccessible(true);
@@ -362,7 +389,7 @@ class OrderReturnServiceTest {
         Order order = completedOrder();
         // set paymentId on order using reflection
         try {
-            java.lang.reflect.Field field = Order.class.getDeclaredField("paymentId");
+            Field field = Order.class.getDeclaredField("paymentId");
             field.setAccessible(true);
             field.set(order, "payment-123");
         } catch (Exception e) {
@@ -371,9 +398,9 @@ class OrderReturnServiceTest {
 
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
 
-        service.adminApprove(RETURN_ID, java.math.BigDecimal.valueOf(100), "VND", "wh-1");
+        service.adminApprove(RETURN_ID, BigDecimal.valueOf(100), "VND", "wh-1");
 
-        verify(paymentGateway).refund("payment-123", java.math.BigDecimal.valueOf(100), "VND",
+        verify(paymentGateway).refund("payment-123", BigDecimal.valueOf(100), "VND",
                 "return approved (admin)", "return:return-1:refund");
     }
 
@@ -384,7 +411,7 @@ class OrderReturnServiceTest {
         when(returnRepository.save(orderReturn)).thenReturn(orderReturn);
         Order order = completedOrder();
         try {
-            java.lang.reflect.Field field = Order.class.getDeclaredField("paymentId");
+            Field field = Order.class.getDeclaredField("paymentId");
             field.setAccessible(true);
             field.set(order, "payment-123");
         } catch (Exception ex) {
@@ -392,11 +419,11 @@ class OrderReturnServiceTest {
         }
         when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
 
-        service.adminApprove(RETURN_ID, java.math.BigDecimal.valueOf(100), "VND", "wh-1");
-        service.adminApprove(RETURN_ID, java.math.BigDecimal.valueOf(100), "VND", "wh-1");
+        service.adminApprove(RETURN_ID, BigDecimal.valueOf(100), "VND", "wh-1");
+        service.adminApprove(RETURN_ID, BigDecimal.valueOf(100), "VND", "wh-1");
 
         verify(paymentGateway).refund(
-                "payment-123", java.math.BigDecimal.valueOf(100), "VND",
+                "payment-123", BigDecimal.valueOf(100), "VND",
                 "return approved (admin)", "return:return-1:refund");
         verify(returnRepository, times(2)).save(orderReturn);
     }
@@ -408,7 +435,7 @@ class OrderReturnServiceTest {
         when(returnRepository.save(orderReturn)).thenReturn(orderReturn);
         Order order = completedOrder();
         try {
-            java.lang.reflect.Field field = Order.class.getDeclaredField("paymentId");
+            Field field = Order.class.getDeclaredField("paymentId");
             field.setAccessible(true);
             field.set(order, "payment-123");
         } catch (Exception exception) {
@@ -418,19 +445,218 @@ class OrderReturnServiceTest {
         doThrow(new IllegalStateException("provider timeout")).doNothing()
                 .when(paymentGateway).refund(any(), any(), any(), any(), any());
 
-        var failed = service.adminApprove(RETURN_ID, java.math.BigDecimal.valueOf(100), "VND", "wh-1");
-        assertEquals(com.aionn.ordering.domain.valueobject.ReturnRefundStatus.FAILED,
+        var failed = service.adminApprove(RETURN_ID, BigDecimal.valueOf(100), "VND", "wh-1");
+        assertEquals(ReturnRefundStatus.FAILED,
                 failed.getRefundStatus());
         assertEquals(1, failed.getRefundAttempts());
 
-        when(clock.instant()).thenReturn(java.time.Instant.parse("2026-07-18T12:00:02Z"));
+        when(clock.instant()).thenReturn(Instant.parse("2026-07-18T12:00:02Z"));
         var retried = service.retryRefund(RETURN_ID);
 
-        assertEquals(com.aionn.ordering.domain.valueobject.ReturnRefundStatus.REFUNDED,
+        assertEquals(ReturnRefundStatus.REFUNDED,
                 retried.getRefundStatus());
         verify(paymentGateway, times(2)).refund(
-                eq("payment-123"), eq(java.math.BigDecimal.valueOf(100)), eq("VND"),
-                org.mockito.ArgumentMatchers.anyString(), eq("return:return-1:refund"));
+                eq("payment-123"), eq(BigDecimal.valueOf(100)), eq("VND"),
+                ArgumentMatchers.anyString(), eq("return:return-1:refund"));
+    }
+
+    @Test
+    void requestReturnRejectsABlankSkuInTheSelection() {
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+        when(returnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThrows(OrderingException.class, () -> service.requestReturn(
+                new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null,
+                        List.of(new RequestReturnCommand.Item(" ", 1)))));
+
+        verify(returnItemRepository, never()).saveAll(any(), any());
+    }
+
+    @Test
+    void requestReturnRejectsDuplicateSelectionLines() {
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+        when(returnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThrows(OrderingException.class, () -> service.requestReturn(
+                new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null,
+                        List.of(new RequestReturnCommand.Item("sku-1", 1),
+                                new RequestReturnCommand.Item("sku-1", 1)))));
+
+        verify(returnItemRepository, never()).saveAll(any(), any());
+    }
+
+    @Test
+    void requestReturnRejectsAnItemOutsideTheOrder() {
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+        when(returnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThrows(OrderingException.class, () -> service.requestReturn(
+                new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null,
+                        List.of(new RequestReturnCommand.Item("sku-9", 1)))));
+
+        verify(returnItemRepository, never()).saveAll(any(), any());
+    }
+
+    @Test
+    void requestReturnRejectsQuantityAboveTheOrderedAmount() {
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+        when(returnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThrows(OrderingException.class, () -> service.requestReturn(
+                new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null,
+                        List.of(new RequestReturnCommand.Item("sku-1", 2)))));
+
+        verify(returnItemRepository, never()).saveAll(any(), any());
+    }
+
+    @Test
+    void requestReturnPersistsTheSelectedItemsWithTheirUnitPrice() {
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+        when(returnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+        java.util.concurrent.atomic.AtomicReference<List<OrderReturnItemPersistencePort.Item>> saved =
+                new java.util.concurrent.atomic.AtomicReference<>();
+        org.mockito.Mockito.doAnswer(inv -> {
+            saved.set(inv.getArgument(1));
+            return null;
+        }).when(returnItemRepository).saveAll(any(), any());
+
+        service.requestReturn(new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null,
+                List.of(new RequestReturnCommand.Item("sku-1", 1))));
+
+        assertEquals(1, saved.get().size());
+        assertEquals("sku-1", saved.get().get(0).skuId());
+        assertEquals(1, saved.get().get(0).qty());
+        assertEquals(0, saved.get().get(0).unitPrice().compareTo(BigDecimal.valueOf(150)));
+        assertEquals(0, saved.get().get(0).refundAmount().compareTo(BigDecimal.valueOf(150)));
+    }
+
+    @Test
+    void listSelectedItemsReturnsRowsAfterAccessCheck() {
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(requestedReturn()));
+        List<OrderReturnItemPersistencePort.Item> rows = List.of(
+                new OrderReturnItemPersistencePort.Item("sku-1", 1,
+                        BigDecimal.valueOf(150), BigDecimal.valueOf(150)));
+        when(returnItemRepository.findByReturnId(RETURN_ID)).thenReturn(rows);
+
+        assertEquals(rows, service.listSelectedItems(RETURN_ID, USER_ID));
+    }
+
+    @Test
+    void adminListByStatusDelegatesToTheRepository() {
+        when(returnRepository.findByStatus(ReturnStatus.REQUESTED, 20))
+                .thenReturn(List.of(requestedReturn()));
+
+        assertEquals(1, service.adminListByStatus(ReturnStatus.REQUESTED, 20).size());
+    }
+
+    @Test
+    void adminAnalyticsRejectsAnInvertedRange() {
+        assertThrows(OrderingException.class, () -> service.adminAnalytics(
+                LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 1)));
+    }
+
+    @Test
+    void retryingARefundWithoutAStoredAmountIsANoOp() {
+        OrderReturn r = requestedReturn();
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
+
+        OrderReturn result = service.retryRefund(RETURN_ID);
+
+        assertEquals(ReturnStatus.REQUESTED, result.getStatus());
+        verify(paymentGateway, never()).refund(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void approvingAnAlreadyApprovedReturnWithTheSameDetailsIsIdempotent() {
+        OrderReturn r = alreadyApproved("VND", "wh-1");
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+        when(returnRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderReturn result = service.adminApprove(RETURN_ID, BigDecimal.valueOf(100), "vnd", "wh-1");
+
+        assertEquals(ReturnStatus.APPROVED, result.getStatus());
+        assertEquals(ReturnRefundStatus.REFUNDED, result.getRefundStatus());
+    }
+
+    @Test
+    void approvingAnAlreadyApprovedReturnWithADifferentCurrencyIsRejected() {
+        OrderReturn r = alreadyApproved("VND", "wh-1");
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
+
+        assertThrows(OrderingException.class,
+                () -> service.adminApprove(RETURN_ID, BigDecimal.valueOf(100), "USD", "wh-1"));
+    }
+
+    @Test
+    void approvingAnAlreadyApprovedReturnWithADifferentWarehouseIsRejected() {
+        OrderReturn r = alreadyApproved("VND", "wh-1");
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
+
+        assertThrows(OrderingException.class,
+                () -> service.adminApprove(RETURN_ID, BigDecimal.valueOf(100), "VND", "wh-2"));
+    }
+
+    @Test
+    void approvingAReturnWithoutACurrencyUsesTheDefaultCurrency() {
+        OrderReturn r = requestedReturn();
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+        when(returnRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderReturn result = service.adminApprove(RETURN_ID, BigDecimal.valueOf(50), null, "wh-1");
+
+        assertEquals("VND", result.getRefundAmount().currency());
+    }
+
+    @Test
+    void approvingAReturnWithoutAPaymentReferenceMarksItRefundedDirectly() {
+        OrderReturn r = requestedReturn();
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.empty());
+        when(returnRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderReturn result = service.adminApprove(RETURN_ID, BigDecimal.valueOf(50), "VND", "wh-1");
+
+        assertEquals(ReturnRefundStatus.REFUNDED, result.getRefundStatus());
+        verify(paymentGateway, never()).refund(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void aFailedRefundIsRecordedForRetry() {
+        OrderReturn r = requestedReturn();
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+        when(returnRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        doThrow(new IllegalStateException("gateway down")).when(paymentGateway)
+                .refund(any(), any(), any(), any(), any());
+
+        OrderReturn result = service.adminApprove(RETURN_ID, BigDecimal.valueOf(50), "VND", "wh-1");
+
+        assertEquals(ReturnRefundStatus.FAILED, result.getRefundStatus());
+        assertEquals(1, result.getRefundAttempts());
+        assertEquals("gateway down", result.getRefundFailureReason());
+    }
+
+    @Test
+    void aRefundInsideItsRetryWindowIsNotAttemptedAgain() {
+        OrderReturn r = requestedReturn();
+        r.approve(Money.of(BigDecimal.valueOf(50), "VND"), "wh-1",
+                Instant.parse("2026-07-18T12:00:00Z"));
+        r.markRefundFailed("gateway down", Instant.parse("2026-07-18T13:00:00Z"));
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
+
+        OrderReturn result = service.retryRefund(RETURN_ID);
+
+        assertEquals(ReturnRefundStatus.FAILED, result.getRefundStatus());
+        verify(paymentGateway, never()).refund(any(), any(), any(), any(), any());
+    }
+
+    private static OrderReturn alreadyApproved(String currency, String warehouseId) {
+        OrderReturn r = requestedReturn();
+        r.approve(Money.of(BigDecimal.valueOf(100), currency), warehouseId,
+                Instant.parse("2026-07-18T12:00:00Z"));
+        return r;
     }
 }
 

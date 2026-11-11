@@ -1,9 +1,12 @@
 package com.aionn.catalog.adapter.rest.controller;
 
+import com.aionn.catalog.adapter.rest.mapper.attribute.AttributeDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.catalog.adapter.rest.dto.attribute.request.ConfigureFilterableRequest;
 import com.aionn.catalog.adapter.rest.dto.attribute.request.CreateAttributeTemplateRequest;
 import com.aionn.catalog.adapter.rest.exception.CatalogExceptionHandler;
-import com.aionn.catalog.adapter.rest.mapper.attribute.AttributeDtoMapperImpl;
 import com.aionn.catalog.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.catalog.adapter.rest.support.TestAuth;
 import com.aionn.catalog.application.dto.attribute.command.ConfigureFilterableCommand;
@@ -17,7 +20,7 @@ import com.aionn.catalog.application.port.in.attribute.GetAttributeTemplateByCat
 import com.aionn.catalog.application.port.in.attribute.GetAttributeTemplateInputPort;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,7 +70,7 @@ class AttributeTemplateControllerWebTest {
                 createAttributeTemplateInputPort,
                 configureFilterableInputPort,
                 getAttributeTemplateInputPort,
-                new AttributeDtoMapperImpl(),
+                Mappers.getMapper(AttributeDtoMapper.class),
                 getAttributeTemplateByCategoryInputPort);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new CatalogExceptionHandler())

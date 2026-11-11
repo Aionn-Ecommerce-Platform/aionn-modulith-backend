@@ -44,13 +44,16 @@ public class AccountDeletionPersistenceAdapter implements AccountDeletionPort {
     }
 
     @Override
-    public void cancel(String userId) {
-        accountDeletionRequestRepository.findByUser_UserIdAndStatus(userId, AccountDeletionStatus.PENDING)
-                .ifPresent(request -> {
+    public boolean cancel(String userId) {
+        return accountDeletionRequestRepository
+                .findByUser_UserIdAndStatusForUpdate(userId, AccountDeletionStatus.PENDING)
+                .map(request -> {
                     request.setStatus(AccountDeletionStatus.CANCELLED);
                     request.setCanceledAt(clock.instant());
                     accountDeletionRequestRepository.save(request);
-                });
+                    return true;
+                })
+                .orElse(false);
     }
 
     private DeletionRequestView toView(AccountDeletionRequestEntity entity) {

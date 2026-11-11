@@ -1,10 +1,12 @@
 package com.aionn.payment.infrastructure.provider;
 
 import com.aionn.payment.infrastructure.provider.config.StripeConnectProperties;
+import com.aionn.payment.infrastructure.provider.config.StripeProperties;
 import com.aionn.payment.domain.exception.PaymentException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Account;
 import com.stripe.model.AccountLink;
+import com.stripe.net.RequestOptions;
 import com.stripe.param.AccountCreateParams;
 import com.stripe.param.AccountLinkCreateParams;
 import org.junit.jupiter.api.Test;
@@ -22,14 +24,16 @@ import static org.mockito.Mockito.when;
 class StripeConnectAdapterTest {
 
     private final StripeConnectAdapter adapter =
-            new StripeConnectAdapter(new StripeConnectProperties("https://refresh", "https://return"));
+            new StripeConnectAdapter(new StripeConnectProperties("https://refresh", "https://return"),
+                    new StripeProperties(true, "sk_test", "whsec_test"));
 
     @Test
     void createsExpressAccount() {
         try (MockedStatic<Account> accounts = Mockito.mockStatic(Account.class)) {
             Account account = mock(Account.class);
             when(account.getId()).thenReturn("acct_1");
-            accounts.when(() -> Account.create(any(AccountCreateParams.class))).thenReturn(account);
+            accounts.when(() -> Account.create(any(AccountCreateParams.class), any(RequestOptions.class)))
+                    .thenReturn(account);
 
             assertThat(adapter.createExpressAccount("merchant-1")).isEqualTo("acct_1");
         }
@@ -40,7 +44,8 @@ class StripeConnectAdapterTest {
         try (MockedStatic<AccountLink> links = Mockito.mockStatic(AccountLink.class)) {
             AccountLink link = mock(AccountLink.class);
             when(link.getUrl()).thenReturn("https://stripe/onboard");
-            links.when(() -> AccountLink.create(any(AccountLinkCreateParams.class))).thenReturn(link);
+            links.when(() -> AccountLink.create(any(AccountLinkCreateParams.class), any(RequestOptions.class)))
+                    .thenReturn(link);
 
             assertThat(adapter.createOnboardingLink("acct_1")).isEqualTo("https://stripe/onboard");
         }
@@ -54,7 +59,7 @@ class StripeConnectAdapterTest {
             when(account.getMetadata()).thenReturn(Map.of("merchantId", "merchant-1"));
             when(account.getChargesEnabled()).thenReturn(true);
             when(account.getPayoutsEnabled()).thenReturn(false);
-            accounts.when(() -> Account.retrieve("acct_1")).thenReturn(account);
+            accounts.when(() -> Account.retrieve(any(String.class), any(RequestOptions.class))).thenReturn(account);
 
             assertThat(adapter.fetchAccountCapabilities("acct_1")).get()
                     .extracting("stripeAccountId", "merchantId", "chargesEnabled", "payoutsEnabled")
@@ -65,7 +70,7 @@ class StripeConnectAdapterTest {
     @Test
     void mapsStripeFailureWhenCreatingAccount() {
         try (MockedStatic<Account> accounts = Mockito.mockStatic(Account.class)) {
-            accounts.when(() -> Account.create(any(AccountCreateParams.class)))
+            accounts.when(() -> Account.create(any(AccountCreateParams.class), any(RequestOptions.class)))
                     .thenThrow(mock(StripeException.class));
 
             assertThatThrownBy(() -> adapter.createExpressAccount("merchant-1"))

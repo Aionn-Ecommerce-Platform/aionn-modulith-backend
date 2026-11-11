@@ -11,11 +11,12 @@ import com.aionn.identity.adapter.rest.dto.security.request.UnlockAccountRequest
 import com.aionn.identity.adapter.rest.mapper.admin.AdminUserDtoMapper;
 import com.aionn.identity.adapter.rest.mapper.security.SecurityDtoMapper;
 import com.aionn.identity.application.port.in.admin.*;
+import com.aionn.identity.application.policy.IdentityValidationConstants;
 import com.aionn.identity.application.port.in.security.UnlockAccountInputPort;
 import com.aionn.identity.domain.valueobject.UserRole;
 import com.aionn.identity.domain.valueobject.UserStatus;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
-import com.aionn.sharedkernel.adapter.web.response.PageMetadata;
+import com.aionn.platform.web.response.ApiResponse;
+import com.aionn.platform.web.response.PageMetadata;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -67,7 +68,7 @@ public class AdminUserController {
 			@RequestParam(required = false) UserStatus status,
 			@RequestParam(required = false) UserRole role,
 			@RequestParam(defaultValue = "0") @Min(0) int page,
-			@RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+			@RequestParam(defaultValue = "20") @Min(1) @Max(IdentityValidationConstants.ADMIN_PAGE_MAX_SIZE) int size) {
 		OffsetPagination safe = OffsetPagination.of(page, size);
 		var result = listUsersQueryPort.execute(
 				adminUserDtoMapper.toListUsersQuery(status, role, safe.page(), safe.size()));

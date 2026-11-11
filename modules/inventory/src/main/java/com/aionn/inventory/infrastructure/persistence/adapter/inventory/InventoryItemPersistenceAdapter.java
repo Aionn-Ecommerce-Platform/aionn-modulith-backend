@@ -5,6 +5,7 @@ import com.aionn.inventory.application.dto.common.PageResult;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import com.aionn.inventory.domain.model.InventoryItem;
 import com.aionn.inventory.domain.valueobject.InventoryItemKey;
+import com.aionn.inventory.domain.valueobject.WarehouseStatus;
 import com.aionn.inventory.infrastructure.persistence.entity.InventoryItemEntity;
 import com.aionn.inventory.infrastructure.persistence.mapper.InventoryItemDomainMapper;
 import com.aionn.inventory.infrastructure.persistence.repository.InventoryItemRepository;
@@ -39,7 +40,7 @@ public class InventoryItemPersistenceAdapter implements InventoryItemPersistence
                 item.getKey().skuId(), item.getKey().warehouseId());
         InventoryItemEntity existing = jpa.findById(id).orElse(null);
         InventoryItemEntity entity = mapper.toEntity(item, existing);
-        return mapper.toDomain(jpa.save(entity));
+        return mapper.toDomain(jpa.saveAndFlush(entity));
     }
 
     @Override
@@ -94,7 +95,8 @@ public class InventoryItemPersistenceAdapter implements InventoryItemPersistence
         List<String> all = new ArrayList<>(distinct);
         for (int from = 0; from < all.size(); from += AVAILABILITY_QUERY_CHUNK) {
             List<String> chunk = all.subList(from, Math.min(from + AVAILABILITY_QUERY_CHUNK, all.size()));
-            available.addAll(jpa.findAvailableSkuIds(chunk));
+            available.addAll(jpa.findAvailableSkuIds(
+                    chunk, WarehouseStatus.ACTIVE.name()));
         }
         return available;
     }

@@ -1,7 +1,7 @@
 package com.aionn.payment.infrastructure.provider;
 
 import com.aionn.payment.application.port.out.PaymentProviderClient;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import com.aionn.payment.domain.valueobject.PaymentGatewayKind;
 import com.aionn.payment.infrastructure.provider.config.StripeProperties;
 import com.stripe.model.Event;

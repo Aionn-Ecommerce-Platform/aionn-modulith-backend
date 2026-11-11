@@ -4,7 +4,7 @@ import com.aionn.inventory.application.port.out.InventoryItemPersistencePort;
 import com.aionn.inventory.application.port.out.WarehousePersistencePort;
 import com.aionn.inventory.domain.model.InventoryItem;
 import com.aionn.inventory.domain.model.Warehouse;
-import com.aionn.sharedkernel.integration.port.inventory.WarehouseSelectorPort;
+import com.aionn.contracts.port.inventory.WarehouseSelectorPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -23,7 +23,9 @@ public class InventoryWarehouseSelectorAdapter implements WarehouseSelectorPort 
         if (merchantId == null || merchantId.isBlank() || skuId == null || skuId.isBlank()) {
             return Optional.empty();
         }
-        List<Warehouse> warehouses = warehouseRepository.findByMerchantOrderByPriority(merchantId);
+        List<Warehouse> warehouses = warehouseRepository.findByMerchantOrderByPriority(merchantId).stream()
+                .filter(w -> w.getStatus().canFulfill())
+                .toList();
         if (warehouses.isEmpty()) {
             return Optional.empty();
         }
@@ -31,11 +33,15 @@ public class InventoryWarehouseSelectorAdapter implements WarehouseSelectorPort 
         List<InventoryItem> items = inventoryItemRepository.findBySkuAcrossWarehouses(skuId, warehouseIds);
         for (Warehouse w : warehouses) {
             for (InventoryItem item : items) {
-                if (item.getKey().warehouseId().equals(w.getWarehouseId()) && item.getAvailableQty() > 0) {
+                if (item.getKey().warehouseId().equals(w.getWarehouseId())
+                        && !item.isLocked()
+                        && item.getAvailableQty() > 0) {
                     return Optional.of(w.getWarehouseId());
                 }
             }
         }
-        return Optional.of(warehouses.get(0).getWarehouseId());
+        // No warehouse has stock — return empty so the caller reports
+        // out-of-stock rather than reserving against a guaranteed-empty one.
+        return Optional.empty();
     }
 }

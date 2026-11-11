@@ -34,6 +34,7 @@ public class Product extends AggregateRoot {
     private final List<ProductVariant> variants = new ArrayList<>();
     private String aiDescription;
     private ProductStatus status;
+    private String slug;
     private final Instant createdAt;
     private Instant updatedAt;
     private final long version;
@@ -80,6 +81,7 @@ public class Product extends AggregateRoot {
             this.variants.addAll(variants);
         this.aiDescription = aiDescription;
         this.status = status;
+        this.slug = com.aionn.catalog.domain.util.ProductSlug.generate(name);
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.version = version;
@@ -98,16 +100,32 @@ public class Product extends AggregateRoot {
         return product;
     }
 
+    /** Restores the persisted slug when rehydrating from storage. */
+    public void attachSlug(String slug) {
+        if (slug != null && !slug.isBlank()) {
+            this.slug = slug;
+        }
+    }
+
     public void ensureOwnedBy(String merchantId) {
         Guard.require(this.merchantId.equals(merchantId),
                 () -> new CatalogException(CatalogErrorCode.PRODUCT_FORBIDDEN));
     }
 
     public void defineVariant(String skuId, Map<String, String> attributeValues, Money price, Clock clock) {
-        // A variant with no attributes is a legitimate shape - a single-SKU item - and callers express it
-        // either as an empty map or by omitting the field altogether. ProductVariant normalises null for
-        // storage, but the event payload below copies the raw argument, so without this the omitted form
-        // stored the variant fine and then failed the request while publishing its event.
+        defineVariant(skuId, attributeValues, price, null, clock);
+    }
+
+    public void defineVariant(String skuId, Map<String, String> attributeValues, Money price,
+            ProductVariant.ParcelDimensions parcel, Clock clock) {
+        if (parcel != null) {
+            Guard.require(parcel.hasWeight(),
+                    () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
+                            "Variant parcel requires a positive shipping weight"));
+            Guard.require(parcel.isBoxComplete(),
+                    () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
+                            "Variant parcel dimensions must include all of length/width/height"));
+        }
         Map<String, String> normalizedAttributes =
                 attributeValues == null ? Map.of() : Map.copyOf(attributeValues);
         for (ProductVariant existing : variants) {
@@ -118,7 +136,7 @@ public class Product extends AggregateRoot {
                     () -> new CatalogException(CatalogErrorCode.PRODUCT_VARIANT_DUPLICATE,
                             "Variant attribute combination already exists"));
         }
-        variants.add(new ProductVariant(skuId, normalizedAttributes, price));
+        variants.add(new ProductVariant(skuId, normalizedAttributes, price, null, parcel));
         touch(clock);
         registerEvent(new ProductEvents.ProductVariantDefined(productId, skuId, Map.copyOf(normalizedAttributes), updatedAt));
     }
@@ -126,6 +144,9 @@ public class Product extends AggregateRoot {
     public void removeVariant(String skuId, Clock clock) {
         ProductVariant existing = findVariant(skuId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.PRODUCT_VARIANT_NOT_FOUND));
+        Guard.require(status != ProductStatus.PUBLISHED || variants.size() > 1,
+                () -> new CatalogException(CatalogErrorCode.PRODUCT_INVALID_TRANSITION,
+                        "Cannot remove the last variant from a published product"));
         variants.remove(existing);
         touch(clock);
         registerEvent(new ProductEvents.ProductVariantRemoved(productId, skuId, merchantId, updatedAt, updatedAt));
@@ -139,6 +160,22 @@ public class Product extends AggregateRoot {
         touch(clock);
         registerEvent(new ProductEvents.ProductVariantPriceChanged(
                 productId, skuId, oldAmount, newPrice.amount(), newPrice.currency(), updatedAt));
+    }
+
+    public void changeVariantParcel(String skuId, ProductVariant.ParcelDimensions parcel, Clock clock) {
+        ProductVariant existing = findVariant(skuId)
+                .orElseThrow(() -> new CatalogException(CatalogErrorCode.PRODUCT_VARIANT_NOT_FOUND));
+        Guard.require(parcel != null && parcel.hasWeight(),
+                () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
+                        "Variant parcel requires a positive shipping weight"));
+        Guard.require(parcel.isBoxComplete(),
+                () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
+                        "Variant parcel dimensions must include all of length/width/height"));
+        existing.setParcel(parcel);
+        touch(clock);
+        registerEvent(new ProductEvents.ProductVariantParcelChanged(
+                productId, skuId, parcel.weightGram(), parcel.lengthCm(), parcel.widthCm(),
+                parcel.heightCm(), updatedAt));
     }
 
     public void updateMedia(List<String> images, Clock clock) {
@@ -174,6 +211,16 @@ public class Product extends AggregateRoot {
         Guard.require(!categoryIds.isEmpty(),
                 () -> new CatalogException(CatalogErrorCode.PRODUCT_PUBLISH_REQUIREMENTS,
                         "Cannot publish without a category"));
+        for (ProductVariant variant : variants) {
+            ProductVariant.ParcelDimensions parcel = variant.parcel();
+            Guard.require(parcel != null && parcel.hasWeight(),
+                    () -> new CatalogException(CatalogErrorCode.PRODUCT_PUBLISH_REQUIREMENTS,
+                            "Cannot publish: SKU " + variant.skuId() + " is missing its shipping weight"));
+            Guard.require(parcel.isBoxComplete(),
+                    () -> new CatalogException(CatalogErrorCode.PRODUCT_PUBLISH_REQUIREMENTS,
+                            "Cannot publish: SKU " + variant.skuId()
+                                    + " has incomplete parcel dimensions (need all of length/width/height)"));
+        }
         ensureTransitionAllowed(ProductStatus.PUBLISHED);
         this.status = ProductStatus.PUBLISHED;
         touch(clock);

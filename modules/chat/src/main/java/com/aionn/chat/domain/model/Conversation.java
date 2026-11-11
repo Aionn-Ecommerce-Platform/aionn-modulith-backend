@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Getter
 public class Conversation extends AggregateRoot {
@@ -29,7 +30,7 @@ public class Conversation extends AggregateRoot {
     private MessageType lastMessageType;
     private String lastMessageSenderId;
     private Instant lastMessageAt;
-    private boolean archived;
+    private final Set<String> archivedParticipantIds;
     private final Instant createdAt;
     private Instant updatedAt;
 
@@ -46,6 +47,27 @@ public class Conversation extends AggregateRoot {
             boolean archived,
             Instant createdAt,
             Instant updatedAt) {
+        this(conversationId, buyerId, merchantId, participants, lastMessageId, lastMessagePreview,
+                lastMessageType, lastMessageSenderId, lastMessageAt,
+                archived && participants != null
+                        ? participants.stream().map(Participant::userId).collect(java.util.stream.Collectors.toSet())
+                        : Set.of(),
+                createdAt, updatedAt);
+    }
+
+    public Conversation(
+            String conversationId,
+            String buyerId,
+            String merchantId,
+            List<Participant> participants,
+            String lastMessageId,
+            String lastMessagePreview,
+            MessageType lastMessageType,
+            String lastMessageSenderId,
+            Instant lastMessageAt,
+            Set<String> archivedParticipantIds,
+            Instant createdAt,
+            Instant updatedAt) {
         this.conversationId = conversationId;
         this.buyerId = buyerId;
         this.merchantId = merchantId;
@@ -55,7 +77,8 @@ public class Conversation extends AggregateRoot {
         this.lastMessageType = lastMessageType;
         this.lastMessageSenderId = lastMessageSenderId;
         this.lastMessageAt = lastMessageAt;
-        this.archived = archived;
+        this.archivedParticipantIds = new java.util.HashSet<>(
+                archivedParticipantIds == null ? Set.of() : archivedParticipantIds);
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -114,9 +137,7 @@ public class Conversation extends AggregateRoot {
     public void recordMessageSent(String messageId, MessageType type, String preview, String senderId,
             Clock clock) {
         requireParticipant(senderId);
-        if (archived) {
-            this.archived = false;
-        }
+        archivedParticipantIds.remove(senderId);
         this.lastMessageId = messageId;
         this.lastMessageType = type;
         this.lastMessagePreview = preview;
@@ -146,14 +167,26 @@ public class Conversation extends AggregateRoot {
 
     public void archive(String userId, Clock clock) {
         requireParticipant(userId);
-        this.archived = true;
+        archivedParticipantIds.add(userId);
         this.updatedAt = clock.instant();
     }
 
     public void unarchive(String userId, Clock clock) {
         requireParticipant(userId);
-        this.archived = false;
+        archivedParticipantIds.remove(userId);
         this.updatedAt = clock.instant();
+    }
+
+    public boolean isArchived() {
+        return !archivedParticipantIds.isEmpty();
+    }
+
+    public boolean isArchivedBy(String userId) {
+        return archivedParticipantIds.contains(userId);
+    }
+
+    public Set<String> getArchivedParticipantIds() {
+        return Set.copyOf(archivedParticipantIds);
     }
 
     public Map<String, Instant> participantLastReadMap() {

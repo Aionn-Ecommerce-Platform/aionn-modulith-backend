@@ -55,6 +55,33 @@ class UcpIdentityApplicationServiceTest {
         }
 
         @Test
+        void linkIdentitySucceedsForProvisionedPlatformCredential() {
+                UcpIdentityLinkRequest request = new UcpIdentityLinkRequest(
+                                "google_assistant", "sub_123", "cust_456", List.of(), Map.of());
+                UcpIdentityLinkResponse expected = new UcpIdentityLinkResponse(
+                                "link_1", "google_assistant", "sub_123", "cust_456", "ACTIVE",
+                                List.of(), Instant.now(), null, Map.of());
+
+                when(identityLinkPort.findByPlatformAndSubject("google_assistant", "sub_123"))
+                                .thenReturn(Optional.empty());
+                when(identityLinkPort.saveLink(any())).thenReturn(expected);
+
+                UcpIdentityLinkResponse result = service.linkIdentity(request, null, "google_assistant");
+
+                assertThat(result.customerId()).isEqualTo("cust_456");
+        }
+
+        @Test
+        void linkIdentityRejectsPlatformCredentialForAnotherPlatform() {
+                UcpIdentityLinkRequest request = new UcpIdentityLinkRequest(
+                                "google_assistant", "sub_123", "cust_456", List.of(), Map.of());
+
+                assertThatThrownBy(() -> service.linkIdentity(request, null, "other_platform"))
+                                .isInstanceOf(UcpProtocolException.class)
+                                .satisfies(ex -> assertThat(((UcpProtocolException) ex).getStatusCode()).isEqualTo(403));
+        }
+
+        @Test
         void linkIdentityThrowsForbiddenWhenCallerDoesNotMatchCustomerId() {
                 UcpIdentityLinkRequest request = new UcpIdentityLinkRequest(
                                 "google_assistant", "sub_123", "cust_456", List.of(), Map.of());

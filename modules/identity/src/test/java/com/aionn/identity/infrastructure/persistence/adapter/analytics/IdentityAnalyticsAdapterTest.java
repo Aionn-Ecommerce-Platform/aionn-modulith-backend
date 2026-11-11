@@ -1,5 +1,7 @@
 package com.aionn.identity.infrastructure.persistence.adapter.analytics;
 
+import org.junit.jupiter.api.BeforeEach;
+
 import com.aionn.identity.application.dto.analytics.result.FeedbackAnalyticsResult;
 import com.aionn.identity.application.dto.analytics.result.KycAnalyticsResult;
 import com.aionn.identity.application.dto.analytics.result.UserAnalyticsResult;
@@ -38,7 +40,7 @@ class IdentityAnalyticsAdapterTest {
 
     private IdentityAnalyticsAdapter adapter;
 
-    @org.junit.jupiter.api.BeforeEach
+    @BeforeEach
     void setUp() {
         adapter = new IdentityAnalyticsAdapter(userRepository, kycRepository, feedbackRepository, Clock.systemUTC());
     }
@@ -119,7 +121,7 @@ class IdentityAnalyticsAdapterTest {
         LocalDate from = LocalDate.of(2024, 1, 1);
         LocalDate to = LocalDate.of(2024, 1, 10);
         List<KycProfileRepository.KycStatusCount> statusRows = List.of(
-                kycStatusCount("PENDING", 2L),
+                kycStatusCount("IN_REVIEW", 2L),
                 kycStatusCount("APPROVED", 6L),
                 kycStatusCount("REJECTED", 2L),
                 kycStatusCount("SUBMITTED", 1L),
@@ -133,7 +135,7 @@ class IdentityAnalyticsAdapterTest {
 
         KycAnalyticsResult result = adapter.getKycAnalytics(from, to);
 
-        assertThat(result.pending()).isEqualTo(2L);
+        assertThat(result.pending()).isEqualTo(3L);
         assertThat(result.approved()).isEqualTo(6L);
         assertThat(result.rejected()).isEqualTo(2L);
         assertThat(result.submitted()).isEqualTo(1L);

@@ -1,5 +1,10 @@
 package com.aionn.catalog.infrastructure.persistence.adapter.product;
 
+import java.math.BigDecimal;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
 import com.aionn.catalog.application.port.out.product.ProductPersistencePort;
 import com.aionn.catalog.domain.model.Product;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
@@ -74,6 +79,11 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
     @Override
     public long countByMerchant(String merchantId) {
         return jpa.countByMerchantId(merchantId);
+    }
+
+    @Override
+    public long countByMerchantAndStatus(String merchantId, ProductStatus status) {
+        return jpa.countByMerchantIdAndStatus(merchantId, status.name());
     }
 
     @Override
@@ -152,8 +162,14 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
 
     @Override
     public List<Product> searchPublished(String query, int limit, int offset) {
+        return searchPublished(query, null, null, limit, offset);
+    }
+
+    @Override
+    public List<Product> searchPublished(String query, BigDecimal priceMin,
+            BigDecimal priceMax, int limit, int offset) {
         String q = (query == null || query.isBlank()) ? null : query.trim();
-        return jpa.searchPublished(q, Math.max(1, limit), Math.max(0, offset)).stream()
+        return jpa.searchPublished(q, priceMin, priceMax, Math.max(1, limit), Math.max(0, offset)).stream()
                 .map(mapper::toDomain)
                 .toList();
     }
@@ -169,12 +185,12 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
         if (productIds == null || productIds.isEmpty()) {
             return List.of();
         }
-        java.util.Map<String, Product> byId = jpa.findAllById(productIds).stream()
+        Map<String, Product> byId = jpa.findAllById(productIds).stream()
                 .map(mapper::toDomain)
-                .collect(java.util.stream.Collectors.toMap(Product::getProductId, p -> p, (a, b) -> a));
+                .collect(Collectors.toMap(Product::getProductId, p -> p, (a, b) -> a));
         return productIds.stream()
                 .map(byId::get)
-                .filter(java.util.Objects::nonNull)
+                .filter(Objects::nonNull)
                 .toList();
     }
 
@@ -197,13 +213,14 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
         String categories = csv(filter.categoryIds());
         String attributesJson = jsonMapper.writeValueAsString(filter.attributes());
         String status = (filter.status() == null ? ProductStatus.PUBLISHED : filter.status()).name();
+        boolean onSale = Boolean.TRUE.equals(filter.onSale());
         List<Product> content = jpa.searchFallback(query, merchantId, status, brands, categories,
-                        filter.priceMin(), filter.priceMax(), attributesJson, filter.ratingMin(), filter.sort().name(),
-                        pagination.size(), pagination.offset()).stream()
+                        filter.priceMin(), filter.priceMax(), attributesJson, filter.ratingMin(), onSale,
+                        filter.sort().name(), pagination.size(), pagination.offset()).stream()
                 .map(mapper::toDomain)
                 .toList();
         long total = jpa.countFallback(query, merchantId, status, brands, categories,
-                filter.priceMin(), filter.priceMax(), attributesJson, filter.ratingMin());
+                filter.priceMin(), filter.priceMax(), attributesJson, filter.ratingMin(), onSale);
         return new FallbackPage(content, total);
     }
 

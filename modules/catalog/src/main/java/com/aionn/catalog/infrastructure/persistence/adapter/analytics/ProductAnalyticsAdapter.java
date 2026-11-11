@@ -28,10 +28,8 @@ public class ProductAnalyticsAdapter implements ProductAnalyticsQueryPort {
                 case "PUBLISHED" -> published = cnt;
                 case "DRAFT" -> draft = cnt;
                 case "PENDING_REVIEW" -> pending = cnt;
-                case "ARCHIVED" -> archived = cnt;
+                case "HIDDEN", "TAKEN_DOWN" -> archived += cnt;
                 default -> {
-                    // Other statuses (DRAFT variants, transient states) are not surfaced in
-                    // analytics.
                 }
             }
         }

@@ -1,5 +1,7 @@
 package com.aionn.identity.infrastructure.persistence.adapter.auth;
 
+import java.time.ZoneOffset;
+
 import com.aionn.identity.domain.model.AuthSession;
 import com.aionn.identity.infrastructure.persistence.entity.AuthSessionEntity;
 import com.aionn.identity.infrastructure.persistence.entity.UserEntity;
@@ -32,7 +34,7 @@ class AuthSessionPersistenceAdapterTest {
     private static final String SESSION_ID = "01HZSES0000000000000000001";
     private static final String USER_ID = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
     private static final Clock CLOCK = Clock.fixed(
-            Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
+            Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
 
     @Mock
     private AuthSessionRepository authSessionRepository;

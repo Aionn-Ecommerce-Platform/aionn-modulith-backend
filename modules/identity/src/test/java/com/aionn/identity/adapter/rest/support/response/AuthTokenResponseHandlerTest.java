@@ -4,7 +4,7 @@ import com.aionn.identity.adapter.rest.dto.auth.response.AuthTokenResponse;
 import com.aionn.identity.adapter.rest.dto.auth.response.LogoutAllResponse;
 import com.aionn.identity.infrastructure.config.properties.AuthCookieProperties;
 import com.aionn.identity.infrastructure.config.properties.AuthProperties;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -73,6 +73,18 @@ class AuthTokenResponseHandlerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().data().refreshToken()).isNull();
         assertThat(response.getBody().data().accessToken()).isEqualTo("access-1");
+    }
+
+    @Test
+    void successSetsOnlyTheHttpOnlyRefreshCookie() {
+        when(authProperties.mobileClientValue()).thenReturn("mobile");
+
+        ResponseEntity<ApiResponse<AuthTokenResponse>> response = authTokenResponseHandler.success(
+                sampleAuthTokenResponse(), "web", "Login successful!");
+
+        assertThat(response.getHeaders().get(HttpHeaders.SET_COOKIE))
+                .hasSize(1)
+                .allMatch(cookie -> cookie.startsWith("refresh_token=") && cookie.contains("HttpOnly"));
     }
 
     @Test

@@ -1,9 +1,9 @@
 package com.aionn.payment.infrastructure.integration.payment;
 
-import com.aionn.sharedkernel.integration.event.payment.PaymentCapturedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.payment.PaymentFailedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.payment.PaymentRefundedIntegrationEvent;
-import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.contracts.event.payment.PaymentCapturedIntegrationEvent;
+import com.aionn.contracts.event.payment.PaymentFailedIntegrationEvent;
+import com.aionn.contracts.event.payment.PaymentRefundedIntegrationEvent;
+import com.aionn.contracts.publisher.IntegrationEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;

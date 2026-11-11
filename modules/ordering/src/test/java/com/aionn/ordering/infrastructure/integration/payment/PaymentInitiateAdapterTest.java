@@ -1,7 +1,7 @@
 package com.aionn.ordering.infrastructure.integration.payment;
 
 import com.aionn.ordering.application.port.out.PaymentGateway;
-import com.aionn.sharedkernel.integration.port.payment.PaymentInitiatePort;
+import com.aionn.contracts.port.payment.PaymentInitiatePort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

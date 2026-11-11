@@ -1,6 +1,7 @@
 package com.aionn.identity.application.service;
 
 import com.aionn.identity.application.dto.consent.result.ConsentResult;
+import com.aionn.identity.application.policy.ConsentPolicy;
 import com.aionn.identity.application.port.out.consent.ConsentPersistencePort;
 import com.aionn.identity.application.port.out.user.UserPersistencePort;
 import com.aionn.identity.domain.exception.IdentityErrorCode;
@@ -28,21 +29,34 @@ public class ConsentService {
 
     private final UserPersistencePort userPersistencePort;
     private final ConsentPersistencePort consentPersistencePort;
+    private final ConsentPolicy consentPolicy;
 
     private final Clock clock;
+
     public ConsentResult agreeTerms(String userId, String version, String ipAddress) {
         log.info("Recording terms consent for user: {}, version: {}", userId, version);
-        return appendDecision(userId, ConsentType.TERMS, version, ipAddress, true);
+        return appendDecision(userId, ConsentType.TERMS,
+                requireCurrentVersion(version, consentPolicy.termsVersion()), ipAddress, true);
     }
 
     public ConsentResult agreePrivacy(String userId, String version, String ipAddress) {
         log.info("Recording privacy consent for user: {}, version: {}", userId, version);
-        return appendDecision(userId, ConsentType.PRIVACY, version, ipAddress, true);
+        return appendDecision(userId, ConsentType.PRIVACY,
+                requireCurrentVersion(version, consentPolicy.privacyVersion()), ipAddress, true);
     }
 
     public ConsentResult updateMarketing(String userId, boolean subscribed, String ipAddress) {
         log.info("Updating marketing consent for user: {}, subscribed: {}", userId, subscribed);
-        return appendDecision(userId, ConsentType.MARKETING, DEFAULT_MARKETING_VERSION, ipAddress, subscribed);
+        return appendDecision(userId, ConsentType.MARKETING,
+                consentPolicy.marketingVersion(), ipAddress, subscribed);
+    }
+
+    private String requireCurrentVersion(String requestedVersion, String currentVersion) {
+        if (requestedVersion == null || requestedVersion.isBlank()
+                || !requestedVersion.trim().equals(currentVersion)) {
+            throw new IdentityException(IdentityErrorCode.CONSENT_VERSION_MISMATCH);
+        }
+        return currentVersion;
     }
 
     @Transactional(readOnly = true)
@@ -84,6 +98,7 @@ public class ConsentService {
         log.info("Consent appended for user: {}, type: {}, granted: {}", userId, consentType, granted);
         return saved;
     }
+
     private Instant nowUtc() {
         return clock.instant();
     }

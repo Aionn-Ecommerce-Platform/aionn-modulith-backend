@@ -1,12 +1,12 @@
 package com.aionn.identity.infrastructure.integration.identity;
 
 import com.aionn.identity.application.port.out.integration.IdentityIntegrationEventPublisherPort;
-import com.aionn.sharedkernel.integration.event.identity.AccountDeletedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.identity.EmailChangedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.identity.PasswordChangedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.identity.PasswordResetRequestedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.identity.PhoneChangedIntegrationEvent;
-import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.contracts.event.identity.AccountDeletedIntegrationEvent;
+import com.aionn.contracts.event.identity.EmailChangedIntegrationEvent;
+import com.aionn.contracts.event.identity.PasswordChangedIntegrationEvent;
+import com.aionn.contracts.event.identity.PasswordResetRequestedIntegrationEvent;
+import com.aionn.contracts.event.identity.PhoneChangedIntegrationEvent;
+import com.aionn.contracts.publisher.IntegrationEventPublisher;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

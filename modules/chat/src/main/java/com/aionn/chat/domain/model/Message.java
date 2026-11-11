@@ -73,7 +73,21 @@ public class Message extends AggregateRoot {
             MessagePayload payload,
             List<String> recipientIds,
             Clock clock) {
-        validatePayload(type, payload);
+        return send(messageId, conversationId, senderId, senderRole, type, payload,
+                recipientIds, MAX_TEXT_LENGTH, clock);
+    }
+
+    public static Message send(
+            String messageId,
+            String conversationId,
+            String senderId,
+            ParticipantRole senderRole,
+            MessageType type,
+            MessagePayload payload,
+            List<String> recipientIds,
+            int maxTextLength,
+            Clock clock) {
+        validatePayload(type, payload, maxTextLength);
         Instant now = clock.instant();
         Message m = new Message(messageId, conversationId, senderId, senderRole, type, payload,
                 MessageStatus.SENT, new HashSet<>(), new HashSet<>(), false, now, now);
@@ -112,12 +126,16 @@ public class Message extends AggregateRoot {
     }
 
     public void recall(String userId, Clock clock) {
+        recall(userId, RECALL_WINDOW, clock);
+    }
+
+    public void recall(String userId, Duration recallWindow, Clock clock) {
         Guard.require(senderId.equals(userId),
                 () -> new ChatException(ChatErrorCode.MESSAGE_FORBIDDEN));
         Guard.require(!recalled,
                 () -> new ChatException(ChatErrorCode.MESSAGE_ALREADY_RECALLED));
         Instant now = clock.instant();
-        Guard.require(!now.isAfter(sentAt.plus(RECALL_WINDOW)),
+        Guard.require(!now.isAfter(sentAt.plus(recallWindow)),
                 () -> new ChatException(ChatErrorCode.MESSAGE_RECALL_WINDOW_EXPIRED));
         this.recalled = true;
         this.status = MessageStatus.RECALLED;
@@ -137,7 +155,7 @@ public class Message extends AggregateRoot {
         };
     }
 
-    private static void validatePayload(MessageType type, MessagePayload payload) {
+    private static void validatePayload(MessageType type, MessagePayload payload, int maxTextLength) {
         if (payload == null) {
             throw new ChatException(ChatErrorCode.MESSAGE_EMPTY);
         }
@@ -146,7 +164,7 @@ public class Message extends AggregateRoot {
             if (body == null || body.isBlank()) {
                 throw new ChatException(ChatErrorCode.MESSAGE_EMPTY);
             }
-            if (body.length() > MAX_TEXT_LENGTH) {
+            if (body.length() > maxTextLength) {
                 throw new ChatException(ChatErrorCode.MESSAGE_TOO_LONG);
             }
         }

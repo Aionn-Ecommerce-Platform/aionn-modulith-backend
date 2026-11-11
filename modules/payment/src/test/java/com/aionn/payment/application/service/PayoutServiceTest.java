@@ -1,5 +1,7 @@
 package com.aionn.payment.application.service;
 
+import org.mockito.ArgumentCaptor;
+
 import com.aionn.payment.application.port.out.MerchantBalancePersistencePort;
 import com.aionn.payment.application.port.out.MerchantPayoutPersistencePort;
 import com.aionn.payment.application.port.out.SettlementLedgerPersistencePort;
@@ -8,7 +10,7 @@ import com.aionn.payment.domain.model.MerchantBalance;
 import com.aionn.payment.domain.model.MerchantPayout;
 import com.aionn.payment.domain.model.SettlementLedgerEntry;
 import com.aionn.payment.domain.valueobject.PayoutStatus;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -69,8 +71,8 @@ class PayoutServiceTest {
         assertEquals(PayoutStatus.PENDING, result.getStatus());
 
         verify(balanceRepo).save(balance);
-        org.mockito.ArgumentCaptor<SettlementLedgerEntry> entry =
-                org.mockito.ArgumentCaptor.forClass(SettlementLedgerEntry.class);
+        ArgumentCaptor<SettlementLedgerEntry> entry =
+                ArgumentCaptor.forClass(SettlementLedgerEntry.class);
         verify(ledgerRepo).save(entry.capture());
         assertEquals(amount.negate(), entry.getValue().getAvailableDelta());
     }
@@ -96,7 +98,7 @@ class PayoutServiceTest {
     void shouldMarkCompleted() {
         MerchantPayout payout = new MerchantPayout("p-1", "m-1", new BigDecimal("100.00"), "VND", PayoutStatus.PENDING,
                 "VCB", "123", "Name", null, null, clock.instant(), null, null, null, 0L);
-        when(payoutRepo.findById("p-1")).thenReturn(Optional.of(payout));
+        when(payoutRepo.findByIdForUpdate("p-1")).thenReturn(Optional.of(payout));
         when(payoutRepo.save(payout)).thenReturn(payout);
 
         MerchantPayout result = payoutService.markCompleted("p-1", "external-123");
@@ -110,7 +112,7 @@ class PayoutServiceTest {
     void shouldMarkFailedAndReverseBalance() {
         MerchantPayout payout = new MerchantPayout("p-1", "m-1", new BigDecimal("100.00"), "VND", PayoutStatus.PENDING,
                 "VCB", "123", "Name", null, null, clock.instant(), null, null, null, 0L);
-        when(payoutRepo.findById("p-1")).thenReturn(Optional.of(payout));
+        when(payoutRepo.findByIdForUpdate("p-1")).thenReturn(Optional.of(payout));
         when(payoutRepo.save(payout)).thenReturn(payout);
 
         MerchantBalance balance = new MerchantBalance("m-1", "VND", BigDecimal.ZERO, BigDecimal.ZERO, 0L,
@@ -122,10 +124,23 @@ class PayoutServiceTest {
         assertEquals(PayoutStatus.FAILED, result.getStatus());
         assertEquals("Bank rejected", result.getFailureReason());
         assertEquals(new BigDecimal("100.00"), balance.getAvailable());
-        org.mockito.ArgumentCaptor<SettlementLedgerEntry> entry =
-                org.mockito.ArgumentCaptor.forClass(SettlementLedgerEntry.class);
+        ArgumentCaptor<SettlementLedgerEntry> entry =
+                ArgumentCaptor.forClass(SettlementLedgerEntry.class);
         verify(ledgerRepo).save(entry.capture());
         assertEquals(new BigDecimal("100.00"), entry.getValue().getAvailableDelta());
+    }
+
+    @Test
+    void shouldNotReverseBalanceTwiceWhenPayoutAlreadyFailed() {
+        MerchantPayout payout = new MerchantPayout("p-1", "m-1", new BigDecimal("100.00"), "VND", PayoutStatus.FAILED,
+                "VCB", "123", "Name", null, null, clock.instant(), null, clock.instant(), "bank error", 0L);
+        when(payoutRepo.findByIdForUpdate("p-1")).thenReturn(Optional.of(payout));
+
+        MerchantPayout result = payoutService.markFailed("p-1", "repeated callback");
+
+        assertEquals(PayoutStatus.FAILED, result.getStatus());
+        verify(balanceRepo, never()).lockForUpdate(any(), any());
+        verify(ledgerRepo, never()).save(any(SettlementLedgerEntry.class));
     }
 
     @Test

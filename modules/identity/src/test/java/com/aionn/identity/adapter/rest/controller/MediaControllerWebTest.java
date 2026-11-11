@@ -8,14 +8,14 @@ import com.aionn.identity.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.identity.application.dto.media.result.UploadSignatureResult;
 import com.aionn.identity.application.port.in.media.GenerateAvatarUploadSignatureInputPort;
 import com.aionn.identity.application.port.in.media.GenerateKycDocumentUploadSignatureInputPort;
-import com.aionn.sharedkernel.adapter.web.support.clientip.ClientIpArgumentResolver;
-import com.aionn.sharedkernel.infrastructure.web.ClientIpResolver;
+import com.aionn.platform.web.support.clientip.ClientIpArgumentResolver;
+import com.aionn.platform.infrastructure.web.ClientIpResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -67,14 +67,16 @@ class MediaControllerWebTest {
                 "cloudinary-api-key",
                 "aionn-cloud",
                 "https://api.cloudinary.com/v1_1/aionn-cloud/image/upload",
-                "identity/avatars");
+                "identity/avatars",
+                "upload");
         UploadSignatureResponse response = new UploadSignatureResponse(
                 "abcdef1234567890signature",
                 "1717000000",
                 "cloudinary-api-key",
                 "aionn-cloud",
                 "https://api.cloudinary.com/v1_1/aionn-cloud/image/upload",
-                "identity/avatars");
+                "identity/avatars",
+                "upload");
 
         when(generateAvatarUploadSignatureInputPort.execute("alice@example.com")).thenReturn(result);
         when(mediaDtoMapper.toUploadSignatureResponse(result)).thenReturn(response);
@@ -99,14 +101,16 @@ class MediaControllerWebTest {
                 "cloudinary-api-key",
                 "aionn-cloud",
                 "https://api.cloudinary.com/v1_1/aionn-cloud/auto/upload",
-                "identity/kyc/alice@example.com");
+                "identity/kyc/alice@example.com",
+                "private");
         UploadSignatureResponse response = new UploadSignatureResponse(
                 "kyc-signature",
                 "1717000001",
                 "cloudinary-api-key",
                 "aionn-cloud",
                 "https://api.cloudinary.com/v1_1/aionn-cloud/auto/upload",
-                "identity/kyc/alice@example.com");
+                "identity/kyc/alice@example.com",
+                "private");
 
         when(generateKycDocumentUploadSignatureInputPort.execute("alice@example.com")).thenReturn(result);
         when(mediaDtoMapper.toUploadSignatureResponse(result)).thenReturn(response);

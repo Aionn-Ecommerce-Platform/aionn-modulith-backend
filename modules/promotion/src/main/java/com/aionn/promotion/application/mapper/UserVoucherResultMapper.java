@@ -1,5 +1,7 @@
 package com.aionn.promotion.application.mapper;
 
+import java.util.List;
+
 import com.aionn.promotion.application.dto.voucher.result.UserVoucherResult;
 import com.aionn.promotion.domain.model.UserVoucher;
 import org.mapstruct.Mapper;
@@ -20,5 +22,5 @@ public interface UserVoucherResultMapper {
     @Mapping(target = "voucherUsedCount", ignore = true)
     UserVoucherResult toResult(UserVoucher userVoucher);
 
-    java.util.List<UserVoucherResult> toResults(java.util.List<UserVoucher> userVouchers);
+    List<UserVoucherResult> toResults(List<UserVoucher> userVouchers);
 }

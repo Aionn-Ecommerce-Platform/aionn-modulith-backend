@@ -1,5 +1,6 @@
 package com.aionn.chat.infrastructure.presence;
 
+import com.aionn.chat.infrastructure.config.properties.ChatPresenceProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -30,7 +31,7 @@ class PresenceTrackerTest {
 
     private RedisPresenceTracker redisTracker() {
         when(redis.opsForSet()).thenReturn(setOps);
-        return new RedisPresenceTracker(redis);
+        return new RedisPresenceTracker(redis, new ChatPresenceProperties("redis", 300, 60000));
     }
 
     @Test

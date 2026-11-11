@@ -1,5 +1,7 @@
 package com.aionn.identity.application.service;
 
+import java.time.ZoneOffset;
+
 import com.aionn.identity.application.policy.AuthPolicy;
 import com.aionn.identity.application.port.out.auth.AuthSessionPersistencePort;
 import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
@@ -63,7 +65,7 @@ class PasswordResetServiceTest {
                 userSecurityPort, passwordResetPort, securityAuditPort, passwordHasher,
                 authSessionPersistencePort, refreshTokenStore,
                 integrationEventPublisher, identityMetrics, authPolicy, abuseRateLimiter,
-                Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
+                Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
     private static UserSecurityPort.UserSecurityData userSecurity() {
@@ -81,6 +83,7 @@ class PasswordResetServiceTest {
         service.changePassword(USER_ID, "OldPass1", "NewPass2", IP);
 
         verify(passwordResetPort).updatePassword(USER_ID, "new-hashed");
+        verify(passwordResetPort).deletePasswordResetTokensForUser(USER_ID);
         verify(securityAuditPort).saveAuditLog(USER_ID,
                 SecurityAuditEventType.PASSWORD_CHANGED, IP);
         verify(integrationEventPublisher).publishPasswordChanged(USER_ID, "self-service");

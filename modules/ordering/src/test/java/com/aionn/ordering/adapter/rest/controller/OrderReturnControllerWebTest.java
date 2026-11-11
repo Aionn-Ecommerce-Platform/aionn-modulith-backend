@@ -1,5 +1,9 @@
 package com.aionn.ordering.adapter.rest.controller;
 
+import com.aionn.ordering.adapter.rest.support.session.CurrentMerchantIdArgumentResolver;
+import com.aionn.contracts.port.catalog.MerchantOwnershipVerifierPort;
+import org.mockito.Mockito;
+
 import com.aionn.ordering.adapter.rest.dto.response.OrderReturnResponse;
 import com.aionn.ordering.adapter.rest.exception.OrderingExceptionHandler;
 import com.aionn.ordering.adapter.rest.mapper.OrderingDtoMapper;
@@ -10,14 +14,14 @@ import com.aionn.ordering.application.dto.returns.command.RejectReturnCommand;
 import com.aionn.ordering.application.dto.returns.command.RequestReturnCommand;
 import com.aionn.ordering.application.dto.returns.result.ReturnResult;
 import com.aionn.ordering.application.port.in.returns.*;
-import com.aionn.sharedkernel.adapter.web.exception.GlobalExceptionHandler;
+import com.aionn.platform.web.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -46,8 +50,9 @@ class OrderReturnControllerWebTest {
     @Mock private ConfirmItemReceivedInputPort confirmItemReceivedInputPort;
     @Mock private GetReturnInputPort getReturnInputPort;
     @Mock private ListReturnsInputPort listReturnsInputPort;
+    @Mock private com.aionn.ordering.application.service.OrderReturnService returnService;
     @Mock private OrderingDtoMapper dtoMapper;
-    @Mock private com.aionn.sharedkernel.integration.port.catalog.MerchantOwnershipVerifierPort merchantOwnershipVerifierPort;
+    @Mock private MerchantOwnershipVerifierPort merchantOwnershipVerifierPort;
 
     private MockMvc mockMvc;
 
@@ -55,19 +60,20 @@ class OrderReturnControllerWebTest {
     void setUp() {
         OrderReturnController controller = new OrderReturnController(
                 requestReturnInputPort, approveReturnInputPort, rejectReturnInputPort,
-                confirmItemReceivedInputPort, getReturnInputPort, listReturnsInputPort, dtoMapper);
+                confirmItemReceivedInputPort, getReturnInputPort, listReturnsInputPort, returnService,
+                dtoMapper);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new OrderingExceptionHandler(), new GlobalExceptionHandler())
                 .setMessageConverters(new JacksonJsonHttpMessageConverter(
                         JacksonMapperFactory.create()))
                 .setCustomArgumentResolvers(new CurrentUserIdArgumentResolver(),
-                        new com.aionn.ordering.adapter.rest.support.session.CurrentMerchantIdArgumentResolver(merchantOwnershipVerifierPort))
+                        new CurrentMerchantIdArgumentResolver(merchantOwnershipVerifierPort))
                 .build();
 
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                 "user-1", "n/a", List.of(new SimpleGrantedAuthority("ROLE_USER")));
         SecurityContextHolder.getContext().setAuthentication(auth);
-        org.mockito.Mockito.lenient().when(merchantOwnershipVerifierPort.isOwnedBy(any(), any())).thenReturn(true);
+        Mockito.lenient().when(merchantOwnershipVerifierPort.isOwnedBy(any(), any())).thenReturn(true);
 
         lenient().when(dtoMapper.toRequestReturnCommand(any(), any(), any())).thenReturn(new RequestReturnCommand("order-1", "user-1", "DEFECT", "url"));
         lenient().when(dtoMapper.toApproveReturnCommand(any(), any(), any())).thenReturn(new ApproveReturnCommand("return-1", "merchant-1", BigDecimal.TEN, "VND", "wh-1"));

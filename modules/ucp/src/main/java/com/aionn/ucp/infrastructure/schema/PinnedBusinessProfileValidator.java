@@ -1,5 +1,6 @@
 package com.aionn.ucp.infrastructure.schema;
 
+import com.aionn.ucp.application.UcpProtocolConstants;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.aionn.ucp.application.port.out.BusinessProfileValidationPort;
 import com.networknt.schema.JsonSchema;
@@ -13,7 +14,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class PinnedBusinessProfileValidator implements BusinessProfileValidationPort {
 
-    private static final String PREFIX = "https://ucp.dev/schemas/";
+    private static final String PREFIX = UcpProtocolConstants.SCHEMA_PREFIX;
     private static final Set<String> RESOURCES = Set.of(
             "profile.json", "ucp.json", "service.json", "capability.json", "payment_handler.json",
             "common/types/available_payment_instrument.json", "common/types/constraint_expression.json",
@@ -30,7 +31,7 @@ public class PinnedBusinessProfileValidator implements BusinessProfileValidation
             // Throw rather than return null: null allows the library's network fallback.
             throw new IllegalArgumentException("Schema is not in the pinned discovery registry");
         }
-        String resource = "/ucp/2026-08-25/" + uri.substring(PREFIX.length());
+        String resource = "/ucp/" + UcpProtocolConstants.VERSION + "/" + uri.substring(PREFIX.length());
         return () -> {
             var stream = PinnedBusinessProfileValidator.class.getResourceAsStream(resource);
             if (stream == null) {

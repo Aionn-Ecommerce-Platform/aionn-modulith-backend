@@ -2,7 +2,7 @@ package com.aionn.catalog.infrastructure.integration.catalog;
 
 import com.aionn.catalog.infrastructure.integration.merchant.MerchantIntegrationEventMapper;
 import com.aionn.catalog.domain.event.MerchantEvents;
-import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.contracts.publisher.IntegrationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;

@@ -2,6 +2,7 @@ package com.aionn.shipping.application.service;
 
 import com.aionn.shipping.application.dto.rate.command.ConfigureRateCommand;
 import com.aionn.shipping.application.dto.rate.command.UpdateRateCommand;
+import com.aionn.shipping.application.policy.ShippingDefaultsPolicy;
 import com.aionn.shipping.application.port.out.ShippingRatePersistencePort;
 import com.aionn.shipping.domain.exception.ShippingErrorCode;
 import com.aionn.shipping.domain.exception.ShippingException;
@@ -24,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,12 +37,17 @@ class ShippingRateServiceTest {
     ShippingRatePersistencePort repository;
     @Mock
     EventPublisher eventPublisher;
+    @Mock
+    ShippingDefaultsPolicy defaultsPolicy;
 
     ShippingRateService service;
 
     @BeforeEach
     void setUp() {
-        service = new ShippingRateService(repository, eventPublisher, Clock.systemUTC());
+        lenient().when(defaultsPolicy.defaultCurrency()).thenReturn("VND");
+        lenient().when(defaultsPolicy.defaultBaseWeightGram()).thenReturn(1000);
+        lenient().when(defaultsPolicy.defaultStepWeightGram()).thenReturn(500);
+        service = new ShippingRateService(repository, eventPublisher, defaultsPolicy, Clock.systemUTC());
     }
 
     @Test
@@ -69,6 +76,22 @@ class ShippingRateServiceTest {
         ArgumentCaptor<ShippingRate> captor = ArgumentCaptor.forClass(ShippingRate.class);
         verify(repository).save(captor.capture());
         assertThat(captor.getValue().getCurrency()).isEqualTo("VND");
+    }
+
+    @Test
+    void configureUsesPolicyWeightDefaultsWhenOmitted() {
+        when(defaultsPolicy.defaultBaseWeightGram()).thenReturn(2000);
+        when(defaultsPolicy.defaultStepWeightGram()).thenReturn(750);
+        when(repository.findByZoneCode("HN")).thenReturn(Optional.empty());
+        when(repository.save(any(ShippingRate.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.configure(new ConfigureRateCommand("HN",
+                BigDecimal.valueOf(30000), "VND", null));
+
+        ArgumentCaptor<ShippingRate> captor = ArgumentCaptor.forClass(ShippingRate.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getBaseWeightGram()).isEqualTo(2000);
+        assertThat(captor.getValue().getStepWeightGram()).isEqualTo(750);
     }
 
     @Test

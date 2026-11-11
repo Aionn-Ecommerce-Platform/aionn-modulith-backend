@@ -2,8 +2,12 @@ package com.aionn.inventory.infrastructure.integration.inventory;
 
 import com.aionn.inventory.application.port.out.WarehousePersistencePort;
 import com.aionn.inventory.domain.event.InventoryItemEvents;
+import com.aionn.inventory.domain.event.StockAdjustmentEvents;
 import com.aionn.inventory.domain.event.StockReservationEvents;
-import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.inventory.domain.valueobject.AdjustmentType;
+import com.aionn.contracts.event.inventory.StockReplenishedIntegrationEvent;
+import com.aionn.contracts.publisher.IntegrationEventPublisher;
+import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -49,9 +53,21 @@ public class InventoryIntegrationEventPublisher {
     }
 
     @EventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void onManualAdjustment(StockAdjustmentEvents.ManualAdjustmentRecorded event) {
+        if (event.type() != AdjustmentType.MANUAL_INCREASE
+                && event.type() != AdjustmentType.TRANSFER_IN) {
+            return;
+        }
+        log.debug("Publishing StockReplenishedIntegrationEvent for sku={} warehouse={}",
+                event.skuId(), event.warehouseId());
+        integrationEventPublisher.publish(new StockReplenishedIntegrationEvent(
+                IdGenerator.ulid(), event.skuId(), event.warehouseId(), event.qty(), event.occurredAt()));
+    }
+
+    @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
-    public void onSafetyStockBreached(InventoryItemEvents.SafetyStockBreached event) {
-        String merchantId = warehouseRepository.findById(event.warehouseId())
+    public void onSafetyStockBreached(InventoryItemEvents.SafetyStockBreached event) {        String merchantId = warehouseRepository.findById(event.warehouseId())
                 .map(w -> w.getMerchantId())
                 .orElse(null);
         if (merchantId == null) {

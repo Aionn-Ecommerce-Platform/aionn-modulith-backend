@@ -15,7 +15,14 @@ public interface AgentResultMapper {
     @Mapping(source = "id", target = "agentId")
     @Mapping(source = "status", target = "status", qualifiedByName = "statusToString")
     @Mapping(source = "expiresAt", target = "expiryAt")
+    @Mapping(target = "apiKey", ignore = true)
     AgentIdentityResult toIdentityResult(AgentIdentity agentIdentity);
+
+    default AgentIdentityResult toCreatedIdentityResult(AgentIdentity agentIdentity, String apiKey) {
+        AgentIdentityResult base = toIdentityResult(agentIdentity);
+        return new AgentIdentityResult(base.agentId(), apiKey, base.permissions(), base.status(),
+                base.expiryAt(), base.createdAt());
+    }
 
     @Mapping(source = "id", target = "auditId")
     AgentAuditLogResult toAuditLogResult(SecurityAudit securityAudit);

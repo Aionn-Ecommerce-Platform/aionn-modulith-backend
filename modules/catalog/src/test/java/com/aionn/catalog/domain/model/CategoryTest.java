@@ -1,5 +1,7 @@
 package com.aionn.catalog.domain.model;
 
+import com.aionn.catalog.domain.event.CategoryEvents;
+
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
 import org.junit.jupiter.api.Test;
@@ -56,7 +58,7 @@ class CategoryTest {
         assertThat(category.getSlug()).isEqualTo("electronics");
         var events = category.pullEvents();
         assertThat(events).hasSize(1);
-        var created = (com.aionn.catalog.domain.event.CategoryEvents.CategoryCreated) events.get(0).payload();
+        var created = (CategoryEvents.CategoryCreated) events.get(0).payload();
         assertThat(created.name()).isEqualTo("Electronics");
         assertThat(created.slug()).isEqualTo("electronics");
     }

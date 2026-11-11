@@ -16,7 +16,7 @@ import com.aionn.inventory.domain.model.Warehouse;
 import com.aionn.inventory.domain.valueobject.AdjustmentType;
 import com.aionn.inventory.domain.valueobject.InventoryItemKey;
 import com.aionn.sharedkernel.application.port.EventPublisher;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -92,6 +92,16 @@ public class StockTransferService {
                                 AdjustmentType.TRANSFER_IN, "transfer " + transfer.getTransferId(), clock);
                 adjustmentRepository.save(inAdj);
 
+                int shortage = transfer.getQty() - command.receivedQty();
+                if (shortage > 0) {
+                        StockAdjustment shortageAdj = StockAdjustment.manual(IdGenerator.ulid(),
+                                        transfer.getSkuId(), transfer.getFromWarehouseId(), shortage,
+                                        AdjustmentType.DAMAGED,
+                                        "transfer shortage " + transfer.getTransferId(), clock);
+                        adjustmentRepository.save(shortageAdj);
+                        eventPublisher.publish(shortageAdj.pullEvents());
+                }
+
                 eventPublisher.publish(transfer.pullEvents());
                 eventPublisher.publish(inAdj.pullEvents());
                 return saved;
@@ -108,16 +118,19 @@ public class StockTransferService {
                 itemRepository.save(source);
 
                 StockTransfer saved = transferRepository.save(transfer);
+                StockAdjustment refundAdj = StockAdjustment.manual(IdGenerator.ulid(),
+                                transfer.getSkuId(), transfer.getFromWarehouseId(), transfer.getQty(),
+                                AdjustmentType.TRANSFER_IN, "transfer cancelled " + transfer.getTransferId(), clock);
+                adjustmentRepository.save(refundAdj);
                 eventPublisher.publish(transfer.pullEvents());
                 eventPublisher.publish(source.pullEvents());
+                eventPublisher.publish(refundAdj.pullEvents());
                 return saved;
         }
 
         @Transactional(readOnly = true)
-        public StockTransfer get(String transferId) {
-                return transferRepository.findById(transferId)
-                                .orElseThrow(() -> new InventoryException(
-                                                InventoryErrorCode.STOCK_TRANSFER_NOT_FOUND));
+        public StockTransfer getOwned(String ownerId, String transferId) {
+                return ownedByOwner(transferId, ownerId);
         }
 
         private StockTransfer ownedByOwner(String transferId, String ownerId) {

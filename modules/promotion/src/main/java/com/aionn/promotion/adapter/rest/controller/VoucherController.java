@@ -1,6 +1,8 @@
 package com.aionn.promotion.adapter.rest.controller;
 
 import com.aionn.promotion.adapter.rest.dto.voucher.ApplyVoucherRequest;
+import com.aionn.promotion.adapter.rest.dto.voucher.GrantVoucherRequest;
+import com.aionn.promotion.application.port.in.voucher.GrantVoucherInputPort;
 import com.aionn.promotion.adapter.rest.dto.voucher.ReleaseVoucherRequest;
 import com.aionn.promotion.adapter.rest.dto.voucher.ReserveVoucherRequest;
 import com.aionn.promotion.adapter.rest.dto.voucher.response.UserVoucherResponse;
@@ -12,8 +14,8 @@ import com.aionn.promotion.application.port.in.voucher.GetMyVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.ListMyVouchersInputPort;
 import com.aionn.promotion.application.port.in.voucher.ReleaseVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.ReserveVoucherInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
-import com.aionn.sharedkernel.adapter.web.support.idempotency.IdempotentRequest;
+import com.aionn.platform.web.response.ApiResponse;
+import com.aionn.platform.web.support.idempotency.IdempotentRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -44,6 +46,7 @@ public class VoucherController {
         private final ReleaseVoucherInputPort releaseVoucherInputPort;
         private final ListMyVouchersInputPort listMyVouchersInputPort;
         private final GetMyVoucherInputPort getMyVoucherInputPort;
+        private final GrantVoucherInputPort grantVoucherInputPort;
         private final VoucherDtoMapper dtoMapper;
 
         @PostMapping("/{voucherCode}/claim")
@@ -118,5 +121,15 @@ public class VoucherController {
                 return ResponseEntity.ok(ApiResponse.success(
                                 dtoMapper.toResponse(getMyVoucherInputPort.execute(userId, voucherCode)),
                                 "Voucher fetched"));
+        }
+
+        @PostMapping("/admin/grant")
+        @PreAuthorize("hasAuthority('ROLE_SYSTEM_ADMIN')")
+        @Operation(summary = "Admin grant voucher to a user (e.g. late delivery compensation)")
+        public ResponseEntity<ApiResponse<UserVoucherResponse>> grant(
+                        @Valid @RequestBody GrantVoucherRequest request) {
+                return ApiResponse.createdResponse("Voucher granted",
+                                dtoMapper.toResponse(grantVoucherInputPort.execute(
+                                                dtoMapper.toGrantCommand(request))));
         }
 }

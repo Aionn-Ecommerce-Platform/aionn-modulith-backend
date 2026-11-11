@@ -1,5 +1,8 @@
 package com.aionn.inventory.infrastructure.persistence.adapter.inventory;
 
+import java.util.ArrayList;
+import java.util.Collection;
+
 import com.aionn.inventory.domain.model.InventoryItem;
 import com.aionn.inventory.domain.valueobject.InventoryItemKey;
 import com.aionn.inventory.infrastructure.persistence.entity.InventoryItemEntity;
@@ -50,7 +53,7 @@ class InventoryItemPersistenceAdapterTest {
         InventoryItemEntity.InventoryItemId id = new InventoryItemEntity.InventoryItemId(SKU_ID, WAREHOUSE_ID);
         when(jpa.findById(id)).thenReturn(Optional.empty());
         when(mapper.toEntity(domain, null)).thenReturn(entity);
-        when(jpa.save(entity)).thenReturn(entity);
+        when(jpa.saveAndFlush(entity)).thenReturn(entity);
         when(mapper.toDomain(entity)).thenReturn(domain);
 
         InventoryItem saved = adapter.save(domain);
@@ -67,7 +70,7 @@ class InventoryItemPersistenceAdapterTest {
         InventoryItemEntity.InventoryItemId id = new InventoryItemEntity.InventoryItemId(SKU_ID, WAREHOUSE_ID);
         when(jpa.findById(id)).thenReturn(Optional.of(existing));
         when(mapper.toEntity(domain, existing)).thenReturn(updated);
-        when(jpa.save(updated)).thenReturn(updated);
+        when(jpa.saveAndFlush(updated)).thenReturn(updated);
         when(mapper.toDomain(updated)).thenReturn(domain);
 
         adapter.save(domain);
@@ -174,12 +177,12 @@ class InventoryItemPersistenceAdapterTest {
     void availabilityIsAskedForInOneQueryRatherThanPerSku() {
         // This runs on the recommendation read path outside the cache, over every SKU of an overfetched
         // slate, so a per-SKU lookup turns one request into a few hundred round trips.
-        when(jpa.findAvailableSkuIds(any())).thenReturn(List.of("SKU_1", "SKU_2"));
+        when(jpa.findAvailableSkuIds(any(), any())).thenReturn(List.of("SKU_1", "SKU_2"));
 
         assertThat(adapter.findAvailableSkus(List.of("SKU_1", "SKU_2", "SKU_3")))
                 .containsExactly("SKU_1", "SKU_2");
 
-        verify(jpa, times(1)).findAvailableSkuIds(any());
+        verify(jpa, times(1)).findAvailableSkuIds(any(), any());
     }
 
     @Test
@@ -187,68 +190,70 @@ class InventoryItemPersistenceAdapterTest {
         assertThat(adapter.findAvailableSkus(List.of())).isEmpty();
         assertThat(adapter.findAvailableSkus(null)).isEmpty();
 
-        verify(jpa, never()).findAvailableSkuIds(any());
+        verify(jpa, never()).findAvailableSkuIds(any(), any());
     }
 
     @Test
     void blankSkuIdsAreDroppedBeforeBinding() {
         // A slate can carry a null SKU where a product has no variant; binding it would match nothing and
         // only spend a parameter.
-        when(jpa.findAvailableSkuIds(any())).thenReturn(List.of("SKU_1"));
+        when(jpa.findAvailableSkuIds(any(), any())).thenReturn(List.of("SKU_1"));
 
-        java.util.List<String> requested = new java.util.ArrayList<>();
+        List<String> requested = new ArrayList<>();
         requested.add("SKU_1");
         requested.add(null);
         requested.add("   ");
 
         assertThat(adapter.findAvailableSkus(requested)).containsExactly("SKU_1");
 
-        ArgumentCaptor<java.util.Collection<String>> captor = ArgumentCaptor.captor();
-        verify(jpa).findAvailableSkuIds(captor.capture());
+        ArgumentCaptor<Collection<String>> captor = ArgumentCaptor.captor();
+        verify(jpa).findAvailableSkuIds(captor.capture(), any());
         assertThat(captor.getValue()).containsExactly("SKU_1");
     }
 
     @Test
     void aSkuRequestedTwiceIsBoundOnce() {
         // Several products in one slate can share a SKU, and repeats only waste the parameter budget.
-        when(jpa.findAvailableSkuIds(any())).thenReturn(List.of("SKU_1"));
+        when(jpa.findAvailableSkuIds(any(), any())).thenReturn(List.of("SKU_1"));
 
         adapter.findAvailableSkus(List.of("SKU_1", "SKU_1", "SKU_1"));
 
-        ArgumentCaptor<java.util.Collection<String>> captor = ArgumentCaptor.captor();
-        verify(jpa).findAvailableSkuIds(captor.capture());
+        ArgumentCaptor<Collection<String>> captor = ArgumentCaptor.captor();
+        verify(jpa).findAvailableSkuIds(captor.capture(), any());
         assertThat(captor.getValue()).containsExactly("SKU_1");
     }
 
     @Test
     void aSkuSetLargerThanTheParameterBudgetIsSplitAcrossQueries() {
         // Postgres caps bind parameters at 65535; a large page must not be allowed to approach it.
-        List<String> skuIds = new java.util.ArrayList<>();
+        List<String> skuIds = new ArrayList<>();
         for (int index = 0; index < 2500; index++) {
             skuIds.add("SKU_" + index);
         }
-        when(jpa.findAvailableSkuIds(any())).thenReturn(List.of());
+        when(jpa.findAvailableSkuIds(any(), any())).thenReturn(List.of());
 
         adapter.findAvailableSkus(skuIds);
 
-        ArgumentCaptor<java.util.Collection<String>> captor = ArgumentCaptor.captor();
-        verify(jpa, times(3)).findAvailableSkuIds(captor.capture());
-        assertThat(captor.getAllValues()).extracting(java.util.Collection::size)
+        ArgumentCaptor<Collection<String>> captor = ArgumentCaptor.captor();
+        verify(jpa, times(3)).findAvailableSkuIds(captor.capture(), any());
+        assertThat(captor.getAllValues()).extracting(Collection::size)
                 .containsExactly(1000, 1000, 500);
         assertThat(captor.getAllValues().stream()
-                .flatMap(java.util.Collection::stream).distinct().count()).isEqualTo(2500);
+                .flatMap(Collection::stream).distinct().count()).isEqualTo(2500);
     }
 
     @Test
     void availabilityFromEveryChunkIsCombined() {
-        List<String> skuIds = new java.util.ArrayList<>();
+        List<String> skuIds = new ArrayList<>();
         for (int index = 0; index < 1200; index++) {
             skuIds.add("SKU_" + index);
         }
-        when(jpa.findAvailableSkuIds(any()))
+        when(jpa.findAvailableSkuIds(any(), any()))
                 .thenReturn(List.of("SKU_0"))
                 .thenReturn(List.of("SKU_1199"));
 
         assertThat(adapter.findAvailableSkus(skuIds)).containsExactly("SKU_0", "SKU_1199");
     }
 }
+
+

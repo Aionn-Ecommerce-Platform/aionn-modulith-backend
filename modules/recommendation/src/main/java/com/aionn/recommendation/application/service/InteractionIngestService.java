@@ -17,16 +17,8 @@ import java.util.Optional;
 
 /**
  * Writes behavioural signals into the interaction log.
- *
- * <p>
- * Interactions are stored with their base weight; decay is applied at read
- * time. Storing a decayed
- * value would freeze it at write time and every row would be wrong within days.
- *
- * <p>
- * Never logs the product a user interacted with above debug level: a person's
- * browsing history can
- * reveal sensitive interests, and it is not needed for operational diagnosis.
+ * Base weight is stored and decay applied at read time. Never log the interacted product above
+ * debug: browsing history can reveal sensitive interests.
  */
 @Slf4j
 @Service
@@ -43,6 +35,13 @@ public class InteractionIngestService {
         if (!isRealUser(command.userId())) {
             return;
         }
+
+        InteractionType type = command.type();
+        if (type == InteractionType.SEARCH) {
+            ingestSearch(command);
+            return;
+        }
+
         Optional<String> productId = resolveProductId(command);
         if (productId.isEmpty()) {
             log.debug("Skipping {} interaction: no product resolved for event {}",
@@ -50,12 +49,8 @@ public class InteractionIngestService {
             return;
         }
 
-        InteractionType type = command.type();
-        // Taken after the catalog lookup so the lock is held only across the check and the write, and
-        // checked under the lock because an erasure landing in between would otherwise delete the
-        // account's history a moment before this appends a new row to it. Outbox delivery is at-least-once
-        // and an account deletion event can be replayed after the erasure it caused, so this is not a
-        // theoretical ordering.
+        // Lock, then check erasure under it: outbox delivery is at-least-once, so a deletion event can
+        // be replayed after the erasure it caused.
         interactionRepository.lockUser(command.userId());
         if (interactionRepository.isUserErased(command.userId())) {
             log.debug("Skipping {} interaction for an erased account", type);
@@ -74,13 +69,27 @@ public class InteractionIngestService {
         interactionRepository.append(interaction);
     }
 
-    /**
-     * Product-scoped events carry the product directly. SKU-scoped ones (cart,
-     * order lines) need a
-     * catalog lookup, which is an in-process adapter call rather than external I/O,
-     * so it is safe
-     * inside this short transaction.
-     */
+    /** A search has no product, so it carries the facets the profile builder scores directly. */
+    private void ingestSearch(RecordInteractionCommand command) {
+        interactionRepository.lockUser(command.userId());
+        if (interactionRepository.isUserErased(command.userId())) {
+            log.debug("Skipping SEARCH interaction for an erased account");
+            return;
+        }
+        UserInteraction interaction = UserInteraction.createSearch(
+                IdGenerator.ulid(),
+                command.userId(),
+                InteractionType.SEARCH,
+                weightPolicy.weightFor(InteractionType.SEARCH).baseWeight(),
+                command.occurredAt() != null ? command.occurredAt() : clock.instant(),
+                command.sourceEventId(),
+                command.categoryIds(),
+                command.brandId(),
+                command.keyword());
+        interactionRepository.append(interaction);
+    }
+
+    /** SKU-scoped events need an in-process catalog lookup (not external I/O). */
     private Optional<String> resolveProductId(RecordInteractionCommand command) {
         if (command.productId() != null && !command.productId().isBlank()) {
             return Optional.of(command.productId());
@@ -91,11 +100,7 @@ public class InteractionIngestService {
         return productAttributeQuery.findProductIdBySkuId(command.skuId());
     }
 
-    /**
-     * Spring Security names an unauthenticated principal {@code anonymousUser};
-     * treating it as a real
-     * user would merge every guest's behaviour into one shared profile.
-     */
+    /** Spring Security's anonymous principal must not merge all guests into one profile. */
     private static boolean isRealUser(String userId) {
         return userId != null && !userId.isBlank() && !"anonymousUser".equals(userId);
     }

@@ -11,7 +11,7 @@ class VnpayPropertiesTest {
         VnpayProperties p = new VnpayProperties(
                 true,
                 "TMN", "SECRET", "https://pay.url", "http://return",
-                "http://fe/return", "https://api.url", "2.1.0", "pay", "VND", "vn");
+                "http://fe/return", "https://api.url", "2.1.0", "pay", "VND", "vn", 15);
 
         assertEquals("TMN", p.tmnCode());
         assertEquals("SECRET", p.hashSecret());
@@ -23,5 +23,6 @@ class VnpayPropertiesTest {
         assertEquals("pay", p.command());
         assertEquals("VND", p.currCode());
         assertEquals("vn", p.locale());
+        assertEquals(15, p.expireMinutes());
     }
 }

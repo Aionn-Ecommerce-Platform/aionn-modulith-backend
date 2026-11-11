@@ -21,9 +21,5 @@ public enum ReservationStatus {
             case COMMITTED, RELEASED, FAILED -> false;
         };
     }
-
-    public boolean isTerminal() {
-        return this != RESERVED;
-    }
 }
 

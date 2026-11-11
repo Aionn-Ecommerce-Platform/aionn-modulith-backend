@@ -10,7 +10,7 @@ import com.aionn.chat.application.port.in.message.MarkReadInputPort;
 import com.aionn.chat.application.port.in.message.RecallMessageInputPort;
 import com.aionn.chat.application.port.in.message.SendMessageInputPort;
 import com.aionn.chat.application.port.in.message.SetTypingInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

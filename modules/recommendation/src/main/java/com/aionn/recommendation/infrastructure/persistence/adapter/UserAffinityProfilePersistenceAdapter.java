@@ -36,4 +36,12 @@ public class UserAffinityProfilePersistenceAdapter implements UserAffinityProfil
     public int deleteByUserId(String userId) {
         return jpa.deleteByUserId(userId);
     }
+
+    @Override
+    public int deleteByUserIds(java.util.Collection<String> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return 0;
+        }
+        return jpa.deleteByUserIdIn(userIds);
+    }
 }

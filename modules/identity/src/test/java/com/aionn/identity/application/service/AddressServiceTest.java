@@ -187,17 +187,18 @@ Clock.systemUTC());
     }
 
     @Test
-    void setDefaultAddressClearsOtherDefaults() {
+    void setDefaultAddressDelegatesToAtomicPortOperation() {
         Address nonDefault = baseAddress(false);
         when(addressPersistencePort.findByAddressIdAndUserId(ADDRESS_ID, USER_ID))
                 .thenReturn(Optional.of(nonDefault));
-        when(addressPersistencePort.save(any(Address.class)))
+        when(addressPersistencePort.setDefault(any(Address.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         Address result = addressService.setDefaultAddress(USER_ID, ADDRESS_ID);
 
         assertThat(result.isDefault()).isTrue();
-        verify(addressPersistencePort).clearDefaultByUserId(USER_ID);
+        verify(addressPersistencePort).setDefault(any(Address.class));
+        verify(addressPersistencePort, org.mockito.Mockito.never()).save(any(Address.class));
     }
 
     @Test

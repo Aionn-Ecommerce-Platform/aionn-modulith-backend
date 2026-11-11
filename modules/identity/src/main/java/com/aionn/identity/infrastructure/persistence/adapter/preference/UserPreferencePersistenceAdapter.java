@@ -52,9 +52,23 @@ public class UserPreferencePersistenceAdapter implements UserPreferencePersisten
     }
 
     @Override
+    public Optional<UserPreferenceResult> findByIdForUpdate(String userId) {
+        return preferenceRepository.findByIdForUpdate(userId)
+                .map(mapper::toResult);
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
     public UserPreferenceResult createDefault(String userId) {
-        var user = userRepository.findById(userId)
+        // Serialize creation on the user row, then re-check: two concurrent first-time
+        // requests must not both insert.
+        var user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.USER_NOT_FOUND));
+
+        var existing = preferenceRepository.findById(userId);
+        if (existing.isPresent()) {
+            return mapper.toResult(existing.get());
+        }
 
         UserPreferenceEntity entity = UserPreferenceEntity.builder()
                 .userId(userId)

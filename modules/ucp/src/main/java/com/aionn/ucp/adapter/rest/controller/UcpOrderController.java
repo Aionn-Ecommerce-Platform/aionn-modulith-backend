@@ -13,12 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Controller exposing canonical UCP Order REST endpoints
- * (dev.ucp.shopping.order).
- * Provides order lookup, status verification, and fulfillment details
- * conforming to UCP 2026-08-25.
- */
+/** UCP Order REST endpoint (dev.ucp.shopping.order), release 2026-08-25. */
 @RestController
 @RequestMapping("/ucp/v1/orders")
 @RequiredArgsConstructor
@@ -28,13 +23,6 @@ public class UcpOrderController {
 
     private final UcpOrderApplicationService orderService;
 
-    /**
-     * Retrieves an order by its identifier.
-     *
-     * @param orderId        the order identifier
-     * @param authentication the caller's authentication context
-     * @return 200 OK with conforming UcpOrderResponse
-     */
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<UcpOrderResponse> getOrder(
             @PathVariable("id") String orderId,
@@ -45,10 +33,12 @@ public class UcpOrderController {
     }
 
     private String getAuthenticatedUserId(Authentication authentication) {
-        if (authentication != null && authentication.isAuthenticated()
-                && !"anonymousUser".equals(authentication.getPrincipal())) {
-            return authentication.getName();
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
+            return null;
         }
-        return null;
+        String name = authentication.getName();
+        // Platform credentials own guest orders directly; buyer JWTs carry the buyer id.
+        return name != null && !name.isBlank() ? name : null;
     }
 }

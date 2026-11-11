@@ -4,7 +4,7 @@ import com.aionn.shipping.domain.exception.ShippingErrorCode;
 import com.aionn.shipping.domain.exception.ShippingException;
 import com.aionn.shipping.domain.valueobject.ShipmentAddress;
 import com.aionn.shipping.infrastructure.carrier.config.GhnProperties;
-import com.aionn.sharedkernel.integration.port.identity.AddressLookupPort;
+import com.aionn.contracts.port.identity.AddressLookupPort;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -73,7 +73,7 @@ public class GhnAddressResolver {
     }
 
     private static ShippingException noMatch(String level, String name, String code, String scope) {
-        return new ShippingException(ShippingErrorCode.SHIPMENT_CARRIER_ERROR,
+        return new ShippingException(ShippingErrorCode.INVALID_ARGUMENT,
                 "GHN has no matching " + level + " for '" + name + "' (code " + code + ")"
                         + (scope == null ? "" : scope));
     }

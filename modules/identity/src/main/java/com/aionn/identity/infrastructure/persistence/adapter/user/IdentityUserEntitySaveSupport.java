@@ -1,5 +1,7 @@
 package com.aionn.identity.infrastructure.persistence.adapter.user;
 
+import java.util.LinkedHashSet;
+
 import com.aionn.identity.domain.model.IdentityUser;
 import com.aionn.identity.infrastructure.persistence.entity.UserEntity;
 import com.aionn.identity.infrastructure.persistence.mapper.IdentityUserMapper;
@@ -18,7 +20,7 @@ class IdentityUserEntitySaveSupport {
         UserEntity entity = userRepository.findById(user.getUserId())
                 .orElseGet(() -> UserEntity.builder()
                         .userId(user.getUserId())
-                        .roles(new java.util.LinkedHashSet<>())
+                        .roles(new LinkedHashSet<>())
                         .build());
 
         entity.setEmail(user.getEmail());

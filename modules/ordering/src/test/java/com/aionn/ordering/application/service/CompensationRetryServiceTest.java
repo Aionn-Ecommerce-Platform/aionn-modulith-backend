@@ -3,9 +3,14 @@ package com.aionn.ordering.application.service;
 import com.aionn.ordering.application.port.out.CompensationTaskPort;
 import com.aionn.ordering.application.port.out.CompensationTaskPort.Task;
 import com.aionn.ordering.application.port.out.CompensationTaskPort.Type;
+import com.aionn.ordering.application.port.out.OrderPersistencePort;
+import com.aionn.ordering.application.port.out.PaymentGateway;
 import com.aionn.ordering.application.port.out.StockReservationGateway;
 import com.aionn.ordering.application.port.out.VoucherGateway;
-import com.aionn.sharedkernel.integration.port.promotion.FlashSaleQueryPort;
+import com.aionn.ordering.application.policy.CompensationRetryPolicy;
+import com.aionn.ordering.domain.model.Order;
+import com.aionn.sharedkernel.domain.vo.Money;
+import com.aionn.contracts.port.promotion.FlashSaleQueryPort;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -26,15 +31,24 @@ import static org.mockito.Mockito.when;
 class CompensationRetryServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-08-05T10:00:00Z");
+    private static final int MAX_ATTEMPTS = 10;
 
     private final CompensationTaskPort taskPort = mock(CompensationTaskPort.class);
     private final StockReservationGateway stockGateway = mock(StockReservationGateway.class);
     private final VoucherGateway voucherGateway = mock(VoucherGateway.class);
+    private final PaymentGateway paymentGateway = mock(PaymentGateway.class);
+    private final OrderPersistencePort orderRepository = mock(OrderPersistencePort.class);
     private final FlashSaleQueryPort flashSaleQueryPort = mock(FlashSaleQueryPort.class);
+    private final CompensationRetryPolicy retryPolicy = mock(CompensationRetryPolicy.class);
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
 
     private final CompensationRetryService service =
-            new CompensationRetryService(taskPort, stockGateway, voucherGateway, flashSaleQueryPort, clock);
+            new CompensationRetryService(taskPort, stockGateway, voucherGateway, paymentGateway,
+                    orderRepository, flashSaleQueryPort, retryPolicy, clock);
+
+    {
+        when(retryPolicy.maxAttempts()).thenReturn(MAX_ATTEMPTS);
+    }
 
     @Test
     void ignoresATaskThatIsNoLongerPending() {
@@ -85,6 +99,34 @@ class CompensationRetryServiceTest {
     }
 
     @Test
+    void commitsTheStockReservationAndCompletesTheTask() {
+        when(taskPort.findById("task-commit")).thenReturn(Optional.of(new Task(
+                "task-commit", Type.STOCK_COMMIT, "res-1", null, "order-1", "order-shipped", 0)));
+
+        service.retry("task-commit");
+
+        verify(stockGateway).commit("res-1");
+        verify(taskPort).markCompleted("task-commit");
+    }
+
+    @Test
+    void refundsTheCapturedPaymentAndCompletesTheTask() {
+        Order order = mock(Order.class);
+        when(order.getTotalAmount()).thenReturn(Money.of(120000, "VND"));
+        when(order.getCurrency()).thenReturn("VND");
+        when(order.getOrderId()).thenReturn("order-1");
+        when(orderRepository.findById("order-1")).thenReturn(Optional.of(order));
+        when(taskPort.findById("task-refund")).thenReturn(Optional.of(new Task(
+                "task-refund", Type.REFUND, "PAY_1", "user-1", "order-1", "user cancellation", 1)));
+
+        service.retry("task-refund");
+
+        verify(paymentGateway).refund("PAY_1", Money.of(120000, "VND").amount(), "VND",
+                "user cancellation", "order:order-1:refund:PAY_1");
+        verify(taskPort).markCompleted("task-refund");
+    }
+
+    @Test
     void recordsAFailureWithExponentialBackoffAndLeavesTheTaskRetryable() {
         when(taskPort.findById("task-3")).thenReturn(Optional.of(new Task(
                 "task-3", Type.RESERVATION_RELEASE, "res-1", "user-1", "order-1", "aborted", 2)));
@@ -102,7 +144,7 @@ class CompensationRetryServiceTest {
     void deadLettersTheTaskOnTheFinalAttempt() {
         when(taskPort.findById("task-4")).thenReturn(Optional.of(new Task(
                 "task-4", Type.VOUCHER_RELEASE, "voucher-1", "user-1", "order-1", "aborted",
-                CompensationRetryService.MAX_ATTEMPTS - 1)));
+                CompensationRetryServiceTest.MAX_ATTEMPTS - 1)));
         doThrow(new IllegalStateException("promotion unavailable"))
                 .when(voucherGateway).release("user-1", "order-1", "aborted");
 

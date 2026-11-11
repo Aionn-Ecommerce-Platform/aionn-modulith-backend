@@ -1,6 +1,7 @@
 identity:
   registration:
     max-verify-attempts: ${IDENTITY_REGISTRATION_MAX_VERIFY_ATTEMPTS:5}
+    expose-otp-in-response: ${IDENTITY_REGISTRATION_EXPOSE_OTP:false}
     resend-cooldown-seconds: ${IDENTITY_REGISTRATION_RESEND_COOLDOWN_SECONDS:60}
     otp-expiry-seconds: ${IDENTITY_REGISTRATION_OTP_EXPIRY_SECONDS:300}
     lock-timeout-seconds: ${IDENTITY_REGISTRATION_LOCK_TIMEOUT_SECONDS:30}
@@ -19,6 +20,11 @@ identity:
     issuer: ${IDENTITY_JWT_ISSUER:aionn-identity}
     secret: ${IDENTITY_JWT_SECRET:}
     access-token-expiry-minutes: ${IDENTITY_JWT_ACCESS_TOKEN_EXPIRY_MINUTES:15}
+  data-export:
+    # The worker polls for REQUESTED rows; exports are built off the request thread.
+    delay-ms: ${IDENTITY_DATA_EXPORT_DELAY_MS:5000}
+    batch-size: ${IDENTITY_DATA_EXPORT_BATCH_SIZE:10}
+
   auth:
     client-type-header: ${IDENTITY_AUTH_CLIENT_TYPE_HEADER:X-Client-Type}
     mobile-client-value: ${IDENTITY_AUTH_MOBILE_CLIENT_VALUE:mobile}
@@ -33,6 +39,7 @@ identity:
     password-reset-rate-limit-window-seconds: ${IDENTITY_AUTH_PASSWORD_RESET_RATE_LIMIT_WINDOW_SECONDS:900}
     session:
       expires-days: ${IDENTITY_AUTH_SESSION_EXPIRES_DAYS:30}
+      retention-days: ${IDENTITY_AUTH_SESSION_RETENTION_DAYS:90}
     cookie:
       secure: ${IDENTITY_AUTH_COOKIE_SECURE:true}
       same-site: ${IDENTITY_AUTH_COOKIE_SAME_SITE:Lax}
@@ -45,6 +52,7 @@ identity:
     issuer: ${IDENTITY_MFA_ISSUER:Aionn}
     encryption-key: ${IDENTITY_MFA_ENCRYPTION_KEY:}
     backup-code-count: ${IDENTITY_MFA_BACKUP_CODE_COUNT:8}
+    backup-code-length: ${IDENTITY_MFA_BACKUP_CODE_LENGTH:8}
   kyc:
     provider: ${IDENTITY_KYC_PROVIDER:local}
     sumsub:
@@ -60,6 +68,16 @@ identity:
       kyc-folder: ${CLOUDINARY_KYC_FOLDER:identity/kyc}
   address:
     max-address-numbers: ${IDENTITY_ADDRESS_MAX_NUMBERS:5}
+  agent:
+    key-expiry-years: ${IDENTITY_AGENT_KEY_EXPIRY_YEARS:1}
+    audit-log-limit: ${IDENTITY_AGENT_AUDIT_LOG_LIMIT:100}
+  account:
+    otp:
+      expiry-seconds: ${IDENTITY_ACCOUNT_OTP_EXPIRY_SECONDS:300}
+      max-attempts: ${IDENTITY_ACCOUNT_OTP_MAX_ATTEMPTS:5}
+    deletion:
+      grace-days: ${IDENTITY_ACCOUNT_DELETION_GRACE_DAYS:30}
+      batch-size: ${IDENTITY_ACCOUNT_DELETION_BATCH_SIZE:100}
   cache:
     geography:
       l1-ttl-seconds: ${IDENTITY_GEOGRAPHY_L1_TTL_SECONDS:1800}

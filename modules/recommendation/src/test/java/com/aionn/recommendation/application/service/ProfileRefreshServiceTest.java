@@ -1,5 +1,7 @@
 package com.aionn.recommendation.application.service;
 
+import java.util.Optional;
+
 import com.aionn.recommendation.application.policy.InteractionWeightPolicy;
 import com.aionn.recommendation.application.port.out.InteractionPersistencePort;
 import com.aionn.recommendation.application.port.out.ProductAttributeQueryPort;
@@ -204,7 +206,7 @@ class ProfileRefreshServiceTest {
 
 	@Test
 	void profileOfFallsBackToAnEmptyProfileWhenNoneIsStored() {
-		when(profileRepository.findByUserId(USER_ID)).thenReturn(java.util.Optional.empty());
+		when(profileRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
 
 		assertThat(service().profileOf(USER_ID).hasNoSignal()).isTrue();
 	}
@@ -245,6 +247,7 @@ class ProfileRefreshServiceTest {
 				List.of("sku-" + productId),
 				null,
 				BigDecimal.valueOf(price),
+				null,
 				"VND");
 	}
 }

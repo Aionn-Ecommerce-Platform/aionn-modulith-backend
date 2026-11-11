@@ -1,5 +1,7 @@
 package com.aionn.catalog.adapter.rest.dto.review.request;
 
+import jakarta.validation.constraints.NotBlank;
+
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
@@ -10,5 +12,5 @@ public record SubmitReviewRequest(
         @Min(1) @Max(5) int rating,
         @Size(max = 200) String title,
         @Size(max = 5000) String content,
-        List<@jakarta.validation.constraints.NotBlank String> imageUrls) {
+        List<@NotBlank String> imageUrls) {
 }

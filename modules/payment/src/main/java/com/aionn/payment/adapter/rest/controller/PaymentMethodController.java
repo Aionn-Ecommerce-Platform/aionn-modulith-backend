@@ -1,7 +1,6 @@
 package com.aionn.payment.adapter.rest.controller;
 
 import com.aionn.payment.adapter.rest.dto.method.request.CompleteStripeSetupIntentRequest;
-import com.aionn.payment.adapter.rest.dto.method.request.LinkMethodRequest;
 import com.aionn.payment.adapter.rest.dto.method.response.PaymentMethodResponse;
 import com.aionn.payment.adapter.rest.dto.method.response.StripeSetupIntentResponse;
 import com.aionn.payment.adapter.rest.dto.preference.request.UpdatePaymentPreferenceRequest;
@@ -9,16 +8,14 @@ import com.aionn.payment.adapter.rest.dto.preference.response.PaymentPreferenceR
 import com.aionn.payment.adapter.rest.mapper.method.PaymentMethodDtoMapper;
 import com.aionn.payment.adapter.rest.mapper.preference.PaymentPreferenceDtoMapper;
 import com.aionn.payment.adapter.rest.support.session.CurrentUserId;
-import com.aionn.payment.application.dto.method.command.LinkMethodCommand;
 import com.aionn.payment.application.port.in.method.CompleteStripeSetupIntentInputPort;
 import com.aionn.payment.application.port.in.method.CreateStripeSetupIntentInputPort;
-import com.aionn.payment.application.port.in.method.LinkPaymentMethodInputPort;
 import com.aionn.payment.application.port.in.method.ListPaymentMethodsInputPort;
 import com.aionn.payment.application.port.in.method.RemovePaymentMethodInputPort;
 import com.aionn.payment.application.port.in.method.VerifyPaymentMethodInputPort;
 import com.aionn.payment.application.port.in.preference.GetPaymentPreferenceInputPort;
 import com.aionn.payment.application.port.in.preference.UpdatePaymentPreferenceInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -42,7 +39,6 @@ import java.util.List;
 @Tag(name = "Payment - Method", description = "Stored payment method endpoints")
 public class PaymentMethodController {
 
-        private final LinkPaymentMethodInputPort linkPaymentMethodInputPort;
         private final VerifyPaymentMethodInputPort verifyPaymentMethodInputPort;
         private final RemovePaymentMethodInputPort removePaymentMethodInputPort;
         private final ListPaymentMethodsInputPort listPaymentMethodsInputPort;
@@ -73,17 +69,6 @@ public class PaymentMethodController {
                                                 updatePaymentPreferenceInputPort.execute(userId, request.paymentType(),
                                                                 request.paymentMethodId())),
                                 "Payment preference updated"));
-        }
-
-        @PostMapping
-        @PreAuthorize("isAuthenticated()")
-        @Operation(summary = "Link method")
-        public ResponseEntity<ApiResponse<PaymentMethodResponse>> link(
-                        @CurrentUserId String userId,
-                        @Valid @RequestBody LinkMethodRequest request) {
-                LinkMethodCommand command = paymentMethodDtoMapper.toCommand(userId, request);
-                return ApiResponse.createdResponse("Payment method linked",
-                                paymentMethodDtoMapper.toResponse(linkPaymentMethodInputPort.execute(command)));
         }
 
         @PostMapping("/{methodId}/verify")

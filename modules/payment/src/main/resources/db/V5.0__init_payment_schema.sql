@@ -83,12 +83,14 @@ CREATE TABLE merchant_balances (
     currency     VARCHAR(3)    NOT NULL,
     pending      NUMERIC(18,2) NOT NULL DEFAULT 0,
     available    NUMERIC(18,2) NOT NULL DEFAULT 0,
+    receivable   NUMERIC(18,2) NOT NULL DEFAULT 0,
     version      BIGINT        NOT NULL DEFAULT 0,
     created_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     updated_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     PRIMARY KEY (merchant_id, currency),
     CONSTRAINT chk_balances_pending_nonneg CHECK (pending >= 0),
-    CONSTRAINT chk_balances_available_nonneg CHECK (available >= 0)
+    CONSTRAINT chk_balances_available_nonneg CHECK (available >= 0),
+    CONSTRAINT chk_merchant_balance_receivable_non_negative CHECK (receivable >= 0)
 );
 CREATE INDEX idx_merchant_balances_merchant ON merchant_balances(merchant_id);
 
@@ -124,10 +126,16 @@ CREATE TABLE settlement_ledger (
     gross       NUMERIC(18,2) NOT NULL,
     commission  NUMERIC(18,2) NOT NULL DEFAULT 0,
     net         NUMERIC(18,2) NOT NULL,
+    pending_delta     NUMERIC(18,2) NOT NULL DEFAULT 0,
+    available_delta   NUMERIC(18,2) NOT NULL DEFAULT 0,
+    receivable_delta  NUMERIC(18,2) NOT NULL DEFAULT 0,
     currency    VARCHAR(3)  NOT NULL,
     note        TEXT,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT chk_ledger_kind CHECK (kind IN ('SALE','MOVE_AVAILABLE','REVERSAL','REFUND','PAYOUT_DEBIT','PAYOUT_REVERSAL'))
+    CONSTRAINT chk_ledger_kind CHECK (kind IN (
+        'SALE', 'MOVE_AVAILABLE', 'REVERSAL', 'REFUND',
+        'PAYOUT_DEBIT', 'PAYOUT_REVERSAL', 'BALANCE_BASELINE'
+    ))
 );
 CREATE INDEX idx_settlement_ledger_merchant ON settlement_ledger(merchant_id, created_at);
 CREATE INDEX idx_settlement_ledger_order ON settlement_ledger(order_id);

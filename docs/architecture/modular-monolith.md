@@ -66,7 +66,7 @@ Create a package only when it has a real responsibility. External providers may 
 - `port/out`: defines persistence, provider, and other secondary-adapter contracts.
 - `policy`: contains pure rules or application-facing interfaces. Implementations that read Spring properties belong in infrastructure.
 
-Application services depend only on domain types, application ports and policies, and valid shared-kernel contracts. A type named `*PersistencePort` is not a Spring Data repository; it is an application abstraction implemented by infrastructure.
+Application services depend only on domain types, application ports and policies, and valid shared contracts. A type named `*PersistencePort` is not a Spring Data repository; it is an application abstraction implemented by infrastructure.
 
 ### Adapter
 
@@ -84,10 +84,11 @@ Application services depend only on domain types, application ports and policies
 ## 4. Module boundaries
 
 - A business module must not import classes from another business module.
-- Synchronous cross-module communication uses interfaces in `shared-kernel/integration/port`.
-- Asynchronous communication uses integration events from the shared kernel.
+- Synchronous cross-module communication uses interfaces in `shared/contracts`.
+- Asynchronous communication uses integration events from `shared/contracts`.
 - Do not move a module's private domain model into the shared kernel to bypass the dependency rule.
 - Adapters implementing shared integration ports need globally unique Spring bean names. Use a distinctive class name or an explicit component name.
+- An order is scoped to exactly one merchant. A cart or agent checkout containing SKUs from multiple merchants must be split by the caller; ordering rejects it with `ORD_109` before any reservation, payment, or voucher side effect. Parent/child orders are supported by the schema for future split orchestration, but no split placement flow exists.
 
 ## 5. Transactions and external I/O
 

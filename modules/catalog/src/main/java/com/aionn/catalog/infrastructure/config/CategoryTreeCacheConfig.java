@@ -2,9 +2,9 @@ package com.aionn.catalog.infrastructure.config;
 
 import com.aionn.catalog.application.dto.category.result.CategoryTreeNode;
 import com.aionn.catalog.infrastructure.config.properties.CategoryTreeCacheProperties;
-import com.aionn.sharedkernel.infrastructure.cache.core.TwoTierCache;
-import com.aionn.sharedkernel.infrastructure.cache.factory.TwoTierCacheFactory;
-import com.aionn.sharedkernel.infrastructure.cache.core.TwoTierCacheProperties;
+import com.aionn.platform.infrastructure.cache.core.TwoTierCache;
+import com.aionn.platform.infrastructure.cache.factory.TwoTierCacheFactory;
+import com.aionn.platform.infrastructure.cache.core.TwoTierCacheProperties;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

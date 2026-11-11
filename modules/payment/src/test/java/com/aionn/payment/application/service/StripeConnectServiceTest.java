@@ -3,7 +3,7 @@ package com.aionn.payment.application.service;
 import com.aionn.payment.application.port.out.StripeConnectPort;
 import com.aionn.payment.domain.exception.PaymentErrorCode;
 import com.aionn.payment.domain.exception.PaymentException;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -61,11 +61,11 @@ class StripeConnectServiceTest {
 
     @Test
     void createOnboardingLinkUsesExistingStripeAccount() {
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(java.util.Optional.of("m-1"));
+        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("m-1"));
 
         MerchantQueryPort.StripeConnectInfo info = mock(MerchantQueryPort.StripeConnectInfo.class);
         when(info.stripeAccountId()).thenReturn("acct_existing");
-        when(merchantQueryPort.findStripeConnectInfo("m-1")).thenReturn(java.util.Optional.of(info));
+        when(merchantQueryPort.findStripeConnectInfo("m-1")).thenReturn(Optional.of(info));
 
         when(stripeConnectPort.createOnboardingLink("acct_existing")).thenReturn("https://stripe/onboard");
 
@@ -75,8 +75,8 @@ class StripeConnectServiceTest {
 
     @Test
     void createOnboardingLinkCreatesAndSavesMissingStripeAccount() {
-        when(merchantQueryPort.findMerchantIdByOwnerId("owner-2")).thenReturn(java.util.Optional.of("m-2"));
-        when(merchantQueryPort.findStripeConnectInfo("m-2")).thenReturn(java.util.Optional.empty());
+        when(merchantQueryPort.findMerchantIdByOwnerId("owner-2")).thenReturn(Optional.of("m-2"));
+        when(merchantQueryPort.findStripeConnectInfo("m-2")).thenReturn(Optional.empty());
 
         when(stripeConnectPort.createExpressAccount("m-2")).thenReturn("acct_new");
         when(stripeConnectPort.createOnboardingLink("acct_new")).thenReturn("https://stripe/onboard");

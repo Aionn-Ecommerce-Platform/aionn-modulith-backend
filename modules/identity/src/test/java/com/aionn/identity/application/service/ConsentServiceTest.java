@@ -1,6 +1,10 @@
 package com.aionn.identity.application.service;
 
+import java.time.ZoneOffset;
+import org.mockito.ArgumentMatchers;
+
 import com.aionn.identity.application.dto.consent.result.ConsentResult;
+import com.aionn.identity.application.policy.ConsentPolicy;
 import com.aionn.identity.application.port.out.consent.ConsentPersistencePort;
 import com.aionn.identity.application.port.out.user.UserPersistencePort;
 import com.aionn.identity.domain.exception.IdentityErrorCode;
@@ -37,6 +41,8 @@ class ConsentServiceTest {
     private UserPersistencePort userPersistencePort;
     @Mock
     private ConsentPersistencePort consentPersistencePort;
+    @Mock
+    private ConsentPolicy consentPolicy;
 
     private ConsentService consentService;
 
@@ -44,7 +50,12 @@ class ConsentServiceTest {
 
     @BeforeEach
     void setUp() {
-        consentService = new ConsentService(userPersistencePort, consentPersistencePort, Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
+        org.mockito.Mockito.lenient().when(consentPolicy.termsVersion()).thenReturn("v1");
+        org.mockito.Mockito.lenient().when(consentPolicy.privacyVersion()).thenReturn("v1");
+        org.mockito.Mockito.lenient().when(consentPolicy.marketingVersion())
+                .thenReturn(ConsentService.DEFAULT_MARKETING_VERSION);
+        consentService = new ConsentService(userPersistencePort, consentPersistencePort,
+                consentPolicy, Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -99,6 +110,15 @@ class ConsentServiceTest {
     }
 
     @Test
+    void rejectsOutdatedConsentVersion() {
+        var ex = assertThrows(IdentityException.class,
+                () -> consentService.agreeTerms(USER_ID, "v0", "1.1.1.1"));
+
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.CONSENT_VERSION_MISMATCH.getCode());
+        verify(consentPersistencePort, org.mockito.Mockito.never()).append(any());
+    }
+
+    @Test
     void rejectsMissingUser() {
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.empty());
 
@@ -129,6 +149,6 @@ class ConsentServiceTest {
     }
 
     private static <T> T any() {
-        return org.mockito.ArgumentMatchers.any();
+        return ArgumentMatchers.any();
     }
 }

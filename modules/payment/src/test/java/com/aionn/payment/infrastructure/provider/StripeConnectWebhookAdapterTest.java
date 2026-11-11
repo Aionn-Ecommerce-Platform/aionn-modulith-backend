@@ -1,5 +1,7 @@
 package com.aionn.payment.infrastructure.provider;
 
+import java.util.Optional;
+
 import com.aionn.payment.application.port.out.stripeconnect.StripeConnectWebhookPort;
 import com.aionn.payment.infrastructure.provider.config.StripeProperties;
 import com.stripe.model.Account;
@@ -74,7 +76,7 @@ class StripeConnectWebhookAdapterTest {
         StripeObject mockHasId = mockAccount;
 
         com.stripe.model.EventDataObjectDeserializer mockDeserializer = mock(com.stripe.model.EventDataObjectDeserializer.class);
-        when(mockDeserializer.getObject()).thenReturn(java.util.Optional.of(mockHasId));
+        when(mockDeserializer.getObject()).thenReturn(Optional.of(mockHasId));
         when(mockEvent.getDataObjectDeserializer()).thenReturn(mockDeserializer);
 
         try (MockedStatic<Webhook> mockedWebhook = Mockito.mockStatic(Webhook.class)) {
@@ -98,7 +100,7 @@ class StripeConnectWebhookAdapterTest {
         when(mockEvent.getType()).thenReturn("account.updated");
 
         com.stripe.model.EventDataObjectDeserializer mockDeserializer = mock(com.stripe.model.EventDataObjectDeserializer.class);
-        when(mockDeserializer.getObject()).thenReturn(java.util.Optional.empty());
+        when(mockDeserializer.getObject()).thenReturn(Optional.empty());
         when(mockEvent.getDataObjectDeserializer()).thenReturn(mockDeserializer);
 
         try (MockedStatic<Webhook> mockedWebhook = Mockito.mockStatic(Webhook.class)) {

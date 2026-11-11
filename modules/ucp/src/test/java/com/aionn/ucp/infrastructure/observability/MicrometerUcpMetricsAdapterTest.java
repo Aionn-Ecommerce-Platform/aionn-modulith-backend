@@ -1,5 +1,7 @@
 package com.aionn.ucp.infrastructure.observability;
 
+import java.util.concurrent.TimeUnit;
+
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,7 +44,7 @@ class MicrometerUcpMetricsAdapterTest {
                 .tag("capability", "cart")
                 .tag("operation", "create")
                 .timer()
-                .totalTime(java.util.concurrent.TimeUnit.MILLISECONDS);
+                .totalTime(TimeUnit.MILLISECONDS);
 
         assertThat(totalTime).isGreaterThanOrEqualTo(120.0);
     }

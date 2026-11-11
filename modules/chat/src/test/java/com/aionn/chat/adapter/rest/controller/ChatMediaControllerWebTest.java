@@ -1,7 +1,10 @@
 package com.aionn.chat.adapter.rest.controller;
 
+import com.aionn.chat.adapter.rest.mapper.media.ChatMediaDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.chat.adapter.rest.exception.ChatExceptionHandler;
-import com.aionn.chat.adapter.rest.mapper.media.ChatMediaDtoMapperImpl;
 import com.aionn.chat.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.chat.adapter.rest.support.session.CurrentUserIdArgumentResolver;
 import com.aionn.chat.application.dto.media.result.UploadSignatureResult;
@@ -12,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -39,7 +42,7 @@ class ChatMediaControllerWebTest {
     @BeforeEach
     void setUp() {
         ChatMediaController controller = new ChatMediaController(
-                generateChatMediaUploadSignatureInputPort, new ChatMediaDtoMapperImpl());
+                generateChatMediaUploadSignatureInputPort, Mappers.getMapper(ChatMediaDtoMapper.class));
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new ChatExceptionHandler())
@@ -65,12 +68,14 @@ class ChatMediaControllerWebTest {
         when(generateChatMediaUploadSignatureInputPort.execute("user-1")).thenReturn(
                 new UploadSignatureResult("sig", "1750000000", "api-key", "demo-cloud",
                         "https://api.cloudinary.com/v1_1/demo-cloud/image/upload",
-                        "aionn/chat/images/user-1"));
+                        "aionn/chat/images/user-1", "jpg,jpeg,png,webp,gif", 5242880));
 
         mockMvc.perform(post("/api/v1/chat/media/upload-signatures/image"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.signature").value("sig"))
-                .andExpect(jsonPath("$.data.folder").value("aionn/chat/images/user-1"));
+                .andExpect(jsonPath("$.data.folder").value("aionn/chat/images/user-1"))
+                .andExpect(jsonPath("$.data.allowedFormats").value("jpg,jpeg,png,webp,gif"))
+                .andExpect(jsonPath("$.data.maxFileSize").value(5242880));
 
         verify(generateChatMediaUploadSignatureInputPort).execute("user-1");
     }

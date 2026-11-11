@@ -31,7 +31,7 @@ The Sonar configuration in the root `build.gradle` is the source of truth for co
 
 ## 4. Test infrastructure
 
-Shared fixtures live in `shared-kernel/src/testFixtures`. After a clean build, or when the IDE cannot resolve the test-fixtures JAR, run:
+Shared fixtures live in `shared/kernel/src/testFixtures`. After a clean build, or when the IDE cannot resolve the test-fixtures JAR, run:
 
 ```powershell
 .\gradlew.bat testFixturesJar

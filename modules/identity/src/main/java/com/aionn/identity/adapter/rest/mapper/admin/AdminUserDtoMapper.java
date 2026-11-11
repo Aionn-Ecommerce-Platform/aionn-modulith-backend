@@ -19,7 +19,7 @@ import com.aionn.identity.application.dto.admin.result.UserRolesResult;
 import com.aionn.identity.application.dto.admin.result.UserStatusResult;
 import com.aionn.identity.domain.valueobject.UserRole;
 import com.aionn.identity.domain.valueobject.UserStatus;
-import com.aionn.sharedkernel.adapter.web.response.PageMetadata;
+import com.aionn.platform.web.response.PageMetadata;
 import org.mapstruct.Mapper;
 
 import java.util.List;

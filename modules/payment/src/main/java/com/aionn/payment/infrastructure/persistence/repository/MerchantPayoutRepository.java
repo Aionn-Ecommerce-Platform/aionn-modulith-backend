@@ -1,8 +1,14 @@
 package com.aionn.payment.infrastructure.persistence.repository;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Optional;
+
 import com.aionn.payment.infrastructure.persistence.entity.MerchantPayoutEntity;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -11,11 +17,15 @@ import java.time.Instant;
 
 public interface MerchantPayoutRepository extends JpaRepository<MerchantPayoutEntity, String> {
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM MerchantPayoutEntity p WHERE p.payoutId = :payoutId")
+    Optional<MerchantPayoutEntity> findByIdForUpdate(@Param("payoutId") String payoutId);
+
     List<MerchantPayoutEntity> findByMerchantIdOrderByRequestedAtDesc(String merchantId, Pageable pageable);
 
     List<MerchantPayoutEntity> findByStatusOrderByRequestedAtAsc(String status, Pageable pageable);
 
-    java.util.Optional<MerchantPayoutEntity> findFirstByMerchantIdAndStatusOrderByCompletedAtDesc(
+    Optional<MerchantPayoutEntity> findFirstByMerchantIdAndStatusOrderByCompletedAtDesc(
             String merchantId, String status);
 
     @Query("SELECT COALESCE(SUM(p.amount), 0) AS amount, COUNT(p) AS count FROM MerchantPayoutEntity p "
@@ -37,7 +47,7 @@ public interface MerchantPayoutRepository extends JpaRepository<MerchantPayoutEn
             @Param("currency") String currency);
 
     interface PayoutSummaryProjection {
-        java.math.BigDecimal getAmount();
+        BigDecimal getAmount();
         Long getCount();
     }
 
@@ -47,8 +57,8 @@ public interface MerchantPayoutRepository extends JpaRepository<MerchantPayoutEn
     }
 
     interface DailyPayoutProjection {
-        java.time.LocalDate getDate();
-        java.math.BigDecimal getAmount();
+        LocalDate getDate();
+        BigDecimal getAmount();
         Long getCount();
     }
 }

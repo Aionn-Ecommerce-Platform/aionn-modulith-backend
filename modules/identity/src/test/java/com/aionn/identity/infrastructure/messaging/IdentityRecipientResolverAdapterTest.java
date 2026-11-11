@@ -1,5 +1,8 @@
 package com.aionn.identity.infrastructure.messaging;
 
+import com.aionn.sharedkernel.testing.fixture.TestClocks;
+import org.mockito.ArgumentMatchers;
+
 import com.aionn.identity.application.port.out.user.UserPersistencePort;
 import com.aionn.identity.domain.model.IdentityUser;
 import com.aionn.sharedkernel.common.exception.NotFoundException;
@@ -32,7 +35,7 @@ class IdentityRecipientResolverAdapterTest {
     }
 
     private IdentityUser user(String email, String phone) {
-        return IdentityUser.createNew("user-1", email, phone, "username", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED);
+        return IdentityUser.createNew("user-1", email, phone, "username", TestClocks.FIXED);
     }
 
     @Test
@@ -40,7 +43,7 @@ class IdentityRecipientResolverAdapterTest {
         String result = adapter.resolve("user-1", "IN_APP");
 
         assertThat(result).isEqualTo("in-app:user-1");
-        verify(userPersistencePort, never()).findById(org.mockito.ArgumentMatchers.anyString());
+        verify(userPersistencePort, never()).findById(ArgumentMatchers.anyString());
     }
 
     @Test

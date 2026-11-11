@@ -3,7 +3,8 @@ package com.aionn.ordering.infrastructure.integration.order;
 import com.aionn.ordering.application.port.out.OrderPersistencePort;
 import com.aionn.ordering.domain.model.Order;
 import com.aionn.ordering.domain.model.OrderItem;
-import com.aionn.sharedkernel.integration.port.ordering.OrderSnapshotQueryPort;
+import com.aionn.contracts.port.ordering.OrderSnapshotQueryPort;
+import com.aionn.sharedkernel.util.MoneyMinorUnits;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -32,15 +33,19 @@ public class OrderingOrderSnapshotAdapter implements OrderSnapshotQueryPort {
         List<OrderSnapshot.Line> lines = new ArrayList<>(order.items().size());
         long subtotalMinor = 0;
         for (OrderItem item : order.items()) {
-            long unit = item.unitPrice().amount().longValue();
+            long unit = MoneyMinorUnits.toMinorUnits(
+                    item.unitPrice().amount(), order.getCurrency());
             long lineTotal = unit * item.qty();
             subtotalMinor += lineTotal;
             lines.add(new OrderSnapshot.Line(item.skuId(), item.qty(), unit, lineTotal));
         }
-        long shippingMinor = order.getShippingFee() == null ? 0L : order.getShippingFee().amount().longValue();
+        long shippingMinor = order.getShippingFee() == null ? 0L
+                : MoneyMinorUnits.toMinorUnits(
+                        order.getShippingFee().amount(), order.getCurrency());
         long totalMinor = order.getTotalAmount() == null
                 ? subtotalMinor + shippingMinor
-                : order.getTotalAmount().amount().longValue();
+                : MoneyMinorUnits.toMinorUnits(
+                        order.getTotalAmount().amount(), order.getCurrency());
         return new OrderSnapshot(
                 order.getOrderId(),
                 order.getUserId(),

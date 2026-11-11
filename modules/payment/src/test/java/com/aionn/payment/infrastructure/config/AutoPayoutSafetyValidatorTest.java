@@ -12,22 +12,39 @@ class AutoPayoutSafetyValidatorTest {
 
     @Test
     void acceptsDisabledAutoPayout() {
-        AutoPayoutSafetyValidator validator = new AutoPayoutSafetyValidator(properties(false));
+        AutoPayoutSafetyValidator validator = new AutoPayoutSafetyValidator(properties(false, "10"));
 
         assertThatCode(validator::rejectUnsafeAutoPayout).doesNotThrowAnyException();
     }
 
     @Test
-    void rejectsAutoPayoutUntilRefundReservePolicyExists() {
-        AutoPayoutSafetyValidator validator = new AutoPayoutSafetyValidator(properties(true));
+    void acceptsAutoPayoutWithPercentageReserve() {
+        AutoPayoutSafetyValidator validator = new AutoPayoutSafetyValidator(properties(true, "10"));
+
+        assertThatCode(validator::rejectUnsafeAutoPayout).doesNotThrowAnyException();
+    }
+
+    @Test
+    void rejectsAutoPayoutWithoutReservePolicy() {
+        AutoPayoutSafetyValidator validator = new AutoPayoutSafetyValidator(properties(true, "0"));
 
         assertThatThrownBy(validator::rejectUnsafeAutoPayout)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("refundable-revenue reserve policy");
     }
 
-    private static PaymentAutoPayoutProperties properties(boolean enabled) {
+    @Test
+    void rejectsInvalidReservePercent() {
+        AutoPayoutSafetyValidator validator = new AutoPayoutSafetyValidator(properties(true, "100"));
+
+        assertThatThrownBy(validator::rejectUnsafeAutoPayout)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("reserve-percent");
+    }
+
+    private static PaymentAutoPayoutProperties properties(boolean enabled, String reservePercent) {
         return new PaymentAutoPayoutProperties(
-                enabled, BigDecimal.valueOf(100_000), "VND", 50, "0 0 2 * * *");
+                enabled, BigDecimal.valueOf(100_000), new BigDecimal(reservePercent),
+                BigDecimal.ZERO, "VND", 50, "0 0 2 * * *");
     }
 }

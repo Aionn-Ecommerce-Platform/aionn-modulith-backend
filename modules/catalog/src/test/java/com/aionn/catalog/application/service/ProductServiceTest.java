@@ -1,5 +1,31 @@
 package com.aionn.catalog.application.service;
 
+import com.aionn.catalog.application.dto.product.command.AssignCollectionsCommand;
+import com.aionn.catalog.application.dto.product.command.CloneProductCommand;
+import com.aionn.catalog.application.dto.product.command.DefineAttributesCommand;
+import com.aionn.catalog.application.dto.product.command.EmergencyTakedownCommand;
+import com.aionn.catalog.application.dto.product.command.RejectProductCommand;
+import com.aionn.catalog.application.dto.product.command.RemoveVariantCommand;
+import com.aionn.catalog.application.dto.product.command.RestoreProductCommand;
+import com.aionn.catalog.application.dto.product.command.SubmitForReviewCommand;
+import com.aionn.catalog.application.dto.product.command.UpdateAiMetadataCommand;
+import com.aionn.catalog.application.dto.product.command.UpdateMediaCommand;
+import com.aionn.catalog.application.dto.search.ProductSearchCriteria;
+import com.aionn.catalog.application.dto.search.ProductSearchDocument;
+import com.aionn.catalog.application.dto.search.ProductSearchResult;
+import com.aionn.catalog.application.mapper.ProductSearchDocumentMapper;
+import com.aionn.catalog.application.port.out.attribute.AttributeTemplatePersistencePort;
+import com.aionn.catalog.application.port.out.integration.CatalogIntegrationEventPublisherPort;
+import com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort;
+import com.aionn.catalog.application.port.out.product.UserBrowsingHistoryPersistencePort;
+import com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort;
+import com.aionn.catalog.application.port.out.search.ProductSearchIndex;
+import com.aionn.catalog.domain.model.ProductVariant;
+import com.aionn.catalog.domain.model.UserBrowsingHistory;
+import java.time.ZoneOffset;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
+
 import com.aionn.catalog.application.dto.common.PageResult;
 import com.aionn.catalog.application.dto.product.command.AssignBrandCommand;
 import com.aionn.catalog.application.dto.product.command.AssignCategoriesCommand;
@@ -70,7 +96,7 @@ class ProductServiceTest {
         @Mock
         private ProductPersistencePort productRepository;
         @Mock
-        private com.aionn.catalog.application.port.out.product.UserBrowsingHistoryPersistencePort userBrowsingHistoryRepository;
+        private UserBrowsingHistoryPersistencePort userBrowsingHistoryRepository;
         @Mock
         private MerchantPersistencePort merchantRepository;
         @Mock
@@ -80,15 +106,15 @@ class ProductServiceTest {
         @Mock
         private TransactionTemplate transactionTemplate;
         @Mock
-        private com.aionn.catalog.application.port.out.search.ProductSearchIndex catalogSearchIndex;
+        private ProductSearchIndex catalogSearchIndex;
         @Mock
-        private com.aionn.catalog.application.mapper.ProductSearchDocumentMapper searchDocumentMapper;
+        private ProductSearchDocumentMapper searchDocumentMapper;
         @Mock
-        private com.aionn.catalog.application.port.out.attribute.AttributeTemplatePersistencePort attributeTemplateRepository;
+        private AttributeTemplatePersistencePort attributeTemplateRepository;
         @Mock
-        private com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort reviewRepository;
+        private ProductReviewPersistencePort reviewRepository;
         @Mock
-        private com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort soldCounterRepository;
+        private ProductSoldCounterPersistencePort soldCounterRepository;
         @Mock
         private ProductResultMapper productResultMapper;
         @Mock
@@ -96,10 +122,10 @@ class ProductServiceTest {
         @Mock
         private EventPublisher eventPublisher;
         @Mock
-        private com.aionn.catalog.application.port.out.integration.CatalogIntegrationEventPublisherPort integrationEventPublisher;
+        private CatalogIntegrationEventPublisherPort integrationEventPublisher;
 
         @Spy
-        private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
+        private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
 
         @InjectMocks
         private ProductService productService;
@@ -110,6 +136,12 @@ class ProductServiceTest {
         void setUp() {
                 lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation ->
                                 ((TransactionCallback<?>) invocation.getArgument(0)).doInTransaction(null));
+                Merchant activeMerchant = Merchant.register(MERCHANT_ID, "owner-1", "Acme",
+                                new BigDecimal("0.05"), FIXED);
+                activeMerchant.activate(ADMIN_ID, "test", FIXED);
+                lenient().when(merchantRepository.findById(MERCHANT_ID))
+                                .thenReturn(Optional.of(activeMerchant));
+                lenient().when(productPolicy.getCloneNameSuffix()).thenReturn(" (Copy)");
                 sampleResult = new ProductResult(
                                 PRODUCT_ID, MERCHANT_ID, "Widget", null,
                                 List.of(), List.of(), List.of(), Map.of(),
@@ -117,11 +149,15 @@ class ProductServiceTest {
                                 Instant.now(), Instant.now());
         }
 
+        private static final ProductVariant.ParcelDimensions PARCEL =
+                new ProductVariant.ParcelDimensions(
+                        500, BigDecimal.valueOf(15), BigDecimal.valueOf(10), BigDecimal.valueOf(5));
+
         private Product publishableProduct() {
                 Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
                 product.categorize(List.of(CATEGORY_ID), FIXED);
                 product.defineVariant("sku-1", Map.of("color", "red"),
-                                Money.of(new BigDecimal("10.00"), "VND"), FIXED);
+                                Money.of(new BigDecimal("10.00"), "VND"), PARCEL, FIXED);
                 product.pullEvents();
                 return product;
         }
@@ -141,6 +177,7 @@ class ProductServiceTest {
         @Test
         void createPersistsAndPublishes() {
                 Merchant merchant = Merchant.register(MERCHANT_ID, "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
+                merchant.activate(ADMIN_ID, "test", FIXED);
                 when(merchantRepository.findById(MERCHANT_ID)).thenReturn(Optional.of(merchant));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -158,7 +195,8 @@ class ProductServiceTest {
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.defineVariant(new DefineVariantCommand(PRODUCT_ID, MERCHANT_ID, "sku-1",
-                                Map.of("color", "red"), new BigDecimal("10.00"), "VND"));
+                                Map.of("color", "red"), new BigDecimal("10.00"), "VND",
+                                500, BigDecimal.valueOf(15), BigDecimal.valueOf(10), BigDecimal.valueOf(5)));
 
                 assertThat(product.variants()).hasSize(1);
                 verify(eventPublisher).publish(anyCollection());
@@ -172,7 +210,8 @@ class ProductServiceTest {
 
                 assertThatThrownBy(() -> productService.defineVariant(new DefineVariantCommand(
                                 PRODUCT_ID, MERCHANT_ID, "sku-1", Map.of("color", "red"),
-                                new BigDecimal("10.00"), "VND")))
+                                new BigDecimal("10.00"), "VND",
+                                500, BigDecimal.valueOf(15), BigDecimal.valueOf(10), BigDecimal.valueOf(5))))
                                 .isInstanceOf(CatalogException.class)
                                 .extracting("errorCode")
                                 .isEqualTo(CatalogErrorCode.PRODUCT_FORBIDDEN.getCode());
@@ -312,7 +351,7 @@ class ProductServiceTest {
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
-                productService.publish(new PublishProductCommand(PRODUCT_ID, ADMIN_ID));
+                productService.publish(new PublishProductCommand(PRODUCT_ID, MERCHANT_ID));
 
                 assertThat(product.getStatus()).isEqualTo(ProductStatus.PUBLISHED);
                 verify(eventPublisher).publish(anyCollection());
@@ -377,7 +416,7 @@ class ProductServiceTest {
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
-                productService.removeVariant(new com.aionn.catalog.application.dto.product.command.RemoveVariantCommand(
+                productService.removeVariant(new RemoveVariantCommand(
                                 PRODUCT_ID, MERCHANT_ID, "sku-1"));
 
                 assertThat(product.variants()).isEmpty();
@@ -389,7 +428,7 @@ class ProductServiceTest {
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
-                productService.updateMedia(new com.aionn.catalog.application.dto.product.command.UpdateMediaCommand(
+                productService.updateMedia(new UpdateMediaCommand(
                                 PRODUCT_ID, MERCHANT_ID, List.of("img1", "img2")));
 
                 assertThat(product.imageList()).containsExactly("img1", "img2");
@@ -402,7 +441,7 @@ class ProductServiceTest {
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.updateAiMetadata(
-                                new com.aionn.catalog.application.dto.product.command.UpdateAiMetadataCommand(
+                                new UpdateAiMetadataCommand(
                                                 PRODUCT_ID, MERCHANT_ID, List.of("premium"), "handmade widget"));
 
                 assertThat(product.tags()).containsExactly("premium");
@@ -416,7 +455,7 @@ class ProductServiceTest {
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.assignCollections(
-                                new com.aionn.catalog.application.dto.product.command.AssignCollectionsCommand(
+                                new AssignCollectionsCommand(
                                                 PRODUCT_ID, MERCHANT_ID, List.of("coll-1", "coll-2")));
 
                 assertThat(product.collectionIds()).containsExactly("coll-1", "coll-2");
@@ -431,7 +470,7 @@ class ProductServiceTest {
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.emergencyTakedown(
-                                new com.aionn.catalog.application.dto.product.command.EmergencyTakedownCommand(
+                                new EmergencyTakedownCommand(
                                                 PRODUCT_ID, ADMIN_ID, "policy"));
 
                 assertThat(product.getStatus()).isEqualTo(ProductStatus.TAKEN_DOWN);
@@ -441,7 +480,7 @@ class ProductServiceTest {
         @Test
         void searchDelegatesToIndex() {
                 var criteria = criteria("keyword", null, List.of(), List.of(), null, null);
-                var hits = new com.aionn.catalog.application.port.out.search.ProductSearchIndex.SearchHits(
+                var hits = new ProductSearchIndex.SearchHits(
                                 List.of(PRODUCT_ID), 1L, Map.of(), Map.of(), Map.of(), null, null);
                 when(catalogSearchIndex.search(criteria)).thenReturn(Optional.of(hits));
                 Product product = publishableProduct();
@@ -503,12 +542,12 @@ class ProductServiceTest {
                 assertThat(results).hasSize(1);
                 assertThat(results.get(0).getName()).isEqualTo("Widget");
                 verify(productRepository, never()).findPersonalizedProducts(anyList(), anyList(),
-                                org.mockito.ArgumentMatchers.anyInt());
+                                ArgumentMatchers.anyInt());
         }
 
         @Test
         void getPersonalizedProductsUsesBrowsingHistoryForRealUser() {
-                com.aionn.catalog.domain.model.UserBrowsingHistory history = new com.aionn.catalog.domain.model.UserBrowsingHistory(
+                UserBrowsingHistory history = new UserBrowsingHistory(
                                 "user-1", List.of(CATEGORY_ID), List.of(BRAND_ID), List.of());
                 when(userBrowsingHistoryRepository.findByUserId("user-1")).thenReturn(Optional.of(history));
                 Product product = publishableProduct();
@@ -539,7 +578,7 @@ class ProductServiceTest {
         void trackProductViewIgnoresAnonymousUser() {
                 productService.trackProductView(PRODUCT_ID, "anonymousUser");
 
-                verify(productRepository, never()).findById(org.mockito.ArgumentMatchers.anyString());
+                verify(productRepository, never()).findById(ArgumentMatchers.anyString());
                 verify(userBrowsingHistoryRepository, never()).save(any());
         }
 
@@ -553,30 +592,30 @@ class ProductServiceTest {
                 productService.trackProductView(PRODUCT_ID, "user-1");
 
                 verify(userBrowsingHistoryRepository).save(any(
-                                com.aionn.catalog.domain.model.UserBrowsingHistory.class));
+                                UserBrowsingHistory.class));
                 verify(integrationEventPublisher).publishProductViewed(
                                 PRODUCT_ID,
                                 "user-1",
                                 BRAND_ID,
-                                java.util.List.of(CATEGORY_ID),
-                                java.time.Instant.parse("2026-01-01T00:00:00Z"));
+                                List.of(CATEGORY_ID),
+                                Instant.parse("2026-01-01T00:00:00Z"));
         }
 
         @Test
         void searchCatalogMapsIndexHitsAndFacets() {
-                com.aionn.catalog.application.dto.search.ProductSearchCriteria criteria = new com.aionn.catalog.application.dto.search.ProductSearchCriteria(
+                ProductSearchCriteria criteria = new ProductSearchCriteria(
                                 "widget", null, ProductStatus.PUBLISHED, List.of(), List.of(),
                                 null, null, Map.of(),
-                                com.aionn.catalog.application.dto.search.ProductSearchCriteria.Sort.RELEVANCE, 0, 20);
-                com.aionn.catalog.application.port.out.search.ProductSearchIndex.SearchHits hits = new com.aionn.catalog.application.port.out.search.ProductSearchIndex.SearchHits(
+                                ProductSearchCriteria.Sort.RELEVANCE, 0, 20);
+                ProductSearchIndex.SearchHits hits = new ProductSearchIndex.SearchHits(
                                 List.of(PRODUCT_ID), 1L, Map.of(BRAND_ID, 1L), Map.of(CATEGORY_ID, 1L),
-                                Map.of(), new java.math.BigDecimal("10"), new java.math.BigDecimal("20"));
+                                Map.of(), new BigDecimal("10"), new BigDecimal("20"));
                 when(catalogSearchIndex.search(criteria)).thenReturn(Optional.of(hits));
                 Product product = publishableProduct();
                 when(productRepository.findByIdsPreserveOrder(List.of(PRODUCT_ID))).thenReturn(List.of(product));
                 when(productResultMapper.toResult(product)).thenReturn(sampleResult);
 
-                com.aionn.catalog.application.dto.search.ProductSearchResult result = productService
+                ProductSearchResult result = productService
                                 .searchCatalog(criteria);
 
                 assertThat(result.page().content()).containsExactly(sampleResult);
@@ -587,10 +626,10 @@ class ProductServiceTest {
 
         @Test
         void searchCatalogFallsBackToJpaWhenIndexUnavailable() {
-                com.aionn.catalog.application.dto.search.ProductSearchCriteria criteria = new com.aionn.catalog.application.dto.search.ProductSearchCriteria(
+                ProductSearchCriteria criteria = new ProductSearchCriteria(
                                 "widget", null, ProductStatus.PUBLISHED, List.of(), List.of(),
                                 null, null, Map.of(),
-                                com.aionn.catalog.application.dto.search.ProductSearchCriteria.Sort.RELEVANCE, 0, 20);
+                                ProductSearchCriteria.Sort.RELEVANCE, 0, 20);
                 when(catalogSearchIndex.search(criteria)).thenReturn(Optional.empty());
                 Product product = publishableProduct();
                 product.publish(ADMIN_ID, FIXED);
@@ -598,26 +637,26 @@ class ProductServiceTest {
                                 .thenReturn(new ProductPersistencePort.FallbackPage(List.of(product), 1));
                 when(productResultMapper.toResult(product)).thenReturn(sampleResult);
 
-                com.aionn.catalog.application.dto.search.ProductSearchResult result = productService
+                ProductSearchResult result = productService
                                 .searchCatalog(criteria);
 
                 assertThat(result.page().content()).containsExactly(sampleResult);
                 assertThat(result.facets().brands()).isEmpty();
         }
 
-        private com.aionn.catalog.application.dto.search.ProductSearchCriteria criteria(
-                        String q, String merchantId, java.util.List<String> categoryIds,
-                        java.util.List<String> brandIds,
-                        java.math.BigDecimal min, java.math.BigDecimal max) {
-                return new com.aionn.catalog.application.dto.search.ProductSearchCriteria(
+        private ProductSearchCriteria criteria(
+                        String q, String merchantId, List<String> categoryIds,
+                        List<String> brandIds,
+                        BigDecimal min, BigDecimal max) {
+                return new ProductSearchCriteria(
                                 q, merchantId, ProductStatus.PUBLISHED, categoryIds, brandIds, min, max, Map.of(),
-                                com.aionn.catalog.application.dto.search.ProductSearchCriteria.Sort.RELEVANCE, 0, 20);
+                                ProductSearchCriteria.Sort.RELEVANCE, 0, 20);
         }
 
         @Test
         void searchCatalogFallbackByMerchantAppliesFilters() {
                 var c = criteria(null, MERCHANT_ID, List.of(CATEGORY_ID), List.of(BRAND_ID),
-                                new java.math.BigDecimal("5"), new java.math.BigDecimal("50"));
+                                new BigDecimal("5"), new BigDecimal("50"));
                 when(catalogSearchIndex.search(c)).thenReturn(Optional.empty());
                 Product product = publishableProduct();
                 product.publish(ADMIN_ID, FIXED);
@@ -662,7 +701,7 @@ class ProductServiceTest {
         @Test
         void searchCatalogHitsWithoutPriceBoundsHasNullPriceRange() {
                 var c = criteria("widget", null, List.of(), List.of(), null, null);
-                var hits = new com.aionn.catalog.application.port.out.search.ProductSearchIndex.SearchHits(
+                var hits = new ProductSearchIndex.SearchHits(
                                 List.of(PRODUCT_ID), 1L, Map.of(), Map.of(), Map.of(), null, null);
                 when(catalogSearchIndex.search(c)).thenReturn(Optional.of(hits));
                 Product product = publishableProduct();
@@ -719,10 +758,10 @@ class ProductServiceTest {
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(source));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
-                productService.clone(new com.aionn.catalog.application.dto.product.command.CloneProductCommand(
+                productService.clone(new CloneProductCommand(
                                 PRODUCT_ID, MERCHANT_ID));
 
-                verify(eventPublisher, org.mockito.Mockito.atLeastOnce()).publish(anyCollection());
+                verify(eventPublisher, Mockito.atLeastOnce()).publish(anyCollection());
         }
 
         @Test
@@ -732,7 +771,7 @@ class ProductServiceTest {
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.submitForReview(
-                                new com.aionn.catalog.application.dto.product.command.SubmitForReviewCommand(
+                                new SubmitForReviewCommand(
                                                 PRODUCT_ID, MERCHANT_ID));
 
                 assertThat(product.getStatus()).isEqualTo(ProductStatus.PENDING_REVIEW);
@@ -744,7 +783,7 @@ class ProductServiceTest {
                 when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
-                productService.reject(new com.aionn.catalog.application.dto.product.command.RejectProductCommand(
+                productService.reject(new RejectProductCommand(
                                 PRODUCT_ID, ADMIN_ID, "SPAM", "bad"));
 
                 assertThat(product.getStatus()).isEqualTo(ProductStatus.REJECTED);
@@ -760,7 +799,7 @@ class ProductServiceTest {
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.restore(
-                                new com.aionn.catalog.application.dto.product.command.RestoreProductCommand(
+                                new RestoreProductCommand(
                                                 PRODUCT_ID, MERCHANT_ID));
 
                 assertThat(product.getStatus()).isEqualTo(ProductStatus.PUBLISHED);
@@ -774,7 +813,7 @@ class ProductServiceTest {
                 when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.defineAttributes(
-                                new com.aionn.catalog.application.dto.product.command.DefineAttributesCommand(
+                                new DefineAttributesCommand(
                                                 PRODUCT_ID, MERCHANT_ID, Map.of("color", "red")));
 
                 assertThat(product.attributes()).containsEntry("color", "red");
@@ -792,13 +831,14 @@ class ProductServiceTest {
         void syncAllToSearchIndexPagesThroughPublishedProducts() {
                 Product product = publishableProduct();
                 product.publish(ADMIN_ID, FIXED);
+                when(productPolicy.getSearchIndexBatchSize()).thenReturn(100);
                 when(productRepository.findPublished(100, 0)).thenReturn(List.of(product));
                 when(productRepository.findPublished(100, 100)).thenReturn(List.of());
-                com.aionn.catalog.application.dto.search.ProductSearchDocument doc = new com.aionn.catalog.application.dto.search.ProductSearchDocument(
+                ProductSearchDocument doc = new ProductSearchDocument(
                                 PRODUCT_ID, MERCHANT_ID, "Widget", null, null, List.of(CATEGORY_ID),
-                                List.of(), List.of(), List.of(), Map.of(), null, null, null, "PUBLISHED",
-                                java.time.Instant.now(), 0.0, 0L);
-                when(searchDocumentMapper.toSearchDocument(org.mockito.ArgumentMatchers.eq(product), any(), anyDouble(),
+                                List.of(), List.of(), List.of(), Map.of(), null, null, null, null, "PUBLISHED",
+                                Instant.now(), 0.0, 0L);
+                when(searchDocumentMapper.toSearchDocument(ArgumentMatchers.eq(product), any(), anyDouble(),
                                 anyLong()))
                                 .thenReturn(doc);
 

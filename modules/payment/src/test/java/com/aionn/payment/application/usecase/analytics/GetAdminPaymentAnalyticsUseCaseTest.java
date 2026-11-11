@@ -10,6 +10,8 @@ import static org.mockito.Mockito.when;
 import com.aionn.payment.application.dto.analytics.query.GetAdminPaymentAnalyticsQuery;
 import com.aionn.payment.application.dto.analytics.result.AdminPaymentAnalyticsResult;
 import com.aionn.payment.application.port.out.PaymentAnalyticsQueryPort;
+import com.aionn.payment.application.policy.PaymentAnalyticsPolicy;
+import com.aionn.payment.application.policy.PaymentDefaultsPolicy;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -18,9 +20,18 @@ import org.junit.jupiter.api.Test;
 
 class GetAdminPaymentAnalyticsUseCaseTest {
     private final PaymentAnalyticsQueryPort queryPort = mock(PaymentAnalyticsQueryPort.class);
+    private final PaymentAnalyticsPolicy analyticsPolicy = mock(PaymentAnalyticsPolicy.class);
+    private final PaymentDefaultsPolicy defaultsPolicy = mock(PaymentDefaultsPolicy.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-08-11T10:00:00Z"), ZoneOffset.UTC);
     private final GetAdminPaymentAnalyticsUseCase useCase =
-            new GetAdminPaymentAnalyticsUseCase(queryPort, clock);
+            new GetAdminPaymentAnalyticsUseCase(queryPort, analyticsPolicy, defaultsPolicy, clock);
+
+    {
+        when(analyticsPolicy.zone()).thenReturn(ZoneOffset.UTC);
+        when(analyticsPolicy.defaultRangeDays()).thenReturn(30);
+        when(analyticsPolicy.maxRangeDays()).thenReturn(366L);
+        when(defaultsPolicy.defaultCurrency()).thenReturn("VND");
+    }
 
     @Test
     void defaultsToLastThirtyDaysAndVnd() {

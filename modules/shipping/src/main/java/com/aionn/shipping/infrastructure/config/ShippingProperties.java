@@ -8,32 +8,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
-import java.math.BigDecimal;
-
 @Validated
 @ConfigurationProperties(prefix = "shipping")
 public record ShippingProperties(
-        @NotNull @Valid @DefaultValue StatusPoller statusPoller,
-        @NotNull @Valid @DefaultValue AutoDelivery autoDelivery,
-        @NotNull @Valid @DefaultValue DefaultDimensions defaultDimensions) {
+        @NotNull @Valid @DefaultValue StatusPoller statusPoller) {
 
     public record StatusPoller(
             @DefaultValue("true") boolean enabled,
             @Min(1000) @Max(3_600_000) @DefaultValue("60000") long delayMs,
             @Min(1) @Max(1000) @DefaultValue("100") int batchSize) {
-    }
-
-    public record AutoDelivery(
-            @DefaultValue("false") boolean enabled,
-            @Min(1000) @Max(86_400_000) @DefaultValue("1200000") long delayMs,
-            @Min(60) @Max(604_800) @DefaultValue("1200") long transitThresholdSeconds,
-            @Min(1) @Max(1000) @DefaultValue("50") int batchSize) {
-    }
-
-    public record DefaultDimensions(
-            @Min(1) @DefaultValue("500") int weightGram,
-            @DefaultValue("20") BigDecimal lengthCm,
-            @DefaultValue("15") BigDecimal widthCm,
-            @DefaultValue("10") BigDecimal heightCm) {
     }
 }

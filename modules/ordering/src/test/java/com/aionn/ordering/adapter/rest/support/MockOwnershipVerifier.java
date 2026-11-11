@@ -1,6 +1,6 @@
 package com.aionn.ordering.adapter.rest.support;
 
-import com.aionn.sharedkernel.integration.port.catalog.MerchantOwnershipVerifierPort;
+import com.aionn.contracts.port.catalog.MerchantOwnershipVerifierPort;
 
 /**
  * Test-only ownership verifier used to wire up

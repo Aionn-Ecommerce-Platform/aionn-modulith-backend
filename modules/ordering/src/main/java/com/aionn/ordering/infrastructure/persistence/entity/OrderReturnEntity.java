@@ -1,5 +1,7 @@
 package com.aionn.ordering.infrastructure.persistence.entity;
 
+import jakarta.persistence.Version;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -92,7 +94,7 @@ public class OrderReturnEntity {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @jakarta.persistence.Version
+    @Version
     @Column(name = "version", nullable = false)
     private long version;
 }

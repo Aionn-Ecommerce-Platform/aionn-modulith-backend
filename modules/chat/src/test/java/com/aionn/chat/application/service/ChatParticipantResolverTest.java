@@ -1,7 +1,7 @@
 package com.aionn.chat.application.service;
 
 import com.aionn.chat.domain.model.Conversation;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

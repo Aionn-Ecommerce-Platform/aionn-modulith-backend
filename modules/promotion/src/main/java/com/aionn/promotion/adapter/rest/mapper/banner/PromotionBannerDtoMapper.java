@@ -23,7 +23,7 @@ public interface PromotionBannerDtoMapper {
 
     default BannerCommands.UpdateBanner toUpdateCommand(String bannerId, UpdateBannerRequest request) {
         return new BannerCommands.UpdateBanner(bannerId, request.title(), request.imageUrl(), request.imagePublicId(),
-                request.linkUrl(), request.displayOrder());
+                request.linkUrl(), request.displayOrder(), request.active());
     }
 
     default BannerCommands.DeleteBanner toDeleteCommand(String bannerId) {

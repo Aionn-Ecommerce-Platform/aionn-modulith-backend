@@ -18,7 +18,7 @@ class OrderingDtoMapperTest {
                 "address-1", "Buyer", "0900000000", "1 Test Street",
                 "ward-1", "district-1", "HN", "VN");
         PlaceOrderRequest request = new PlaceOrderRequest(
-                "address-1", null, "VND", address, List.of("SKU-1"), "COD");
+                "address-1", null, "VND", address, List.of("SKU-1"), "COD", "Giao giờ hành chính", "EXPRESS");
 
         var command = mapper.toPlaceOrderCommand("user-1", "idempotency-1", request);
 

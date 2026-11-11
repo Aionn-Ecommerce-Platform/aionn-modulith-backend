@@ -1,5 +1,7 @@
 package com.aionn.recommendation.domain.model;
 
+import java.util.HashMap;
+
 import com.aionn.recommendation.domain.valueobject.AffinityScore;
 import org.junit.jupiter.api.Test;
 
@@ -93,7 +95,7 @@ class UserAffinityProfileTest {
 
     @Test
     void affinityMapsAreDefensivelyCopied() {
-        java.util.Map<String, AffinityScore> mutable = new java.util.HashMap<>();
+        Map<String, AffinityScore> mutable = new HashMap<>();
         mutable.put("cat-phone", AffinityScore.ONE);
         UserAffinityProfile profile = profileWith(mutable, Map.of());
 

@@ -6,7 +6,7 @@ import com.aionn.chat.adapter.rest.mapper.block.BlockDtoMapper;
 import com.aionn.chat.application.port.in.block.BlockUserInputPort;
 import com.aionn.chat.application.port.in.block.ListMyBlocksQueryPort;
 import com.aionn.chat.application.port.in.block.UnblockUserInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

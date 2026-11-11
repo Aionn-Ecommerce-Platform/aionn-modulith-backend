@@ -25,6 +25,7 @@ import java.math.BigDecimal;
 @ConfigurationProperties(prefix = "recommendation.weights")
 public record RecommendationWeightProperties(
         @NotNull @Valid @DefaultValue Signal view,
+        @NotNull @Valid @DefaultValue Signal search,
         @NotNull @Valid @DefaultValue Signal cartAdd,
         @NotNull @Valid @DefaultValue Signal purchase) {
 

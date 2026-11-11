@@ -20,7 +20,8 @@ public final class BannerCommands {
             String imageUrl,
             String imagePublicId,
             String linkUrl,
-            Integer displayOrder) implements Command {
+            Integer displayOrder,
+            Boolean active) implements Command {
     }
 
     public record DeleteBanner(String bannerId) implements Command {

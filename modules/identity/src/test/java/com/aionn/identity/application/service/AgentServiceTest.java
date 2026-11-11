@@ -3,7 +3,6 @@ package com.aionn.identity.application.service;
 import com.aionn.identity.application.policy.AgentPolicy;
 import com.aionn.identity.application.port.out.agent.AgentAuditPort;
 import com.aionn.identity.application.port.out.agent.AgentPersistencePort;
-import com.aionn.identity.application.port.out.security.PasswordHasherPort;
 import com.aionn.identity.domain.exception.IdentityErrorCode;
 import com.aionn.identity.domain.exception.IdentityException;
 import com.aionn.identity.domain.model.AgentIdentity;
@@ -41,8 +40,6 @@ class AgentServiceTest {
     private AgentAuditPort agentAuditPort;
     @Mock
     private AgentPolicy agentPolicy;
-    @Mock
-    private PasswordHasherPort passwordHasher;
 
     private static final Instant FIXED_NOW = Instant.parse("2026-07-12T10:00:00Z");
 
@@ -51,22 +48,24 @@ class AgentServiceTest {
     @BeforeEach
     void setUp() {
         agentService = new AgentService(
-                agentPersistencePort, agentAuditPort, agentPolicy, passwordHasher,
+                agentPersistencePort, agentAuditPort, agentPolicy,
                 Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
     @Test
-    void createSavesAgentWithExpectedFields() {
+    void createSavesAgentWithExpectedFieldsAndReturnsRawKeyOnce() {
         when(agentPolicy.getKeyExpiryYears()).thenReturn(1);
-        when(passwordHasher.hash(org.mockito.ArgumentMatchers.anyString())).thenReturn("hashed-key");
         when(agentPersistencePort.save(any(AgentIdentity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        AgentIdentity result = agentService.create(OWNER_ID);
+        AgentService.Created created = agentService.create(OWNER_ID);
+        AgentIdentity result = created.agent();
 
         assertThat(result.getId()).isNotNull();
         assertThat(result.getOwnerId()).isEqualTo(OWNER_ID);
-        assertThat(result.getKeyHash()).isEqualTo("hashed-key");
+        assertThat(created.apiKey()).isNotBlank();
+        assertThat(result.getKeyHash())
+                .isEqualTo(com.aionn.sharedkernel.util.Sha256Hasher.hexDigest(created.apiKey()));
         assertThat(result.getStatus()).isEqualTo(AgentStatus.ACTIVE);
         Instant expectedExpiry = FIXED_NOW.atZone(ZoneOffset.UTC).plusYears(1).toInstant();
         assertThat(result.getExpiresAt()).isEqualTo(expectedExpiry);
@@ -129,6 +128,18 @@ class AgentServiceTest {
         List<AgentIdentity> result = agentService.listMy(OWNER_ID);
 
         assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void getAgentAuditLogsUsesConfiguredLimit() {
+        when(agentPersistencePort.findByIdAndOwnerId(AGENT_ID, OWNER_ID))
+                .thenReturn(Optional.of(baseAgent()));
+        when(agentPolicy.getAuditLogLimit()).thenReturn(50);
+        when(agentAuditPort.findByAgentId(AGENT_ID, 50)).thenReturn(List.of());
+
+        agentService.getAgentAuditLogs(OWNER_ID, AGENT_ID);
+
+        verify(agentAuditPort).findByAgentId(AGENT_ID, 50);
     }
 
     @Test

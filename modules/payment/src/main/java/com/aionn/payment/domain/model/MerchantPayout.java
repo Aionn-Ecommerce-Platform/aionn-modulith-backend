@@ -51,8 +51,16 @@ public class MerchantPayout {
 
     public static MerchantPayout request(String payoutId, String merchantId, BigDecimal amount,
             String currency, String bankName, String bankAccountNo, String bankAccountName, String note, Instant now) {
-        Guard.require(amount.signum() > 0,
+        Guard.require(amount != null && amount.signum() > 0,
                 () -> new PaymentException(PaymentErrorCode.INVALID_ARGUMENT, "amount must be positive"));
+        Guard.notBlank(currency, () -> new PaymentException(PaymentErrorCode.INVALID_ARGUMENT,
+                "currency must not be blank"));
+        Guard.notBlank(bankName, () -> new PaymentException(PaymentErrorCode.INVALID_ARGUMENT,
+                "bankName must not be blank"));
+        Guard.notBlank(bankAccountNo, () -> new PaymentException(PaymentErrorCode.INVALID_ARGUMENT,
+                "bankAccountNo must not be blank"));
+        Guard.notBlank(bankAccountName, () -> new PaymentException(PaymentErrorCode.INVALID_ARGUMENT,
+                "bankAccountName must not be blank"));
         return new MerchantPayout(payoutId, merchantId, amount, currency, PayoutStatus.PENDING,
                 bankName, bankAccountNo, bankAccountName, null, note, now, null, null, null, 0);
     }

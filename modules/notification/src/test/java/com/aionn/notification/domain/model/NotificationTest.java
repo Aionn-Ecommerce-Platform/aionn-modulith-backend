@@ -173,4 +173,51 @@ class NotificationTest {
                 .extracting("errorCode")
                 .isEqualTo(NotificationErrorCode.NOTIFICATION_FORBIDDEN.getCode());
     }
+
+    @Test
+    void markSentIsIdempotent() {
+        Notification n = newNotification();
+        n.markSent(FIXED);
+
+        n.markSent(FIXED);
+
+        assertThat(n.getStatus()).isEqualTo(NotificationStatus.SENT);
+        assertThat(n.canRetry()).isFalse();
+    }
+
+    @Test
+    void markFailedAfterSentIsIgnored() {
+        Notification n = newNotification();
+        n.markSent(FIXED);
+
+        n.markFailed("late failure", FIXED);
+
+        assertThat(n.getStatus()).isEqualTo(NotificationStatus.SENT);
+        assertThat(n.getRetryCount()).isZero();
+    }
+
+    @Test
+    void markFailedAfterDeletionIsIgnored() {
+        Notification n = newNotification();
+        n.softDelete(FIXED);
+
+        n.markFailed("late failure", FIXED);
+
+        assertThat(n.getStatus()).isEqualTo(NotificationStatus.DELETED);
+        assertThat(n.getRetryCount()).isZero();
+    }
+
+    @Test
+    void markDeliveryUnknownAfterFailureIsIgnored() {
+        Notification n = newNotification();
+        n.markFailed("e", FIXED);
+        n.markFailed("e", FIXED);
+        n.markFailed("e", FIXED);
+
+        n.markDeliveryUnknown("late", FIXED);
+
+        assertThat(n.getStatus()).isEqualTo(NotificationStatus.FAILED);
+        assertThat(n.getRetryCount()).isEqualTo(3);
+        assertThat(n.getLastFailureReason()).isEqualTo("e");
+    }
 }

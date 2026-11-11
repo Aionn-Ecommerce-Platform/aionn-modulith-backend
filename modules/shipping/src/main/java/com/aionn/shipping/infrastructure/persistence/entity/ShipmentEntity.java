@@ -1,5 +1,7 @@
 package com.aionn.shipping.infrastructure.persistence.entity;
 
+import jakarta.persistence.Version;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -145,7 +147,10 @@ public class ShipmentEntity {
     @Column(name = "returned_at")
     private Instant returnedAt;
 
-    @jakarta.persistence.Version
+    @Column(name = "last_polled_at")
+    private Instant lastPolledAt;
+
+    @Version
     @Column(name = "version", nullable = false)
     private long version;
 }

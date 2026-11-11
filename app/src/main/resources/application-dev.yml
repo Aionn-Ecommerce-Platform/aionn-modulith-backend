@@ -3,3 +3,13 @@ spring:
     locations:
       - classpath:db
       - classpath:db-demo
+
+aionn:
+  ucp:
+    rest-endpoint: "${UCP_REST_ENDPOINT:http://localhost:8080/ucp/v1}"
+    require-https: "${UCP_REQUIRE_HTTPS:false}"
+
+notification:
+  push:
+    web-push-public-key: "${NOTIFICATION_WEB_PUSH_PUBLIC_KEY:BC2kA2R_Wm-8l1L3m0MIFv7JdYezfQc2QtjX49hbCyjyPO7I9xtgBSRuTccFEBifc3jnEbW6BP2fB8PlDNVgAx0}"
+

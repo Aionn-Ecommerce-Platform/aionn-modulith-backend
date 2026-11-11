@@ -19,7 +19,6 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface AddressDtoMapper {
 
-	// request -> command
 	@Mapping(target = "type", expression = "java(mapStringToAddressType(request.type()))")
 	CreateAddressCommand toCreateCommand(String userId, CreateAddressRequest request);
 
@@ -30,15 +29,11 @@ public interface AddressDtoMapper {
 
 	SetDefaultAddressCommand toSetDefaultCommand(String userId, String addressId);
 
-	// result -> response
-	// Serialize the domain enum as its name so the REST contract doesn't
-	// depend on the domain enum type.
 	@Mapping(target = "type", expression = "java(result.type() == null ? null : result.type().name())")
 	AddressResponse toResponse(AddressResult result);
 
 	List<AddressResponse> toResponses(List<AddressResult> results);
 
-	// helper convert - validates and converts String to AddressType enum
 	default AddressType mapStringToAddressType(String type) {
 		if (type == null)
 			return null;

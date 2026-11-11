@@ -7,7 +7,7 @@ import com.aionn.payment.application.service.PaymentService;
 import com.aionn.payment.domain.model.Payment;
 import com.aionn.payment.domain.valueobject.PaymentGatewayKind;
 import com.aionn.payment.domain.valueobject.PaymentStatus;
-import com.aionn.sharedkernel.integration.port.payment.PaymentInitiatePort;
+import com.aionn.contracts.port.payment.PaymentInitiatePort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

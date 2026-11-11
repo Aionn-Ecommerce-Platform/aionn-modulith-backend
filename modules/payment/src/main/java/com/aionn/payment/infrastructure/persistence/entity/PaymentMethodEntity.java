@@ -1,5 +1,7 @@
 package com.aionn.payment.infrastructure.persistence.entity;
 
+import jakarta.persistence.Version;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -56,7 +58,7 @@ public class PaymentMethodEntity {
     @Column(name = "verified_at")
     private Instant verifiedAt;
 
-    @jakarta.persistence.Version
+    @Version
     @Column(name = "version", nullable = false)
     private long version;
 }

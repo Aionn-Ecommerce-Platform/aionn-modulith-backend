@@ -3,12 +3,13 @@ package com.aionn.identity.adapter.rest.mapper.admin;
 import com.aionn.identity.domain.valueobject.UserRole;
 import com.aionn.identity.domain.valueobject.UserStatus;
 import org.junit.jupiter.api.Test;
+import org.mapstruct.factory.Mappers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class AdminUserDtoMapperTest {
 
-    private final AdminUserDtoMapper mapper = new AdminUserDtoMapperImpl();
+    private final AdminUserDtoMapper mapper = Mappers.getMapper(AdminUserDtoMapper.class);
 
     @Test
     void createsListQueryWhenOptionalFiltersAreMissing() {

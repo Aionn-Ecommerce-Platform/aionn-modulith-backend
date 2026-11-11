@@ -1,8 +1,8 @@
 package com.aionn.ordering.infrastructure.integration.order;
 
 import com.aionn.ordering.application.port.out.integration.CartIntegrationEventPublisherPort;
-import com.aionn.sharedkernel.integration.event.ordering.CartItemAddedIntegrationEvent;
-import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.contracts.event.ordering.CartItemAddedIntegrationEvent;
+import com.aionn.contracts.publisher.IntegrationEventPublisher;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

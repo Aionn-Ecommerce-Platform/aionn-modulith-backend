@@ -1,6 +1,8 @@
 package com.aionn.ucp.application.catalog;
 
-import com.aionn.sharedkernel.integration.port.catalog.CatalogQueryPort;
+import org.mockito.Mockito;
+
+import com.aionn.contracts.port.catalog.CatalogQueryPort;
 import com.aionn.ucp.adapter.rest.dto.catalog.UcpCatalogLookupRequest;
 import com.aionn.ucp.adapter.rest.dto.catalog.UcpCatalogLookupResponse;
 import com.aionn.ucp.adapter.rest.dto.catalog.UcpCatalogModels.*;
@@ -8,6 +10,7 @@ import com.aionn.ucp.adapter.rest.dto.catalog.UcpCatalogSearchRequest;
 import com.aionn.ucp.adapter.rest.dto.catalog.UcpCatalogSearchResponse;
 import com.aionn.ucp.adapter.rest.dto.catalog.UcpProductDetailRequest;
 import com.aionn.ucp.adapter.rest.dto.catalog.UcpProductDetailResponse;
+import com.aionn.ucp.application.TestUcpProtocolPolicy;
 import com.aionn.ucp.domain.exception.UcpProtocolException;
 import com.aionn.ucp.infrastructure.schema.PinnedUcpSchemaValidator;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,7 +43,8 @@ class UcpCatalogApplicationServiceTest {
         @BeforeEach
         void setUp() {
                 schemaValidator = new PinnedUcpSchemaValidator();
-                service = new UcpCatalogApplicationService(catalogQueryPort, schemaValidator);
+                service = new UcpCatalogApplicationService(catalogQueryPort, schemaValidator,
+                                new TestUcpProtocolPolicy("VND"));
         }
 
         private CatalogQueryPort.ProductView sampleProduct(String productId, String name, BigDecimal minPrice,
@@ -108,8 +112,10 @@ class UcpCatalogApplicationServiceTest {
                 verify(catalogQueryPort).search(captor.capture());
                 assertThat(captor.getValue().query()).isEqualTo("shoes");
                 assertThat(captor.getValue().limit()).isEqualTo(10);
-                assertThat(captor.getValue().minPrice()).isEqualByComparingTo("50.00");
-                assertThat(captor.getValue().maxPrice()).isEqualByComparingTo("120.00");
+                // Minor units are interpreted in the store's market currency (VND, 0
+                // fraction digits) — 5000 minor = 5000 major, not the old buggy USD /100.
+                assertThat(captor.getValue().minPrice()).isEqualByComparingTo("5000");
+                assertThat(captor.getValue().maxPrice()).isEqualByComparingTo("12000");
         }
 
         @Test
@@ -123,6 +129,49 @@ class UcpCatalogApplicationServiceTest {
                 assertThat(response.products()).isEmpty();
                 assertThat(response.pagination().hasNextPage()).isFalse();
                 assertThat(response.pagination().cursor()).isNull();
+        }
+
+        @Test
+        void searchCatalogHonoursRequestCursorAndEmitsNextOffset() {
+                // Two pages worth of products: limit=1, the adapter over-fetches one
+                // extra so size>limit signals a next page at offset+1.
+                CatalogQueryPort.ProductView p1 = sampleProduct("prod-1", "A", BigDecimal.valueOf(10),
+                                BigDecimal.valueOf(10));
+                CatalogQueryPort.ProductView p2 = sampleProduct("prod-2", "B", BigDecimal.valueOf(20),
+                                BigDecimal.valueOf(20));
+                when(catalogQueryPort.search(any())).thenReturn(List.of(p1, p2));
+
+                UcpCatalogSearchResponse page1 = service.searchCatalog(new UcpCatalogSearchRequest(
+                                "q", null,
+                                new UcpPaginationRequestDto(1, null),
+                                null, null, null));
+
+                assertThat(page1.products()).hasSize(1);
+                assertThat(page1.pagination().hasNextPage()).isTrue();
+                assertThat(page1.pagination().cursor()).isEqualTo("cursor_1");
+
+                ArgumentCaptor<CatalogQueryPort.SearchCriteria> captor = ArgumentCaptor
+                                .forClass(CatalogQueryPort.SearchCriteria.class);
+                verify(catalogQueryPort).search(captor.capture());
+                assertThat(captor.getValue().offset()).isEqualTo(0);
+        }
+
+        @Test
+        void searchCatalogResumesFromSuppliedCursor() {
+                CatalogQueryPort.ProductView p2 = sampleProduct("prod-2", "B", BigDecimal.valueOf(20),
+                                BigDecimal.valueOf(20));
+                when(catalogQueryPort.search(any())).thenReturn(List.of(p2));
+
+                UcpCatalogSearchResponse page2 = service.searchCatalog(new UcpCatalogSearchRequest(
+                                "q", null,
+                                new UcpPaginationRequestDto(1, "cursor_1"),
+                                null, null, null));
+
+                ArgumentCaptor<CatalogQueryPort.SearchCriteria> captor = ArgumentCaptor
+                                .forClass(CatalogQueryPort.SearchCriteria.class);
+                verify(catalogQueryPort).search(captor.capture());
+                assertThat(captor.getValue().offset()).isEqualTo(1);
+                assertThat(page2.pagination().hasNextPage()).isFalse();
         }
 
         @Test
@@ -233,7 +282,7 @@ class UcpCatalogApplicationServiceTest {
                                 new UcpPaginationRequestDto(-5, null), null, null, null));
                 ArgumentCaptor<CatalogQueryPort.SearchCriteria> captor2 = ArgumentCaptor
                                 .forClass(CatalogQueryPort.SearchCriteria.class);
-                verify(catalogQueryPort, org.mockito.Mockito.times(2)).search(captor2.capture());
+                verify(catalogQueryPort, Mockito.times(2)).search(captor2.capture());
                 assertThat(captor2.getValue().limit()).isEqualTo(1);
         }
 
@@ -288,7 +337,7 @@ class UcpCatalogApplicationServiceTest {
         @Test
         void serviceWorksWithoutSchemaValidator() {
                 UcpCatalogApplicationService serviceWithoutValidator = new UcpCatalogApplicationService(
-                                catalogQueryPort, null);
+                                catalogQueryPort, null, new TestUcpProtocolPolicy("VND"));
                 CatalogQueryPort.ProductView p1 = sampleProduct("prod-1", "Single Item", BigDecimal.valueOf(25.00),
                                 BigDecimal.valueOf(25.00));
                 when(catalogQueryPort.findByProductOrSkuId("prod-1")).thenReturn(Optional.of(p1));

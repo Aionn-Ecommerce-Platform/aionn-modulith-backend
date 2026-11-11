@@ -9,6 +9,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -98,8 +99,16 @@ class RealtimeBroadcasterTest {
         }).doesNotThrowAnyException();
     }
 
-    @SuppressWarnings("unchecked")
     private static Map<String, Object> asMap(Object payload) {
-        return (Map<String, Object>) payload;
+        if (!(payload instanceof Map<?, ?> values)) {
+            throw new AssertionError("Expected map payload");
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        values.forEach((key, value) -> {
+            if (key instanceof String name) {
+                result.put(name, value);
+            }
+        });
+        return result;
     }
 }

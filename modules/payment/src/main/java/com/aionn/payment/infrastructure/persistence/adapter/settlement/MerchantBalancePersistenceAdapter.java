@@ -1,5 +1,7 @@
 package com.aionn.payment.infrastructure.persistence.adapter.settlement;
 
+import java.time.Instant;
+
 import com.aionn.payment.application.port.out.MerchantBalancePersistencePort;
 import com.aionn.payment.domain.model.MerchantBalance;
 import com.aionn.payment.infrastructure.persistence.entity.MerchantBalanceEntity;
@@ -45,7 +47,7 @@ public class MerchantBalancePersistenceAdapter implements MerchantBalancePersist
     }
 
     @Override
-    public MerchantBalance createIfAbsentAndLock(String merchantId, String currency, java.time.Instant now) {
+    public MerchantBalance createIfAbsentAndLock(String merchantId, String currency, Instant now) {
         jpa.insertIfAbsent(merchantId, currency, now);
         return jpa.lockByMerchantAndCurrency(merchantId, currency)
                 .map(this::toDomain)

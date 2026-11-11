@@ -8,9 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-// Faceted search index. Returns Optional.empty() from search when the backend
-// is unreachable so callers can fall back to a JPA path. A successful but empty
-// match returns a present SearchHits with zero hits.
 public interface ProductSearchIndex {
 
     void index(ProductSearchDocument document);

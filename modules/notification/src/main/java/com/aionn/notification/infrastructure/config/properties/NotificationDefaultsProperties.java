@@ -5,5 +5,6 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 
 @ConfigurationProperties(prefix = "notification.defaults")
 public record NotificationDefaultsProperties(
-        @DefaultValue("vi-VN") String locale) {
+        @DefaultValue("vi-VN") String locale,
+        @DefaultValue("en-US") String englishLocale) {
 }

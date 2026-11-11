@@ -12,14 +12,14 @@ import com.aionn.identity.application.dto.user.view.*;
 import com.aionn.identity.application.port.in.user.*;
 import com.aionn.identity.domain.exception.IdentityErrorCode;
 import com.aionn.identity.domain.exception.IdentityException;
-import com.aionn.sharedkernel.adapter.web.support.clientip.ClientIpArgumentResolver;
-import com.aionn.sharedkernel.infrastructure.web.ClientIpResolver;
+import com.aionn.platform.web.support.clientip.ClientIpArgumentResolver;
+import com.aionn.platform.infrastructure.web.ClientIpResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -58,6 +58,8 @@ class UserControllerWebTest {
         @Mock
         private RequestDataExportInputPort requestDataExportInputPort;
         @Mock
+        private GetDataExportInputPort getDataExportInputPort;
+        @Mock
         private UserDtoMapper userDtoMapper;
 
         private MockMvc mockMvc;
@@ -68,7 +70,7 @@ class UserControllerWebTest {
                                 getMyProfileInputPort, verifyEmailInputPort, updateDisplayNameInputPort,
                                 updateAvatarInputPort, changeEmailInputPort, changePhoneInputPort,
                                 requestAccountDeletionInputPort, cancelAccountDeletionInputPort,
-                                requestDataExportInputPort, userDtoMapper);
+                                requestDataExportInputPort, getDataExportInputPort, userDtoMapper);
 
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new IdentityExceptionHandler())
@@ -544,6 +546,31 @@ class UserControllerWebTest {
                                 .with(user("alice@example.com").roles("USER")))
                                 .andExpect(status().isConflict())
                                 .andExpect(jsonPath("$.data.errorCode").value("IDENTITY_216"));
+        }
+
+        @Test
+        void getDataExportReturnsCompletedPayload() throws Exception {
+                when(getDataExportInputPort.execute("alice@example.com", "exp-1"))
+                                .thenReturn(new DataExportPayloadView("exp-1", "application/json",
+                                                "{\"profile\":{\"username\":\"alice\"}}", Instant.now()));
+
+                mockMvc.perform(get("/api/v1/users/me/data-exports/exp-1")
+                                .with(user("alice@example.com").roles("USER")))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.requestId").value("exp-1"))
+                                .andExpect(jsonPath("$.data.payload").value(
+                                                "{\"profile\":{\"username\":\"alice\"}}"));
+        }
+
+        @Test
+        void getDataExportReturns404WhenMissing() throws Exception {
+                when(getDataExportInputPort.execute("alice@example.com", "missing"))
+                                .thenThrow(new IdentityException(IdentityErrorCode.DATA_EXPORT_NOT_FOUND));
+
+                mockMvc.perform(get("/api/v1/users/me/data-exports/missing")
+                                .with(user("alice@example.com").roles("USER")))
+                                .andExpect(status().isNotFound())
+                                .andExpect(jsonPath("$.data.errorCode").value("IDENTITY_231"));
         }
 
         @Test

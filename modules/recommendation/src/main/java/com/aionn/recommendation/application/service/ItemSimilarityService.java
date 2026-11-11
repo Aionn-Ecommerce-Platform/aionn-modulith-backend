@@ -19,15 +19,8 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Rebuilds the item-to-item similarity matrix.
- *
- * <p>Item-based rather than user-based: the item matrix is smaller, changes more slowly, and can be
- * precomputed. A user-based matrix would need recomputing whenever anyone acts, and a new user would
- * have no neighbours at all.
- *
- * <p>Only strong signals count. Views are excluded because browsing is exploratory - two products
- * appearing in the same browsing session says far less than two products appearing in the same
- * basket.
+ * Rebuilds the item-to-item similarity matrix. Item-based so it is smaller, slower-changing and
+ * precomputable than a user-based matrix. Only strong signals count; views are too exploratory.
  */
 @Slf4j
 @Service
@@ -39,17 +32,9 @@ public class ItemSimilarityService {
     private final Clock clock;
 
     /**
-     * Rebuilds the matrix.
-     *
-     * <p>Deliberately not {@code @Transactional}. The compute phase and each write batch open their own
-     * short transaction in the persistence adapter, which is what keeps the rebuild inside a
-     * transaction budget at all: one transaction spanning the self-join plus every upsert exceeds the
-     * application-wide default timeout as soon as the catalogue is large, and the whole refresh then
-     * rolls back having achieved nothing. A partially applied matrix is recovered by the next run,
-     * since every pair upserts on its natural key.
-     *
-     * @param maxNeighboursPerProduct caps the stored matrix so a popular product does not accumulate
-     *                                more neighbours than any reader will page through
+     * Deliberately not transactional: compute and each write batch use their own short transaction,
+     * otherwise one long transaction exceeds the default timeout. A partial matrix is recovered by
+     * the next run because every pair upserts on its natural key.
      */
     public int refresh(Duration lookback, int minCoOccurrence, int maxNeighboursPerProduct) {
         Instant now = clock.instant();
@@ -62,8 +47,7 @@ public class ItemSimilarityService {
                 .computeItemSimilarity(since, strongTypes, minCoOccurrence, maxNeighboursPerProduct);
         if (rows.isEmpty()) {
             log.debug("No product pairs met the co-occurrence threshold of {}", minCoOccurrence);
-            // Still sweep: pairs that fell below the threshold since the last run must disappear, and
-            // returning early would leave them recommending each other indefinitely.
+            // Still sweep: pairs that fell below the threshold must disappear.
             int stale = similarityRepository.deleteComputedBefore(now);
             if (stale > 0) {
                 log.info("Dropped {} stale similarity pair(s)", stale);
@@ -71,8 +55,7 @@ public class ItemSimilarityService {
             return 0;
         }
 
-        // Each unordered pair is stored in both directions so a neighbour lookup needs a single
-        // indexed predicate instead of an OR across two columns.
+        // Store both directions so lookups need one indexed predicate instead of an OR.
         List<ItemSimilarity> similarities = new ArrayList<>(rows.size() * 2);
         for (InteractionPersistencePort.SimilarityRow row : rows) {
             AffinityScore score = AffinityScore.of(clampToUnit(row.score()));
@@ -83,17 +66,13 @@ public class ItemSimilarityService {
         }
 
         similarityRepository.upsertAll(similarities);
-        // Pairs that no longer co-occur within the window must disappear, otherwise a one-off
-        // co-purchase from months ago would keep recommending forever.
+        // Drop pairs that no longer co-occur within the window.
         int removed = similarityRepository.deleteComputedBefore(now);
         log.info("Refreshed {} similarity pair(s); dropped {} stale pair(s)", rows.size(), removed);
         return rows.size();
     }
 
-    /**
-     * Floating-point cosine can land a hair outside [0,1]; clamping keeps the value object's
-     * invariant intact without hiding a real computation error, since the excess is at rounding scale.
-     */
+    /** Clamp rounding-scale float drift so the value object's [0,1] invariant holds. */
     private static BigDecimal clampToUnit(double score) {
         return BigDecimal.valueOf(Math.clamp(score, 0.0d, 1.0d));
     }

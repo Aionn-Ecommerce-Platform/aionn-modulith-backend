@@ -1,14 +1,20 @@
 package com.aionn.payment.infrastructure.provider;
 
+import java.util.Arrays;
+import java.util.Locale;
+import org.springframework.context.i18n.LocaleContextHolder;
+
 import com.aionn.payment.application.port.out.PaymentProviderClient;
 import com.aionn.payment.domain.exception.PaymentErrorCode;
 import com.aionn.payment.domain.exception.PaymentException;
 import com.aionn.payment.domain.valueobject.PaymentGatewayKind;
 import com.aionn.payment.infrastructure.provider.config.VnpayProperties;
 import com.aionn.sharedkernel.util.Sha256Hasher;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.Mac;
@@ -34,6 +40,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "payment.provider.vnpay", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VnpayPaymentProviderClient implements PaymentProviderClient {
 
     private static final String HMAC_SHA512 = "HmacSHA512";
@@ -63,7 +70,7 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
 
         ZonedDateTime now = clock.instant().atZone(VN_ZONE);
         String createDate = now.format(VNP_DATE_FMT);
-        String expireDate = now.plusMinutes(15).format(VNP_DATE_FMT);
+        String expireDate = now.plusMinutes(properties.expireMinutes()).format(VNP_DATE_FMT);
 
         String txnRef = request.paymentId();
 
@@ -78,7 +85,7 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
         params.put("vnp_OrderType", "other");
         String vnpLocale = properties.locale();
         if (vnpLocale == null || vnpLocale.isBlank() || "vn".equalsIgnoreCase(vnpLocale)) {
-            java.util.Locale current = org.springframework.context.i18n.LocaleContextHolder.getLocale();
+            Locale current = LocaleContextHolder.getLocale();
             if (current != null && "en".equalsIgnoreCase(current.getLanguage())) {
                 vnpLocale = "en";
             } else {
@@ -200,8 +207,8 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
             if (response.statusCode() != 200) {
                 return new Refund(false, requestId, "VNPay HTTP " + response.statusCode());
             }
-            @SuppressWarnings("unchecked")
-            Map<String, Object> parsed = objectMapper.readValue(response.body(), Map.class);
+            Map<String, Object> parsed = objectMapper.readValue(
+                    response.body(), new TypeReference<Map<String, Object>>() {});
             String responseCode = String.valueOf(parsed.get("vnp_ResponseCode"));
             boolean accepted = "00".equals(responseCode);
             String message = parsed.get("vnp_Message") == null ? null : String.valueOf(parsed.get("vnp_Message"));
@@ -250,7 +257,7 @@ public class VnpayPaymentProviderClient implements PaymentProviderClient {
             return Map.of();
         }
         String cleaned = query.startsWith("?") ? query.substring(1) : query;
-        return java.util.Arrays.stream(cleaned.split("&"))
+        return Arrays.stream(cleaned.split("&"))
                 .map(pair -> pair.split("=", 2))
                 .filter(parts -> parts.length == 2)
                 .collect(Collectors.toMap(

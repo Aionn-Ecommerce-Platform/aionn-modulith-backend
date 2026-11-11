@@ -30,9 +30,10 @@ public class PreferenceService {
     private final UserPreferenceResultMapper userPreferenceResultMapper;
 
     private final Clock clock;
+
     public UserPreferenceResult updateGeneral(UpdateGeneralPreferenceCommand command) {
         log.info("Updating general preferences for user: {}", command.userId());
-        UserPreferenceResult preference = getOrCreate(command.userId());
+        UserPreferenceResult preference = getOrCreateForUpdate(command.userId());
 
         return preferencePersistencePort.save(
                 userPreferenceResultMapper.applyGeneral(preference, command, nowUtc()));
@@ -40,7 +41,7 @@ public class PreferenceService {
 
     public UserPreferenceResult updateNotifications(UpdateNotificationPreferenceCommand command) {
         log.info("Updating notification preferences for user: {}", command.userId());
-        UserPreferenceResult preference = getOrCreate(command.userId());
+        UserPreferenceResult preference = getOrCreateForUpdate(command.userId());
 
         return preferencePersistencePort.save(
                 userPreferenceResultMapper.applyNotifications(preference, command, nowUtc()));
@@ -48,7 +49,7 @@ public class PreferenceService {
 
     public UserPreferenceResult updateAiPrivacy(UpdateAiPrivacyPreferenceCommand command) {
         log.info("Updating AI privacy preferences for user: {}", command.userId());
-        UserPreferenceResult preference = getOrCreate(command.userId());
+        UserPreferenceResult preference = getOrCreateForUpdate(command.userId());
 
         return preferencePersistencePort.save(
                 userPreferenceResultMapper.applyAiPrivacy(preference, command, nowUtc()));
@@ -75,6 +76,18 @@ public class PreferenceService {
                     .orElseThrow(() -> new IdentityException(IdentityErrorCode.USER_NOT_FOUND));
         }
     }
+
+    private UserPreferenceResult getOrCreateForUpdate(String userId) {
+        userPersistencePort.findById(userId)
+                .orElseThrow(() -> new IdentityException(IdentityErrorCode.USER_NOT_FOUND));
+
+        Optional<UserPreferenceResult> existing = preferencePersistencePort.findByIdForUpdate(userId);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+        return preferencePersistencePort.createDefault(userId);
+    }
+
     private Instant nowUtc() {
         return clock.instant();
     }

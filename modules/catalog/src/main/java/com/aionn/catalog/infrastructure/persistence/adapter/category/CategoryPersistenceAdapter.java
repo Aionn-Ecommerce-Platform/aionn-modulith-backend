@@ -1,5 +1,8 @@
 package com.aionn.catalog.infrastructure.persistence.adapter.category;
 
+import java.util.ArrayList;
+import java.util.Objects;
+
 import com.aionn.catalog.application.port.out.category.CategoryPersistencePort;
 import com.aionn.catalog.domain.model.Category;
 import com.aionn.catalog.infrastructure.persistence.mapper.CategoryDomainMapper;
@@ -37,10 +40,10 @@ public class CategoryPersistenceAdapter implements CategoryPersistencePort {
 
     @Override
     public List<Category> lockMutationSet(String categoryId, List<String> additionalCategoryIds) {
-        List<String> ids = new java.util.ArrayList<>();
+        List<String> ids = new ArrayList<>();
         ids.add(categoryId);
         if (additionalCategoryIds != null) {
-            ids.addAll(additionalCategoryIds.stream().filter(java.util.Objects::nonNull).toList());
+            ids.addAll(additionalCategoryIds.stream().filter(Objects::nonNull).toList());
         }
         return jpa.findMutationSetForUpdate(categoryId, ids.stream().distinct().sorted().toList()).stream()
                 .map(mapper::toDomain)

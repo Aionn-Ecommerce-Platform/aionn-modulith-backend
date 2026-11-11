@@ -1,8 +1,11 @@
 package com.aionn.inventory.adapter.rest.controller;
 
+import com.aionn.inventory.adapter.rest.mapper.warehouse.WarehouseDtoMapper;
+
+import org.mapstruct.factory.Mappers;
+
 import com.aionn.inventory.adapter.rest.dto.warehouse.request.AdminReasonRequest;
 import com.aionn.inventory.adapter.rest.exception.InventoryExceptionHandler;
-import com.aionn.inventory.adapter.rest.mapper.warehouse.WarehouseDtoMapperImpl;
 import com.aionn.inventory.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.inventory.adapter.rest.support.MockOwnershipVerifier;
 import com.aionn.inventory.adapter.rest.support.TestAuth;
@@ -11,7 +14,7 @@ import com.aionn.inventory.adapter.rest.support.session.CurrentMerchantIdArgumen
 import com.aionn.inventory.application.dto.warehouse.command.LiftSuspensionCommand;
 import com.aionn.inventory.application.dto.warehouse.result.WarehouseResult;
 import com.aionn.inventory.application.port.in.warehouse.*;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,7 +60,7 @@ class WarehouseControllerBranchWebTest {
                 liftWarehouseSuspensionInputPort,
                 getWarehouseInputPort,
                 listWarehousesByOwnerInputPort,
-                new WarehouseDtoMapperImpl()
+                Mappers.getMapper(WarehouseDtoMapper.class)
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new InventoryExceptionHandler())

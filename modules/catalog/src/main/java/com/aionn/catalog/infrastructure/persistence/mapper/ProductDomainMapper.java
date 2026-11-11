@@ -1,5 +1,8 @@
 package com.aionn.catalog.infrastructure.persistence.mapper;
 
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 import com.aionn.catalog.domain.model.Product;
 import com.aionn.catalog.domain.model.ProductVariant;
 import com.aionn.catalog.domain.valueobject.ProductStatus;
@@ -39,13 +42,17 @@ public interface ProductDomainMapper {
                         .price(Optional.ofNullable(variant.price()).map(Money::amount).orElse(null))
                         .originalPrice(Optional.ofNullable(variant.originalPrice()).map(Money::amount).orElse(null))
                         .currency(Optional.ofNullable(variant.price()).map(Money::currency).orElse(null))
+                        .weightGram(Optional.ofNullable(variant.parcel()).map(ProductVariant.ParcelDimensions::weightGram).orElse(null))
+                        .lengthCm(Optional.ofNullable(variant.parcel()).map(ProductVariant.ParcelDimensions::lengthCm).orElse(null))
+                        .widthCm(Optional.ofNullable(variant.parcel()).map(ProductVariant.ParcelDimensions::widthCm).orElse(null))
+                        .heightCm(Optional.ofNullable(variant.parcel()).map(ProductVariant.ParcelDimensions::heightCm).orElse(null))
                         .build();
                 variantEntities.add(ve);
             }
         }
         entity.setVariants(variantEntities);
 
-        java.util.Set<ProductTranslationEntity> translationEntities = new java.util.LinkedHashSet<>();
+        Set<ProductTranslationEntity> translationEntities = new LinkedHashSet<>();
         if (product.translations() != null) {
             for (Product.Translation trans : product.translations()) {
                 ProductTranslationEntity te = ProductTranslationEntity.builder()
@@ -63,6 +70,7 @@ public interface ProductDomainMapper {
     }
 
     @Mapping(target = "status", ignore = true)
+    @Mapping(target = "slug", ignore = true)
     @Mapping(target = "variants", ignore = true)
     @Mapping(target = "translations", ignore = true)
     Product toDomainBasic(ProductEntity entity);
@@ -80,10 +88,17 @@ public interface ProductDomainMapper {
                 Money originalPrice = ve.getOriginalPrice() != null && ve.getCurrency() != null
                         ? Money.of(ve.getOriginalPrice(), ve.getCurrency())
                         : null;
+                ProductVariant.ParcelDimensions parcel =
+                        ve.getWeightGram() != null || ve.getLengthCm() != null
+                                || ve.getWidthCm() != null || ve.getHeightCm() != null
+                        ? new ProductVariant.ParcelDimensions(
+                                ve.getWeightGram(), ve.getLengthCm(), ve.getWidthCm(), ve.getHeightCm())
+                        : null;
                 variants.add(new ProductVariant(ve.getSkuId(),
                         ve.getAttributeValues() != null ? ve.getAttributeValues() : Map.of(),
                         price,
-                        originalPrice));
+                        originalPrice,
+                        parcel));
             }
         }
 
@@ -94,7 +109,7 @@ public interface ProductDomainMapper {
             }
         }
 
-        return new Product(
+        Product product = new Product(
                 base.getProductId(),
                 base.getMerchantId(),
                 base.getName(),
@@ -111,6 +126,8 @@ public interface ProductDomainMapper {
                 base.getUpdatedAt(),
                 entity.getVersion(),
                 translations);
+        product.attachSlug(entity.getSlug());
+        return product;
     }
 }
 

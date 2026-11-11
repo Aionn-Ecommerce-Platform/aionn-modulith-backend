@@ -13,7 +13,6 @@ import java.time.Instant;
 import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.provider.jdbctemplate.JdbcTemplateLockProvider;
 import org.flywaydb.core.Flyway;
-import org.flywaydb.core.api.MigrationVersion;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -51,6 +50,42 @@ class FlywayMigrationIntegrationTest {
         assertThat(rowCount("products")).isPositive();
         assertThat(rowCount("recommendation_interactions")).isPositive();
         assertThat(rowCount("promotion_banners")).isPositive();
+        assertThat(queryLong("SELECT MAX(qty) FROM order_items")).isLessThanOrEqualTo(5);
+        assertThat(queryLong("""
+                SELECT COUNT(*)
+                  FROM payments p
+                  JOIN orders o ON o.order_id = p.order_id
+                 WHERE p.amount <> o.total_amount
+                """)).isZero();
+        assertThat(queryLong("""
+                SELECT COUNT(*)
+                  FROM orders o
+                  JOIN (
+                      SELECT order_id, SUM(qty * unit_price) AS subtotal
+                        FROM order_items
+                       GROUP BY order_id
+                  ) items ON items.order_id = o.order_id
+                 WHERE o.total_amount > items.subtotal + COALESCE(o.shipping_fee, 0)
+                    OR o.total_amount < COALESCE(o.shipping_fee, 0)
+                """)).isZero();
+        assertThat(queryLong("""
+                SELECT COUNT(*)
+                  FROM shipments s
+                  JOIN order_items oi ON oi.order_id = s.order_id
+                  JOIN product_variants pv ON pv.sku_id = oi.sku_id
+                 WHERE s.weight_gram <> LEAST(50000, GREATEST(oi.qty * COALESCE(pv.weight_gram, 0), 0))
+                """)).isZero();
+        assertThat(queryLong("""
+                SELECT COUNT(*)
+                  FROM product_sold_counters c
+                  JOIN (
+                      SELECT pv.product_id, COALESCE(SUM(oi.qty), 0) AS qty
+                        FROM product_variants pv
+                        LEFT JOIN order_items oi ON oi.sku_id = pv.sku_id
+                       GROUP BY pv.product_id
+                  ) sold ON sold.product_id = c.product_id
+                 WHERE c.sold_count <> sold.qty
+                """)).isZero();
     }
 
     @Test
@@ -158,52 +193,6 @@ class FlywayMigrationIntegrationTest {
         }
     }
 
-    @Test
-    void settlementMigrationBackfillsHistoricalMovementsBeforeCreatingBaseline() throws SQLException {
-        Flyway beforeBucketDeltas = Flyway.configure()
-                .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
-                .locations("classpath:db")
-                .target(MigrationVersion.fromVersion("5.0"))
-                .cleanDisabled(false)
-                .load();
-        beforeBucketDeltas.clean();
-        beforeBucketDeltas.migrate();
-
-        try (Connection connection = DriverManager.getConnection(
-                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
-                Statement statement = connection.createStatement()) {
-            statement.executeUpdate("""
-                    INSERT INTO merchant_balances
-                        (merchant_id, currency, pending, available, version, created_at, updated_at)
-                    VALUES ('historical-merchant', 'VND', 0, 95, 0, NOW(), NOW())
-                    """);
-            statement.executeUpdate("""
-                    INSERT INTO settlement_ledger
-                        (entry_id, merchant_id, order_id, kind, gross, commission, net, currency)
-                    VALUES
-                        ('historical-sale', 'historical-merchant', 'historical-order',
-                         'SALE', 100, 5, 95, 'VND'),
-                        ('historical-move', 'historical-merchant', 'historical-order',
-                         'MOVE_AVAILABLE', 95, 0, 95, 'VND')
-                    """);
-        }
-
-        flyway("classpath:db").migrate();
-
-        try (Connection connection = DriverManager.getConnection(
-                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
-                Statement statement = connection.createStatement();
-                ResultSet sale = statement.executeQuery("""
-                        SELECT pending_delta
-                        FROM settlement_ledger
-                        WHERE entry_id = 'historical-sale'
-                        """)) {
-            sale.next();
-            assertThat(sale.getBigDecimal(1)).isEqualByComparingTo("95");
-            assertThat(settlementMismatchCount(statement)).isZero();
-        }
-    }
-
     private static Flyway flyway(String... locations) {
         return Flyway.configure()
                 .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
@@ -217,6 +206,16 @@ class FlywayMigrationIntegrationTest {
                         POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
                 Statement statement = connection.createStatement();
                 ResultSet result = statement.executeQuery("SELECT COUNT(*) FROM " + table)) {
+            result.next();
+            return result.getLong(1);
+        }
+    }
+
+    private static long queryLong(String sql) throws SQLException {
+        try (Connection connection = DriverManager.getConnection(
+                        POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+                Statement statement = connection.createStatement();
+                ResultSet result = statement.executeQuery(sql)) {
             result.next();
             return result.getLong(1);
         }
