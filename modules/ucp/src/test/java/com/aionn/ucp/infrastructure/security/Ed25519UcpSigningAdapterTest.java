@@ -98,4 +98,46 @@ class Ed25519UcpSigningAdapterTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("key configuration");
     }
+
+    @Test
+    void disablesSigningWithoutProperties() {
+        Ed25519UcpSigningAdapter adapter = new Ed25519UcpSigningAdapter(null, null);
+
+        assertThat(adapter.publicJwks()).isEmpty();
+        assertThat(adapter.signRequest("GET", "host", "/", null)).isEmpty();
+    }
+
+    @Test
+    void requiresThePrivateKeyWhenAPublicKeyIsConfigured() {
+        UcpProperties publicOnly = new UcpProperties(VERSION, "https://store.example/ucp/v1", "Store",
+                Set.of("https://ucp.dev/schemas/"), true,
+                new UcpProperties.Capabilities(true, true, true, true, true), "", "VND", "",
+                "", "not-a-key");
+
+        assertThatThrownBy(() -> new Ed25519UcpSigningAdapter(publicOnly, CLOCK))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("without signature-private-key");
+    }
+
+    @Test
+    void signsAnEmptyBodyWhenNoneIsProvided() throws Exception {
+        Ed25519UcpSigningAdapter adapter = new Ed25519UcpSigningAdapter(properties(pair()), null);
+
+        Map<String, String> headers = adapter.signRequest("GET", "hooks.example", "/events", null);
+
+        assertThat(headers).containsKeys("Content-Digest", "Signature-Input", "Signature");
+        assertThat(headers.get("Signature-Input")).contains("alg=\"ed25519\"");
+    }
+
+    @Test
+    void rejectsMalformedKeys() {
+        UcpProperties blankPublic = new UcpProperties(VERSION, "https://store.example/ucp/v1", "Store",
+                Set.of("https://ucp.dev/schemas/"), true,
+                new UcpProperties.Capabilities(true, true, true, true, true), "", "VND", "",
+                "bm90LWEta2V5", "");
+
+        assertThatThrownBy(() -> new Ed25519UcpSigningAdapter(blankPublic, CLOCK))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("key configuration");
+    }
 }
