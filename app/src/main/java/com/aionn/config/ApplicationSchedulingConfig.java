@@ -6,44 +6,32 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 /**
- * Owns the scheduler that every {@code @Scheduled} business job runs on.
+ * Business scheduler for {@code @Scheduled} jobs that do not name a scheduler.
  *
- * <p>This bean has to exist explicitly. Spring Boot's {@code TaskSchedulingAutoConfiguration} is
- * {@code @ConditionalOnMissingBean(TaskScheduler.class)}, and the outbox already registers one, so
- * Boot never creates a {@code taskScheduler} of its own. With only
- * {@code outboxTaskScheduler} in the context - a pool of one - the
- * {@code ScheduledAnnotationBeanPostProcessor} resolves it as the default for every job that does not
- * name a scheduler, and the whole application's background work serialises onto the outbox thread. A
- * slow offline rebuild then stalls the outbox dispatcher, which stops all integration-event delivery.
+ * <p>The pool size is configuration, not code: it lives in {@code application.yml} under
+ * {@code spring.task.scheduling.pool.size} and can be overridden per environment through
+ * {@code SCHEDULER_POOL_SIZE}. There is deliberately no default here - a missing property is a
+ * deployment error, and silently falling back to a number the tests do not exercise is how a pool
+ * ends up smaller than the job count.
  *
- * <p>The bean is named {@code taskScheduler} on purpose: that is the name Spring falls back to when
- * several {@code TaskScheduler} beans are present, so the outbox keeps its dedicated single thread
- * (it coordinates with row locks, leases and {@code FOR UPDATE SKIP LOCKED}) while business jobs get
- * a pool sized for concurrency.
+ * <p>The outbox dispatcher names its own {@code outboxTaskScheduler}; {@code @Async} is not enabled,
+ * so no application work shares this pool through an executor fallback.
  */
 @Configuration(proxyBeanMethods = false)
 public class ApplicationSchedulingConfig {
 
     /**
-     * At least one thread per scheduled job, so no job can ever queue behind another. Every job either
-     * holds a ShedLock or finishes in well under its interval, so the threads are idle almost all the
-     * time and the pool costs nothing but the reservation.
-     *
-     * <p>{@code ApplicationSchedulingConfigTest} counts the {@code @Scheduled} methods on the classpath
-     * and fails if this falls below them, which is what keeps the number honest as jobs are added. It
-     * counts from bytecode rather than by hand because a job written with a fully qualified annotation -
-     * which {@code InMemoryRegistrationRateLimiter} does - is easy to miss in a grep.
+     * A single thread serialises every job and one slow job stalls all the others, so the configured
+     * value is floored at two rather than trusted blindly.
      */
-    static final int DEFAULT_POOL_SIZE = 20;
+    private static final int MINIMUM_POOL_SIZE = 2;
 
     @Bean
     public ThreadPoolTaskScheduler taskScheduler(
-            @Value("${spring.task.scheduling.pool.size:" + DEFAULT_POOL_SIZE + "}") int poolSize) {
+            @Value("${spring.task.scheduling.pool.size}") int configuredPoolSize) {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
-        scheduler.setPoolSize(Math.max(2, poolSize));
+        scheduler.setPoolSize(Math.max(MINIMUM_POOL_SIZE, configuredPoolSize));
         scheduler.setThreadNamePrefix("aionn-sched-");
-        // Let a running job finish rather than abandoning it mid-transaction; bounded by the
-        // lifecycle timeout so shutdown still completes.
         scheduler.setWaitForTasksToCompleteOnShutdown(true);
         scheduler.setAwaitTerminationSeconds(30);
         scheduler.setRemoveOnCancelPolicy(true);
