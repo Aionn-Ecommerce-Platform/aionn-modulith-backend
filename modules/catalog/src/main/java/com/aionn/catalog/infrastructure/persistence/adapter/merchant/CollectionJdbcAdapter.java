@@ -4,6 +4,8 @@ import com.aionn.catalog.application.port.out.merchant.CollectionPersistencePort
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.sql.ResultSet;
@@ -20,6 +22,7 @@ public class CollectionJdbcAdapter implements CollectionPersistencePort {
     private static final RowMapper<CollectionView> MAPPER = CollectionJdbcAdapter::map;
 
     private final JdbcTemplate jdbcTemplate;
+    private final NamedParameterJdbcTemplate namedJdbcTemplate;
 
     @Override
     public List<CollectionView> findAll(boolean activeOnly) {
@@ -85,10 +88,10 @@ public class CollectionJdbcAdapter implements CollectionPersistencePort {
         if (collectionIds == null || collectionIds.isEmpty()) {
             return true;
         }
-        String placeholders = String.join(",", collectionIds.stream().map(id -> "?").toList());
-        Long count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM collections WHERE collection_id IN (" + placeholders + ")",
-                Long.class, collectionIds.toArray());
+        Long count = namedJdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM collections WHERE collection_id IN (:ids)",
+                new MapSqlParameterSource("ids", collectionIds),
+                Long.class);
         return count != null && count == collectionIds.size();
     }
 

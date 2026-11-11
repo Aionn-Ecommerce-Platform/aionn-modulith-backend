@@ -22,7 +22,7 @@ public final class ProductSlug {
                 .toLowerCase(Locale.ROOT)
                 .replaceAll("[^a-z0-9]+", "-")
                 .replaceAll("-+", "-")
-                .replaceAll("(^-|-$)", "");
+                .replaceAll("(^-)|(-$)", "");
         if (normalized.isBlank()) {
             return "san-pham";
         }

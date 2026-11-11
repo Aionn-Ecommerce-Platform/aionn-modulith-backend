@@ -76,6 +76,19 @@ class AuthTokenResponseHandlerTest {
     }
 
     @Test
+    void successIssuesAReadableCsrfCookieForTheSpa() {
+        when(authProperties.mobileClientValue()).thenReturn("mobile");
+
+        ResponseEntity<ApiResponse<AuthTokenResponse>> response = authTokenResponseHandler.success(
+                sampleAuthTokenResponse(), "web", "Login successful!");
+
+        java.util.List<String> cookies = response.getHeaders().get(HttpHeaders.SET_COOKIE);
+        assertThat(cookies).anyMatch(cookie -> cookie.startsWith("XSRF-TOKEN=")
+                && cookie.contains("Path=/")
+                && !cookie.contains("HttpOnly"));
+    }
+
+    @Test
     void logoutResponsesClearRefreshCookie() {
         ResponseEntity<ApiResponse<Void>> logoutResponse = authTokenResponseHandler.logoutSuccess("Logout successful");
         ResponseEntity<ApiResponse<LogoutAllResponse>> logoutAllResponse = authTokenResponseHandler

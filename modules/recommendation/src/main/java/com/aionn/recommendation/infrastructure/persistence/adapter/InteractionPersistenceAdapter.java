@@ -8,6 +8,8 @@ import com.aionn.recommendation.infrastructure.persistence.mapper.InteractionDom
 import com.aionn.recommendation.infrastructure.persistence.repository.InteractionRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -32,6 +34,7 @@ public class InteractionPersistenceAdapter implements InteractionPersistencePort
     private final InteractionRepository jpa;
     private final InteractionDomainMapper mapper;
     private final JdbcTemplate jdbc;
+    private final NamedParameterJdbcTemplate namedJdbc;
     private final Clock clock;
 
     /**
@@ -45,12 +48,14 @@ public class InteractionPersistenceAdapter implements InteractionPersistencePort
             InteractionRepository jpa,
             InteractionDomainMapper mapper,
             JdbcTemplate jdbc,
+            NamedParameterJdbcTemplate namedJdbc,
             Clock clock,
             PlatformTransactionManager transactionManager,
             RecommendationJobProperties jobProperties) {
         this.jpa = jpa;
         this.mapper = mapper;
         this.jdbc = jdbc;
+        this.namedJdbc = namedJdbc;
         this.clock = clock;
         this.computeReads = new TransactionTemplate(transactionManager);
         this.computeReads.setReadOnly(true);
@@ -162,10 +167,9 @@ public class InteractionPersistenceAdapter implements InteractionPersistencePort
                 .filter(v -> v != null).distinct().toList();
         List<String> products = rows.stream().map(row -> (String) row.get("product"))
                 .filter(v -> v != null).distinct().toList();
-        String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
-        int deleted = jdbc.update(
-                "DELETE FROM recommendation_interactions WHERE interaction_id IN (" + placeholders + ")",
-                ids.toArray());
+        int deleted = namedJdbc.update(
+                "DELETE FROM recommendation_interactions WHERE interaction_id IN (:ids)",
+                new MapSqlParameterSource("ids", ids));
         return new PrunedInteractions(deleted, users, products);
     }
 

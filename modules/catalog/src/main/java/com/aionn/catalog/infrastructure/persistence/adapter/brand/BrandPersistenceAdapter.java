@@ -15,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Component
@@ -27,6 +28,7 @@ public class BrandPersistenceAdapter implements BrandPersistencePort {
 
     @Override
     public Brand save(Brand brand) {
+        Objects.requireNonNull(brand, "brand");
         BrandEntity entity = mapper.toEntity(brand);
         jpa.findById(brand.getBrandId()).ifPresent(existing -> entity.setVersion(existing.getVersion()));
         var saved = jpa.save(entity);

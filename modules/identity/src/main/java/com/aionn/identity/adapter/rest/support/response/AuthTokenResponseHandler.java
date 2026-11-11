@@ -11,14 +11,18 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
+import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
 @Component
 @RequiredArgsConstructor
 public class AuthTokenResponseHandler {
 
     private static final String REFRESH_COOKIE_NAME = "refresh_token";
+    private static final String CSRF_COOKIE_NAME = "XSRF-TOKEN";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final AuthProperties authProperties;
     private final AuthCookieProperties cookieProperties;
@@ -46,6 +50,8 @@ public class AuthTokenResponseHandler {
         if (response.refreshToken() != null) {
             cookieHeaders.add(HttpHeaders.SET_COOKIE,
                     buildRefreshCookie(response.refreshToken(), response.sessionExpiresAt()).toString());
+            cookieHeaders.add(HttpHeaders.SET_COOKIE,
+                    buildCsrfCookie(response.sessionExpiresAt()).toString());
         }
         return noStoreResponseFactory.ok(ApiResponse.success(webResponse, message), cookieHeaders);
     }
@@ -90,6 +96,24 @@ public class AuthTokenResponseHandler {
                 .sameSite(cookieProperties.sameSite())
                 .path(cookieProperties.refreshPath())
                 .maxAge(0)
+                .build();
+    }
+
+    /**
+     * Double-submit CSRF token. The value is random, readable by the SPA and echoed back in
+     * {@code X-XSRF-TOKEN}; the server never stores it.
+     */
+    private ResponseCookie buildCsrfCookie(Instant expiresAt) {
+        long maxAgeSeconds = Math.max(0, Duration.between(clock.instant(), expiresAt).getSeconds());
+        byte[] tokenBytes = new byte[32];
+        SECURE_RANDOM.nextBytes(tokenBytes);
+        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(tokenBytes);
+        return ResponseCookie.from(CSRF_COOKIE_NAME, token)
+                .httpOnly(false)
+                .secure(cookieProperties.secure())
+                .sameSite(cookieProperties.sameSite())
+                .path("/")
+                .maxAge(maxAgeSeconds)
                 .build();
     }
 }

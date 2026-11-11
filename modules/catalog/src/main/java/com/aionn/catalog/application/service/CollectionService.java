@@ -22,7 +22,7 @@ import java.util.regex.Pattern;
 @Transactional
 public class CollectionService {
 
-    private static final Pattern SLUG = Pattern.compile("^[a-z0-9]+(?:-[a-z0-9]+)*$");
+    private static final Pattern SLUG = Pattern.compile("^[a-z0-9]++(?:-[a-z0-9]++)*+$");
 
     private final CollectionPersistencePort collectionRepository;
     private final Clock clock;

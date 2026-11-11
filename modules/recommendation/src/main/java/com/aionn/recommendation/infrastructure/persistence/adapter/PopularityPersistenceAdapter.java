@@ -8,6 +8,8 @@ import com.aionn.recommendation.infrastructure.persistence.repository.ProductPop
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -49,6 +51,7 @@ public class PopularityPersistenceAdapter implements PopularityPersistencePort {
     private final ProductPopularityRepository jpa;
     private final RecommendationSignalDomainMapper mapper;
     private final JdbcTemplate jdbcTemplate;
+    private final NamedParameterJdbcTemplate namedJdbcTemplate;
     private final TransactionTemplate writeBatch;
     private final int batchSize;
 
@@ -56,11 +59,13 @@ public class PopularityPersistenceAdapter implements PopularityPersistencePort {
             ProductPopularityRepository jpa,
             RecommendationSignalDomainMapper mapper,
             JdbcTemplate jdbcTemplate,
+            NamedParameterJdbcTemplate namedJdbcTemplate,
             PlatformTransactionManager transactionManager,
             RecommendationJobProperties jobProperties) {
         this.jpa = jpa;
         this.mapper = mapper;
         this.jdbcTemplate = jdbcTemplate;
+        this.namedJdbcTemplate = namedJdbcTemplate;
         this.batchSize = jobProperties.execution().upsertBatchSize();
         this.writeBatch = new TransactionTemplate(transactionManager);
         this.writeBatch.setTimeout(jobProperties.execution().computeTimeoutSeconds());
@@ -138,8 +143,8 @@ public class PopularityPersistenceAdapter implements PopularityPersistencePort {
             return 0;
         }
         List<String> ids = productIds.stream().distinct().toList();
-        String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
-        String sql = "DELETE FROM recommendation_popularity WHERE product_id IN (" + placeholders + ")";
-        return writeBatch.execute(status -> jdbcTemplate.update(sql, ids.toArray()));
+        return writeBatch.execute(status -> namedJdbcTemplate.update(
+                "DELETE FROM recommendation_popularity WHERE product_id IN (:ids)",
+                new MapSqlParameterSource("ids", ids)));
     }
 }
