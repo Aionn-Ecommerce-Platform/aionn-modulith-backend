@@ -17,11 +17,13 @@ import com.aionn.platform.web.response.ApiResponse;
 import com.aionn.platform.web.support.clientip.ClientIp;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -41,6 +43,17 @@ public class AuthController {
 	private final LogoutInputPort logoutInputPort;
 	private final AuthDtoMapper authDtoMapper;
 	private final AuthTokenResponseHandler authTokenResponseHandler;
+
+	@GetMapping("/csrf")
+	@Operation(summary = "Fetch a CSRF token", description = "Issues the double-submit token used by cookie-authenticated refresh calls")
+	public ResponseEntity<ApiResponse<CsrfTokenResponse>> csrf(HttpServletRequest request) {
+		CsrfToken token = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+		return ResponseEntity.ok(ApiResponse.success(
+				new CsrfTokenResponse(token == null ? "" : token.getToken()), "CSRF token fetched"));
+	}
+
+	public record CsrfTokenResponse(String token) {
+	}
 
 	@PostMapping("/login")
 	@Operation(summary = "Login", description = "Authenticate user credentials and create a new auth session")

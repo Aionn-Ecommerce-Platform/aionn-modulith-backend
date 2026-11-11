@@ -40,6 +40,8 @@ import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.csrf.DefaultCsrfToken;
 
 import java.time.Instant;
 import java.time.Duration;
@@ -110,6 +112,15 @@ class AuthControllerWebTest {
                                                 new CurrentAccessTokenJtiArgumentResolver(accessTokenIssuerPort),
                                                 new MockAuthenticationArgumentResolver())
                                 .build();
+        }
+
+        @Test
+        void csrfEndpointReturnsTheRequestToken() throws Exception {
+                mockMvc.perform(get("/api/v1/auth/csrf")
+                                .requestAttr(CsrfToken.class.getName(),
+                                                new DefaultCsrfToken("X-XSRF-TOKEN", "_csrf", "csrf-token")))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.token").value("csrf-token"));
         }
 
         @Test

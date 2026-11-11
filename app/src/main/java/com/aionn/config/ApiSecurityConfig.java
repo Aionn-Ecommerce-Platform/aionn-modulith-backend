@@ -17,8 +17,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
-import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -50,10 +49,15 @@ public class ApiSecurityConfig {
 
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+                CookieCsrfTokenRepository csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+                csrfTokenRepository.setCookieCustomizer(cookie -> cookie
+                                .httpOnly(true)
+                                .sameSite("Lax")
+                                .path("/"));
                 http
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                                 .csrf(csrf -> csrf
-                                                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                                                .csrfTokenRepository(csrfTokenRepository)
                                                 .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
                                                 .requireCsrfProtectionMatcher(ApiSecurityConfig::requiresCsrfProtection))
                                 .headers(headers -> headers
@@ -80,6 +84,7 @@ public class ApiSecurityConfig {
                                                 .permitAll()
                                                 .requestMatchers(HttpMethod.GET,
                                                                 "/.well-known/ucp",
+                                                                "/api/v1/auth/csrf",
                                                                 "/api/v1/geography/**",
                                                                 "/api/v1/catalog/**",
                                                                 "/api/v1/inventory/items",

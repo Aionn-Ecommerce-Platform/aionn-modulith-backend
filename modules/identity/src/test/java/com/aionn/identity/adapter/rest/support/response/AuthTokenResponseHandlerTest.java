@@ -76,16 +76,15 @@ class AuthTokenResponseHandlerTest {
     }
 
     @Test
-    void successIssuesAReadableCsrfCookieForTheSpa() {
+    void successSetsOnlyTheHttpOnlyRefreshCookie() {
         when(authProperties.mobileClientValue()).thenReturn("mobile");
 
         ResponseEntity<ApiResponse<AuthTokenResponse>> response = authTokenResponseHandler.success(
                 sampleAuthTokenResponse(), "web", "Login successful!");
 
-        java.util.List<String> cookies = response.getHeaders().get(HttpHeaders.SET_COOKIE);
-        assertThat(cookies).anyMatch(cookie -> cookie.startsWith("XSRF-TOKEN=")
-                && cookie.contains("Path=/")
-                && !cookie.contains("HttpOnly"));
+        assertThat(response.getHeaders().get(HttpHeaders.SET_COOKIE))
+                .hasSize(1)
+                .allMatch(cookie -> cookie.startsWith("refresh_token=") && cookie.contains("HttpOnly"));
     }
 
     @Test
