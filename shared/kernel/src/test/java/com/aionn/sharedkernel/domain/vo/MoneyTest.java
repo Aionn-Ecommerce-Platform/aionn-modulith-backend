@@ -125,4 +125,26 @@ class MoneyTest {
         assertThat(Money.of(BigDecimal.TEN, "USD").divide(new BigDecimal("3")).amount())
                 .isEqualByComparingTo("3.33");
     }
+
+    @Test
+    void handlesCurrenciesWithoutMinorUnits() {
+        assertThat(Money.of(BigDecimal.ONE, "XAU").amount()).isEqualByComparingTo("1.00");
+        assertThat(Money.of(BigDecimal.TEN, "XAU").divide(new BigDecimal("3")).amount())
+                .isEqualByComparingTo("3.33");
+    }
+
+    @Test
+    void reportsSignAndComparisonDirections() {
+        Money one = Money.of(BigDecimal.ONE, "USD");
+        Money two = Money.of(BigDecimal.TWO, "USD");
+
+        assertThat(one.isGreaterOrEqual(two)).isFalse();
+        assertThat(two.isLessOrEqual(one)).isFalse();
+        assertThat(two.max(one)).isSameAs(two);
+        assertThat(two.min(one)).isSameAs(one);
+        assertThat(one.isPositive()).isTrue();
+        assertThat(Money.zero("USD").isPositive()).isFalse();
+        assertThat(Money.zero("USD").isNegative()).isFalse();
+        assertThat(Money.of(BigDecimal.ONE.negate(), "USD").isNegative()).isTrue();
+    }
 }

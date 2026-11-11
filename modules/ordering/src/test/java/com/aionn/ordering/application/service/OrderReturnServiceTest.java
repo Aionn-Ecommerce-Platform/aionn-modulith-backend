@@ -565,5 +565,98 @@ class OrderReturnServiceTest {
         assertEquals(ReturnStatus.REQUESTED, result.getStatus());
         verify(paymentGateway, never()).refund(any(), any(), any(), any(), any());
     }
+
+    @Test
+    void approvingAnAlreadyApprovedReturnWithTheSameDetailsIsIdempotent() {
+        OrderReturn r = alreadyApproved("VND", "wh-1");
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+        when(returnRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderReturn result = service.adminApprove(RETURN_ID, BigDecimal.valueOf(100), "vnd", "wh-1");
+
+        assertEquals(ReturnStatus.APPROVED, result.getStatus());
+        assertEquals(ReturnRefundStatus.REFUNDED, result.getRefundStatus());
+    }
+
+    @Test
+    void approvingAnAlreadyApprovedReturnWithADifferentCurrencyIsRejected() {
+        OrderReturn r = alreadyApproved("VND", "wh-1");
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
+
+        assertThrows(OrderingException.class,
+                () -> service.adminApprove(RETURN_ID, BigDecimal.valueOf(100), "USD", "wh-1"));
+    }
+
+    @Test
+    void approvingAnAlreadyApprovedReturnWithADifferentWarehouseIsRejected() {
+        OrderReturn r = alreadyApproved("VND", "wh-1");
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
+
+        assertThrows(OrderingException.class,
+                () -> service.adminApprove(RETURN_ID, BigDecimal.valueOf(100), "VND", "wh-2"));
+    }
+
+    @Test
+    void approvingAReturnWithoutACurrencyUsesTheDefaultCurrency() {
+        OrderReturn r = requestedReturn();
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+        when(returnRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderReturn result = service.adminApprove(RETURN_ID, BigDecimal.valueOf(50), null, "wh-1");
+
+        assertEquals("VND", result.getRefundAmount().currency());
+    }
+
+    @Test
+    void approvingAReturnWithoutAPaymentReferenceMarksItRefundedDirectly() {
+        OrderReturn r = requestedReturn();
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.empty());
+        when(returnRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderReturn result = service.adminApprove(RETURN_ID, BigDecimal.valueOf(50), "VND", "wh-1");
+
+        assertEquals(ReturnRefundStatus.REFUNDED, result.getRefundStatus());
+        verify(paymentGateway, never()).refund(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void aFailedRefundIsRecordedForRetry() {
+        OrderReturn r = requestedReturn();
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+        when(returnRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        doThrow(new IllegalStateException("gateway down")).when(paymentGateway)
+                .refund(any(), any(), any(), any(), any());
+
+        OrderReturn result = service.adminApprove(RETURN_ID, BigDecimal.valueOf(50), "VND", "wh-1");
+
+        assertEquals(ReturnRefundStatus.FAILED, result.getRefundStatus());
+        assertEquals(1, result.getRefundAttempts());
+        assertEquals("gateway down", result.getRefundFailureReason());
+    }
+
+    @Test
+    void aRefundInsideItsRetryWindowIsNotAttemptedAgain() {
+        OrderReturn r = requestedReturn();
+        r.approve(Money.of(BigDecimal.valueOf(50), "VND"), "wh-1",
+                Instant.parse("2026-07-18T12:00:00Z"));
+        r.markRefundFailed("gateway down", Instant.parse("2026-07-18T13:00:00Z"));
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
+
+        OrderReturn result = service.retryRefund(RETURN_ID);
+
+        assertEquals(ReturnRefundStatus.FAILED, result.getRefundStatus());
+        verify(paymentGateway, never()).refund(any(), any(), any(), any(), any());
+    }
+
+    private static OrderReturn alreadyApproved(String currency, String warehouseId) {
+        OrderReturn r = requestedReturn();
+        r.approve(Money.of(BigDecimal.valueOf(100), currency), warehouseId,
+                Instant.parse("2026-07-18T12:00:00Z"));
+        return r;
+    }
 }
 

@@ -430,4 +430,41 @@ class NotificationDispatchServiceTest {
 
         assertThat(service().findRetryable(50)).hasSize(1);
     }
+
+    @Test
+    void prepareByEventRendersShippingNotificationsWithANullContext() {
+        when(subscriptionRepository.findByUserId("user-1"))
+                .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
+        when(templateRepository.findByEventChannelLocale(eq(EVENT), eq(NotificationChannel.EMAIL), anyString()))
+                .thenReturn(Optional.of(NotificationTemplate.create("tpl-email", EVENT,
+                        NotificationChannel.EMAIL, NotificationCategory.SHIPPING, "vi-VN",
+                        "Subject", "Hello", CLOCK)));
+        echoSave();
+
+        List<Notification> prepared = service().prepareByEvent(new NotificationCommands.SendByEvent(
+                "user-1", EVENT, NotificationCategory.SHIPPING,
+                List.of(NotificationChannel.EMAIL), "vi-VN", null, null));
+
+        assertThat(prepared).hasSize(1);
+        assertThat(prepared.get(0).getContent()).isEqualTo("Hello");
+    }
+
+    @Test
+    void prepareByEventHandlesChatAndSystemCategories() {
+        when(subscriptionRepository.findByUserId("user-1"))
+                .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
+        when(templateRepository.findByEventChannelLocale(eq(EVENT), eq(NotificationChannel.IN_APP), anyString()))
+                .thenReturn(Optional.of(template(NotificationChannel.IN_APP)));
+        echoSave();
+
+        List<Notification> chat = service().prepareByEvent(new NotificationCommands.SendByEvent(
+                "user-1", EVENT, NotificationCategory.CHAT, List.of(NotificationChannel.IN_APP),
+                "vi-VN", null, Map.of("name", "Tran")));
+        List<Notification> system = service().prepareByEvent(new NotificationCommands.SendByEvent(
+                "user-1", EVENT, NotificationCategory.SYSTEM, List.of(NotificationChannel.IN_APP),
+                "vi-VN", null, Map.of("name", "Tran")));
+
+        assertThat(chat).hasSize(1);
+        assertThat(system).hasSize(1);
+    }
 }

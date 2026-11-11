@@ -220,6 +220,40 @@ class AdminUserServiceTest {
                 .isEqualTo(IdentityErrorCode.INVALID_USER_STATUS.getCode());
     }
 
+    @Test
+    void updateStatusToActiveKeepsSessionsAlive() {
+        IdentityUser user = newUser(Set.of(UserRole.BUYER));
+        when(adminUserPersistencePort.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(adminUserPersistencePort.save(any(IdentityUser.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        String status = adminUserService.updateStatus(USER_ID, UserStatus.ACTIVE);
+
+        assertThat(status).isEqualTo("ACTIVE");
+        verify(authSessionPersistencePort, org.mockito.Mockito.never()).findByUserId(any());
+    }
+
+    @Test
+    void updateStatusRevokesOnlyActiveSessions() {
+        IdentityUser user = newUser(Set.of(UserRole.BUYER));
+        com.aionn.identity.domain.model.AuthSession active = com.aionn.identity.domain.model.AuthSession
+                .createNew("session-active", USER_ID, "ip", "ua", Instant.now().plus(Duration.ofDays(7)),
+                        java.time.Clock.fixed(Instant.now(), java.time.ZoneOffset.UTC));
+        com.aionn.identity.domain.model.AuthSession revoked = com.aionn.identity.domain.model.AuthSession
+                .createNew("session-revoked", USER_ID, "ip", "ua", Instant.now().plus(Duration.ofDays(7)),
+                        java.time.Clock.fixed(Instant.now(), java.time.ZoneOffset.UTC));
+        revoked.revoke();
+        when(adminUserPersistencePort.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(adminUserPersistencePort.save(any(IdentityUser.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(authSessionPersistencePort.findByUserId(USER_ID)).thenReturn(List.of(active, revoked));
+
+        adminUserService.updateStatus(USER_ID, UserStatus.BANNED);
+
+        verify(refreshTokenStore, org.mockito.Mockito.never()).revokeBySessionId("session-revoked");
+        verify(authSessionPersistencePort).saveAll(List.of(active, revoked));
+    }
+
     private IdentityUser newUser(Set<UserRole> roles) {
         return new IdentityUser(
                 USER_ID,

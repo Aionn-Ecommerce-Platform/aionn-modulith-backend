@@ -158,6 +158,35 @@ class AuthServiceTest {
     }
 
     @Test
+    void socialSignupTranslatesAUniquenessRace() {
+        when(socialTokenVerifier.verifyAndExtract(AuthProvider.GOOGLE, "token"))
+                .thenReturn(new SocialUserProfile("puid", "new@example.com", "New User"));
+        when(socialLinkPersistencePort.findByProviderAndProviderUserId(AuthProvider.GOOGLE, "puid"))
+                .thenReturn(Optional.empty());
+        when(userPersistencePort.findByIdentity("new@example.com")).thenReturn(Optional.empty());
+        when(userPersistencePort.save(any(IdentityUser.class)))
+                .thenThrow(new org.springframework.dao.DataIntegrityViolationException("dup"));
+
+        assertErrorCode(IdentityErrorCode.ACCOUNT_ALREADY_EXISTS,
+                () -> authService.socialLogin(new SocialLoginCommand("google", "token", "ip", "ua")));
+    }
+
+    @Test
+    void logoutAllSkipsSessionsThatAreAlreadyRevoked() {
+        AuthSession revoked = AuthSession.createNew("s3", USER_ID, "ip", "ua",
+                Instant.now(TEST_CLOCK).plus(Duration.ofDays(7)), TEST_CLOCK);
+        revoked.revoke();
+        when(userPersistencePort.existsById(USER_ID)).thenReturn(true);
+        when(authSessionPersistencePort.findByUserId(USER_ID)).thenReturn(List.of(revoked));
+        when(authResultMapper.toLogoutAllResult(0)).thenReturn(new LogoutAllResult(0));
+
+        LogoutAllResult result = authService.logoutAll(new LogoutAllCommand(USER_ID));
+
+        assertThat(result.revokedSessions()).isZero();
+        verify(refreshTokenStore, never()).revokeBySessionId("s3");
+    }
+
+    @Test
     void logoutRevokesSessionAndBlacklistsAccessToken() {
         when(userPersistencePort.existsById(USER_ID)).thenReturn(true);
         when(authSessionPersistencePort.findById(SESSION_ID))

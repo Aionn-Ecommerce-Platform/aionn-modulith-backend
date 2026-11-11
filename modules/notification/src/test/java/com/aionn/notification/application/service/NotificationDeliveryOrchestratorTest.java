@@ -390,4 +390,66 @@ class NotificationDeliveryOrchestratorTest {
 
         verify(emailSender).send(any(ChannelSender.DeliveryRequest.class));
     }
+
+    @Test
+    void enqueueDirectByEventDelegatesToTheDispatcher() {
+        Notification prepared = pending("noti-1", NotificationChannel.EMAIL);
+        when(emailSender.channel()).thenReturn(NotificationChannel.EMAIL);
+        when(dispatchService.prepareDirect(any())).thenReturn(prepared);
+
+        Notification result = orchestrator(emailSender).enqueueDirectByEvent(
+                new NotificationCommands.SendDirectByEvent("user-1", "identity.email-otp",
+                        NotificationCategory.SECURITY, NotificationChannel.EMAIL, "a@b.c", null, null,
+                        Map.of()));
+
+        assertThat(result).isSameAs(prepared);
+        verify(emailSender, never()).send(any(ChannelSender.DeliveryRequest.class));
+    }
+
+    @Test
+    void deliverQueuedAsyncIgnoresNullAndEmptyBatches() {
+        when(emailSender.channel()).thenReturn(NotificationChannel.EMAIL);
+
+        orchestrator(emailSender).deliverQueuedAsync(null);
+        orchestrator(emailSender).deliverQueuedAsync(List.of());
+
+        verify(dispatchService, never()).recordSent(any());
+    }
+
+    @Test
+    void anAttemptThatAlreadySucceededRecordsSentWithoutCallingTheProvider() {
+        when(deliveryAttemptPort.begin(any(), any())).thenReturn(new DeliveryAttemptPort.Attempt(
+                "attempt-1", DeliveryAttemptPort.Status.SUCCEEDED, true));
+        when(emailSender.channel()).thenReturn(NotificationChannel.EMAIL);
+        when(dispatchService.prepareByEvent(any()))
+                .thenReturn(List.of(pending("noti-1", NotificationChannel.EMAIL)));
+        when(recipientResolver.resolveAll("user-1", NotificationChannel.EMAIL))
+                .thenReturn(List.of("a@b.c"));
+        when(dispatchService.recordSent(any())).thenReturn(sent("noti-1"));
+
+        orchestrator(emailSender).sendByEvent(byEvent());
+
+        verify(emailSender, never()).send(any(ChannelSender.DeliveryRequest.class));
+        verify(dispatchService).recordSent(any());
+    }
+
+    @Test
+    void providersWithoutARateLimitNeverLimitDelivery() {
+        NotificationProvider provider = Mockito.mock(NotificationProvider.class);
+        when(provider.getRateLimitPerMinute()).thenReturn(0);
+        when(providerRepository.findActiveByChannel(NotificationChannel.EMAIL))
+                .thenReturn(Optional.of(provider));
+        when(emailSender.channel()).thenReturn(NotificationChannel.EMAIL);
+        when(dispatchService.prepareByEvent(any()))
+                .thenReturn(List.of(pending("noti-1", NotificationChannel.EMAIL)));
+        when(recipientResolver.resolveAll("user-1", NotificationChannel.EMAIL))
+                .thenReturn(List.of("a@b.c"));
+        emailSenderReturns(ChannelSender.DeliveryResult.ok("ext-1"));
+        when(dispatchService.recordSent(any())).thenReturn(sent("noti-1"));
+
+        orchestrator(emailSender).sendByEvent(byEvent());
+
+        verify(rateLimiter, never()).allow(any(), any(),
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
+    }
 }

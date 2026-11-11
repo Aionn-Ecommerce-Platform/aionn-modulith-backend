@@ -286,6 +286,43 @@ class IdempotencyInterceptorTest {
         return new Object();
     }
 
+    @Test
+    void preHandleIncludesTheQueryStringAndUsesAnonymousForANamelessPrincipal() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/kyc");
+        request.setQueryString("page=2");
+        request.addHeader("Idempotency-Key", "query-key");
+        org.springframework.security.core.Authentication authentication = mock(
+                org.springframework.security.core.Authentication.class);
+        when(authentication.getName()).thenReturn(null);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        when(redisIdempotencyStore.find(any())).thenReturn(Optional.empty());
+        when(redisIdempotencyStore.beginProcessing(any(), any(), any())).thenReturn(true);
+
+        boolean allowed = interceptor.preHandle(request, new MockHttpServletResponse(), handlerMethod());
+
+        assertTrue(allowed);
+        assertEquals("http:idempotency:POST:/api/v1/kyc?page=2:anonymous:query-key",
+                request.getAttribute(RequestAttributeKeys.IDEMPOTENCY_KEY));
+        assertEquals(hash("POST", "/api/v1/kyc", "page=2", "anonymous", new byte[0]),
+                request.getAttribute(RequestAttributeKeys.IDEMPOTENCY_REQUEST_HASH));
+    }
+
+    @Test
+    void preHandleHashesAnUnwrappedRequestWithAnEmptyBody() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/kyc");
+        request.addHeader("Idempotency-Key", "raw-key");
+
+        when(redisIdempotencyStore.find(any())).thenReturn(Optional.empty());
+        when(redisIdempotencyStore.beginProcessing(any(), any(), any())).thenReturn(true);
+
+        boolean allowed = interceptor.preHandle(request, new MockHttpServletResponse(), handlerMethod());
+
+        assertTrue(allowed);
+        assertEquals(hash("POST", "/api/v1/kyc", null, "anonymous", new byte[0]),
+                request.getAttribute(RequestAttributeKeys.IDEMPOTENCY_REQUEST_HASH));
+    }
+
     private HandlerMethod handlerMethod() throws NoSuchMethodException {
         return new HandlerMethod(new DummyController(), DummyController.class.getMethod("create"));
     }

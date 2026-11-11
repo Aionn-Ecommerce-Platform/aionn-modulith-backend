@@ -203,6 +203,64 @@ class GlobalExceptionHandlerSupportTest {
         assertEquals("CATALOG_999", response.getBody().data().get("errorCode"));
     }
 
+    @Test
+    void globalExceptionHandlerMergesDuplicateValidationFields() {
+        ValidationException validationException = new ValidationException("Catalog",
+                List.of(new ValidationException.FieldError("name", "required"),
+                        new ValidationException.FieldError("name", "too short")));
+
+        var response = handler.handleValidation(validationException);
+
+        Map<?, ?> fieldErrors = (Map<?, ?>) response.getBody().data().get("fieldErrors");
+        assertEquals("required; too short", fieldErrors.get("name"));
+    }
+
+    @Test
+    void globalExceptionHandlerFillsMissingValidationMessages() throws Exception {
+        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(new MutablePropertyValues(), "request");
+        bindingResult.addError(new FieldError("request", "name", null, false, null, null, null));
+        bindingResult.addError(new FieldError("request", "name", "again", false, null, null, "must be unique"));
+        MethodParameter parameter = new MethodParameter(
+                SampleController.class.getDeclaredMethod("submit", String.class), 0);
+
+        var response = handler.handleMethodArgumentNotValid(
+                new MethodArgumentNotValidException(parameter, bindingResult));
+
+        Map<?, ?> fieldErrors = (Map<?, ?>) response.getBody().data().get("fieldErrors");
+        assertEquals("Invalid value; must be unique", fieldErrors.get("name"));
+    }
+
+    @Test
+    void globalExceptionHandlerMergesDuplicateParameterViolations() throws Exception {
+        var search = SampleController.class.getDeclaredMethod("search", int.class);
+        MethodParameter parameter = org.mockito.Mockito.mock(MethodParameter.class);
+        org.mockito.Mockito.when(parameter.getParameterName()).thenReturn(" ");
+        org.mockito.Mockito.when(parameter.getParameterIndex()).thenReturn(2);
+        ParameterValidationResult violation = new ParameterValidationResult(
+                parameter,
+                0,
+                List.of(new DefaultMessageSourceResolvable(new String[] { "Min.search.limit" }),
+                        new DefaultMessageSourceResolvable(new String[] { "Max.search.limit" })),
+                null,
+                null,
+                null,
+                (resolvable, targetType) -> null);
+
+        var response = handler.handleHandlerMethodValidation(new HandlerMethodValidationException(
+                MethodValidationResult.create(new SampleController(), search, List.of(violation))));
+
+        Map<?, ?> fieldErrors = (Map<?, ?>) response.getBody().data().get("fieldErrors");
+        assertEquals("Invalid value; Invalid value", fieldErrors.get("arg2"));
+    }
+
+    @Test
+    void globalExceptionHandlerHandlesMethodsWithoutSupportedVerbs() {
+        var response = handler.handleMethodNotSupported(new HttpRequestMethodNotSupportedException("PUT"));
+
+        assertEquals(405, response.getStatusCode().value());
+        assertTrue(response.getBody().message().contains("none"));
+    }
+
     static class SampleController {
         void submit(String body) {
             // Empty on purpose; only reflective method metadata is needed in this test.
