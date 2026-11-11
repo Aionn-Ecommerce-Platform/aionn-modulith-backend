@@ -1,7 +1,9 @@
 package com.aionn.catalog.adapter.rest.dto.product.request;
 
+import jakarta.validation.constraints.NotBlank;
+
 import java.util.List;
 
 public record AssignCollectionsRequest(
-        List<@jakarta.validation.constraints.NotBlank String> collectionIds) {
+        List<@NotBlank String> collectionIds) {
 }

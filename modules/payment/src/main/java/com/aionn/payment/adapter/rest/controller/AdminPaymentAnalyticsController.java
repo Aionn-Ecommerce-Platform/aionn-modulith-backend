@@ -4,7 +4,7 @@ import com.aionn.payment.adapter.rest.dto.analytics.response.AdminPaymentAnalyti
 import com.aionn.payment.adapter.rest.mapper.analytics.PaymentAnalyticsDtoMapper;
 import com.aionn.payment.application.dto.analytics.query.GetAdminPaymentAnalyticsQuery;
 import com.aionn.payment.application.port.in.analytics.GetAdminPaymentAnalyticsInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.LocalDate;
@@ -31,7 +31,7 @@ public class AdminPaymentAnalyticsController {
     public ResponseEntity<ApiResponse<AdminPaymentAnalyticsResponse>> get(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
-            @RequestParam(defaultValue = "VND") String currency) {
+            @RequestParam(required = false) String currency) {
         var result = analyticsInputPort.execute(new GetAdminPaymentAnalyticsQuery(from, to, currency));
         return ResponseEntity.ok(ApiResponse.success(dtoMapper.toResponse(result), "Payment analytics fetched"));
     }

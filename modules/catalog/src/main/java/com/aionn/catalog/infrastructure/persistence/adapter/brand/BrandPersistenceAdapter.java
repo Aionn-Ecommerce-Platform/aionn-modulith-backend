@@ -27,7 +27,9 @@ public class BrandPersistenceAdapter implements BrandPersistencePort {
 
     @Override
     public Brand save(Brand brand) {
-        var saved = jpa.save(mapper.toEntity(brand));
+        BrandEntity entity = mapper.toEntity(brand);
+        jpa.findById(brand.getBrandId()).ifPresent(existing -> entity.setVersion(existing.getVersion()));
+        var saved = jpa.save(entity);
         return mapper.toDomain(saved);
     }
 

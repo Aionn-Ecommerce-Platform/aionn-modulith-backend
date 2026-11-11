@@ -27,8 +27,9 @@ public class StripeConnectWebhookController {
     @Operation(summary = "Stripe Connect webhook (account.updated)")
     public ResponseEntity<Void> handle(
             @RequestHeader(value = "Stripe-Signature", required = false) String signature,
-            @RequestBody String rawBody) {
-        StripeConnectWebhookPort.WebhookEvent event = stripeConnectWebhookPort.parseAndVerify(rawBody, signature);
+            @RequestBody byte[] rawBody) {
+        StripeConnectWebhookPort.WebhookEvent event = stripeConnectWebhookPort.parseAndVerify(
+                new String(rawBody, java.nio.charset.StandardCharsets.UTF_8), signature);
         if (event == null) {
             return ResponseEntity.badRequest().build();
         }

@@ -11,12 +11,7 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties(prefix = "ordering")
 public record OrderingProperties(
-                @NotNull @Valid @DefaultValue Reservation reservation,
                 @NotNull @Valid @DefaultValue AutoCancel autoCancel) {
-
-        public record Reservation(
-                        @Min(60) @Max(7 * 24 * 3600) @DefaultValue("86400") int ttlSeconds) {
-        }
 
         public record AutoCancel(
                         @DefaultValue("true") boolean enabled,

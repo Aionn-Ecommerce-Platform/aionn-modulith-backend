@@ -1,5 +1,8 @@
 package com.aionn.payment.infrastructure.persistence.adapter.ledger;
 
+import com.aionn.payment.domain.valueobject.LedgerEntryType;
+import com.aionn.sharedkernel.domain.vo.Money;
+
 import com.aionn.payment.domain.model.TransactionLedger;
 import com.aionn.payment.infrastructure.persistence.entity.TransactionLedgerEntity;
 import com.aionn.payment.infrastructure.persistence.mapper.TransactionLedgerDomainMapper;
@@ -32,8 +35,8 @@ class TransactionLedgerPersistenceAdapterTest {
     @Test
     void shouldSaveAndFindByPaymentId() {
         TransactionLedger entry = TransactionLedger.record("entry-1", "pay-1",
-                com.aionn.sharedkernel.domain.vo.Money.of(BigDecimal.TEN, "VND"),
-                com.aionn.payment.domain.valueobject.LedgerEntryType.CREDIT,
+                Money.of(BigDecimal.TEN, "VND"),
+                LedgerEntryType.CREDIT,
                 "STRIPE", "tx-1", Instant.now());
 
         TransactionLedgerEntity entity = TransactionLedgerEntity.builder().ledgerId("entry-1").paymentId("pay-1").build();

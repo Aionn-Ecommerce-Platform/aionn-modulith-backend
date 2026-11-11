@@ -1,5 +1,18 @@
 package com.aionn.catalog.adapter.rest.controller;
 
+import com.aionn.catalog.adapter.rest.dto.merchant.request.UpdateCommissionRateRequest;
+import com.aionn.catalog.application.dto.common.PageResult;
+import com.aionn.catalog.application.dto.merchant.command.ActivateMerchantCommand;
+import com.aionn.catalog.application.dto.merchant.command.CloseMerchantCommand;
+import com.aionn.catalog.application.dto.merchant.command.UpdateGlobalCommissionRateCommand;
+import com.aionn.catalog.application.dto.merchant.command.UpdateMerchantCommissionRateCommand;
+import com.aionn.catalog.application.dto.merchant.query.ListMerchantsQuery;
+import com.aionn.catalog.application.port.in.merchant.UpdateGlobalCommissionRateInputPort;
+import com.aionn.catalog.application.port.in.merchant.UpdateMerchantCommissionRateInputPort;
+import java.math.BigDecimal;
+import java.util.List;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+
 import com.aionn.catalog.adapter.rest.mapper.merchant.MerchantDtoMapper;
 
 import org.mapstruct.factory.Mappers;
@@ -26,7 +39,7 @@ import com.aionn.catalog.application.port.in.merchant.SuspendMerchantInputPort;
 import com.aionn.catalog.application.port.in.merchant.UpdateMerchantProfileInputPort;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,9 +81,9 @@ class MerchantControllerWebTest {
         @Mock
         private ListMerchantsInputPort listMerchantsInputPort;
         @Mock
-        private com.aionn.catalog.application.port.in.merchant.UpdateGlobalCommissionRateInputPort updateGlobalCommissionRateInputPort;
+        private UpdateGlobalCommissionRateInputPort updateGlobalCommissionRateInputPort;
         @Mock
-        private com.aionn.catalog.application.port.in.merchant.UpdateMerchantCommissionRateInputPort updateMerchantCommissionRateInputPort;
+        private UpdateMerchantCommissionRateInputPort updateMerchantCommissionRateInputPort;
 
         private MockMvc mockMvc;
         private final JsonMapper objectMapper = JacksonMapperFactory.create();
@@ -96,7 +109,7 @@ class MerchantControllerWebTest {
         private MerchantResult sample() {
                 return new MerchantResult(
                                 "m-1", "owner-1", "Acme", null, "desc", "01", "Ha Noi",
-                                "ACTIVE", Instant.now(), Instant.now());
+                                "ACTIVE", new java.math.BigDecimal("0.05"), Instant.now(), Instant.now());
         }
 
         @Test
@@ -162,7 +175,7 @@ class MerchantControllerWebTest {
         @Test
         void activateDelegatesAdminReason() throws Exception {
                 when(activateMerchantInputPort.execute(
-                                any(com.aionn.catalog.application.dto.merchant.command.ActivateMerchantCommand.class)))
+                                any(ActivateMerchantCommand.class)))
                                 .thenReturn(sample());
 
                 mockMvc.perform(post("/api/v1/catalog/merchants/m-1/activate")
@@ -173,13 +186,13 @@ class MerchantControllerWebTest {
                                 .andExpect(jsonPath("$.data.merchantId").value("m-1"));
 
                 verify(activateMerchantInputPort)
-                                .execute(any(com.aionn.catalog.application.dto.merchant.command.ActivateMerchantCommand.class));
+                                .execute(any(ActivateMerchantCommand.class));
         }
 
         @Test
         void closeUsesOwnerPrincipal() throws Exception {
                 when(closeMerchantInputPort.execute(
-                                any(com.aionn.catalog.application.dto.merchant.command.CloseMerchantCommand.class)))
+                                any(CloseMerchantCommand.class)))
                                 .thenReturn(sample());
 
                 mockMvc.perform(post("/api/v1/catalog/merchants/m-1/close")
@@ -190,15 +203,15 @@ class MerchantControllerWebTest {
                                 .andExpect(jsonPath("$.data.merchantId").value("m-1"));
 
                 verify(closeMerchantInputPort)
-                                .execute(any(com.aionn.catalog.application.dto.merchant.command.CloseMerchantCommand.class));
+                                .execute(any(CloseMerchantCommand.class));
         }
 
         @Test
         void listReturnsPagedMerchants() throws Exception {
-                com.aionn.catalog.application.dto.common.PageResult<MerchantResult> page = new com.aionn.catalog.application.dto.common.PageResult<>(
-                                java.util.List.of(sample()), 0, 20, 1);
+                PageResult<MerchantResult> page = new PageResult<>(
+                                List.of(sample()), 0, 20, 1);
                 when(listMerchantsInputPort.execute(any(
-                                com.aionn.catalog.application.dto.merchant.query.ListMerchantsQuery.class)))
+                                ListMerchantsQuery.class)))
                                 .thenReturn(page);
 
                 mockMvc.perform(get("/api/v1/catalog/merchants"))
@@ -206,37 +219,37 @@ class MerchantControllerWebTest {
                                 .andExpect(jsonPath("$.data[0].merchantId").value("m-1"));
 
                 verify(listMerchantsInputPort).execute(any(
-                                com.aionn.catalog.application.dto.merchant.query.ListMerchantsQuery.class));
+                                ListMerchantsQuery.class));
         }
 
         @Test
         void updateGlobalCommissionRateReturnsOk() throws Exception {
-                mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                mockMvc.perform(MockMvcRequestBuilders
                                 .put("/api/v1/catalog/merchants/settings/commission-rate")
                                 .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(
-                                                new com.aionn.catalog.adapter.rest.dto.merchant.request.UpdateCommissionRateRequest(
-                                                                new java.math.BigDecimal("0.0600")))))
+                                                new UpdateCommissionRateRequest(
+                                                                new BigDecimal("0.0600")))))
                                 .andExpect(status().isOk());
 
                 verify(updateGlobalCommissionRateInputPort).execute(any(
-                                com.aionn.catalog.application.dto.merchant.command.UpdateGlobalCommissionRateCommand.class));
+                                UpdateGlobalCommissionRateCommand.class));
         }
 
         @Test
         void updateMerchantCommissionRateReturnsUpdatedMerchant() throws Exception {
                 when(updateMerchantCommissionRateInputPort.execute(any(
-                                com.aionn.catalog.application.dto.merchant.command.UpdateMerchantCommissionRateCommand.class)))
+                                UpdateMerchantCommissionRateCommand.class)))
                                 .thenReturn(sample());
 
-                mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                mockMvc.perform(MockMvcRequestBuilders
                                 .put("/api/v1/catalog/merchants/m-1/commission-rate")
                                 .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(
-                                                new com.aionn.catalog.adapter.rest.dto.merchant.request.UpdateCommissionRateRequest(
-                                                                new java.math.BigDecimal("0.0800")))))
+                                                new UpdateCommissionRateRequest(
+                                                                new BigDecimal("0.0800")))))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.data.merchantId").value("m-1"));
         }

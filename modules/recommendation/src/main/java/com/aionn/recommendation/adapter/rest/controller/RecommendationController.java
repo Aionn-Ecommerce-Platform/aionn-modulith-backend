@@ -10,7 +10,7 @@ import com.aionn.recommendation.application.port.in.GetAlsoBoughtInputPort;
 import com.aionn.recommendation.application.port.in.GetCartSuggestionsInputPort;
 import com.aionn.recommendation.application.port.in.GetHomeFeedInputPort;
 import com.aionn.recommendation.application.port.in.GetSimilarProductsInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;

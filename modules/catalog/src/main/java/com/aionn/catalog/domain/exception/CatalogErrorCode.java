@@ -50,6 +50,16 @@ public enum CatalogErrorCode {
     REVIEW_ALREADY_REPORTED("CATALOG_506", "This review has already been reported"),
     REVIEW_NOT_REPORTED("CATALOG_507", "Review is not in REPORTED status"),
 
+    // Product Q&A
+    QUESTION_NOT_FOUND("CATALOG_601", "Product question not found"),
+    QUESTION_FORBIDDEN("CATALOG_602", "Action on question is not allowed for current user"),
+
+    // Collections
+    COLLECTION_NOT_FOUND("CATALOG_701", "Collection not found"),
+    COLLECTION_SLUG_CONFLICT("CATALOG_702", "Collection slug must be unique"),
+    COLLECTION_HAS_PRODUCTS("CATALOG_703", "Collection still has products assigned"),
+    COLLECTION_INVALID("CATALOG_704", "Invalid collection data"),
+
     // Generic
     INVALID_ARGUMENT("CATALOG_900", "Invalid argument");
 

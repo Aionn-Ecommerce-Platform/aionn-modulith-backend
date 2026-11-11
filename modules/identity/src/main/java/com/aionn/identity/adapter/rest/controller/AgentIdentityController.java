@@ -5,9 +5,10 @@ import com.aionn.identity.adapter.rest.dto.agent.request.UpdateAgentPermissionsR
 import com.aionn.identity.adapter.rest.dto.agent.response.AgentAuditLogResponse;
 import com.aionn.identity.adapter.rest.dto.agent.response.AgentIdentityResponse;
 import com.aionn.identity.adapter.rest.mapper.agent.AgentIdentityDtoMapper;
+import com.aionn.identity.adapter.rest.support.response.NoStoreResponseFactory;
 import com.aionn.identity.application.port.in.agent.*;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
-import com.aionn.sharedkernel.adapter.web.support.idempotency.IdempotentRequest;
+import com.aionn.platform.web.response.ApiResponse;
+import com.aionn.platform.web.support.idempotency.IdempotentRequest;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,6 +36,7 @@ public class AgentIdentityController {
         private final GetAgentAuditLogsQueryPort getAgentAuditLogsQueryPort;
         private final RevokeAgentInputPort revokeAgentInputPort;
         private final AgentIdentityDtoMapper agentIdentityDtoMapper;
+        private final NoStoreResponseFactory noStoreResponseFactory;
 
         @GetMapping
         @Operation(summary = "List agent identities", description = "Get all AI agent identities owned by the authenticated user")
@@ -64,7 +66,8 @@ public class AgentIdentityController {
                 var result = createAgentIdentityInputPort.execute(
                                 agentIdentityDtoMapper.toCreateCommand(authentication.getName(), request));
                 var response = agentIdentityDtoMapper.toResponse(result);
-                return ResponseEntity.ok(ApiResponse.success(response, "Agent identity created"));
+                // The raw API key is shown once; never let a proxy/browser cache it.
+                return noStoreResponseFactory.ok(ApiResponse.success(response, "Agent identity created"));
         }
 
         @PutMapping("/{agentId}/permissions")

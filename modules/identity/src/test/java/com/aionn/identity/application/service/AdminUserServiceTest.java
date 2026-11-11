@@ -5,6 +5,8 @@ import com.aionn.identity.application.dto.admin.result.UserListResult;
 import com.aionn.identity.application.dto.common.PageResult;
 import com.aionn.identity.application.mapper.AdminResultMapper;
 import com.aionn.identity.application.port.out.admin.AdminUserPersistencePort;
+import com.aionn.identity.application.port.out.auth.AuthSessionPersistencePort;
+import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
 import com.aionn.identity.domain.exception.IdentityErrorCode;
 import com.aionn.identity.domain.exception.IdentityException;
 import com.aionn.identity.domain.model.IdentityUser;
@@ -39,13 +41,18 @@ class AdminUserServiceTest {
     @Mock
     private AdminUserPersistencePort adminUserPersistencePort;
     @Mock
+    private AuthSessionPersistencePort authSessionPersistencePort;
+    @Mock
+    private RefreshTokenStorePort refreshTokenStore;
+    @Mock
     private AdminResultMapper adminResultMapper;
 
     private AdminUserService adminUserService;
 
     @BeforeEach
     void setUp() {
-        adminUserService = new AdminUserService(adminUserPersistencePort, adminResultMapper);
+        adminUserService = new AdminUserService(adminUserPersistencePort,
+                authSessionPersistencePort, refreshTokenStore, adminResultMapper);
     }
 
     @Test
@@ -99,15 +106,25 @@ class AdminUserServiceTest {
     }
 
     @Test
-    void updateStatusUpdatesUserStatus() {
+    void updateStatusUpdatesUserStatusAndRevokesSessions() {
         IdentityUser user = newUser(Set.of(UserRole.BUYER));
         when(adminUserPersistencePort.findById(USER_ID)).thenReturn(Optional.of(user));
         when(adminUserPersistencePort.save(any(IdentityUser.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
+        when(authSessionPersistencePort.findByUserId(USER_ID)).thenReturn(List.of());
 
         String status = adminUserService.updateStatus(USER_ID, UserStatus.BANNED);
 
         assertThat(status).isEqualTo("BANNED");
+        verify(authSessionPersistencePort).findByUserId(USER_ID);
+    }
+
+    @Test
+    void updateStatusRejectsManualDeletion() {
+        var ex = assertThrows(IdentityException.class,
+                () -> adminUserService.updateStatus(USER_ID, UserStatus.DELETED));
+
+        assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.INVALID_USER_STATUS.getCode());
     }
 
     @Test

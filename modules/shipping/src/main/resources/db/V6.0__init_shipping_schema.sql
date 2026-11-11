@@ -36,7 +36,8 @@ CREATE TABLE shipments (
     picked_at              TIMESTAMPTZ,
     delivered_at           TIMESTAMPTZ,
     cancelled_at           TIMESTAMPTZ,
-    returned_at            TIMESTAMPTZ
+    returned_at            TIMESTAMPTZ,
+    last_polled_at         TIMESTAMPTZ
 );
 CREATE INDEX idx_shipments_order           ON shipments(order_id);
 CREATE INDEX idx_shipments_merchant        ON shipments(merchant_id);
@@ -45,6 +46,7 @@ CREATE UNIQUE INDEX idx_shipments_tracking ON shipments(tracking_code) WHERE tra
 CREATE INDEX idx_shipments_status          ON shipments(status);
 CREATE INDEX idx_shipments_active_tracking ON shipments(status, tracking_code)
     WHERE status NOT IN ('DELIVERED','CANCELLED','RETURNED') AND tracking_code IS NOT NULL;
+CREATE INDEX idx_shipments_last_polled     ON shipments(status, last_polled_at);
 
 CREATE TABLE shipping_rates (
     rate_id    VARCHAR(50) PRIMARY KEY,
@@ -59,6 +61,11 @@ CREATE TABLE shipping_rates (
 
 -- Baseline domestic fallback rates.
 INSERT INTO shipping_rates (rate_id, zone_code, base_fee, currency, condition, version, created_at, updated_at) VALUES
-('SR_VN_HN', 'VN-HN', 30000.0, 'VND', 'Hanoi Delivery', 0, NOW(), NOW()),
-('SR_VN_SG', 'VN-SG', 35000.0, 'VND', 'HCMC Delivery', 0, NOW(), NOW()),
-('SR_VN_DN', 'VN-DN', 40000.0, 'VND', 'Da Nang Delivery', 0, NOW(), NOW());
+('SR_VN_HN', '01', 30000.0, 'VND', 'Hanoi Delivery', 0, NOW(), NOW()),
+('SR_VN_SG', '79', 35000.0, 'VND', 'HCMC Delivery', 0, NOW(), NOW()),
+('SR_VN_DN', '48', 40000.0, 'VND', 'Da Nang Delivery', 0, NOW(), NOW());
+
+CREATE TABLE processed_carrier_webhooks (
+    event_id     VARCHAR(150) PRIMARY KEY,
+    processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

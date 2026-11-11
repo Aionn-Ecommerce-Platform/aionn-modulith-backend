@@ -6,14 +6,15 @@ import com.aionn.identity.application.dto.geography.result.ResolvedLocation;
 import com.aionn.identity.application.service.GeographyService;
 import com.aionn.identity.domain.exception.IdentityErrorCode;
 import com.aionn.identity.domain.exception.IdentityException;
-import com.aionn.sharedkernel.integration.port.identity.AddressLookupPort.ResolvedAddress;
-import com.aionn.sharedkernel.integration.port.identity.AddressLookupPort.ResolvedProvince;
+import com.aionn.contracts.port.identity.AddressLookupPort.ResolvedAddress;
+import com.aionn.contracts.port.identity.AddressLookupPort.ResolvedProvince;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -75,6 +76,37 @@ class IdentityAddressLookupAdapterTest {
 
         assertThatThrownBy(() -> adapter.resolve("p", "d", "w"))
                 .isInstanceOf(IdentityException.class);
+    }
+
+    @Test
+    void resolveByNamesFindsUniqueWardAndDistrict() {
+        GeographyResult province = new GeographyResult("79", "Hồ Chí Minh", "Ho Chi Minh");
+        GeographyResult district = new GeographyResult("760", "Quận 1", "District 1");
+        GeographyResult ward = new GeographyResult("26734", "Phường Bến Nghé", "Ben Nghe");
+        when(geographyService.listProvinces("VN")).thenReturn(List.of(province));
+        when(geographyService.listDistricts("79")).thenReturn(List.of(district));
+        when(geographyService.listWards("760")).thenReturn(List.of(ward));
+
+        Optional<ResolvedAddress> result = adapter.resolveByNames("VN", "Ho Chi Minh", "Ben Nghe");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().provinceCode()).isEqualTo("79");
+        assertThat(result.get().districtCode()).isEqualTo("760");
+        assertThat(result.get().wardCode()).isEqualTo("26734");
+    }
+
+    @Test
+    void resolveByNamesRejectsAmbiguousWardNames() {
+        GeographyResult province = new GeographyResult("79", "Hồ Chí Minh", "Ho Chi Minh");
+        GeographyResult firstDistrict = new GeographyResult("760", "Quận 1", "District 1");
+        GeographyResult secondDistrict = new GeographyResult("761", "Quận 3", "District 3");
+        GeographyResult ward = new GeographyResult("26734", "Phường 1", "Ward 1");
+        when(geographyService.listProvinces("VN")).thenReturn(List.of(province));
+        when(geographyService.listDistricts("79")).thenReturn(List.of(firstDistrict, secondDistrict));
+        when(geographyService.listWards("760")).thenReturn(List.of(ward));
+        when(geographyService.listWards("761")).thenReturn(List.of(ward));
+
+        assertThat(adapter.resolveByNames("VN", "Ho Chi Minh", "Phuong 1")).isEmpty();
     }
 
     @Test

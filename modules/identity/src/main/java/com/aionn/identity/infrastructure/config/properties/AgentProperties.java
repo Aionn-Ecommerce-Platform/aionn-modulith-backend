@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @Builder
 @ConfigurationProperties(prefix = "identity.agent")
 public record AgentProperties(
-                @DefaultValue("1") int keyExpiryYears) {
+                @DefaultValue("1") int keyExpiryYears,
+                @DefaultValue("100") int auditLogLimit) {
 }
 

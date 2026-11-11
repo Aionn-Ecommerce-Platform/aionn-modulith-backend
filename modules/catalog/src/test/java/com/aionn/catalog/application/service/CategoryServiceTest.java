@@ -1,5 +1,8 @@
 package com.aionn.catalog.application.service;
 
+import java.time.ZoneOffset;
+import java.util.Collections;
+
 import com.aionn.catalog.application.dto.category.command.CreateCategoryCommand;
 import com.aionn.catalog.application.dto.category.command.MoveCategoryCommand;
 import com.aionn.catalog.application.dto.category.command.UpdateCategoryCommand;
@@ -42,7 +45,7 @@ class CategoryServiceTest {
         private EventPublisher eventPublisher;
 
         @Spy
-        private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
+        private Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
 
         @InjectMocks
         private CategoryService categoryService;
@@ -334,7 +337,7 @@ class CategoryServiceTest {
                 Category category = Category.create(CATEGORY_ID, "current-parent", "A", "a", FIXED);
                 category.pullEvents();
                 // A null new parent contributes no extra identifier to the locked set.
-                when(categoryRepository.lockMutationSet(CATEGORY_ID, java.util.Collections.singletonList(null)))
+                when(categoryRepository.lockMutationSet(CATEGORY_ID, Collections.singletonList(null)))
                                 .thenReturn(List.of(category, parent));
                 when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
 

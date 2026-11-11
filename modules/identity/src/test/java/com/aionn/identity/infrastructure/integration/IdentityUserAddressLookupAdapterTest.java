@@ -4,7 +4,7 @@ import com.aionn.identity.infrastructure.integration.address.IdentityUserAddress
 import com.aionn.identity.application.port.out.address.AddressPersistencePort;
 import com.aionn.identity.domain.model.Address;
 import com.aionn.identity.domain.valueobject.AddressType;
-import com.aionn.sharedkernel.integration.port.identity.UserAddressLookupPort.UserAddress;
+import com.aionn.contracts.port.identity.UserAddressLookupPort.UserAddress;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

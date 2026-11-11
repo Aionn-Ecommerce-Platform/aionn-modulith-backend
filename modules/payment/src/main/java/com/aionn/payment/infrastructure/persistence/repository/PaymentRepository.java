@@ -1,5 +1,7 @@
 package com.aionn.payment.infrastructure.persistence.repository;
 
+import java.math.BigDecimal;
+
 import com.aionn.payment.infrastructure.persistence.entity.PaymentEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -34,7 +36,7 @@ public interface PaymentRepository extends JpaRepository<PaymentEntity, String> 
             @Param("currency") String currency);
 
     interface PaymentSummaryProjection {
-        java.math.BigDecimal getRefundAmount();
+        BigDecimal getRefundAmount();
         Long getRefundCount();
         Long getPaidCount();
     }

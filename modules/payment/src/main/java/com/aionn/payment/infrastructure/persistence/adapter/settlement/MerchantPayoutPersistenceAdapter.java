@@ -29,6 +29,11 @@ public class MerchantPayoutPersistenceAdapter implements MerchantPayoutPersisten
     }
 
     @Override
+    public Optional<MerchantPayout> findByIdForUpdate(String payoutId) {
+        return jpa.findByIdForUpdate(payoutId).map(this::toDomain);
+    }
+
+    @Override
     public List<MerchantPayout> findByMerchant(String merchantId, int limit) {
         return jpa.findByMerchantIdOrderByRequestedAtDesc(merchantId,
                 PageRequest.of(0, Math.max(1, limit))).stream()

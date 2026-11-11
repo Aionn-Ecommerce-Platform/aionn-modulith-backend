@@ -1,5 +1,8 @@
 package com.aionn.catalog.infrastructure.persistence.entity;
 
+import jakarta.persistence.Version;
+import java.math.BigDecimal;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -54,7 +57,7 @@ public class MerchantEntity {
     private String status;
 
     @Column(name = "commission_rate", nullable = false, precision = 5, scale = 4)
-    private java.math.BigDecimal commissionRate;
+    private BigDecimal commissionRate;
 
     @Column(name = "stripe_account_id", length = 100)
     private String stripeAccountId;
@@ -73,7 +76,7 @@ public class MerchantEntity {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @jakarta.persistence.Version
+    @Version
     @Column(name = "version", nullable = false)
     private long version;
 }

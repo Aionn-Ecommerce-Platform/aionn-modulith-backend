@@ -1,5 +1,7 @@
 package com.aionn.ucp.adapter.rest.controller;
 
+import com.aionn.platform.web.support.idempotency.IdempotentRequest;
+import com.aionn.ucp.application.UcpProtocolConstants;
 import com.aionn.ucp.adapter.rest.dto.checkout.UcpCheckoutRequest;
 import com.aionn.ucp.adapter.rest.dto.checkout.UcpCheckoutResponse;
 import com.aionn.ucp.application.checkout.UcpCheckoutApplicationService;
@@ -32,6 +34,7 @@ public class UcpCheckoutController {
     private final UcpCheckoutApplicationService checkoutService;
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @IdempotentRequest(ttlSeconds = UcpProtocolConstants.IDEMPOTENCY_TTL_SECONDS, required = true)
     public ResponseEntity<UcpCheckoutResponse> createCheckout(
             @Valid @RequestBody(required = false) UcpCheckoutRequest request,
             Authentication authentication) {
@@ -50,6 +53,7 @@ public class UcpCheckoutController {
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @IdempotentRequest(ttlSeconds = UcpProtocolConstants.IDEMPOTENCY_TTL_SECONDS, required = true)
     public ResponseEntity<UcpCheckoutResponse> updateCheckout(
             @PathVariable("id") String checkoutId,
             @Valid @RequestBody UcpCheckoutRequest request,
@@ -60,15 +64,18 @@ public class UcpCheckoutController {
     }
 
     @PostMapping(value = "/{id}/complete", produces = MediaType.APPLICATION_JSON_VALUE)
+    @IdempotentRequest(ttlSeconds = UcpProtocolConstants.IDEMPOTENCY_TTL_SECONDS, required = true)
     public ResponseEntity<UcpCheckoutResponse> completeCheckout(
             @PathVariable("id") String checkoutId,
+            @Valid @RequestBody(required = false) UcpCheckoutRequest request,
             Authentication authentication) {
         String userId = getAuthenticatedUserId(authentication);
-        UcpCheckoutResponse response = checkoutService.completeCheckout(checkoutId, userId);
+        UcpCheckoutResponse response = checkoutService.completeCheckout(checkoutId, request, userId);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping(value = "/{id}/cancel", produces = MediaType.APPLICATION_JSON_VALUE)
+    @IdempotentRequest(ttlSeconds = UcpProtocolConstants.IDEMPOTENCY_TTL_SECONDS, required = true)
     public ResponseEntity<UcpCheckoutResponse> cancelCheckout(
             @PathVariable("id") String checkoutId,
             Authentication authentication) {
@@ -78,10 +85,16 @@ public class UcpCheckoutController {
     }
 
     private String getAuthenticatedUserId(Authentication authentication) {
-        if (authentication != null && authentication.isAuthenticated()
-                && !"anonymousUser".equals(authentication.getPrincipal())) {
-            return authentication.getName();
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
+            return null;
         }
-        return null;
+        String name = authentication.getName();
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        // Platform credentials own guest resources directly, so different platforms
+        // cannot read each other's carts/checkouts by knowing the resource id.
+        return name;
     }
 }

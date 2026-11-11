@@ -95,6 +95,19 @@ class ConversationTest {
     }
 
     @Test
+    void archive_isScopedToParticipant() {
+        Conversation c = buyerMerchantConversation();
+
+        c.archive("U_buyer", FIXED);
+
+        assertThat(c.isArchivedBy("U_buyer")).isTrue();
+        assertThat(c.isArchivedBy("M_seller")).isFalse();
+
+        c.unarchive("U_buyer", FIXED);
+        assertThat(c.isArchived()).isFalse();
+    }
+
+    @Test
     void recordMessageSent_unarchivesAndUpdatesLastMessage() {
         Conversation c = buyerMerchantConversation();
         c.archive("U_buyer", FIXED);

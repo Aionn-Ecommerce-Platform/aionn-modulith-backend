@@ -5,5 +5,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 
 @ConfigurationProperties(prefix = "chat.media.cloudinary")
 public record ChatCloudinaryProperties(
-        @DefaultValue("aionn/chat/images") String chatImageFolder) {
+        @DefaultValue("aionn/chat/images") String chatImageFolder,
+        @DefaultValue("jpg,jpeg,png,webp,gif") String allowedFormats,
+        @DefaultValue("5242880") long maxFileSizeBytes) {
 }

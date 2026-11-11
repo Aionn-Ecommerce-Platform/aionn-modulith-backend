@@ -1,5 +1,7 @@
 package com.aionn.ordering.infrastructure.persistence.entity;
 
+import jakarta.persistence.Version;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -113,12 +115,18 @@ public class OrderEntity {
     @Column(name = "cancelled_at")
     private Instant cancelledAt;
 
+    @Column(name = "note", length = 1000)
+    private String note;
+
+    @Column(name = "shipping_service", length = 20)
+    private String shippingService;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("id.skuId asc")
     @Builder.Default
     private List<OrderItemEntity> items = new ArrayList<>();
 
-    @jakarta.persistence.Version
+    @Version
     @Column(name = "version", nullable = false)
     private long version;
 }

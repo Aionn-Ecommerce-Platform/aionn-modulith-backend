@@ -1,5 +1,7 @@
 package com.aionn.ucp.adapter.rest.controller;
 
+import com.aionn.platform.web.support.idempotency.IdempotentRequest;
+import com.aionn.ucp.application.UcpProtocolConstants;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpCartRequest;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpCartResponse;
 import com.aionn.ucp.application.cart.UcpCartApplicationService;
@@ -31,6 +33,7 @@ public class UcpCartController {
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
+    @IdempotentRequest(ttlSeconds = UcpProtocolConstants.IDEMPOTENCY_TTL_SECONDS, required = true)
     public UcpCartResponse createCart(
             @Valid @RequestBody UcpCartRequest request,
             HttpServletRequest servletRequest) {
@@ -47,6 +50,7 @@ public class UcpCartController {
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @IdempotentRequest(ttlSeconds = UcpProtocolConstants.IDEMPOTENCY_TTL_SECONDS, required = true)
     public UcpCartResponse updateCart(
             @PathVariable("id") String id,
             @Valid @RequestBody UcpCartRequest request,
@@ -56,6 +60,7 @@ public class UcpCartController {
     }
 
     @PostMapping("/{id}/cancel")
+    @IdempotentRequest(ttlSeconds = UcpProtocolConstants.IDEMPOTENCY_TTL_SECONDS, required = true)
     public UcpCartResponse cancelCart(
             @PathVariable("id") String id,
             HttpServletRequest servletRequest) {
@@ -68,6 +73,12 @@ public class UcpCartController {
             return null;
         }
         Principal principal = request.getUserPrincipal();
-        return principal != null ? principal.getName() : null;
+        if (principal == null) {
+            return null;
+        }
+        String name = principal.getName();
+        // Platform credentials own guest carts directly; this keeps each platform's
+        // guest resources isolated without a buyer JWT.
+        return name;
     }
 }

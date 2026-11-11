@@ -7,7 +7,7 @@ import com.aionn.ordering.domain.model.OrderItem;
 import com.aionn.ordering.domain.valueobject.OrderStatus;
 import com.aionn.ordering.domain.valueobject.ShippingAddress;
 import com.aionn.sharedkernel.domain.vo.Money;
-import com.aionn.sharedkernel.integration.port.ordering.OrderPlacementPort;
+import com.aionn.contracts.port.ordering.OrderPlacementPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

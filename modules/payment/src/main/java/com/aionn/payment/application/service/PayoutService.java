@@ -10,7 +10,7 @@ import com.aionn.payment.domain.model.MerchantPayout;
 import com.aionn.payment.domain.model.SettlementLedgerEntry;
 import com.aionn.payment.domain.model.SettlementLedgerEntry.SettlementKind;
 import com.aionn.payment.domain.valueobject.PayoutStatus;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +36,14 @@ public class PayoutService {
 
         public MerchantPayout requestPayout(String ownerId, BigDecimal amount, String currency,
                         String bankName, String bankAccountNo, String bankAccountName, String note) {
+                if (amount == null || amount.signum() <= 0
+                                || currency == null || currency.isBlank()
+                                || bankName == null || bankName.isBlank()
+                                || bankAccountNo == null || bankAccountNo.isBlank()
+                                || bankAccountName == null || bankAccountName.isBlank()) {
+                        throw new PaymentException(PaymentErrorCode.INVALID_ARGUMENT,
+                                        "Payout amount, currency and bank details are required");
+                }
                 String merchantId = merchantQueryPort.findMerchantIdByOwnerId(ownerId)
                                 .orElseThrow(() -> new PaymentException(PaymentErrorCode.METHOD_FORBIDDEN,
                                                 PaymentMessages.NO_MERCHANT_FOR_USER));
@@ -62,14 +70,20 @@ public class PayoutService {
         }
 
         public MerchantPayout markCompleted(String payoutId, String externalRef) {
-                MerchantPayout payout = required(payoutId);
+                MerchantPayout payout = locked(payoutId);
+                if (payout.getStatus() == PayoutStatus.COMPLETED) {
+                        return payout;
+                }
                 Instant now = clock.instant();
                 payout.markCompleted(externalRef, now);
                 return payoutRepo.save(payout);
         }
 
         public MerchantPayout markFailed(String payoutId, String reason) {
-                MerchantPayout payout = required(payoutId);
+                MerchantPayout payout = locked(payoutId);
+                if (payout.getStatus() == PayoutStatus.FAILED) {
+                        return payout;
+                }
                 Instant now = clock.instant();
                 payout.markFailed(reason, now);
 
@@ -110,8 +124,8 @@ public class PayoutService {
                 return payoutRepo.findByStatus(status, limit);
         }
 
-        private MerchantPayout required(String payoutId) {
-                return payoutRepo.findById(payoutId)
+        private MerchantPayout locked(String payoutId) {
+                return payoutRepo.findByIdForUpdate(payoutId)
                                 .orElseThrow(() -> new PaymentException(PaymentErrorCode.PAYMENT_NOT_FOUND,
                                                 "Payout not found"));
         }

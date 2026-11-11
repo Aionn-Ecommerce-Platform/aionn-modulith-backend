@@ -12,7 +12,9 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties(prefix = "inventory")
 public record InventoryProperties(@NotNull @Valid @DefaultValue Reservation reservation) {
 
-    public record Reservation(@NotNull @Valid @DefaultValue AutoRelease autoRelease) {
+    public record Reservation(
+            @Min(1) @Max(604800) @DefaultValue("900") int defaultTtlSeconds,
+            @NotNull @Valid @DefaultValue AutoRelease autoRelease) {
 
         public record AutoRelease(
                 @DefaultValue("true") boolean enabled,

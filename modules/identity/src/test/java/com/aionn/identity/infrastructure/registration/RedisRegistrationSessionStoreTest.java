@@ -1,5 +1,7 @@
 package com.aionn.identity.infrastructure.registration;
 
+import java.time.Clock;
+
 import com.aionn.identity.domain.model.RegistrationVerificationSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +35,7 @@ class RedisRegistrationSessionStoreTest {
 
     @BeforeEach
     void setUp() {
-        store = new RedisRegistrationSessionStore(redisTemplate, java.time.Clock.systemUTC());
+        store = new RedisRegistrationSessionStore(redisTemplate, Clock.systemUTC());
     }
 
     private RegistrationVerificationSession session(String regId, Instant expiredAt) {

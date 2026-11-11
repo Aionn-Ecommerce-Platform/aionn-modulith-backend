@@ -7,6 +7,7 @@ import com.aionn.identity.application.port.out.security.MfaPersistencePort;
 import com.aionn.identity.application.port.out.security.PasswordHasherPort;
 import com.aionn.identity.application.port.out.security.SecurityAuditPort;
 import com.aionn.identity.application.port.out.security.TotpManagerPort;
+import com.aionn.identity.application.port.out.security.TotpReplayGuardPort;
 import com.aionn.identity.application.port.out.observability.IdentityMetricsPort;
 import com.aionn.identity.domain.valueobject.SecurityAuditEventType;
 import com.aionn.identity.application.port.out.security.UserSecurityPort;
@@ -34,6 +35,7 @@ public class MfaService {
     private final SecurityAuditPort securityAuditPort;
     private final PasswordHasherPort passwordHasher;
     private final TotpManagerPort totpManager;
+    private final TotpReplayGuardPort totpReplayGuard;
     private final MfaPolicy mfaPolicy;
     private final IdentityMetricsPort identityMetrics;
 
@@ -120,7 +122,8 @@ public class MfaService {
         if (user.mfaSecret() == null || user.mfaSecret().isBlank()) {
             throw new IdentityException(IdentityErrorCode.MFA_SETUP_NOT_INITIATED);
         }
-        if (!totpManager.verifyCode(user.mfaSecret(), mfaCode)) {
+        if (!totpManager.verifyCode(user.mfaSecret(), mfaCode)
+                || !totpReplayGuard.claim(user.userId(), mfaCode)) {
             throw new IdentityException(IdentityErrorCode.OTP_INVALID, "Invalid MFA code");
         }
     }
@@ -129,7 +132,8 @@ public class MfaService {
         if (!user.mfaEnabled() || user.mfaSecret() == null || user.mfaSecret().isBlank()) {
             throw new IdentityException(IdentityErrorCode.MFA_NOT_ENABLED);
         }
-        if (totpManager.verifyCode(user.mfaSecret(), mfaCode)) {
+        if (totpManager.verifyCode(user.mfaSecret(), mfaCode)
+                && totpReplayGuard.claim(user.userId(), mfaCode)) {
             return;
         }
         boolean matched = mfaPersistencePort.findActiveBackupCodes(user.userId()).stream()
@@ -145,7 +149,7 @@ public class MfaService {
     private List<String> replaceBackupCodes(String userId) {
         mfaPersistencePort.deleteBackupCodes(userId);
         List<String> rawCodes = IntStream.range(0, mfaPolicy.getBackupCodeCount())
-                .mapToObj(i -> OtpGenerator.generate8DigitOtp())
+                .mapToObj(i -> OtpGenerator.generateNumericOtp(mfaPolicy.getBackupCodeLength()))
                 .toList();
         List<String> codeHashes = rawCodes.stream()
                 .map(passwordHasher::hash)

@@ -1,5 +1,7 @@
 package com.aionn.identity.infrastructure.persistence.adapter.social;
 
+import java.time.ZoneOffset;
+
 import com.aionn.identity.domain.exception.IdentityErrorCode;
 import com.aionn.identity.domain.exception.IdentityException;
 import com.aionn.identity.domain.model.SocialLink;
@@ -33,7 +35,7 @@ class SocialLinkPersistenceAdapterTest {
     private static final String USER_ID = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
     private static final String PROVIDER_USER_ID = "google-123";
     private static final Clock CLOCK = Clock.fixed(
-            Instant.parse("2026-01-01T00:00:00Z"), java.time.ZoneOffset.UTC);
+            Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
 
     @Mock
     private SocialAccountRepository socialAccountRepository;

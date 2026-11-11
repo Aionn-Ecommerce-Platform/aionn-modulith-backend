@@ -1,5 +1,7 @@
 package com.aionn.recommendation.infrastructure.scheduling;
 
+import org.mockito.Mockito;
+
 import com.aionn.recommendation.application.port.out.InteractionPersistencePort;
 import com.aionn.recommendation.application.port.out.observability.RecommendationMetricsPort;
 import com.aionn.recommendation.infrastructure.config.properties.RecommendationJobProperties;
@@ -110,7 +112,7 @@ class ProfileRefreshSchedulerTest {
         scheduler(180).run();
 
         ArgumentCaptor<Instant> since = ArgumentCaptor.forClass(Instant.class);
-        verify(interactionRepository, org.mockito.Mockito.atLeastOnce())
+        verify(interactionRepository, Mockito.atLeastOnce())
                 .findUserIdsWithInteractionsSince(since.capture(), eq(BATCH_SIZE));
         assertThat(since.getAllValues()).allSatisfy(window ->
                 assertThat(window).isAfterOrEqualTo(NOW.minus(Duration.ofDays(180))));

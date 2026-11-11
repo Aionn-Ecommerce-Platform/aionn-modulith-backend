@@ -38,6 +38,8 @@ public class Order extends AggregateRoot {
     private Instant updatedAt;
     private Instant completedAt;
     private Instant cancelledAt;
+    private String note;
+    private String shippingService;
 
     public Order(
             String orderId,
@@ -181,6 +183,18 @@ public class Order extends AggregateRoot {
                 paymentMethodId, currency, items, address, shippingFee, merchandiseSubtotal, now);
     }
 
+    /** Attaches a buyer-supplied delivery note. Blank notes are stored as null. */
+    public void attachNote(String note) {
+        this.note = (note == null || note.isBlank()) ? null : note.trim();
+    }
+
+    /** Attaches the selected shipping service level (STANDARD / EXPRESS). */
+    public void attachShippingService(String shippingService) {
+        this.shippingService = (shippingService == null || shippingService.isBlank())
+                ? null
+                : shippingService.trim().toUpperCase();
+    }
+
     public void approve(String paymentId, Instant now) {
         ensureTransition(OrderStatus.APPROVED);
         this.status = OrderStatus.APPROVED;
@@ -190,6 +204,9 @@ public class Order extends AggregateRoot {
     }
 
     public void confirmPreparation(Instant now) {
+        if (status == OrderStatus.PREPARING) {
+            return;
+        }
         Guard.require(status == OrderStatus.APPROVED,
                 () -> new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
                         "Order must be APPROVED before merchant can prepare"));

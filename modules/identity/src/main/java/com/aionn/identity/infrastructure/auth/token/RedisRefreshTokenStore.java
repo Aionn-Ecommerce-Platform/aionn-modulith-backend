@@ -17,6 +17,22 @@ public class RedisRefreshTokenStore implements RefreshTokenStorePort {
 
     private static final String TOKEN_KEY_PREFIX = "identity:auth:refresh:";
     private static final String SESSION_INDEX_PREFIX = "identity:auth:refresh:session:";
+    private static final String CONSUMED_KEY_PREFIX = "identity:auth:refresh:consumed:";
+
+    private static final DefaultRedisScript<String> CONSUME_SCRIPT = new DefaultRedisScript<>(
+            """
+            local value = redis.call('GET', KEYS[1])
+            if not value then
+              return nil
+            end
+            local ttl = redis.call('PTTL', KEYS[1])
+            redis.call('DEL', KEYS[1])
+            if ttl > 0 then
+              redis.call('SET', KEYS[2], value, 'PX', ttl)
+            end
+            return value
+            """,
+            String.class);
     
     private static final DefaultRedisScript<Long> REVOKE_BY_SESSION_SCRIPT = new DefaultRedisScript<>(
             """
@@ -46,17 +62,20 @@ public class RedisRefreshTokenStore implements RefreshTokenStorePort {
 
     @Override
     public Optional<String> consumeSessionId(String tokenId) {
-        // GETDEL is atomic on the server side: any concurrent refresh that races with
-        // us
-        // will see a null payload and be rejected, eliminating the replay window
-        // between
-        // findSessionId() and revoke().
         String tokenHash = sha256(tokenId);
-        String sessionId = redisTemplate.opsForValue().getAndDelete(tokenKey(tokenHash));
+        String sessionId = redisTemplate.execute(
+                CONSUME_SCRIPT,
+                List.of(tokenKey(tokenHash), consumedKey(tokenHash)));
         if (sessionId != null) {
             redisTemplate.opsForSet().remove(sessionIndexKey(sessionId), tokenHash);
         }
         return Optional.ofNullable(sessionId);
+    }
+
+    @Override
+    public Optional<String> findConsumedSessionId(String tokenId) {
+        return Optional.ofNullable(
+                redisTemplate.opsForValue().get(consumedKey(sha256(tokenId))));
     }
 
     @Override
@@ -85,6 +104,10 @@ public class RedisRefreshTokenStore implements RefreshTokenStorePort {
 
     private static String sessionIndexKey(String sessionId) {
         return SESSION_INDEX_PREFIX + sessionId;
+    }
+
+    private static String consumedKey(String tokenHash) {
+        return CONSUMED_KEY_PREFIX + tokenHash;
     }
 
     private static String sha256(String value) {

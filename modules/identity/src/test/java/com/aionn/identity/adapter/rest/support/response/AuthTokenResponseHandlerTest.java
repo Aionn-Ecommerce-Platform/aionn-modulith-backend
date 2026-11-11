@@ -4,7 +4,7 @@ import com.aionn.identity.adapter.rest.dto.auth.response.AuthTokenResponse;
 import com.aionn.identity.adapter.rest.dto.auth.response.LogoutAllResponse;
 import com.aionn.identity.infrastructure.config.properties.AuthCookieProperties;
 import com.aionn.identity.infrastructure.config.properties.AuthProperties;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

@@ -14,5 +14,6 @@ class SpringCatalogProductPolicyTest {
 
         assertThat(policy.getBulkPriceUpdateMaxSize()).isEqualTo(250);
         assertThat(policy.getBestSellerThreshold()).isEqualTo(2500L);
+        assertThat(policy.getSearchIndexBatchSize()).isEqualTo(200);
     }
 }

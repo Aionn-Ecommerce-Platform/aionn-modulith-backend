@@ -2,6 +2,8 @@ package com.aionn.promotion.application.service;
 
 import com.aionn.promotion.application.dto.flashsale.command.FlashSaleCommands;
 import com.aionn.promotion.application.dto.flashsale.result.ActiveFlashSaleResult;
+import com.aionn.promotion.application.policy.PromotionDefaultsPolicy;
+import com.aionn.promotion.application.policy.PromotionLimitPolicy;
 import com.aionn.promotion.application.port.out.FlashSaleRegistrationPersistencePort;
 import com.aionn.promotion.application.port.out.PromotionCampaignPersistencePort;
 import com.aionn.promotion.domain.exception.PromotionErrorCode;
@@ -12,8 +14,8 @@ import com.aionn.promotion.domain.valueobject.CampaignType;
 import com.aionn.promotion.domain.valueobject.FlashSaleRegistrationStatus;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.Money;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
-import com.aionn.sharedkernel.integration.port.catalog.PricingQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.PricingQueryPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -31,7 +33,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -52,10 +53,17 @@ class FlashSaleServiceTest {
     private PricingQueryPort pricingQueryPort;
     @Mock
     private EventPublisher eventPublisher;
+    @Mock
+    private PromotionDefaultsPolicy defaultsPolicy;
+    @Mock
+    private PromotionLimitPolicy limitPolicy;
 
     private FlashSaleService service() {
+        org.mockito.Mockito.lenient().when(defaultsPolicy.defaultCurrency()).thenReturn("VND");
+        org.mockito.Mockito.lenient().when(limitPolicy.maxRegistrationLimit()).thenReturn(200);
+        org.mockito.Mockito.lenient().when(limitPolicy.maxActiveFlashSaleLimit()).thenReturn(50);
         return new FlashSaleService(registrationRepository, campaignRepository,
-                merchantQueryPort, pricingQueryPort, CLOCK, eventPublisher);
+                merchantQueryPort, pricingQueryPort, CLOCK, eventPublisher, defaultsPolicy, limitPolicy);
     }
 
     private static PromotionCampaign campaign(CampaignType type) {
@@ -343,16 +351,18 @@ class FlashSaleServiceTest {
     }
 
     @Test
-    void listActiveReturnsEmptyWhenNoApprovedRegistrations() {
-        when(registrationRepository.findAllApprovedRunning(anyInt())).thenReturn(List.of());
+    void listActiveReturnsEmptyWhenNoRunningCampaigns() {
+        when(campaignRepository.findRunning(NOW, 5)).thenReturn(List.of());
 
         assertThat(service().listActive(5)).isEmpty();
+        verify(registrationRepository, never()).findApprovedByCampaignIds(any());
     }
 
     @Test
-    void listActiveGroupsByRunningCampaign() {
-        when(registrationRepository.findAllApprovedRunning(anyInt())).thenReturn(List.of(approved()));
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.of(runningFlashCampaign()));
+    void listActiveGroupsApprovedItemsForRunningCampaigns() {
+        when(campaignRepository.findRunning(NOW, 5)).thenReturn(List.of(runningFlashCampaign()));
+        when(registrationRepository.findApprovedByCampaignIds(List.of("camp-1")))
+                .thenReturn(List.of(approved()));
 
         List<ActiveFlashSaleResult> active = service().listActive(5);
 
@@ -363,18 +373,18 @@ class FlashSaleServiceTest {
     }
 
     @Test
-    void listActiveSkipsCampaignsThatAreNotRunning() {
-        when(registrationRepository.findAllApprovedRunning(anyInt())).thenReturn(List.of(approved()));
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.of(campaign(CampaignType.FLASH_SALE)));
+    void listActiveSkipsRunningCampaignWithoutApprovedItems() {
+        when(campaignRepository.findRunning(NOW, 5)).thenReturn(List.of(runningFlashCampaign()));
+        when(registrationRepository.findApprovedByCampaignIds(List.of("camp-1")))
+                .thenReturn(List.of());
 
         assertThat(service().listActive(5)).isEmpty();
     }
 
     @Test
-    void listActiveSkipsMissingCampaigns() {
-        when(registrationRepository.findAllApprovedRunning(anyInt())).thenReturn(List.of(approved()));
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.empty());
+    void listActiveCapsCampaignLimitBeforeQueryingRegistrations() {
+        when(campaignRepository.findRunning(NOW, 50)).thenReturn(List.of());
 
-        assertThat(service().listActive(5)).isEmpty();
+        assertThat(service().listActive(999)).isEmpty();
     }
 }

@@ -1,5 +1,7 @@
 package com.aionn.identity.infrastructure.registration;
 
+import java.time.Clock;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,7 +30,7 @@ class RedisRegistrationRateLimiterTest {
 
     @BeforeEach
     void setUp() {
-        rateLimiter = new RedisRegistrationRateLimiter(redisTemplate, java.time.Clock.systemUTC());
+        rateLimiter = new RedisRegistrationRateLimiter(redisTemplate, Clock.systemUTC());
     }
 
     private static RedisScript<Long> anyScript() {

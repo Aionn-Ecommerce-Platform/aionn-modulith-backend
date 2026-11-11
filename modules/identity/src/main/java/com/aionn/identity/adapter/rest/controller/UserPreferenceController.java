@@ -9,7 +9,7 @@ import com.aionn.identity.application.port.in.preference.GetUserPreferenceQueryP
 import com.aionn.identity.application.port.in.preference.UpdateAiPrivacyPreferenceInputPort;
 import com.aionn.identity.application.port.in.preference.UpdateGeneralPreferenceInputPort;
 import com.aionn.identity.application.port.in.preference.UpdateNotificationPreferenceInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

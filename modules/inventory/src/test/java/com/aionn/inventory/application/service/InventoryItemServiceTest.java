@@ -1,8 +1,14 @@
 package com.aionn.inventory.application.service;
 
+import com.aionn.inventory.application.dto.common.PageResult;
+import com.aionn.inventory.domain.valueobject.WarehouseStatus;
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
+import java.time.LocalDate;
+import java.util.List;
+import org.springframework.dao.DataIntegrityViolationException;
+
 import com.aionn.inventory.application.dto.inventory.command.*;
 import com.aionn.inventory.application.port.out.InventoryItemPersistencePort;
-import com.aionn.inventory.application.port.out.SafetyStockNotifier;
 import com.aionn.inventory.application.port.out.StockAdjustmentPersistencePort;
 import com.aionn.inventory.application.port.out.WarehousePersistencePort;
 import com.aionn.inventory.domain.exception.InventoryErrorCode;
@@ -12,7 +18,7 @@ import com.aionn.inventory.domain.model.Warehouse;
 import com.aionn.inventory.domain.valueobject.AdjustmentType;
 import com.aionn.inventory.domain.valueobject.InventoryItemKey;
 import com.aionn.sharedkernel.application.port.EventPublisher;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -42,8 +48,6 @@ class InventoryItemServiceTest {
         StockAdjustmentPersistencePort adjustmentRepository;
         @Mock
         EventPublisher eventPublisher;
-        @Mock
-        SafetyStockNotifier safetyStockNotifier;
         @Mock
         MerchantQueryPort merchantQueryPort;
 
@@ -144,15 +148,14 @@ class InventoryItemServiceTest {
                 service.configureSafetyStock(new ConfigureSafetyStockCommand(
                                 "owner-1", "SKU_1", "WH_1", 10));
 
-                verify(safetyStockNotifier).notifySafetyStockBreach(
-                                "M_1", "SKU_1", "WH_1", 5, 10);
+                verify(eventPublisher).publish(anyCollection());
         }
 
         @Test
         void initializeRejectsWhenWarehouseInactive() {
                 Warehouse warehouse = mock(Warehouse.class);
                 when(warehouse.getStatus())
-                                .thenReturn(com.aionn.inventory.domain.valueobject.WarehouseStatus.SUSPENDED);
+                                .thenReturn(WarehouseStatus.SUSPENDED);
                 when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
                 when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
 
@@ -170,7 +173,7 @@ class InventoryItemServiceTest {
                 when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
                 when(itemRepository.findByKey(any())).thenReturn(Optional.empty());
                 when(itemRepository.save(any()))
-                                .thenThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate"));
+                                .thenThrow(new DataIntegrityViolationException("duplicate"));
 
                 assertThatThrownBy(() -> service.initialize(new InitializeStockCommand(
                                 "owner-1", "SKU_1", "WH_1", 10)))
@@ -189,7 +192,7 @@ class InventoryItemServiceTest {
                 when(itemRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
                 service.trackBatchAndExpiry(new TrackBatchAndExpiryCommand(
-                                "owner-1", "SKU_1", "WH_1", "BATCH_1", java.time.LocalDate.parse("2027-01-01")));
+                                "owner-1", "SKU_1", "WH_1", "BATCH_1", LocalDate.parse("2027-01-01")));
 
                 verify(itemRepository).save(item);
         }
@@ -259,7 +262,7 @@ class InventoryItemServiceTest {
         @Test
         void listBySkuReturnsItems() {
                 InventoryItem item = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 10, FIXED);
-                when(itemRepository.findBySku("SKU_1")).thenReturn(java.util.List.of(item));
+                when(itemRepository.findBySku("SKU_1")).thenReturn(List.of(item));
 
                 service.listBySku("SKU_1");
 
@@ -272,12 +275,12 @@ class InventoryItemServiceTest {
                 when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("M_1"));
                 when(warehouseRepository.findById("WH_1")).thenReturn(Optional.of(warehouse));
 
-                com.aionn.inventory.application.dto.common.PageResult<InventoryItem> page = new com.aionn.inventory.application.dto.common.PageResult<>(
-                                java.util.List.of(), 0, 10, 0, 0);
+                PageResult<InventoryItem> page = new PageResult<>(
+                                List.of(), 0, 10, 0, 0);
                 when(itemRepository.findByWarehouse(eq("WH_1"), any())).thenReturn(page);
 
                 service.listByWarehouse("owner-1", "WH_1",
-                                com.aionn.sharedkernel.domain.vo.OffsetPagination.of(0, 10));
+                                OffsetPagination.of(0, 10));
 
                 verify(itemRepository).findByWarehouse(eq("WH_1"), any());
         }

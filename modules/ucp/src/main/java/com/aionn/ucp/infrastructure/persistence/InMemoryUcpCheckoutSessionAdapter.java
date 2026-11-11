@@ -90,7 +90,7 @@ public class InMemoryUcpCheckoutSessionAdapter implements UcpCheckoutSessionPort
             if (session == null) {
                 return Optional.empty();
             }
-            if (session.isExpired(clock.instant())) {
+            if (session.isExpired(clock.instant()) && !isTerminal(session)) {
                 if (store.remove(id, session)) {
                     return Optional.empty();
                 }
@@ -121,15 +121,18 @@ public class InMemoryUcpCheckoutSessionAdapter implements UcpCheckoutSessionPort
         if (orderId == null || orderId.isBlank()) {
             return Optional.empty();
         }
-        Instant now = clock.instant();
         return store.values().stream()
-                .filter(session -> orderId.equals(session.orderId()) && !session.isExpired(now))
+                .filter(session -> orderId.equals(session.orderId()))
                 .findFirst();
     }
 
     public void evictExpired() {
         Instant now = clock.instant();
-        store.entrySet().removeIf(entry -> entry.getValue().isExpired(now));
+        store.entrySet().removeIf(entry -> entry.getValue().isExpired(now) && !isTerminal(entry.getValue()));
+    }
+
+    private static boolean isTerminal(UcpCheckoutSession session) {
+        return session.isCompleted() || session.isCanceled();
     }
 
     private void evictIfNecessary() {

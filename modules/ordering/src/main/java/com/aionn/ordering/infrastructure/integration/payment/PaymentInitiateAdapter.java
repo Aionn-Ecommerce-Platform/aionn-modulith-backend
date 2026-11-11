@@ -1,7 +1,7 @@
 package com.aionn.ordering.infrastructure.integration.payment;
 
 import com.aionn.ordering.application.port.out.PaymentGateway;
-import com.aionn.sharedkernel.integration.port.payment.PaymentInitiatePort;
+import com.aionn.contracts.port.payment.PaymentInitiatePort;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

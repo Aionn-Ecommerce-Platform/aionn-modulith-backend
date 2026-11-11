@@ -1,4 +1,8 @@
 ordering:
+  return:
+    window-days: ${ORDERING_RETURN_WINDOW_DAYS:7}
+    refund-max-attempts: ${ORDERING_RETURN_REFUND_MAX_ATTEMPTS:5}
+    refund-batch-size: ${ORDERING_RETURN_REFUND_BATCH_SIZE:100}
   reservation:
     ttl-seconds: ${ORDERING_RESERVATION_TTL_SECONDS:86400}
   auto-cancel:
@@ -6,3 +10,14 @@ ordering:
     timeout-minutes: ${ORDERING_AUTO_CANCEL_TIMEOUT_MIN:15}
     delay-ms: ${ORDERING_AUTO_CANCEL_DELAY_MS:60000}
     batch-size: ${ORDERING_AUTO_CANCEL_BATCH:100}
+  compensation:
+    max-attempts: ${ORDERING_COMPENSATION_MAX_ATTEMPTS:10}
+    batch-size: ${ORDERING_COMPENSATION_BATCH_SIZE:100}
+  analytics:
+    zone: ${ORDERING_ANALYTICS_ZONE:Asia/Ho_Chi_Minh}
+    merchant-default-range-days: ${ORDERING_ANALYTICS_MERCHANT_RANGE_DAYS:7}
+    platform-default-range-days: ${ORDERING_ANALYTICS_PLATFORM_RANGE_DAYS:30}
+    top-merchants-limit: ${ORDERING_ANALYTICS_TOP_MERCHANTS_LIMIT:10}
+    max-top-products-limit: ${ORDERING_ANALYTICS_MAX_TOP_PRODUCTS_LIMIT:20}
+  defaults:
+    currency: ${ORDERING_DEFAULTS_CURRENCY:VND}

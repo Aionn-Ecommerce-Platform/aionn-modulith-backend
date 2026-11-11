@@ -1,16 +1,18 @@
 package com.aionn.ordering.infrastructure.integration.order;
 
+import org.junit.jupiter.api.BeforeEach;
+
 import com.aionn.ordering.application.port.out.integration.OrderingIntegrationEventPublisherPort;
 import com.aionn.ordering.domain.model.Order;
 import com.aionn.ordering.domain.model.OrderItem;
 import com.aionn.ordering.domain.valueobject.ShippingAddress;
 import com.aionn.sharedkernel.domain.vo.Money;
-import com.aionn.sharedkernel.integration.event.ordering.OrderApprovedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.ordering.OrderCancelledIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.ordering.OrderCompletedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.ordering.OrderPlacedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.ordering.OrderShippedIntegrationEvent;
-import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.contracts.event.ordering.OrderApprovedIntegrationEvent;
+import com.aionn.contracts.event.ordering.OrderCancelledIntegrationEvent;
+import com.aionn.contracts.event.ordering.OrderCompletedIntegrationEvent;
+import com.aionn.contracts.event.ordering.OrderPlacedIntegrationEvent;
+import com.aionn.contracts.event.ordering.OrderShippedIntegrationEvent;
+import com.aionn.contracts.publisher.IntegrationEventPublisher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -32,7 +34,7 @@ class OrderingIntegrationEventPublisherTest {
 
     private OrderingIntegrationEventPublisher publisher;
 
-    @org.junit.jupiter.api.BeforeEach
+    @BeforeEach
     void setUp() {
         publisher = new OrderingIntegrationEventPublisher(
                 integrationEventPublisher, FIXED);

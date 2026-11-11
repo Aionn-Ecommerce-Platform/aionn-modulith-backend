@@ -12,7 +12,7 @@ import com.aionn.identity.infrastructure.persistence.repository.geography.Countr
 import com.aionn.identity.infrastructure.persistence.repository.geography.DistrictRepository;
 import com.aionn.identity.infrastructure.persistence.repository.geography.ProvinceRepository;
 import com.aionn.identity.infrastructure.persistence.repository.geography.WardRepository;
-import com.aionn.sharedkernel.infrastructure.cache.core.TwoTierCache;
+import com.aionn.platform.infrastructure.cache.core.TwoTierCache;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 

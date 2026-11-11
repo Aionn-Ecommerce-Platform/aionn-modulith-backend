@@ -8,9 +8,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SpringAgentPolicyTest {
 
     @Test
-    void mapsKeyExpiryYears() {
-        SpringAgentPolicy policy = new SpringAgentPolicy(new AgentProperties(3));
+    void mapsConfiguredValues() {
+        SpringAgentPolicy policy = new SpringAgentPolicy(new AgentProperties(3, 250));
 
         assertThat(policy.getKeyExpiryYears()).isEqualTo(3);
+        assertThat(policy.getAuditLogLimit()).isEqualTo(250);
     }
 }

@@ -1,5 +1,10 @@
 package com.aionn.identity.adapter.rest.controller;
 
+import com.aionn.identity.application.port.out.auth.AccessTokenClaims;
+import jakarta.servlet.http.Cookie;
+import java.io.File;
+import java.util.Optional;
+
 import com.aionn.identity.adapter.rest.dto.auth.request.LoginRequest;
 import com.aionn.identity.adapter.rest.dto.auth.request.SocialAuthRequest;
 import com.aionn.identity.adapter.rest.dto.auth.response.AuthSessionResponse;
@@ -22,16 +27,16 @@ import com.aionn.identity.application.port.in.auth.*;
 import com.aionn.identity.domain.exception.IdentityErrorCode;
 import com.aionn.identity.domain.exception.IdentityException;
 import com.aionn.identity.infrastructure.config.properties.AuthProperties;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
-import com.aionn.sharedkernel.adapter.web.support.clientip.ClientIpArgumentResolver;
-import com.aionn.sharedkernel.infrastructure.web.ClientIpResolver;
+import com.aionn.platform.web.response.ApiResponse;
+import com.aionn.platform.web.support.clientip.ClientIpArgumentResolver;
+import com.aionn.platform.infrastructure.web.ClientIpResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -312,8 +317,8 @@ class AuthControllerWebTest {
                 mockMvc.perform(post("/api/v1/auth/refresh")
                                 .contentType(APPLICATION_JSON)
                                 .header("X-Client-Type", "web")
-                                .cookie(new java.io.File("").getName().equals("")
-                                                ? new jakarta.servlet.http.Cookie("refresh_token",
+                                .cookie(new File("").getName().equals("")
+                                                ? new Cookie("refresh_token",
                                                                 "cookie-refresh-token")
                                                 : null))
                                 .andExpect(status().isOk());
@@ -372,8 +377,8 @@ class AuthControllerWebTest {
                 when(authTokenResponseHandler.logoutSuccess("Logout successful"))
                                 .thenReturn(ResponseEntity.ok(ApiResponse.success("Logout successful")));
                 when(accessTokenIssuerPort.parseClaims(any()))
-                                .thenReturn(java.util.Optional
-                                                .of(new com.aionn.identity.application.port.out.auth.AccessTokenClaims(
+                                .thenReturn(Optional
+                                                .of(new AccessTokenClaims(
                                                                 "user-123", "current-session", "jti-123",
                                                                 List.of("USER"))));
 

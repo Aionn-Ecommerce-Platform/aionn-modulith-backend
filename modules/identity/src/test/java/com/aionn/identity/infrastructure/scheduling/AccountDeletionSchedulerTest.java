@@ -68,6 +68,7 @@ class AccountDeletionSchedulerTest {
     }
 
     private AccountDeletionScheduler scheduler() {
+        when(processor.batchSize()).thenReturn(100);
         return new AccountDeletionScheduler(processor, refreshTokenStore, integrationEventPublisher);
     }
 }

@@ -17,6 +17,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.Instant;
 import com.aionn.promotion.domain.valueobject.VoucherScope;
+import com.aionn.promotion.domain.valueobject.VoucherType;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 
@@ -44,6 +45,10 @@ public class VoucherEntity {
 
     @Column(name = "merchant_id", length = 50)
     private String merchantId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", length = 20, nullable = false)
+    private VoucherType type;
 
     @Column(name = "discount_amount", precision = 18, scale = 2, nullable = false)
     private BigDecimal discountAmount;

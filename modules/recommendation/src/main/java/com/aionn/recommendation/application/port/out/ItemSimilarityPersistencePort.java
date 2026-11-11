@@ -1,5 +1,7 @@
 package com.aionn.recommendation.application.port.out;
 
+import java.time.Instant;
+
 import com.aionn.recommendation.domain.model.ItemSimilarity;
 
 import java.util.Collection;
@@ -19,5 +21,8 @@ public interface ItemSimilarityPersistencePort {
     void upsertAll(List<ItemSimilarity> similarities);
 
     /** Removes pairs not refreshed by the latest run, so stale co-occurrences do not linger. */
-    int deleteComputedBefore(java.time.Instant cutoff);
+    int deleteComputedBefore(Instant cutoff);
+
+    /** Drops every pair touching these products after their history was pruned. */
+    int deleteByProductIds(Collection<String> productIds);
 }

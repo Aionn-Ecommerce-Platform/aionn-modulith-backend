@@ -13,12 +13,17 @@
 CREATE TABLE recommendation_interactions (
     interaction_id   VARCHAR(50)  PRIMARY KEY,
     user_id          VARCHAR(50)  NOT NULL,
-    product_id       VARCHAR(50)  NOT NULL,
+    -- Nullable for SEARCH signals, which capture filter intent rather than a product.
+    product_id       VARCHAR(50),
     interaction_type VARCHAR(20)  NOT NULL,
     weight           NUMERIC(5,2) NOT NULL,
     occurred_at      TIMESTAMPTZ  NOT NULL,
     created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     source_event_id  VARCHAR(100),
+    -- Search-intent facets carried by SEARCH rows only.
+    category_ids     JSONB,
+    brand_id         VARCHAR(50),
+    keyword          VARCHAR(255),
     CONSTRAINT chk_rec_interaction_weight CHECK (weight > 0)
 );
 
@@ -43,8 +48,9 @@ CREATE INDEX idx_rec_interactions_occurred_at
 --
 -- Leading on source_event_id also serves a lookup by event alone - what a dead-letter replay already
 -- wrote - so no second index is needed.
+-- COALESCE keeps dedup working for SEARCH rows that carry no product_id.
 CREATE UNIQUE INDEX uq_rec_interactions_source_event
-    ON recommendation_interactions (source_event_id, user_id, product_id, interaction_type)
+    ON recommendation_interactions (source_event_id, user_id, COALESCE(product_id, ''), interaction_type)
     WHERE source_event_id IS NOT NULL;
 
 -- Aggregated affinity per user, rewritten by the profile refresh scheduler. Scores are normalised

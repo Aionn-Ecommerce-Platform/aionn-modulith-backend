@@ -35,8 +35,35 @@ class ShipmentDimensionsTest {
                 BigDecimal.TEN
         ))
         .isInstanceOf(ShippingException.class)
-        .hasMessageContaining("weight must be >= 0")
+        .hasMessageContaining("weight must be > 0")
         .extracting(ex -> ((ShippingException) ex).getErrorCode())
         .isEqualTo(ShippingErrorCode.INVALID_ARGUMENT.getCode());
+    }
+
+    @Test
+    void volumetricWeightUsesDomesticDivisorOf6000() {
+        // 30 × 20 × 40 = 24,000 cm³ -> 4,000 g at 6000 cm³/kg
+        ShipmentDimensions dims = new ShipmentDimensions(500, new BigDecimal("30"),
+                new BigDecimal("20"), new BigDecimal("40"));
+
+        assertThat(dims.volumetricWeightGram()).isEqualTo(4000);
+    }
+
+    @Test
+    void chargeableWeightIsTheGreaterOfActualAndVolumetric() {
+        ShipmentDimensions bulky = new ShipmentDimensions(500, new BigDecimal("30"),
+                new BigDecimal("20"), new BigDecimal("40"));
+        ShipmentDimensions heavy = new ShipmentDimensions(10000, new BigDecimal("10"),
+                new BigDecimal("10"), new BigDecimal("10"));
+
+        assertThat(bulky.chargeableWeightGram()).isEqualTo(4000);
+        assertThat(heavy.chargeableWeightGram()).isEqualTo(10000);
+    }
+
+    @Test
+    void volumetricWeightIsZeroWhenBoxIsIncomplete() {
+        assertThat(new ShipmentDimensions(500, null, null, null).volumetricWeightGram()).isZero();
+        assertThat(new ShipmentDimensions(500, BigDecimal.TEN, null, BigDecimal.TEN)
+                .volumetricWeightGram()).isZero();
     }
 }

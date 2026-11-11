@@ -2,7 +2,12 @@ package com.aionn.identity.infrastructure.security.web;
 
 import com.aionn.identity.application.port.out.auth.AccessTokenClaims;
 import com.aionn.identity.application.port.out.auth.AccessTokenIssuerPort;
+import com.aionn.identity.application.port.out.auth.AuthSessionPersistencePort;
 import com.aionn.identity.application.port.out.auth.TokenBlacklistPort;
+import com.aionn.identity.application.port.out.user.UserPersistencePort;
+import com.aionn.identity.domain.model.AuthSession;
+import com.aionn.identity.domain.model.IdentityUser;
+import com.aionn.identity.domain.valueobject.AuthSessionStatus;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,6 +22,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -31,6 +37,9 @@ public class BearerAuthenticationFilter extends OncePerRequestFilter {
 
     private final AccessTokenIssuerPort tokenIssuer;
     private final TokenBlacklistPort tokenBlacklist;
+    private final AuthSessionPersistencePort authSessionPersistencePort;
+    private final UserPersistencePort userPersistencePort;
+    private final Clock clock;
 
     @Override
     protected void doFilterInternal(
@@ -84,20 +93,47 @@ public class BearerAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
-        List<String> roles = claims.roles();
-        Collection<? extends GrantedAuthority> authorities;
-        if (!roles.isEmpty()) {
-            authorities = roles.stream()
-                    .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role))
-                    .toList();
-        } else {
-            authorities = List.of(new SimpleGrantedAuthority("ROLE_USER"));
+        if (!isSessionAndUserActive(claims)) {
+            filterChain.doFilter(request, response);
+            return;
         }
+
+        List<String> roles = claims.roles();
+        Collection<? extends GrantedAuthority> authorities = roles.isEmpty()
+                ? List.of()
+                : roles.stream()
+                        .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role))
+                        .toList();
 
         var authentication = new UsernamePasswordAuthenticationToken(claims.userId(), token, authorities);
         SecurityContextHolder.getContext().setAuthentication(authentication);
         request.setAttribute(SecurityRequestAttributeKeys.SESSION_ID, claims.sessionId());
 
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * A signed access token is not enough: the session may have been revoked (logout, logout-all,
+     * password reset, admin revoke) and the user may have been suspended/banned/deleted. Checking
+     * both makes revocation effective before the access token's natural expiry.
+     */
+    private boolean isSessionAndUserActive(AccessTokenClaims claims) {
+        try {
+            Optional<AuthSession> sessionOpt = authSessionPersistencePort.findById(claims.sessionId());
+            if (sessionOpt.isEmpty()) {
+                return false;
+            }
+            AuthSession session = sessionOpt.get();
+            if (!AuthSessionStatus.ACTIVE.equals(session.getStatus())
+                    || session.isExpired(clock)
+                    || !claims.userId().equals(session.getUserId())) {
+                return false;
+            }
+            Optional<IdentityUser> userOpt = userPersistencePort.findById(claims.userId());
+            return userOpt.isPresent() && userOpt.get().isActive();
+        } catch (RuntimeException ex) {
+            log.warn("Session/user lookup failed while authenticating; denying auth", ex);
+            return false;
+        }
     }
 }

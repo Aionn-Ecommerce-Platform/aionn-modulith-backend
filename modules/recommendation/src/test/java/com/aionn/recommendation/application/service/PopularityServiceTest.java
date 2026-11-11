@@ -117,6 +117,8 @@ class PopularityServiceTest {
     private void stubHalfLives() {
         lenient().when(weightPolicy.weightFor(InteractionType.VIEW))
                 .thenReturn(InteractionWeight.of(BigDecimal.ONE, Duration.ofDays(14)));
+        lenient().when(weightPolicy.weightFor(InteractionType.SEARCH))
+                .thenReturn(InteractionWeight.of(BigDecimal.valueOf(0.5), Duration.ofDays(7)));
         lenient().when(weightPolicy.weightFor(InteractionType.CART_ADD))
                 .thenReturn(InteractionWeight.of(BigDecimal.valueOf(4), Duration.ofDays(30)));
         lenient().when(weightPolicy.weightFor(InteractionType.PURCHASE))

@@ -7,12 +7,9 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 
 /**
- * Decides how much weight each signal carries for a given user.
- *
- * <p>Cold start is treated as a continuous adjustment rather than an error path. A user with two
- * interactions has enough to infer category and brand taste but nothing meaningful for collaborative
- * filtering - a cosine over two data points is noise. So the collaborative weight is redistributed
- * instead of the whole request falling back to a generic list.
+ * Decides how much weight each signal carries for a user. Cold start is a continuous adjustment, not
+ * an error path: with little data, collaborative weight is redistributed rather than falling back
+ * wholesale to a generic list.
  */
 @Component
 @RequiredArgsConstructor
@@ -46,10 +43,7 @@ public class ColdStartPolicy {
                 weights.contentWeight(), weights.popularityWeight());
     }
 
-    /**
-     * Normalised weights for the three candidate sources. Values are relative; the ranking policy
-     * divides by their sum, so they need not add to one.
-     */
+    /** Weights are relative; the ranking policy divides by their sum, so they need not add to one. */
     public record SignalWeights(
             BigDecimal collaborative, BigDecimal content, BigDecimal popularity) {
 
@@ -57,10 +51,7 @@ public class ColdStartPolicy {
             return new SignalWeights(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ONE);
         }
 
-        /**
-         * Cold-start slate that blends recent momentum with new arrivals. New arrivals ride the
-         * content slot because they are a catalog-derived signal, not a behavioural one.
-         */
+        /** New arrivals ride the content slot: they are catalog-derived, not behavioural. */
         public static SignalWeights trendingWithNewArrivals() {
             return new SignalWeights(BigDecimal.ZERO, BigDecimal.ONE, BigDecimal.ONE);
         }

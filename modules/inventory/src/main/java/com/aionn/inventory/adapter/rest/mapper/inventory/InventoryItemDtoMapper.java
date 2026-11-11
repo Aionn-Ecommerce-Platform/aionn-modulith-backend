@@ -8,6 +8,7 @@ import com.aionn.inventory.adapter.rest.dto.inventory.request.ManualAdjustmentRe
 import com.aionn.inventory.adapter.rest.dto.inventory.request.TrackBatchAndExpiryRequest;
 import com.aionn.inventory.adapter.rest.dto.inventory.response.InventoryItemResponse;
 import com.aionn.inventory.adapter.rest.dto.inventory.response.LowStockAlertResponse;
+import com.aionn.inventory.adapter.rest.dto.inventory.response.PublicInventoryItemResponse;
 import com.aionn.inventory.application.dto.analytics.result.LowStockAlertResult;
 import com.aionn.inventory.application.dto.inventory.command.AuditInventoryCommand;
 import com.aionn.inventory.application.dto.inventory.command.ConfigureSafetyStockCommand;
@@ -38,6 +39,10 @@ public interface InventoryItemDtoMapper {
     InventoryItemResponse toResponse(InventoryItemResult result);
 
     List<InventoryItemResponse> toResponses(List<InventoryItemResult> results);
+
+    PublicInventoryItemResponse toPublicResponse(InventoryItemResult result);
+
+    List<PublicInventoryItemResponse> toPublicResponses(List<InventoryItemResult> results);
 
     LowStockAlertResponse toLowStockResponse(LowStockAlertResult result);
 

@@ -2,9 +2,9 @@ package com.aionn.identity.infrastructure.config;
 
 import com.aionn.identity.application.dto.geography.result.GeographyResult;
 import com.aionn.identity.infrastructure.config.properties.GeographyCacheProperties;
-import com.aionn.sharedkernel.infrastructure.cache.core.TwoTierCache;
-import com.aionn.sharedkernel.infrastructure.cache.factory.TwoTierCacheFactory;
-import com.aionn.sharedkernel.infrastructure.cache.core.TwoTierCacheProperties;
+import com.aionn.platform.infrastructure.cache.core.TwoTierCache;
+import com.aionn.platform.infrastructure.cache.factory.TwoTierCacheFactory;
+import com.aionn.platform.infrastructure.cache.core.TwoTierCacheProperties;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

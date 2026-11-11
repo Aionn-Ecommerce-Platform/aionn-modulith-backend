@@ -22,7 +22,8 @@ public record ProductResult(
         long soldCount,
         boolean isBestSeller,
         Double rating,
-        Long reviewCount) {
+        Long reviewCount,
+        String slug) {
 
     public ProductResult(
             String productId,
@@ -39,7 +40,7 @@ public record ProductResult(
             Instant createdAt,
             Instant updatedAt) {
         this(productId, merchantId, name, brandId, categoryIds, imageList, tags,
-                attributes, variants, aiDescription, status, createdAt, updatedAt, 0L, false, 0.0, 0L);
+                attributes, variants, aiDescription, status, createdAt, updatedAt, 0L, false, 0.0, 0L, null);
     }
 
     public ProductResult(
@@ -58,7 +59,7 @@ public record ProductResult(
             Instant updatedAt,
             long soldCount) {
         this(productId, merchantId, name, brandId, categoryIds, imageList, tags,
-                attributes, variants, aiDescription, status, createdAt, updatedAt, soldCount, false, 0.0, 0L);
+                attributes, variants, aiDescription, status, createdAt, updatedAt, soldCount, false, 0.0, 0L, null);
     }
 
     public ProductResult(
@@ -78,9 +79,11 @@ public record ProductResult(
             long soldCount,
             boolean isBestSeller) {
         this(productId, merchantId, name, brandId, categoryIds, imageList, tags,
-                attributes, variants, aiDescription, status, createdAt, updatedAt, soldCount, isBestSeller, 0.0, 0L);
+                attributes, variants, aiDescription, status, createdAt, updatedAt, soldCount, isBestSeller, 0.0, 0L, null);
     }
 
-    public record Variant(String skuId, Map<String, String> attributeValues, BigDecimal price, String currency) {
+    public record Variant(String skuId, Map<String, String> attributeValues, BigDecimal price,
+            BigDecimal originalPrice, String currency, Integer weightGram, BigDecimal lengthCm,
+            BigDecimal widthCm, BigDecimal heightCm) {
     }
 }

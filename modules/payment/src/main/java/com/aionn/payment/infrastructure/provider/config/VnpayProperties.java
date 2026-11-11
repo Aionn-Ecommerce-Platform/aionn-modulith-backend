@@ -15,5 +15,6 @@ public record VnpayProperties(
         @DefaultValue("2.1.0") String version,
         @DefaultValue("pay") String command,
         @DefaultValue("VND") String currCode,
-        @DefaultValue("vn") String locale) {
+        @DefaultValue("vn") String locale,
+        @DefaultValue("15") int expireMinutes) {
 }

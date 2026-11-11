@@ -21,10 +21,8 @@ import org.mapstruct.Mapper;
 @Mapper(componentModel = "spring")
 public interface UserDtoMapper {
 
-    // Query
     GetMyProfileQuery toGetMyProfileQuery(String userId);
 
-    // Request -> Command
     UpdateDisplayNameCommand toUpdateDisplayNameCommand(String userId, ChangeDisplayNameRequest request);
 
     UpdateAvatarCommand toUpdateAvatarCommand(String userId, ChangeAvatarRequest request);
@@ -44,7 +42,6 @@ public interface UserDtoMapper {
 
     RequestDataExportCommand toRequestDataExportCommand(String userId);
 
-    // View -> Response
     UserProfileResponse toProfileResponse(UserProfileView view);
 
     DeletionRequestResponse toDeletionRequestResponse(DeletionRequestView view);

@@ -1,7 +1,7 @@
 package com.aionn.ordering.infrastructure.integration.listener;
 
 import com.aionn.ordering.application.service.OrderService;
-import com.aionn.sharedkernel.integration.event.payment.PaymentFailedIntegrationEvent;
+import com.aionn.contracts.event.payment.PaymentFailedIntegrationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;

@@ -1,6 +1,6 @@
 package com.aionn.config;
 
-import com.aionn.sharedkernel.infrastructure.outbox.OutboxDeadLetterService;
+import com.aionn.platform.infrastructure.outbox.OutboxDeadLetterService;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.access.prepost.PreAuthorize;
 

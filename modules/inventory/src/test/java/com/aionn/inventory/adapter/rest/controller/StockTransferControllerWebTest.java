@@ -18,7 +18,7 @@ import com.aionn.inventory.application.port.in.transfer.CancelTransferInputPort;
 import com.aionn.inventory.application.port.in.transfer.CompleteTransferInputPort;
 import com.aionn.inventory.application.port.in.transfer.GetTransferInputPort;
 import com.aionn.inventory.application.port.in.transfer.InitiateTransferInputPort;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -116,9 +116,10 @@ class StockTransferControllerWebTest {
 
     @Test
     void getReturnsTransfer() throws Exception {
-        when(getTransferInputPort.execute("T_1")).thenReturn(sample("T_1", "INITIATED"));
+        when(getTransferInputPort.execute("owner-1", "T_1")).thenReturn(sample("T_1", "INITIATED"));
 
-        mockMvc.perform(get("/api/v1/inventory/transfers/T_1"))
+        mockMvc.perform(get("/api/v1/inventory/transfers/T_1")
+                        .with(TestAuth.authUser("owner-1", "ROLE_MERCHANT")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.transferId").value("T_1"));
     }

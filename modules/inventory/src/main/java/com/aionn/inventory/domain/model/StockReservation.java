@@ -59,17 +59,18 @@ public class StockReservation extends AggregateRoot {
         StockReservation reservation = new StockReservation(reservationId, skuId, warehouseId, orderId, qty,
                 ReservationStatus.RESERVED, now, expiresAt, null);
         reservation.registerEvent(new StockReservationEvents.StockReserved(
-                reservationId, skuId, warehouseId, qty, expiresAt, now));
+                reservationId, skuId, warehouseId, orderId, qty, expiresAt, now));
         return reservation;
     }
 
     public static StockReservation failed(
-            String reservationId, String skuId, String warehouseId, int qty, String reason, Clock clock) {
+            String reservationId, String skuId, String warehouseId, String orderId,
+            int qty, String reason, Clock clock) {
         Instant now = clock.instant();
-        StockReservation reservation = new StockReservation(reservationId, skuId, warehouseId, null, qty,
+        StockReservation reservation = new StockReservation(reservationId, skuId, warehouseId, orderId, qty,
                 ReservationStatus.FAILED, now, null, now);
         reservation.registerEvent(new StockReservationEvents.StockReservationFailed(
-                reservationId, skuId, warehouseId, qty, reason, now));
+                reservationId, skuId, warehouseId, orderId, qty, reason, now));
         return reservation;
     }
 

@@ -32,6 +32,11 @@ public class PromotionCampaignPersistenceAdapter implements PromotionCampaignPer
     }
 
     @Override
+    public Optional<PromotionCampaign> findByIdForUpdate(String campaignId) {
+        return jpa.findByIdForUpdate(campaignId).map(mapper::toDomain);
+    }
+
+    @Override
     public List<PromotionCampaign> findToActivate(Instant now, int limit) {
         return jpa.findToActivate(now, PageRequest.of(0, Math.max(1, limit))).stream()
                 .map(mapper::toDomain)
@@ -48,6 +53,13 @@ public class PromotionCampaignPersistenceAdapter implements PromotionCampaignPer
     @Override
     public List<PromotionCampaign> listByStatus(String status, int limit) {
         return jpa.findByStatus(status, PageRequest.of(0, Math.max(1, limit))).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<PromotionCampaign> findRunning(Instant now, int limit) {
+        return jpa.findRunning(now, PageRequest.of(0, Math.max(1, limit))).stream()
                 .map(mapper::toDomain)
                 .toList();
     }

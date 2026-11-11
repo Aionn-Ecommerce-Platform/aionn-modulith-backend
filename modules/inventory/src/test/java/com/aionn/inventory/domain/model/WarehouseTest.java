@@ -80,6 +80,17 @@ class WarehouseTest {
     }
 
     @Test
+    void changeStatusCannotReactivateSuspendedWarehouse() {
+        Warehouse w = Warehouse.create(WH_ID, MERCHANT, "addr", 1, FIXED_CLOCK);
+        w.suspend("admin", "fraud", FIXED_CLOCK);
+
+        assertThatThrownBy(() -> w.changeStatus(WarehouseStatus.ACTIVE, FIXED_CLOCK))
+                .isInstanceOf(InventoryException.class)
+                .extracting("errorCode")
+                .isEqualTo(InventoryErrorCode.WAREHOUSE_INVALID_TRANSITION.getCode());
+    }
+
+    @Test
     void suspendThenLiftReturnsToActive() {
         Warehouse w = Warehouse.create(WH_ID, MERCHANT, "addr", 1, FIXED_CLOCK);
         w.suspend("admin", "fraud-check", FIXED_CLOCK);

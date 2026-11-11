@@ -100,7 +100,19 @@ CREATE TABLE product_variants (
     price            NUMERIC(18,2),
     currency         VARCHAR(3),
     original_price   NUMERIC(18,2),
-    CONSTRAINT fk_variants_product FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE
+    -- Parcel characteristics used for real carrier fee quotes. All four are
+    -- required before a product can be published (domain-level guard) so a
+    -- checkout never falls back to a guessed parcel.
+    weight_gram      INTEGER,
+    length_cm        NUMERIC(8,2),
+    width_cm         NUMERIC(8,2),
+    height_cm        NUMERIC(8,2),
+    CONSTRAINT fk_variants_product FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE,
+    CONSTRAINT chk_variant_weight_nonneg CHECK (weight_gram IS NULL OR weight_gram > 0),
+    CONSTRAINT chk_variant_dims_pos CHECK (
+        (length_cm IS NULL AND width_cm IS NULL AND height_cm IS NULL)
+        OR (length_cm > 0 AND width_cm > 0 AND height_cm > 0)
+    )
 );
 CREATE INDEX idx_variants_product ON product_variants(product_id);
 

@@ -1,5 +1,7 @@
 package com.aionn.ordering.infrastructure.persistence.adapter.returns;
 
+import java.time.Instant;
+
 import com.aionn.ordering.application.port.out.OrderReturnPersistencePort;
 import com.aionn.ordering.domain.model.OrderReturn;
 import com.aionn.ordering.domain.valueobject.ReturnStatus;
@@ -24,7 +26,7 @@ public class OrderReturnPersistenceAdapter implements OrderReturnPersistencePort
     public OrderReturn save(OrderReturn r) {
         OrderReturnEntity existing = jpa.findById(r.getReturnId()).orElse(null);
         OrderReturnEntity entity = mapper.toEntity(r, existing);
-        return mapper.toDomain(jpa.save(entity));
+        return mapper.toDomain(jpa.saveAndFlush(entity));
     }
 
     @Override
@@ -60,13 +62,19 @@ public class OrderReturnPersistenceAdapter implements OrderReturnPersistencePort
     }
 
     @Override
-    public List<String> findRefundRetryIds(java.time.Instant now, int maxAttempts, int limit) {
+    public boolean hasActiveReturn(String orderId) {
+        return jpa.existsByOrderIdAndStatusIn(orderId,
+                List.of("REQUESTED", "APPROVED", "ITEM_RECEIVED"));
+    }
+
+    @Override
+    public List<String> findRefundRetryIds(Instant now, int maxAttempts, int limit) {
         int safeLimit = Math.max(1, Math.min(limit, 200));
         return jpa.findRefundRetryIds(now, maxAttempts, PageRequest.of(0, safeLimit));
     }
 
     @Override
-    public List<ReturnAnalyticsRow> findReturnAnalyticsRows(java.time.Instant from, java.time.Instant to) {
+    public List<ReturnAnalyticsRow> findReturnAnalyticsRows(Instant from, Instant to) {
         return jpa.findReturnAnalyticsRows(from, to).stream()
                 .map(row -> new ReturnAnalyticsRow(
                         row.getStatus(),
@@ -77,7 +85,7 @@ public class OrderReturnPersistenceAdapter implements OrderReturnPersistencePort
     }
 
     @Override
-    public long countCompletedOrdersBetween(java.time.Instant from, java.time.Instant to) {
+    public long countCompletedOrdersBetween(Instant from, Instant to) {
         return jpa.countCompletedOrdersBetween(from, to);
     }
 }

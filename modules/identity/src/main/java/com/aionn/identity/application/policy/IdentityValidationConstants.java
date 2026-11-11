@@ -4,7 +4,16 @@ public final class IdentityValidationConstants {
 
     public static final int DISPLAY_NAME_MAX_LENGTH = 100;
     public static final int DISPLAY_NAME_MIN_LENGTH = 2;
+    public static final int USERNAME_MAX_LENGTH = 50;
+    public static final int USERNAME_MIN_LENGTH = 3;
+    public static final int SOCIAL_USERNAME_SUFFIX_LENGTH = 10;
     public static final int AVATAR_URL_MAX_LENGTH = 2048;
+
+    public static final int ADMIN_PAGE_MAX_SIZE = 100;
+    public static final int ADMIN_KYC_LIST_MAX_LIMIT = 200;
+
+    public static final int TOTP_CODE_LENGTH = 6;
+    public static final int BACKUP_CODE_LENGTH = 8;
 
     public static final int PASSWORD_MIN_LENGTH = 8;
     public static final int PASSWORD_MAX_LENGTH = 128;

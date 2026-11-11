@@ -5,7 +5,7 @@ import com.aionn.catalog.application.port.in.media.GenerateProductMediaUploadSig
 import com.aionn.catalog.application.port.out.media.ProductMediaUploadSignatureProviderPort;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

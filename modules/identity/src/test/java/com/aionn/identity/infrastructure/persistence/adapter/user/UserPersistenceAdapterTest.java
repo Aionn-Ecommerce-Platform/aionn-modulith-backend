@@ -1,5 +1,7 @@
 package com.aionn.identity.infrastructure.persistence.adapter.user;
 
+import com.aionn.sharedkernel.testing.fixture.TestClocks;
+
 import com.aionn.identity.domain.model.IdentityUser;
 import com.aionn.identity.infrastructure.persistence.entity.UserEntity;
 import com.aionn.identity.infrastructure.persistence.mapper.IdentityUserMapper;
@@ -31,7 +33,7 @@ class UserPersistenceAdapterTest {
     private UserPersistenceAdapter adapter;
 
     private IdentityUser user() {
-        return IdentityUser.createNew(USER_ID, "a@b.com", "+84912345678", "alice", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED);
+        return IdentityUser.createNew(USER_ID, "a@b.com", "+84912345678", "alice", TestClocks.FIXED);
     }
 
     @Test

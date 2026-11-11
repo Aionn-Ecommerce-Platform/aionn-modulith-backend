@@ -7,11 +7,9 @@ public interface PasswordResetPort {
 
     void savePasswordResetTokenHash(String tokenHash, String userId, Instant expiresAt);
 
-    Optional<PasswordResetTokenData> findPasswordResetTokenHash(String tokenHash);
-
     Optional<PasswordResetTokenData> consumePasswordResetTokenHash(String tokenHash);
 
-    void deletePasswordResetTokenHash(String tokenHash);
+    void deletePasswordResetTokensForUser(String userId);
 
     void updatePassword(String userId, String passwordHash);
 

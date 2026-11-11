@@ -58,6 +58,12 @@ public class KycProfile {
         this.providerCorrelationId = providerCorrelationId;
         this.reviewNote = moderationComment;
 
+        // Provider webhooks are at-least-once and may arrive out of order. Once a terminal
+        // decision is stored, duplicate or late events must not flip or regress it.
+        if (this.status == KycStatus.APPROVED || this.status == KycStatus.REJECTED) {
+            return;
+        }
+
         if (reviewAnswer == null) {
             if (this.status == KycStatus.DRAFT) {
                 transitionTo(KycStatus.SUBMITTED);

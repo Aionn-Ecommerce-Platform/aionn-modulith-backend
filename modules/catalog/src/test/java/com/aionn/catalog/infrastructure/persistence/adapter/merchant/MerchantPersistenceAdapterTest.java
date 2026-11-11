@@ -50,6 +50,22 @@ class MerchantPersistenceAdapterTest {
     }
 
     @Test
+    void savePreservesExistingVersionForOptimisticLocking() {
+        Merchant domain = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
+        MerchantEntity existing = new MerchantEntity();
+        existing.setVersion(7L);
+        MerchantEntity entity = new MerchantEntity();
+        when(jpa.findById("m-1")).thenReturn(Optional.of(existing));
+        when(mapper.toEntity(domain)).thenReturn(entity);
+        when(jpa.save(entity)).thenReturn(entity);
+        when(mapper.toDomain(entity)).thenReturn(domain);
+
+        adapter.save(domain);
+
+        assertThat(entity.getVersion()).isEqualTo(7L);
+    }
+
+    @Test
     void findByIdReturnsMappedDomainWhenPresent() {
         MerchantEntity entity = new MerchantEntity();
         Merchant domain = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);

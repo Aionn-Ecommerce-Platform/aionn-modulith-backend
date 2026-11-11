@@ -1,4 +1,13 @@
 promotion:
+  defaults:
+    currency: ${PROMOTION_DEFAULTS_CURRENCY:VND}
+
+  limits:
+    max-list-limit: ${PROMOTION_LIMITS_MAX_LIST_LIMIT:100}
+    max-registration-limit: ${PROMOTION_LIMITS_MAX_REGISTRATION_LIMIT:200}
+    max-active-flash-sale-limit: ${PROMOTION_LIMITS_MAX_ACTIVE_FLASH_SALE_LIMIT:50}
+    top-vouchers-limit: ${PROMOTION_LIMITS_TOP_VOUCHERS_LIMIT:10}
+
   flash-sale:
     enabled: ${PROMOTION_FLASH_SALE_ENABLED:true}
   scheduler:
@@ -7,6 +16,7 @@ promotion:
     batch-size: ${PROMOTION_SCHEDULER_BATCH:100}
 
   voucher:
+    reservation-ttl-seconds: ${PROMOTION_VOUCHER_RESERVATION_TTL_SECONDS:900}
     auto-release:
       enabled: ${PROMOTION_VOUCHER_AUTORELEASE_ENABLED:true}
       delay-ms: ${PROMOTION_VOUCHER_AUTORELEASE_DELAY_MS:30000}

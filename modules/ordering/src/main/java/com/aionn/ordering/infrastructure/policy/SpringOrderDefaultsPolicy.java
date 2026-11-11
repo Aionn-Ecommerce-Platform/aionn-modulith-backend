@@ -9,11 +9,13 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SpringOrderDefaultsPolicy implements OrderDefaultsPolicy {
 
+    private static final String FALLBACK_CURRENCY = "VND";
+
     private final OrderingDefaultsProperties properties;
 
     @Override
     public String defaultCurrency() {
         String currency = properties.currency();
-        return (currency == null || currency.isBlank()) ? "VND" : currency.trim().toUpperCase();
+        return (currency == null || currency.isBlank()) ? FALLBACK_CURRENCY : currency.trim().toUpperCase();
     }
 }

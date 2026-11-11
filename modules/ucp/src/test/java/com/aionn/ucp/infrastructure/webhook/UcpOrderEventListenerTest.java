@@ -1,12 +1,11 @@
 package com.aionn.ucp.infrastructure.webhook;
 
-import com.aionn.sharedkernel.integration.event.ordering.OrderApprovedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.ordering.OrderCancelledIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.ordering.OrderCompletedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.ordering.OrderPlacedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.ordering.OrderShippedIntegrationEvent;
+import com.aionn.contracts.event.ordering.OrderApprovedIntegrationEvent;
+import com.aionn.contracts.event.ordering.OrderCancelledIntegrationEvent;
+import com.aionn.contracts.event.ordering.OrderCompletedIntegrationEvent;
+import com.aionn.contracts.event.ordering.OrderPlacedIntegrationEvent;
+import com.aionn.contracts.event.ordering.OrderShippedIntegrationEvent;
 import com.aionn.ucp.application.port.out.UcpCheckoutSessionPort;
-import com.aionn.ucp.application.port.out.UcpWebhookDispatcherPort;
 import com.aionn.ucp.application.port.out.UcpWebhookEvent;
 import com.aionn.ucp.domain.model.UcpCheckoutSession;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,7 +37,7 @@ class UcpOrderEventListenerTest {
     private UcpCheckoutSessionPort sessionPort;
 
     @Mock
-    private UcpWebhookDispatcherPort webhookDispatcher;
+    private UcpWebhookDeliveryStore deliveryStore;
 
     private Clock clock;
     private UcpOrderEventListener listener;
@@ -47,7 +46,7 @@ class UcpOrderEventListenerTest {
     @BeforeEach
     void setUp() {
         clock = Clock.fixed(now, ZoneId.of("UTC"));
-        listener = new UcpOrderEventListener(sessionPort, webhookDispatcher, clock);
+        listener = new UcpOrderEventListener(sessionPort, deliveryStore, clock);
     }
 
     private UcpCheckoutSession sampleSession(String orderId, String webhookUrl) {
@@ -70,11 +69,12 @@ class UcpOrderEventListenerTest {
         listener.onOrderPlaced(event);
 
         ArgumentCaptor<UcpWebhookEvent> captor = ArgumentCaptor.forClass(UcpWebhookEvent.class);
-        verify(webhookDispatcher).dispatch(eq(webhookUrl), captor.capture());
+        verify(deliveryStore).enqueue(eq(webhookUrl), captor.capture());
 
         UcpWebhookEvent dispatched = captor.getValue();
         assertThat(dispatched.eventType()).isEqualTo("order.placed");
         assertThat(dispatched.orderId()).isEqualTo(orderId);
+        assertThat(dispatched.eventId()).isEqualTo("evt_1");
         assertThat(dispatched.occurredAt()).isEqualTo(now);
     }
 
@@ -90,7 +90,7 @@ class UcpOrderEventListenerTest {
         listener.onOrderShipped(event);
 
         ArgumentCaptor<UcpWebhookEvent> captor = ArgumentCaptor.forClass(UcpWebhookEvent.class);
-        verify(webhookDispatcher).dispatch(eq(webhookUrl), captor.capture());
+        verify(deliveryStore).enqueue(eq(webhookUrl), captor.capture());
 
         UcpWebhookEvent dispatched = captor.getValue();
         assertThat(dispatched.eventType()).isEqualTo("order.shipped");
@@ -108,7 +108,7 @@ class UcpOrderEventListenerTest {
         listener.onOrderCompleted(event);
 
         ArgumentCaptor<UcpWebhookEvent> captor = ArgumentCaptor.forClass(UcpWebhookEvent.class);
-        verify(webhookDispatcher).dispatch(eq(webhookUrl), captor.capture());
+        verify(deliveryStore).enqueue(eq(webhookUrl), captor.capture());
         assertThat(captor.getValue().eventType()).isEqualTo("order.completed");
     }
 
@@ -125,7 +125,7 @@ class UcpOrderEventListenerTest {
         listener.onOrderCancelled(event);
 
         ArgumentCaptor<UcpWebhookEvent> captor = ArgumentCaptor.forClass(UcpWebhookEvent.class);
-        verify(webhookDispatcher).dispatch(eq(webhookUrl), captor.capture());
+        verify(deliveryStore).enqueue(eq(webhookUrl), captor.capture());
         assertThat(captor.getValue().eventType()).isEqualTo("order.cancelled");
         assertThat(captor.getValue().data()).containsEntry("reason_code", "USER_CANCELLED");
     }
@@ -140,18 +140,18 @@ class UcpOrderEventListenerTest {
 
         listener.onOrderApproved(event);
 
-        verify(webhookDispatcher).dispatch(eq(webhookUrl), any(UcpWebhookEvent.class));
+        verify(deliveryStore).enqueue(eq(webhookUrl), any(UcpWebhookEvent.class));
     }
 
     @Test
     void skipsDispatchWhenNoSessionFoundOrNoWebhookUrl() {
         when(sessionPort.findByOrderId("ord_missing")).thenReturn(Optional.empty());
         listener.onOrderCompleted(new OrderCompletedIntegrationEvent("evt_x", "ord_missing", now));
-        verify(webhookDispatcher, never()).dispatch(any(), any());
+        verify(deliveryStore, never()).enqueue(any(), any());
 
         when(sessionPort.findByOrderId("ord_no_webhook"))
                 .thenReturn(Optional.of(sampleSession("ord_no_webhook", null)));
         listener.onOrderCompleted(new OrderCompletedIntegrationEvent("evt_y", "ord_no_webhook", now));
-        verify(webhookDispatcher, never()).dispatch(any(), any());
+        verify(deliveryStore, never()).enqueue(any(), any());
     }
 }

@@ -10,14 +10,8 @@ import java.time.Duration;
 import java.time.Instant;
 
 /**
- * Base weight of an interaction plus the half-life over which it fades.
- *
- * <p>
- * Decay is what separates this module from catalog's browsing history, which
- * treats a view from
- * six months ago exactly like one from this morning. A purchase stays
- * meaningful for months; a view
- * stops meaning much within a fortnight.
+ * Base weight of an interaction plus the half-life over which it fades. Decay distinguishes this
+ * module from catalog's browsing history: a purchase stays meaningful for months, a view for days.
  */
 public record InteractionWeight(BigDecimal baseWeight, Duration halfLife) {
 
@@ -38,16 +32,7 @@ public record InteractionWeight(BigDecimal baseWeight, Duration halfLife) {
         return new InteractionWeight(baseWeight, halfLife);
     }
 
-    /**
-     * Exponential decay: {@code base * 2^(-age / halfLife)}. The caller supplies
-     * {@code now} because
-     * domain code must not read the system clock.
-     *
-     * <p>
-     * Interactions dated in the future (clock skew between instances) keep their
-     * full weight
-     * rather than being amplified.
-     */
+    /** {@code base * 2^(-age / halfLife)}. Future-dated rows (clock skew) keep full weight, never more. */
     public BigDecimal decayedAt(Instant occurredAt, Instant now) {
         if (occurredAt == null || now == null) {
             throw new RecommendationException(RecommendationErrorCode.INTERACTION_INVALID,

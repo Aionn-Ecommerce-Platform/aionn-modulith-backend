@@ -12,6 +12,7 @@ public enum IdentityErrorCode {
 	PHONE_REQUIRED("IDENTITY_004", "Phone number is required"),
 	USERNAME_ALREADY_EXISTS("IDENTITY_005", "Username already exists in the system"),
 	PHONE_INVALID("IDENTITY_006", "Invalid phone number format"),
+	ACCOUNT_ALREADY_EXISTS("IDENTITY_007", "Account details are already in use"),
 
 	OTP_INVALID("IDENTITY_101", "Invalid OTP code"),
 	OTP_EXPIRED("IDENTITY_102", "OTP code has expired"),
@@ -44,6 +45,7 @@ public enum IdentityErrorCode {
 	ACCOUNT_DELETION_ALREADY_REQUESTED("IDENTITY_214", "Account deletion request already exists"),
 	ACCOUNT_DELETION_NOT_FOUND("IDENTITY_215", "Account deletion request not found"),
 	DATA_EXPORT_ALREADY_IN_PROGRESS("IDENTITY_216", "A data export request is already in progress"),
+	DATA_EXPORT_NOT_FOUND("IDENTITY_231", "Data export request not found"),
 	EMAIL_VERIFICATION_NOT_FOUND("IDENTITY_217", "Email verification challenge not found"),
 	EMAIL_CHANGE_NOT_FOUND("IDENTITY_218", "Email change challenge not found"),
 	PHONE_CHANGE_NOT_FOUND("IDENTITY_219", "Phone change challenge not found"),
@@ -54,9 +56,10 @@ public enum IdentityErrorCode {
 	ACCESS_DENIED("IDENTITY_225", "Access denied"),
 	INVALID_USER_STATUS("IDENTITY_226", "Invalid user status"),
 	INVALID_USER_ROLE("IDENTITY_227", "Invalid user role"),
-	INVALID_FEEDBACK_CATEGORY("IDENTITY_228", "Invalid feedback category"),
+	INVALID_FEEDBACK_CATEGORY("IDENTITY_232", "Invalid feedback category"),
 	FEEDBACK_CONTENT_REQUIRED("IDENTITY_229", "Feedback content is required"),
 	ACCOUNT_HAS_OPEN_ORDERS("IDENTITY_230", "Cannot request account deletion while there are active or pending orders"),
+	INVALID_FEEDBACK_STATUS_TRANSITION("IDENTITY_233", "Invalid feedback status transition"),
 
 	INVALID_ADDRESS_TYPE("IDENTITY_301", "Invalid address type. Supported types are HOME or OFFICE"),
 	ADDRESS_NOT_FOUND("IDENTITY_302", "Address not found"),
@@ -74,12 +77,15 @@ public enum IdentityErrorCode {
 	KYC_DOCUMENT_REQUIRED("IDENTITY_408", "KYC document is required"),
 	KYC_DOCUMENT_NOT_FOUND("IDENTITY_409", "KYC document not found"),
 	KYC_DOCUMENT_TYPE_INVALID("IDENTITY_410", "KYC document type is invalid"),
+	KYC_DOCUMENT_OWNERSHIP_INVALID("IDENTITY_411", "KYC document does not belong to this user"),
+	KYC_DOCUMENT_URL_INVALID("IDENTITY_412", "KYC document URL is invalid"),
 
 	AGENT_NOT_FOUND("IDENTITY_501", "Agent identity not found"),
 	AGENT_CREATION_NOT_ALLOWED("IDENTITY_502", "User is not allowed to create agents"),
 
 	CONSENT_NOT_FOUND("IDENTITY_601", "Consent record not found"),
 	INVALID_IP_ADDRESS("IDENTITY_602", "Invalid IP address format"),
+	CONSENT_VERSION_MISMATCH("IDENTITY_603", "Consent version is outdated"),
 
 	FEEDBACK_NOT_FOUND("IDENTITY_701", "Feedback not found");
 

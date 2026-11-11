@@ -12,7 +12,7 @@ import com.aionn.payment.adapter.rest.mapper.analytics.PaymentAnalyticsDtoMapper
 import com.aionn.payment.application.dto.analytics.query.GetAdminPaymentAnalyticsQuery;
 import com.aionn.payment.application.dto.analytics.result.AdminPaymentAnalyticsResult;
 import com.aionn.payment.application.port.in.analytics.GetAdminPaymentAnalyticsInputPort;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;

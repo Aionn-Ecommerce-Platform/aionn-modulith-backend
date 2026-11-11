@@ -1,5 +1,7 @@
 package com.aionn.identity.infrastructure.security.otp;
 
+import java.time.Clock;
+
 import com.aionn.identity.application.port.out.user.UserOtpChallengeStorePort.UserOtpChallenge;
 import com.aionn.identity.domain.valueobject.OtpChannel;
 import com.aionn.identity.domain.valueobject.UserOtpPurpose;
@@ -36,7 +38,7 @@ class RedisUserOtpChallengeStoreTest {
 
     @BeforeEach
     void setUp() {
-        store = new RedisUserOtpChallengeStore(redisTemplate, java.time.Clock.systemUTC());
+        store = new RedisUserOtpChallengeStore(redisTemplate, Clock.systemUTC());
     }
 
     @Test

@@ -1,47 +1,32 @@
-# Starts Aionn Modulith Backend with local env files loaded
+# Loads envs/*.env into the process environment, then starts the backend.
 $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$envFiles = @(
-    ".env",
-    "envs/common.env",
-    "envs/identity.env",
-    "envs/catalog.env",
-    "envs/inventory.env",
-    "envs/ordering.env",
-    "envs/payment.env",
-    "envs/shipping.env",
-    "envs/promotion.env",
-    "envs/notification.env",
-    "envs/chat.env",
-    "envs/recommendation.env"
-)
 
-foreach ($file in $envFiles) {
-    $fullPath = Join-Path $root $file
-    if (Test-Path -LiteralPath $fullPath) {
-        Get-Content $fullPath | ForEach-Object {
-            $line = $_.Trim()
-            if ($line -and -not $line.StartsWith("#")) {
-                if ($line -match "^([^=]+)=(.*)$") {
-                    $key = $Matches[1].Trim()
-                    $val = $Matches[2].Trim()
-                    if (($val.StartsWith('"') -and $val.EndsWith('"')) -or ($val.StartsWith("'") -and $val.EndsWith("'"))) {
-                        $val = $val.Substring(1, $val.Length - 2)
-                    }
-                    [System.Environment]::SetEnvironmentVariable($key, $val, [System.EnvironmentVariableTarget]::Process)
-                    Set-Item "env:$key" $val
-                }
-            }
+# common.env first so module files override the shared defaults.
+$envFiles = @("common", "identity", "catalog", "inventory", "ordering", "payment",
+    "shipping", "promotion", "notification", "chat", "recommendation")
+
+foreach ($name in $envFiles) {
+    $path = Join-Path $root "envs/$name.env"
+    if (-not (Test-Path -LiteralPath $path)) { continue }
+    foreach ($line in Get-Content -LiteralPath $path) {
+        $line = $line.Trim()
+        if (-not $line -or $line.StartsWith("#")) { continue }
+        $separator = $line.IndexOf("=")
+        if ($separator -le 0) { continue }
+        $key = $line.Substring(0, $separator).Trim()
+        $value = $line.Substring($separator + 1).Trim()
+        if ($value.Length -ge 2 -and
+            (($value[0] -eq '"' -and $value[-1] -eq '"') -or ($value[0] -eq "'" -and $value[-1] -eq "'"))) {
+            $value = $value.Substring(1, $value.Length - 2)
         }
+        [System.Environment]::SetEnvironmentVariable($key, $value, [System.EnvironmentVariableTarget]::Process)
     }
 }
 
-if (-not $env:SPRING_PROFILES_ACTIVE) {
-    $env:SPRING_PROFILES_ACTIVE = "dev"
-}
+if (-not $env:SPRING_PROFILES_ACTIVE) { $env:SPRING_PROFILES_ACTIVE = "dev" }
 
-Write-Host "Environment configured for Aionn Backend. Starting application..."
+Write-Host "Environment loaded from envs/*.env. Starting application..."
 Set-Location $root
 & .\gradlew.bat :app:bootRun
-

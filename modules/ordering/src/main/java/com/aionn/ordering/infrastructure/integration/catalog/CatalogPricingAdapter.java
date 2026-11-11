@@ -1,9 +1,9 @@
 package com.aionn.ordering.infrastructure.integration.catalog;
 
 import com.aionn.ordering.application.port.out.CatalogPricingGateway;
-import com.aionn.sharedkernel.integration.port.catalog.PricingQueryPort;
-import com.aionn.sharedkernel.integration.port.inventory.WarehouseSelectorPort;
-import com.aionn.sharedkernel.integration.port.promotion.FlashSaleQueryPort;
+import com.aionn.contracts.port.catalog.PricingQueryPort;
+import com.aionn.contracts.port.inventory.WarehouseSelectorPort;
+import com.aionn.contracts.port.promotion.FlashSaleQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -32,9 +32,14 @@ public class CatalogPricingAdapter implements CatalogPricingGateway {
             FlashSaleQueryPort.SkuFlashSale flashSale = flashSales.get(p.skuId());
             boolean usesFlashSale = flashSale != null && p.currency().equals(flashSale.currency());
             var effectivePrice = usesFlashSale ? flashSale.salePrice() : p.price();
+            PricingQueryPort.SkuPricing.Parcel pz = p.parcel();
+            SkuPricing.Parcel parcel = pz == null ? null
+                    : new SkuPricing.Parcel(pz.weightGram(), pz.lengthCm(), pz.widthCm(), pz.heightCm());
             result.put(entry.getKey(), new SkuPricing(
-                    p.skuId(), p.merchantId(), warehouseId, effectivePrice, p.currency(), p.active(), p.categoryIds(),
-                    usesFlashSale ? flashSale.registrationId() : null));
+                    p.skuId(), p.merchantId(), warehouseId, effectivePrice, p.currency(), p.active(),
+                    p.categoryIds(),
+                    usesFlashSale ? flashSale.registrationId() : null, parcel,
+                    p.productName(), p.imageUrl(), p.variantLabel()));
         }
         return result;
     }

@@ -20,6 +20,13 @@ public interface AccountDeletionRequestRepository extends JpaRepository<AccountD
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT r FROM AccountDeletionRequestEntity r "
+            + "WHERE r.user.userId = :userId AND r.status = :status")
+    Optional<AccountDeletionRequestEntity> findByUser_UserIdAndStatusForUpdate(
+            @Param("userId") String userId,
+            @Param("status") AccountDeletionStatus status);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM AccountDeletionRequestEntity r "
             + "WHERE r.status = :status AND r.scheduledDeletionAt <= :now "
             + "ORDER BY r.scheduledDeletionAt, r.deletionRequestId")
     List<AccountDeletionRequestEntity> findDueForUpdate(

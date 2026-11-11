@@ -5,4 +5,6 @@ public interface ChatConversationPolicy {
     int getListDefaultLimit();
 
     int getListMaxLimit();
+
+    int getUnreadScanLimit();
 }

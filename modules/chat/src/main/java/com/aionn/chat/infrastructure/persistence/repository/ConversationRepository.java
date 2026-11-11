@@ -15,9 +15,8 @@ public interface ConversationRepository extends JpaRepository<ConversationEntity
     @Query("""
             SELECT c FROM ConversationEntity c
               WHERE (c.buyerId = :userId OR (:merchantId IS NOT NULL AND c.merchantId = :merchantId))
-                AND (:includeArchived = TRUE OR c.archived = FALSE)
             ORDER BY c.lastMessageAt DESC NULLS LAST, c.createdAt DESC
             """)
-    List<ConversationEntity> findByParticipant(String userId, String merchantId, boolean includeArchived, Pageable pageable);
+    List<ConversationEntity> findByParticipant(String userId, String merchantId, Pageable pageable);
 }
 

@@ -1,5 +1,9 @@
 package com.aionn.payment.adapter.rest.controller;
 
+import com.aionn.payment.application.dto.payment.command.FailPaymentCommand;
+import com.aionn.payment.domain.exception.PaymentErrorCode;
+import com.aionn.payment.domain.exception.PaymentException;
+
 import com.aionn.payment.adapter.rest.mapper.payment.PaymentDtoMapper;
 import com.aionn.payment.adapter.rest.exception.PaymentExceptionHandler;
 import com.aionn.payment.application.dto.payment.command.ConfirmPaymentCommand;
@@ -105,7 +109,7 @@ class VnpayReturnControllerWebTest {
     void shouldHandleReturnInternalErrorOnFailure() throws Exception {
         PaymentProviderClient.WebhookEvent event = new PaymentProviderClient.WebhookEvent("payment.captured", "pay-1", "txn-1", BigDecimal.TEN, "VND", true, null, null);
         when(providerClient.verifyAndParse(any(), any())).thenReturn(event);
-        when(getPaymentInputPort.execute("pay-1")).thenThrow(new com.aionn.payment.domain.exception.PaymentException(com.aionn.payment.domain.exception.PaymentErrorCode.PAYMENT_NOT_FOUND));
+        when(getPaymentInputPort.execute("pay-1")).thenThrow(new PaymentException(PaymentErrorCode.PAYMENT_NOT_FOUND));
 
         mockMvc.perform(get("/api/v1/payments/vnpay/return?valid"))
                 .andExpect(status().isNotFound());
@@ -143,8 +147,8 @@ class VnpayReturnControllerWebTest {
                 "payment.failed", "pay-1", "txn-1", BigDecimal.TEN, "VND", false, "VNPAY_24", "Cancelled");
         when(providerClient.verifyAndParse(any(), any())).thenReturn(event);
 
-        com.aionn.payment.application.dto.payment.command.FailPaymentCommand failCommand =
-                new com.aionn.payment.application.dto.payment.command.FailPaymentCommand("pay-1", "VNPAY_ERROR", "Cancelled");
+        FailPaymentCommand failCommand =
+                new FailPaymentCommand("pay-1", "VNPAY_ERROR", "Cancelled");
         when(paymentDtoMapper.toFailCommand(event, "VNPAY_ERROR")).thenReturn(failCommand);
 
         mockMvc.perform(post("/api/v1/payments/vnpay/ipn?vnpay_params=1"))
@@ -181,8 +185,8 @@ class VnpayReturnControllerWebTest {
                 "pay-missing", "txn-1", BigDecimal.TEN, "VND");
         when(paymentDtoMapper.toConfirmCommand(event)).thenReturn(command);
         when(confirmPaymentInputPort.execute(command)).thenThrow(
-                new com.aionn.payment.domain.exception.PaymentException(
-                        com.aionn.payment.domain.exception.PaymentErrorCode.PAYMENT_NOT_FOUND));
+                new PaymentException(
+                        PaymentErrorCode.PAYMENT_NOT_FOUND));
 
         mockMvc.perform(post("/api/v1/payments/vnpay/ipn?vnpay_params=1"))
                 .andExpect(status().isOk())
@@ -198,8 +202,8 @@ class VnpayReturnControllerWebTest {
                 "pay-1", "txn-1", BigDecimal.TEN, "VND");
         when(paymentDtoMapper.toConfirmCommand(event)).thenReturn(command);
         when(confirmPaymentInputPort.execute(command)).thenThrow(
-                new com.aionn.payment.domain.exception.PaymentException(
-                        com.aionn.payment.domain.exception.PaymentErrorCode.PAYMENT_GATEWAY_ERROR));
+                new PaymentException(
+                        PaymentErrorCode.PAYMENT_GATEWAY_ERROR));
 
         mockMvc.perform(post("/api/v1/payments/vnpay/ipn?vnpay_params=1"))
                 .andExpect(status().isOk())

@@ -2,6 +2,7 @@ package com.aionn.shipping.adapter.rest.dto.rate.response;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 public record ShippingQuoteResponse(
         BigDecimal fee,
@@ -10,5 +11,13 @@ public record ShippingQuoteResponse(
         String source,
         String detail,
         Instant estimatedDeliveryAt,
-        Instant carrierOrderDate) {
+        Instant carrierOrderDate,
+        List<ShippingOptionResponse> options) {
+
+    public record ShippingOptionResponse(
+            String code,
+            String label,
+            BigDecimal fee,
+            Instant estimatedDeliveryAt) {
+    }
 }

@@ -1,8 +1,8 @@
 package com.aionn.config;
 
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
-import com.aionn.sharedkernel.infrastructure.outbox.OutboxDeadLetterService;
-import com.aionn.sharedkernel.infrastructure.outbox.OutboxDeadLetterService.DeadLetterPage;
+import com.aionn.platform.web.response.ApiResponse;
+import com.aionn.platform.infrastructure.outbox.OutboxDeadLetterService;
+import com.aionn.platform.infrastructure.outbox.OutboxDeadLetterService.DeadLetterPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;

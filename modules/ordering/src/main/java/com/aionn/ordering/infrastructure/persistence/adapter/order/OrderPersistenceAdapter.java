@@ -1,5 +1,7 @@
 package com.aionn.ordering.infrastructure.persistence.adapter.order;
 
+import java.math.BigDecimal;
+
 import com.aionn.ordering.application.port.out.OrderPersistencePort;
 import com.aionn.ordering.domain.model.Order;
 import com.aionn.ordering.infrastructure.persistence.entity.OrderEntity;
@@ -30,6 +32,11 @@ public class OrderPersistenceAdapter implements OrderPersistencePort {
     @Override
     public Optional<Order> findById(String orderId) {
         return jpa.findById(orderId).map(mapper::toDomain);
+    }
+
+    @Override
+    public Optional<Order> findByIdForUpdate(String orderId) {
+        return jpa.findByIdForUpdate(orderId).map(mapper::toDomain);
     }
 
     @Override
@@ -105,7 +112,7 @@ public class OrderPersistenceAdapter implements OrderPersistencePort {
                 .map(row -> new TopProductRow(
                         row.getSkuId(),
                         row.getUnitsSold() == null ? 0L : row.getUnitsSold(),
-                        row.getRevenue() == null ? java.math.BigDecimal.ZERO : row.getRevenue()))
+                        row.getRevenue() == null ? BigDecimal.ZERO : row.getRevenue()))
                 .toList();
     }
 

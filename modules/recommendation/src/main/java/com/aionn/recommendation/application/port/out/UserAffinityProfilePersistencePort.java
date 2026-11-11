@@ -3,6 +3,7 @@ package com.aionn.recommendation.application.port.out;
 import com.aionn.recommendation.domain.model.UserAffinityProfile;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.Optional;
 
 public interface UserAffinityProfilePersistencePort {
@@ -21,4 +22,7 @@ public interface UserAffinityProfilePersistencePort {
     void save(UserAffinityProfile profile, Instant refreshedAt);
 
     int deleteByUserId(String userId);
+
+    /** Drops profiles whose source interactions were pruned. */
+    int deleteByUserIds(Collection<String> userIds);
 }

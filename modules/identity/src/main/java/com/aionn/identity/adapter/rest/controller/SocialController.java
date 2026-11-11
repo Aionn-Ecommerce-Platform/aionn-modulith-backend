@@ -5,8 +5,8 @@ import com.aionn.identity.adapter.rest.dto.auth.response.SocialLinkResponse;
 import com.aionn.identity.adapter.rest.mapper.auth.AuthDtoMapper;
 import com.aionn.identity.application.port.in.auth.LinkSocialInputPort;
 import com.aionn.identity.application.port.in.auth.UnlinkSocialInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
-import com.aionn.sharedkernel.adapter.web.support.idempotency.IdempotentRequest;
+import com.aionn.platform.web.response.ApiResponse;
+import com.aionn.platform.web.support.idempotency.IdempotentRequest;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

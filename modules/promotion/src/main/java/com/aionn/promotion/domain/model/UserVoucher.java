@@ -92,9 +92,12 @@ public class UserVoucher extends AggregateRoot {
     }
 
     public void reserve(String orderId, Instant expiresAt, Clock clock) {
+        if (status == UserVoucherStatus.RESERVED) {
+            Guard.require(orderId.equals(reservedOrderId),
+                    () -> new PromotionException(PromotionErrorCode.USER_VOUCHER_RESERVED_BY_OTHER));
+            return;
+        }
         ensureTransition(UserVoucherStatus.RESERVED);
-        Guard.require(status != UserVoucherStatus.RESERVED || orderId.equals(reservedOrderId),
-                () -> new PromotionException(PromotionErrorCode.USER_VOUCHER_RESERVED_BY_OTHER));
         this.status = UserVoucherStatus.RESERVED;
         this.reservedOrderId = orderId;
         this.reservedAt = clock.instant();
@@ -118,6 +121,9 @@ public class UserVoucher extends AggregateRoot {
     }
 
     public void release(String reason, Clock clock) {
+        if (status == UserVoucherStatus.RELEASED) {
+            return;
+        }
         Guard.require(status == UserVoucherStatus.RESERVED || status == UserVoucherStatus.APPLIED,
                 () -> new PromotionException(PromotionErrorCode.USER_VOUCHER_INVALID_STATE,
                         "Only RESERVED or APPLIED vouchers can be released"));

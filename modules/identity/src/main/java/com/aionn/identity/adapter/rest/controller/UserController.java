@@ -1,5 +1,12 @@
 package com.aionn.identity.adapter.rest.controller;
 
+import com.aionn.identity.application.dto.user.command.ConfirmEmailChangeCommand;
+import com.aionn.identity.application.dto.user.command.ConfirmEmailVerificationCommand;
+import com.aionn.identity.application.dto.user.command.ConfirmPhoneChangeCommand;
+import com.aionn.identity.application.dto.user.command.RequestEmailChangeOtpCommand;
+import com.aionn.identity.application.dto.user.command.RequestEmailVerificationOtpCommand;
+import com.aionn.identity.application.dto.user.command.RequestPhoneChangeOtpCommand;
+
 import com.aionn.identity.adapter.rest.dto.user.request.ChangeAvatarRequest;
 import com.aionn.identity.adapter.rest.dto.user.request.ChangeDisplayNameRequest;
 import com.aionn.identity.adapter.rest.dto.user.request.ConfirmOtpRequest;
@@ -10,9 +17,10 @@ import com.aionn.identity.adapter.rest.dto.user.response.DataExportRequestRespon
 import com.aionn.identity.adapter.rest.dto.user.response.DeletionRequestResponse;
 import com.aionn.identity.adapter.rest.dto.user.response.UserProfileResponse;
 import com.aionn.identity.adapter.rest.mapper.user.UserDtoMapper;
+import com.aionn.identity.application.dto.user.view.DataExportPayloadView;
 import com.aionn.identity.application.port.in.user.*;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
-import com.aionn.sharedkernel.adapter.web.support.idempotency.IdempotentRequest;
+import com.aionn.platform.web.response.ApiResponse;
+import com.aionn.platform.web.support.idempotency.IdempotentRequest;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -39,6 +47,7 @@ public class UserController {
 	private final RequestAccountDeletionInputPort requestAccountDeletionInputPort;
 	private final CancelAccountDeletionInputPort cancelAccountDeletionInputPort;
 	private final RequestDataExportInputPort requestDataExportInputPort;
+	private final GetDataExportInputPort getDataExportInputPort;
 	private final UserDtoMapper userDtoMapper;
 
 	@GetMapping
@@ -53,7 +62,7 @@ public class UserController {
 	@Operation(summary = "Send verification email OTP", description = "Send OTP to the current primary email for verification")
 	public ResponseEntity<ApiResponse<Void>> sendVerifyEmailOtp(Authentication authentication) {
 		verifyEmailInputPort.requestOtp(
-				new com.aionn.identity.application.dto.user.command.RequestEmailVerificationOtpCommand(
+				new RequestEmailVerificationOtpCommand(
 						authentication.getName()));
 		return ResponseEntity.ok(ApiResponse.success("Verification OTP sent to email"));
 	}
@@ -64,7 +73,7 @@ public class UserController {
 			Authentication authentication,
 			@Valid @RequestBody ConfirmOtpRequest request) {
 		verifyEmailInputPort.confirm(
-				new com.aionn.identity.application.dto.user.command.ConfirmEmailVerificationCommand(
+				new ConfirmEmailVerificationCommand(
 						authentication.getName(), request.otpCode()));
 		return ResponseEntity.ok(ApiResponse.success("Email verified"));
 	}
@@ -97,7 +106,7 @@ public class UserController {
 			Authentication authentication,
 			@Valid @RequestBody RequestEmailChangeOtpRequest request) {
 		changeEmailInputPort.requestOtp(
-				new com.aionn.identity.application.dto.user.command.RequestEmailChangeOtpCommand(
+				new RequestEmailChangeOtpCommand(
 						authentication.getName(), request.newEmail()));
 		return ResponseEntity.ok(ApiResponse.success("OTP sent to new email"));
 	}
@@ -108,7 +117,7 @@ public class UserController {
 			Authentication authentication,
 			@Valid @RequestBody ConfirmOtpRequest request) {
 		var result = changeEmailInputPort.confirm(
-				new com.aionn.identity.application.dto.user.command.ConfirmEmailChangeCommand(
+				new ConfirmEmailChangeCommand(
 						authentication.getName(), request.otpCode()));
 		var response = userDtoMapper.toProfileResponse(result);
 		return ResponseEntity.ok(ApiResponse.success(response, "Email updated"));
@@ -120,7 +129,7 @@ public class UserController {
 			Authentication authentication,
 			@Valid @RequestBody RequestPhoneChangeOtpRequest request) {
 		changePhoneInputPort.requestOtp(
-				new com.aionn.identity.application.dto.user.command.RequestPhoneChangeOtpCommand(
+				new RequestPhoneChangeOtpCommand(
 						authentication.getName(), request.newPhone()));
 		return ResponseEntity.ok(ApiResponse.success("OTP sent to new phone"));
 	}
@@ -131,7 +140,7 @@ public class UserController {
 			Authentication authentication,
 			@Valid @RequestBody ConfirmOtpRequest request) {
 		var result = changePhoneInputPort.confirm(
-				new com.aionn.identity.application.dto.user.command.ConfirmPhoneChangeCommand(
+				new ConfirmPhoneChangeCommand(
 						authentication.getName(), request.otpCode()));
 		var response = userDtoMapper.toProfileResponse(result);
 		return ResponseEntity.ok(ApiResponse.success(response, "Phone updated"));
@@ -164,5 +173,14 @@ public class UserController {
 				.execute(userDtoMapper.toRequestDataExportCommand(authentication.getName()));
 		DataExportRequestResponse response = userDtoMapper.toDataExportResponse(result);
 		return ApiResponse.createdResponse("Data export requested", response);
+	}
+
+	@GetMapping("/data-exports/{requestId}")
+	@Operation(summary = "Get data export", description = "Download a completed personal data export for the authenticated user")
+	public ResponseEntity<ApiResponse<DataExportPayloadView>> getDataExport(
+			Authentication authentication,
+			@PathVariable String requestId) {
+		DataExportPayloadView result = getDataExportInputPort.execute(authentication.getName(), requestId);
+		return ResponseEntity.ok(ApiResponse.success(result, "Data export fetched"));
 	}
 }

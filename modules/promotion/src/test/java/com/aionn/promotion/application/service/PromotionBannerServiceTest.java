@@ -94,11 +94,11 @@ class PromotionBannerServiceTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         PromotionBanner saved = service.update(new BannerCommands.UpdateBanner(
-                "BAN_1", "Winter", null, null, null, 9));
+                "BAN_1", "Winter", null, null, null, 9, false));
 
         assertThat(saved.getTitle()).isEqualTo("Winter");
         assertThat(saved.getDisplayOrder()).isEqualTo(9);
-        assertThat(saved.isActive()).isTrue();
+        assertThat(saved.isActive()).isFalse();
         verify(bannerRepository).syncDisplayOrderSequence(9);
     }
 
@@ -107,7 +107,7 @@ class PromotionBannerServiceTest {
         when(bannerRepository.findById("nope")).thenReturn(Optional.empty());
 
         BannerCommands.UpdateBanner command = new BannerCommands.UpdateBanner(
-                "nope", "x", null, null, null, null);
+                "nope", "x", null, null, null, null, null);
 
         assertThatThrownBy(() -> service.update(command))
                 .isInstanceOf(PromotionException.class);

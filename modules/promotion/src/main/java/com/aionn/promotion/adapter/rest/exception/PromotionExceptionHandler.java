@@ -1,11 +1,13 @@
 package com.aionn.promotion.adapter.rest.exception;
 
 import com.aionn.promotion.domain.exception.PromotionException;
-import com.aionn.sharedkernel.adapter.web.exception.AbstractModuleExceptionHandler;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.exception.AbstractModuleExceptionHandler;
+import com.aionn.platform.web.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.dao.ConcurrencyFailureException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -39,5 +41,13 @@ public class PromotionExceptionHandler extends AbstractModuleExceptionHandler {
     public ResponseEntity<ApiResponse<Map<String, Object>>> handlePromotionException(PromotionException ex) {
         log.warn("Promotion exception [{}]: {}", ex.getErrorCode(), ex.getMessage());
         return handleException(ex);
+    }
+
+    @ExceptionHandler({ConcurrencyFailureException.class, DataIntegrityViolationException.class})
+    public ResponseEntity<ApiResponse<Map<String, Object>>> handleConflict(RuntimeException ex) {
+        log.warn("Promotion conflict: {}", ex.getMessage());
+        return buildError(HttpStatus.CONFLICT,
+                "The resource was modified concurrently or violates a constraint",
+                "CONFLICT", null);
     }
 }

@@ -8,5 +8,6 @@ public record UpdateBannerRequest(
         @Size(max = 500) String imageUrl,
         @Size(max = 255) String imagePublicId,
         @Size(max = 500) String linkUrl,
-        @PositiveOrZero Integer displayOrder) {
+        @PositiveOrZero Integer displayOrder,
+        Boolean active) {
 }

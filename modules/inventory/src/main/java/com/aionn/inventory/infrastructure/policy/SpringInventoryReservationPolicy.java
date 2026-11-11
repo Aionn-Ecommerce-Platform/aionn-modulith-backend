@@ -1,7 +1,7 @@
 package com.aionn.inventory.infrastructure.policy;
 
 import com.aionn.inventory.application.policy.InventoryReservationPolicy;
-import com.aionn.inventory.infrastructure.config.properties.InventoryReservationProperties;
+import com.aionn.inventory.infrastructure.config.InventoryProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -9,15 +9,10 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SpringInventoryReservationPolicy implements InventoryReservationPolicy {
 
-    private final InventoryReservationProperties properties;
+    private final InventoryProperties properties;
 
     @Override
     public int getDefaultTtlSeconds() {
-        return properties.defaultTtlSeconds();
-    }
-
-    @Override
-    public int getAutoReleaseBatchSize() {
-        return properties.autoReleaseBatchSize();
+        return properties.reservation().defaultTtlSeconds();
     }
 }

@@ -91,6 +91,9 @@ CREATE TABLE order_returns (
 CREATE INDEX idx_order_returns_order    ON order_returns(order_id);
 CREATE INDEX idx_order_returns_merchant ON order_returns(merchant_id);
 CREATE INDEX idx_order_returns_status   ON order_returns(status);
+CREATE UNIQUE INDEX uq_order_returns_active
+    ON order_returns(order_id)
+    WHERE status IN ('REQUESTED', 'APPROVED', 'ITEM_RECEIVED');
 CREATE INDEX idx_order_returns_refund_retry
     ON order_returns(refund_status, next_refund_attempt_at)
     WHERE refund_status IN ('PENDING', 'FAILED');

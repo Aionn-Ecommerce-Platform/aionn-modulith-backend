@@ -86,7 +86,7 @@ class ShipmentPersistenceAdapterTest {
 
     @Test
     void findActiveTrackingReturnsList() {
-        when(jpa.findByTrackingCodeIsNotNullAndStatusNotIn(any(), any(Pageable.class)))
+        when(jpa.findActiveTracking(any(), any(Pageable.class)))
                 .thenReturn(List.of(entity));
         when(mapper.toDomain(entity)).thenReturn(shipment);
 

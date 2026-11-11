@@ -3,9 +3,9 @@ package com.aionn.ordering.infrastructure.integration.listener;
 import com.aionn.ordering.application.dto.order.command.ConfirmDeliveredCommand;
 import com.aionn.ordering.application.service.OrderService;
 import com.aionn.ordering.domain.valueobject.OrderStatus;
-import com.aionn.sharedkernel.integration.event.payment.PaymentCapturedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.payment.PaymentFailedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.shipping.ShipmentDeliveredIntegrationEvent;
+import com.aionn.contracts.event.payment.PaymentCapturedIntegrationEvent;
+import com.aionn.contracts.event.payment.PaymentFailedIntegrationEvent;
+import com.aionn.contracts.event.shipping.ShipmentDeliveredIntegrationEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -42,18 +42,19 @@ class OrderingIntegrationListenersTest {
 
         paymentCapturedListener.on(event);
 
-        verify(orderService).approvePayment("ord-1", "pay-100");
+        verify(orderService).approvePayment("ord-1", "pay-100", BigDecimal.TEN, "VND");
     }
 
     @Test
     void paymentCapturedListenerPropagatesFailureForOutboxRetry() {
         PaymentCapturedIntegrationEvent event = new PaymentCapturedIntegrationEvent(
                 "ev-1", "pay-100", "ord-1", "tx-1", BigDecimal.TEN, "VND", Instant.now());
-        doThrow(new RuntimeException("Error")).when(orderService).approvePayment("ord-1", "pay-100");
+        doThrow(new RuntimeException("Error")).when(orderService)
+                .approvePayment("ord-1", "pay-100", BigDecimal.TEN, "VND");
 
         assertThrows(RuntimeException.class, () -> paymentCapturedListener.on(event));
 
-        verify(orderService).approvePayment("ord-1", "pay-100");
+        verify(orderService).approvePayment("ord-1", "pay-100", BigDecimal.TEN, "VND");
     }
 
     @Test

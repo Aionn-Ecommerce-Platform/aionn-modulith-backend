@@ -2,8 +2,8 @@ package com.aionn.payment.infrastructure.integration;
 
 import com.aionn.payment.application.service.SettlementService;
 import com.aionn.payment.infrastructure.integration.listener.SettlementEventListener;
-import com.aionn.sharedkernel.integration.event.ordering.OrderApprovedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.ordering.OrderCompletedIntegrationEvent;
+import com.aionn.contracts.event.ordering.OrderApprovedIntegrationEvent;
+import com.aionn.contracts.event.ordering.OrderCompletedIntegrationEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

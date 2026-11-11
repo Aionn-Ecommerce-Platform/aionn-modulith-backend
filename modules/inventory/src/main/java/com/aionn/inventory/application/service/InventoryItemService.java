@@ -8,10 +8,8 @@ import com.aionn.inventory.application.dto.inventory.command.InitializeStockComm
 import com.aionn.inventory.application.dto.inventory.command.ManualAdjustmentCommand;
 import com.aionn.inventory.application.dto.inventory.command.TrackBatchAndExpiryCommand;
 import com.aionn.inventory.application.port.out.InventoryItemPersistencePort;
-import com.aionn.inventory.application.port.out.SafetyStockNotifier;
 import com.aionn.inventory.application.port.out.StockAdjustmentPersistencePort;
 import com.aionn.inventory.application.port.out.WarehousePersistencePort;
-import com.aionn.inventory.domain.event.InventoryItemEvents;
 import com.aionn.inventory.domain.exception.InventoryErrorCode;
 import com.aionn.inventory.domain.exception.InventoryException;
 import com.aionn.inventory.domain.model.InventoryItem;
@@ -20,9 +18,8 @@ import com.aionn.inventory.domain.model.Warehouse;
 import com.aionn.inventory.domain.valueobject.InventoryItemKey;
 import com.aionn.inventory.application.dto.common.PageResult;
 import com.aionn.sharedkernel.application.port.EventPublisher;
-import com.aionn.sharedkernel.domain.model.EventEnvelope;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,7 +40,6 @@ public class InventoryItemService {
     private final WarehousePersistencePort warehouseRepository;
     private final StockAdjustmentPersistencePort adjustmentRepository;
     private final EventPublisher eventPublisher;
-    private final SafetyStockNotifier safetyStockNotifier;
     private final MerchantQueryPort merchantQueryPort;
     private final Clock clock;
 
@@ -69,11 +65,11 @@ public class InventoryItemService {
     }
 
     public InventoryItem configureSafetyStock(ConfigureSafetyStockCommand command) {
-        OwnerContext ctx = ownerContext(command.ownerId(), command.warehouseId());
+        ownerContext(command.ownerId(), command.warehouseId());
         InventoryItem item = lockedItem(command.skuId(), command.warehouseId());
         item.configureSafetyStock(command.safetyStockQty(), clock);
         InventoryItem saved = itemRepository.save(item);
-        publishWithSafetyHook(item.pullEvents(), ctx.merchantId());
+        eventPublisher.publish(item.pullEvents());
         return saved;
     }
 
@@ -87,7 +83,7 @@ public class InventoryItemService {
     }
 
     public InventoryItem manualAdjustment(ManualAdjustmentCommand command) {
-        OwnerContext ctx = ownerContext(command.ownerId(), command.warehouseId());
+        ownerContext(command.ownerId(), command.warehouseId());
         InventoryItem item = lockedItem(command.skuId(), command.warehouseId());
 
         int signedDelta = switch (command.type()) {
@@ -105,7 +101,7 @@ public class InventoryItemService {
         adjustmentRepository.save(adjustment);
         eventPublisher.publish(adjustment.pullEvents());
 
-        publishWithSafetyHook(item.pullEvents(), ctx.merchantId());
+        eventPublisher.publish(item.pullEvents());
         return saved;
     }
 
@@ -126,17 +122,24 @@ public class InventoryItemService {
     }
 
     public InventoryItem auditInventory(AuditInventoryCommand command) {
-        OwnerContext ctx = ownerContext(command.ownerId(), command.warehouseId());
+        ownerContext(command.ownerId(), command.warehouseId());
         InventoryItem item = lockedItem(command.skuId(), command.warehouseId());
         item.recordAudit(IdGenerator.ulid(), command.actualQty(), clock);
         item.emitBreachIfApplicable(clock);
         InventoryItem saved = itemRepository.save(item);
-        publishWithSafetyHook(item.pullEvents(), ctx.merchantId());
+        eventPublisher.publish(item.pullEvents());
         return saved;
     }
 
     @Transactional(readOnly = true)
     public InventoryItem get(String skuId, String warehouseId) {
+        return itemRepository.findByKey(new InventoryItemKey(skuId, warehouseId))
+                .orElseThrow(() -> new InventoryException(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND));
+    }
+
+    @Transactional(readOnly = true)
+    public InventoryItem getForOwner(String ownerId, String skuId, String warehouseId) {
+        ownerContext(ownerId, warehouseId);
         return itemRepository.findByKey(new InventoryItemKey(skuId, warehouseId))
                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND));
     }
@@ -171,16 +174,6 @@ public class InventoryItemService {
     private InventoryItem lockedItem(String skuId, String warehouseId) {
         return itemRepository.lockByKey(new InventoryItemKey(skuId, warehouseId))
                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND));
-    }
-
-    private void publishWithSafetyHook(List<EventEnvelope> events, String merchantId) {
-        eventPublisher.publish(events);
-        for (EventEnvelope envelope : events) {
-            if (envelope.payload() instanceof InventoryItemEvents.SafetyStockBreached breach) {
-                safetyStockNotifier.notifySafetyStockBreach(merchantId,
-                        breach.skuId(), breach.warehouseId(), breach.availableQty(), breach.safetyStockQty());
-            }
-        }
     }
 
     private record OwnerContext(String merchantId, Warehouse warehouse) {

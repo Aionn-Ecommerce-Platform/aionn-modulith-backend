@@ -13,11 +13,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * An ordered set of scored recommendations for one surface.
- *
- * <p>Deduplication happens here rather than in each candidate source: the same product legitimately
- * arrives from collaborative filtering, content matching and popularity at once, and the first
- * (highest-scoring) arrival should win along with its reason.
+ * Ordered, deduplicated recommendations for one surface. Dedup lives here because the same product
+ * legitimately arrives from several candidate sources; the highest-scoring arrival wins with its reason.
  */
 public record RecommendationSlate(RecommendationSurface surface, List<ScoredProduct> items) {
 
@@ -33,11 +30,7 @@ public record RecommendationSlate(RecommendationSurface surface, List<ScoredProd
         return new RecommendationSlate(surface, List.of());
     }
 
-    /**
-     * Sorts by score descending, drops duplicate products, then truncates. Ties break on product ID
-     * so a slate is stable across calls - an unstable order makes cached and uncached responses
-     * disagree for no reason.
-     */
+    /** Score descending, dedup, truncate. Ties break on product ID so cached/uncached order matches. */
     public static RecommendationSlate of(
             RecommendationSurface surface, List<ScoredProduct> candidates, int limit) {
         if (candidates == null || candidates.isEmpty() || limit <= 0) {

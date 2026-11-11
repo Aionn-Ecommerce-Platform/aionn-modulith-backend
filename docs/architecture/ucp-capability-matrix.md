@@ -14,7 +14,7 @@ The Universal Commerce Protocol (UCP) module (`modules/ucp`) acts as an **intero
 
 - **Discovery Endpoint:** `GET /.well-known/ucp`
 - **REST Base Path:** `/ucp/v1`
-- **Integration Boundary:** Calls application ports in `shared-kernel` (`CartOperationsPort`, `OrderPlacementPort`, `CatalogQueryPort`, `OrderSnapshotQueryPort`).
+- **Integration Boundary:** Calls application ports in `shared/contracts` (`CartOperationsPort`, `OrderPlacementPort`, `CatalogQueryPort`, `OrderSnapshotQueryPort`).
 - **Data Ownership:** Does not create duplicate commerce database tables. Checkout session state and external identity bindings are managed via dedicated adapter ports (`UcpCheckoutSessionPort`, `UcpIdentityLinkPort`).
 
 ---
@@ -55,7 +55,7 @@ The following extensions exist in UCP specifications but are not advertised by A
 - **Checkout:** Ephemeral session coordination (`UcpCheckoutSession`), incomplete session reuse, delegation to `OrderPlacementPort.placeHeadless(...)` for inventory reservation and payment processing.
 - **Catalog:** Filtered pagination, minor-unit price range queries, batch SKU lookup, variant availability mapping.
 - **Identity Linking:** External `platformId` + `platformSubject` composite key binding with active/revoked lifecycle.
-- **Order & Webhooks:** Canonical order snapshot lookup, asynchronous webhook dispatching upon order lifecycle events (`OrderPlaced`, `OrderShipped`, etc.) with SSRF protection.
+- **Order & Webhooks:** Canonical order snapshot lookup and durable webhook delivery for order lifecycle events (`OrderPlaced`, `OrderShipped`, etc.) with SSRF protection and exponential retry.
 - **Observability:** OpenAPI documentation group `"UCP"`, Micrometer metrics (`ucp.requests.total`, `ucp.requests.duration`, `ucp.webhooks.total`).
 
 ---

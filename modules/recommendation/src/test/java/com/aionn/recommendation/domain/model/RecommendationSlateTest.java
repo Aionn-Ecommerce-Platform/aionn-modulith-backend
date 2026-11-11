@@ -1,5 +1,7 @@
 package com.aionn.recommendation.domain.model;
 
+import java.math.BigDecimal;
+
 import com.aionn.recommendation.domain.valueobject.AffinityScore;
 import com.aionn.recommendation.domain.valueobject.RecommendationReason;
 import com.aionn.recommendation.domain.valueobject.RecommendationSurface;
@@ -37,7 +39,7 @@ class RecommendationSlateTest {
 
         assertThat(slate.items()).hasSize(1);
         assertThat(slate.items().getFirst().score().value())
-                .isEqualByComparingTo(java.math.BigDecimal.valueOf(0.8));
+                .isEqualByComparingTo(BigDecimal.valueOf(0.8));
         assertThat(slate.items().getFirst().reason())
                 .isEqualTo(RecommendationReason.SIMILAR_TO_VIEWED);
     }

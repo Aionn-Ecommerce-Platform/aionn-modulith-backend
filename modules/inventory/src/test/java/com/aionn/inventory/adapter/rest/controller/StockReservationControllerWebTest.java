@@ -17,7 +17,7 @@ import com.aionn.inventory.application.port.in.reservation.ReleaseReservationInp
 import com.aionn.inventory.application.port.in.reservation.ReserveStockInputPort;
 import com.aionn.inventory.domain.exception.InventoryErrorCode;
 import com.aionn.inventory.domain.exception.InventoryException;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

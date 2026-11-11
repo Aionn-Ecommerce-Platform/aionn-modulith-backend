@@ -1,12 +1,13 @@
 package com.aionn.chat.application.service;
 
 import com.aionn.chat.application.dto.autoreply.command.AutoReplyCommands;
+import com.aionn.chat.application.policy.ChatAutoReplyPolicy;
 import com.aionn.chat.application.port.out.MerchantAutoReplyPersistencePort;
 import com.aionn.chat.domain.exception.ChatErrorCode;
 import com.aionn.chat.domain.exception.ChatException;
 import com.aionn.chat.domain.model.MerchantAutoReply;
 import com.aionn.sharedkernel.application.port.EventPublisher;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -16,7 +17,9 @@ import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
 
@@ -24,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -40,9 +44,17 @@ class AutoReplyServiceTest {
     private EventPublisher eventPublisher;
     @Mock
     private MerchantQueryPort merchantQueryPort;
+    @Mock
+    private ChatAutoReplyPolicy autoReplyPolicy;
 
     private AutoReplyService service() {
-        return new AutoReplyService(repository, eventPublisher, merchantQueryPort, CLOCK);
+        lenient().when(autoReplyPolicy.workingHourStart()).thenReturn(LocalTime.of(8, 0));
+        lenient().when(autoReplyPolicy.workingHourEnd()).thenReturn(LocalTime.of(22, 0));
+        lenient().when(autoReplyPolicy.workingDays())
+                .thenReturn(EnumSet.range(DayOfWeek.MONDAY, DayOfWeek.SATURDAY));
+        lenient().when(autoReplyPolicy.timezone()).thenReturn(ZoneId.of("Asia/Ho_Chi_Minh"));
+        return new AutoReplyService(repository, eventPublisher, merchantQueryPort,
+                autoReplyPolicy, CLOCK);
     }
 
     private static AutoReplyCommands.UpdateAutoReply updateCommand(String ownerId, String merchantId) {

@@ -1,11 +1,21 @@
 package com.aionn.payment.adapter.rest.controller;
 
+import com.aionn.payment.adapter.rest.mapper.method.PaymentMethodDtoMapper;
+import com.aionn.payment.adapter.rest.mapper.preference.PaymentPreferenceDtoMapper;
+import com.aionn.payment.application.port.in.method.CompleteStripeSetupIntentInputPort;
+import com.aionn.payment.application.port.in.method.CreateStripeSetupIntentInputPort;
+import com.aionn.payment.application.port.in.method.ListPaymentMethodsInputPort;
+import com.aionn.payment.application.port.in.method.RemovePaymentMethodInputPort;
+import com.aionn.payment.application.port.in.method.VerifyPaymentMethodInputPort;
+import com.aionn.payment.application.port.in.preference.GetPaymentPreferenceInputPort;
+import com.aionn.payment.application.port.in.preference.UpdatePaymentPreferenceInputPort;
+import org.mockito.Mockito;
+
 import com.aionn.payment.adapter.rest.dto.method.response.PaymentMethodResponse;
 import com.aionn.payment.adapter.rest.dto.method.response.StripeSetupIntentResponse;
 import com.aionn.payment.adapter.rest.dto.preference.response.PaymentPreferenceResponse;
 import com.aionn.payment.adapter.rest.exception.PaymentExceptionHandler;
 import com.aionn.payment.adapter.rest.support.session.CurrentUserIdArgumentResolver;
-import com.aionn.payment.application.dto.method.command.LinkMethodCommand;
 import com.aionn.payment.application.dto.method.command.RemoveMethodCommand;
 import com.aionn.payment.application.dto.method.command.VerifyMethodCommand;
 import com.aionn.payment.application.dto.method.result.PaymentMethodResult;
@@ -17,7 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -43,32 +53,29 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PaymentMethodControllerWebTest {
 
     @Mock
-    private com.aionn.payment.application.port.in.method.LinkPaymentMethodInputPort linkPaymentMethodInputPort;
+    private VerifyPaymentMethodInputPort verifyPaymentMethodInputPort;
     @Mock
-    private com.aionn.payment.application.port.in.method.VerifyPaymentMethodInputPort verifyPaymentMethodInputPort;
+    private RemovePaymentMethodInputPort removePaymentMethodInputPort;
     @Mock
-    private com.aionn.payment.application.port.in.method.RemovePaymentMethodInputPort removePaymentMethodInputPort;
+    private ListPaymentMethodsInputPort listPaymentMethodsInputPort;
     @Mock
-    private com.aionn.payment.application.port.in.method.ListPaymentMethodsInputPort listPaymentMethodsInputPort;
+    private CreateStripeSetupIntentInputPort createStripeSetupIntentInputPort;
     @Mock
-    private com.aionn.payment.application.port.in.method.CreateStripeSetupIntentInputPort createStripeSetupIntentInputPort;
+    private CompleteStripeSetupIntentInputPort completeStripeSetupIntentInputPort;
     @Mock
-    private com.aionn.payment.application.port.in.method.CompleteStripeSetupIntentInputPort completeStripeSetupIntentInputPort;
+    private GetPaymentPreferenceInputPort getPaymentPreferenceInputPort;
     @Mock
-    private com.aionn.payment.application.port.in.preference.GetPaymentPreferenceInputPort getPaymentPreferenceInputPort;
+    private UpdatePaymentPreferenceInputPort updatePaymentPreferenceInputPort;
     @Mock
-    private com.aionn.payment.application.port.in.preference.UpdatePaymentPreferenceInputPort updatePaymentPreferenceInputPort;
+    private PaymentMethodDtoMapper paymentMethodDtoMapper;
     @Mock
-    private com.aionn.payment.adapter.rest.mapper.method.PaymentMethodDtoMapper paymentMethodDtoMapper;
-    @Mock
-    private com.aionn.payment.adapter.rest.mapper.preference.PaymentPreferenceDtoMapper paymentPreferenceDtoMapper;
+    private PaymentPreferenceDtoMapper paymentPreferenceDtoMapper;
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         PaymentMethodController controller = new PaymentMethodController(
-                linkPaymentMethodInputPort,
                 verifyPaymentMethodInputPort,
                 removePaymentMethodInputPort,
                 listPaymentMethodsInputPort,
@@ -113,52 +120,11 @@ class PaymentMethodControllerWebTest {
     }
 
     @Test
-    void linkMethodReturnsCreated() throws Exception {
-        PaymentMethodResult result = methodResult("m-1", "LINKED");
-        PaymentMethodResponse response = methodResponse("m-1", "LINKED");
-        LinkMethodCommand command = new LinkMethodCommand("user-123", "stripe", "4242", "tok-abc");
-        org.mockito.Mockito.lenient().when(paymentMethodDtoMapper.toCommand(any(), any())).thenReturn(command);
-
-        when(linkPaymentMethodInputPort.execute(any(LinkMethodCommand.class))).thenReturn(result);
-        when(paymentMethodDtoMapper.toResponse(result)).thenReturn(response);
-
-        mockMvc.perform(post("/api/v1/payments/methods")
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "provider": "stripe",
-                                  "last4Digits": "4242",
-                                  "gatewayToken": "tok-abc"
-                                }
-                                """))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.methodId").value("m-1"))
-                .andExpect(jsonPath("$.data.status").value("LINKED"));
-
-        verify(linkPaymentMethodInputPort).execute(any(LinkMethodCommand.class));
-    }
-
-    @Test
-    void linkRejectsBlankToken() throws Exception {
-        mockMvc.perform(post("/api/v1/payments/methods")
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "provider": "stripe",
-                                  "last4Digits": "4242",
-                                  "gatewayToken": ""
-                                }
-                                """))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.data.errorCode").value("VALIDATION_FAILED"));
-    }
-
-    @Test
     void verifyTransitionsToVerified() throws Exception {
         PaymentMethodResult result = methodResult("m-2", "VERIFIED");
         PaymentMethodResponse response = methodResponse("m-2", "VERIFIED");
         VerifyMethodCommand command = new VerifyMethodCommand("user-123", "m-2");
-        org.mockito.Mockito.lenient().when(paymentMethodDtoMapper.toVerifyCommand("user-123", "m-2")).thenReturn(command);
+        Mockito.lenient().when(paymentMethodDtoMapper.toVerifyCommand("user-123", "m-2")).thenReturn(command);
 
         when(verifyPaymentMethodInputPort.execute(any(VerifyMethodCommand.class))).thenReturn(result);
         when(paymentMethodDtoMapper.toResponse(result)).thenReturn(response);
@@ -174,7 +140,7 @@ class PaymentMethodControllerWebTest {
     @Test
     void removeReturnsNoContent() throws Exception {
         RemoveMethodCommand command = new RemoveMethodCommand("user-123", "m-3");
-        org.mockito.Mockito.lenient().when(paymentMethodDtoMapper.toRemoveCommand("user-123", "m-3")).thenReturn(command);
+        Mockito.lenient().when(paymentMethodDtoMapper.toRemoveCommand("user-123", "m-3")).thenReturn(command);
 
         mockMvc.perform(delete("/api/v1/payments/methods/m-3"))
                 .andExpect(status().isNoContent());

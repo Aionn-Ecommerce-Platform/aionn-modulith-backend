@@ -1,5 +1,8 @@
 package com.aionn.payment.application.service;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.List;
+
 import com.aionn.payment.application.dto.payment.command.ConfirmPaymentCommand;
 import com.aionn.payment.application.dto.payment.command.FailPaymentCommand;
 import com.aionn.payment.application.dto.payment.command.InitiatePaymentCommand;
@@ -22,7 +25,7 @@ import com.aionn.payment.domain.valueobject.PaymentGatewayKind;
 import com.aionn.payment.domain.valueobject.PaymentStatus;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.Money;
-import com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort;
+import com.aionn.contracts.port.ordering.OrderQueryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +34,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -162,6 +166,7 @@ class PaymentServiceTest {
                                 Money.of(new BigDecimal("75"), "VND"), PaymentGatewayKind.STRIPE, "idem-4",
                                 fixedInstant);
                 when(paymentRepository.findById("p4")).thenReturn(Optional.of(payment));
+                when(paymentRepository.lockById("p4")).thenReturn(Optional.of(payment));
                 when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
                 when(invoiceStorage.storeInvoiceUrl("p4", "o4")).thenReturn("https://invoice.example/p4.pdf");
 
@@ -181,7 +186,7 @@ class PaymentServiceTest {
                 Payment payment = Payment.initiate("p5", "o5", "u5", null,
                                 Money.of(new BigDecimal("75"), "VND"), PaymentGatewayKind.STRIPE, "idem-5",
                                 fixedInstant);
-                when(paymentRepository.findById("p5")).thenReturn(Optional.of(payment));
+                when(paymentRepository.lockById("p5")).thenReturn(Optional.of(payment));
                 when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 Payment result = service.fail(new FailPaymentCommand("p5", "E1", "boom"));
@@ -341,13 +346,15 @@ class PaymentServiceTest {
                 when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
                 when(providerRouter.route(PaymentGatewayKind.STRIPE)).thenReturn(providerClient);
                 when(orderQueryPort.findOrderSummary("o-cap")).thenReturn(Optional
-                                .of(new com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort.OrderSummary(
+                                .of(new OrderQueryPort.OrderSummary(
                                                 "o-cap", "u1", "m-cap", new BigDecimal("100"), "VND")));
                 when(providerClient.authorize(any())).thenReturn(new PaymentProviderClient.Authorization(
                                 true, "txn-cap", null, null, null));
-                when(paymentRepository.findById(any())).thenReturn(Optional.of(
-                                Payment.initiate("p-cap", "o-cap", "u1", null, Money.of(new BigDecimal("100"), "VND"),
-                                                PaymentGatewayKind.STRIPE, "idem-captured", fixedInstant)));
+                Payment capturedPayment = Payment.initiate("p-cap", "o-cap", "u1", null,
+                                Money.of(new BigDecimal("100"), "VND"),
+                                PaymentGatewayKind.STRIPE, "idem-captured", fixedInstant);
+                when(paymentRepository.findById(any())).thenReturn(Optional.of(capturedPayment));
+                when(paymentRepository.lockById(any())).thenReturn(Optional.of(capturedPayment));
 
                 PaymentInitiation result = service.initiate(new InitiatePaymentCommand(
                                 "o-cap", "u1", null, PaymentGatewayKind.STRIPE, "idem-captured"));
@@ -364,7 +371,7 @@ class PaymentServiceTest {
                                 orderSummary("o-dec", "u1", new BigDecimal("100"), "VND")));
                 when(providerClient.authorize(any())).thenReturn(new PaymentProviderClient.Authorization(
                                 false, null, null, "CARD_DECLINED", "insufficient funds"));
-                when(paymentRepository.findById(any())).thenReturn(Optional.of(
+                when(paymentRepository.lockById(any())).thenReturn(Optional.of(
                                 Payment.initiate("p-dec", "o-dec", "u1", null, Money.of(new BigDecimal("100"), "VND"),
                                                 PaymentGatewayKind.STRIPE, "idem-decline", fixedInstant)));
 
@@ -395,6 +402,7 @@ class PaymentServiceTest {
                                 Money.of(new BigDecimal("100"), "VND"), PaymentGatewayKind.STRIPE, "idem-fail-inv",
                                 fixedInstant);
                 when(paymentRepository.findById("p-fail-inv")).thenReturn(Optional.of(payment));
+                when(paymentRepository.lockById("p-fail-inv")).thenReturn(Optional.of(payment));
                 when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
                 when(invoiceStorage.storeInvoiceUrl(any(), any()))
                                 .thenThrow(new RuntimeException("Storage unavailable"));
@@ -413,7 +421,7 @@ class PaymentServiceTest {
                                 Money.of(new BigDecimal("100"), "VND"), PaymentGatewayKind.STRIPE, "idem-f",
                                 fixedInstant);
                 payment.markFailed("E1", "reason", fixedInstant);
-                when(paymentRepository.findById("p-f")).thenReturn(Optional.of(payment));
+                when(paymentRepository.lockById("p-f")).thenReturn(Optional.of(payment));
 
                 Payment result = service.fail(new FailPaymentCommand("p-f", "E1", "reason"));
 
@@ -426,9 +434,9 @@ class PaymentServiceTest {
                 Payment payment = Payment.initiate("p-list", "o-list", "u-list", null,
                                 Money.of(new BigDecimal("100"), "VND"), PaymentGatewayKind.STRIPE, "idem-list",
                                 fixedInstant);
-                when(paymentRepository.findByOrderId("o-list")).thenReturn(java.util.List.of(payment));
+                when(paymentRepository.findByOrderId("o-list")).thenReturn(List.of(payment));
 
-                java.util.List<Payment> results = service.listByOrderId("o-list");
+                List<Payment> results = service.listByOrderId("o-list");
 
                 assertThat(results).hasSize(1);
                 assertThat(results.get(0).getPaymentId()).isEqualTo("p-list");
@@ -493,19 +501,86 @@ class PaymentServiceTest {
         }
 
         @Test
-        void confirmRejectsGatewayCurrencyMismatchEvenForPaidReplay() {
-                Payment payment = Payment.initiate("p-paid-mismatch", "o1", "u1", null,
-                                Money.of(new BigDecimal("100"), "VND"), PaymentGatewayKind.VNPAY,
-                                "idem-paid-mismatch", fixedInstant);
-                payment.markPaid("txn-original", fixedInstant);
-                when(paymentRepository.findById("p-paid-mismatch")).thenReturn(Optional.of(payment));
+        void confirmDoesNotWriteLedgerWhenConcurrentWebhookAlreadyPaid() {
+                Payment pending = Payment.initiate("p-race", "o-race", "u-race", null,
+                                Money.of(new BigDecimal("100"), "VND"), PaymentGatewayKind.STRIPE,
+                                "idem-race-confirm", fixedInstant);
+                Payment paidByOtherWebhook = Payment.initiate("p-race", "o-race", "u-race", null,
+                                Money.of(new BigDecimal("100"), "VND"), PaymentGatewayKind.STRIPE,
+                                "idem-race-confirm", fixedInstant);
+                paidByOtherWebhook.markPaid("txn-race", fixedInstant);
+                when(paymentRepository.findById("p-race")).thenReturn(Optional.of(pending));
+                when(paymentRepository.lockById("p-race")).thenReturn(Optional.of(paidByOtherWebhook));
 
-                assertThatThrownBy(() -> service.confirm(new ConfirmPaymentCommand(
-                                "p-paid-mismatch", "txn-replay", new BigDecimal("100"), "USD")))
+                Payment result = service.confirm(new ConfirmPaymentCommand(
+                                "p-race", "txn-race", new BigDecimal("100"), "VND"));
+
+                assertThat(result.getStatus()).isEqualTo(PaymentStatus.PAID);
+                verify(paymentRepository, never()).save(any());
+                verify(ledgerRepository, never()).save(any());
+                verify(invoiceStorage, never()).storeInvoiceUrl(any(), any());
+                verify(integrationEventPublisher, never()).publishPaymentCaptured(
+                                any(), any(), any(), any(), any());
+        }
+
+        @Test
+        void failDoesNotOverwritePaymentAlreadyCapturedByAnotherWebhook() {
+                Payment paidByOtherWebhook = Payment.initiate("p-race-fail", "o-race-fail", "u-race", null,
+                                Money.of(new BigDecimal("100"), "VND"), PaymentGatewayKind.STRIPE,
+                                "idem-race-fail", fixedInstant);
+                paidByOtherWebhook.markPaid("txn-race", fixedInstant);
+                when(paymentRepository.lockById("p-race-fail")).thenReturn(Optional.of(paidByOtherWebhook));
+
+                Payment result = service.fail(new FailPaymentCommand("p-race-fail", "E1", "late failure"));
+
+                assertThat(result.getStatus()).isEqualTo(PaymentStatus.PAID);
+                verify(paymentRepository, never()).save(any());
+                verify(integrationEventPublisher, never()).publishPaymentFailed(
+                                any(), any(), any(), any());
+        }
+
+        @Test
+        void initiateReturnsWinningPaymentWhenConcurrentInsertHitsUniqueKey() {
+                Payment winner = Payment.initiate("p-win", "o-win", "u-win", null,
+                                Money.of(new BigDecimal("100"), "VND"), PaymentGatewayKind.STRIPE,
+                                "idem-race-init", fixedInstant);
+                AtomicBoolean firstLookup = new AtomicBoolean(true);
+                when(paymentRepository.findByIdempotencyKey("idem-race-init"))
+                                .thenAnswer(invocation -> firstLookup.getAndSet(false)
+                                                ? Optional.empty()
+                                                : Optional.of(winner));
+                when(orderQueryPort.findOrderSummary("o-win")).thenReturn(Optional.of(
+                                orderSummary("o-win", "u-win", new BigDecimal("100"), "VND")));
+                when(paymentRepository.save(any(Payment.class)))
+                                .thenThrow(new DataIntegrityViolationException("duplicate idempotency key"));
+
+                PaymentInitiation result = service.initiate(new InitiatePaymentCommand(
+                                "o-win", "u-win", null, PaymentGatewayKind.STRIPE, "idem-race-init"));
+
+                assertThat(result.payment().getPaymentId()).isEqualTo("p-win");
+                verify(providerRouter, never()).route(any());
+        }
+
+        @Test
+        void initiateRejectsConcurrentWinnerWithDifferentOrder() {
+                Payment otherOrder = Payment.initiate("p-other", "o-other", "u1", null,
+                                Money.of(new BigDecimal("100"), "VND"), PaymentGatewayKind.STRIPE,
+                                "idem-race-foreign", fixedInstant);
+                AtomicBoolean firstLookup = new AtomicBoolean(true);
+                when(paymentRepository.findByIdempotencyKey("idem-race-foreign"))
+                                .thenAnswer(invocation -> firstLookup.getAndSet(false)
+                                                ? Optional.empty()
+                                                : Optional.of(otherOrder));
+                when(orderQueryPort.findOrderSummary("o-race-foreign")).thenReturn(Optional.of(
+                                orderSummary("o-race-foreign", "u1", new BigDecimal("100"), "VND")));
+                when(paymentRepository.save(any(Payment.class)))
+                                .thenThrow(new DataIntegrityViolationException("duplicate idempotency key"));
+
+                assertThatThrownBy(() -> service.initiate(new InitiatePaymentCommand(
+                                "o-race-foreign", "u1", null, PaymentGatewayKind.STRIPE,
+                                "idem-race-foreign")))
                                 .isInstanceOf(PaymentException.class)
                                 .extracting("errorCode")
-                                .isEqualTo(PaymentErrorCode.INVALID_ARGUMENT.getCode());
-
-                verify(paymentRepository, never()).save(any());
+                                .isEqualTo(PaymentErrorCode.PAYMENT_DUPLICATE.getCode());
         }
 }

@@ -10,6 +10,7 @@ import com.aionn.identity.adapter.rest.mapper.registration.RegistrationDtoMapper
 import com.aionn.identity.adapter.rest.support.client.AuthClientTypeArgumentResolver;
 import com.aionn.identity.adapter.rest.support.client.ClientUserAgentArgumentResolver;
 import com.aionn.identity.adapter.rest.support.response.AuthTokenResponseHandler;
+import com.aionn.identity.adapter.rest.support.response.NoStoreResponseFactory;
 import com.aionn.identity.application.dto.registration.command.CompleteRegistrationCommand;
 import com.aionn.identity.application.dto.registration.command.InitiateRegistrationCommand;
 import com.aionn.identity.application.dto.registration.command.ResendRegistrationOtpCommand;
@@ -23,9 +24,9 @@ import com.aionn.identity.application.port.in.registration.InitiateRegistrationI
 import com.aionn.identity.application.port.in.registration.ResendRegistrationOtpInputPort;
 import com.aionn.identity.application.port.in.registration.VerifyRegistrationOtpInputPort;
 import com.aionn.identity.infrastructure.config.properties.AuthProperties;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
-import com.aionn.sharedkernel.adapter.web.support.clientip.ClientIpArgumentResolver;
-import com.aionn.sharedkernel.infrastructure.web.ClientIpResolver;
+import com.aionn.platform.web.response.ApiResponse;
+import com.aionn.platform.web.support.clientip.ClientIpArgumentResolver;
+import com.aionn.platform.infrastructure.web.ClientIpResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,7 +34,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -78,7 +79,8 @@ class RegistrationControllerWebTest {
                 completeRegistrationInputPort,
                 resendRegistrationOtpInputPort,
                 registrationDtoMapper,
-                authTokenResponseHandler);
+                authTokenResponseHandler,
+                new NoStoreResponseFactory());
 
         lenient().when(authProperties.clientTypeHeader()).thenReturn("X-Client-Type");
 
@@ -199,8 +201,8 @@ class RegistrationControllerWebTest {
         VerifyRegistrationOtpResult result = new VerifyRegistrationOtpResult("reg-1", "verify-token");
         VerifyOtpResponse response = new VerifyOtpResponse("reg-1", "verify-token");
 
-        when(registrationDtoMapper.toVerifyOtpCommand(eq("reg-1"), any(VerifyOtpRequest.class)))
-                .thenReturn(new VerifyRegistrationOtpCommand("reg-1", "123456"));
+        when(registrationDtoMapper.toVerifyOtpCommand(eq("reg-1"), any(VerifyOtpRequest.class), any()))
+                .thenReturn(new VerifyRegistrationOtpCommand("reg-1", "123456", "203.0.113.10"));
         when(verifyRegistrationOtpInputPort.execute(any())).thenReturn(result);
         when(registrationDtoMapper.toVerifyOtpResponse(result)).thenReturn(response);
 
@@ -216,7 +218,7 @@ class RegistrationControllerWebTest {
                 .andExpect(jsonPath("$.data.regId").value("reg-1"))
                 .andExpect(jsonPath("$.data.verificationToken").value("verify-token"));
 
-        verify(registrationDtoMapper).toVerifyOtpCommand("reg-1", new VerifyOtpRequest("123456"));
+        verify(registrationDtoMapper).toVerifyOtpCommand("reg-1", new VerifyOtpRequest("123456"), "127.0.0.1");
         verify(verifyRegistrationOtpInputPort).execute(any());
     }
 

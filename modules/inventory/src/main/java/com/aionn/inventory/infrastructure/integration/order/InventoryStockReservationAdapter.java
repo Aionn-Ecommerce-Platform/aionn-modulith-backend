@@ -6,7 +6,7 @@ import com.aionn.inventory.application.dto.reservation.command.ReserveStockComma
 import com.aionn.inventory.application.service.StockReservationService;
 import com.aionn.inventory.domain.model.StockReservation;
 import com.aionn.inventory.domain.valueobject.ReservationStatus;
-import com.aionn.sharedkernel.integration.port.inventory.InventoryStockReservationPort;
+import com.aionn.contracts.port.inventory.InventoryStockReservationPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

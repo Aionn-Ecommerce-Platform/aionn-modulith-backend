@@ -14,5 +14,7 @@ public interface StockReservationPersistencePort {
 
     Optional<StockReservation> lockForUpdate(String reservationId);
 
+    Optional<StockReservation> findActiveReservation(String orderId, String skuId, String warehouseId);
+
     List<StockReservation> findExpired(Instant now, int limit);
 }

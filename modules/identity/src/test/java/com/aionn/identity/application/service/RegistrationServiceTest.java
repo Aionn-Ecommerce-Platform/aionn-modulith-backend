@@ -1,5 +1,11 @@
 package com.aionn.identity.application.service;
 
+import com.aionn.identity.application.dto.registration.command.ResendRegistrationOtpCommand;
+import com.aionn.identity.application.dto.registration.command.VerifyRegistrationOtpCommand;
+import com.aionn.identity.application.dto.registration.result.ResendRegistrationOtpResult;
+import com.aionn.identity.application.dto.registration.result.VerifyRegistrationOtpResult;
+import java.time.ZoneOffset;
+
 import com.aionn.identity.application.dto.registration.command.CompleteRegistrationCommand;
 import com.aionn.identity.application.dto.registration.command.InitiateRegistrationCommand;
 import com.aionn.identity.application.dto.registration.result.CompleteRegistrationResult;
@@ -10,7 +16,7 @@ import com.aionn.identity.application.port.out.auth.AccessTokenIssuerPort;
 import com.aionn.identity.application.port.out.auth.AuthSessionPersistencePort;
 import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
 import com.aionn.identity.application.port.out.observability.IdentityMetricsPort;
-import com.aionn.sharedkernel.integration.port.notification.IdentityNotificationPort;
+import com.aionn.contracts.port.notification.IdentityNotificationPort;
 import com.aionn.identity.application.port.out.registration.CaptchaTokenValidatorPort;
 import com.aionn.identity.application.port.out.registration.RegistrationLockManagerPort;
 import com.aionn.identity.application.port.out.registration.RegistrationRateLimiterPort;
@@ -43,6 +49,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -99,7 +106,10 @@ class RegistrationServiceTest {
                                 registrationPolicy,
                                 registrationLockManager,
                                 identityMetrics,
-                                Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
+                                Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+                lenient().when(registrationSessionStore.tryAcquireVerifyAttempt(
+                                anyString(), any(Integer.class), any()))
+                                .thenReturn(true);
         }
 
         @Test
@@ -337,12 +347,12 @@ class RegistrationServiceTest {
                                 true, "verify-token", FIXED_NOW.minusSeconds(60));
                 when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
                 when(registrationResultMapper.toVerifyOtpResult("reg-1", "verify-token"))
-                                .thenReturn(new com.aionn.identity.application.dto.registration.result.VerifyRegistrationOtpResult(
+                                .thenReturn(new VerifyRegistrationOtpResult(
                                                 "reg-1", "verify-token"));
 
                 var result = registrationService.verifyOtp(
-                                new com.aionn.identity.application.dto.registration.command.VerifyRegistrationOtpCommand(
-                                                "reg-1", "123456"));
+                                new VerifyRegistrationOtpCommand(
+                                                "reg-1", "123456", "203.0.113.10"));
 
                 assertThat(result.verificationToken()).isEqualTo("verify-token");
                 verify(registrationSessionStore, never()).save(any());
@@ -354,10 +364,31 @@ class RegistrationServiceTest {
 
                 IdentityException ex = assertThrows(IdentityException.class,
                                 () -> registrationService.verifyOtp(
-                                                new com.aionn.identity.application.dto.registration.command.VerifyRegistrationOtpCommand(
-                                                                "missing", "123456")));
+                                                new VerifyRegistrationOtpCommand(
+                                                                "missing", "123456", "203.0.113.10")));
 
                 assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.REGISTRATION_SESSION_NOT_FOUND.getCode());
+        }
+
+        @Test
+        void verifyOtpRejectsWhenAttemptBudgetIsExhausted() {
+                RegistrationVerificationSession session = new RegistrationVerificationSession(
+                                "reg-1", "+84912345678", "123456", 0, 5,
+                                FIXED_NOW.minusSeconds(30),
+                                FIXED_NOW.plusSeconds(600),
+                                false, null, null);
+                when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
+                when(registrationSessionStore.tryAcquireVerifyAttempt(
+                                eq("reg-1"), eq(5), any())).thenReturn(false);
+
+                IdentityException ex = assertThrows(IdentityException.class,
+                                () -> registrationService.verifyOtp(
+                                                new VerifyRegistrationOtpCommand(
+                                                                "reg-1", "123456", "203.0.113.10")));
+
+                assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.OTP_ATTEMPTS_EXCEEDED.getCode());
+                assertThat(session.isVerified()).isFalse();
+                verify(registrationSessionStore, never()).save(any());
         }
 
         @Test
@@ -369,12 +400,12 @@ class RegistrationServiceTest {
                                 false, null, null);
                 when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
                 when(registrationResultMapper.toVerifyOtpResult(eq("reg-1"), anyString()))
-                                .thenAnswer(inv -> new com.aionn.identity.application.dto.registration.result.VerifyRegistrationOtpResult(
+                                .thenAnswer(inv -> new VerifyRegistrationOtpResult(
                                                 inv.getArgument(0), inv.getArgument(1)));
 
                 var result = registrationService.verifyOtp(
-                                new com.aionn.identity.application.dto.registration.command.VerifyRegistrationOtpCommand(
-                                                "reg-1", "123456"));
+                                new VerifyRegistrationOtpCommand(
+                                                "reg-1", "123456", "203.0.113.10"));
 
                 assertThat(session.isVerified()).isTrue();
                 assertThat(result.verificationToken()).isNotNull();
@@ -387,7 +418,7 @@ class RegistrationServiceTest {
 
                 assertThrows(IdentityException.class,
                                 () -> registrationService.resendOtp(
-                                                new com.aionn.identity.application.dto.registration.command.ResendRegistrationOtpCommand(
+                                                new ResendRegistrationOtpCommand(
                                                                 "missing", "203.0.113.10")));
         }
 
@@ -403,11 +434,11 @@ class RegistrationServiceTest {
                                 false, null, null);
                 when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
                 when(registrationResultMapper.toResendOtpResult(any(RegistrationVerificationSession.class), any()))
-                                .thenReturn(new com.aionn.identity.application.dto.registration.result.ResendRegistrationOtpResult(
+                                .thenReturn(new ResendRegistrationOtpResult(
                                                 "reg-1", session.getResendAvailableAt(), session.getExpiredAt(), null));
 
                 registrationService.resendOtp(
-                                new com.aionn.identity.application.dto.registration.command.ResendRegistrationOtpCommand(
+                                new ResendRegistrationOtpCommand(
                                                 "reg-1", "203.0.113.10"));
 
                 verify(registrationSessionStore).save(session);

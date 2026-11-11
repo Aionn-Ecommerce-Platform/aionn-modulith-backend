@@ -5,7 +5,7 @@ import com.aionn.payment.domain.exception.PaymentErrorCode;
 import com.aionn.payment.domain.exception.PaymentException;
 import com.aionn.payment.domain.valueobject.PaymentGatewayKind;
 import com.aionn.payment.infrastructure.provider.config.StripeProperties;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import com.stripe.Stripe;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
@@ -19,6 +19,7 @@ import com.stripe.param.RefundCreateParams;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -28,6 +29,7 @@ import java.util.Set;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "payment.provider.stripe", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class StripePaymentProviderClient implements PaymentProviderClient {
 
     private static final Set<String> ZERO_DECIMAL_CURRENCIES = Set.of(
@@ -48,8 +50,8 @@ public class StripePaymentProviderClient implements PaymentProviderClient {
     @PostConstruct
     void init() {
         if (properties.apiKey() == null || properties.apiKey().isBlank()) {
-            throw new IllegalStateException(
-                    "Stripe API key is missing. Set STRIPE_API_KEY in the environment.");
+            log.warn("Stripe API key is missing; Stripe payments will fail until STRIPE_API_KEY is set.");
+            return;
         }
         configureStripeApiKey(properties.apiKey());
     }
@@ -95,6 +97,7 @@ public class StripePaymentProviderClient implements PaymentProviderClient {
                 params.setReturnUrl(request.returnUrl());
             }
             RequestOptions options = RequestOptions.builder()
+                    .setApiKey(properties.apiKey())
                     .setIdempotencyKey(request.idempotencyKey())
                     .build();
 
@@ -139,6 +142,7 @@ public class StripePaymentProviderClient implements PaymentProviderClient {
                     .putMetadata("reason", request.reason() == null ? "" : request.reason())
                     .build();
             RequestOptions options = RequestOptions.builder()
+                    .setApiKey(properties.apiKey())
                     .setIdempotencyKey(request.idempotencyKey())
                     .build();
             com.stripe.model.Refund stripeRefund = com.stripe.model.Refund.create(params, options);
@@ -157,7 +161,8 @@ public class StripePaymentProviderClient implements PaymentProviderClient {
     @Override
     public String generateInvoice(String paymentId, String orderId, BigDecimal amount, String currency) {
         try {
-            PaymentIntent intent = PaymentIntent.retrieve(paymentId);
+            PaymentIntent intent = PaymentIntent.retrieve(paymentId,
+                    RequestOptions.builder().setApiKey(properties.apiKey()).build());
             if (intent.getInvoice() != null) {
                 Invoice invoice = Invoice.retrieve(intent.getInvoice());
                 if (invoice.getHostedInvoiceUrl() != null) {

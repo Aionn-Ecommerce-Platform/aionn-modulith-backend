@@ -1,6 +1,6 @@
 package com.aionn.chat.infrastructure.realtime;
 
-import com.aionn.sharedkernel.integration.port.identity.AccessTokenVerifierPort;
+import com.aionn.contracts.port.identity.AccessTokenVerifierPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

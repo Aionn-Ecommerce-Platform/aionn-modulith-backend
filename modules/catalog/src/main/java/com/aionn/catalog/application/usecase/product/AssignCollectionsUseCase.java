@@ -4,6 +4,7 @@ import com.aionn.catalog.application.dto.product.command.AssignCollectionsComman
 import com.aionn.catalog.application.dto.product.result.ProductResult;
 import com.aionn.catalog.application.mapper.ProductResultMapper;
 import com.aionn.catalog.application.port.in.product.AssignCollectionsInputPort;
+import com.aionn.catalog.application.service.CollectionService;
 import com.aionn.catalog.application.service.ProductService;
 import com.aionn.catalog.domain.model.Product;
 import lombok.RequiredArgsConstructor;
@@ -14,11 +15,13 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AssignCollectionsUseCase implements AssignCollectionsInputPort {
     private final ProductService productService;
+    private final CollectionService collectionService;
     private final ProductResultMapper productResultMapper;
 
     @Override
     @Transactional
     public ProductResult execute(AssignCollectionsCommand command) {
+        collectionService.requireExisting(command.collectionIds());
         Product product = productService.assignCollections(command);
         return productResultMapper.toResult(product);
     }

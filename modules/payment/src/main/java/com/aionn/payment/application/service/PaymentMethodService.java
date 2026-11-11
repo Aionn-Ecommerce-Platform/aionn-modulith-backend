@@ -1,6 +1,7 @@
 package com.aionn.payment.application.service;
 
-import com.aionn.payment.application.dto.method.command.LinkMethodCommand;
+import java.util.function.Supplier;
+
 import com.aionn.payment.application.dto.method.command.RemoveMethodCommand;
 import com.aionn.payment.application.dto.method.command.VerifyMethodCommand;
 import com.aionn.payment.application.dto.method.result.StripeSetupIntentResult;
@@ -28,19 +29,6 @@ public class PaymentMethodService {
     private final StripeSetupIntentPort stripeSetupIntentPort;
     private final Clock clock;
     private final TransactionTemplate transactionTemplate;
-
-    public PaymentMethod link(LinkMethodCommand command) {
-        return inTransaction(() -> linkInTransaction(command));
-    }
-
-    private PaymentMethod linkInTransaction(LinkMethodCommand command) {
-        Instant now = clock.instant();
-        PaymentMethod method = PaymentMethod.link(IdGenerator.ulid(),
-                command.userId(), command.provider(), command.last4Digits(), command.gatewayToken(), now);
-        PaymentMethod saved = repository.save(method);
-        eventPublisher.publish(method.pullEvents());
-        return saved;
-    }
 
     public PaymentMethod verify(VerifyMethodCommand command) {
         return inTransaction(() -> verifyInTransaction(command));
@@ -99,7 +87,7 @@ public class PaymentMethodService {
         return saved;
     }
 
-    private <T> T inTransaction(java.util.function.Supplier<T> work) {
+    private <T> T inTransaction(Supplier<T> work) {
         return transactionTemplate.execute(status -> work.get());
     }
 

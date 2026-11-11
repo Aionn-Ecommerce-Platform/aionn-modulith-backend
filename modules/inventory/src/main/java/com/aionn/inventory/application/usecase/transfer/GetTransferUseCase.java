@@ -17,7 +17,7 @@ public class GetTransferUseCase implements GetTransferInputPort {
 
     @Override
     @Transactional(readOnly = true)
-    public StockTransferResult execute(String transferId) {
-        return stockTransferResultMapper.toResult(stockTransferService.get(transferId));
+    public StockTransferResult execute(String ownerId, String transferId) {
+        return stockTransferResultMapper.toResult(stockTransferService.getOwned(ownerId, transferId));
     }
 }

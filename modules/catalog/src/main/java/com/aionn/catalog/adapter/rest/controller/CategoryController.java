@@ -16,7 +16,7 @@ import com.aionn.catalog.application.port.in.category.ListCategoryChildrenInputP
 import com.aionn.catalog.application.port.in.category.ListCategoryRootsInputPort;
 import com.aionn.catalog.application.port.in.category.MoveCategoryInputPort;
 import com.aionn.catalog.application.port.in.category.UpdateCategoryInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

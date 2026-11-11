@@ -37,8 +37,11 @@ public class ConversationPersistenceAdapter implements ConversationPersistencePo
 
     @Override
     public List<Conversation> findByParticipant(String userId, String merchantId, boolean includeArchived, int limit) {
-        return jpa.findByParticipant(userId, merchantId, includeArchived, PageRequest.of(0, Math.max(1, limit))).stream()
+        return jpa.findByParticipant(userId, merchantId, PageRequest.of(0, Math.max(1, limit))).stream()
                 .map(mapper::toDomain)
+                .filter(conversation -> includeArchived
+                        || (!conversation.isArchivedBy(userId)
+                                && (merchantId == null || !conversation.isArchivedBy(merchantId))))
                 .toList();
     }
 }

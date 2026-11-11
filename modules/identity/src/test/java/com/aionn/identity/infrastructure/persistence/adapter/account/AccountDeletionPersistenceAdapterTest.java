@@ -1,5 +1,9 @@
 package com.aionn.identity.infrastructure.persistence.adapter.account;
 
+import java.time.Clock;
+import java.time.ZoneOffset;
+import org.junit.jupiter.api.BeforeEach;
+
 import com.aionn.identity.application.dto.user.view.DeletionRequestView;
 import com.aionn.identity.domain.valueobject.AccountDeletionStatus;
 import com.aionn.identity.infrastructure.persistence.entity.AccountDeletionRequestEntity;
@@ -35,9 +39,9 @@ class AccountDeletionPersistenceAdapterTest {
     private AccountDeletionPersistenceAdapter adapter;
     private static final Instant FIXED_NOW = Instant.parse("2026-07-12T10:00:00Z");
 
-    @org.junit.jupiter.api.BeforeEach
+    @BeforeEach
     void setUp() {
-        adapter = new AccountDeletionPersistenceAdapter(accountDeletionRequestRepository, userRepository, java.time.Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
+        adapter = new AccountDeletionPersistenceAdapter(accountDeletionRequestRepository, userRepository, Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -92,10 +96,10 @@ class AccountDeletionPersistenceAdapterTest {
                 .requestedAt(FIXED_NOW)
                 .scheduledDeletionAt(FIXED_NOW.plus(Duration.ofDays(30)))
                 .build();
-        when(accountDeletionRequestRepository.findByUser_UserIdAndStatus(USER_ID, AccountDeletionStatus.PENDING))
+        when(accountDeletionRequestRepository.findByUser_UserIdAndStatusForUpdate(USER_ID, AccountDeletionStatus.PENDING))
                 .thenReturn(Optional.of(entity));
 
-        adapter.cancel(USER_ID);
+        assertThat(adapter.cancel(USER_ID)).isTrue();
 
         assertThat(entity.getStatus()).isEqualTo(AccountDeletionStatus.CANCELLED);
         assertThat(entity.getCanceledAt()).isEqualTo(FIXED_NOW);
@@ -104,10 +108,10 @@ class AccountDeletionPersistenceAdapterTest {
 
     @Test
     void cancelDoesNothingWhenNoPendingRequest() {
-        when(accountDeletionRequestRepository.findByUser_UserIdAndStatus(USER_ID, AccountDeletionStatus.PENDING))
+        when(accountDeletionRequestRepository.findByUser_UserIdAndStatusForUpdate(USER_ID, AccountDeletionStatus.PENDING))
                 .thenReturn(Optional.empty());
 
-        adapter.cancel(USER_ID);
+        assertThat(adapter.cancel(USER_ID)).isFalse();
 
         verify(accountDeletionRequestRepository, never()).save(any());
     }

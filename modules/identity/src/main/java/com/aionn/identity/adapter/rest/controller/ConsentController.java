@@ -4,12 +4,12 @@ import com.aionn.identity.adapter.rest.dto.consent.request.MarketingConsentReque
 import com.aionn.identity.adapter.rest.dto.consent.request.TermsConsentRequest;
 import com.aionn.identity.adapter.rest.dto.consent.response.ConsentResponse;
 import com.aionn.identity.adapter.rest.mapper.consent.ConsentDtoMapper;
-import com.aionn.sharedkernel.adapter.web.support.clientip.ClientIp;
+import com.aionn.platform.web.support.clientip.ClientIp;
 import com.aionn.identity.application.port.in.consent.AgreePrivacyInputPort;
 import com.aionn.identity.application.port.in.consent.AgreeTermsInputPort;
 import com.aionn.identity.application.port.in.consent.GetMyConsentsQueryPort;
 import com.aionn.identity.application.port.in.consent.UpdateMarketingConsentInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

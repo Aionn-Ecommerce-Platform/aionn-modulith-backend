@@ -18,7 +18,7 @@ import com.aionn.inventory.application.port.in.warehouse.GetWarehouseInputPort;
 import com.aionn.inventory.application.port.in.warehouse.LiftWarehouseSuspensionInputPort;
 import com.aionn.inventory.application.port.in.warehouse.ListWarehousesByOwnerInputPort;
 import com.aionn.inventory.application.port.in.warehouse.SuspendWarehouseInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

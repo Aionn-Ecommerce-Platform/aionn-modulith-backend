@@ -3,7 +3,7 @@ package com.aionn.ordering.infrastructure.integration.listener;
 import com.aionn.ordering.application.dto.order.command.ConfirmDeliveredCommand;
 import com.aionn.ordering.application.service.OrderService;
 import com.aionn.ordering.domain.valueobject.OrderStatus;
-import com.aionn.sharedkernel.integration.event.shipping.ShipmentDeliveredIntegrationEvent;
+import com.aionn.contracts.event.shipping.ShipmentDeliveredIntegrationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;

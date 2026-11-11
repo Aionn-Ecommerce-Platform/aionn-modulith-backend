@@ -2,11 +2,21 @@ payment:
   auto-payout:
     enabled: ${PAYMENT_AUTO_PAYOUT_ENABLED:false}
     threshold: ${PAYMENT_AUTO_PAYOUT_THRESHOLD:100000}
+    reserve-percent: ${PAYMENT_AUTO_PAYOUT_RESERVE_PERCENT:10}
+    reserve-amount: ${PAYMENT_AUTO_PAYOUT_RESERVE_AMOUNT:0}
     currency: ${PAYMENT_AUTO_PAYOUT_CURRENCY:VND}
     batch-size: ${PAYMENT_AUTO_PAYOUT_BATCH:50}
     cron: ${PAYMENT_AUTO_PAYOUT_CRON:0 0 2 * * *}
   invoice:
     base-url: ${PAYMENT_INVOICE_BASE_URL:http://localhost:8080/invoices/}
+  defaults:
+    currency: ${PAYMENT_DEFAULTS_CURRENCY:VND}
+  analytics:
+    zone: ${PAYMENT_ANALYTICS_ZONE:UTC}
+    default-range-days: ${PAYMENT_ANALYTICS_DEFAULT_RANGE_DAYS:30}
+    max-range-days: ${PAYMENT_ANALYTICS_MAX_RANGE_DAYS:366}
+  settlement:
+    default-commission-rate: ${PAYMENT_SETTLEMENT_DEFAULT_COMMISSION_RATE:0.0500}
   provider:
     stripe:
       enabled: ${STRIPE_ENABLED:true}
@@ -24,3 +34,4 @@ payment:
       command: ${VNPAY_COMMAND:pay}
       curr-code: ${VNPAY_CURR_CODE:VND}
       locale: ${VNPAY_LOCALE:vn}
+      expire-minutes: ${VNPAY_EXPIRE_MINUTES:15}

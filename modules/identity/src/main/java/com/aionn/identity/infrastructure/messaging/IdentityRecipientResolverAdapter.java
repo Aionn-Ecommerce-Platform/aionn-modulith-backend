@@ -3,7 +3,7 @@ package com.aionn.identity.infrastructure.messaging;
 import com.aionn.identity.application.port.out.user.UserPersistencePort;
 import com.aionn.sharedkernel.common.exception.NotFoundException;
 import com.aionn.sharedkernel.common.exception.ValidationException;
-import com.aionn.sharedkernel.integration.port.identity.RecipientResolverPort;
+import com.aionn.contracts.port.identity.RecipientResolverPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;

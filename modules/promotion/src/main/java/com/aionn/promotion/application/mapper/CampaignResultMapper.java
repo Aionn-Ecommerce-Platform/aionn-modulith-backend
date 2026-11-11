@@ -1,5 +1,7 @@
 package com.aionn.promotion.application.mapper;
 
+import java.util.List;
+
 import com.aionn.promotion.application.dto.campaign.result.CampaignResult;
 import com.aionn.promotion.domain.model.PromotionCampaign;
 import org.mapstruct.Mapper;
@@ -19,5 +21,5 @@ public interface CampaignResultMapper {
     @Mapping(target = "maxUsesPerVoucher", expression = "java(campaign.getCondition().maxUsesPerVoucher())")
     CampaignResult toResult(PromotionCampaign campaign);
 
-    java.util.List<CampaignResult> toResults(java.util.List<PromotionCampaign> campaigns);
+    List<CampaignResult> toResults(List<PromotionCampaign> campaigns);
 }

@@ -24,7 +24,10 @@ public class AttributeTemplatePersistenceAdapter implements AttributeTemplatePer
     @Override
     public AttributeTemplate save(AttributeTemplate template) {
         try {
-            return mapper.toDomain(jpa.save(mapper.toEntity(template)));
+            var entity = mapper.toEntity(template);
+            jpa.findById(template.getTemplateId())
+                    .ifPresent(existing -> entity.setVersion(existing.getVersion()));
+            return mapper.toDomain(jpa.save(entity));
         } catch (DataIntegrityViolationException e) {
             throw new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
                     "Attribute template already exists for this category");

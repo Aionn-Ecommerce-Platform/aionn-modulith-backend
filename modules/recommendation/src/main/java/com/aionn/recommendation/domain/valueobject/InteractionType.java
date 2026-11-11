@@ -1,21 +1,15 @@
 package com.aionn.recommendation.domain.valueobject;
 
-/**
- * Behavioural signal types the module ingests. Ordered weakest to strongest intent; the numeric
- * weight and decay attached to each one is configuration, not domain knowledge, and arrives through
- * {@link InteractionWeight}.
- */
+/** Behavioural signal types, weakest to strongest intent. Weights and decay come from {@link InteractionWeight}. */
 public enum InteractionType {
 
     VIEW,
+    SEARCH,
     CART_ADD,
     PURCHASE;
 
-    /**
-     * Strong signals express deliberate intent and are the only ones used for collaborative
-     * filtering: views are noisy because users browse widely without meaning to buy.
-     */
+    /** Only deliberate-intent signals feed collaborative filtering; views and searches are noisy. */
     public boolean isStrongSignal() {
-        return this != VIEW;
+        return this == CART_ADD || this == PURCHASE;
     }
 }

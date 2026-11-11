@@ -19,6 +19,10 @@ import java.util.Set;
 @Getter
 public class MerchantAutoReply extends AggregateRoot {
 
+    private static final LocalTime DEFAULT_WORKING_HOUR_START = LocalTime.of(8, 0);
+    private static final LocalTime DEFAULT_WORKING_HOUR_END = LocalTime.of(22, 0);
+    private static final ZoneId DEFAULT_TIMEZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+
     private final String merchantId;
     private boolean enabled;
     private String greeting;
@@ -46,10 +50,19 @@ public class MerchantAutoReply extends AggregateRoot {
     }
 
     public static MerchantAutoReply create(String merchantId, Clock clock) {
+        return create(merchantId, DEFAULT_WORKING_HOUR_START, DEFAULT_WORKING_HOUR_END,
+                EnumSet.range(DayOfWeek.MONDAY, DayOfWeek.SATURDAY), DEFAULT_TIMEZONE, clock);
+    }
+
+    public static MerchantAutoReply create(String merchantId, LocalTime workingHourStart,
+            LocalTime workingHourEnd, Set<DayOfWeek> workingDays, ZoneId timezone, Clock clock) {
         Instant now = clock.instant();
-        Set<DayOfWeek> defaults = EnumSet.range(DayOfWeek.MONDAY, DayOfWeek.SATURDAY);
+        Set<DayOfWeek> safeWorkingDays = workingDays == null || workingDays.isEmpty()
+                ? EnumSet.noneOf(DayOfWeek.class)
+                : EnumSet.copyOf(workingDays);
         return new MerchantAutoReply(merchantId, false, null, null,
-                LocalTime.of(8, 0), LocalTime.of(22, 0), defaults, ZoneId.of("Asia/Ho_Chi_Minh"), now, now);
+                workingHourStart, workingHourEnd, safeWorkingDays,
+                timezone == null ? DEFAULT_TIMEZONE : timezone, now, now);
     }
 
     public void update(boolean enabled, String greeting, String awayMessage,
@@ -59,6 +72,9 @@ public class MerchantAutoReply extends AggregateRoot {
                 || workingHourStart.isBefore(workingHourEnd),
                 () -> new ChatException(ChatErrorCode.INVALID_ARGUMENT,
                         "workingHourStart must be before workingHourEnd"));
+        Guard.require(!enabled || (awayMessage != null && !awayMessage.isBlank()),
+                () -> new ChatException(ChatErrorCode.INVALID_ARGUMENT,
+                        "awayMessage is required when auto-reply is enabled"));
         this.enabled = enabled;
         this.greeting = greeting;
         this.awayMessage = awayMessage;

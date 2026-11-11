@@ -3,8 +3,8 @@ package com.aionn.chat.infrastructure.media;
 import com.aionn.chat.application.dto.media.result.UploadSignatureResult;
 import com.aionn.chat.application.port.out.media.ChatMediaUploadSignatureProviderPort;
 import com.aionn.chat.infrastructure.config.properties.ChatCloudinaryProperties;
-import com.aionn.sharedkernel.media.CloudinaryCredentialsProperties;
-import com.aionn.sharedkernel.media.CloudinarySigner;
+import com.aionn.platform.media.CloudinaryCredentialsProperties;
+import com.aionn.platform.media.CloudinarySigner;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -34,6 +34,8 @@ public class CloudinaryChatMediaUploadSignatureProvider
         Map<String, String> params = new TreeMap<>();
         params.put("folder", folder);
         params.put("timestamp", String.valueOf(timestamp));
+        params.put("allowed_formats", folders.allowedFormats());
+        params.put("max_file_size", String.valueOf(folders.maxFileSizeBytes()));
 
         String signature = CloudinarySigner.sign(params, credentials.apiSecret());
 
@@ -44,6 +46,8 @@ public class CloudinaryChatMediaUploadSignatureProvider
                 credentials.apiKey(),
                 credentials.cloudName(),
                 credentials.uploadUrl("image"),
-                folder);
+                folder,
+                folders.allowedFormats(),
+                folders.maxFileSizeBytes());
     }
 }

@@ -1,5 +1,8 @@
 package com.aionn.ucp.adapter.rest.filter;
 
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -36,7 +39,7 @@ class UcpHeaderFilterTest {
                 "Aionn Test",
                 Set.of("https://ucp.dev/schemas/"),
                 false,
-                new UcpProperties.Capabilities(false, false, false, false, false));
+                new UcpProperties.Capabilities(false, false, false, false, false), "", "VND", "");
         filter = new UcpHeaderFilter(properties);
     }
 
@@ -126,7 +129,7 @@ class UcpHeaderFilterTest {
                 "Aionn Prod",
                 Set.of("https://ucp.dev/schemas/"),
                 true, // requireHttps = true
-                new UcpProperties.Capabilities(false, false, false, false, false));
+                new UcpProperties.Capabilities(false, false, false, false, false), "", "VND", "");
 
         UcpHeaderFilter secureFilter = new UcpHeaderFilter(secureProperties);
 
@@ -150,7 +153,7 @@ class UcpHeaderFilterTest {
                 "Aionn Prod",
                 Set.of("https://ucp.dev/schemas/"),
                 true,
-                new UcpProperties.Capabilities(false, false, false, false, false));
+                new UcpProperties.Capabilities(false, false, false, false, false), "", "VND", "");
 
         UcpHeaderFilter secureFilter = new UcpHeaderFilter(secureProperties);
 
@@ -380,7 +383,7 @@ class UcpHeaderFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain() {
             @Override
-            public void doFilter(jakarta.servlet.ServletRequest req, jakarta.servlet.ServletResponse res) {
+            public void doFilter(ServletRequest req, ServletResponse res) {
                 ((HttpServletResponse) res).setStatus(500);
             }
         };

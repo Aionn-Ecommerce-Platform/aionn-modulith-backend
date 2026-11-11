@@ -1,5 +1,7 @@
 package com.aionn.catalog.application.service;
 
+import java.math.BigDecimal;
+
 import com.aionn.catalog.application.dto.merchant.command.ActivateMerchantCommand;
 import com.aionn.catalog.application.dto.merchant.command.CloseMerchantCommand;
 import com.aionn.catalog.application.dto.merchant.command.RegisterMerchantCommand;
@@ -8,8 +10,8 @@ import com.aionn.catalog.application.dto.merchant.command.UpdateMerchantProfileC
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.catalog.application.port.out.merchant.MerchantPersistencePort;
 import com.aionn.catalog.application.port.out.observability.CatalogMetricsPort;
-import com.aionn.sharedkernel.integration.port.identity.AddressLookupPort;
-import com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort;
+import com.aionn.contracts.port.identity.AddressLookupPort;
+import com.aionn.contracts.port.ordering.OrderQueryPort;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.catalog.domain.model.Merchant;
@@ -43,7 +45,7 @@ public class MerchantService {
         if (merchantRepository.existsByOwnerId(command.ownerId())) {
             throw new CatalogException(CatalogErrorCode.MERCHANT_ALREADY_EXISTS);
         }
-        java.math.BigDecimal rate = catalogSettingsPort.getDefaultCommissionRate();
+        BigDecimal rate = catalogSettingsPort.getDefaultCommissionRate();
         Merchant merchant = Merchant.register(IdGenerator.ulid(), command.ownerId(), command.name(), rate, clock);
         Merchant saved = merchantRepository.save(merchant);
         eventPublisher.publish(merchant.pullEvents());
@@ -56,9 +58,6 @@ public class MerchantService {
         String provinceCode = command.provinceCode();
         String provinceName = null;
         if (provinceCode != null && !provinceCode.isBlank()) {
-            // Validate against identity. Reject unknown codes so the catalog never
-            // stores a province that the storefront filter (which reads from
-            // /geography/provinces) cannot match.
             provinceName = addressLookupPort.resolveProvince(provinceCode)
                     .orElseThrow(() -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
                             "Unknown province code: " + command.provinceCode()))

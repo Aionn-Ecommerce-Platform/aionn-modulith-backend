@@ -1,7 +1,7 @@
 package com.aionn.chat.infrastructure.realtime;
 
 import com.aionn.chat.application.port.out.PresenceTracker;
-import com.aionn.sharedkernel.integration.port.identity.AccessTokenVerifierPort;
+import com.aionn.contracts.port.identity.AccessTokenVerifierPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;

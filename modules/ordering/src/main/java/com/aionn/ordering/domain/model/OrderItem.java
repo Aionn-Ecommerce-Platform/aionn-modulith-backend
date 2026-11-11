@@ -9,7 +9,14 @@ public record OrderItem(
         int qty,
         Money unitPrice,
         String warehouseId,
-        String reservationId) {
+        String reservationId,
+        String productName,
+        String imageUrl,
+        String variantLabel) {
+
+    public OrderItem(String skuId, int qty, Money unitPrice, String warehouseId, String reservationId) {
+        this(skuId, qty, unitPrice, warehouseId, reservationId, null, null, null);
+    }
 
     public OrderItem {
         Objects.requireNonNull(skuId, "skuId");

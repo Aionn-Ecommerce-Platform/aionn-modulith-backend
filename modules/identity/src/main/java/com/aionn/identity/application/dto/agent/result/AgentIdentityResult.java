@@ -4,10 +4,9 @@ import java.time.Instant;
 
 public record AgentIdentityResult(
                 String agentId,
-                String keyHash,
+                String apiKey,
                 String permissions,
                 String status,
                 Instant expiryAt,
                 Instant createdAt) {
 }
-

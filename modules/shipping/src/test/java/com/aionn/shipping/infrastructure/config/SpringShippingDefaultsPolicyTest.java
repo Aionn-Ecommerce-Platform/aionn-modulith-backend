@@ -9,7 +9,7 @@ class SpringShippingDefaultsPolicyTest {
 
     @Test
     void shouldReturnConfiguredCurrencyInUpperCaseAndTrimmed() {
-        ShippingDefaultsProperties properties = new ShippingDefaultsProperties(" usd ");
+        ShippingDefaultsProperties properties = new ShippingDefaultsProperties(" usd ", 2000, 750);
         SpringShippingDefaultsPolicy policy = new SpringShippingDefaultsPolicy(properties);
 
         assertThat(policy.defaultCurrency()).isEqualTo("USD");
@@ -17,7 +17,7 @@ class SpringShippingDefaultsPolicyTest {
 
     @Test
     void shouldReturnDefaultCurrencyWhenNull() {
-        ShippingDefaultsProperties properties = new ShippingDefaultsProperties(null);
+        ShippingDefaultsProperties properties = new ShippingDefaultsProperties(null, 2000, 750);
         SpringShippingDefaultsPolicy policy = new SpringShippingDefaultsPolicy(properties);
 
         assertThat(policy.defaultCurrency()).isEqualTo("VND");
@@ -25,9 +25,18 @@ class SpringShippingDefaultsPolicyTest {
 
     @Test
     void shouldReturnDefaultCurrencyWhenBlank() {
-        ShippingDefaultsProperties properties = new ShippingDefaultsProperties("   ");
+        ShippingDefaultsProperties properties = new ShippingDefaultsProperties("   ", 2000, 750);
         SpringShippingDefaultsPolicy policy = new SpringShippingDefaultsPolicy(properties);
 
         assertThat(policy.defaultCurrency()).isEqualTo("VND");
+    }
+
+    @Test
+    void shouldExposeConfiguredWeightLadderDefaults() {
+        ShippingDefaultsProperties properties = new ShippingDefaultsProperties("VND", 2000, 750);
+        SpringShippingDefaultsPolicy policy = new SpringShippingDefaultsPolicy(properties);
+
+        assertThat(policy.defaultBaseWeightGram()).isEqualTo(2000);
+        assertThat(policy.defaultStepWeightGram()).isEqualTo(750);
     }
 }

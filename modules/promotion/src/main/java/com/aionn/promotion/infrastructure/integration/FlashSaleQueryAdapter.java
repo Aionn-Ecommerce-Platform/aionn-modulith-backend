@@ -1,13 +1,16 @@
 package com.aionn.promotion.infrastructure.integration;
 
+import com.aionn.promotion.domain.valueobject.FlashSaleRegistrationStatus;
+
 import com.aionn.promotion.application.port.out.FlashSaleRegistrationPersistencePort;
 import com.aionn.promotion.application.port.out.PromotionCampaignPersistencePort;
+import com.aionn.promotion.application.policy.PromotionLimitPolicy;
 import com.aionn.promotion.domain.model.FlashSaleRegistration;
 import com.aionn.promotion.domain.model.PromotionCampaign;
 import com.aionn.promotion.domain.valueobject.CampaignStatus;
 import com.aionn.promotion.domain.valueobject.CampaignType;
 import com.aionn.promotion.infrastructure.persistence.repository.PromotionCampaignRepository;
-import com.aionn.sharedkernel.integration.port.promotion.FlashSaleQueryPort;
+import com.aionn.contracts.port.promotion.FlashSaleQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +34,7 @@ public class FlashSaleQueryAdapter implements FlashSaleQueryPort {
     private final PromotionCampaignPersistencePort campaignRepository;
     private final PromotionCampaignRepository campaignJpaRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final PromotionLimitPolicy limitPolicy;
 
     @Override
     @Transactional
@@ -172,15 +176,15 @@ public class FlashSaleQueryAdapter implements FlashSaleQueryPort {
     @Override
     @Transactional(readOnly = true)
     public List<ActiveFlashSaleCampaign> listActiveCampaigns(int limit) {
-        int safe = Math.max(1, Math.min(limit, 50));
+        int safe = Math.max(1, Math.min(limit, limitPolicy.maxActiveFlashSaleLimit()));
         List<ActiveFlashSaleCampaign> out = new ArrayList<>();
         campaignJpaRepository.findByTypeAndStatus(
                         CampaignType.FLASH_SALE.name(), CampaignStatus.RUNNING.name(), PageRequest.of(0, safe)).stream()
                 .forEach(c -> {
                     List<FlashSaleRegistration> regs = registrationRepository
                             .findByCampaign(c.getCampaignId(),
-                                    com.aionn.promotion.domain.valueobject.FlashSaleRegistrationStatus.APPROVED,
-                                    200);
+                                    FlashSaleRegistrationStatus.APPROVED,
+                                    limitPolicy.maxRegistrationLimit());
                     List<String> productIds = regs.stream()
                             .filter(FlashSaleRegistration::hasStockLeft)
                             .map(FlashSaleRegistration::getProductId)

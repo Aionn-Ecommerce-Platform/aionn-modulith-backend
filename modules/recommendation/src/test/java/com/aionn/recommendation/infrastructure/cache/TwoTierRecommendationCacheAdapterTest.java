@@ -3,7 +3,7 @@ package com.aionn.recommendation.infrastructure.cache;
 import com.aionn.recommendation.application.dto.result.RecommendationItemResult;
 import com.aionn.recommendation.application.port.out.observability.RecommendationMetricsPort;
 import com.aionn.recommendation.domain.valueobject.RecommendationSurface;
-import com.aionn.sharedkernel.infrastructure.cache.core.TwoTierCache;
+import com.aionn.platform.infrastructure.cache.core.TwoTierCache;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;

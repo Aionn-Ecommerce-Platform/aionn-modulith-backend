@@ -1,5 +1,7 @@
 package com.aionn.identity.infrastructure.kyc;
 
+import com.aionn.sharedkernel.testing.fixture.TestClocks;
+
 import com.aionn.identity.application.port.out.kyc.ExternalKycVerificationPort.ExternalKycApplicant;
 import com.aionn.identity.application.port.out.kyc.ExternalKycVerificationPort.ExternalKycSession;
 import com.aionn.identity.domain.model.IdentityUser;
@@ -16,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 class LocalDevKycVerificationAdapterTest {
 
-    private final IdentityUser user = IdentityUser.createNew("user-1", "user@example.com", "+8490", "john", com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED);
+    private final IdentityUser user = IdentityUser.createNew("user-1", "user@example.com", "+8490", "john", TestClocks.FIXED);
 
     private LocalDevKycVerificationAdapter adapter;
 

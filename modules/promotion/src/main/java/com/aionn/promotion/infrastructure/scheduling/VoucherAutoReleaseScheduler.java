@@ -2,9 +2,9 @@ package com.aionn.promotion.infrastructure.scheduling;
 
 import com.aionn.promotion.application.port.out.UserVoucherPersistencePort;
 import com.aionn.promotion.domain.model.UserVoucher;
+import com.aionn.promotion.infrastructure.config.properties.PromotionVoucherProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -21,16 +21,15 @@ public class VoucherAutoReleaseScheduler {
 
     private final UserVoucherPersistencePort userVoucherRepository;
     private final VoucherAutoReleaseWorker worker;
+    private final PromotionVoucherProperties voucherProperties;
     private final Clock clock;
-
-    @Value("${promotion.voucher.auto-release.batch-size:100}")
-    private int batchSize;
 
     @Scheduled(fixedDelayString = "${promotion.voucher.auto-release.delay-ms:30000}")
     @SchedulerLock(name = "promotion-voucher-auto-release", lockAtMostFor = "PT10M", lockAtLeastFor = "PT25S")
     public void run() {
         try {
-            List<UserVoucher> expired = userVoucherRepository.findExpiredReservations(clock.instant(), batchSize);
+            List<UserVoucher> expired = userVoucherRepository.findExpiredReservations(
+                    clock.instant(), voucherProperties.autoRelease().batchSize());
             int released = 0;
             for (UserVoucher uv : expired) {
                 try {

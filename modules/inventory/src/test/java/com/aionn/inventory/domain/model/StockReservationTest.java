@@ -48,10 +48,10 @@ class StockReservationTest {
 
     @Test
     void failedFactoryProducesFailedReservation() {
-        StockReservation r = StockReservation.failed(RES_ID, SKU, WH, 5, "Insufficient stock", FIXED_CLOCK);
+        StockReservation r = StockReservation.failed(RES_ID, SKU, WH, "ORDER_1", 5, "Insufficient stock", FIXED_CLOCK);
 
         assertThat(r.getStatus()).isEqualTo(ReservationStatus.FAILED);
-        assertThat(r.getOrderId()).isNull();
+        assertThat(r.getOrderId()).isEqualTo("ORDER_1");
         assertThat(r.getReservedAt()).isEqualTo(FIXED_CLOCK.instant());
         assertThat(r.peekEvents())
                 .anyMatch(env -> env.payload() instanceof StockReservationEvents.StockReservationFailed);

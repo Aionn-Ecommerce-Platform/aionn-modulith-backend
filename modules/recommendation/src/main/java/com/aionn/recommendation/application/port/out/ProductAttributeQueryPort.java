@@ -41,7 +41,25 @@ public interface ProductAttributeQueryPort {
             List<String> skuIds,
             String imageUrl,
             BigDecimal priceFrom,
-            String currency) {
+            BigDecimal originalPriceFrom,
+            String currency,
+            Double rating,
+            Long reviewCount,
+            Long soldCount) {
+
+        public ProductAttributes(
+                String productId,
+                String name,
+                String brandId,
+                List<String> categoryIds,
+                List<String> skuIds,
+                String imageUrl,
+                BigDecimal priceFrom,
+                BigDecimal originalPriceFrom,
+                String currency) {
+            this(productId, name, brandId, categoryIds, skuIds, imageUrl, priceFrom,
+                    originalPriceFrom, currency, null, null, 0L);
+        }
 
         public ProductAttributes {
             categoryIds = categoryIds == null ? List.of() : List.copyOf(categoryIds);

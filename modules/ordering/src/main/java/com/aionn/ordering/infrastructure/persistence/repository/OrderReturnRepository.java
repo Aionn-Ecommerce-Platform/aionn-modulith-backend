@@ -17,6 +17,8 @@ public interface OrderReturnRepository extends JpaRepository<OrderReturnEntity, 
 
     List<OrderReturnEntity> findByMerchantIdOrderByRequestedAtDesc(String merchantId, Pageable pageable);
 
+    boolean existsByOrderIdAndStatusIn(String orderId, java.util.Collection<String> statuses);
+
     @Query("""
         SELECT r.returnId FROM OrderReturnEntity r
          WHERE r.refundStatus IN ('PENDING', 'FAILED')

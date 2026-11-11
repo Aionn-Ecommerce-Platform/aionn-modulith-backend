@@ -1,8 +1,8 @@
 package com.aionn.chat.adapter.rest.exception;
 
 import com.aionn.chat.domain.exception.ChatException;
-import com.aionn.sharedkernel.adapter.web.exception.AbstractModuleExceptionHandler;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.exception.AbstractModuleExceptionHandler;
+import com.aionn.platform.web.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;

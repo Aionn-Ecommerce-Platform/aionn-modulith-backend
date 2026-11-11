@@ -5,4 +5,6 @@ public interface MfaPolicy {
     String getMfaIssuer();
 
     int getBackupCodeCount();
+
+    int getBackupCodeLength();
 }

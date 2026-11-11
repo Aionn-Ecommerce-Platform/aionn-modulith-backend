@@ -1,5 +1,8 @@
 package com.aionn.catalog.application.service;
 
+import java.util.Collections;
+import java.util.Comparator;
+
 import com.aionn.catalog.application.dto.category.command.CreateCategoryCommand;
 import com.aionn.catalog.application.dto.category.command.MoveCategoryCommand;
 import com.aionn.catalog.application.dto.category.command.UpdateCategoryCommand;
@@ -70,7 +73,7 @@ public class CategoryService {
 
     public Category move(MoveCategoryCommand command) {
         Map<String, Category> locked = lockMutationSet(
-                command.categoryId(), java.util.Collections.singletonList(command.newParentId()));
+                command.categoryId(), Collections.singletonList(command.newParentId()));
         Category category = requiredLocked(locked, command.categoryId());
         if (command.newParentId() != null) {
             if (command.newParentId().equals(category.getCategoryId())) {
@@ -138,7 +141,7 @@ public class CategoryService {
     private Map<String, Category> lockMutationSet(String categoryId, List<String> additionalIds) {
         Map<String, Category> locked = new LinkedHashMap<>();
         categoryRepository.lockMutationSet(categoryId, additionalIds).stream()
-                .sorted(java.util.Comparator.comparing(Category::getCategoryId))
+                .sorted(Comparator.comparing(Category::getCategoryId))
                 .forEach(category -> locked.put(category.getCategoryId(), category));
         return locked;
     }

@@ -7,5 +7,6 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 public record GeographyCacheProperties(
         @DefaultValue("1800") long l1TtlSeconds,
         @DefaultValue("5000") long l1MaxSize,
-        @DefaultValue("86400") long l2TtlSeconds) {
+        @DefaultValue("86400") long l2TtlSeconds,
+        @DefaultValue("3600") long httpCacheSeconds) {
 }

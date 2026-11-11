@@ -68,6 +68,8 @@ public class PasswordResetService {
         }
 
         passwordResetPort.updatePassword(userId, passwordHasher.hash(newPassword));
+        // A password change invalidates any outstanding reset link for this account.
+        passwordResetPort.deletePasswordResetTokensForUser(userId);
         revokeOtherSessions(userId);
         securityAuditPort.saveAuditLog(userId, SecurityAuditEventType.PASSWORD_CHANGED, ipAddress);
         integrationEventPublisher.publishPasswordChanged(userId, "self-service");

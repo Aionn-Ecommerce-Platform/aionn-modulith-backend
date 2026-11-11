@@ -7,9 +7,9 @@ import com.aionn.inventory.application.dto.reservation.command.ReleaseReservatio
 import com.aionn.inventory.application.dto.reservation.command.ReserveStockCommand;
 import com.aionn.inventory.application.service.StockReservationService;
 import com.aionn.inventory.domain.model.StockReservation;
-import com.aionn.sharedkernel.integration.port.inventory.InventoryStockReservationPort.Reservation;
-import com.aionn.sharedkernel.integration.port.inventory.InventoryStockReservationPort.ReservationException;
-import com.aionn.sharedkernel.integration.port.inventory.InventoryStockReservationPort.ReservationLine;
+import com.aionn.contracts.port.inventory.InventoryStockReservationPort.Reservation;
+import com.aionn.contracts.port.inventory.InventoryStockReservationPort.ReservationException;
+import com.aionn.contracts.port.inventory.InventoryStockReservationPort.ReservationLine;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

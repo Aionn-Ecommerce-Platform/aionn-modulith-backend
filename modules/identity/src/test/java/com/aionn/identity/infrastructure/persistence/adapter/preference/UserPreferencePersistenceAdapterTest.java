@@ -1,5 +1,7 @@
 package com.aionn.identity.infrastructure.persistence.adapter.preference;
 
+import org.mockito.ArgumentCaptor;
+
 import com.aionn.identity.application.dto.preference.result.UserPreferenceResult;
 import com.aionn.identity.domain.exception.IdentityErrorCode;
 import com.aionn.identity.domain.exception.IdentityException;
@@ -69,7 +71,7 @@ class UserPreferencePersistenceAdapterTest {
         UserPreferenceResult preference = result();
         UserEntity user = UserEntity.builder().userId(USER_ID).build();
         UserPreferenceEntity saved = mock(UserPreferenceEntity.class);
-        org.mockito.ArgumentCaptor<UserPreferenceEntity> captor = org.mockito.ArgumentCaptor.forClass(UserPreferenceEntity.class);
+        ArgumentCaptor<UserPreferenceEntity> captor = ArgumentCaptor.forClass(UserPreferenceEntity.class);
         when(preferenceRepository.findById(USER_ID)).thenReturn(Optional.empty());
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
         when(preferenceRepository.save(captor.capture())).thenReturn(saved);
@@ -121,7 +123,8 @@ class UserPreferencePersistenceAdapterTest {
     void createDefaultPersistsNewPreferenceForUser() {
         UserPreferenceResult preference = result();
         UserPreferenceEntity saved = mock(UserPreferenceEntity.class);
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(UserEntity.builder().userId(USER_ID).build()));
+        when(userRepository.findByIdForUpdate(USER_ID)).thenReturn(Optional.of(UserEntity.builder().userId(USER_ID).build()));
+        when(preferenceRepository.findById(USER_ID)).thenReturn(Optional.empty());
         when(preferenceRepository.save(any(UserPreferenceEntity.class))).thenReturn(saved);
         when(mapper.toResult(saved)).thenReturn(preference);
 
@@ -130,7 +133,7 @@ class UserPreferencePersistenceAdapterTest {
 
     @Test
     void createDefaultThrowsWhenUserMissing() {
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
+        when(userRepository.findByIdForUpdate(USER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> adapter.createDefault(USER_ID))
                 .isInstanceOfSatisfying(IdentityException.class,

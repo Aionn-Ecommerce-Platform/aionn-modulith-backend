@@ -11,5 +11,9 @@ public record DefineVariantCommand(
         String skuId,
         Map<String, String> attributeValues,
         BigDecimal price,
-        String currency) implements Command {
+        String currency,
+        Integer weightGram,
+        BigDecimal lengthCm,
+        BigDecimal widthCm,
+        BigDecimal heightCm) implements Command {
 }

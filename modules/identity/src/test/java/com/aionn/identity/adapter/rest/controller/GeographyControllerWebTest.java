@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -61,7 +61,9 @@ class GeographyControllerWebTest {
                 listProvincesQueryPort, getProvinceQueryPort,
                 listDistrictsQueryPort, getDistrictQueryPort,
                 listWardsQueryPort, getWardQueryPort,
-                geographyDtoMapper);
+                geographyDtoMapper,
+                new com.aionn.identity.infrastructure.config.properties.GeographyCacheProperties(
+                        1800, 5000, 86400, 3600));
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new IdentityExceptionHandler())

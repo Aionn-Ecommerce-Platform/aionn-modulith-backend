@@ -140,4 +140,21 @@ public class ItemSimilarityPersistenceAdapter implements ItemSimilarityPersisten
         return writeBatch.execute(status ->
                 jdbcTemplate.update(DELETE_STALE_SQL, Timestamp.from(cutoff)));
     }
+
+    @Override
+    public int deleteByProductIds(Collection<String> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return 0;
+        }
+        List<String> ids = productIds.stream().distinct().toList();
+        String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
+        String sql = "DELETE FROM recommendation_item_similarity WHERE product_id IN (" + placeholders
+                + ") OR similar_product_id IN (" + placeholders + ")";
+        Object[] args = new Object[ids.size() * 2];
+        for (int i = 0; i < ids.size(); i++) {
+            args[i] = ids.get(i);
+            args[ids.size() + i] = ids.get(i);
+        }
+        return writeBatch.execute(status -> jdbcTemplate.update(sql, args));
+    }
 }

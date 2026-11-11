@@ -1,5 +1,6 @@
 package com.aionn.identity.application.service;
 
+import com.aionn.identity.domain.valueobject.FeedbackCategory;
 
 import java.time.Clock;
 import com.aionn.identity.application.dto.common.PageResult;
@@ -152,7 +153,7 @@ class FeedbackServiceTest {
 
     private static Feedback sampleFeedback() {
         return Feedback.createNew(FEEDBACK_ID, USER_ID,
-                com.aionn.identity.domain.valueobject.FeedbackCategory.GENERAL,
+                FeedbackCategory.GENERAL,
                 "subject", "content", 5, null, null);
     }
 }

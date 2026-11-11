@@ -1,5 +1,8 @@
 package com.aionn.identity.application.service;
 
+import com.aionn.identity.application.policy.IdentityValidationConstants;
+import java.text.Normalizer;
+
 import com.aionn.identity.application.dto.auth.command.LinkSocialCommand;
 import com.aionn.identity.application.dto.auth.command.LoginCommand;
 import com.aionn.identity.application.dto.auth.command.LogoutAllCommand;
@@ -14,6 +17,7 @@ import com.aionn.identity.application.dto.auth.result.RefreshAccessTokenResult;
 import com.aionn.identity.application.dto.auth.result.SocialLoginResult;
 import com.aionn.identity.application.mapper.AuthResultMapper;
 import com.aionn.identity.application.policy.AuthPolicy;
+import com.aionn.identity.application.policy.MfaCodeFormatPolicy;
 import com.aionn.identity.application.port.out.auth.AccessTokenIssuerPort;
 import com.aionn.identity.application.port.out.auth.AuthSessionPersistencePort;
 import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
@@ -23,6 +27,7 @@ import com.aionn.identity.application.port.out.security.MfaPersistencePort;
 import com.aionn.identity.application.port.out.security.AbuseRateLimiterPort;
 import com.aionn.identity.application.port.out.security.PasswordHasherPort;
 import com.aionn.identity.application.port.out.security.TotpManagerPort;
+import com.aionn.identity.application.port.out.security.TotpReplayGuardPort;
 import com.aionn.identity.application.port.out.security.UserSecurityPort;
 import com.aionn.identity.application.port.out.social.SocialLinkPersistencePort;
 import com.aionn.identity.application.port.out.social.SocialTokenVerifierPort;
@@ -40,6 +45,7 @@ import com.aionn.sharedkernel.util.IdGenerator;
 import com.aionn.sharedkernel.util.Sha256Hasher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,11 +65,6 @@ import java.util.stream.Collectors;
 @Transactional
 public class AuthService {
 
-    private static final int TOTP_LENGTH = 6;
-    private static final int BACKUP_CODE_LENGTH = 8;
-    private static final int MAX_SOCIAL_USERNAME_LENGTH = 50;
-    private static final int SOCIAL_USERNAME_SUFFIX_LENGTH = 10;
-
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final UserPersistencePort userPersistencePort;
@@ -73,16 +74,18 @@ public class AuthService {
     private final MfaPersistencePort mfaPersistencePort;
     private final PasswordHasherPort passwordHasher;
     private final TotpManagerPort totpManager;
+    private final TotpReplayGuardPort totpReplayGuard;
     private final AccessTokenIssuerPort accessTokenIssuer;
     private final SocialTokenVerifierPort socialTokenVerifier;
     private final AuthPolicy authPolicy;
+    private final MfaCodeFormatPolicy mfaCodeFormatPolicy;
     private final RefreshTokenStorePort refreshTokenStore;
     private final AuthResultMapper authResultMapper;
     private final TokenBlacklistPort tokenBlacklist;
     private final IdentityMetricsPort identityMetrics;
     private final AbuseRateLimiterPort abuseRateLimiter;
-
     private final Clock clock;
+
     public LoginResult login(LoginCommand command) {
         log.debug("Login attempt for identity: {}", command.identity());
         enforceLoginRateLimit(command);
@@ -118,7 +121,13 @@ public class AuthService {
                     .orElseThrow(() -> new IdentityException(IdentityErrorCode.USER_NOT_FOUND));
         } else {
             user = createUserForSocial(provider, profile);
-            IdentityUser savedUser = userPersistencePort.save(user);
+            IdentityUser savedUser;
+            try {
+                savedUser = userPersistencePort.save(user);
+            } catch (DataIntegrityViolationException ex) {
+                log.warn("Social signup lost a uniqueness race for provider={}", provider, ex);
+                throw new IdentityException(IdentityErrorCode.ACCOUNT_ALREADY_EXISTS);
+            }
             SocialLink newSocialLink = SocialLink.createNew(
                     IdGenerator.ulid(),
                     savedUser.getUserId(),
@@ -158,7 +167,8 @@ public class AuthService {
     public SocialLink linkSocial(LinkSocialCommand command) {
         IdentityUser user = validateUserExists(command.userId());
         AuthProvider provider = AuthProvider.from(command.provider());
-        String providerUserId = socialTokenVerifier.verifyAndExtract(provider, command.providerToken()).providerUserId();
+        String providerUserId = socialTokenVerifier.verifyAndExtract(provider, command.providerToken())
+                .providerUserId();
 
         if (socialLinkPersistencePort.existsByProviderAndProviderUserId(provider, providerUserId)
                 || socialLinkPersistencePort.findByUserIdAndProvider(command.userId(), provider).isPresent()) {
@@ -225,18 +235,34 @@ public class AuthService {
             throw new IdentityException(IdentityErrorCode.VERIFICATION_TOKEN_INVALID);
         }
 
-        // Atomic find-and-revoke: prevents two concurrent refresh calls from both
-        // succeeding with the same token and lets a replay attempt be detected later.
+        // Atomic consume. If the token is absent but a consumed marker exists, this is
+        // a replay:
+        // revoke the whole family so the stolen token and the currently valid sibling
+        // both die.
         String sessionId = refreshTokenStore.consumeSessionId(tokenId)
-                .orElseThrow(() -> new IdentityException(IdentityErrorCode.VERIFICATION_TOKEN_INVALID));
+                .orElseGet(() -> {
+                    refreshTokenStore.findConsumedSessionId(tokenId).ifPresent(consumedSessionId -> {
+                        refreshTokenStore.revokeBySessionId(consumedSessionId);
+                        log.warn("Refresh token reuse detected; revoked session {}",
+                                consumedSessionId);
+                    });
+                    throw new IdentityException(IdentityErrorCode.VERIFICATION_TOKEN_INVALID);
+                });
 
         AuthSession session = authSessionPersistencePort.findById(sessionId)
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.SESSION_NOT_FOUND));
         if (!AuthSessionStatus.ACTIVE.equals(session.getStatus()) || session.isExpired(clock)) {
-            // Token already consumed above; revoke the whole session so any sibling tokens
-            // issued from the same family are invalidated as well.
             refreshTokenStore.revokeBySessionId(sessionId);
             throw new IdentityException(IdentityErrorCode.VERIFICATION_TOKEN_INVALID);
+        }
+
+        IdentityUser user = userPersistencePort.findById(session.getUserId())
+                .orElseThrow(() -> new IdentityException(IdentityErrorCode.USER_NOT_FOUND));
+        if (!user.isActive()) {
+            session.revoke();
+            authSessionPersistencePort.save(session);
+            refreshTokenStore.revokeBySessionId(sessionId);
+            throw new IdentityException(IdentityErrorCode.USER_INACTIVE);
         }
 
         session.extendExpiry(nowUtc().plus(Duration.ofDays(authPolicy.getSessionExpiresDays())), clock);
@@ -311,9 +337,10 @@ public class AuthService {
         boolean matched = false;
         if (userSecurity.mfaSecret() != null && !userSecurity.mfaSecret().isBlank()) {
             String normalizedCode = mfaCode.trim();
-            if (isNumericCode(normalizedCode, TOTP_LENGTH)) {
-                matched = totpManager.verifyCode(userSecurity.mfaSecret(), normalizedCode);
-            } else if (isNumericCode(normalizedCode, BACKUP_CODE_LENGTH)) {
+            if (isNumericCode(normalizedCode, mfaCodeFormatPolicy.totpCodeLength())) {
+                matched = totpManager.verifyCode(userSecurity.mfaSecret(), normalizedCode)
+                        && totpReplayGuard.claim(userId, normalizedCode);
+            } else if (isNumericCode(normalizedCode, mfaCodeFormatPolicy.backupCodeLength())) {
                 matched = mfaPersistencePort.findActiveBackupCodes(userId).stream()
                         .filter(code -> passwordHasher.matches(normalizedCode, code.codeHash()))
                         .findFirst()
@@ -329,12 +356,9 @@ public class AuthService {
     }
 
     private void recordFailedLoginAttempt(UserSecurityPort.UserSecurityData user) {
-        int failedAttempts = user.failedLoginAttempts() + 1;
-        Instant lockedUntil = null;
-        if (failedAttempts >= authPolicy.getMaxFailedLoginAttempts()) {
-            lockedUntil = nowUtc().plus(Duration.ofMinutes(authPolicy.getLockoutMinutes()));
-        }
-        userSecurityPort.recordFailedLoginAttempt(user.userId(), failedAttempts, lockedUntil);
+        Instant lockUntil = nowUtc().plus(Duration.ofMinutes(authPolicy.getLockoutMinutes()));
+        userSecurityPort.recordFailedLoginAttempt(
+                user.userId(), authPolicy.getMaxFailedLoginAttempts(), lockUntil);
     }
 
     private boolean isLocked(Instant lockedUntil) {
@@ -383,8 +407,10 @@ public class AuthService {
                     .replaceAll("[^a-zA-Z0-9_]", "")).toLowerCase();
         }
         String generatedId = IdGenerator.ulid();
-        String suffix = generatedId.substring(generatedId.length() - SOCIAL_USERNAME_SUFFIX_LENGTH).toLowerCase();
-        int maxBaseLength = MAX_SOCIAL_USERNAME_LENGTH - suffix.length() - 1;
+        String suffix = generatedId
+                .substring(generatedId.length() - IdentityValidationConstants.SOCIAL_USERNAME_SUFFIX_LENGTH)
+                .toLowerCase();
+        int maxBaseLength = IdentityValidationConstants.USERNAME_MAX_LENGTH - suffix.length() - 1;
         String boundedBase = base.substring(0, Math.min(base.length(), maxBaseLength));
         return boundedBase + "_" + suffix;
     }
@@ -417,17 +443,17 @@ public class AuthService {
         if (email != null && email.contains("@")) {
             String local = email.substring(0, email.indexOf('@')).toLowerCase()
                     .replaceAll("[^a-z0-9._-]", "");
-            if (local.length() >= 3) {
+            if (local.length() >= IdentityValidationConstants.USERNAME_MIN_LENGTH) {
                 return local;
             }
         }
         if (displayName != null && !displayName.isBlank()) {
-            String slug = java.text.Normalizer.normalize(displayName, java.text.Normalizer.Form.NFD)
+            String slug = Normalizer.normalize(displayName, Normalizer.Form.NFD)
                     .replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
                     .toLowerCase()
                     .replaceAll("\\s+", "_")
                     .replaceAll("[^a-z0-9_]", "");
-            if (slug.length() >= 3) {
+            if (slug.length() >= IdentityValidationConstants.USERNAME_MIN_LENGTH) {
                 return slug;
             }
         }
@@ -445,10 +471,12 @@ public class AuthService {
     }
 
     private String issueAccessToken(AuthSession session) {
-        var user = userPersistencePort.findById(session.getUserId()).orElse(null);
-        var roles = user != null
-                ? user.getRoles().stream().map(Enum::name).collect(Collectors.toSet())
-                : java.util.Set.<String>of();
+        IdentityUser user = userPersistencePort.findById(session.getUserId())
+                .orElseThrow(() -> new IdentityException(IdentityErrorCode.USER_NOT_FOUND));
+        if (!user.isActive()) {
+            throw new IdentityException(IdentityErrorCode.USER_INACTIVE);
+        }
+        var roles = user.getRoles().stream().map(Enum::name).collect(Collectors.toSet());
         return accessTokenIssuer.issueAccessToken(
                 session.getUserId(),
                 session.getSessionId(),
@@ -466,7 +494,7 @@ public class AuthService {
     }
 
     private String issueRefreshToken(AuthSession session) {
-        byte[] bytes = new byte[com.aionn.identity.application.policy.IdentityValidationConstants.REFRESH_TOKEN_BYTES];
+        byte[] bytes = new byte[IdentityValidationConstants.REFRESH_TOKEN_BYTES];
         SECURE_RANDOM.nextBytes(bytes);
         String tokenId = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 

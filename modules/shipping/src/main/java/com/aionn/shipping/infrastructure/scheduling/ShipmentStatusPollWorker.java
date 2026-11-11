@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
 import java.util.Optional;
 
 @Slf4j
@@ -20,6 +21,7 @@ public class ShipmentStatusPollWorker {
     private final CarrierClient carrierClient;
     private final GhnStatusMapper statusMapper;
     private final ShipmentStatusApplier shipmentStatusApplier;
+    private final Clock clock;
 
     public void syncOne(String shipmentId) {
         Shipment shipment = shipmentRepository.findById(shipmentId).orElse(null);
@@ -29,6 +31,9 @@ public class ShipmentStatusPollWorker {
         }
         CarrierClient.OrderDetail detail;
         try {
+            // Stamp the attempt before the remote call so failing carriers cannot
+            // monopolise the front of the polling queue forever.
+            shipmentRepository.markPolled(shipmentId, clock.instant());
             detail = carrierClient.fetchOrderDetail(shipment.getTrackingCode());
         } catch (RuntimeException ex) {
             log.warn("GHN detail failed for {} ({}): {}", shipment.getShipmentId(),

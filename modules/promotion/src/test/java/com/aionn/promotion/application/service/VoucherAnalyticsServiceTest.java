@@ -1,9 +1,12 @@
 package com.aionn.promotion.application.service;
 
+import org.assertj.core.data.Offset;
+
 import com.aionn.promotion.application.dto.analytics.result.MerchantVoucherAnalyticsResult;
+import com.aionn.promotion.application.policy.PromotionLimitPolicy;
 import com.aionn.promotion.application.port.out.VoucherPersistencePort;
 import com.aionn.promotion.application.port.out.VoucherPersistencePort.MerchantVoucherRow;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -25,9 +28,16 @@ class VoucherAnalyticsServiceTest {
     private VoucherPersistencePort voucherRepository;
     @Mock
     private MerchantQueryPort merchantQueryPort;
+    @Mock
+    private PromotionLimitPolicy limitPolicy;
 
     @InjectMocks
     private VoucherAnalyticsService service;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        org.mockito.Mockito.lenient().when(limitPolicy.topVouchersLimit()).thenReturn(10);
+    }
 
     private static MerchantVoucherRow row(String code, String campaignId,
             Integer limit, Integer used, BigDecimal discount) {
@@ -49,7 +59,7 @@ class VoucherAnalyticsServiceTest {
         assertThat(result.totalIssued()).isEqualTo(150);
         assertThat(result.totalRedeemed()).isEqualTo(25);
         assertThat(result.totalRemaining()).isEqualTo(125);
-        assertThat(result.redemptionRate()).isCloseTo(25d / 150d, org.assertj.core.data.Offset.offset(0.0001));
+        assertThat(result.redemptionRate()).isCloseTo(25d / 150d, Offset.offset(0.0001));
         assertThat(result.totalDiscountValue()).isEqualByComparingTo("300000");
         assertThat(result.topVouchers()).extracting(MerchantVoucherAnalyticsResult.TopVoucher::voucherCode)
                 .containsExactly("V-1", "V-2");
@@ -76,6 +86,6 @@ class VoucherAnalyticsServiceTest {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.getMerchantAnalytics("owner-1"))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(com.aionn.promotion.domain.exception.PromotionException.class);
     }
 }

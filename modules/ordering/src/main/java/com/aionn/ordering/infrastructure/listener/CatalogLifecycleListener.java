@@ -1,6 +1,6 @@
 package com.aionn.ordering.infrastructure.listener;
 
-import com.aionn.sharedkernel.integration.event.catalog.ProductEmergencyTakedownIntegrationEvent;
+import com.aionn.contracts.event.catalog.ProductEmergencyTakedownIntegrationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;

@@ -17,7 +17,8 @@
     },
     {
       "path": "scaffolds/common_location_lookup_response.json",
-      "sha256": "1cd64356351f76294e67d7a663fd28f61ebb64937669ba2d8a4d274ecdf1a690",
+      "sha256": "6702477b2db65274e8c6c083ec8708db88aea00e55d31ba1f8c243fe21e6d5d8",
+      "normalization": ["protocol-version-pin"],
       "source_path": "scripts/scaffolds/common_location_lookup_response.json"
     },
     {
@@ -27,17 +28,20 @@
     },
     {
       "path": "scaffolds/common_location_search_response.json",
-      "sha256": "1cd64356351f76294e67d7a663fd28f61ebb64937669ba2d8a4d274ecdf1a690",
+      "sha256": "6702477b2db65274e8c6c083ec8708db88aea00e55d31ba1f8c243fe21e6d5d8",
+      "normalization": ["protocol-version-pin"],
       "source_path": "scripts/scaffolds/common_location_search_response.json"
     },
     {
       "path": "scaffolds/common_payment_authentication_response.json",
-      "sha256": "0efe22f1da0f9143d926bbe30509b2b1bc45faae29b1b3d1b5b0a179241b1c41",
+      "sha256": "bc6872c1b1bc43d32563eb9418626f985431e49ddf0a26741243460306466389",
+      "normalization": ["protocol-version-pin"],
       "source_path": "scripts/scaffolds/common_payment_authentication_response.json"
     },
     {
       "path": "scaffolds/profile_response.json",
-      "sha256": "e0e21f9c77ee216fddb6eeefe988a2ce906743b2153d28f544d9889d7c035265",
+      "sha256": "69547d2968957483b54261114e03e15d19284c21de694aaccd0aca0daef465de",
+      "normalization": ["protocol-version-pin"],
       "source_path": "scripts/scaffolds/profile_response.json"
     },
     {
@@ -52,7 +56,8 @@
     },
     {
       "path": "scaffolds/shopping_cart_response.json",
-      "sha256": "c812929762e8303de71f6403f809e7065601b79d7c9f98c3fa21384779dfe157",
+      "sha256": "8dadc378c091785162de062bab5038e80138adec6f8938ef85796203df0aad2c",
+      "normalization": ["protocol-version-pin"],
       "source_path": "scripts/scaffolds/shopping_cart_response.json"
     },
     {
@@ -67,12 +72,14 @@
     },
     {
       "path": "scaffolds/shopping_catalog_lookup_response.json",
-      "sha256": "2a1984d288c9e0728afa1dd8e556a30b9ebdc81b43cde5fc256c538d9da60f49",
+      "sha256": "9d3985b0380d5a64ae9fec1ca838d895ddebbbd5a9a6f4e3ae206a5dc2e0c037",
+      "normalization": ["protocol-version-pin"],
       "source_path": "scripts/scaffolds/shopping_catalog_lookup_response.json"
     },
     {
       "path": "scaffolds/shopping_catalog_lookup_response_get_product.json",
-      "sha256": "d00597ae760d387c684d46d8ebb6026cb198331640fd2ce46e622db9a670ed0b",
+      "sha256": "58694635262cb0a1cc84967953a81fff6e82bcb0f466dec7469c162af1ea0958",
+      "normalization": ["protocol-version-pin"],
       "source_path": "scripts/scaffolds/shopping_catalog_lookup_response_get_product.json"
     },
     {
@@ -82,7 +89,8 @@
     },
     {
       "path": "scaffolds/shopping_catalog_search_response.json",
-      "sha256": "2a1984d288c9e0728afa1dd8e556a30b9ebdc81b43cde5fc256c538d9da60f49",
+      "sha256": "9d3985b0380d5a64ae9fec1ca838d895ddebbbd5a9a6f4e3ae206a5dc2e0c037",
+      "normalization": ["protocol-version-pin"],
       "source_path": "scripts/scaffolds/shopping_catalog_search_response.json"
     },
     {
@@ -102,17 +110,20 @@
     },
     {
       "path": "scaffolds/shopping_checkout_response.json",
-      "sha256": "02c38f4284bde5c082cb594d59fe48865d4d33dd8009063264ba4e49719e6c15",
+      "sha256": "ae97bc9f71d8334cba153031335005a4e5e8bdf9863221f82a220c7cb86999ed",
+      "normalization": ["protocol-version-pin"],
       "source_path": "scripts/scaffolds/shopping_checkout_response.json"
     },
     {
       "path": "scaffolds/shopping_order_response.json",
-      "sha256": "4f394178a3f82329d68f7c6f44fa3c736e9b7d51fd8771981da618038e82ea1b",
+      "sha256": "61972194a2623e19ef0838b23eca5bbc8955123b4bee8b8eae2699f05c9a64b3",
+      "normalization": ["protocol-version-pin"],
       "source_path": "scripts/scaffolds/shopping_order_response.json"
     },
     {
       "path": "scaffolds/shopping_types_error_response_response.json",
-      "sha256": "140c7510295100fc455dd8defb50b9b1eafd66132a7552069d9ac5e8afdad620",
+      "sha256": "04769e2ffc05f0583bd769e1893ee029393ce2bba7c6300eb93e9c0333decabf",
+      "normalization": ["protocol-version-pin"],
       "source_path": "scripts/scaffolds/shopping_types_error_response_response.json"
     },
     {
@@ -122,7 +133,8 @@
     },
     {
       "path": "scaffolds/ucp_response.json",
-      "sha256": "7036d8c136dd6dae632beeb15488c879464447d8fc549071b6c6dcfb792628ac",
+      "sha256": "c3980c27b5f2a7a353574a73f5278e36305dc971c50a2e4119f1b9dc55174ac9",
+      "normalization": ["protocol-version-pin"],
       "source_path": "scripts/scaffolds/ucp_response.json"
     },
     {

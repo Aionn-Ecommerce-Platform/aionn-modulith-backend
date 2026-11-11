@@ -2,7 +2,7 @@ package com.aionn.ordering.application.port.out;
 
 public interface OrderPlacementOperationPort {
 
-    record Operation(String orderId, String requestHash, boolean completed) {}
+    record Operation(String orderId, String requestHash, boolean completed, boolean claimed) {}
 
     Operation start(String userId, String idempotencyKey, String requestHash, String proposedOrderId);
 

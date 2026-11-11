@@ -1,5 +1,7 @@
 package com.aionn.inventory.domain.model;
 
+import java.time.ZoneOffset;
+
 import com.aionn.sharedkernel.domain.Guard;
 import com.aionn.sharedkernel.domain.model.AggregateRoot;
 import com.aionn.inventory.domain.event.InventoryItemEvents;
@@ -142,7 +144,7 @@ public class InventoryItem extends AggregateRoot {
     }
 
     public void trackBatchAndExpiry(String batchNo, LocalDate expiryDate, Clock clock) {
-        Guard.require(expiryDate == null || !expiryDate.isBefore(clock.instant().atZone(java.time.ZoneOffset.UTC).toLocalDate()),
+        Guard.require(expiryDate == null || !expiryDate.isBefore(clock.instant().atZone(ZoneOffset.UTC).toLocalDate()),
                 () -> new InventoryException(InventoryErrorCode.INVENTORY_EXPIRY_INVALID,
                         "expiryDate must not be in the past"));
         this.batchNo = batchNo;
@@ -153,8 +155,12 @@ public class InventoryItem extends AggregateRoot {
     }
 
     public void recordAudit(String auditId, int actualQty, Clock clock) {
+        ensureUnlocked();
         Guard.require(actualQty >= 0,
                 () -> new InventoryException(InventoryErrorCode.INVENTORY_AUDIT_NEGATIVE));
+        Guard.require(actualQty >= reservedQty(),
+                () -> new InventoryException(InventoryErrorCode.INVENTORY_AUDIT_BELOW_RESERVED,
+                        "Audited qty " + actualQty + " is below reserved qty " + reservedQty()));
         int expected = physicalQty;
         Instant now = clock.instant();
         registerEvent(new InventoryItemEvents.InventoryAudited(

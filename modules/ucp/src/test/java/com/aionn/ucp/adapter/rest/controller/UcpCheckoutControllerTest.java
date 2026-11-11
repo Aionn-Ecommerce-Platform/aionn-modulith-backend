@@ -144,7 +144,7 @@ class UcpCheckoutControllerTest {
 
         @Test
         void completeCheckoutReturns200WithCompletedResponse() throws Exception {
-                when(checkoutService.completeCheckout(eq("chk_123"), any()))
+                when(checkoutService.completeCheckout(eq("chk_123"), any(), any()))
                                 .thenReturn(sampleResponse("chk_123", "completed"));
 
                 mockMvc.perform(post("/ucp/v1/checkout-sessions/chk_123/complete"))

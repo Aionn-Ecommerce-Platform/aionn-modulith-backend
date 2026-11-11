@@ -1,7 +1,7 @@
 package com.aionn.identity.adapter.rest.exception;
 
 import com.aionn.identity.domain.exception.IdentityErrorCode;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

@@ -1,5 +1,6 @@
 package com.aionn.ucp.infrastructure.schema;
 
+import com.aionn.ucp.application.UcpProtocolConstants;
 import com.aionn.ucp.application.port.out.UcpSchemaValidationPort;
 import com.aionn.ucp.infrastructure.config.UcpProperties;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -19,7 +20,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class PinnedUcpSchemaValidator implements UcpSchemaValidationPort {
 
-    private static final String DEFAULT_PREFIX = "https://ucp.dev/schemas/";
+    private static final String DEFAULT_PREFIX = UcpProtocolConstants.SCHEMA_PREFIX;
     private static final String ERROR_RESPONSE_SCHEMA_URI = DEFAULT_PREFIX + "common/types/error_response.json";
 
     private final Set<String> allowedPrefixes;
@@ -66,12 +67,12 @@ public class PinnedUcpSchemaValidator implements UcpSchemaValidationPort {
             subpath = subpath.substring(0, hashIdx);
         }
 
-        String mainResource = "/ucp/2026-08-25/" + subpath;
+        String mainResource = "/ucp/" + UcpProtocolConstants.VERSION + "/" + subpath;
         InputStream is = getClass().getResourceAsStream(mainResource);
         String finalResource = mainResource;
 
         if (is == null) {
-            String testResource = "/ucp-contract/2026-08-25/schemas/" + subpath;
+            String testResource = "/ucp-contract/" + UcpProtocolConstants.VERSION + "/schemas/" + subpath;
             is = getClass().getResourceAsStream(testResource);
             finalResource = testResource;
         }

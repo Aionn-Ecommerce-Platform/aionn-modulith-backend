@@ -23,7 +23,10 @@ public class OrderDomainMapper {
                     item.getQty(),
                     Money.of(item.getUnitPrice(), e.getCurrency()),
                     item.getWarehouseId(),
-                    item.getReservationId()));
+                    item.getReservationId(),
+                    item.getProductName(),
+                    item.getImageUrl(),
+                    item.getVariantLabel()));
         }
         boolean hasAddress = e.getAddressId() != null
                 || e.getAddressFullName() != null
@@ -40,7 +43,7 @@ public class OrderDomainMapper {
                         e.getAddressCountryCode());
         Money shippingFee = e.getShippingFee() == null ? null : Money.of(e.getShippingFee(), e.getCurrency());
         Money total = e.getTotalAmount() == null ? null : Money.of(e.getTotalAmount(), e.getCurrency());
-        return new Order(
+        Order order = new Order(
                 e.getOrderId(),
                 e.getOrderSn(),
                 e.getParentOrderId(),
@@ -60,6 +63,9 @@ public class OrderDomainMapper {
                 e.getUpdatedAt(),
                 e.getCompletedAt(),
                 e.getCancelledAt());
+        order.attachNote(e.getNote());
+        order.attachShippingService(e.getShippingService());
+        return order;
     }
 
     public OrderEntity toEntity(Order order, OrderEntity existing) {
@@ -80,6 +86,8 @@ public class OrderDomainMapper {
         entity.setShippingFee(order.getShippingFee() == null ? null : order.getShippingFee().amount());
         entity.setStatus(order.getStatus().name());
         entity.setReasonCode(order.getReasonCode());
+        entity.setNote(order.getNote());
+        entity.setShippingService(order.getShippingService());
         entity.setCompletedAt(order.getCompletedAt());
         entity.setCancelledAt(order.getCancelledAt());
 
@@ -104,6 +112,9 @@ public class OrderDomainMapper {
                     .unitPrice(item.unitPrice().amount())
                     .warehouseId(item.warehouseId())
                     .reservationId(item.reservationId())
+                    .productName(item.productName())
+                    .imageUrl(item.imageUrl())
+                    .variantLabel(item.variantLabel())
                     .build();
             entity.getItems().add(itemEntity);
         }

@@ -15,7 +15,7 @@ import com.aionn.recommendation.application.port.in.GetCartSuggestionsInputPort;
 import com.aionn.recommendation.application.port.in.GetHomeFeedInputPort;
 import com.aionn.recommendation.application.port.in.GetSimilarProductsInputPort;
 import com.aionn.recommendation.domain.valueobject.RecommendationReason;
-import com.aionn.sharedkernel.adapter.web.exception.GlobalExceptionHandler;
+import com.aionn.platform.web.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -241,6 +241,7 @@ class RecommendationControllerWebTest {
                                 "Product " + productId,
                                 "https://cdn.example.com/" + productId + ".jpg",
                                 BigDecimal.valueOf(34_990_000),
+                                null,
                                 "VND",
                                 BigDecimal.valueOf(0.91),
                                 reason,

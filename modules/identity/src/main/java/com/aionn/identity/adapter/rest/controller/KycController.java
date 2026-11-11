@@ -16,8 +16,8 @@ import com.aionn.identity.application.port.in.kyc.GetKycQueryPort;
 import com.aionn.identity.application.port.in.kyc.ListKycDocumentsQueryPort;
 import com.aionn.identity.application.port.in.kyc.ListMyKycQueryPort;
 import com.aionn.identity.application.port.in.kyc.SubmitKycInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
-import com.aionn.sharedkernel.adapter.web.support.idempotency.IdempotentRequest;
+import com.aionn.platform.web.response.ApiResponse;
+import com.aionn.platform.web.support.idempotency.IdempotentRequest;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

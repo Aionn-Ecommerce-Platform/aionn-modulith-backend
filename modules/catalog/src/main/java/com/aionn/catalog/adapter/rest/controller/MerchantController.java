@@ -18,7 +18,7 @@ import com.aionn.catalog.application.port.in.merchant.ListMerchantsInputPort;
 import com.aionn.catalog.application.port.in.merchant.RegisterMerchantInputPort;
 import com.aionn.catalog.application.port.in.merchant.SuspendMerchantInputPort;
 import com.aionn.catalog.application.port.in.merchant.UpdateMerchantProfileInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -39,7 +39,7 @@ import com.aionn.catalog.application.port.in.merchant.UpdateGlobalCommissionRate
 import com.aionn.catalog.application.port.in.merchant.UpdateMerchantCommissionRateInputPort;
 import com.aionn.catalog.adapter.rest.dto.merchant.request.UpdateCommissionRateRequest;
 import com.aionn.catalog.application.dto.common.PageResult;
-import com.aionn.sharedkernel.adapter.web.response.PageMetadata;
+import com.aionn.platform.web.response.PageMetadata;
 import java.util.List;
 
 @RestController

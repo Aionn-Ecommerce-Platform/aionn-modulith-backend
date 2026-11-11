@@ -1,8 +1,8 @@
 package com.aionn.recommendation.infrastructure.listener;
 
 import com.aionn.recommendation.application.service.InteractionRetentionService;
-import com.aionn.sharedkernel.integration.event.IntegrationEvent;
-import com.aionn.sharedkernel.integration.event.identity.AccountDeletedIntegrationEvent;
+import com.aionn.contracts.event.IntegrationEvent;
+import com.aionn.contracts.event.identity.AccountDeletedIntegrationEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;

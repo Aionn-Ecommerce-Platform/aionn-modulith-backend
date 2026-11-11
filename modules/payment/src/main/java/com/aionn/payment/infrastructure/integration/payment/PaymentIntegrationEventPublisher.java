@@ -1,10 +1,10 @@
 package com.aionn.payment.infrastructure.integration.payment;
 
 import com.aionn.payment.application.port.out.integration.PaymentIntegrationEventPublisherPort;
-import com.aionn.sharedkernel.integration.event.payment.PaymentCapturedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.payment.PaymentFailedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.payment.PaymentRefundedIntegrationEvent;
-import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.contracts.event.payment.PaymentCapturedIntegrationEvent;
+import com.aionn.contracts.event.payment.PaymentFailedIntegrationEvent;
+import com.aionn.contracts.event.payment.PaymentRefundedIntegrationEvent;
+import com.aionn.contracts.publisher.IntegrationEventPublisher;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

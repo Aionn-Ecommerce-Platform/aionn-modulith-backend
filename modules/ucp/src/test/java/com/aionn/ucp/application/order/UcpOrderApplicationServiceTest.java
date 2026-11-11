@@ -1,9 +1,13 @@
 package com.aionn.ucp.application.order;
 
-import com.aionn.sharedkernel.integration.port.ordering.OrderSnapshotQueryPort;
-import com.aionn.sharedkernel.integration.port.ordering.OrderSnapshotQueryPort.OrderSnapshot;
-import com.aionn.sharedkernel.integration.port.ordering.OrderSnapshotQueryPort.OrderSnapshot.Line;
+import java.math.BigDecimal;
+
+import com.aionn.contracts.port.catalog.CatalogQueryPort;
+import com.aionn.contracts.port.ordering.OrderSnapshotQueryPort;
+import com.aionn.contracts.port.ordering.OrderSnapshotQueryPort.OrderSnapshot;
+import com.aionn.contracts.port.ordering.OrderSnapshotQueryPort.OrderSnapshot.Line;
 import com.aionn.ucp.adapter.rest.dto.order.UcpOrderModels.UcpOrderResponse;
+import com.aionn.ucp.application.TestUcpProtocolPolicy;
 import com.aionn.ucp.application.port.out.UcpCheckoutSessionPort;
 import com.aionn.ucp.domain.exception.UcpProtocolException;
 import com.aionn.ucp.domain.model.UcpCheckoutSession;
@@ -30,6 +34,9 @@ class UcpOrderApplicationServiceTest {
         private OrderSnapshotQueryPort orderSnapshotPort;
 
         @Mock
+        private CatalogQueryPort catalogQueryPort;
+
+        @Mock
         private UcpCheckoutSessionPort sessionPort;
 
         private PinnedUcpSchemaValidator schemaValidator;
@@ -38,7 +45,8 @@ class UcpOrderApplicationServiceTest {
         @BeforeEach
         void setUp() {
                 schemaValidator = new PinnedUcpSchemaValidator();
-                orderService = new UcpOrderApplicationService(orderSnapshotPort, sessionPort, schemaValidator);
+                orderService = new UcpOrderApplicationService(orderSnapshotPort, catalogQueryPort, sessionPort,
+                        schemaValidator, new TestUcpProtocolPolicy());
         }
 
         @Test
@@ -98,6 +106,67 @@ class UcpOrderApplicationServiceTest {
                 assertThat(response.fulfillment().expectations().get(0).destination().streetAddress())
                                 .isEqualTo("123 Le Loi");
                 assertThat(response.totals()).hasSize(3); // subtotal, shipping, total
+        }
+
+        @Test
+        void getOrderEnrichesLineItemTitleFromCatalog() {
+                String orderId = "ord_enrich";
+                String userId = "user_e";
+
+                OrderSnapshot snapshot = new OrderSnapshot(
+                                orderId,
+                                userId,
+                                "merch_1",
+                                "VND",
+                                "COMPLETED",
+                                50000L,
+                                10000L,
+                                60000L,
+                                List.of(new Line("sku_ao_thun_do_l", 2, 25000L, 50000L)));
+
+                CatalogQueryPort.ProductView view = new CatalogQueryPort.ProductView(
+                                "prod_1",
+                                "Áo thun nam",
+                                "desc",
+                                List.of("https://img/1.png"),
+                                List.of(new CatalogQueryPort.VariantView(
+                                                "sku_ao_thun_do_l", "Áo thun nam (Đỏ, L)",
+                                                new BigDecimal("25000"), "VND", true, Map.of())));
+                when(orderSnapshotPort.findOrderById(orderId)).thenReturn(Optional.of(snapshot));
+                when(sessionPort.findByOrderId(orderId)).thenReturn(Optional.empty());
+                when(catalogQueryPort.lookupByProductOrSkuIds(List.of("sku_ao_thun_do_l")))
+                                .thenReturn(new CatalogQueryPort.LookupResult(List.of(view), List.of()));
+
+                UcpOrderResponse response = orderService.getOrder(orderId, userId);
+
+                assertThat(response.lineItems().get(0).item().title()).isEqualTo("Áo thun nam (Đỏ, L)");
+                assertThat(response.lineItems().get(0).item().imageUrl()).isEqualTo("https://img/1.png");
+        }
+
+        @Test
+        void getOrderFallsBackToSkuIdWhenCatalogUnavailable() {
+                String orderId = "ord_no_catalog";
+                String userId = "user_nc";
+
+                OrderSnapshot snapshot = new OrderSnapshot(
+                                orderId,
+                                userId,
+                                "merch_1",
+                                "VND",
+                                "PENDING",
+                                1000L,
+                                0L,
+                                1000L,
+                                List.of(new Line("sku_unknown", 1, 1000L, 1000L)));
+
+                when(orderSnapshotPort.findOrderById(orderId)).thenReturn(Optional.of(snapshot));
+                when(sessionPort.findByOrderId(orderId)).thenReturn(Optional.empty());
+                when(catalogQueryPort.lookupByProductOrSkuIds(List.of("sku_unknown")))
+                                .thenReturn(new CatalogQueryPort.LookupResult(List.of(), List.of("sku_unknown")));
+
+                UcpOrderResponse response = orderService.getOrder(orderId, userId);
+
+                assertThat(response.lineItems().get(0).item().title()).isEqualTo("sku_unknown");
         }
 
         @Test
@@ -190,6 +259,20 @@ class UcpOrderApplicationServiceTest {
                                 .isInstanceOf(UcpProtocolException.class)
                                 .hasMessageContaining("Access denied")
                                 .satisfies(e -> assertThat(((UcpProtocolException) e).getStatusCode()).isEqualTo(403));
+        }
+
+        @Test
+        void getOrderAllowsPlatformCallerForGuestCheckoutOrder() {
+                OrderSnapshot snapshot = new OrderSnapshot(
+                                "ord_guest", "ucp:guest:chk_1", "merch_1", "VND", "PENDING",
+                                100L, 0L, 100L,
+                                List.of(new Line("sku_1", 1, 100L, 100L)));
+                when(orderSnapshotPort.findOrderById("ord_guest")).thenReturn(Optional.of(snapshot));
+                when(sessionPort.findByOrderId("ord_guest")).thenReturn(Optional.empty());
+
+                UcpOrderResponse response = orderService.getOrder("ord_guest", null);
+
+                assertThat(response.id()).isEqualTo("ord_guest");
         }
 
         @Test

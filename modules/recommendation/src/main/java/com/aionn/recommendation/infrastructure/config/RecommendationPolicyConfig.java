@@ -3,9 +3,11 @@ package com.aionn.recommendation.infrastructure.config;
 import com.aionn.recommendation.application.policy.ColdStartThresholdPolicy;
 import com.aionn.recommendation.application.policy.InteractionWeightPolicy;
 import com.aionn.recommendation.application.policy.RankingWeightPolicy;
+import com.aionn.recommendation.application.policy.RecommendationServingPolicy;
 import com.aionn.recommendation.domain.valueobject.InteractionWeight;
 import com.aionn.recommendation.infrastructure.config.properties.RecommendationColdStartProperties;
 import com.aionn.recommendation.infrastructure.config.properties.RecommendationRankingProperties;
+import com.aionn.recommendation.infrastructure.config.properties.RecommendationServingProperties;
 import com.aionn.recommendation.infrastructure.config.properties.RecommendationWeightProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,6 +27,7 @@ public class RecommendationPolicyConfig {
     public InteractionWeightPolicy interactionWeightPolicy(RecommendationWeightProperties properties) {
         return type -> switch (type) {
             case VIEW -> toWeight(properties.view());
+            case SEARCH -> toWeight(properties.search());
             case CART_ADD -> toWeight(properties.cartAdd());
             case PURCHASE -> toWeight(properties.purchase());
         };
@@ -50,6 +53,12 @@ public class RecommendationPolicyConfig {
     public ColdStartThresholdPolicy coldStartThresholdPolicy(
             RecommendationColdStartProperties properties) {
         return new PropertyBackedColdStartThresholdPolicy(properties);
+    }
+
+    @Bean
+    public RecommendationServingPolicy recommendationServingPolicy(
+            RecommendationServingProperties properties) {
+        return new PropertyBackedServingPolicy(properties);
     }
 
     private static InteractionWeight toWeight(RecommendationWeightProperties.Signal signal) {
@@ -111,6 +120,39 @@ public class RecommendationPolicyConfig {
         @Override
         public int fullHybridThreshold() {
             return Math.max(contentOnlyThreshold(), properties.fullHybridThreshold());
+        }
+    }
+
+    private record PropertyBackedServingPolicy(
+            RecommendationServingProperties properties) implements RecommendationServingPolicy {
+
+        @Override
+        public int seedLookbackDays() {
+            return Math.max(1, properties.seedLookbackDays());
+        }
+
+        @Override
+        public int seedLimit() {
+            return Math.max(1, properties.seedLimit());
+        }
+
+        @Override
+        public int maxPageSize() {
+            return Math.max(1, properties.maxPageSize());
+        }
+
+        @Override
+        public BigDecimal maxFlashSaleShare() {
+            BigDecimal share = properties.maxFlashSaleShare();
+            if (share.signum() < 0) {
+                return BigDecimal.ZERO;
+            }
+            return share.min(BigDecimal.ONE);
+        }
+
+        @Override
+        public int categoryCandidateOvershoot() {
+            return Math.max(0, properties.categoryCandidateOvershoot());
         }
     }
 }

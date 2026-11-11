@@ -1,11 +1,17 @@
 package com.aionn.identity.infrastructure.integration;
+
+import java.time.ZoneOffset;
+import org.mockito.ArgumentMatchers;
+
 import com.aionn.identity.infrastructure.integration.security.IdentityAccessTokenVerifierAdapter;
 
 import com.aionn.identity.application.port.out.auth.AccessTokenClaims;
 import com.aionn.identity.application.port.out.auth.AccessTokenIssuerPort;
 import com.aionn.identity.application.port.out.auth.AuthSessionPersistencePort;
 import com.aionn.identity.application.port.out.auth.TokenBlacklistPort;
+import com.aionn.identity.application.port.out.user.UserPersistencePort;
 import com.aionn.identity.domain.model.AuthSession;
+import com.aionn.identity.domain.model.IdentityUser;
 import com.aionn.identity.domain.valueobject.AuthSessionStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,17 +43,22 @@ class IdentityAccessTokenVerifierAdapterTest {
     @Mock
     private AuthSessionPersistencePort authSessionPersistencePort;
     @Mock
+    private UserPersistencePort userPersistencePort;
+    @Mock
     private TokenBlacklistPort tokenBlacklist;
 
     private static final Clock CLOCK =
-            Clock.fixed(Instant.parse("2026-08-05T10:00:00Z"), java.time.ZoneOffset.UTC);
+            Clock.fixed(Instant.parse("2026-08-05T10:00:00Z"), ZoneOffset.UTC);
 
     private IdentityAccessTokenVerifierAdapter adapter;
 
     @BeforeEach
     void setUp() {
         adapter = new IdentityAccessTokenVerifierAdapter(
-                tokenIssuer, authSessionPersistencePort, tokenBlacklist, CLOCK);
+                tokenIssuer, authSessionPersistencePort, userPersistencePort, tokenBlacklist, CLOCK);
+        IdentityUser activeUser = org.mockito.Mockito.mock(IdentityUser.class);
+        lenient().when(activeUser.isActive()).thenReturn(true);
+        lenient().when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser));
     }
 
     private static Instant utcNow() {
@@ -66,7 +77,7 @@ class IdentityAccessTokenVerifierAdapterTest {
     @Test
     void returnsEmptyWhenHeaderNull() {
         assertThat(adapter.verifyAndExtractUserId(null)).isEmpty();
-        verify(tokenIssuer, never()).parseClaims(org.mockito.ArgumentMatchers.anyString());
+        verify(tokenIssuer, never()).parseClaims(ArgumentMatchers.anyString());
     }
 
     @Test
@@ -101,7 +112,7 @@ class IdentityAccessTokenVerifierAdapterTest {
         when(tokenBlacklist.isBlacklisted(JTI)).thenReturn(true);
 
         assertThat(adapter.verifyAndExtractUserId("Bearer tok")).isEmpty();
-        verify(authSessionPersistencePort, never()).findById(org.mockito.ArgumentMatchers.anyString());
+        verify(authSessionPersistencePort, never()).findById(ArgumentMatchers.anyString());
     }
 
     @Test
@@ -146,6 +157,14 @@ class IdentityAccessTokenVerifierAdapterTest {
     }
 
     @Test
+    void returnsEmptyWhenRevocationStoreFails() {
+        when(tokenIssuer.parseClaims("tok")).thenReturn(Optional.of(claims(USER_ID, SESSION_ID, JTI)));
+        when(tokenBlacklist.isBlacklisted(JTI)).thenThrow(new RuntimeException("redis down"));
+
+        assertThat(adapter.verifyAndExtractUserId("Bearer tok")).isEmpty();
+    }
+
+    @Test
     void returnsUserIdOnValidBearerToken() {
         when(tokenIssuer.parseClaims("tok")).thenReturn(Optional.of(claims(USER_ID, SESSION_ID, JTI)));
         when(tokenBlacklist.isBlacklisted(JTI)).thenReturn(false);
@@ -157,13 +176,13 @@ class IdentityAccessTokenVerifierAdapterTest {
 
     @Test
     void skipsBlacklistCheckWhenJtiNull() {
-        lenient().when(tokenBlacklist.isBlacklisted(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        lenient().when(tokenBlacklist.isBlacklisted(ArgumentMatchers.any())).thenReturn(true);
         when(tokenIssuer.parseClaims("tok")).thenReturn(Optional.of(claims(USER_ID, SESSION_ID, null)));
         when(authSessionPersistencePort.findById(SESSION_ID))
                 .thenReturn(Optional.of(session(AuthSessionStatus.ACTIVE, USER_ID, utcNow().plus(Duration.ofDays(1)))));
 
         assertThat(adapter.verifyAndExtractUserId("Bearer tok")).contains(USER_ID);
-        verify(tokenBlacklist, never()).isBlacklisted(org.mockito.ArgumentMatchers.anyString());
+        verify(tokenBlacklist, never()).isBlacklisted(ArgumentMatchers.anyString());
     }
 }
 

@@ -8,6 +8,7 @@ public record VoucherResponse(
         String campaignId,
         String scope,
         String merchantId,
+        String type,
         BigDecimal discountAmount,
         String currency,
         int usageLimit,

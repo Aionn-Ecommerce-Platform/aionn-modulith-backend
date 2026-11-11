@@ -56,7 +56,7 @@ class OrderAutoCancelWorkerTest {
         OrderItem item2 = mock(OrderItem.class);
         Order savedOrder = mock(Order.class);
 
-        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdForUpdate(orderId)).thenReturn(Optional.of(order));
         when(clock.instant()).thenReturn(now);
         when(order.items()).thenReturn(List.of(item1, item2));
         when(item1.reservationId()).thenReturn("res-1");
@@ -80,7 +80,7 @@ class OrderAutoCancelWorkerTest {
     void throwsExceptionWhenOrderNotFound() {
         String orderId = "non-existent";
 
-        when(orderRepository.findById(orderId)).thenReturn(Optional.empty());
+        when(orderRepository.findByIdForUpdate(orderId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> worker.cancelOneExpired(orderId))
                 .isInstanceOf(OrderingException.class);
@@ -97,7 +97,7 @@ class OrderAutoCancelWorkerTest {
         OrderItem item2 = mock(OrderItem.class);
         Order savedOrder = mock(Order.class);
 
-        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdForUpdate(orderId)).thenReturn(Optional.of(order));
         when(clock.instant()).thenReturn(now);
         when(order.items()).thenReturn(List.of(item1, item2));
         when(item1.reservationId()).thenReturn("res-1");
@@ -121,7 +121,7 @@ class OrderAutoCancelWorkerTest {
         OrderItem item2 = mock(OrderItem.class);
         Order savedOrder = mock(Order.class);
 
-        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdForUpdate(orderId)).thenReturn(Optional.of(order));
         when(clock.instant()).thenReturn(now);
         when(order.items()).thenReturn(List.of(item1, item2));
         when(item1.reservationId()).thenReturn("res-1");
@@ -148,7 +148,7 @@ class OrderAutoCancelWorkerTest {
         Order order = mock(Order.class);
         Order savedOrder = mock(Order.class);
 
-        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdForUpdate(orderId)).thenReturn(Optional.of(order));
         when(clock.instant()).thenReturn(now);
         when(order.items()).thenReturn(List.of());
         when(order.pullEvents()).thenReturn(List.of());
@@ -167,7 +167,7 @@ class OrderAutoCancelWorkerTest {
         Order order = mock(Order.class);
         Order savedOrder = mock(Order.class);
 
-        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdForUpdate(orderId)).thenReturn(Optional.of(order));
         when(clock.instant()).thenReturn(now);
         when(order.items()).thenReturn(List.of());
         when(order.pullEvents()).thenReturn(List.of());
@@ -183,3 +183,4 @@ class OrderAutoCancelWorkerTest {
                 eq(CancellationKind.AUTO_CANCELLED));
     }
 }
+

@@ -5,7 +5,7 @@ import com.aionn.chat.application.port.out.PresenceTracker;
 import com.aionn.chat.application.port.out.observability.ChatMetricsPort;
 import com.aionn.chat.domain.event.ChatEvents;
 import com.aionn.chat.domain.model.Conversation;
-import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.contracts.publisher.IntegrationEventPublisher;
 import org.junit.jupiter.api.Test;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.transaction.TransactionDefinition;

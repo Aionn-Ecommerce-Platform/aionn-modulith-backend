@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class SpringRegistrationPolicyTest {
 
-    private RegistrationProperties properties(boolean twilioEnabled) {
+    private RegistrationProperties properties(boolean exposeOtp) {
         return new RegistrationProperties(
                 6,
                 90,
@@ -18,9 +18,10 @@ class SpringRegistrationPolicyTest {
                 45,
                 60L,
                 "+1",
-                new RateLimit(4, 400, 2, 120),
+                new RateLimit(4, 400, 2, 120, 10, 300, 5, 300),
                 new Captcha("google", "", "", ""),
-                new Twilio(twilioEnabled, "", "", ""));
+                new Twilio(false, "", "", ""),
+                exposeOtp);
     }
 
     @Test
@@ -40,15 +41,15 @@ class SpringRegistrationPolicyTest {
     }
 
     @Test
-    void exposesOtpWhenTwilioDisabled() {
-        SpringRegistrationPolicy policy = new SpringRegistrationPolicy(properties(false));
+    void exposesOtpOnlyWhenExplicitlyEnabled() {
+        SpringRegistrationPolicy policy = new SpringRegistrationPolicy(properties(true));
 
         assertThat(policy.isExposeOtpInResponse()).isTrue();
     }
 
     @Test
-    void hidesOtpWhenTwilioEnabled() {
-        SpringRegistrationPolicy policy = new SpringRegistrationPolicy(properties(true));
+    void hidesOtpByDefault() {
+        SpringRegistrationPolicy policy = new SpringRegistrationPolicy(properties(false));
 
         assertThat(policy.isExposeOtpInResponse()).isFalse();
     }

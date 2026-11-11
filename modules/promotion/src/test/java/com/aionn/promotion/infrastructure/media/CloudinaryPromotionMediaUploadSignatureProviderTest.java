@@ -2,8 +2,8 @@ package com.aionn.promotion.infrastructure.media;
 
 import com.aionn.promotion.application.dto.media.result.UploadSignatureResult;
 import com.aionn.promotion.infrastructure.config.properties.PromotionCloudinaryProperties;
-import com.aionn.sharedkernel.media.CloudinaryCredentialsProperties;
-import com.aionn.sharedkernel.media.CloudinarySigner;
+import com.aionn.platform.media.CloudinaryCredentialsProperties;
+import com.aionn.platform.media.CloudinarySigner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

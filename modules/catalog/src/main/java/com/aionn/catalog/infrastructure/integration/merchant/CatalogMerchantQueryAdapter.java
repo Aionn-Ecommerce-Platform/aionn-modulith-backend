@@ -1,11 +1,13 @@
 package com.aionn.catalog.infrastructure.integration.merchant;
 
+import java.math.BigDecimal;
+
 import com.aionn.catalog.application.port.out.merchant.MerchantPersistencePort;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.catalog.domain.model.Merchant;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantCommandPort;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantCommandPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,7 +42,7 @@ public class CatalogMerchantQueryAdapter implements MerchantQueryPort, MerchantC
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<java.math.BigDecimal> findCommissionRate(String merchantId) {
+    public Optional<BigDecimal> findCommissionRate(String merchantId) {
         if (merchantId == null || merchantId.isBlank()) {
             return Optional.empty();
         }

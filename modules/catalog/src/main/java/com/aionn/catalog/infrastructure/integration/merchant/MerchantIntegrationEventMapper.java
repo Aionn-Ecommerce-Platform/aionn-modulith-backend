@@ -1,9 +1,9 @@
 package com.aionn.catalog.infrastructure.integration.merchant;
 
 import com.aionn.catalog.domain.event.MerchantEvents;
-import com.aionn.sharedkernel.integration.event.catalog.MerchantActivatedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.catalog.MerchantClosedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.catalog.MerchantSuspendedIntegrationEvent;
+import com.aionn.contracts.event.catalog.MerchantActivatedIntegrationEvent;
+import com.aionn.contracts.event.catalog.MerchantClosedIntegrationEvent;
+import com.aionn.contracts.event.catalog.MerchantSuspendedIntegrationEvent;
 import com.aionn.sharedkernel.util.IdGenerator;
 import org.springframework.stereotype.Component;
 

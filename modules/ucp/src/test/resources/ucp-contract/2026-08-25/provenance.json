@@ -12,5 +12,29 @@
   ],
   "reference_validator_repository": "https://github.com/Universal-Commerce-Protocol/ucp-schema",
   "reference_validator_commit": "a0fc4fc189add7da533c981bdb3d8a36950e0602",
-  "scope": "Offline contract and fixture inventory only. These resources are not registered with the discovery runtime validator and do not advertise or implement any UCP commerce capability."
+  "scope": "Offline contract and fixture inventory only. These resources are not registered with the discovery runtime validator and do not advertise or implement any UCP commerce capability.",
+  "fixture_normalization": {
+    "name": "protocol-version-pin",
+    "reason": "Upstream tag v2026-08-25 still ships generated scaffolds whose example payloads carry the 2026-01-01 version and ucp.dev/2026-01-01 URLs. The imported fixtures are normalized to the pinned protocol version so the contract inventory matches the release it is pinned to.",
+    "replacements": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-08-25"
+      }
+    ],
+    "files": [
+      "scaffolds/common_location_lookup_response.json",
+      "scaffolds/common_location_search_response.json",
+      "scaffolds/common_payment_authentication_response.json",
+      "scaffolds/profile_response.json",
+      "scaffolds/shopping_cart_response.json",
+      "scaffolds/shopping_catalog_lookup_response.json",
+      "scaffolds/shopping_catalog_lookup_response_get_product.json",
+      "scaffolds/shopping_catalog_search_response.json",
+      "scaffolds/shopping_checkout_response.json",
+      "scaffolds/shopping_order_response.json",
+      "scaffolds/shopping_types_error_response_response.json",
+      "scaffolds/ucp_response.json"
+    ]
+  }
 }

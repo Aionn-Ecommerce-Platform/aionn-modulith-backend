@@ -3,12 +3,13 @@ package com.aionn.promotion.infrastructure.integration;
 import com.aionn.promotion.application.port.out.PromotionCampaignPersistencePort;
 import com.aionn.promotion.application.port.out.UserVoucherPersistencePort;
 import com.aionn.promotion.application.port.out.VoucherPersistencePort;
+import com.aionn.promotion.application.policy.VoucherReservationPolicy;
 import com.aionn.promotion.domain.model.PromotionCampaign;
 import com.aionn.promotion.domain.model.UserVoucher;
 import com.aionn.promotion.domain.model.Voucher;
 import com.aionn.promotion.domain.valueobject.UserVoucherStatus;
 import com.aionn.sharedkernel.domain.vo.Money;
-import com.aionn.sharedkernel.integration.port.promotion.VoucherApplyPort;
+import com.aionn.contracts.port.promotion.VoucherApplyPort;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +17,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.time.Clock;
 import java.util.List;
 
@@ -33,6 +33,7 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
     private final VoucherPersistencePort voucherRepository;
     private final UserVoucherPersistencePort userVoucherRepository;
     private final PromotionCampaignPersistencePort campaignRepository;
+    private final VoucherReservationPolicy reservationPolicy;
     private final Clock clock;
 
     @Override
@@ -47,17 +48,19 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
             return new Discount(BigDecimal.ZERO, currency, false, "voucher-wrong-shop");
         }
 
-        UserVoucher uv = userVoucherRepository.findByUserAndCode(userId, voucherCode).orElse(null);
+        UserVoucher uv = userVoucherRepository.findByUserAndCodeForUpdate(userId, voucherCode).orElse(null);
         if (uv != null && uv.getStatus() == UserVoucherStatus.APPLIED) {
             if (orderId.equals(uv.getReservedOrderId()) && uv.getAppliedAmount() != null) {
-                return new Discount(uv.getAppliedAmount().amount(), uv.getAppliedAmount().currency(), true, null);
+                return new Discount(uv.getAppliedAmount().amount(), uv.getAppliedAmount().currency(), true, null,
+                        voucher.isFreeShipping());
             }
             return new Discount(BigDecimal.ZERO, currency, false, "voucher-already-used");
         }
 
         // Validate campaign conditions if platform voucher
+        PromotionCampaign campaign = null;
         if (voucher.getCampaignId() != null) {
-            PromotionCampaign campaign = campaignRepository.findById(voucher.getCampaignId()).orElse(null);
+            campaign = campaignRepository.findByIdForUpdate(voucher.getCampaignId()).orElse(null);
             if (campaign != null) {
                 try {
                     campaign.ensureRunning(clock);
@@ -83,40 +86,66 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
             if (!voucher.isUsable(clock.instant())) {
                 return new Discount(BigDecimal.ZERO, currency, false, "voucher-not-usable");
             }
+            if (campaign != null && campaign.getCondition().maxClaimsPerUser() != null
+                    && userVoucherRepository.countByUserAndCampaign(userId, campaign.getCampaignId())
+                            >= campaign.getCondition().maxClaimsPerUser()) {
+                return new Discount(BigDecimal.ZERO, currency, false, "claim-limit-reached");
+            }
             voucher.claimSlot(clock);
             uv = UserVoucher.claim(IdGenerator.ulid(), voucherCode, userId, clock);
             userVoucherRepository.save(uv);
         }
 
+        if (uv.getStatus() == UserVoucherStatus.RESERVED) {
+            if (!orderId.equals(uv.getReservedOrderId())) {
+                return new Discount(BigDecimal.ZERO, currency, false, "voucher-reserved-by-other");
+            }
+        }
+
+        String voucherCurrency = voucher.getDiscountAmount().currency();
+        if (currency != null && !currency.isBlank() && !currency.equalsIgnoreCase(voucherCurrency)) {
+            return new Discount(BigDecimal.ZERO, currency, false, "voucher-currency-mismatch");
+        }
         BigDecimal discount = voucher.getDiscountAmount().amount();
-        if (lineSubtotal != null && discount.compareTo(lineSubtotal) > 0) {
+        // Goods vouchers cannot exceed the goods they discount. A free-shipping
+        // voucher is capped against the shipping fee by the caller instead, so it
+        // must not be clamped to the (usually larger) line subtotal here.
+        if (!voucher.isFreeShipping() && lineSubtotal != null && discount.compareTo(lineSubtotal) > 0) {
             discount = lineSubtotal;
         }
-        String discountCurrency = voucher.getDiscountAmount().currency();
 
-        voucher.reserveSlot(clock);
+        if (uv.getStatus() != UserVoucherStatus.RESERVED) {
+            voucher.reserveSlot(clock);
+            uv.reserve(orderId, reservationPolicy.expiresFrom(clock.instant()), clock);
+        }
         voucher.commitSlot(clock);
+        uv.apply(Money.of(discount, voucherCurrency), clock);
 
-        uv.reserve(orderId, clock.instant().plus(Duration.ofMinutes(15)), clock);
-        uv.apply(Money.of(discount, discountCurrency), clock);
+        // Consume the campaign budget the same way VoucherService.apply does —
+        // ordering goes through this adapter, so without it a platform campaign's
+        // budget would never be decremented at checkout.
+        if (campaign != null) {
+            campaign.consumeBudget(Money.of(discount, voucherCurrency), clock);
+            campaignRepository.save(campaign);
+        }
 
         voucherRepository.save(voucher);
         userVoucherRepository.save(uv);
 
-        return new Discount(discount, discountCurrency, true, null);
+        return new Discount(discount, voucherCurrency, true, null, voucher.isFreeShipping());
     }
 
     @Override
     @Transactional
     public void release(String userId, String orderId, String reason) {
-        userVoucherRepository.findByReservedOrderId(orderId)
+        userVoucherRepository.findByReservedOrderIdForUpdate(orderId)
                 .filter(uv -> uv.getUserId().equals(userId))
                 .ifPresent(uv -> {
                     if (uv.getStatus() != UserVoucherStatus.APPLIED
                             && uv.getStatus() != UserVoucherStatus.RESERVED) {
                         return;
                     }
-                    Voucher voucher = voucherRepository.findByCode(uv.getVoucherCode()).orElse(null);
+                    Voucher voucher = voucherRepository.lockByCode(uv.getVoucherCode()).orElse(null);
                     if (voucher != null) {
                         if (uv.getStatus() == UserVoucherStatus.APPLIED) {
                             voucher.releaseCommittedSlot(clock);

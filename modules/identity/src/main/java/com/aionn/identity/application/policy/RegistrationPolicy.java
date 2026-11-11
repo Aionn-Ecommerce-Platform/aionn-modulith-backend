@@ -23,4 +23,12 @@ public interface RegistrationPolicy {
     int getPhoneRateLimitMaxAttempts();
 
     int getPhoneRateLimitWindowSeconds();
+
+    int getVerifyIpMaxAttempts();
+
+    int getVerifyIpWindowSeconds();
+
+    int getResendIpMaxAttempts();
+
+    int getResendIpWindowSeconds();
 }

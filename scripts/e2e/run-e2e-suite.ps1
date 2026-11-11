@@ -45,9 +45,7 @@ Get-Content $envFiles | ForEach-Object {
 $overrides = @{
     "CAPTCHA_PROVIDER" = "mock"
     "CAPTCHA_EXPECTED_TOKEN" = ""
-    "TWILIO_ENABLED" = "false"
     "IDENTITY_AUTH_GOOGLE_PROVIDER" = "mock"
-    "IDENTITY_AUTH_FACEBOOK_PROVIDER" = "mock"
     "IDENTITY_MEDIA_PROVIDER" = "mock"
     "IDENTITY_KYC_PROVIDER" = "local"
     "FLYWAY_ENABLED" = "true"

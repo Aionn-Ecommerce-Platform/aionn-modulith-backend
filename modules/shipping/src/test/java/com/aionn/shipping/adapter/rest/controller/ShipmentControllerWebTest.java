@@ -1,5 +1,8 @@
 package com.aionn.shipping.adapter.rest.controller;
 
+import com.aionn.shipping.application.service.ParcelResolver;
+import org.mockito.ArgumentMatchers;
+
 import com.aionn.shipping.adapter.rest.dto.shipment.CancelShipmentRequest;
 import com.aionn.shipping.adapter.rest.dto.shipment.CreateShipmentRequest;
 import com.aionn.shipping.adapter.rest.dto.shipment.QuoteShippingRequest;
@@ -12,6 +15,7 @@ import com.aionn.shipping.application.dto.shipment.command.CancelShipmentCommand
 import com.aionn.shipping.application.dto.shipment.command.CreateShipmentCommand;
 import com.aionn.shipping.application.dto.shipment.command.QuoteShippingCommand;
 import com.aionn.shipping.application.dto.shipment.result.ShipmentResult;
+import com.aionn.shipping.application.usecase.shipment.QuoteShippingUseCase;
 import com.aionn.shipping.application.port.in.shipment.QuoteShippingInputPort;
 import com.aionn.shipping.application.port.in.shipment.CreateShipmentInputPort;
 import com.aionn.shipping.application.port.in.shipment.RegisterShipmentInputPort;
@@ -23,8 +27,7 @@ import com.aionn.shipping.application.port.in.shipment.ListShipmentsByOrderInput
 import com.aionn.shipping.domain.exception.ShippingErrorCode;
 import com.aionn.shipping.domain.exception.ShippingException;
 import com.aionn.shipping.domain.valueobject.ShipmentAddress;
-import com.aionn.shipping.domain.valueobject.ShipmentDimensions;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,6 +51,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -75,6 +79,8 @@ class ShipmentControllerWebTest {
     private GetShipmentInputPort getShipmentInputPort;
     @Mock
     private ListShipmentsByOrderInputPort listShipmentsByOrderInputPort;
+    @Mock
+    private ParcelResolver parcelResolver;
 
     private final ShipmentDtoMapper shipmentDtoMapper = Mappers.getMapper(ShipmentDtoMapper.class);
     private final ShippingRateDtoMapper shippingRateDtoMapper = Mappers.getMapper(ShippingRateDtoMapper.class);
@@ -94,7 +100,8 @@ class ShipmentControllerWebTest {
                 getShipmentInputPort,
                 listShipmentsByOrderInputPort,
                 shipmentDtoMapper,
-                shippingRateDtoMapper
+                shippingRateDtoMapper,
+                parcelResolver
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new ShippingExceptionHandler())
@@ -108,40 +115,45 @@ class ShipmentControllerWebTest {
         ShippingQuoteResult quote = new ShippingQuoteResult(
                 BigDecimal.valueOf(30000), "VND", "HN", "configured-rate",
                 "<=2kg", null, null);
-        when(quoteShippingInputPort.execute(any(QuoteShippingCommand.class))).thenReturn(quote);
+        when(quoteShippingInputPort.executeForItems(any(), any(), anyList(), any(), any()))
+                .thenReturn(quote);
 
         ShipmentAddress address = new ShipmentAddress(
                 "John", "0912345678", "addr", "00001", "001", "HN", "VN");
-        ShipmentDimensions dims = new ShipmentDimensions(
-                500, BigDecimal.valueOf(20), BigDecimal.valueOf(15), BigDecimal.valueOf(10));
+        List<QuoteShippingRequest.Item> items = List.of(
+                new QuoteShippingRequest.Item("sku-1", 2));
 
         mockMvc.perform(post("/api/v1/shipping/shipments/quote")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new QuoteShippingRequest(null, address, dims, "VND"))))
+                                new QuoteShippingRequest(null, address, items, null, "VND"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.fee").value(30000))
                 .andExpect(jsonPath("$.data.currency").value("VND"));
 
-        ArgumentCaptor<QuoteShippingCommand> commandCaptor = ArgumentCaptor.forClass(QuoteShippingCommand.class);
-        verify(quoteShippingInputPort).execute(commandCaptor.capture());
-        assertThat(commandCaptor.getValue().orderId()).isNull();
+        ArgumentCaptor<List<QuoteShippingUseCase.ItemRequest>> itemsCaptor = ArgumentCaptor.captor();
+        verify(quoteShippingInputPort).executeForItems(any(), any(), itemsCaptor.capture(), any(), any());
+        assertThat(itemsCaptor.getValue()).hasSize(1);
+        assertThat(itemsCaptor.getValue().get(0).skuId()).isEqualTo("sku-1");
+        assertThat(itemsCaptor.getValue().get(0).qty()).isEqualTo(2);
     }
 
     @Test
     void createReturnsCreatedWhenMerchantResolved() throws Exception {
         when(createShipmentInputPort.execute(any(CreateShipmentCommand.class)))
                 .thenReturn(sample("S_1", "REQUESTED"));
+        when(parcelResolver.resolveParcels(anyList()))
+                .thenReturn(List.of(new QuoteShippingCommand.Parcel(500, null, null, null, 1)));
 
         ShipmentAddress address = new ShipmentAddress(
                 "John", "0912345678", "addr", "00001", "001", "HN", "VN");
-        ShipmentDimensions dims = new ShipmentDimensions(
-                500, BigDecimal.valueOf(20), BigDecimal.valueOf(15), BigDecimal.valueOf(10));
+        List<CreateShipmentRequest.Item> items = List.of(
+                new CreateShipmentRequest.Item("sku-1", 1));
 
         mockMvc.perform(post("/api/v1/shipping/shipments")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateShipmentRequest(
-                                "ORDER_1", "U_BUYER", address, dims,
+                                "ORDER_1", "U_BUYER", address, items,
                                 BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND"))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.shipmentId").value("S_1"));
@@ -153,16 +165,18 @@ class ShipmentControllerWebTest {
     void createReturnsForbiddenWhenOwnerHasNoMerchant() throws Exception {
         when(createShipmentInputPort.execute(any(CreateShipmentCommand.class)))
                 .thenThrow(new ShippingException(ShippingErrorCode.SHIPMENT_FORBIDDEN));
+        when(parcelResolver.resolveParcels(anyList()))
+                .thenReturn(List.of(new QuoteShippingCommand.Parcel(500, null, null, null, 1)));
 
         ShipmentAddress address = new ShipmentAddress(
                 "John", "0912345678", "addr", "00001", "001", "HN", "VN");
-        ShipmentDimensions dims = new ShipmentDimensions(
-                500, BigDecimal.valueOf(20), BigDecimal.valueOf(15), BigDecimal.valueOf(10));
+        List<CreateShipmentRequest.Item> items = List.of(
+                new CreateShipmentRequest.Item("sku-1", 1));
 
         mockMvc.perform(post("/api/v1/shipping/shipments")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new CreateShipmentRequest(
-                                "ORDER_1", "U_BUYER", address, dims,
+                                "ORDER_1", "U_BUYER", address, items,
                                 BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND"))))
                 .andExpect(status().isForbidden());
     }
@@ -199,7 +213,7 @@ class ShipmentControllerWebTest {
 
     @Test
     void registerWithCarrierReturnsRegisteredShipment() throws Exception {
-        when(registerShipmentInputPort.execute("S_1")).thenReturn(sample("S_1", "REGISTERED"));
+        when(registerShipmentInputPort.execute(ArgumentMatchers.eq("S_1"), ArgumentMatchers.anyString())).thenReturn(sample("S_1", "REGISTERED"));
 
         mockMvc.perform(post("/api/v1/shipping/shipments/S_1/register"))
                 .andExpect(status().isOk())

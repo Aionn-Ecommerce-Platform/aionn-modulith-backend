@@ -15,6 +15,8 @@ public class SpringAuthPolicy implements AuthPolicy {
     private final JwtProperties jwtProperties;
     private final AuthProperties authProperties;
 
+
+
     @Override
     public long getSessionExpiresDays() {
         return properties.expiresDays();
@@ -69,4 +71,5 @@ public class SpringAuthPolicy implements AuthPolicy {
     public int getPasswordResetRateLimitWindowSeconds() {
         return authProperties.passwordResetRateLimitWindowSeconds();
     }
+
 }

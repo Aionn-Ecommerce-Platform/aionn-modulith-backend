@@ -46,23 +46,6 @@ class PasswordResetPersistenceAdapterTest {
     }
 
     @Test
-    void findPasswordResetTokenHashReturnsDataWhenPresent() {
-        Instant expiresAt = Instant.now().plus(Duration.ofHours(1));
-        when(tokenStore.find(TOKEN_HASH))
-                .thenReturn(Optional.of(new RedisPasswordResetTokenStore.PasswordResetTokenData(USER_ID, expiresAt)));
-
-        assertThat(adapter.findPasswordResetTokenHash(TOKEN_HASH))
-                .contains(new PasswordResetTokenData(USER_ID, expiresAt));
-    }
-
-    @Test
-    void findPasswordResetTokenHashReturnsEmptyWhenMissing() {
-        when(tokenStore.find(TOKEN_HASH)).thenReturn(Optional.empty());
-
-        assertThat(adapter.findPasswordResetTokenHash(TOKEN_HASH)).isEmpty();
-    }
-
-    @Test
     void consumePasswordResetTokenHashReturnsDataWhenPresent() {
         Instant expiresAt = Instant.now().plus(Duration.ofHours(1));
         when(tokenStore.consume(TOKEN_HASH))
@@ -80,10 +63,10 @@ class PasswordResetPersistenceAdapterTest {
     }
 
     @Test
-    void deletePasswordResetTokenHashDelegatesToStore() {
-        adapter.deletePasswordResetTokenHash(TOKEN_HASH);
+    void deletePasswordResetTokensForUserDelegatesToStore() {
+        adapter.deletePasswordResetTokensForUser(USER_ID);
 
-        verify(tokenStore).delete(TOKEN_HASH);
+        verify(tokenStore).deleteForUser(USER_ID);
     }
 
     @Test

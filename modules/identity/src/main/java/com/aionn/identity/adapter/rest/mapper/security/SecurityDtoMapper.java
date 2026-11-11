@@ -31,7 +31,6 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface SecurityDtoMapper {
 
-    // Request -> Command
     ChangePasswordCommand toChangePasswordCommand(String userId, String clientIp, ChangePasswordRequest request);
 
     RequestPasswordResetCommand toPasswordResetCommand(String clientIp, PasswordResetRequestCommand request);
@@ -49,7 +48,6 @@ public interface SecurityDtoMapper {
 
     UnlockAccountCommand toUnlockAccountCommand(String userId);
 
-    // Result -> Response
     PasswordResetResponse toPasswordResetResponse(PasswordResetResult result);
 
     MfaSetupResponse toMfaSetupResponse(MfaSetupResult result);

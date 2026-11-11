@@ -13,19 +13,12 @@ shipping:
       label-print-url: ${GHN_LABEL_PRINT_URL:https://dev-online-gateway.ghn.vn/a5/public-api/printA5}
       webhook-secret: ${GHN_WEBHOOK_SECRET:}
 
+  defaults:
+    currency: ${SHIPPING_DEFAULTS_CURRENCY:VND}
+    base-weight-gram: ${SHIPPING_DEFAULTS_BASE_WEIGHT_GRAM:1000}
+    step-weight-gram: ${SHIPPING_DEFAULTS_STEP_WEIGHT_GRAM:500}
+
   status-poller:
     enabled: ${SHIPPING_STATUS_POLLER_ENABLED:true}
     delay-ms: ${SHIPPING_STATUS_POLLER_DELAY_MS:60000}
     batch-size: ${SHIPPING_STATUS_POLLER_BATCH:100}
-
-  auto-delivery:
-    enabled: ${SHIPPING_AUTO_DELIVERY_ENABLED:true}
-    delay-ms: ${SHIPPING_AUTO_DELIVERY_DELAY_MS:1200000}
-    transit-threshold-seconds: ${SHIPPING_AUTO_DELIVERY_THRESHOLD_SECONDS:1200}
-    batch-size: ${SHIPPING_AUTO_DELIVERY_BATCH:50}
-
-  default-dimensions:
-    weight-gram: ${SHIPPING_DEFAULT_DIM_WEIGHT_GRAM:500}
-    length-cm: ${SHIPPING_DEFAULT_DIM_LENGTH_CM:20}
-    width-cm: ${SHIPPING_DEFAULT_DIM_WIDTH_CM:15}
-    height-cm: ${SHIPPING_DEFAULT_DIM_HEIGHT_CM:10}

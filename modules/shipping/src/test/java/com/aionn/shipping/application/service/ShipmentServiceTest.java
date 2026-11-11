@@ -1,9 +1,15 @@
 package com.aionn.shipping.application.service;
 
+import com.aionn.shipping.domain.valueobject.ShipmentStatus;
+import java.time.Clock;
+import org.mockito.Mockito;
+
 import com.aionn.shipping.application.dto.rate.result.ShippingQuoteResult;
 import com.aionn.shipping.application.dto.shipment.command.*;
 import com.aionn.shipping.application.policy.CarrierWebhookSecurityPolicy;
+import com.aionn.shipping.application.policy.ShippingDefaultsPolicy;
 import com.aionn.shipping.application.port.out.CarrierClient;
+import com.aionn.shipping.application.port.out.CarrierWebhookIdempotencyPort;
 import com.aionn.shipping.application.port.out.ShipmentPersistencePort;
 import com.aionn.shipping.application.port.out.ShippingRatePersistencePort;
 import com.aionn.shipping.application.port.out.integration.ShippingIntegrationEventPublisherPort;
@@ -14,7 +20,8 @@ import com.aionn.shipping.domain.model.ShippingRate;
 import com.aionn.shipping.domain.valueobject.ShipmentAddress;
 import com.aionn.shipping.domain.valueobject.ShipmentDimensions;
 import com.aionn.sharedkernel.application.port.EventPublisher;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.ordering.OrderQueryPort;
 import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -54,7 +61,13 @@ class ShipmentServiceTest {
         @Mock
         MerchantQueryPort merchantQueryPort;
         @Mock
+        OrderQueryPort orderQueryPort;
+        @Mock
+        ShippingDefaultsPolicy defaultsPolicy;
+        @Mock
         CarrierWebhookSecurityPolicy webhookSecurityPolicy;
+        @Mock
+        CarrierWebhookIdempotencyPort webhookIdempotencyPort;
         @Mock
         TransactionTemplate transactionTemplate;
 
@@ -64,6 +77,9 @@ class ShipmentServiceTest {
                         "John Doe", "0912345678", "123 Main", "00001", "001", "HN", "VN");
         private static final ShipmentDimensions DIMENSIONS = new ShipmentDimensions(
                         500, BigDecimal.valueOf(20), BigDecimal.valueOf(15), BigDecimal.valueOf(10));
+        private static final List<QuoteShippingCommand.Parcel> PARCELS = List.of(
+                        new QuoteShippingCommand.Parcel(500, BigDecimal.valueOf(20), BigDecimal.valueOf(15),
+                                        BigDecimal.valueOf(10), 1));
 
         @BeforeEach
         void setUp() {
@@ -71,10 +87,16 @@ class ShipmentServiceTest {
                                 ((TransactionCallback<?>) invocation.getArgument(0)).doInTransaction(null));
                 lenient().when(webhookSecurityPolicy.isAuthorized(any())).thenReturn(true);
                 lenient().when(webhookSecurityPolicy.isAuthorized(isNull())).thenReturn(true);
+                lenient().when(webhookIdempotencyPort.claim(any())).thenReturn(true);
+                lenient().when(defaultsPolicy.defaultCurrency()).thenReturn("VND");
+                lenient().when(orderQueryPort.findOrderSummary(anyString()))
+                                .thenReturn(Optional.of(new OrderQueryPort.OrderSummary(
+                                                "ORDER_1", "U_1", "M_1",
+                                                BigDecimal.valueOf(30000), "VND")));
                 service = new ShipmentService(shipmentRepository, rateRepository, eventPublisher,
                                 carrierClient, integrationEventPublisher, merchantQueryPort,
-                                java.time.Clock.systemUTC(),
-                                webhookSecurityPolicy, transactionTemplate);
+                                orderQueryPort, defaultsPolicy, Clock.systemUTC(),
+                                webhookSecurityPolicy, webhookIdempotencyPort, transactionTemplate);
         }
 
         @Test
@@ -82,7 +104,7 @@ class ShipmentServiceTest {
                 when(shipmentRepository.save(any(Shipment.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 service.createShipment(new CreateShipmentCommand("ORDER_1", "M_1", null, "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND"));
+                                ADDRESS, PARCELS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND"));
 
                 verify(shipmentRepository).save(any(Shipment.class));
                 verify(eventPublisher).publish(anyCollection());
@@ -95,12 +117,30 @@ class ShipmentServiceTest {
                 when(rateRepository.findByZoneCode("HN")).thenReturn(Optional.of(rate));
 
                 ShippingQuoteResult result = service.quote(new QuoteShippingCommand(
-                                "ORDER_1", ADDRESS, DIMENSIONS, "VND"));
+                                "ORDER_1", ADDRESS, PARCELS, "VND"));
 
                 assertThat(result.fee()).isEqualByComparingTo(BigDecimal.valueOf(25000));
                 assertThat(result.source()).isEqualTo("configured-rate");
                 assertThat(result.zoneCode()).isEqualTo("HN");
                 verify(transactionTemplate).execute(any());
+        }
+
+        @Test
+        void configuredWeightRateUsesChargeableWeightAndFreeshipThreshold() {
+                ShippingRate rate = ShippingRate.configure("R_1", "HN", BigDecimal.valueOf(30000), "VND", null,
+                                1000, 500, BigDecimal.valueOf(5000), null, BigDecimal.valueOf(500000), FIXED);
+                when(rateRepository.findByZoneCode("HN")).thenReturn(Optional.of(rate));
+                var parcels = List.of(new QuoteShippingCommand.Parcel(
+                                1200, BigDecimal.valueOf(20), BigDecimal.valueOf(15), BigDecimal.valueOf(10), 1));
+
+                ShippingQuoteResult regular = service.quote(new QuoteShippingCommand(
+                                "ORDER_1", ADDRESS, parcels, BigDecimal.valueOf(100000), "VND"));
+                ShippingQuoteResult free = service.quote(new QuoteShippingCommand(
+                                "ORDER_1", ADDRESS, parcels, BigDecimal.valueOf(500000), "VND"));
+
+                assertThat(regular.fee()).isEqualByComparingTo(BigDecimal.valueOf(35000));
+                assertThat(free.fee()).isEqualByComparingTo(BigDecimal.ZERO);
+                verify(carrierClient, Mockito.never()).quote(any(), any(), any());
         }
 
         @Test
@@ -113,7 +153,7 @@ class ShipmentServiceTest {
                                 .thenReturn(carrierQuote);
 
                 ShippingQuoteResult result = service.quote(new QuoteShippingCommand(
-                                "ORDER_1", ADDRESS, DIMENSIONS, "VND"));
+                                "ORDER_1", ADDRESS, PARCELS, "VND"));
 
                 assertThat(result.fee()).isEqualByComparingTo(BigDecimal.valueOf(40000));
                 assertThat(result.source()).isEqualTo("carrier");
@@ -208,17 +248,17 @@ class ShipmentServiceTest {
                 service.applyCarrierWebhook(new CarrierWebhookCommand("TRACK_1", "PICKED_UP", null, null, null, null,
                                 null, null, "WH_1", null));
                 assertThat(shipment.getStatus())
-                                .isEqualTo(com.aionn.shipping.domain.valueobject.ShipmentStatus.PICKED_UP);
+                                .isEqualTo(ShipmentStatus.PICKED_UP);
 
                 service.applyCarrierWebhook(new CarrierWebhookCommand("TRACK_1", "IN_TRANSIT", "HUB", "on the way",
                                 null, null, null, null, null, null));
                 assertThat(shipment.getStatus())
-                                .isEqualTo(com.aionn.shipping.domain.valueobject.ShipmentStatus.IN_TRANSIT);
+                                .isEqualTo(ShipmentStatus.IN_TRANSIT);
 
                 service.applyCarrierWebhook(new CarrierWebhookCommand("TRACK_1", "OUT_FOR_DELIVERY", null, null,
                                 "driver", "phone", null, null, null, null));
                 assertThat(shipment.getStatus())
-                                .isEqualTo(com.aionn.shipping.domain.valueobject.ShipmentStatus.OUT_FOR_DELIVERY);
+                                .isEqualTo(ShipmentStatus.OUT_FOR_DELIVERY);
         }
 
         @Test
@@ -259,7 +299,7 @@ class ShipmentServiceTest {
 
                 verify(shipmentRepository).save(shipment);
                 assertThat(shipment.getStatus())
-                                .isEqualTo(com.aionn.shipping.domain.valueobject.ShipmentStatus.CANCELLED);
+                                .isEqualTo(ShipmentStatus.CANCELLED);
         }
 
         @Test
@@ -275,7 +315,7 @@ class ShipmentServiceTest {
                                 "TRACK_1", "PICKED_UP", null, null, null, null, null, null, "WH_1", "correct-secret"));
 
                 assertThat(shipment.getStatus())
-                                .isEqualTo(com.aionn.shipping.domain.valueobject.ShipmentStatus.PICKED_UP);
+                                .isEqualTo(ShipmentStatus.PICKED_UP);
         }
 
         @Test
@@ -292,10 +332,14 @@ class ShipmentServiceTest {
         @Test
         void createShipmentResolvesMerchantFromOwnerWhenMerchantIdBlank() {
                 when(merchantQueryPort.findMerchantIdByOwnerId("OWNER_1")).thenReturn(Optional.of("M_9"));
+                when(orderQueryPort.findOrderSummary("ORDER_1"))
+                                .thenReturn(Optional.of(new OrderQueryPort.OrderSummary(
+                                                "ORDER_1", "U_1", "M_9",
+                                                BigDecimal.valueOf(30000), "VND")));
                 when(shipmentRepository.save(any(Shipment.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 Shipment created = service.createShipment(new CreateShipmentCommand("ORDER_1", " ", "OWNER_1", "U_1",
-                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND"));
+                                ADDRESS, PARCELS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND"));
 
                 assertThat(created.getMerchantId()).isEqualTo("M_9");
         }
@@ -305,7 +349,7 @@ class ShipmentServiceTest {
                 when(merchantQueryPort.findMerchantIdByOwnerId("OWNER_X")).thenReturn(Optional.empty());
 
                 assertThatThrownBy(() -> service.createShipment(new CreateShipmentCommand(
-                                "ORDER_1", null, "OWNER_X", "U_1", ADDRESS, DIMENSIONS,
+                                "ORDER_1", null, "OWNER_X", "U_1", ADDRESS, PARCELS,
                                 BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND")))
                                 .isInstanceOf(ShippingException.class)
                                 .extracting("errorCode")
@@ -395,7 +439,7 @@ class ShipmentServiceTest {
                                 "TRACK_1", "RETRY", null, null, null, null, null, null, null, null));
 
                 assertThat(shipment.getStatus())
-                                .isEqualTo(com.aionn.shipping.domain.valueobject.ShipmentStatus.OUT_FOR_DELIVERY);
+                                .isEqualTo(ShipmentStatus.OUT_FOR_DELIVERY);
         }
 
         @Test
@@ -411,7 +455,7 @@ class ShipmentServiceTest {
                                 "TRACK_1", "PICKED_UP", null, null, null, null, null, null, "WH_1", null));
 
                 assertThat(shipment.getStatus())
-                                .isEqualTo(com.aionn.shipping.domain.valueobject.ShipmentStatus.PICKED_UP);
+                                .isEqualTo(ShipmentStatus.PICKED_UP);
         }
 
         @Test
@@ -433,7 +477,7 @@ class ShipmentServiceTest {
                                                 "carrier-detail", null, null));
 
                 ShippingQuoteResult result = service.quote(new QuoteShippingCommand(
-                                "ORDER_1", ADDRESS, DIMENSIONS, null));
+                                "ORDER_1", ADDRESS, PARCELS, null));
 
                 assertThat(result.currency()).isEqualTo("VND");
                 verify(carrierClient).quote(ADDRESS, DIMENSIONS, "VND");

@@ -16,7 +16,7 @@ import com.aionn.promotion.application.port.in.flashsale.ListMyFlashSaleRegistra
 import com.aionn.promotion.application.port.in.flashsale.RegisterFlashSaleInputPort;
 import com.aionn.promotion.application.port.in.flashsale.RejectFlashSaleInputPort;
 import com.aionn.promotion.domain.valueobject.FlashSaleRegistrationStatus;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

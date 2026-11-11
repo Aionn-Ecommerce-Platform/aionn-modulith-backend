@@ -20,4 +20,9 @@ public class SpringChatConversationPolicy implements ChatConversationPolicy {
     public int getListMaxLimit() {
         return properties.listMaxLimit();
     }
+
+    @Override
+    public int getUnreadScanLimit() {
+        return properties.unreadScanLimit();
+    }
 }

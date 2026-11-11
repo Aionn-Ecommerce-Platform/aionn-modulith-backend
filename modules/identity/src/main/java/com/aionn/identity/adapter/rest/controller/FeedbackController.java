@@ -5,7 +5,7 @@ import com.aionn.identity.adapter.rest.dto.feedback.response.FeedbackResponse;
 import com.aionn.identity.adapter.rest.mapper.feedback.FeedbackDtoMapper;
 import com.aionn.identity.application.port.in.feedback.ListMyFeedbackQueryPort;
 import com.aionn.identity.application.port.in.feedback.SubmitFeedbackInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -33,10 +33,6 @@ public class FeedbackController {
     public ResponseEntity<ApiResponse<FeedbackResponse>> submit(
             Authentication authentication,
             @Valid @RequestBody SubmitFeedbackRequest request) {
-        // Spring Security populates an AnonymousAuthenticationToken for
-        // unauthenticated requests whose isAuthenticated() returns true and
-        // whose name is "anonymousUser" — treat that as no user, otherwise
-        // "anonymousUser" would end up in the SubmitFeedbackCommand.
         String userId = (authentication != null
                 && authentication.isAuthenticated()
                 && !(authentication instanceof AnonymousAuthenticationToken))

@@ -1,0 +1,21 @@
+aionn:
+  web:
+    default-locale: ${AIONN_WEB_DEFAULT_LOCALE:vi}
+
+  shared:
+    cache:
+      two-tier:
+        enabled: ${AIONN_CACHE_TWO_TIER_ENABLED:true}
+        origin: ${AIONN_CACHE_ORIGIN:}
+
+  outbox:
+    poll-delay-ms: ${AIONN_OUTBOX_POLL_DELAY_MS:1000}
+    batch-size: ${AIONN_OUTBOX_BATCH_SIZE:50}
+    max-attempts: ${AIONN_OUTBOX_MAX_ATTEMPTS:10}
+    lease-duration-seconds: ${AIONN_OUTBOX_LEASE_DURATION_SECONDS:300}
+
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+  api-key: ${CLOUDINARY_API_KEY:}
+  api-secret: ${CLOUDINARY_API_SECRET:}
+  upload-base-url: ${CLOUDINARY_UPLOAD_BASE_URL:https://api.cloudinary.com/v1_1}

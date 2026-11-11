@@ -1,7 +1,7 @@
 package com.aionn.payment.application.usecase.stripeconnect;
 
 import com.aionn.payment.application.port.in.stripeconnect.SyncStripeConnectAccountInputPort;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

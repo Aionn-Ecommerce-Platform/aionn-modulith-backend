@@ -12,6 +12,15 @@ public interface UserOtpChallengeStorePort {
 
     Optional<UserOtpChallenge> find(String userId, UserOtpPurpose purpose);
 
+    /**
+     * Atomically reserves one verification attempt for the challenge. Returns {@code false}
+     * once {@code maxAttempts} have been used, so parallel guesses cannot bypass the limit.
+     */
+    boolean tryAcquireAttempt(String userId, UserOtpPurpose purpose, int maxAttempts,
+            Instant expiresAt);
+
+    void resetAttempts(String userId, UserOtpPurpose purpose);
+
     void delete(String userId, UserOtpPurpose purpose);
 
     record UserOtpChallenge(

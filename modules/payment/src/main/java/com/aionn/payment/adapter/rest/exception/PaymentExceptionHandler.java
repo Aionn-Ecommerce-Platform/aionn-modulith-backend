@@ -1,11 +1,13 @@
 package com.aionn.payment.adapter.rest.exception;
 
 import com.aionn.payment.domain.exception.PaymentException;
-import com.aionn.sharedkernel.adapter.web.exception.AbstractModuleExceptionHandler;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.exception.AbstractModuleExceptionHandler;
+import com.aionn.platform.web.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.dao.ConcurrencyFailureException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -37,5 +39,13 @@ public class PaymentExceptionHandler extends AbstractModuleExceptionHandler {
     public ResponseEntity<ApiResponse<Map<String, Object>>> handlePaymentException(PaymentException ex) {
         log.warn("Payment exception [{}]: {}", ex.getErrorCode(), ex.getMessage());
         return handleException(ex);
+    }
+
+    @ExceptionHandler({ConcurrencyFailureException.class, DataIntegrityViolationException.class})
+    public ResponseEntity<ApiResponse<Map<String, Object>>> handleConflict(RuntimeException ex) {
+        log.warn("Payment conflict: {}", ex.getMessage());
+        return buildError(HttpStatus.CONFLICT,
+                "The resource was modified concurrently or violates a constraint",
+                "CONFLICT", null);
     }
 }

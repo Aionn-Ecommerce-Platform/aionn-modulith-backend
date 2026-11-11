@@ -1,5 +1,8 @@
 package com.aionn.ordering.infrastructure.persistence.entity;
 
+import jakarta.persistence.Version;
+import org.hibernate.annotations.OptimisticLock;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -50,11 +53,11 @@ public class CartEntity {
     private Instant updatedAt;
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @org.hibernate.annotations.OptimisticLock(excluded = false)
+    @OptimisticLock(excluded = false)
     @Builder.Default
     private List<CartItemEntity> items = new ArrayList<>();
 
-    @jakarta.persistence.Version
+    @Version
     @Column(name = "version", nullable = false)
     private long version;
 }

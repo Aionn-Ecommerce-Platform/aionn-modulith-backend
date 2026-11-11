@@ -1,8 +1,11 @@
 package com.aionn.ordering.infrastructure.integration.order;
 
+import java.util.Collection;
+import java.util.Optional;
+
 import com.aionn.ordering.domain.valueobject.OrderStatus;
 import com.aionn.ordering.infrastructure.persistence.repository.OrderRepository;
-import com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort;
+import com.aionn.contracts.port.ordering.OrderQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,7 +44,7 @@ public class OrderingOrderQueryAdapter implements OrderQueryPort {
 
     @Override
     @Transactional(readOnly = true)
-    public boolean hasCompletedPurchaseForSkus(String userId, java.util.Collection<String> skuIds) {
+    public boolean hasCompletedPurchaseForSkus(String userId, Collection<String> skuIds) {
         if (userId == null || userId.isBlank() || skuIds == null || skuIds.isEmpty()) {
             return false;
         }
@@ -50,7 +53,7 @@ public class OrderingOrderQueryAdapter implements OrderQueryPort {
 
     @Override
     @Transactional(readOnly = true)
-    public String findCompletedOrderIdForSkus(String userId, java.util.Collection<String> skuIds) {
+    public String findCompletedOrderIdForSkus(String userId, Collection<String> skuIds) {
         if (userId == null || userId.isBlank() || skuIds == null || skuIds.isEmpty()) {
             return null;
         }
@@ -59,9 +62,9 @@ public class OrderingOrderQueryAdapter implements OrderQueryPort {
 
     @Override
     @Transactional(readOnly = true)
-    public java.util.Optional<OrderSummary> findOrderSummary(String orderId) {
+    public Optional<OrderSummary> findOrderSummary(String orderId) {
         if (orderId == null || orderId.isBlank()) {
-            return java.util.Optional.empty();
+            return Optional.empty();
         }
         return orderJpaRepository.findById(orderId)
                 .map(e -> new OrderSummary(

@@ -10,7 +10,7 @@ import com.aionn.inventory.application.port.in.reservation.CommitReservationInpu
 import com.aionn.inventory.application.port.in.reservation.GetReservationInputPort;
 import com.aionn.inventory.application.port.in.reservation.ReleaseReservationInputPort;
 import com.aionn.inventory.application.port.in.reservation.ReserveStockInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

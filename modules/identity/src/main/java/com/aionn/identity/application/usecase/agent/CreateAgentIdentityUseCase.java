@@ -19,8 +19,8 @@ public class CreateAgentIdentityUseCase implements CreateAgentIdentityInputPort 
     @Override
     @Transactional
     public AgentIdentityResult execute(CreateAgentIdentityCommand command) {
-        var result = agentService.create(command.ownerUserId());
-        return agentResultMapper.toIdentityResult(result);
+        var created = agentService.create(command.ownerUserId());
+        return agentResultMapper.toCreatedIdentityResult(created.agent(), created.apiKey());
     }
 }
 

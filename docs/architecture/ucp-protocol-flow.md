@@ -26,7 +26,7 @@ The **Universal Commerce Protocol (UCP)** module (`modules/ucp`) acts as an **in
                              │ In-Process Java Port Calls
                              ▼
 ┌─────────────────────────────────────────────────────────┐
-│                    shared-kernel                        │
+│                    shared/contracts                     │
 │  (CartOperationsPort, OrderPlacementPort, CatalogQuery) │
 └────────────┬───────────────┬────────────────┬───────────┘
              ▼               ▼                ▼
@@ -124,7 +124,7 @@ sequenceDiagram
   - `POST /ucp/v1/catalog/lookup`: Batch lookup of items by SKUs/IDs.
   - `POST /ucp/v1/catalog/product`: Detailed view of a single product.
 - **Controller**: [`UcpCatalogController`](../../modules/ucp/src/main/java/com/aionn/ucp/adapter/rest/controller/UcpCatalogController.java)
-- **Port**: `CatalogQueryPort` in `shared-kernel`.
+- **Port**: `CatalogQueryPort` in `shared/contracts`.
 - **Validation**: Strict verification against `schemas/shopping/catalog_search.json` and `catalog_lookup.json`. Prices are converted into minor units (cents).
 
 ### Flow 4: Cart Lifecycle
@@ -147,7 +147,7 @@ sequenceDiagram
   - `POST /ucp/v1/checkout-sessions/{id}/complete`: Finalize checkout.
   - `POST /ucp/v1/checkout-sessions/{id}/cancel`: Cancel session.
 - **Controller**: [`UcpCheckoutController`](../../modules/ucp/src/main/java/com/aionn/ucp/adapter/rest/controller/UcpCheckoutController.java)
-- **Session Store**: `UcpCheckoutSessionPort` tracks protocol lifecycle states (`PENDING`, `READY_FOR_COMPLETION`, `COMPLETED`, `CANCELLED`) with TTL eviction.
+- **Session Store**: `UcpCheckoutSessionPort` tracks protocol lifecycle states (`incomplete`, `completing`, `completed`, `canceled`). Expired incomplete sessions are evicted; completed/canceled sessions are retained for `aionn.ucp.session-cleanup.retention-days` so order lookups, webhooks, and idempotent `complete` retries still resolve.
 - **Order Placement**: Completion delegates directly to `OrderPlacementPort.placeHeadless(...)`. This creates the real order in `modules/ordering`, initiates stock reservation, and triggers the Transactional Outbox event.
 
 ### Flow 6: Order Snapshots & Webhook Push
@@ -156,7 +156,8 @@ sequenceDiagram
   - Inbound Query: `GET /ucp/v1/orders/{id}` retrieves order status conforming to `schemas/shopping/order.json`.
   - Outbound Webhook: Dispatched to client's `context.webhook_url` when internal order lifecycle events occur.
 - **Listener & Dispatcher**:
-  - [`UcpOrderEventListener`](../../modules/ucp/src/main/java/com/aionn/ucp/infrastructure/webhook/UcpOrderEventListener.java): Spring `@TransactionalEventListener(phase = AFTER_COMMIT)` listens to domain events (`OrderPlaced`, `OrderApproved`, `OrderShipped`, `OrderCompleted`, `OrderCancelled`).
+  - [`UcpOrderEventListener`](../../modules/ucp/src/main/java/com/aionn/ucp/infrastructure/webhook/UcpOrderEventListener.java): `@EventListener` for `OrderPlaced`, `OrderApproved`, `OrderShipped`, `OrderCompleted`, and `OrderCancelled`. It reuses the source integration event id and timestamp and writes a durable delivery row.
+  - [`UcpWebhookDeliveryScheduler`](../../modules/ucp/src/main/java/com/aionn/ucp/infrastructure/webhook/UcpWebhookDeliveryScheduler.java): retries pending deliveries with exponential backoff and marks exhausted rows `DEAD`.
   - [`RestClientUcpWebhookDispatcher`](../../modules/ucp/src/main/java/com/aionn/ucp/infrastructure/webhook/RestClientUcpWebhookDispatcher.java): Dispatches HTTP POST webhooks with SSRF protection (rejecting private/internal IP ranges) and timeout enforcement.
 
 ---

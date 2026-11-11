@@ -147,6 +147,9 @@ public class OrderReturn extends AggregateRoot {
     }
 
     public void reject(String rejectionReason, Instant now) {
+        Guard.require(refundStatus != ReturnRefundStatus.REFUNDED,
+                () -> new OrderingException(OrderingErrorCode.RETURN_INVALID_STATE,
+                        "A refunded return cannot be rejected"));
         ensureTransition(ReturnStatus.REJECTED);
         this.rejectionReason = rejectionReason;
         this.status = ReturnStatus.REJECTED;

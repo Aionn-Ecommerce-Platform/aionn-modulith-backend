@@ -8,6 +8,12 @@ import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+/**
+ * Runs daily at 03:23 server time. Processes pending account deletions whose grace period
+ * has elapsed, draining batches until one is short. ShedLock prevents overlapping runs
+ * between instances; refresh-token revocation and deletion events happen after each batch
+ * commits so consumers never observe a rolled-back deletion.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -26,10 +32,8 @@ public class AccountDeletionScheduler {
             result = processor.completeDueRequests();
             completed += result.completedAccounts();
             result.revokedSessionIds().forEach(this::revokeRefreshTokensSafely);
-            // Published after the batch transaction commits: an event for a rolled-back deletion would
-            // make consumers erase data for an account that still exists.
             result.deletedUserIds().forEach(this::announceDeletionSafely);
-        } while (result.completedAccounts() == AccountDeletionProcessor.BATCH_SIZE);
+        } while (result.completedAccounts() == processor.batchSize());
         if (completed > 0) {
             log.info("Completed {} account deletion requests", completed);
         }
@@ -43,11 +47,6 @@ public class AccountDeletionScheduler {
         }
     }
 
-    /**
-     * A failed announcement must not abort the sweep: the account is already tombstoned, and the
-     * downstream erasure can be replayed. Logged without the user ID, which is the identifier being
-     * retired.
-     */
     private void announceDeletionSafely(String userId) {
         try {
             integrationEventPublisher.publishAccountDeleted(userId);

@@ -1,5 +1,7 @@
 package com.aionn.config;
 
+import java.util.Objects;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
@@ -31,7 +33,7 @@ class OperationalRuntimeConfigurationTest {
     private static Object value(List<PropertySource<?>> sources, String key) {
         return sources.stream()
                 .map(source -> source.getProperty(key))
-                .filter(java.util.Objects::nonNull)
+                .filter(Objects::nonNull)
                 .findFirst()
                 .orElse(null);
     }

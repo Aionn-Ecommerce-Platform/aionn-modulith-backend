@@ -1,5 +1,7 @@
 package com.aionn.chat.domain.model;
 
+import java.util.Map;
+
 import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 import com.aionn.chat.domain.exception.ChatException;
@@ -172,17 +174,17 @@ class ChatDomainSystemClockTest {
         assertThat(preview(MessageType.TEXT, MessagePayload.text("Hi"))).isEqualTo("Hi");
         assertThat(preview(MessageType.SYSTEM, MessagePayload.system("Sys"))).isEqualTo("Sys");
         assertThat(preview(MessageType.IMAGE,
-                new MessagePayload(null, java.util.Map.of("imageUrl", "u")))).isEqualTo("[Photo]");
+                new MessagePayload(null, Map.of("imageUrl", "u")))).isEqualTo("[Photo]");
         assertThat(preview(MessageType.PRODUCT_CARD,
-                new MessagePayload(null, java.util.Map.of("productId", "p")))).isEqualTo("[Product]");
+                new MessagePayload(null, Map.of("productId", "p")))).isEqualTo("[Product]");
         assertThat(preview(MessageType.ORDER_REF,
-                new MessagePayload(null, java.util.Map.of("orderId", "o")))).isEqualTo("[Order]");
+                new MessagePayload(null, Map.of("orderId", "o")))).isEqualTo("[Order]");
     }
 
     @Test
     void previewBodyForTextWithoutBodyIsEmpty() {
         Message message = Message.send("msg-9", "conv-1", "buyer-1", ParticipantRole.BUYER,
-                MessageType.SYSTEM, new MessagePayload(null, java.util.Map.of()), List.of("mer-1"), FIXED);
+                MessageType.SYSTEM, new MessagePayload(null, Map.of()), List.of("mer-1"), FIXED);
 
         assertThat(message.previewBody()).isEmpty();
     }

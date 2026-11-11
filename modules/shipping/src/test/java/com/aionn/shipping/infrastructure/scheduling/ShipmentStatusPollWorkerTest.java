@@ -1,5 +1,7 @@
 package com.aionn.shipping.infrastructure.scheduling;
 
+import org.mockito.Mockito;
+
 import com.aionn.shipping.application.port.out.CarrierClient;
 import com.aionn.shipping.application.port.out.ShipmentPersistencePort;
 import com.aionn.shipping.domain.model.Shipment;
@@ -34,6 +36,9 @@ class ShipmentStatusPollWorkerTest {
 
     @Mock
     private ShipmentStatusApplier shipmentStatusApplier;
+
+    @Mock
+    private java.time.Clock clock;
 
     @Mock
     private Shipment shipment;
@@ -123,7 +128,7 @@ class ShipmentStatusPollWorkerTest {
         when(shipment.getStatus()).thenReturn(ShipmentStatus.REGISTERED);
         when(carrierClient.fetchOrderDetail("TR_1")).thenReturn(detail("PICKED_UP"));
         when(statusMapper.map("PICKED_UP")).thenReturn(Optional.of(ShipmentStatus.PICKED_UP));
-        org.mockito.Mockito.doThrow(new RuntimeException("db down"))
+        Mockito.doThrow(new RuntimeException("db down"))
                 .when(shipmentStatusApplier).apply(anyString(), any(), any());
 
         worker.syncOne("S_1");

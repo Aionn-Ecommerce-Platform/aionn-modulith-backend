@@ -1,7 +1,7 @@
 package com.aionn.inventory.infrastructure.integration.inventory;
 
 import com.aionn.inventory.application.port.out.InventoryItemPersistencePort;
-import com.aionn.sharedkernel.integration.port.inventory.StockAvailabilityQueryPort;
+import com.aionn.contracts.port.inventory.StockAvailabilityQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;

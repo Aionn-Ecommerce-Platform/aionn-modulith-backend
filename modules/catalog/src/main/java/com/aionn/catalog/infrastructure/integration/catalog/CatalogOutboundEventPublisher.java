@@ -1,8 +1,8 @@
 package com.aionn.catalog.infrastructure.integration.catalog;
 
 import com.aionn.catalog.application.port.out.integration.CatalogIntegrationEventPublisherPort;
-import com.aionn.sharedkernel.integration.event.catalog.ProductViewedIntegrationEvent;
-import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.contracts.event.catalog.ProductViewedIntegrationEvent;
+import com.aionn.contracts.publisher.IntegrationEventPublisher;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

@@ -19,6 +19,17 @@ public interface StockReservationRepository extends JpaRepository<StockReservati
 
     @Query("""
             SELECT r FROM StockReservationEntity r
+              WHERE r.orderId = :orderId
+                AND r.skuId = :skuId
+                AND r.warehouseId = :warehouseId
+                AND r.status = 'RESERVED'
+            ORDER BY r.reservedAt DESC
+            """)
+    List<StockReservationEntity> findActiveReservation(
+            String orderId, String skuId, String warehouseId, Pageable pageable);
+
+    @Query("""
+            SELECT r FROM StockReservationEntity r
               WHERE r.status = 'RESERVED'
                 AND r.expiresAt IS NOT NULL
                 AND r.expiresAt <= :now

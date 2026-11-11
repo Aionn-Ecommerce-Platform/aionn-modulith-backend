@@ -1,5 +1,6 @@
 inventory:
   reservation:
+    default-ttl-seconds: ${INVENTORY_RESERVATION_DEFAULT_TTL_SECONDS:900}
     auto-release:
       enabled: ${INVENTORY_RESERVATION_AUTORELEASE_ENABLED:true}
       delay-ms: ${INVENTORY_RESERVATION_AUTORELEASE_DELAY_MS:30000}

@@ -35,7 +35,8 @@ public class PaymentWebhookController {
     public ResponseEntity<Void> handle(
             @PathVariable String gateway,
             @RequestHeader(value = "X-Signature", required = false) String signature,
-            @RequestBody String rawBody) {
+            @RequestBody byte[] rawBody) {
+        String rawPayload = new String(rawBody, java.nio.charset.StandardCharsets.UTF_8);
         PaymentGatewayKind kind;
         try {
             kind = PaymentGatewayKind.valueOf(gateway.toUpperCase());
@@ -44,8 +45,14 @@ public class PaymentWebhookController {
             return ResponseEntity.badRequest().build();
         }
         PaymentProviderClient client = providerRouter.route(kind);
-        PaymentProviderClient.WebhookEvent event = client.verifyAndParse(rawBody, signature);
+        PaymentProviderClient.WebhookEvent event = client.verifyAndParse(rawPayload, signature);
         if (event.paymentId() == null) {
+            // Stripe sends many event types we do not consume. Acknowledge them so
+            // Stripe does not retry forever; only genuinely malformed/unsigned
+            // events are rejected.
+            if (event.errorCode() == null && event.type() != null && event.type().startsWith("stripe.")) {
+                return ResponseEntity.ok().build();
+            }
             log.warn("Webhook without paymentId for gateway {}", kind);
             return ResponseEntity.badRequest().build();
         }

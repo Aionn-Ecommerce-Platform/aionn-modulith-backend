@@ -4,9 +4,10 @@ import com.aionn.inventory.application.dto.reservation.command.CommitReservation
 import com.aionn.inventory.application.dto.reservation.command.ReleaseReservationCommand;
 import com.aionn.inventory.application.dto.reservation.command.ReserveStockCommand;
 import com.aionn.inventory.application.port.out.InventoryItemPersistencePort;
-import com.aionn.inventory.application.port.out.OutboundOrderNotifier;
 import com.aionn.inventory.application.port.out.StockAdjustmentPersistencePort;
 import com.aionn.inventory.application.port.out.StockReservationPersistencePort;
+import com.aionn.inventory.application.port.out.WarehousePersistencePort;
+import com.aionn.inventory.application.policy.InventoryReservationPolicy;
 import com.aionn.inventory.domain.exception.InventoryErrorCode;
 import com.aionn.inventory.domain.exception.InventoryException;
 import com.aionn.inventory.domain.model.InventoryItem;
@@ -34,37 +35,56 @@ public class StockReservationService {
         private final InventoryItemPersistencePort itemRepository;
         private final StockReservationPersistencePort reservationRepository;
         private final StockAdjustmentPersistencePort adjustmentRepository;
+        private final WarehousePersistencePort warehouseRepository;
         private final EventPublisher eventPublisher;
-        private final OutboundOrderNotifier outboundOrderNotifier;
+        private final InventoryReservationPolicy reservationPolicy;
         private final Clock clock;
 
         public StockReservation reserve(ReserveStockCommand command) {
+                if (command.orderId() != null && !command.orderId().isBlank()) {
+                        var existing = reservationRepository.findActiveReservation(
+                                        command.orderId(), command.skuId(), command.warehouseId());
+                        if (existing.isPresent()) {
+                                return existing.get();
+                        }
+                }
+
                 InventoryItemKey key = new InventoryItemKey(command.skuId(), command.warehouseId());
                 InventoryItem item = itemRepository.lockByKey(key)
                                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND));
 
-                if (item.isLocked() || item.getAvailableQty() < command.qty()) {
-                        String reason = item.isLocked() ? "Inventory locked" : "Insufficient stock";
+                boolean warehouseCanFulfill = warehouseRepository.findById(command.warehouseId())
+                                .map(warehouse -> warehouse.getStatus().canFulfill())
+                                .orElse(false);
+                if (!warehouseCanFulfill || item.isLocked() || item.getAvailableQty() < command.qty()) {
+                        String reason = !warehouseCanFulfill
+                                        ? "Warehouse is not active"
+                                        : item.isLocked() ? "Inventory locked" : "Insufficient stock";
                         StockReservation failed = StockReservation.failed(IdGenerator.ulid(),
-                                        command.skuId(), command.warehouseId(), command.qty(), reason, clock);
+                                        command.skuId(), command.warehouseId(), command.orderId(),
+                                        command.qty(), reason, clock);
                         StockReservation saved = reservationRepository.save(failed);
                         eventPublisher.publish(failed.pullEvents());
-                        outboundOrderNotifier.notifyReservationFailed(command.orderId(),
-                                        command.skuId(), command.warehouseId(), command.qty(), reason);
                         return saved;
                 }
 
                 item.reserve(command.qty(), clock);
                 itemRepository.save(item);
 
-                Instant expiresAt = clock.instant().plus(Duration.ofSeconds(command.ttlSeconds()));
+                Instant expiresAt = clock.instant().plus(Duration.ofSeconds(ttlSeconds(command)));
                 StockReservation reservation = StockReservation.reserve(IdGenerator.ulid(),
                                 command.skuId(), command.warehouseId(), command.orderId(), command.qty(), expiresAt,
                                 clock);
-                StockReservation saved = reservationRepository.save(reservation);
-                eventPublisher.publish(reservation.pullEvents());
-                eventPublisher.publish(item.pullEvents());
-                return saved;
+                try {
+                        StockReservation saved = reservationRepository.save(reservation);
+                        eventPublisher.publish(reservation.pullEvents());
+                        eventPublisher.publish(item.pullEvents());
+                        return saved;
+                } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+                        return reservationRepository.findActiveReservation(
+                                        command.orderId(), command.skuId(), command.warehouseId())
+                                        .orElseThrow(() -> ex);
+                }
         }
 
         public StockReservation commit(CommitReservationCommand command) {
@@ -95,8 +115,6 @@ public class StockReservationService {
                 eventPublisher.publish(reservation.pullEvents());
                 eventPublisher.publish(item.pullEvents());
                 eventPublisher.publish(outbound.pullEvents());
-                outboundOrderNotifier.notifyOutbound(reservation.getOrderId(), reservation.getReservationId(),
-                                reservation.getSkuId(), reservation.getWarehouseId(), reservation.getQty());
                 return saved;
         }
 
@@ -130,5 +148,11 @@ public class StockReservationService {
                 return reservationRepository.findById(reservationId)
                                 .orElseThrow(() -> new InventoryException(
                                                 InventoryErrorCode.STOCK_RESERVATION_NOT_FOUND));
+        }
+
+        private int ttlSeconds(ReserveStockCommand command) {
+                return command.ttlSeconds() != null && command.ttlSeconds() > 0
+                                ? command.ttlSeconds()
+                                : reservationPolicy.getDefaultTtlSeconds();
         }
 }

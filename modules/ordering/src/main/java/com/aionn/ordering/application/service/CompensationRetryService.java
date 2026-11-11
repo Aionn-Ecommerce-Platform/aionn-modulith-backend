@@ -1,9 +1,13 @@
 package com.aionn.ordering.application.service;
 
 import com.aionn.ordering.application.port.out.CompensationTaskPort;
+import com.aionn.ordering.application.port.out.OrderPersistencePort;
+import com.aionn.ordering.application.port.out.PaymentGateway;
 import com.aionn.ordering.application.port.out.StockReservationGateway;
 import com.aionn.ordering.application.port.out.VoucherGateway;
-import com.aionn.sharedkernel.integration.port.promotion.FlashSaleQueryPort;
+import com.aionn.ordering.application.policy.CompensationRetryPolicy;
+import com.aionn.contracts.port.promotion.FlashSaleQueryPort;
+import com.aionn.sharedkernel.util.RetryBackoff;
 import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,11 +18,13 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CompensationRetryService {
 
-    public static final int MAX_ATTEMPTS = 10;
     private final CompensationTaskPort taskPort;
     private final StockReservationGateway stockGateway;
     private final VoucherGateway voucherGateway;
+    private final PaymentGateway paymentGateway;
+    private final OrderPersistencePort orderRepository;
     private final FlashSaleQueryPort flashSaleQueryPort;
+    private final CompensationRetryPolicy retryPolicy;
     private final Clock clock;
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -30,13 +36,22 @@ public class CompensationRetryService {
                 case RESERVATION_RELEASE -> stockGateway.release(task.resourceId(), task.reason());
                 case VOUCHER_RELEASE -> voucherGateway.release(task.userId(), task.orderId(), task.reason());
                 case FLASH_SALE_RELEASE -> flashSaleQueryPort.release(task.resourceId());
+                case STOCK_COMMIT -> stockGateway.commit(task.resourceId());
+                case REFUND -> {
+                    var order = orderRepository.findById(task.orderId()).orElseThrow();
+                    if (task.resourceId() != null) {
+                        paymentGateway.refund(task.resourceId(), order.getTotalAmount().amount(),
+                                order.getCurrency(), task.reason(),
+                                "order:" + order.getOrderId() + ":refund:" + task.resourceId());
+                    }
+                }
             }
             taskPort.markCompleted(task.taskId());
         } catch (RuntimeException failure) {
             int attempt = task.attempts() + 1;
-            long delay = Math.min(3600, 1L << Math.min(attempt, 12));
+            long delay = RetryBackoff.seconds(attempt);
             taskPort.markFailed(task.taskId(), failure.getMessage(), clock.instant().plusSeconds(delay),
-                    attempt >= MAX_ATTEMPTS);
+                    attempt >= retryPolicy.maxAttempts());
         }
     }
 }

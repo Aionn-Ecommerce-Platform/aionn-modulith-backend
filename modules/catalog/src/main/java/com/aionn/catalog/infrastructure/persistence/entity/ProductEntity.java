@@ -1,5 +1,9 @@
 package com.aionn.catalog.infrastructure.persistence.entity;
 
+import jakarta.persistence.Version;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -50,6 +54,9 @@ public class ProductEntity {
     @Column(name = "name", length = 255, nullable = false)
     private String name;
 
+    @Column(name = "slug", length = 300)
+    private String slug;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "category_ids", columnDefinition = "jsonb")
     private List<String> categoryIds;
@@ -84,7 +91,7 @@ public class ProductEntity {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @jakarta.persistence.Version
+    @Version
     @Column(name = "version", nullable = false)
     private long version;
 
@@ -95,5 +102,5 @@ public class ProductEntity {
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
-    private java.util.Set<ProductTranslationEntity> translations = new java.util.LinkedHashSet<>();
+    private Set<ProductTranslationEntity> translations = new LinkedHashSet<>();
 }

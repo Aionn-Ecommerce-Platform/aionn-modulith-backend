@@ -1,13 +1,15 @@
 package com.aionn.chat.infrastructure.listener;
 
+import com.aionn.sharedkernel.util.IdGenerator;
+
 import com.aionn.chat.application.port.out.ConversationPersistencePort;
 import com.aionn.chat.application.port.out.PresenceTracker;
 import com.aionn.chat.application.port.out.observability.ChatMetricsPort;
 import com.aionn.chat.domain.event.ChatEvents;
 import com.aionn.chat.domain.model.Conversation;
 import com.aionn.chat.domain.valueobject.Participant;
-import com.aionn.sharedkernel.integration.event.chat.MessageSentIntegrationEvent;
-import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.contracts.event.chat.MessageSentIntegrationEvent;
+import com.aionn.contracts.publisher.IntegrationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -53,6 +55,9 @@ public class MessageSentListener {
         String preview = event.payload() == null || event.payload().body() == null
                 ? ""
                 : event.payload().body();
+        if (preview.length() > 200) {
+            preview = preview.substring(0, 200);
+        }
 
         Set<String> onlineRecipients = presenceTracker.filterOnline(new HashSet<>(event.recipientIds()));
         for (String recipientId : event.recipientIds()) {
@@ -62,7 +67,7 @@ public class MessageSentListener {
             }
 
             MessageSentIntegrationEvent integrationEvent = new MessageSentIntegrationEvent(
-                    com.aionn.sharedkernel.util.IdGenerator.ulid(),
+                    IdGenerator.ulid(),
                     event.conversationId(),
                     event.messageId(),
                     event.senderId(),

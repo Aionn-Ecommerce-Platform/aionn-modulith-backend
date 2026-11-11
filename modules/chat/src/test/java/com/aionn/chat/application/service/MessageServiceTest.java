@@ -1,6 +1,9 @@
 package com.aionn.chat.application.service;
 
+import com.aionn.chat.domain.valueobject.MessagePayload;
+
 import com.aionn.chat.application.dto.message.command.MessageCommands;
+import com.aionn.chat.application.policy.ChatMessagePolicy;
 import com.aionn.chat.application.port.out.ConversationPersistencePort;
 import com.aionn.chat.application.port.out.MerchantAutoReplyPersistencePort;
 import com.aionn.chat.application.port.out.MessagePersistencePort;
@@ -59,10 +62,14 @@ class MessageServiceTest {
     private EventPublisher eventPublisher;
     @Mock
     private ChatParticipantResolver participantResolver;
+    @Mock
+    private ChatMessagePolicy messagePolicy;
 
     private MessageService service() {
+        when(messagePolicy.getMaxTextLength()).thenReturn(Message.MAX_TEXT_LENGTH);
+        when(messagePolicy.getRecallWindow()).thenReturn(Message.RECALL_WINDOW);
         return new MessageService(conversationRepository, messageRepository, userBlockRepository,
-                autoReplyRepository, eventPublisher, participantResolver, CLOCK);
+                autoReplyRepository, eventPublisher, participantResolver, messagePolicy, CLOCK);
     }
 
     private static Conversation conversation() {
@@ -171,6 +178,19 @@ class MessageServiceTest {
     }
 
     @Test
+    void persistSendRejectsClientGeneratedSystemMessage() {
+        MessageService service = service();
+        MessageCommands.SendMessage command = new MessageCommands.SendMessage(
+                "buyer-1", "conv-1", MessageType.SYSTEM, "System notice", Map.of());
+
+        assertThatThrownBy(() -> service.persistSend(command))
+                .isInstanceOf(ChatException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ChatErrorCode.INVALID_ARGUMENT.getCode());
+        verify(conversationRepository, never()).findById(anyString());
+        verify(messageRepository, never()).save(any());
+    }
+
+    @Test
     void persistSendBuildsMetadataPayloadForNonTextTypes() {
         conversationFound(conversation());
         echoMessageSave();
@@ -242,7 +262,7 @@ class MessageServiceTest {
         Conversation conversation = conversation();
         conversationFound(conversation);
         Message message = Message.send("msg-1", "conv-1", "buyer-1", ParticipantRole.BUYER,
-                MessageType.TEXT, com.aionn.chat.domain.valueobject.MessagePayload.text("Hi"),
+                MessageType.TEXT, MessagePayload.text("Hi"),
                 List.of("mer-1"), CLOCK);
         message.pullEvents();
         when(messageRepository.findById("msg-1")).thenReturn(Optional.of(message));
@@ -257,7 +277,7 @@ class MessageServiceTest {
     @Test
     void markReadRejectsCallerOutsideConversation() {
         Message message = Message.send("msg-1", "conv-1", "buyer-1", ParticipantRole.BUYER,
-                MessageType.TEXT, com.aionn.chat.domain.valueobject.MessagePayload.text("Hi"),
+                MessageType.TEXT, MessagePayload.text("Hi"),
                 List.of("mer-1"), CLOCK);
         when(messageRepository.findById("msg-1")).thenReturn(Optional.of(message));
         when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(conversation()));
@@ -275,7 +295,7 @@ class MessageServiceTest {
     void markReadAlsoMarksDelivered() {
         conversationFound(conversation());
         Message message = Message.send("msg-1", "conv-1", "buyer-1", ParticipantRole.BUYER,
-                MessageType.TEXT, com.aionn.chat.domain.valueobject.MessagePayload.text("Hi"),
+                MessageType.TEXT, MessagePayload.text("Hi"),
                 List.of("mer-1"), CLOCK);
         message.pullEvents();
         when(messageRepository.findById("msg-1")).thenReturn(Optional.of(message));
@@ -291,7 +311,7 @@ class MessageServiceTest {
     void recallBySenderClearsBody() {
         conversationFound(conversation());
         Message message = Message.send("msg-1", "conv-1", "buyer-1", ParticipantRole.BUYER,
-                MessageType.TEXT, com.aionn.chat.domain.valueobject.MessagePayload.text("Hi"),
+                MessageType.TEXT, MessagePayload.text("Hi"),
                 List.of("mer-1"), CLOCK);
         message.pullEvents();
         when(messageRepository.findById("msg-1")).thenReturn(Optional.of(message));
@@ -329,7 +349,7 @@ class MessageServiceTest {
     void getForUserReturnsMessage() {
         conversationFound(conversation());
         Message message = Message.send("msg-1", "conv-1", "buyer-1", ParticipantRole.BUYER,
-                MessageType.TEXT, com.aionn.chat.domain.valueobject.MessagePayload.text("Hi"),
+                MessageType.TEXT, MessagePayload.text("Hi"),
                 List.of("mer-1"), CLOCK);
         when(messageRepository.findById("msg-1")).thenReturn(Optional.of(message));
 

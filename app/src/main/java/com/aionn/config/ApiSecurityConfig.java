@@ -1,6 +1,6 @@
 package com.aionn.config;
 
-import com.aionn.sharedkernel.infrastructure.web.security.SecurityIpProperties;
+import com.aionn.platform.infrastructure.web.security.SecurityIpProperties;
 import lombok.extern.slf4j.Slf4j;
 import java.util.Arrays;
 import java.util.List;
@@ -20,6 +20,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.aionn.identity.infrastructure.security.web.BearerAuthenticationFilter;
+import com.aionn.ucp.adapter.rest.filter.UcpAgentAuthenticationFilter;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
@@ -30,16 +32,18 @@ public class ApiSecurityConfig {
 
         private final String allowedOrigins;
         private final BearerAuthenticationFilter bearerAuthenticationFilter;
+        private final ObjectProvider<UcpAgentAuthenticationFilter> ucpAgentAuthenticationFilter;
 
         public ApiSecurityConfig(
                         @Value("${SECURITY_CORS_ALLOWED_ORIGINS:}") String allowedOrigins,
-                        BearerAuthenticationFilter bearerAuthenticationFilter) {
+                        BearerAuthenticationFilter bearerAuthenticationFilter,
+                        ObjectProvider<UcpAgentAuthenticationFilter> ucpAgentAuthenticationFilter) {
                 this.allowedOrigins = allowedOrigins;
                 this.bearerAuthenticationFilter = bearerAuthenticationFilter;
+                this.ucpAgentAuthenticationFilter = ucpAgentAuthenticationFilter;
         }
 
         @Bean
-        @SuppressWarnings("java:S4502")
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
                 http
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -99,6 +103,9 @@ public class ApiSecurityConfig {
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
+                ucpAgentAuthenticationFilter.ifAvailable(
+                                filter -> http.addFilterAfter(filter, BearerAuthenticationFilter.class));
+
                 return http.build();
         }
 
@@ -121,6 +128,9 @@ public class ApiSecurityConfig {
                                 "X-Request-Id",
                                 "Idempotency-Key",
                                 "X-Idempotency-Key",
+                                "X-UCP-Api-Key",
+                                "UCP-Agent",
+                                "UCP-Version",
                                 "X-Forwarded-For",
                                 "Origin"));
                 cfg.setExposedHeaders(List.of("X-Request-Id", "Idempotent-Replay"));

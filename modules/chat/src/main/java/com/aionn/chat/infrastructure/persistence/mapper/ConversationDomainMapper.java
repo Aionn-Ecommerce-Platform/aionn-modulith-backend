@@ -39,7 +39,7 @@ public class ConversationDomainMapper {
                 e.getLastMessageType() == null ? null : MessageType.valueOf(e.getLastMessageType()),
                 e.getLastMessageSenderId(),
                 e.getLastMessageAt(),
-                e.isArchived(),
+                e.getArchivedParticipants(),
                 e.getCreatedAt(),
                 e.getUpdatedAt());
     }
@@ -68,7 +68,7 @@ public class ConversationDomainMapper {
         entity.setLastMessageType(c.getLastMessageType() == null ? null : c.getLastMessageType().name());
         entity.setLastMessageSenderId(c.getLastMessageSenderId());
         entity.setLastMessageAt(c.getLastMessageAt());
-        entity.setArchived(c.isArchived());
+        entity.setArchivedParticipants(new java.util.HashSet<>(c.getArchivedParticipantIds()));
         return entity;
     }
 

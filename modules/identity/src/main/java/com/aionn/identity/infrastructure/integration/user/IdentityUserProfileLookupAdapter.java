@@ -1,7 +1,7 @@
 package com.aionn.identity.infrastructure.integration.user;
 
 import com.aionn.identity.infrastructure.persistence.repository.user.UserRepository;
-import com.aionn.sharedkernel.integration.port.identity.UserProfileLookupPort;
+import com.aionn.contracts.port.identity.UserProfileLookupPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;

@@ -8,14 +8,15 @@ import com.aionn.inventory.adapter.rest.dto.inventory.request.ManualAdjustmentRe
 import com.aionn.inventory.adapter.rest.dto.inventory.request.TrackBatchAndExpiryRequest;
 import com.aionn.inventory.adapter.rest.dto.inventory.response.LowStockAlertResponse;
 import com.aionn.inventory.adapter.rest.dto.inventory.response.InventoryItemResponse;
+import com.aionn.inventory.adapter.rest.dto.inventory.response.PublicInventoryItemResponse;
 import com.aionn.inventory.adapter.rest.mapper.inventory.InventoryItemDtoMapper;
 import com.aionn.inventory.adapter.rest.support.session.CurrentAdminId;
 import com.aionn.inventory.application.dto.common.PageResult;
 import com.aionn.inventory.application.dto.inventory.command.EmergencyUnlockCommand;
 import com.aionn.inventory.application.dto.inventory.result.InventoryItemResult;
 import com.aionn.inventory.application.port.in.inventory.*;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
-import com.aionn.sharedkernel.adapter.web.response.PageMetadata;
+import com.aionn.platform.web.response.ApiResponse;
+import com.aionn.platform.web.response.PageMetadata;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -164,7 +165,17 @@ public class InventoryItemController {
 
     @GetMapping
     @Operation(summary = "List inventory items by SKU", description = "Public read for product detail stock summary")
-    public ResponseEntity<ApiResponse<List<InventoryItemResponse>>> listBySku(
+    public ResponseEntity<ApiResponse<List<PublicInventoryItemResponse>>> listBySku(
+            @RequestParam("skuId") String skuId) {
+        return ResponseEntity.ok(
+                ApiResponse.success(dtoMapper.toPublicResponses(listInventoryItemsBySkuInputPort.execute(skuId)),
+                        "Inventory items fetched"));
+    }
+
+    @GetMapping("/admin/by-sku")
+    @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
+    @Operation(summary = "List full inventory rows by SKU (admin)")
+    public ResponseEntity<ApiResponse<List<InventoryItemResponse>>> adminListBySku(
             @RequestParam("skuId") String skuId) {
         return ResponseEntity.ok(
                 ApiResponse.success(dtoMapper.toResponses(listInventoryItemsBySkuInputPort.execute(skuId)),
@@ -191,12 +202,15 @@ public class InventoryItemController {
 
     @GetMapping("/{skuId}/{warehouseId}")
     @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Get inventory item")
+    @Operation(summary = "Get inventory item",
+            description = "Returns a single warehouse's stock; only the warehouse owner may read it.")
     public ResponseEntity<ApiResponse<InventoryItemResponse>> get(
+            Authentication authentication,
             @PathVariable String skuId,
             @PathVariable String warehouseId) {
         return ResponseEntity.ok(ApiResponse.success(
-                dtoMapper.toResponse(getInventoryItemInputPort.execute(skuId, warehouseId)),
+                dtoMapper.toResponse(getInventoryItemInputPort.execute(
+                        authentication.getName(), skuId, warehouseId)),
                 "Inventory item fetched"));
     }
 }

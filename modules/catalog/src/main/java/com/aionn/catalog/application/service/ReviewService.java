@@ -23,7 +23,7 @@ import com.aionn.catalog.domain.model.ProductVariant;
 import com.aionn.catalog.domain.valueobject.ReviewStatus;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
-import com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort;
+import com.aionn.contracts.port.ordering.OrderQueryPort;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

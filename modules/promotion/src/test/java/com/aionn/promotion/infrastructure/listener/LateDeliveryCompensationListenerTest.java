@@ -1,8 +1,10 @@
 package com.aionn.promotion.infrastructure.listener;
 
+import org.junit.jupiter.api.Assertions;
+
 import com.aionn.promotion.application.dto.voucher.command.VoucherCommands;
 import com.aionn.promotion.application.port.in.voucher.GrantVoucherInputPort;
-import com.aionn.sharedkernel.integration.event.shipping.ShipmentDeliveredIntegrationEvent;
+import com.aionn.contracts.event.shipping.ShipmentDeliveredIntegrationEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -95,7 +97,7 @@ class LateDeliveryCompensationListenerTest {
 
         when(grantVoucherInputPort.execute(any())).thenThrow(new RuntimeException("database timeout"));
 
-        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class,
+        Assertions.assertThrows(RuntimeException.class,
                 () -> listener.onShipmentDelivered(event));
 
         verify(grantVoucherInputPort).execute(any());

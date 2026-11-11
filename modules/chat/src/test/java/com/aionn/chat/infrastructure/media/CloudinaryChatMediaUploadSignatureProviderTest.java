@@ -2,7 +2,7 @@ package com.aionn.chat.infrastructure.media;
 
 import com.aionn.chat.application.dto.media.result.UploadSignatureResult;
 import com.aionn.chat.infrastructure.config.properties.ChatCloudinaryProperties;
-import com.aionn.sharedkernel.media.CloudinaryCredentialsProperties;
+import com.aionn.platform.media.CloudinaryCredentialsProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +23,7 @@ class CloudinaryChatMediaUploadSignatureProviderTest {
     void setUp() {
         CloudinaryCredentialsProperties credentials = new CloudinaryCredentialsProperties(
                 "demo-cloud", "api-key", "api-secret", "https://api.cloudinary.com/v1_1");
-        ChatCloudinaryProperties folders = new ChatCloudinaryProperties("aionn/chat/images");
+        ChatCloudinaryProperties folders = new ChatCloudinaryProperties("aionn/chat/images", "jpg,jpeg,png,webp,gif", 5242880);
         provider = new CloudinaryChatMediaUploadSignatureProvider(credentials, folders,
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
@@ -38,6 +38,8 @@ class CloudinaryChatMediaUploadSignatureProviderTest {
         assertThat(result.uploadUrl()).isEqualTo("https://api.cloudinary.com/v1_1/demo-cloud/image/upload");
         assertThat(result.timestamp()).isEqualTo(String.valueOf(NOW.getEpochSecond()));
         assertThat(result.signature()).isNotBlank();
+        assertThat(result.allowedFormats()).isEqualTo("jpg,jpeg,png,webp,gif");
+        assertThat(result.maxFileSize()).isEqualTo(5242880L);
     }
 
     @Test

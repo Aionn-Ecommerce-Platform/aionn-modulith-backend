@@ -2,20 +2,21 @@ package com.aionn.shipping.adapter.rest.controller;
 
 import com.aionn.shipping.adapter.rest.dto.shipment.CarrierWebhookRequest;
 import com.aionn.shipping.adapter.rest.exception.ShippingExceptionHandler;
-import com.aionn.shipping.adapter.rest.mapper.shipment.ShipmentDtoMapper;
 import com.aionn.shipping.application.dto.shipment.command.CarrierWebhookCommand;
 import com.aionn.shipping.application.dto.shipment.result.ShipmentResult;
 import com.aionn.shipping.application.port.in.shipment.ApplyCarrierWebhookInputPort;
 import com.aionn.shipping.domain.exception.ShippingErrorCode;
 import com.aionn.shipping.domain.exception.ShippingException;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonConfig;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mapstruct.factory.Mappers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -35,101 +36,105 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class ShippingWebhookControllerWebTest {
 
-    @Mock
-    private ApplyCarrierWebhookInputPort applyCarrierWebhookInputPort;
+        @Mock
+        private ApplyCarrierWebhookInputPort applyCarrierWebhookInputPort;
 
-    private final ShipmentDtoMapper shipmentDtoMapper = Mappers.getMapper(ShipmentDtoMapper.class);
-    private final JsonMapper objectMapper = JacksonMapperFactory.create();
+        private final ObjectMapper objectMapper = new JacksonConfig().objectMapper();
+        private final JsonMapper jsonMapper = JacksonMapperFactory.create();
 
-    private MockMvc buildMockMvc() {
-        ShippingWebhookController controller = new ShippingWebhookController(applyCarrierWebhookInputPort, shipmentDtoMapper);
-        return MockMvcBuilders.standaloneSetup(controller)
-                .setControllerAdvice(new ShippingExceptionHandler())
-                .setMessageConverters(new JacksonJsonHttpMessageConverter(objectMapper))
-                .build();
-    }
+        private MockMvc buildMockMvc() {
+                ShippingWebhookController controller = new ShippingWebhookController(applyCarrierWebhookInputPort,
+                                objectMapper);
+                return MockMvcBuilders.standaloneSetup(controller)
+                                .setControllerAdvice(new ShippingExceptionHandler())
+                                .setMessageConverters(
+                                                new ByteArrayHttpMessageConverter(),
+                                                new JacksonJsonHttpMessageConverter(jsonMapper))
+                                .build();
+        }
 
-    private String validPayload() throws Exception {
-        return objectMapper.writeValueAsString(
-                new CarrierWebhookRequest(
-                        "TRACK_1", "PICKED_UP", null, null, null, null, null, null, "WH_1"));
-    }
+        private String validPayload() throws Exception {
+                return jsonMapper.writeValueAsString(
+                                new CarrierWebhookRequest(
+                                                "TRACK_1", "PICKED_UP", null, null, null, null, null, null, "WH_1"));
+        }
 
-    @Test
-    void carrierWebhookAcceptsValidSecret() throws Exception {
-        MockMvc mockMvc = buildMockMvc();
-        when(applyCarrierWebhookInputPort.execute(argThat(cmd -> "expected-secret".equals(cmd.webhookSecret()))))
-                .thenReturn(sample("S_1", "PICKED_UP"));
+        @Test
+        void carrierWebhookAcceptsValidSecret() throws Exception {
+                MockMvc mockMvc = buildMockMvc();
+                when(applyCarrierWebhookInputPort
+                                .execute(argThat(cmd -> "expected-secret".equals(cmd.webhookSecret()))))
+                                .thenReturn(sample("S_1", "PICKED_UP"));
 
-        mockMvc.perform(post("/api/v1/shipping/webhooks/carrier")
-                        .header("X-Webhook-Secret", "expected-secret")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(validPayload()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").doesNotExist());
+                mockMvc.perform(post("/api/v1/shipping/webhooks/carrier")
+                                .header("X-Webhook-Secret", "expected-secret")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(validPayload()))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data").doesNotExist());
 
-        verify(applyCarrierWebhookInputPort).execute(any(CarrierWebhookCommand.class));
-    }
+                verify(applyCarrierWebhookInputPort).execute(any(CarrierWebhookCommand.class));
+        }
 
-    @Test
-    void carrierWebhookRejectsInvalidSecret() throws Exception {
-        MockMvc mockMvc = buildMockMvc();
-        when(applyCarrierWebhookInputPort.execute(argThat(cmd -> "WRONG".equals(cmd.webhookSecret()))))
-                .thenThrow(new ShippingException(ShippingErrorCode.SHIPMENT_FORBIDDEN));
+        @Test
+        void carrierWebhookRejectsInvalidSecret() throws Exception {
+                MockMvc mockMvc = buildMockMvc();
+                when(applyCarrierWebhookInputPort.execute(argThat(cmd -> "WRONG".equals(cmd.webhookSecret()))))
+                                .thenThrow(new ShippingException(ShippingErrorCode.SHIPMENT_FORBIDDEN));
 
-        mockMvc.perform(post("/api/v1/shipping/webhooks/carrier")
-                        .header("X-Webhook-Secret", "WRONG")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(validPayload()))
-                .andExpect(status().isForbidden());
-    }
+                mockMvc.perform(post("/api/v1/shipping/webhooks/carrier")
+                                .header("X-Webhook-Secret", "WRONG")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(validPayload()))
+                                .andExpect(status().isForbidden());
+        }
 
-    @Test
-    void carrierWebhookRejectsMissingSecretWhenConfigured() throws Exception {
-        MockMvc mockMvc = buildMockMvc();
-        when(applyCarrierWebhookInputPort.execute(argThat(cmd -> cmd.webhookSecret() == null)))
-                .thenThrow(new ShippingException(ShippingErrorCode.SHIPMENT_FORBIDDEN));
+        @Test
+        void carrierWebhookRejectsMissingSecretWhenConfigured() throws Exception {
+                MockMvc mockMvc = buildMockMvc();
+                when(applyCarrierWebhookInputPort.execute(argThat(cmd -> cmd.webhookSecret() == null)))
+                                .thenThrow(new ShippingException(ShippingErrorCode.SHIPMENT_FORBIDDEN));
 
-        mockMvc.perform(post("/api/v1/shipping/webhooks/carrier")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(validPayload()))
-                .andExpect(status().isForbidden());
-    }
+                mockMvc.perform(post("/api/v1/shipping/webhooks/carrier")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(validPayload()))
+                                .andExpect(status().isForbidden());
+        }
 
-    @Test
-    void carrierWebhookSkipsAuthWhenSecretNotConfigured() throws Exception {
-        MockMvc mockMvc = buildMockMvc();
-        when(applyCarrierWebhookInputPort.execute(argThat(cmd -> cmd.webhookSecret() == null)))
-                .thenReturn(sample("S_1", "PICKED_UP"));
+        @Test
+        void carrierWebhookSkipsAuthWhenSecretNotConfigured() throws Exception {
+                MockMvc mockMvc = buildMockMvc();
+                when(applyCarrierWebhookInputPort.execute(argThat(cmd -> cmd.webhookSecret() == null)))
+                                .thenReturn(sample("S_1", "PICKED_UP"));
 
-        mockMvc.perform(post("/api/v1/shipping/webhooks/carrier")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(validPayload()))
-                .andExpect(status().isOk());
+                mockMvc.perform(post("/api/v1/shipping/webhooks/carrier")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(validPayload()))
+                                .andExpect(status().isOk());
 
-        verify(applyCarrierWebhookInputPort).execute(any(CarrierWebhookCommand.class));
-    }
+                verify(applyCarrierWebhookInputPort).execute(any(CarrierWebhookCommand.class));
+        }
 
-    @Test
-    void carrierWebhookValidatesPayload() throws Exception {
-        MockMvc mockMvc = buildMockMvc();
+        @Test
+        void carrierWebhookValidatesPayload() throws Exception {
+                MockMvc mockMvc = buildMockMvc();
 
-        String invalid = objectMapper.writeValueAsString(
-                new CarrierWebhookRequest(
-                        " ", " ", null, null, null, null, null, null, null));
+                String invalid = jsonMapper.writeValueAsString(
+                                new CarrierWebhookRequest(
+                                                " ", " ", null, null, null, null, null, null, null));
 
-        mockMvc.perform(post("/api/v1/shipping/webhooks/carrier")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(invalid))
-                .andExpect(status().is4xxClientError());
+                mockMvc.perform(post("/api/v1/shipping/webhooks/carrier")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(invalid))
+                                .andExpect(status().is4xxClientError());
 
-        verify(applyCarrierWebhookInputPort, never()).execute(any());
-    }
+                verify(applyCarrierWebhookInputPort, never()).execute(any());
+        }
 
-    private ShipmentResult sample(String id, String status) {
-        Instant now = Instant.now();
-        return new ShipmentResult(id, "ORDER_1", "M_1", "U_1",
-                "TRACK_1", "CARRIER_1", null, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND",
-                status, null, null, null, 0, null, null, null, null, null, null, now, now);
-    }
+        private ShipmentResult sample(String id, String status) {
+                Instant now = Instant.now();
+                return new ShipmentResult(id, "ORDER_1", "M_1", "U_1",
+                                "TRACK_1", "CARRIER_1", null, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND",
+                                status, null, null, null, 0, null, null, null, null, null, null, now, now);
+        }
 }

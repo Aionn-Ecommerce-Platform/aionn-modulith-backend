@@ -1,13 +1,16 @@
 package com.aionn.payment.application.service;
 
+import java.util.List;
+
 import com.aionn.payment.application.port.out.MerchantBalancePersistencePort;
 import com.aionn.payment.application.port.out.SettlementLedgerPersistencePort;
+import com.aionn.payment.application.policy.PaymentSettlementPolicy;
 import com.aionn.payment.domain.model.MerchantBalance;
 import com.aionn.payment.domain.model.SettlementLedgerEntry;
 import com.aionn.payment.domain.model.SettlementLedgerEntry.SettlementKind;
 import com.aionn.sharedkernel.domain.vo.Money;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
-import com.aionn.sharedkernel.integration.port.ordering.OrderQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.ordering.OrderQueryPort;
 import com.aionn.sharedkernel.util.Sha256Hasher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,12 +28,11 @@ import java.time.Instant;
 @Transactional
 public class SettlementService {
 
-    private static final BigDecimal DEFAULT_RATE = new BigDecimal("0.0500");
-
     private final MerchantBalancePersistencePort balanceRepo;
     private final SettlementLedgerPersistencePort ledgerRepo;
     private final OrderQueryPort orderQueryPort;
     private final MerchantQueryPort merchantQueryPort;
+    private final PaymentSettlementPolicy settlementPolicy;
     private final Clock clock;
 
     public void onOrderApproved(String orderId, String paymentId) {
@@ -41,7 +43,8 @@ public class SettlementService {
             log.warn("Settlement: order {} not found, skipping SALE entry", orderId);
             return;
         }
-        BigDecimal rate = merchantQueryPort.findCommissionRate(order.merchantId()).orElse(DEFAULT_RATE);
+        BigDecimal rate = merchantQueryPort.findCommissionRate(order.merchantId())
+                .orElseGet(settlementPolicy::defaultCommissionRate);
         BigDecimal commission = currencyAmount(order.totalAmount().multiply(rate), order.currency());
         BigDecimal net = currencyAmount(order.totalAmount().subtract(commission), order.currency());
 
@@ -76,7 +79,17 @@ public class SettlementService {
             return;
         }
         if (ledgerRepo.existsById(effectId)) return;
-        BigDecimal amountToMove = sale.getPendingDelta().max(BigDecimal.ZERO);
+
+        // Pending can already be reduced by refunds issued before completion; move
+        // only what this order still contributes so the balance guard cannot reject
+        // a legitimate completion.
+        List<SettlementLedgerEntry> entries = ledgerRepo.findByOrder(orderId);
+        BigDecimal amountToMove = entries.stream()
+                .filter(entry -> entry.getKind() == SettlementKind.SALE
+                        || entry.getKind() == SettlementKind.REFUND)
+                .map(SettlementLedgerEntry::getPendingDelta)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .max(BigDecimal.ZERO);
         if (amountToMove.signum() > 0) {
             balance.moveToAvailable(amountToMove, now);
             balanceRepo.save(balance);
@@ -104,7 +117,7 @@ public class SettlementService {
         // against the same cumulative ledger state. Rounding the cumulative target and
         // subtracting what was already allocated guarantees that all parts add up to
         // exactly the sale net amount.
-        java.util.List<SettlementLedgerEntry> entries = ledgerRepo.findByOrder(orderId);
+        List<SettlementLedgerEntry> entries = ledgerRepo.findByOrder(orderId);
         sale = entries.stream()
                 .filter(entry -> entry.getKind() == SettlementKind.SALE)
                 .findFirst()

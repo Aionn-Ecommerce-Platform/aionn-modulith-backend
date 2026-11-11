@@ -1,5 +1,7 @@
 package com.aionn.promotion.domain.model;
 
+import java.math.RoundingMode;
+
 import com.aionn.promotion.domain.event.PromotionEvents;
 import com.aionn.promotion.domain.exception.PromotionErrorCode;
 import com.aionn.promotion.domain.exception.PromotionException;
@@ -109,8 +111,11 @@ public class FlashSaleRegistration extends AggregateRoot {
         ensureTransitionAllowed(FlashSaleRegistrationStatus.APPROVED);
         Guard.notBlank(adminId, "adminId");
         if (variantPrice != null && variantPrice.isPositive()) {
+            Guard.require(salePrice.currency().equalsIgnoreCase(variantPrice.currency()),
+                    () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
+                            "Sale price currency must match the regular price currency"));
             BigDecimal discountPercent = BigDecimal.ONE
-                    .subtract(salePrice.amount().divide(variantPrice.amount(), 4, java.math.RoundingMode.HALF_UP))
+                    .subtract(salePrice.amount().divide(variantPrice.amount(), 4, RoundingMode.HALF_UP))
                     .multiply(BigDecimal.valueOf(100));
             Guard.require(discountPercent.compareTo(MIN_DISCOUNT_PERCENT) >= 0,
                     () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
@@ -121,7 +126,8 @@ public class FlashSaleRegistration extends AggregateRoot {
         this.decidedAt = now;
         this.decidedBy = adminId;
         this.updatedAt = now;
-        registerEvent(new PromotionEvents.FlashSaleApproved(registrationId, campaignId, skuId, adminId, now));
+        registerEvent(new PromotionEvents.FlashSaleApproved(registrationId, campaignId, merchantId, productId,
+                skuId, adminId, now));
     }
 
     public void reject(String adminId, String reason, Clock clock) {

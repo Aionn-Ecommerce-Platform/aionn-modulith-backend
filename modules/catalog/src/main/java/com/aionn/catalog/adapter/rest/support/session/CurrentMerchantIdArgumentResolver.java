@@ -2,7 +2,7 @@ package com.aionn.catalog.adapter.rest.support.session;
 
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantOwnershipVerifierPort;
+import com.aionn.contracts.port.catalog.MerchantOwnershipVerifierPort;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.MethodParameter;

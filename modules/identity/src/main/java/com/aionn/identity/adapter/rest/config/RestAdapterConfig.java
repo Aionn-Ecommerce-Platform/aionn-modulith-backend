@@ -4,7 +4,7 @@ import com.aionn.identity.adapter.rest.support.client.AuthClientTypeArgumentReso
 import com.aionn.identity.adapter.rest.support.client.ClientUserAgentArgumentResolver;
 import com.aionn.identity.adapter.rest.support.session.CurrentAccessTokenJtiArgumentResolver;
 import com.aionn.identity.adapter.rest.support.session.CurrentSessionIdArgumentResolver;
-import com.aionn.sharedkernel.adapter.web.support.clientip.ClientIpArgumentResolver;
+import com.aionn.platform.web.support.clientip.ClientIpArgumentResolver;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;

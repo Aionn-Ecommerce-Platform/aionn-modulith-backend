@@ -43,7 +43,7 @@ public class SpringRegistrationPolicy implements RegistrationPolicy {
 
     @Override
     public boolean isExposeOtpInResponse() {
-        return !properties.twilio().enabled();
+        return properties.exposeOtpInResponse();
     }
 
     @Override
@@ -64,5 +64,25 @@ public class SpringRegistrationPolicy implements RegistrationPolicy {
     @Override
     public int getPhoneRateLimitWindowSeconds() {
         return properties.rateLimit().phoneWindowSeconds();
+    }
+
+    @Override
+    public int getVerifyIpMaxAttempts() {
+        return properties.rateLimit().verifyIpMaxAttempts();
+    }
+
+    @Override
+    public int getVerifyIpWindowSeconds() {
+        return properties.rateLimit().verifyIpWindowSeconds();
+    }
+
+    @Override
+    public int getResendIpMaxAttempts() {
+        return properties.rateLimit().resendIpMaxAttempts();
+    }
+
+    @Override
+    public int getResendIpWindowSeconds() {
+        return properties.rateLimit().resendIpWindowSeconds();
     }
 }

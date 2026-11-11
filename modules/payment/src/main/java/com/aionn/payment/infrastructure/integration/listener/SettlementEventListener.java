@@ -1,9 +1,9 @@
 package com.aionn.payment.infrastructure.integration.listener;
 
 import com.aionn.payment.application.service.SettlementService;
-import com.aionn.sharedkernel.integration.event.ordering.OrderApprovedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.ordering.OrderCompletedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.payment.PaymentRefundedIntegrationEvent;
+import com.aionn.contracts.event.ordering.OrderApprovedIntegrationEvent;
+import com.aionn.contracts.event.ordering.OrderCompletedIntegrationEvent;
+import com.aionn.contracts.event.payment.PaymentRefundedIntegrationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;

@@ -10,7 +10,7 @@ import com.aionn.identity.application.port.in.geography.ListCountriesQueryPort;
 import com.aionn.identity.application.port.in.geography.ListDistrictsQueryPort;
 import com.aionn.identity.application.port.in.geography.ListProvincesQueryPort;
 import com.aionn.identity.application.port.in.geography.ListWardsQueryPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -27,14 +27,6 @@ import java.util.List;
 @Tag(name = "Geography", description = "Geographic reference data endpoints - countries, provinces, districts, wards")
 public class GeographyController {
 
-    // Geography is administrative reference data that changes on the order of
-    // months (province splits, ward renames); an hour of shared-cache is a
-    // reasonable trade between load reduction and staleness. Individual
-    // endpoints keep this cache header so browsers, CDNs, and API gateways
-    // can hold on to the payload without hammering the DB.
-    private static final CacheControl GEOGRAPHY_CACHE =
-            CacheControl.maxAge(Duration.ofHours(1)).cachePublic();
-
     private final ListCountriesQueryPort listCountriesQueryPort;
     private final GetCountryQueryPort getCountryQueryPort;
     private final ListProvincesQueryPort listProvincesQueryPort;
@@ -44,6 +36,7 @@ public class GeographyController {
     private final ListWardsQueryPort listWardsQueryPort;
     private final GetWardQueryPort getWardQueryPort;
     private final GeographyDtoMapper geographyDtoMapper;
+    private final com.aionn.identity.infrastructure.config.properties.GeographyCacheProperties cacheProperties;
 
     @GetMapping("/countries")
     @Operation(summary = "List countries", description = "Get all active countries")
@@ -104,7 +97,11 @@ public class GeographyController {
         return cached(ApiResponse.success(geographyDtoMapper.toResponse(result), "Ward fetched"));
     }
 
-    private static <T> ResponseEntity<T> cached(T body) {
-        return ResponseEntity.ok().cacheControl(GEOGRAPHY_CACHE).body(body);
+    private <T> ResponseEntity<T> cached(T body) {
+        return ResponseEntity.ok().cacheControl(cacheControl()).body(body);
+    }
+
+    private CacheControl cacheControl() {
+        return CacheControl.maxAge(Duration.ofSeconds(cacheProperties.httpCacheSeconds())).cachePublic();
     }
 }

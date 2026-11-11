@@ -1,5 +1,9 @@
 package com.aionn.catalog.infrastructure.persistence.adapter.product;
 
+import com.aionn.catalog.application.port.out.product.ProductPersistencePort;
+import java.math.BigDecimal;
+import java.util.Map;
+
 import com.aionn.catalog.domain.model.Product;
 import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.catalog.domain.valueobject.ProductStatus;
@@ -253,7 +257,7 @@ class ProductPersistenceAdapterTest {
 
     @Test
     void searchPublishedNormalizesBlankQueryToNull() {
-        when(jpa.searchPublished(null, 20, 0)).thenReturn(List.of());
+        when(jpa.searchPublished(null, null, null, 20, 0)).thenReturn(List.of());
 
         assertThat(adapter.searchPublished("   ", 20, 0)).isEmpty();
     }
@@ -262,7 +266,7 @@ class ProductPersistenceAdapterTest {
     void searchPublishedTrimsQuery() {
         ProductEntity entity = new ProductEntity();
         Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
-        when(jpa.searchPublished("widget", 20, 0)).thenReturn(List.of(entity));
+        when(jpa.searchPublished("widget", null, null, 20, 0)).thenReturn(List.of(entity));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
         assertThat(adapter.searchPublished("  widget  ", 20, 0)).containsExactly(domain);
@@ -299,20 +303,21 @@ class ProductPersistenceAdapterTest {
     void searchFallbackPushesFiltersAndPaginationToDatabase() {
         ProductEntity entity = new ProductEntity();
         Product domain = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
-        var filter = new com.aionn.catalog.application.port.out.product.ProductPersistencePort.FallbackFilter(
+        var filter = new ProductPersistencePort.FallbackFilter(
                 " widget ", MERCHANT_ID, ProductStatus.PUBLISHED,
                 List.of("brand-1", "brand-2"), List.of("cat-1"),
-                new java.math.BigDecimal("10"), new java.math.BigDecimal("50"),
-                java.util.Map.of("color", List.of("red", "blue")),
-                com.aionn.catalog.application.port.out.product.ProductPersistencePort.FallbackSort.PRICE_ASC, 4.0);
+                new BigDecimal("10"), new BigDecimal("50"),
+                Map.of("color", List.of("red", "blue")),
+                ProductPersistencePort.FallbackSort.PRICE_ASC, 4.0,
+                Boolean.TRUE);
         when(jsonMapper.writeValueAsString(filter.attributes())).thenReturn("{\"color\":[\"red\",\"blue\"]}");
         when(jpa.searchFallback("widget", MERCHANT_ID, "PUBLISHED", "brand-1,brand-2", "cat-1",
-                new java.math.BigDecimal("10"), new java.math.BigDecimal("50"),
-                "{\"color\":[\"red\",\"blue\"]}", 4.0, "PRICE_ASC", 20, 40))
+                new BigDecimal("10"), new BigDecimal("50"),
+                "{\"color\":[\"red\",\"blue\"]}", 4.0, true, "PRICE_ASC", 20, 40))
                 .thenReturn(List.of(entity));
         when(jpa.countFallback("widget", MERCHANT_ID, "PUBLISHED", "brand-1,brand-2", "cat-1",
-                new java.math.BigDecimal("10"), new java.math.BigDecimal("50"),
-                "{\"color\":[\"red\",\"blue\"]}", 4.0)).thenReturn(41L);
+                new BigDecimal("10"), new BigDecimal("50"),
+                "{\"color\":[\"red\",\"blue\"]}", 4.0, true)).thenReturn(41L);
         when(mapper.toDomain(entity)).thenReturn(domain);
 
         var page = adapter.searchFallback(filter, OffsetPagination.of(2, 20));

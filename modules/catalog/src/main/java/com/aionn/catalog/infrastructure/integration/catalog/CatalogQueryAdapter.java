@@ -1,11 +1,13 @@
 package com.aionn.catalog.infrastructure.integration.catalog;
 
+import com.aionn.catalog.application.port.out.merchant.MerchantPersistencePort;
 import com.aionn.catalog.application.port.out.product.ProductPersistencePort;
 import com.aionn.catalog.domain.model.Product;
 import com.aionn.catalog.domain.model.ProductVariant;
+import com.aionn.catalog.domain.valueobject.MerchantStatus;
 import com.aionn.catalog.domain.valueobject.ProductStatus;
 import com.aionn.sharedkernel.domain.vo.Money;
-import com.aionn.sharedkernel.integration.port.catalog.CatalogQueryPort;
+import com.aionn.contracts.port.catalog.CatalogQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,22 +21,23 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-// Catalog-side adapter that exposes product views to other modules without
-// leaking domain types. Callers consume flat ProductView records only.
 @Component
 @RequiredArgsConstructor
 public class CatalogQueryAdapter implements CatalogQueryPort {
 
     private final ProductPersistencePort productRepository;
+    private final MerchantPersistencePort merchantRepository;
 
     @Override
     @Transactional(readOnly = true)
     public List<ProductView> search(SearchCriteria criteria) {
-        List<Product> products = productRepository.searchPublished(criteria.query(), criteria.limit(), 0);
+        int fetchLimit = criteria.limit() + 1;
+        List<Product> products = productRepository.searchPublished(criteria.query(), criteria.minPrice(),
+                criteria.maxPrice(), fetchLimit, criteria.offset());
         List<ProductView> mapped = new ArrayList<>(products.size());
         for (Product p : products) {
             ProductView dto = toView(p);
-            if (dto != null && matchesPrice(dto, criteria.minPrice(), criteria.maxPrice())) {
+            if (dto != null) {
                 mapped.add(dto);
             }
         }
@@ -90,29 +93,14 @@ public class CatalogQueryAdapter implements CatalogQueryPort {
         return new LookupResult(views, notFound);
     }
 
-    private static boolean matchesPrice(ProductView dto, BigDecimal min, BigDecimal max) {
-        if (min == null && max == null) {
-            return true;
+    private ProductView toView(Product p) {
+        if (p.getStatus() != ProductStatus.PUBLISHED) {
+            return null;
         }
-        if (dto.variants().isEmpty()) {
-            return true;
-        }
-        BigDecimal cheapest = dto.variants().stream()
-                .map(VariantView::price)
-                .filter(java.util.Objects::nonNull)
-                .min(BigDecimal::compareTo)
-                .orElse(null);
-        if (cheapest == null) {
-            return true;
-        }
-        if (min != null && cheapest.compareTo(min) < 0) {
-            return false;
-        }
-        return max == null || cheapest.compareTo(max) <= 0;
-    }
-
-    private static ProductView toView(Product p) {
-        if (p.getStatus() == ProductStatus.TAKEN_DOWN) {
+        boolean merchantActive = merchantRepository.findById(p.getMerchantId())
+                .map(m -> m.getStatus() == MerchantStatus.ACTIVE)
+                .orElse(false);
+        if (!merchantActive) {
             return null;
         }
         List<ProductVariant> domainVariants = p.variants();
@@ -121,13 +109,17 @@ public class CatalogQueryAdapter implements CatalogQueryPort {
             Money price = v.price();
             BigDecimal amount = price == null ? null : price.amount();
             String currency = price == null ? null : price.currency();
+            ProductVariant.ParcelDimensions parcel = v.parcel();
+            ParcelView parcelView = parcel == null ? null
+                    : new ParcelView(parcel.weightGram(), parcel.lengthCm(), parcel.widthCm(), parcel.heightCm());
             variants.add(new VariantView(
                     v.skuId(),
                     p.getName() + variantSuffix(v),
                     amount,
                     currency,
                     price != null,
-                    v.attributeValues() == null ? Map.of() : v.attributeValues()));
+                    v.attributeValues() == null ? Map.of() : v.attributeValues(),
+                    parcelView));
         }
         return new ProductView(
                 p.getProductId(),

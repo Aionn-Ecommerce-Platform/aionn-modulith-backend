@@ -1,16 +1,15 @@
 package com.aionn.identity.adapter.rest.dto.agent.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.time.Instant;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record AgentIdentityResponse(
         String agentId,
-        // Hashed credential, not a usable key — kept in the response only so
-        // clients can display a stable fingerprint. Name reflects the content.
-        String keyHash,
+        String apiKey,
         String permissions,
         String status,
         Instant expiryAt,
         Instant createdAt) {
 }
-
-

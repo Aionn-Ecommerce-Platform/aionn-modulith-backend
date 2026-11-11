@@ -1,14 +1,19 @@
 package com.aionn.promotion.application.service;
 
+import com.aionn.promotion.domain.valueobject.VoucherType;
+
 import com.aionn.promotion.application.dto.voucher.command.VoucherCommands;
+import com.aionn.promotion.application.policy.PromotionDefaultsPolicy;
+import com.aionn.promotion.application.policy.PromotionLimitPolicy;
 import com.aionn.promotion.application.port.out.VoucherPersistencePort;
 import com.aionn.promotion.domain.exception.PromotionErrorCode;
 import com.aionn.promotion.domain.exception.PromotionException;
 import com.aionn.promotion.domain.model.Voucher;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.Money;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,11 +25,11 @@ import java.util.List;
 @Transactional
 public class ShopVoucherService {
 
-    private static final int MAX_LIMIT = 100;
-
     private final VoucherPersistencePort voucherRepository;
     private final MerchantQueryPort merchantQueryPort;
     private final EventPublisher eventPublisher;
+    private final PromotionDefaultsPolicy defaultsPolicy;
+    private final PromotionLimitPolicy limitPolicy;
     private final Clock clock;
 
     public Voucher issue(VoucherCommands.IssueShopVoucher command) {
@@ -36,9 +41,17 @@ public class ShopVoucherService {
         Voucher voucher = Voucher.issueForShop(
                 voucherCode,
                 merchantId,
-                Money.of(command.discountAmount(), command.currency() == null ? "VND" : command.currency()),
+                command.type() == null
+                        ? VoucherType.ORDER_DISCOUNT
+                        : command.type(),
+                Money.of(command.discountAmount(), resolveCurrency(command.currency())),
                 command.usageLimit(), command.validFrom(), command.validUntil(), clock);
-        Voucher saved = voucherRepository.save(voucher);
+        Voucher saved;
+        try {
+            saved = voucherRepository.save(voucher);
+        } catch (DataIntegrityViolationException ex) {
+            throw new PromotionException(PromotionErrorCode.VOUCHER_DUPLICATE_CODE);
+        }
         eventPublisher.publish(voucher.pullEvents());
         return saved;
     }
@@ -55,8 +68,12 @@ public class ShopVoucherService {
                 .toList();
     }
 
-    private static int safeLimit(int limit) {
-        return Math.min(Math.max(limit, 1), MAX_LIMIT);
+    private int safeLimit(int limit) {
+        return Math.min(Math.max(limit, 1), limitPolicy.maxListLimit());
+    }
+
+    private String resolveCurrency(String currency) {
+        return currency == null || currency.isBlank() ? defaultsPolicy.defaultCurrency() : currency;
     }
 
     private String merchantIdFor(String ownerId) {

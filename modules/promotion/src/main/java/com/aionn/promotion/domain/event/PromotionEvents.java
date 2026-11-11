@@ -27,7 +27,7 @@ public final class PromotionEvents {
     }
 
     public record VoucherIssued(
-            String voucherCode, String campaignId, BigDecimal discountAmount, String currency,
+            String voucherCode, String campaignId, String merchantId, BigDecimal discountAmount, String currency,
             int usageLimit, Instant validUntil, Instant occurredAt) implements PromotionEvent {
     }
 
@@ -65,7 +65,7 @@ public final class PromotionEvents {
     }
 
     public record FlashSaleApproved(
-            String registrationId, String campaignId, String skuId,
+            String registrationId, String campaignId, String merchantId, String productId, String skuId,
             String adminId, Instant occurredAt) implements PromotionEvent {
     }
 

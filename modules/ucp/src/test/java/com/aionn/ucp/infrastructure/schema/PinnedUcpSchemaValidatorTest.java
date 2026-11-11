@@ -1,5 +1,8 @@
 package com.aionn.ucp.infrastructure.schema;
 
+import java.util.List;
+import org.junit.jupiter.api.Assertions;
+
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -66,7 +69,7 @@ class PinnedUcpSchemaValidatorTest {
                 UcpErrorResponse error = new UcpErrorResponse(
                                 new UcpErrorResponse.Metadata("2026-08-25", "success"), // Invalid status for error
                                                                                         // response
-                                java.util.List.of(UcpMessage.error("code", "msg", "unrecoverable")),
+                                List.of(UcpMessage.error("code", "msg", "unrecoverable")),
                                 null);
 
                 JsonNode jsonNode = mapper.valueToTree(error);
@@ -79,7 +82,7 @@ class PinnedUcpSchemaValidatorTest {
         void rejectsErrorResponseWithInvalidContinueUrl() {
                 UcpErrorResponse error = new UcpErrorResponse(
                                 new UcpErrorResponse.Metadata("2026-08-25", "error"),
-                                java.util.List.of(UcpMessage.error("code", "msg", "unrecoverable")),
+                                List.of(UcpMessage.error("code", "msg", "unrecoverable")),
                                 "not-a-valid-uri");
 
                 JsonNode jsonNode = mapper.valueToTree(error);
@@ -113,7 +116,7 @@ class PinnedUcpSchemaValidatorTest {
                 PinnedUcpSchemaValidator defaultValidator = new PinnedUcpSchemaValidator();
                 UcpErrorResponse error = UcpErrorResponse.of("2026-08-25", "err", "msg", "recoverable");
                 JsonNode jsonNode = mapper.valueToTree(error);
-                org.junit.jupiter.api.Assertions
+                Assertions
                                 .assertDoesNotThrow(() -> defaultValidator.validateErrorResponse(jsonNode));
         }
 

@@ -1,5 +1,11 @@
 package com.aionn.ordering.application.service;
 
+import com.aionn.ordering.domain.valueobject.ShippingAddress;
+import java.time.Clock;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.stream.Collectors;
+
 import com.aionn.ordering.application.dto.order.command.CancelOrderCommand;
 import com.aionn.ordering.application.dto.order.command.ChangeShippingInfoCommand;
 import com.aionn.ordering.application.dto.order.command.ConfirmDeliveredCommand;
@@ -21,6 +27,8 @@ import com.aionn.ordering.application.port.out.ShippingGateway;
 import com.aionn.ordering.application.port.out.StockReservationGateway;
 import com.aionn.ordering.application.port.out.VoucherGateway;
 import com.aionn.ordering.application.port.out.integration.OrderingIntegrationEventPublisherPort;
+import com.aionn.ordering.application.policy.OrderDefaultsPolicy;
+import com.aionn.ordering.application.policy.OrderingAnalyticsPolicy;
 import com.aionn.ordering.application.policy.ReservationPolicy;
 import com.aionn.ordering.domain.exception.OrderingErrorCode;
 import com.aionn.ordering.domain.exception.OrderingException;
@@ -30,8 +38,8 @@ import com.aionn.ordering.domain.model.OrderItem;
 import com.aionn.ordering.domain.valueobject.OrderStatus;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.Money;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
-import com.aionn.sharedkernel.integration.port.promotion.FlashSaleQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.promotion.FlashSaleQueryPort;
 import com.aionn.sharedkernel.util.IdGenerator;
 import com.aionn.sharedkernel.util.Sha256Hasher;
 import lombok.RequiredArgsConstructor;
@@ -69,7 +77,9 @@ public class OrderService {
     private final MerchantQueryPort merchantQueryPort;
     private final OrderingIntegrationEventPublisherPort integrationEventPublisher;
     private final ReservationPolicy reservationPolicy;
-    private final java.time.Clock clock;
+    private final OrderDefaultsPolicy orderDefaultsPolicy;
+    private final OrderingAnalyticsPolicy analyticsPolicy;
+    private final Clock clock;
     private final TransactionTemplate transactionTemplate;
     private final CompensationTaskPort compensationTaskPort;
     private final OrderPlacementOperationPort placementOperationPort;
@@ -77,6 +87,7 @@ public class OrderService {
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order placeOrder(PlaceOrderCommand command) {
+        validatePaymentSelection(command.gateway(), command.paymentMethodId());
         Cart cart = cartService.loadOwned(command.userId());
         if (cart.isEmpty()) {
             throw new OrderingException(OrderingErrorCode.CART_EMPTY);
@@ -110,10 +121,9 @@ public class OrderService {
                 cart.getVoucherCode(),
                 command.paymentMethodId(),
                 command.currency(),
-                command.shippingAddressSnapshot(), command.idempotencyKey());
+                command.shippingAddressSnapshot(), command.idempotencyKey(), command.note(),
+                command.shippingService());
 
-        // Online payments stay pending until the gateway confirms them; keep
-        // cart lines in that case so a failed payment can be retried.
         if (result.getStatus() == OrderStatus.APPROVED) {
             transactionTemplate.executeWithoutResult(status -> removePurchasedItemsFromCart(command.userId(), lines));
         }
@@ -121,10 +131,6 @@ public class OrderService {
         return result;
     }
 
-    /**
-     * Headless placement: no cart involvement. Used by UCP agentic checkout
-     * where the agent commits a snapshot of line items directly.
-     */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order placeOrderHeadless(PlaceOrderHeadlessCommand command) {
         if (command.lines() == null || command.lines().isEmpty()) {
@@ -137,21 +143,36 @@ public class OrderService {
                 command.voucherCode(),
                 command.paymentMethodId(),
                 command.currency(),
-                command.shippingAddressSnapshot(), command.idempotencyKey());
+                command.shippingAddressSnapshot(), command.idempotencyKey(), command.note(),
+                command.shippingService());
     }
 
-    /**
-     * Core placement flow shared by cart-driven and headless paths:
-     * pricing → reservation → voucher → payment → order create.
-     */
     private Order placeFromLines(
             String userId,
             List<PlaceOrderHeadlessCommand.Line> lines,
             String voucherCode,
             String paymentMethodId,
             String requestCurrency,
-            com.aionn.ordering.domain.valueobject.ShippingAddress shippingAddress,
-            String requestedIdempotencyKey) {
+            ShippingAddress shippingAddress,
+            String requestedIdempotencyKey,
+            String note,
+            String shippingService) {
+
+        if (lines == null || lines.isEmpty() || lines.size() > 100) {
+            throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
+                    "Order must contain between 1 and 100 lines");
+        }
+        java.util.Set<String> seenSkus = new java.util.HashSet<>();
+        for (PlaceOrderHeadlessCommand.Line line : lines) {
+            if (line.skuId() == null || line.skuId().isBlank() || line.qty() <= 0) {
+                throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
+                        "Order line requires a non-blank SKU and positive quantity");
+            }
+            if (!seenSkus.add(line.skuId())) {
+                throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
+                        "Duplicate SKU in order: " + line.skuId());
+            }
+        }
 
         List<String> skuIds = lines.stream().map(PlaceOrderHeadlessCommand.Line::skuId).toList();
         Map<String, CatalogPricingGateway.SkuPricing> pricing = catalogPricingGateway.resolve(skuIds);
@@ -169,8 +190,7 @@ public class OrderService {
         String pricingCurrency = first.currency();
         for (CatalogPricingGateway.SkuPricing p : pricing.values()) {
             if (!merchantId.equals(p.merchantId())) {
-                throw new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
-                        "Cart contains SKUs from multiple merchants - split flow not implemented");
+                throw new OrderingException(OrderingErrorCode.ORDER_MULTI_MERCHANT_NOT_SUPPORTED);
             }
             if (!pricingCurrency.equals(p.currency())) {
                 throw new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
@@ -192,13 +212,20 @@ public class OrderService {
         OrderPlacementOperationPort.Operation operation = placementOperationPort.start(
                 userId, idempotencyKey, requestHash, IdGenerator.ulid());
         String orderId = operation.orderId();
+        if (!operation.completed() && !operation.claimed()) {
+            throw new OrderingException(OrderingErrorCode.ORDER_PLACEMENT_IN_PROGRESS,
+                    "An order with this idempotency key is already being placed");
+        }
         Order replay = orderRepository.findById(orderId).orElse(null);
         if (replay != null) {
             placementOperationPort.complete(userId, idempotencyKey, orderId);
             return replay;
         }
 
-        Money shippingFee = quoteShippingFee(orderId, merchantId, shippingAddress, currency);
+        List<ShippingGateway.Parcel> parcels = toParcels(lines, pricing);
+        Money goodsSubtotal = linesSubtotal(lines, pricing, currency);
+        Money shippingFee = quoteShippingFee(orderId, merchantId, shippingAddress, currency, parcels,
+                goodsSubtotal.amount(), shippingService);
         Map<String, Integer> flashSaleQuantities = new LinkedHashMap<>();
         for (PlaceOrderHeadlessCommand.Line line : lines) {
             String registrationId = pricing.get(line.skuId()).flashSaleRegistrationId();
@@ -241,32 +268,52 @@ public class OrderService {
         Money lineSubtotal = Money.zero(currency);
         for (StockReservationGateway.Reservation r : reservations) {
             Money unit = Money.of(r.unitPrice(), currency);
-            items.add(new OrderItem(r.skuId(), r.qty(), unit, r.warehouseId(), r.reservationId()));
+            CatalogPricingGateway.SkuPricing sku = pricing.get(r.skuId());
+            items.add(new OrderItem(r.skuId(), r.qty(), unit, r.warehouseId(), r.reservationId(),
+                    sku == null ? null : sku.productName(),
+                    sku == null ? null : sku.imageUrl(),
+                    sku == null ? null : sku.variantLabel()));
             lineSubtotal = lineSubtotal.add(unit.multiply(r.qty()));
         }
 
+        Money subtotal = lineSubtotal;
+        Order placed;
         try {
-            if (voucherCode != null) {
-                List<String> orderCategoryIds = pricing.values().stream()
-                        .flatMap(sku -> sku.categoryIds().stream())
-                        .distinct()
-                        .toList();
-                VoucherGateway.Discount discount = voucherGateway.apply(
-                        userId, merchantId, voucherCode, orderId, lineSubtotal.amount(), currency,
-                        orderCategoryIds);
-                if (!discount.valid()) {
-                    throw new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
-                            "Voucher invalid: " + discount.reason());
+            // Voucher consumption and order persistence commit atomically; a failed save rolls it back.
+            placed = transactionTemplate.execute(status -> {
+                Money discountedSubtotal = subtotal;
+                Money discountedShipping = shippingFee;
+                if (voucherCode != null) {
+                    List<String> orderCategoryIds = pricing.values().stream()
+                            .flatMap(sku -> sku.categoryIds().stream())
+                            .distinct()
+                            .toList();
+                    VoucherGateway.Discount discount = voucherGateway.apply(
+                            userId, merchantId, voucherCode, orderId, subtotal.amount(), currency,
+                            orderCategoryIds);
+                    if (!discount.valid()) {
+                        throw new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
+                                "Voucher invalid: " + discount.reason());
+                    }
+                    validateVoucherDiscount(discount, currency);
+                    if (discount.freeShipping()) {
+                        // A free-shipping voucher waives the fee, capped by its own amount.
+                        BigDecimal waived = discount.amount().min(shippingFee.amount());
+                        discountedShipping = Money.of(
+                                shippingFee.amount().subtract(waived).max(BigDecimal.ZERO), currency);
+                    } else {
+                        BigDecimal newSubtotal = subtotal.amount()
+                                .subtract(discount.amount()).max(BigDecimal.ZERO);
+                        discountedSubtotal = Money.of(newSubtotal, currency);
+                    }
                 }
-                validateVoucherDiscount(discount, currency);
-                BigDecimal newSubtotal = lineSubtotal.amount().subtract(discount.amount()).max(BigDecimal.ZERO);
-                lineSubtotal = Money.of(newSubtotal, currency);
-            }
 
-            String proposalId = "prop-" + System.nanoTime();
-            Order order = Order.place(orderId, userId, merchantId, proposalId,
-                    paymentMethodId, currency, items, shippingAddress, shippingFee, lineSubtotal, clock.instant());
-            Order placed = transactionTemplate.execute(status -> {
+                String proposalId = "prop-" + IdGenerator.ulid();
+                Order order = Order.place(orderId, userId, merchantId, proposalId,
+                        paymentMethodId, currency, items, shippingAddress, discountedShipping, discountedSubtotal,
+                        clock.instant());
+                order.attachNote(note);
+                order.attachShippingService(shippingService);
                 Order saved = orderRepository.save(order);
                 eventPublisher.publish(order.pullEvents());
                 integrationEventPublisher.publishOrderPlaced(saved);
@@ -278,25 +325,42 @@ public class OrderService {
                 }
                 return saved;
             });
-            placementOperationPort.complete(userId, idempotencyKey, orderId);
-            return placed;
         } catch (RuntimeException failure) {
-            compensateFailedPlacement(userId, orderId, voucherCode, reservations);
+            compensateFailedPlacement(orderId, reservations);
             throw failure;
         }
+        // Order committed: a failure to record completion must not release its stock/voucher.
+        placementOperationPort.complete(userId, idempotencyKey, orderId);
+        return placed;
     }
 
     public Order approvePayment(String orderId, String paymentId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new OrderingException(OrderingErrorCode.ORDER_NOT_FOUND));
-        if (order.getStatus() == OrderStatus.APPROVED) {
-            return order;
-        }
-        order.approve(paymentId, clock.instant());
-        Order saved = orderRepository.save(order);
-        eventPublisher.publish(saved.pullEvents());
-        integrationEventPublisher.publishOrderApproved(saved.getOrderId(), paymentId);
+        return approvePayment(orderId, paymentId, null, null);
+    }
 
+    public Order approvePayment(String orderId, String paymentId, BigDecimal capturedAmount, String capturedCurrency) {
+        // Pessimistic row lock so a concurrent cancelOnPaymentFailure can't race this approve.
+        Order saved = transactionTemplate.execute(status -> {
+            Order order = orderRepository.findByIdForUpdate(orderId)
+                    .orElseThrow(() -> new OrderingException(OrderingErrorCode.ORDER_NOT_FOUND));
+            if (order.getStatus() == OrderStatus.APPROVED) {
+                if (java.util.Objects.equals(order.getPaymentId(), paymentId)) {
+                    return order;
+                }
+                refundIfPaid(order, paymentId, capturedAmount, capturedCurrency, "duplicate payment capture");
+                return order;
+            }
+            if (order.getStatus() == OrderStatus.CANCELLED) {
+                refundIfPaid(order, paymentId, capturedAmount, capturedCurrency,
+                        "payment captured after cancellation");
+                return order;
+            }
+            order.approve(paymentId, clock.instant());
+            Order persisted = orderRepository.save(order);
+            eventPublisher.publish(persisted.pullEvents());
+            integrationEventPublisher.publishOrderApproved(persisted.getOrderId(), paymentId);
+            return persisted;
+        });
         List<PlaceOrderHeadlessCommand.Line> lines = saved.getItems().stream()
                 .map(item -> new PlaceOrderHeadlessCommand.Line(item.skuId(), item.qty()))
                 .toList();
@@ -332,16 +396,12 @@ public class OrderService {
         return saved;
     }
 
-    /**
-     * Best-effort: register the shipment with the carrier once the merchant
-     * confirms preparation. Failure (e.g. carrier outage) is logged but must
-     * not block the order flow - the polling worker will retry next cycle.
-     */
     private void triggerShipmentRegistration(Order order) {
         try {
             BigDecimal fee = order.getShippingFee() == null ? null : order.getShippingFee().amount();
             shippingGateway.createAndRegister(order.getOrderId(), order.getMerchantId(),
-                    order.getUserId(), order.getShippingAddress(), null, fee, order.getCurrency());
+                    order.getUserId(), order.getShippingAddress(), null, fee, order.getCurrency(),
+                    toParcels(order));
         } catch (Exception ex) {
             log.warn("Auto-shipment registration failed for order {}: {}",
                     order.getOrderId(), ex.getMessage());
@@ -363,18 +423,15 @@ public class OrderService {
             return persisted;
         });
         releaseReservationsBestEffort(saved, "order-cancelled");
-        refundIfPaid(saved, "user cancellation");
+        refundIfPaid(saved, saved.getPaymentId(), null, null, "user cancellation");
         return saved;
     }
 
-    /**
-     * Cancel a PENDING order whose online payment failed. Idempotent: if the
-     * order is already cancelled or approved (race with capture event), no-op.
-     */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order cancelOnPaymentFailure(String orderId, String errorCode, String reason) {
         Order saved = transactionTemplate.execute(status -> {
-            Order order = required(orderId);
+            Order order = orderRepository.findByIdForUpdate(orderId)
+                    .orElseThrow(() -> new OrderingException(OrderingErrorCode.ORDER_NOT_FOUND));
             if (order.getStatus() != OrderStatus.PENDING) {
                 log.info("Skipping payment-failure cancel for order {}: status is {}",
                         orderId, order.getStatus());
@@ -407,7 +464,7 @@ public class OrderService {
             return persisted;
         });
         releaseReservationsBestEffort(saved, "merchant-rejected");
-        refundIfPaid(saved, "merchant rejected");
+        refundIfPaid(saved, saved.getPaymentId(), null, null, "merchant rejected");
         return saved;
     }
 
@@ -430,8 +487,14 @@ public class OrderService {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order changeShippingInfo(ChangeShippingInfoCommand command) {
         Order snapshot = transactionTemplate.execute(status -> ownedByUser(command.orderId(), command.userId()));
+        // A captured payment is locked to the old total; re-pricing would diverge from the gateway.
+        if (snapshot.getPaymentId() != null) {
+            throw new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
+                    "Cannot change shipping after payment has been initiated");
+        }
         Money newFee = quoteShippingFee(snapshot.getOrderId(), snapshot.getMerchantId(),
-                command.newAddress(), snapshot.getCurrency());
+                command.newAddress(), snapshot.getCurrency(), toParcels(snapshot),
+                orderGoodsSubtotal(snapshot));
         return transactionTemplate.execute(status -> {
             Order order = ownedByUser(command.orderId(), command.userId());
             order.changeShippingInfo(command.newAddress(), newFee, clock.instant());
@@ -443,11 +506,11 @@ public class OrderService {
 
     private static String placementRequestHash(String userId,
             List<PlaceOrderHeadlessCommand.Line> lines, String voucherCode, String paymentMethodId,
-            String currency, com.aionn.ordering.domain.valueobject.ShippingAddress address) {
+            String currency, ShippingAddress address) {
         String canonicalLines = lines.stream()
-                .sorted(java.util.Comparator.comparing(PlaceOrderHeadlessCommand.Line::skuId))
+                .sorted(Comparator.comparing(PlaceOrderHeadlessCommand.Line::skuId))
                 .map(line -> line.skuId() + ":" + line.qty())
-                .collect(java.util.stream.Collectors.joining(","));
+                .collect(Collectors.joining(","));
         return Sha256Hasher.hexDigest(String.join("|",
                 userId, canonicalLines, String.valueOf(voucherCode), String.valueOf(paymentMethodId),
                 currency, String.valueOf(address)));
@@ -464,9 +527,71 @@ public class OrderService {
         }
     }
 
+    /** A SKU without a weight rejects the quote; fees must come from real parcel data. */
+    private List<ShippingGateway.Parcel> toParcels(
+            List<PlaceOrderHeadlessCommand.Line> lines,
+            Map<String, CatalogPricingGateway.SkuPricing> pricing) {
+        List<ShippingGateway.Parcel> parcels = new ArrayList<>(lines.size());
+        for (PlaceOrderHeadlessCommand.Line line : lines) {
+            CatalogPricingGateway.SkuPricing sku = pricing.get(line.skuId());
+            CatalogPricingGateway.SkuPricing.Parcel p = sku == null ? null : sku.parcel();
+            if (p == null || !p.hasWeight()) {
+                throw new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
+                        "SKU " + line.skuId() + " is missing its shipping weight");
+            }
+            int totalWeight = p.weightGram() * line.qty();
+            parcels.add(new ShippingGateway.Parcel(
+                    totalWeight, p.lengthCm(), p.widthCm(), p.heightCm(), line.qty()));
+        }
+        return parcels;
+    }
+
+    /** Item dims are not stored on the order, so re-resolve pricing to recover parcels. */
+    private List<ShippingGateway.Parcel> toParcels(Order order) {
+        List<String> skuIds = order.getItems().stream().map(OrderItem::skuId).toList();
+        Map<String, CatalogPricingGateway.SkuPricing> pricing = catalogPricingGateway.resolve(skuIds);
+        List<PlaceOrderHeadlessCommand.Line> lines = order.getItems().stream()
+                .map(item -> new PlaceOrderHeadlessCommand.Line(item.skuId(), item.qty()))
+                .toList();
+        return toParcels(lines, pricing);
+    }
+
+    private Money linesSubtotal(List<PlaceOrderHeadlessCommand.Line> lines,
+            Map<String, CatalogPricingGateway.SkuPricing> pricing, String currency) {
+        Money subtotal = Money.zero(currency);
+        for (PlaceOrderHeadlessCommand.Line line : lines) {
+            CatalogPricingGateway.SkuPricing sku = pricing.get(line.skuId());
+            if (sku == null || sku.price() == null) {
+                throw new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
+                        "SKU " + line.skuId() + " has no price for the subtotal");
+            }
+            subtotal = subtotal.add(Money.of(sku.price(), currency).multiply(line.qty()));
+        }
+        return subtotal;
+    }
+
+    private BigDecimal orderGoodsSubtotal(Order order) {
+        BigDecimal subtotal = BigDecimal.ZERO;
+        for (OrderItem item : order.items()) {
+            subtotal = subtotal.add(item.unitPrice().amount()
+                    .multiply(BigDecimal.valueOf(item.qty())));
+        }
+        return subtotal;
+    }
+
     private Money quoteShippingFee(String orderId, String merchantId,
-            com.aionn.ordering.domain.valueobject.ShippingAddress address, String currency) {
-        ShippingGateway.ShippingQuote quote = shippingGateway.quote(orderId, merchantId, address, currency);
+            ShippingAddress address, String currency,
+            List<ShippingGateway.Parcel> parcels, BigDecimal goodsSubtotal) {
+        return quoteShippingFee(orderId, merchantId, address, currency, parcels, goodsSubtotal, null);
+    }
+
+    private Money quoteShippingFee(String orderId, String merchantId,
+            ShippingAddress address, String currency,
+            List<ShippingGateway.Parcel> parcels, BigDecimal goodsSubtotal, String shippingService) {
+        ShippingGateway.ShippingQuote quote = shippingService == null || shippingService.isBlank()
+                ? shippingGateway.quote(orderId, merchantId, address, currency, parcels, goodsSubtotal)
+                : shippingGateway.quote(orderId, merchantId, address, currency, parcels, goodsSubtotal,
+                        shippingService);
         if (quote == null || quote.fee() == null || quote.currency() == null
                 || quote.fee().signum() < 0 || !currency.equalsIgnoreCase(quote.currency())) {
             throw new OrderingException(OrderingErrorCode.ORDER_INVALID_STATE,
@@ -475,23 +600,38 @@ public class OrderService {
         return Money.of(quote.fee(), currency);
     }
 
-    private void refundIfPaid(Order order, String reason) {
-        if (order.getPaymentId() != null) {
-            paymentGateway.refund(order.getPaymentId(), order.getTotalAmount().amount(),
-                    order.getCurrency(), reason, "order:" + order.getOrderId() + ":cancel-refund");
+    private void refundIfPaid(Order order, String paymentId, BigDecimal capturedAmount,
+            String capturedCurrency, String reason) {
+        if (paymentId == null) {
+            return;
+        }
+        BigDecimal amount = capturedAmount != null ? capturedAmount : order.getTotalAmount().amount();
+        String currency = capturedCurrency != null ? capturedCurrency : order.getCurrency();
+        String taskId = "refund:" + order.getOrderId() + ":" + paymentId;
+        String idempotencyKey = "order:" + order.getOrderId() + ":refund:" + paymentId;
+        enqueueCompensation(new CompensationTaskPort.Task(
+                taskId, CompensationTaskPort.Type.REFUND, paymentId,
+                order.getUserId(), order.getOrderId(), reason, 0));
+        try {
+            paymentGateway.refund(paymentId, amount, currency, reason, idempotencyKey);
+            completeCompensation(taskId);
+        } catch (RuntimeException ex) {
+            log.warn("Refund for order {} payment {} failed; retry task {} remains pending",
+                    order.getOrderId(), paymentId, taskId, ex);
+        }
+    }
+
+    private void completeCompensation(String taskId) {
+        try {
+            compensationTaskPort.markCompleted(taskId);
+        } catch (RuntimeException ex) {
+            log.warn("Unable to mark compensation task {} completed", taskId, ex);
         }
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order markShipped(ConfirmShippedCommand command) {
-        Order snapshot = transactionTemplate.execute(status -> required(command.orderId()));
-        for (OrderItem item : snapshot.items()) {
-            if (item.reservationId() == null) {
-                continue;
-            }
-            stockReservationGateway.commit(item.reservationId());
-        }
-        return transactionTemplate.execute(status -> {
+        Order snapshot = transactionTemplate.execute(status -> {
             Order order = required(command.orderId());
             order.markShipped(command.shipmentId(), clock.instant());
             Order saved = orderRepository.save(order);
@@ -499,6 +639,27 @@ public class OrderService {
             integrationEventPublisher.publishOrderShipped(saved.getOrderId(), command.shipmentId());
             return saved;
         });
+        commitReservationsBestEffort(snapshot);
+        return snapshot;
+    }
+
+    private void commitReservationsBestEffort(Order order) {
+        for (OrderItem item : order.items()) {
+            if (item.reservationId() == null) {
+                continue;
+            }
+            String taskId = "stock-commit:" + item.reservationId();
+            enqueueCompensation(new CompensationTaskPort.Task(
+                    taskId, CompensationTaskPort.Type.STOCK_COMMIT, item.reservationId(),
+                    null, order.getOrderId(), "order-shipped", 0));
+            try {
+                stockReservationGateway.commit(item.reservationId());
+                completeCompensation(taskId);
+            } catch (RuntimeException ex) {
+                log.warn("Stock commit for reservation {} failed; retry task {} remains pending",
+                        item.reservationId(), taskId, ex);
+            }
+        }
     }
 
     public Order complete(ConfirmDeliveredCommand command) {
@@ -550,9 +711,11 @@ public class OrderService {
     @Transactional(readOnly = true)
     public MerchantOrderAnalyticsResult getMerchantAnalytics(String ownerId, LocalDate from, LocalDate to) {
         String merchantId = requireMerchantIdForOwner(ownerId);
-        ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
+        ZoneId zone = analyticsPolicy.zone();
         LocalDate safeTo = to == null ? clock.instant().atZone(zone).toLocalDate() : to;
-        LocalDate safeFrom = from == null ? safeTo.minusDays(6) : from;
+        LocalDate safeFrom = from == null
+                ? safeTo.minusDays(analyticsPolicy.merchantDefaultRangeDays() - 1L)
+                : from;
         if (safeFrom.isAfter(safeTo)) {
             throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT);
         }
@@ -561,6 +724,9 @@ public class OrderService {
         var endExclusive = safeTo.plusDays(1).atStartOfDay(zone).toInstant();
         List<OrderPersistencePort.OrderAnalyticsRow> rows = orderRepository.findMerchantAnalyticsRows(merchantId, start,
                 endExclusive);
+        validateAnalyticsRange(safeFrom, safeTo);
+        String currency = singleCurrency(rows.stream()
+                .map(OrderPersistencePort.OrderAnalyticsRow::currency).toList());
 
         Map<LocalDate, DailyRevenueAccumulator> revenueByDate = new LinkedHashMap<>();
         for (LocalDate day = safeFrom; !day.isAfter(safeTo); day = day.plusDays(1)) {
@@ -572,14 +738,10 @@ public class OrderService {
             statusCounts.put(status.name(), 0L);
         }
 
-        String currency = "VND";
         long completedOrders = 0;
         BigDecimal totalRevenue = BigDecimal.ZERO;
 
         for (OrderPersistencePort.OrderAnalyticsRow row : rows) {
-            if (row.currency() != null && !row.currency().isBlank()) {
-                currency = row.currency();
-            }
             String status = row.status();
             statusCounts.merge(status, 1L, Long::sum);
             if (!OrderStatus.COMPLETED.name().equals(status)) {
@@ -621,9 +783,11 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public PlatformOrderAnalyticsResult getPlatformAnalytics(LocalDate from, LocalDate to) {
-        ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
+        ZoneId zone = analyticsPolicy.zone();
         LocalDate safeTo = to == null ? clock.instant().atZone(zone).toLocalDate() : to;
-        LocalDate safeFrom = from == null ? safeTo.minusDays(29) : from;
+        LocalDate safeFrom = from == null
+                ? safeTo.minusDays(analyticsPolicy.platformDefaultRangeDays() - 1L)
+                : from;
         if (safeFrom.isAfter(safeTo)) {
             throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT);
         }
@@ -632,6 +796,9 @@ public class OrderService {
         var endExclusive = safeTo.plusDays(1).atStartOfDay(zone).toInstant();
         List<OrderPersistencePort.PlatformAnalyticsRow> rows = orderRepository.findPlatformAnalyticsRows(start,
                 endExclusive);
+        validateAnalyticsRange(safeFrom, safeTo);
+        String currency = singleCurrency(rows.stream()
+                .map(OrderPersistencePort.PlatformAnalyticsRow::currency).toList());
 
         Map<LocalDate, DailyRevenueAccumulator> revenueByDate = new LinkedHashMap<>();
         for (LocalDate day = safeFrom; !day.isAfter(safeTo); day = day.plusDays(1)) {
@@ -644,14 +811,10 @@ public class OrderService {
         }
 
         Map<String, MerchantAccumulator> byMerchant = new LinkedHashMap<>();
-        String currency = "VND";
         long completedOrders = 0;
         BigDecimal totalGmv = BigDecimal.ZERO;
 
         for (OrderPersistencePort.PlatformAnalyticsRow row : rows) {
-            if (row.currency() != null && !row.currency().isBlank()) {
-                currency = row.currency();
-            }
             statusCounts.merge(row.status(), 1L, Long::sum);
             if (!OrderStatus.COMPLETED.name().equals(row.status())) {
                 continue;
@@ -683,7 +846,7 @@ public class OrderService {
                         entry.getValue().revenue(),
                         entry.getValue().orders()))
                 .sorted((a, b) -> b.revenue().compareTo(a.revenue()))
-                .limit(10)
+                .limit(analyticsPolicy.topMerchantsLimit())
                 .toList();
 
         return new PlatformOrderAnalyticsResult(
@@ -701,13 +864,16 @@ public class OrderService {
     @Transactional(readOnly = true)
     public List<TopProductResult> getMerchantTopProducts(String ownerId, LocalDate from, LocalDate to, int limit) {
         String merchantId = requireMerchantIdForOwner(ownerId);
-        ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
+        ZoneId zone = analyticsPolicy.zone();
         LocalDate safeTo = to == null ? clock.instant().atZone(zone).toLocalDate() : to;
-        LocalDate safeFrom = from == null ? safeTo.minusDays(29) : from;
+        LocalDate safeFrom = from == null
+                ? safeTo.minusDays(analyticsPolicy.merchantDefaultRangeDays() - 1L)
+                : from;
+        validateAnalyticsRange(safeFrom, safeTo);
         if (safeFrom.isAfter(safeTo)) {
             throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT);
         }
-        int safeLimit = Math.min(Math.max(limit, 1), 20);
+        int safeLimit = Math.min(Math.max(limit, 1), analyticsPolicy.maxTopProductsLimit());
 
         var start = safeFrom.atStartOfDay(zone).toInstant();
         var endExclusive = safeTo.plusDays(1).atStartOfDay(zone).toInstant();
@@ -742,7 +908,7 @@ public class OrderService {
         if (statusFilter == null || statusFilter.isBlank()) {
             return List.of();
         }
-        return java.util.Arrays.stream(statusFilter.split(","))
+        return Arrays.stream(statusFilter.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isBlank())
                 .map(this::parseOrderStatus)
@@ -780,10 +946,16 @@ public class OrderService {
         return order;
     }
 
-    private String requireMerchantIdForOwner(String ownerId) {
-        return merchantQueryPort.findMerchantIdByOwnerId(ownerId)
-                .orElseThrow(() -> new OrderingException(OrderingErrorCode.ORDER_NOT_OWNED_BY_MERCHANT,
-                        "No merchant registered for the authenticated user"));
+    /**
+     * The {@code @CurrentMerchantId} resolver already verified ownership, so this value is a
+     * merchantId — not an owner id to look up again.
+     */
+    private String requireMerchantIdForOwner(String merchantId) {
+        if (merchantId == null || merchantId.isBlank()) {
+            throw new OrderingException(OrderingErrorCode.ORDER_NOT_OWNED_BY_MERCHANT,
+                    "No merchant registered for the authenticated user");
+        }
+        return merchantId;
     }
 
     private void releaseReservations(List<StockReservationGateway.Reservation> reservations, String reason) {
@@ -798,20 +970,44 @@ public class OrderService {
         }
     }
 
-    private void compensateFailedPlacement(String userId, String orderId, String voucherCode,
+    private void validatePaymentSelection(String gateway, String paymentMethodId) {
+        boolean cod = gateway == null || "COD".equalsIgnoreCase(gateway);
+        boolean hasPaymentMethod = paymentMethodId != null && !paymentMethodId.isBlank();
+        if (!cod && !hasPaymentMethod) {
+            throw new OrderingException(OrderingErrorCode.ORDER_PAYMENT_FAILED,
+                    "A payment method is required for gateway " + gateway);
+        }
+        if (cod && hasPaymentMethod && !"COD".equalsIgnoreCase(paymentMethodId)) {
+            throw new OrderingException(OrderingErrorCode.ORDER_PAYMENT_FAILED,
+                    "COD gateway requires a COD payment method");
+        }
+    }
+
+    private String singleCurrency(java.util.List<String> currencies) {
+        var distinct = currencies.stream()
+                .filter(c -> c != null && !c.isBlank())
+                .map(String::toUpperCase)
+                .distinct()
+                .toList();
+        if (distinct.size() > 1) {
+            throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
+                    "Analytics range contains multiple currencies: " + distinct);
+        }
+        return distinct.isEmpty() ? orderDefaultsPolicy.defaultCurrency() : distinct.getFirst();
+    }
+
+    private void validateAnalyticsRange(LocalDate from, LocalDate to) {
+        if (from.isAfter(to)
+                || java.time.temporal.ChronoUnit.DAYS.between(from, to) > 366) {
+            throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
+                    "Analytics range must be between 1 and 367 days");
+        }
+    }
+
+    private void compensateFailedPlacement(String orderId,
             List<StockReservationGateway.Reservation> reservations) {
         releaseFlashSaleBestEffort(orderId);
-        if (voucherCode != null) {
-            try {
-                voucherGateway.release(userId, orderId, "order-placement-failed");
-            } catch (RuntimeException ex) {
-                log.error("Failed to release voucher for aborted order {}", orderId, ex);
-                enqueueCompensation(new CompensationTaskPort.Task(
-                        "voucher-release:" + orderId,
-                        CompensationTaskPort.Type.VOUCHER_RELEASE,
-                        voucherCode, userId, orderId, "order-placement-failed", 0));
-            }
-        }
+        // Voucher apply ran inside the rolled-back transaction, so its slot is already restored.
         releaseReservations(reservations, "order-placement-failed");
     }
 

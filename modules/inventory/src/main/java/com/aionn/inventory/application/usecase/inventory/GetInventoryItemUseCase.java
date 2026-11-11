@@ -17,7 +17,8 @@ public class GetInventoryItemUseCase implements GetInventoryItemInputPort {
 
     @Override
     @Transactional(readOnly = true)
-    public InventoryItemResult execute(String skuId, String warehouseId) {
-        return inventoryItemResultMapper.toResult(inventoryItemService.get(skuId, warehouseId));
+    public InventoryItemResult execute(String ownerId, String skuId, String warehouseId) {
+        return inventoryItemResultMapper.toResult(
+                inventoryItemService.getForOwner(ownerId, skuId, warehouseId));
     }
 }

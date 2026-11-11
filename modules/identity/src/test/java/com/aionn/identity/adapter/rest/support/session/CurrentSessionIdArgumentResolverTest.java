@@ -1,5 +1,8 @@
 package com.aionn.identity.adapter.rest.support.session;
 
+import jakarta.servlet.http.HttpServletRequest;
+import org.mockito.Mockito;
+
 import com.aionn.identity.infrastructure.security.web.SecurityRequestAttributeKeys;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +34,7 @@ class CurrentSessionIdArgumentResolverTest {
     @Test
     void supportsParameterWithCurrentSessionIdAndStringType() {
         when(methodParameter.hasParameterAnnotation(CurrentSessionId.class)).thenReturn(true);
-        org.mockito.Mockito.<Class<?>>when(methodParameter.getParameterType()).thenReturn(String.class);
+        Mockito.<Class<?>>when(methodParameter.getParameterType()).thenReturn(String.class);
 
         assertThat(resolver.supportsParameter(methodParameter)).isTrue();
     }
@@ -47,7 +50,7 @@ class CurrentSessionIdArgumentResolverTest {
     void resolveArgumentReturnsSessionIdFromRequestAttribute() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setAttribute(SecurityRequestAttributeKeys.SESSION_ID, "session-42");
-        when(webRequest.getNativeRequest(jakarta.servlet.http.HttpServletRequest.class))
+        when(webRequest.getNativeRequest(HttpServletRequest.class))
                 .thenReturn(request);
 
         Object resolved = resolver.resolveArgument(methodParameter, null, webRequest, null);
@@ -58,7 +61,7 @@ class CurrentSessionIdArgumentResolverTest {
     @Test
     void resolveArgumentReturnsNullWhenAttributeMissing() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        when(webRequest.getNativeRequest(jakarta.servlet.http.HttpServletRequest.class))
+        when(webRequest.getNativeRequest(HttpServletRequest.class))
                 .thenReturn(request);
 
         Object resolved = resolver.resolveArgument(methodParameter, null, webRequest, null);
@@ -68,7 +71,7 @@ class CurrentSessionIdArgumentResolverTest {
 
     @Test
     void resolveArgumentReturnsNullWhenNativeRequestMissing() {
-        when(webRequest.getNativeRequest(jakarta.servlet.http.HttpServletRequest.class))
+        when(webRequest.getNativeRequest(HttpServletRequest.class))
                 .thenReturn(null);
 
         Object resolved = resolver.resolveArgument(methodParameter, null, webRequest, null);

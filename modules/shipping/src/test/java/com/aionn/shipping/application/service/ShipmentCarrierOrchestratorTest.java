@@ -8,7 +8,7 @@ import com.aionn.shipping.domain.exception.ShippingException;
 import com.aionn.shipping.domain.model.Shipment;
 import com.aionn.shipping.domain.valueobject.ShipmentAddress;
 import com.aionn.shipping.domain.valueobject.ShipmentDimensions;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -69,12 +69,12 @@ class ShipmentCarrierOrchestratorTest {
     void registerWithCarrierCallsCarrierThenPersistsRegistration() {
         Shipment shipment = shipment();
         Shipment persisted = registeredShipment();
-        when(shipmentService.loadShipment("S_1")).thenReturn(shipment);
+        when(shipmentService.loadShipmentForUpdate("S_1")).thenReturn(shipment);
         CarrierClient.Registration reg = new CarrierClient.Registration("TRACK_1", "CARRIER_O1", null);
         when(carrierClient.register(any(), any(), any(), any(), any(), any(), any())).thenReturn(reg);
         when(shipmentService.applyRegistration("S_1", reg)).thenReturn(persisted);
 
-        Shipment result = orchestrator.registerWithCarrier("S_1");
+        Shipment result = orchestrator.registerWithCarrier("S_1", "M_1");
 
         assertThat(result).isSameAs(persisted);
         verify(carrierClient).register("S_1", "ORDER_1", ADDRESS, DIMENSIONS,
@@ -84,9 +84,9 @@ class ShipmentCarrierOrchestratorTest {
     @Test
     void registerWithCarrierIsIdempotentWhenAlreadyRegistered() {
         Shipment shipment = registeredShipment();
-        when(shipmentService.loadShipment("S_1")).thenReturn(shipment);
+        when(shipmentService.loadShipmentForUpdate("S_1")).thenReturn(shipment);
 
-        Shipment result = orchestrator.registerWithCarrier("S_1");
+        Shipment result = orchestrator.registerWithCarrier("S_1", "M_1");
 
         assertThat(result).isSameAs(shipment);
         verifyNoInteractions(carrierClient);
@@ -95,11 +95,11 @@ class ShipmentCarrierOrchestratorTest {
 
     @Test
     void registerWithCarrierTranslatesRuntimeFailureIntoCarrierError() {
-        when(shipmentService.loadShipment("S_1")).thenReturn(shipment());
+        when(shipmentService.loadShipmentForUpdate("S_1")).thenReturn(shipment());
         when(carrierClient.register(any(), any(), any(), any(), any(), any(), any()))
                 .thenThrow(new RuntimeException("Carrier unavailable"));
 
-        assertThatThrownBy(() -> orchestrator.registerWithCarrier("S_1"))
+        assertThatThrownBy(() -> orchestrator.registerWithCarrier("S_1", "M_1"))
                 .isInstanceOf(ShippingException.class)
                 .hasMessageContaining("Carrier unavailable")
                 .extracting("errorCode")
@@ -110,11 +110,11 @@ class ShipmentCarrierOrchestratorTest {
 
     @Test
     void registerWithCarrierRethrowsShippingExceptionUnchanged() {
-        when(shipmentService.loadShipment("S_1")).thenReturn(shipment());
+        when(shipmentService.loadShipmentForUpdate("S_1")).thenReturn(shipment());
         when(carrierClient.register(any(), any(), any(), any(), any(), any(), any()))
                 .thenThrow(new ShippingException(ShippingErrorCode.INVALID_ARGUMENT, "bad address"));
 
-        assertThatThrownBy(() -> orchestrator.registerWithCarrier("S_1"))
+        assertThatThrownBy(() -> orchestrator.registerWithCarrier("S_1", "M_1"))
                 .isInstanceOf(ShippingException.class)
                 .extracting("errorCode")
                 .isEqualTo(ShippingErrorCode.INVALID_ARGUMENT.getCode());
@@ -122,10 +122,10 @@ class ShipmentCarrierOrchestratorTest {
 
     @Test
     void registerWithCarrierPropagatesMissingShipment() {
-        when(shipmentService.loadShipment("MISSING"))
+        when(shipmentService.loadShipmentForUpdate("MISSING"))
                 .thenThrow(new ShippingException(ShippingErrorCode.SHIPMENT_NOT_FOUND));
 
-        assertThatThrownBy(() -> orchestrator.registerWithCarrier("MISSING"))
+        assertThatThrownBy(() -> orchestrator.registerWithCarrier("MISSING", "M_1"))
                 .isInstanceOf(ShippingException.class)
                 .extracting("errorCode")
                 .isEqualTo(ShippingErrorCode.SHIPMENT_NOT_FOUND.getCode());
@@ -221,17 +221,18 @@ class ShipmentCarrierOrchestratorTest {
     }
 
     @Test
-    void cancelShipmentStillCancelsLocallyWhenCarrierCancelFails() {
+    void cancelShipmentFailsWhenCarrierCancelFails() {
         Shipment shipment = registeredShipment();
         when(shipmentService.loadShipment("S_1")).thenReturn(shipment);
         when(merchantQueryPort.findMerchantIdByOwnerId("OWNER_1")).thenReturn(Optional.of("M_1"));
-        when(shipmentService.applyCancel("S_1", "reason")).thenReturn(shipment);
         doThrow(new RuntimeException("Carrier unavailable")).when(carrierClient).cancel(any(), any());
 
-        orchestrator.cancelShipment(new CancelShipmentCommand("S_1", "reason", "OWNER_1"));
+        assertThatThrownBy(() -> orchestrator.cancelShipment(
+                new CancelShipmentCommand("S_1", "reason", "OWNER_1")))
+                .isInstanceOf(ShippingException.class);
 
         verify(carrierClient).cancel("TRACK_1", "reason");
-        verify(shipmentService).applyCancel("S_1", "reason");
+        verify(shipmentService, never()).applyCancel(any(), any());
     }
 
     @Test
@@ -262,3 +263,4 @@ class ShipmentCarrierOrchestratorTest {
         verify(shipmentService, never()).applyCancel(any(), any());
     }
 }
+

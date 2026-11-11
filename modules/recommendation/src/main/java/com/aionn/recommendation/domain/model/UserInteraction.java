@@ -7,14 +7,9 @@ import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
-/**
- * One recorded behavioural signal. Immutable by design: the interaction log is
- * append-only, so an
- * interaction is never corrected in place - a later interaction supersedes it,
- * and decay handles the
- * fading of the earlier one.
- */
+/** One recorded behavioural signal. Immutable: the log is append-only, later signals supersede and decay fades earlier ones. */
 @Getter
 public class UserInteraction {
 
@@ -26,14 +21,15 @@ public class UserInteraction {
     private final Instant occurredAt;
 
     /**
-     * Identifier of the integration event that produced this signal, or null when the interaction was
-     * written by something other than an event (seeded fixtures, a manual backfill).
-     *
-     * <p>This is what makes ingest idempotent. Outbox delivery is at-least-once, so the same event can
-     * arrive twice; a unique index over this identifier and the signal's natural key lets the second
-     * arrival be dropped by the database instead of inflating every score that sums over the log.
+     * Integration event that produced this signal, or null for non-event writes (fixtures, backfills).
+     * A unique index over it plus the natural key makes ingest idempotent under at-least-once delivery.
      */
     private final String sourceEventId;
+
+    /** Facets carried by {@link InteractionType#SEARCH}: a search has no product to look up. */
+    private final List<String> categoryIds;
+    private final String brandId;
+    private final String keyword;
 
     public UserInteraction(
             String interactionId,
@@ -53,15 +49,34 @@ public class UserInteraction {
             BigDecimal weight,
             Instant occurredAt,
             String sourceEventId) {
+        this(interactionId, userId, productId, type, weight, occurredAt, sourceEventId,
+                List.of(), null, null);
+    }
+
+    public UserInteraction(
+            String interactionId,
+            String userId,
+            String productId,
+            InteractionType type,
+            BigDecimal weight,
+            Instant occurredAt,
+            String sourceEventId,
+            List<String> categoryIds,
+            String brandId,
+            String keyword) {
         this.interactionId = required(interactionId, "interactionId");
         this.userId = required(userId, "userId");
-        this.productId = required(productId, "productId");
         this.type = requireType(type);
+        // SEARCH records filter intent, not a product; every other type must resolve a productId.
+        this.productId = type == InteractionType.SEARCH ? productId : required(productId, "productId");
         this.weight = requireWeight(weight);
         this.occurredAt = requireOccurredAt(occurredAt);
         this.sourceEventId = sourceEventId == null || sourceEventId.isBlank()
                 ? null
                 : sourceEventId.trim();
+        this.categoryIds = categoryIds == null ? List.of() : List.copyOf(categoryIds);
+        this.brandId = brandId;
+        this.keyword = keyword;
     }
 
     public static UserInteraction create(
@@ -72,6 +87,21 @@ public class UserInteraction {
             BigDecimal weight,
             Instant occurredAt) {
         return new UserInteraction(interactionId, userId, productId, type, weight, occurredAt);
+    }
+
+    public static UserInteraction createSearch(
+            String interactionId,
+            String userId,
+            InteractionType type,
+            BigDecimal weight,
+            Instant occurredAt,
+            String sourceEventId,
+            List<String> categoryIds,
+            String brandId,
+            String keyword) {
+        return new UserInteraction(
+                interactionId, userId, null, type, weight, occurredAt, sourceEventId,
+                categoryIds, brandId, keyword);
     }
 
     public static UserInteraction create(

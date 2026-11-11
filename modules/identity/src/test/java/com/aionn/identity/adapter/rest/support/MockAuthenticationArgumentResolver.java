@@ -1,5 +1,7 @@
 package com.aionn.identity.adapter.rest.support;
 
+import org.mockito.Mockito;
+
 import org.springframework.core.MethodParameter;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.Authentication;
@@ -35,8 +37,8 @@ public class MockAuthenticationArgumentResolver implements HandlerMethodArgument
         }
 
         if (principal != null) {
-            Authentication mockAuth = org.mockito.Mockito.mock(Authentication.class);
-            org.mockito.Mockito.when(mockAuth.getName()).thenReturn(principal.getName());
+            Authentication mockAuth = Mockito.mock(Authentication.class);
+            Mockito.when(mockAuth.getName()).thenReturn(principal.getName());
             return mockAuth;
         }
 

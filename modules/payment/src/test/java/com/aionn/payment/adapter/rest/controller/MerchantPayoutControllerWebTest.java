@@ -1,5 +1,7 @@
 package com.aionn.payment.adapter.rest.controller;
 
+import com.aionn.payment.application.dto.payout.command.RequestPayoutCommand;
+
 import com.aionn.payment.adapter.rest.dto.payout.response.MerchantBalanceResponse;
 import com.aionn.payment.adapter.rest.dto.payout.response.PayoutResponse;
 import com.aionn.payment.adapter.rest.exception.PaymentExceptionHandler;
@@ -16,7 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -111,7 +113,7 @@ class MerchantPayoutControllerWebTest {
         MerchantPayoutResult result = new MerchantPayoutResult("p-1", "m-1", new BigDecimal("100.00"), "VND", "PENDING", "VCB", "123", "Name", null, null, Instant.now(), null, null, null);
         PayoutResponse response = new PayoutResponse("p-1", "m-1", new BigDecimal("100.00"), "VND", "PENDING", "VCB", "123", "Name", null, null, Instant.now(), null, null, null);
 
-        com.aionn.payment.application.dto.payout.command.RequestPayoutCommand command = new com.aionn.payment.application.dto.payout.command.RequestPayoutCommand("merchant-owner", new BigDecimal("100.00"), "VND", "VCB", "123", "Name", "Note");
+        RequestPayoutCommand command = new RequestPayoutCommand("merchant-owner", new BigDecimal("100.00"), "VND", "VCB", "123", "Name", "Note");
         
         when(payoutDtoMapper.toCommand(any(), any())).thenReturn(command);
         when(requestPayoutInputPort.execute(command)).thenReturn(result);

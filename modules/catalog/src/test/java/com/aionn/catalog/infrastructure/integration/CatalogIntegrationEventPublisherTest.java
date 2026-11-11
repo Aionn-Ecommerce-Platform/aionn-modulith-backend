@@ -3,10 +3,10 @@ import com.aionn.catalog.infrastructure.integration.catalog.CatalogIntegrationEv
 import com.aionn.catalog.infrastructure.integration.merchant.MerchantIntegrationEventMapper;
 
 import com.aionn.catalog.domain.event.MerchantEvents;
-import com.aionn.sharedkernel.integration.event.catalog.MerchantActivatedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.catalog.MerchantClosedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.catalog.MerchantSuspendedIntegrationEvent;
-import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.contracts.event.catalog.MerchantActivatedIntegrationEvent;
+import com.aionn.contracts.event.catalog.MerchantClosedIntegrationEvent;
+import com.aionn.contracts.event.catalog.MerchantSuspendedIntegrationEvent;
+import com.aionn.contracts.publisher.IntegrationEventPublisher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

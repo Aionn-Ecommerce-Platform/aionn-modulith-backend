@@ -43,4 +43,8 @@ public interface ProductReviewPersistencePort {
     record RatingStats(double averageRating, long reviewCount) {}
 
     Map<String, RatingStats> getRatingStatsByProductIds(List<String> productIds);
+
+    record MerchantRatingStats(double averageRating, long reviewCount) {}
+
+    MerchantRatingStats getMerchantRatingStats(String merchantId);
 }

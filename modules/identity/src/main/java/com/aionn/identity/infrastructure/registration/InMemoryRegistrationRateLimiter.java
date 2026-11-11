@@ -1,5 +1,7 @@
 package com.aionn.identity.infrastructure.registration;
 
+import org.springframework.scheduling.annotation.Scheduled;
+
 import com.aionn.identity.application.port.out.registration.RegistrationRateLimiterPort;
 import com.aionn.identity.application.port.out.security.AbuseRateLimiterPort;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -53,7 +55,7 @@ public class InMemoryRegistrationRateLimiter implements RegistrationRateLimiterP
     // In-memory limiter is dev-only (Redis is used in production), but still
     // sweep drained buckets periodically so long-running dev sessions do not
     // accumulate stale entries.
-    @org.springframework.scheduling.annotation.Scheduled(fixedDelayString = "PT10M")
+    @Scheduled(fixedDelayString = "PT10M")
     void evictDrainedBuckets() {
         long threshold = clock.instant().getEpochSecond() - 3600;
         requestsByKey.entrySet().removeIf(entry -> {

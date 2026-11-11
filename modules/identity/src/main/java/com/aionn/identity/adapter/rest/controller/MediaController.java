@@ -4,7 +4,7 @@ import com.aionn.identity.adapter.rest.dto.media.response.UploadSignatureRespons
 import com.aionn.identity.adapter.rest.mapper.media.MediaDtoMapper;
 import com.aionn.identity.application.port.in.media.GenerateAvatarUploadSignatureInputPort;
 import com.aionn.identity.application.port.in.media.GenerateKycDocumentUploadSignatureInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

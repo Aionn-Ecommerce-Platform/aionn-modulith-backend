@@ -10,18 +10,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Map;
 
-/**
- * UCP Order capability DTO models conforming to release 2026-08-25
- * schemas/shopping/order.json.
- */
+/** UCP Order DTOs for release 2026-08-25 (schemas/shopping/order.json). */
 public final class UcpOrderModels {
 
         private UcpOrderModels() {
         }
 
-        /**
-         * Top-level order response object.
-         */
         @JsonInclude(JsonInclude.Include.NON_NULL)
         public record UcpOrderResponse(
                         @JsonProperty("ucp") UcpResponseMetadata ucp,
@@ -39,9 +33,6 @@ public final class UcpOrderModels {
                         @JsonProperty("attribution") Map<String, Object> attribution) {
         }
 
-        /**
-         * Line item inside a completed or in-flight order.
-         */
         @JsonInclude(JsonInclude.Include.NON_NULL)
         public record UcpOrderLineItemDto(
                         @JsonProperty("id") String id,
@@ -51,9 +42,6 @@ public final class UcpOrderModels {
                         @JsonProperty("status") String status) {
         }
 
-        /**
-         * Tracks original, active, and fulfilled quantities for a line item.
-         */
         @JsonInclude(JsonInclude.Include.NON_NULL)
         public record UcpOrderQuantityDto(
                         @JsonProperty("original") Integer original,
@@ -61,18 +49,12 @@ public final class UcpOrderModels {
                         @JsonProperty("fulfilled") Integer fulfilled) {
         }
 
-        /**
-         * Fulfillment state capturing expectations and shipment events.
-         */
         @JsonInclude(JsonInclude.Include.NON_NULL)
         public record UcpOrderFulfillmentDto(
                         @JsonProperty("expectations") List<UcpExpectationDto> expectations,
                         @JsonProperty("events") List<Map<String, Object>> events) {
         }
 
-        /**
-         * Buyer-facing delivery expectation representing grouped line items.
-         */
         @JsonInclude(JsonInclude.Include.NON_NULL)
         public record UcpExpectationDto(
                         @JsonProperty("id") String id,
@@ -83,18 +65,12 @@ public final class UcpOrderModels {
                         @JsonProperty("fulfillable_on") String fulfillableOn) {
         }
 
-        /**
-         * References a line item and quantity inside a fulfillment expectation.
-         */
         @JsonInclude(JsonInclude.Include.NON_NULL)
         public record UcpExpectationLineItemDto(
                         @JsonProperty("id") String id,
                         @JsonProperty("quantity") Integer quantity) {
         }
 
-        /**
-         * Destination postal address for shipping fulfillment.
-         */
         @JsonInclude(JsonInclude.Include.NON_NULL)
         public record UcpPostalAddressDto(
                         @JsonProperty("street_address") String streetAddress,

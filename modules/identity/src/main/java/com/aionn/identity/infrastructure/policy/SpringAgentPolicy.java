@@ -15,4 +15,9 @@ public class SpringAgentPolicy implements AgentPolicy {
     public int getKeyExpiryYears() {
         return properties.keyExpiryYears();
     }
+
+    @Override
+    public int getAuditLogLimit() {
+        return properties.auditLogLimit();
+    }
 }

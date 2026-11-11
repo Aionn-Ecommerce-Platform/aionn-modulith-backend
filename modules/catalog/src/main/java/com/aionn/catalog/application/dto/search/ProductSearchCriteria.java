@@ -1,13 +1,12 @@
 package com.aionn.catalog.application.dto.search;
 
 import com.aionn.catalog.domain.valueobject.ProductStatus;
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
-// Read-side filter for the faceted catalog search. Backed by the
-// ProductSearchIndex port (OpenSearch in production, in-memory otherwise).
 public record ProductSearchCriteria(
         String q,
         String merchantId,
@@ -20,7 +19,9 @@ public record ProductSearchCriteria(
         Sort sort,
         int page,
         int size,
-        Double ratingMin) {
+        Double ratingMin,
+        Boolean onSale,
+        List<String> collectionIds) {
 
     public enum Sort {
         RELEVANCE,
@@ -34,6 +35,7 @@ public record ProductSearchCriteria(
         categoryIds = categoryIds == null ? List.of() : List.copyOf(categoryIds);
         brandIds = brandIds == null ? List.of() : List.copyOf(brandIds);
         attributes = attributes == null ? Map.of() : Map.copyOf(attributes);
+        collectionIds = collectionIds == null ? List.of() : List.copyOf(collectionIds);
         if (sort == null) {
             sort = Sort.RELEVANCE;
         }
@@ -41,10 +43,10 @@ public record ProductSearchCriteria(
             page = 0;
         }
         if (size < 1) {
-            size = 20;
+            size = OffsetPagination.DEFAULT_SIZE;
         }
-        if (size > 100) {
-            size = 100;
+        if (size > OffsetPagination.MAX_SIZE) {
+            size = OffsetPagination.MAX_SIZE;
         }
     }
 
@@ -60,7 +62,43 @@ public record ProductSearchCriteria(
             Sort sort,
             int page,
             int size) {
-        this(q, merchantId, status, categoryIds, brandIds, priceMin, priceMax, attributes, sort, page, size, null);
+        this(q, merchantId, status, categoryIds, brandIds, priceMin, priceMax, attributes, sort, page, size,
+                null, null, List.of());
+    }
+
+    public ProductSearchCriteria(
+            String q,
+            String merchantId,
+            ProductStatus status,
+            List<String> categoryIds,
+            List<String> brandIds,
+            BigDecimal priceMin,
+            BigDecimal priceMax,
+            Map<String, List<String>> attributes,
+            Sort sort,
+            int page,
+            int size,
+            Double ratingMin) {
+        this(q, merchantId, status, categoryIds, brandIds, priceMin, priceMax, attributes, sort, page, size,
+                ratingMin, null, List.of());
+    }
+
+    public ProductSearchCriteria(
+            String q,
+            String merchantId,
+            ProductStatus status,
+            List<String> categoryIds,
+            List<String> brandIds,
+            BigDecimal priceMin,
+            BigDecimal priceMax,
+            Map<String, List<String>> attributes,
+            Sort sort,
+            int page,
+            int size,
+            Double ratingMin,
+            Boolean onSale) {
+        this(q, merchantId, status, categoryIds, brandIds, priceMin, priceMax, attributes, sort, page, size,
+                ratingMin, onSale, List.of());
     }
 
     public boolean hasText() {

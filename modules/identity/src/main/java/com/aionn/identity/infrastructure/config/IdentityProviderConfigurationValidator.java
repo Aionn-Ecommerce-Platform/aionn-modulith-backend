@@ -4,20 +4,26 @@ import com.aionn.identity.infrastructure.config.properties.KycProperties;
 import com.aionn.identity.infrastructure.config.properties.IdentityMediaProperties;
 import com.aionn.identity.infrastructure.config.properties.RegistrationProperties;
 import com.aionn.identity.infrastructure.config.properties.SocialAuthProperties;
-import com.aionn.sharedkernel.media.CloudinaryCredentialsProperties;
+import com.aionn.platform.media.CloudinaryCredentialsProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.SmartInitializingSingleton;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
+
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
 public class IdentityProviderConfigurationValidator implements SmartInitializingSingleton {
+
+    private static final Set<String> LOCAL_DEV_PROFILES = Set.of("dev", "local", "test", "default");
 
     private final IdentityMediaProperties mediaProperties;
     private final CloudinaryCredentialsProperties cloudinaryProperties;
     private final KycProperties kycProperties;
     private final SocialAuthProperties socialAuthProperties;
     private final RegistrationProperties registrationProperties;
+    private final Environment environment;
 
     @Override
     public void afterSingletonsInstantiated() {
@@ -26,7 +32,38 @@ public class IdentityProviderConfigurationValidator implements SmartInitializing
         validateSocialProviders();
         validateCaptcha();
         validateTwilio();
+        validateOtpExposure();
         validateImplementedProviders();
+        validateSharedStateProviders();
+    }
+
+    private void validateSharedStateProviders() {
+        if (!hasActiveProfile() || isLocalDevProfile()) {
+            return;
+        }
+        forbidMemory("identity.registration.ratelimit.provider");
+        forbidMemory("identity.account.otp-challenge.provider");
+    }
+
+    private void forbidMemory(String key) {
+        String value = environment.getProperty(key);
+        if ("memory".equalsIgnoreCase(value)) {
+            throw new IllegalStateException(key + "=memory is only allowed for local dev profiles "
+                    + LOCAL_DEV_PROFILES + " — multi-instance deployments must use redis.");
+        }
+    }
+
+    private boolean hasActiveProfile() {
+        return environment.getActiveProfiles().length > 0;
+    }
+
+    private boolean isLocalDevProfile() {
+        for (String profile : environment.getActiveProfiles()) {
+            if (LOCAL_DEV_PROFILES.contains(profile.toLowerCase())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void validateCloudinary() {
@@ -43,7 +80,8 @@ public class IdentityProviderConfigurationValidator implements SmartInitializing
             return;
         }
         if (kycProperties.sumsub() == null) {
-            throw new IllegalStateException("identity.kyc.sumsub configuration is required when KYC provider is sumsub");
+            throw new IllegalStateException(
+                    "identity.kyc.sumsub configuration is required when KYC provider is sumsub");
         }
         requireNotBlank(kycProperties.sumsub().appToken(), "IDENTITY_KYC_SUMSUB_APP_TOKEN");
         requireNotBlank(kycProperties.sumsub().secretKey(), "IDENTITY_KYC_SUMSUB_SECRET_KEY");
@@ -75,9 +113,25 @@ public class IdentityProviderConfigurationValidator implements SmartInitializing
         requireNotBlank(registrationProperties.twilio().fromPhoneNumber(), "TWILIO_FROM_PHONE_NUMBER");
     }
 
+    /**
+     * Exposing an OTP in the HTTP response defeats phone ownership verification. It
+     * is only
+     * acceptable for local/dev profiles where the developer cannot read the
+     * SMS/email sink.
+     */
+    private void validateOtpExposure() {
+        if (!registrationProperties.exposeOtpInResponse() || !hasActiveProfile() || isLocalDevProfile()) {
+            return;
+        }
+        throw new IllegalStateException(
+                "identity.registration.expose-otp-in-response=true is only allowed for local dev profiles "
+                        + LOCAL_DEV_PROFILES);
+    }
+
     private void validateImplementedProviders() {
-        if ("remote".equalsIgnoreCase(mediaProperties.provider())) {
-            throw new IllegalStateException("identity.media.provider=remote is not implemented; use cloudinary");
+        if (!"cloudinary".equalsIgnoreCase(mediaProperties.provider())) {
+            throw new IllegalStateException(
+                    "identity.media.provider must be cloudinary; got " + mediaProperties.provider());
         }
     }
 

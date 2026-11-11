@@ -50,5 +50,17 @@ public class ProductVariantEntity {
 
     @Column(name = "currency", length = 3)
     private String currency;
+
+    @Column(name = "weight_gram")
+    private Integer weightGram;
+
+    @Column(name = "length_cm", precision = 8, scale = 2)
+    private BigDecimal lengthCm;
+
+    @Column(name = "width_cm", precision = 8, scale = 2)
+    private BigDecimal widthCm;
+
+    @Column(name = "height_cm", precision = 8, scale = 2)
+    private BigDecimal heightCm;
 }
 

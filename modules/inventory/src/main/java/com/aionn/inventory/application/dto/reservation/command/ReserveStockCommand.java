@@ -7,5 +7,5 @@ public record ReserveStockCommand(
         String warehouseId,
         String orderId,
         int qty,
-        int ttlSeconds) implements Command {
+        Integer ttlSeconds) implements Command {
 }

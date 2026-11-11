@@ -1,5 +1,7 @@
 package com.aionn.catalog.application.mapper;
 
+import java.util.Objects;
+
 import com.aionn.catalog.application.dto.search.ProductSearchDocument;
 import com.aionn.catalog.domain.model.Product;
 import com.aionn.catalog.domain.model.ProductVariant;
@@ -12,81 +14,71 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * Pure mapper for converting Product domain model to ProductSearchDocument.
- * 
- * <p>
- * This mapper performs only data transformation without any business logic,
- * database queries, or side effects. Rating and sold count data must be
- * provided
- * by the caller.
- * </p>
- */
 @Component
 public class ProductSearchDocumentMapper {
 
-    /**
-     * Converts a Product domain model to a search document for indexing.
-     * 
-     * @param product              The product domain model
-     * @param filterableAttributes Map of filterable attributes for faceted search
-     * @param rating               The average rating score (must be pre-calculated
-     *                             by caller)
-     * @param soldCount            The total sold count (must be pre-calculated by
-     *                             caller)
-     * @return ProductSearchDocument ready for search indexing
-     */
-    public ProductSearchDocument toSearchDocument(
-            Product product,
-            Map<String, String> filterableAttributes,
-            double rating,
-            long soldCount) {
+        public ProductSearchDocument toSearchDocument(
+                        Product product,
+                        Map<String, String> filterableAttributes,
+                        double rating,
+                        long soldCount) {
 
-        List<BigDecimal> prices = product.variants().stream()
-                .map(ProductVariant::price)
-                .filter(java.util.Objects::nonNull)
-                .map(Money::amount)
-                .toList();
-        BigDecimal priceFrom = prices.stream().reduce(BigDecimal::min).orElse(null);
-        BigDecimal priceTo = prices.stream().reduce(BigDecimal::max).orElse(null);
-        String currency = product.variants().stream()
-                .map(ProductVariant::price)
-                .filter(java.util.Objects::nonNull)
-                .map(Money::currency)
-                .findFirst()
-                .orElse(null);
+                List<BigDecimal> prices = product.variants().stream()
+                                .map(ProductVariant::price)
+                                .filter(Objects::nonNull)
+                                .map(Money::amount)
+                                .toList();
+                BigDecimal priceFrom = prices.stream().reduce(BigDecimal::min).orElse(null);
+                BigDecimal priceTo = prices.stream().reduce(BigDecimal::max).orElse(null);
+                String currency = product.variants().stream()
+                                .map(ProductVariant::price)
+                                .filter(Objects::nonNull)
+                                .map(Money::currency)
+                                .findFirst()
+                                .orElse(null);
+                // True when a variant's original price exceeds its sell price (standing
+                // discount).
+                boolean hasDiscount = product.variants().stream()
+                                .anyMatch(v -> {
+                                        Money price = v.price();
+                                        Money original = v.originalPrice();
+                                        return price != null && original != null
+                                                        && original.amount() != null && price.amount() != null
+                                                        && original.amount().compareTo(price.amount()) > 0;
+                                });
 
-        Locale locale = LocaleContextHolder.getLocale();
-        String name = product.getName();
-        String aiDescription = product.getAiDescription();
-        Product.Translation trans = product.translations().stream()
-                .filter(t -> t.locale().equalsIgnoreCase(locale.getLanguage()))
-                .findFirst()
-                .orElse(null);
-        if (trans != null) {
-            name = trans.name();
-            if (trans.aiDescription() != null) {
-                aiDescription = trans.aiDescription();
-            }
+                Locale locale = LocaleContextHolder.getLocale();
+                String name = product.getName();
+                String aiDescription = product.getAiDescription();
+                Product.Translation trans = product.translations().stream()
+                                .filter(t -> t.locale().equalsIgnoreCase(locale.getLanguage()))
+                                .findFirst()
+                                .orElse(null);
+                if (trans != null) {
+                        name = trans.name();
+                        if (trans.aiDescription() != null) {
+                                aiDescription = trans.aiDescription();
+                        }
+                }
+
+                return new ProductSearchDocument(
+                                product.getProductId(),
+                                product.getMerchantId(),
+                                name,
+                                aiDescription,
+                                product.getBrandId(),
+                                product.categoryIds(),
+                                product.collectionIds(),
+                                product.tags(),
+                                product.imageList(),
+                                filterableAttributes == null ? Map.of() : filterableAttributes,
+                                priceFrom,
+                                priceTo,
+                                currency,
+                                hasDiscount,
+                                product.getStatus().name(),
+                                product.getUpdatedAt(),
+                                rating,
+                                soldCount);
         }
-
-        return new ProductSearchDocument(
-                product.getProductId(),
-                product.getMerchantId(),
-                name,
-                aiDescription,
-                product.getBrandId(),
-                product.categoryIds(),
-                product.collectionIds(),
-                product.tags(),
-                product.imageList(),
-                filterableAttributes == null ? Map.of() : filterableAttributes,
-                priceFrom,
-                priceTo,
-                currency,
-                product.getStatus().name(),
-                product.getUpdatedAt(),
-                rating,
-                soldCount);
-    }
 }

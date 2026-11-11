@@ -1,7 +1,7 @@
 package com.aionn.promotion.infrastructure.listener;
 
 import com.aionn.promotion.application.service.VoucherService;
-import com.aionn.sharedkernel.integration.event.ordering.OrderCancelledIntegrationEvent;
+import com.aionn.contracts.event.ordering.OrderCancelledIntegrationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;

@@ -3,10 +3,10 @@ package com.aionn.recommendation.infrastructure.listener;
 import com.aionn.recommendation.application.dto.command.RecordInteractionCommand;
 import com.aionn.recommendation.application.port.in.RecordInteractionInputPort;
 import com.aionn.recommendation.domain.valueobject.InteractionType;
-import com.aionn.sharedkernel.integration.event.IntegrationEvent;
-import com.aionn.sharedkernel.integration.event.catalog.ProductViewedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.ordering.CartItemAddedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.ordering.OrderPlacedIntegrationEvent;
+import com.aionn.contracts.event.IntegrationEvent;
+import com.aionn.contracts.event.catalog.ProductViewedIntegrationEvent;
+import com.aionn.contracts.event.ordering.CartItemAddedIntegrationEvent;
+import com.aionn.contracts.event.ordering.OrderPlacedIntegrationEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -109,7 +109,7 @@ class InteractionEventListenerTest {
                 .toList();
 
         assertThat(handlers)
-                .hasSize(3)
+                .hasSize(4)
                 .allSatisfy(method -> {
                     assertThat(method.getParameterCount()).isEqualTo(1);
                     assertThat(IntegrationEvent.class).isAssignableFrom(method.getParameterTypes()[0]);

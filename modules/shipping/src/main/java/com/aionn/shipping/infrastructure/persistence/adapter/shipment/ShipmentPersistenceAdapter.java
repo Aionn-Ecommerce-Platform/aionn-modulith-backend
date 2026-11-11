@@ -1,5 +1,7 @@
 package com.aionn.shipping.infrastructure.persistence.adapter.shipment;
 
+import java.time.Instant;
+
 import com.aionn.shipping.application.port.out.ShipmentPersistencePort;
 import com.aionn.shipping.domain.model.Shipment;
 import com.aionn.shipping.infrastructure.persistence.entity.ShipmentEntity;
@@ -8,6 +10,7 @@ import com.aionn.shipping.infrastructure.persistence.repository.ShipmentReposito
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -44,17 +47,19 @@ public class ShipmentPersistenceAdapter implements ShipmentPersistencePort {
     }
 
     @Override
-    public List<Shipment> findActiveTracking(int batchSize) {
-        return jpa.findByTrackingCodeIsNotNullAndStatusNotIn(TERMINAL,
-                PageRequest.of(0, Math.max(1, batchSize)))
-                .stream().map(mapper::toDomain).toList();
+    public Optional<Shipment> findByIdForUpdate(String shipmentId) {
+        return jpa.findByIdForUpdate(shipmentId).map(mapper::toDomain);
     }
 
     @Override
-    public List<Shipment> findInTransitOlderThan(java.time.Instant cutoff, int batchSize) {
-        Set<String> transitStatuses = Set.of("REGISTERED", "PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY");
-        return jpa.findByStatusInAndUpdatedAtBefore(transitStatuses, cutoff,
-                PageRequest.of(0, Math.max(1, batchSize)))
+    @Transactional
+    public void markPolled(String shipmentId, Instant polledAt) {
+        jpa.updateLastPolledAt(shipmentId, polledAt);
+    }
+
+    @Override
+    public List<Shipment> findActiveTracking(int batchSize) {
+        return jpa.findActiveTracking(TERMINAL, PageRequest.of(0, Math.max(1, batchSize)))
                 .stream().map(mapper::toDomain).toList();
     }
 }

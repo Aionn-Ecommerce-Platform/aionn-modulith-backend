@@ -1,6 +1,7 @@
 package com.aionn.recommendation.application.service;
 
 import com.aionn.recommendation.application.policy.RankingWeightPolicy;
+import com.aionn.recommendation.application.policy.RecommendationServingPolicy;
 import com.aionn.recommendation.application.port.out.InteractionPersistencePort;
 import com.aionn.recommendation.application.port.out.ItemSimilarityPersistencePort;
 import com.aionn.recommendation.application.port.out.PopularityPersistencePort;
@@ -54,6 +55,7 @@ class CandidateGenerationServiceTest {
                 popularityRepository,
                 productAttributeQuery,
                 weights(),
+                servingPolicy(),
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -236,6 +238,7 @@ class CandidateGenerationServiceTest {
                 List.of("sku-" + productId),
                 null,
                 BigDecimal.valueOf(price),
+                null,
                 "VND");
     }
 
@@ -264,6 +267,35 @@ class CandidateGenerationServiceTest {
 
         assertThat(service().categoryCandidates("p-missing", 10)).isEmpty();
         assertThat(service().categoryCandidates("p-no-cats", 10)).isEmpty();
+    }
+
+    private static RecommendationServingPolicy servingPolicy() {
+        return new RecommendationServingPolicy() {
+            @Override
+            public int seedLookbackDays() {
+                return 30;
+            }
+
+            @Override
+            public int seedLimit() {
+                return 20;
+            }
+
+            @Override
+            public int maxPageSize() {
+                return 50;
+            }
+
+            @Override
+            public BigDecimal maxFlashSaleShare() {
+                return new BigDecimal("0.40");
+            }
+
+            @Override
+            public int categoryCandidateOvershoot() {
+                return 5;
+            }
+        };
     }
 
     private static RankingWeightPolicy weights() {

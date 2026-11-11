@@ -1,5 +1,9 @@
 package com.aionn.identity.infrastructure.security.web;
 
+import java.time.Clock;
+import java.time.ZoneOffset;
+import org.junit.jupiter.api.BeforeEach;
+
 import com.aionn.identity.domain.valueobject.UserRole;
 import com.aionn.identity.domain.valueobject.UserStatus;
 import com.aionn.identity.infrastructure.persistence.entity.UserEntity;
@@ -30,9 +34,9 @@ class IdentityUserDetailsServiceTest {
     private IdentityUserDetailsService service;
     private static final Instant FIXED_NOW = Instant.parse("2026-07-12T10:00:00Z");
 
-    @org.junit.jupiter.api.BeforeEach
+    @BeforeEach
     void setUp() {
-        service = new IdentityUserDetailsService(userRepository, java.time.Clock.fixed(FIXED_NOW, java.time.ZoneOffset.UTC));
+        service = new IdentityUserDetailsService(userRepository, Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
     private UserEntity.UserEntityBuilder activeUser() {

@@ -1,7 +1,7 @@
 package com.aionn.recommendation.infrastructure.listener;
 
 import com.aionn.recommendation.application.service.InteractionRetentionService;
-import com.aionn.sharedkernel.integration.event.identity.AccountDeletedIntegrationEvent;
+import com.aionn.contracts.event.identity.AccountDeletedIntegrationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;

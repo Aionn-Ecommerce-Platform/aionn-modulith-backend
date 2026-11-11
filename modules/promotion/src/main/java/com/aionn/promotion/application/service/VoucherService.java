@@ -3,6 +3,7 @@ package com.aionn.promotion.application.service;
 import com.aionn.promotion.application.dto.voucher.command.VoucherCommands;
 import com.aionn.promotion.application.dto.voucher.result.UserVoucherResult;
 import com.aionn.promotion.application.mapper.UserVoucherResultMapper;
+import com.aionn.promotion.application.policy.VoucherReservationPolicy;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.promotion.application.port.out.PromotionCampaignPersistencePort;
 import com.aionn.promotion.application.port.out.UserVoucherPersistencePort;
@@ -10,6 +11,7 @@ import com.aionn.promotion.application.port.out.VoucherPersistencePort;
 import com.aionn.promotion.domain.exception.PromotionErrorCode;
 import com.aionn.promotion.domain.exception.PromotionException;
 import com.aionn.promotion.domain.model.PromotionCampaign;
+import com.aionn.promotion.domain.valueobject.UserVoucherStatus;
 import java.util.Optional;
 import com.aionn.promotion.domain.model.UserVoucher;
 import com.aionn.promotion.domain.model.Voucher;
@@ -22,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -32,19 +33,19 @@ import java.util.List;
 @Transactional
 public class VoucherService {
 
-    private static final Duration DEFAULT_RESERVATION_TTL = Duration.ofMinutes(15);
-
     private final VoucherPersistencePort voucherRepository;
     private final UserVoucherPersistencePort userVoucherRepository;
     private final PromotionCampaignPersistencePort campaignRepository;
     private final UserVoucherResultMapper mapper;
     private final EventPublisher eventPublisher;
+    private final VoucherReservationPolicy reservationPolicy;
     private final Clock clock;
 
     public UserVoucherResult claim(VoucherCommands.ClaimVoucher command) {
         Voucher voucher = voucherRepository.lockByCode(command.voucherCode())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.VOUCHER_NOT_FOUND));
-        runningCampaignOrNull(voucher);
+        PromotionCampaign campaign = runningCampaignOrNull(voucher);
+        enforceClaimLimit(command.userId(), campaign);
 
         userVoucherRepository.findByUserAndCode(command.userId(), command.voucherCode())
                 .ifPresent(existing -> {
@@ -97,10 +98,16 @@ public class VoucherService {
             throw new PromotionException(PromotionErrorCode.CONDITION_NOT_MET);
         }
 
-        UserVoucher uv = userVoucherRepository.findByUserAndCode(command.userId(), command.voucherCode())
+        UserVoucher uv = userVoucherRepository.findByUserAndCodeForUpdate(command.userId(), command.voucherCode())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.USER_VOUCHER_NOT_FOUND));
+        if (uv.getStatus() == UserVoucherStatus.RESERVED) {
+            if (command.orderId().equals(uv.getReservedOrderId())) {
+                return toResult(uv);
+            }
+            throw new PromotionException(PromotionErrorCode.USER_VOUCHER_RESERVED_BY_OTHER);
+        }
         Instant expiresAt = command.expiresAt() != null ? command.expiresAt()
-                : clock.instant().plus(DEFAULT_RESERVATION_TTL);
+                : reservationPolicy.expiresFrom(clock.instant());
         voucher.reserveSlot(clock);
         uv.reserve(command.orderId(), expiresAt, clock);
 
@@ -113,14 +120,34 @@ public class VoucherService {
     public UserVoucherResult apply(VoucherCommands.ApplyVoucher command) {
         Voucher voucher = voucherRepository.lockByCode(command.voucherCode())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.VOUCHER_NOT_FOUND));
-        PromotionCampaign campaign = runningCampaignOrNull(voucher);
-        UserVoucher uv = userVoucherRepository.findByUserAndCode(command.userId(), command.voucherCode())
+        UserVoucher uv = userVoucherRepository.findByUserAndCodeForUpdate(command.userId(), command.voucherCode())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.USER_VOUCHER_NOT_FOUND));
+        if (uv.getStatus() == UserVoucherStatus.APPLIED) {
+            if (command.orderId().equals(uv.getReservedOrderId())) {
+                return toResult(uv);
+            }
+            throw new PromotionException(PromotionErrorCode.USER_VOUCHER_RESERVED_BY_OTHER);
+        }
+        PromotionCampaign campaign = voucher.getCampaignId() == null ? null
+                : campaignRepository.findByIdForUpdate(voucher.getCampaignId())
+                        .orElseThrow(() -> new PromotionException(PromotionErrorCode.CAMPAIGN_NOT_FOUND));
+        if (campaign != null) {
+            campaign.ensureRunning(clock);
+        }
         if (uv.getReservedOrderId() == null || !uv.getReservedOrderId().equals(command.orderId())) {
             throw new PromotionException(PromotionErrorCode.USER_VOUCHER_RESERVED_BY_OTHER);
         }
+        String expectedCurrency = voucher.getDiscountAmount().currency();
+        if (command.currency() != null && !command.currency().equalsIgnoreCase(expectedCurrency)) {
+            throw new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
+                    "Voucher currency does not match the order currency");
+        }
         Money applied = Money.of(command.appliedAmount(),
-                command.currency() == null ? voucher.getDiscountAmount().currency() : command.currency());
+                command.currency() == null ? expectedCurrency : command.currency());
+        if (!applied.isPositive() || applied.isGreaterThan(voucher.getDiscountAmount())) {
+            throw new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
+                    "Applied amount must be positive and within the voucher value");
+        }
         voucher.commitSlot(clock);
         if (campaign != null) {
             campaign.consumeBudget(applied, clock);
@@ -139,12 +166,19 @@ public class VoucherService {
     public UserVoucherResult release(VoucherCommands.ReleaseVoucher command) {
         Voucher voucher = voucherRepository.lockByCode(command.voucherCode())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.VOUCHER_NOT_FOUND));
-        UserVoucher uv = userVoucherRepository.findByUserAndCode(command.userId(), command.voucherCode())
+        UserVoucher uv = userVoucherRepository.findByUserAndCodeForUpdate(command.userId(), command.voucherCode())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.USER_VOUCHER_NOT_FOUND));
         if (uv.getReservedOrderId() == null || !uv.getReservedOrderId().equals(command.orderId())) {
             throw new PromotionException(PromotionErrorCode.USER_VOUCHER_RESERVED_BY_OTHER);
         }
-        voucher.releaseSlot(clock);
+        // A RESERVED voucher holds a reserved slot; an APPLIED voucher already
+        // committed that slot into usedCount, so the matching release must
+        // decrement usedCount, not reservedCount.
+        if (uv.getStatus() == UserVoucherStatus.APPLIED) {
+            voucher.releaseCommittedSlot(clock);
+        } else {
+            voucher.releaseSlot(clock);
+        }
         uv.release(command.reason(), clock);
 
         voucherRepository.save(voucher);
@@ -159,13 +193,17 @@ public class VoucherService {
      * reservation was found.
      */
     public int releaseByOrder(String orderId, String reason) {
-        UserVoucher uv = userVoucherRepository.findByReservedOrderId(orderId).orElse(null);
+        UserVoucher uv = userVoucherRepository.findByReservedOrderIdForUpdate(orderId).orElse(null);
         if (uv == null) {
             return 0;
         }
         Voucher voucher = voucherRepository.lockByCode(uv.getVoucherCode()).orElse(null);
         if (voucher != null) {
-            voucher.releaseSlot(clock);
+            if (uv.getStatus() == UserVoucherStatus.APPLIED) {
+                voucher.releaseCommittedSlot(clock);
+            } else {
+                voucher.releaseSlot(clock);
+            }
             voucherRepository.save(voucher);
         }
         uv.release(reason, clock);
@@ -180,8 +218,13 @@ public class VoucherService {
         // in its own transaction and a single failure doesn't poison the batch.
         List<UserVoucher> expired = userVoucherRepository.findExpiredReservations(now, batchSize);
         int released = 0;
-        for (UserVoucher uv : expired) {
+        for (UserVoucher candidate : expired) {
             try {
+                UserVoucher uv = userVoucherRepository.findByIdForUpdate(candidate.getUserVoucherId())
+                        .orElse(null);
+                if (uv == null) {
+                    continue;
+                }
                 Voucher voucher = voucherRepository.lockByCode(uv.getVoucherCode())
                         .orElse(null);
                 if (voucher != null) {
@@ -193,7 +236,7 @@ public class VoucherService {
                 eventPublisher.publish(uv.pullEvents());
                 released++;
             } catch (RuntimeException ex) {
-                log.warn("Skip release for {}: {}", uv.getUserVoucherId(), ex.getMessage());
+                log.warn("Skip release for {}: {}", candidate.getUserVoucherId(), ex.getMessage());
             }
         }
         return released;
@@ -241,5 +284,15 @@ public class VoucherService {
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.CAMPAIGN_NOT_FOUND));
         campaign.ensureRunning(clock);
         return campaign;
+    }
+
+    private void enforceClaimLimit(String userId, PromotionCampaign campaign) {
+        if (campaign == null || campaign.getCondition().maxClaimsPerUser() == null) {
+            return;
+        }
+        long claimed = userVoucherRepository.countByUserAndCampaign(userId, campaign.getCampaignId());
+        if (claimed >= campaign.getCondition().maxClaimsPerUser()) {
+            throw new PromotionException(PromotionErrorCode.USER_VOUCHER_LIMIT_REACHED);
+        }
     }
 }

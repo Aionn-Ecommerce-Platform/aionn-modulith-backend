@@ -1,6 +1,7 @@
 package com.aionn.payment.application.service;
 
-import com.aionn.payment.application.dto.method.command.LinkMethodCommand;
+import com.aionn.payment.application.dto.method.result.StripeSetupIntentResult;
+
 import com.aionn.payment.application.dto.method.command.RemoveMethodCommand;
 import com.aionn.payment.application.dto.method.command.VerifyMethodCommand;
 import com.aionn.payment.application.port.out.PaymentMethodPersistencePort;
@@ -28,7 +29,6 @@ import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.lenient;
@@ -52,25 +52,10 @@ class PaymentMethodServiceTest {
 
     @BeforeEach
     void setUp() {
-        lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation ->
-                ((TransactionCallback<?>) invocation.getArgument(0)).doInTransaction(null));
+        lenient().when(transactionTemplate.execute(any()))
+                .thenAnswer(invocation -> ((TransactionCallback<?>) invocation.getArgument(0)).doInTransaction(null));
         service = new PaymentMethodService(repository, eventPublisher, stripeSetupIntentPort, clock,
                 transactionTemplate);
-    }
-
-    @Test
-    void linkPersistsMethodAndReturnsEntity() {
-        when(repository.save(any(PaymentMethod.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        PaymentMethod result = service.link(
-                new LinkMethodCommand("u1", "stripe", "4242", "tok-abc"));
-
-        assertThat(result.getUserId()).isEqualTo("u1");
-        assertThat(result.getProvider()).isEqualTo("stripe");
-        assertThat(result.getStatus()).isEqualTo(PaymentMethodStatus.LINKED);
-        assertThat(result.getLast4Digits()).isEqualTo("4242");
-        verify(repository).save(any(PaymentMethod.class));
-        verify(eventPublisher).publish(anyCollection());
     }
 
     @Test
@@ -219,7 +204,7 @@ class PaymentMethodServiceTest {
 
     @Test
     void createStripeSetupIntentDelegatesToGateway() {
-        var expected = new com.aionn.payment.application.dto.method.result.StripeSetupIntentResult("si_1", "secret");
+        var expected = new StripeSetupIntentResult("si_1", "secret");
         when(stripeSetupIntentPort.create("u1")).thenReturn(expected);
 
         assertThat(service.createStripeSetupIntent("u1")).isEqualTo(expected);

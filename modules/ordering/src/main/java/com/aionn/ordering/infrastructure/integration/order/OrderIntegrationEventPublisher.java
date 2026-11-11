@@ -1,7 +1,7 @@
 package com.aionn.ordering.infrastructure.integration.order;
 
 import com.aionn.ordering.domain.event.OrderEvents;
-import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.contracts.publisher.IntegrationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;

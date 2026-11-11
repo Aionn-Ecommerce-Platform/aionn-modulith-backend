@@ -21,6 +21,10 @@ public enum OrderingErrorCode {
     ORDER_NOT_OWNED_BY_MERCHANT("ORD_106", "Order does not belong to this merchant"),
     ORDER_RESERVATION_FAILED("ORD_107", "Stock reservation failed for one or more items"),
     ORDER_PAYMENT_FAILED("ORD_108", "Payment authorization failed"),
+    ORDER_MULTI_MERCHANT_NOT_SUPPORTED("ORD_109",
+            "Cart contains items from multiple merchants; place one order per merchant"),
+    ORDER_PLACEMENT_IN_PROGRESS("ORD_110",
+            "An order with this idempotency key is already being placed"),
 
     // Returns
     RETURN_NOT_FOUND("ORD_201", "Order return not found"),

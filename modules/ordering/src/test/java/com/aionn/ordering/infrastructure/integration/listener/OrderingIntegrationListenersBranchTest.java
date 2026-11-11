@@ -1,9 +1,11 @@
 package com.aionn.ordering.infrastructure.integration.listener;
 
-import com.aionn.sharedkernel.integration.event.inventory.StockCommittedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.inventory.StockReservationFailedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.payment.PaymentFailedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.shipping.ShipmentDeliveredIntegrationEvent;
+import com.aionn.ordering.application.service.OrderService;
+
+import com.aionn.contracts.event.inventory.StockCommittedIntegrationEvent;
+import com.aionn.contracts.event.inventory.StockReservationFailedIntegrationEvent;
+import com.aionn.contracts.event.payment.PaymentFailedIntegrationEvent;
+import com.aionn.contracts.event.shipping.ShipmentDeliveredIntegrationEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class OrderingIntegrationListenersBranchTest {
 
     @Mock
-    private com.aionn.ordering.application.service.OrderService orderService;
+    private OrderService orderService;
 
     @InjectMocks
     private PaymentFailedListener paymentFailedListener;

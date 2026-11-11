@@ -1,8 +1,8 @@
 package com.aionn.ordering.adapter.rest.exception;
 
 import com.aionn.ordering.domain.exception.OrderingException;
-import com.aionn.sharedkernel.adapter.web.exception.AbstractModuleExceptionHandler;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.exception.AbstractModuleExceptionHandler;
+import com.aionn.platform.web.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -21,11 +21,10 @@ public class OrderingExceptionHandler extends AbstractModuleExceptionHandler {
     public OrderingExceptionHandler() {
         registerErrors(HttpStatus.NOT_FOUND,
                 "ORD_001", "ORD_003", "ORD_101", "ORD_201");
-        registerErrors(HttpStatus.CONFLICT, "ORD_104");
+        registerErrors(HttpStatus.CONFLICT, "ORD_103", "ORD_104", "ORD_110", "ORD_202");
         registerErrors(HttpStatus.FORBIDDEN, "ORD_002", "ORD_102", "ORD_106");
         registerErrors(HttpStatus.BAD_REQUEST,
-                "ORD_004", "ORD_103", "ORD_105", "ORD_107", "ORD_108",
-                "ORD_202", "ORD_900");
+                "ORD_004", "ORD_105", "ORD_107", "ORD_108", "ORD_109", "ORD_900");
         setDefaultStatus(HttpStatus.UNPROCESSABLE_CONTENT);
     }
 

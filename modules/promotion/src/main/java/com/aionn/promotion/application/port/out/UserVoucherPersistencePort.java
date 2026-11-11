@@ -12,11 +12,17 @@ public interface UserVoucherPersistencePort {
 
     Optional<UserVoucher> findById(String userVoucherId);
 
+    Optional<UserVoucher> findByIdForUpdate(String userVoucherId);
+
     Optional<UserVoucher> findByUserAndCode(String userId, String voucherCode);
+
+    Optional<UserVoucher> findByUserAndCodeForUpdate(String userId, String voucherCode);
 
     Optional<UserVoucher> findByUserAndCodeAndEntitlement(String userId, String voucherCode, String entitlementKey);
 
     Optional<UserVoucher> findByReservedOrderId(String orderId);
+
+    Optional<UserVoucher> findByReservedOrderIdForUpdate(String orderId);
 
     long countByUserAndCampaign(String userId, String campaignId);
 

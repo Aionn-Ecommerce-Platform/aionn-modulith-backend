@@ -1,10 +1,15 @@
 package com.aionn.ordering.infrastructure.integration.order;
 
+import java.time.Instant;
+import java.util.List;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
+
 import com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand;
 import com.aionn.ordering.application.service.OrderService;
 import com.aionn.ordering.domain.model.Order;
 import com.aionn.ordering.domain.valueobject.OrderStatus;
-import com.aionn.sharedkernel.integration.port.ordering.OrderPlacementPort;
+import com.aionn.contracts.port.ordering.OrderPlacementPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,16 +31,16 @@ class OrderingOrderPlacementAdapterBranchTest {
         @Test
         void placeHeadlessHandlesNullShippingAddress() {
                 OrderPlacementPort.PlaceCommand command = new OrderPlacementPort.PlaceCommand(
-                                "usr-1", java.util.List.of(), "VOUCHER", "pm-1", "VND", null);
+                                "usr-1", List.of(), "VOUCHER", "pm-1", "VND", null);
 
                 Order order = new Order("ord-1", null, "usr-1", "m-1", "prop-1", "pm-1", "VND",
-                                java.util.List.of(), null, null, null,
+                                List.of(), null, null, null,
                                 OrderStatus.PENDING, "pay-1", null,
-                                java.time.Instant.now(), java.time.Instant.now(), null, null);
+                                Instant.now(), Instant.now(), null, null);
 
-                org.mockito.Mockito
+                Mockito
                                 .when(orderService.placeOrderHeadless(
-                                                org.mockito.ArgumentMatchers.any(PlaceOrderHeadlessCommand.class)))
+                                                ArgumentMatchers.any(PlaceOrderHeadlessCommand.class)))
                                 .thenReturn(order);
 
                 OrderPlacementPort.PlacedOrder placed = adapter.placeHeadless(command);

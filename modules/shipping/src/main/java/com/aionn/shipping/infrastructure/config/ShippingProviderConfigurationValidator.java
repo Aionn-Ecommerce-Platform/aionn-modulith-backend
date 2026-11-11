@@ -1,6 +1,6 @@
 package com.aionn.shipping.infrastructure.config;
 
-import com.aionn.shipping.infrastructure.config.properties.ShippingCarrierProperties;
+import com.aionn.shipping.infrastructure.carrier.config.GhnProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.SmartInitializingSingleton;
@@ -16,41 +16,25 @@ public class ShippingProviderConfigurationValidator implements SmartInitializing
 
     private static final Set<String> PRODUCTION_PROFILES = Set.of("prod");
 
-    private final ShippingCarrierProperties carrierProperties;
+    private final GhnProperties ghn;
     private final Environment environment;
 
     @Override
     public void afterSingletonsInstantiated() {
-        validateCarrierProvider();
         validateGhnCredentials();
     }
 
-    private void validateCarrierProvider() {
-        String provider = carrierProperties.provider();
-        if ("assume-success".equalsIgnoreCase(provider)) {
-            if (isProductionProfile()) {
-                throw new IllegalStateException(
-                        "shipping.carrier.provider=assume-success is not allowed in production. "
-                                + "Switch to ghn (or another real carrier) before deploying.");
-            }
-            log.warn("shipping.carrier.provider={} - shipments will use synthetic tracking codes. "
-                    + "Switch to a real carrier before production.", provider);
-        }
-    }
-
     private void validateGhnCredentials() {
-        if (!"ghn".equalsIgnoreCase(carrierProperties.provider())) {
+        if (!isBlank(ghn.baseUrl()) && !isBlank(ghn.token()) && !isBlank(ghn.shopId())
+                && ghn.fromDistrictId() != null && !isBlank(ghn.fromWardCode())) {
             return;
         }
-        ShippingCarrierProperties.Ghn ghn = carrierProperties.ghn();
-        if (ghn == null || isBlank(ghn.apiToken()) || isBlank(ghn.shopId())) {
-            String message = "GHN provider enabled but apiToken/shopId not configured "
-                    + "(GHN_API_TOKEN / GHN_SHOP_ID).";
-            if (isProductionProfile()) {
-                throw new IllegalStateException(message);
-            }
-            log.warn(message);
+        String message = "GHN is the only shipping carrier but its configuration is incomplete "
+                + "(GHN_API_TOKEN / GHN_SHOP_ID / GHN_FROM_DISTRICT_ID / GHN_FROM_WARD_CODE).";
+        if (isProductionProfile()) {
+            throw new IllegalStateException(message);
         }
+        log.warn(message);
     }
 
     private boolean isBlank(String s) {

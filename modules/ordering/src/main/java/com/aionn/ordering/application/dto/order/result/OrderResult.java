@@ -30,7 +30,9 @@ public record OrderResult(
         Instant createdAt,
         Instant updatedAt,
         Instant completedAt,
-        Instant cancelledAt) {
+        Instant cancelledAt,
+        String note,
+        String shippingService) {
 
     public OrderResult(
             String orderId,
@@ -61,11 +63,16 @@ public record OrderResult(
         this(orderId, null, parentOrderId, userId, merchantId, proposalId, paymentMethodId, paymentId, currency,
                 totalAmount, shippingFee, addressId, recipientName, recipientPhone, recipientAddressLine,
                 recipientWardCode, recipientDistrictCode, recipientProvinceCode, recipientCountryCode,
-                items, status, reasonCode, createdAt, updatedAt, completedAt, cancelledAt);
+                items, status, reasonCode, createdAt, updatedAt, completedAt, cancelledAt, null, null);
     }
 
     public record OrderItemResult(
-            String skuId, int qty, BigDecimal unitPrice, String warehouseId, String reservationId) {
+            String skuId, int qty, BigDecimal unitPrice, String warehouseId, String reservationId,
+            String productName, String imageUrl, String variantLabel) {
+        public OrderItemResult(String skuId, int qty, BigDecimal unitPrice, String warehouseId,
+                String reservationId) {
+            this(skuId, qty, unitPrice, warehouseId, reservationId, null, null, null);
+        }
     }
 }
 

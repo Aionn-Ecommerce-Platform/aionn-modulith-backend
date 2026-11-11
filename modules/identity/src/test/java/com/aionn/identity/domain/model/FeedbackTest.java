@@ -86,4 +86,28 @@ class FeedbackTest {
         assertThat(fb.getHandledBy()).isEqualTo("admin-1");
         assertThat(fb.getHandledAt()).isEqualTo(now);
     }
+
+    @Test
+    void closedFeedbackCannotBeReopened() {
+        Feedback fb = Feedback.createNew("fb-1", "u", FeedbackCategory.BUG,
+                "s", "c", null, null, null);
+        fb.changeStatus("admin-1", FeedbackStatus.CLOSED, Instant.now());
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> fb.changeStatus("admin-2", FeedbackStatus.OPEN, Instant.now()))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(fb.getStatus()).isEqualTo(FeedbackStatus.CLOSED);
+    }
+
+    @Test
+    void replyRejectsInvalidStatusTransition() {
+        Feedback fb = Feedback.createNew("fb-1", "u", FeedbackCategory.BUG,
+                "s", "c", null, null, null);
+        fb.changeStatus("admin-1", FeedbackStatus.CLOSED, Instant.now());
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> fb.reply("admin-2", "late", FeedbackStatus.RESOLVED, Instant.now()))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(fb.getStatus()).isEqualTo(FeedbackStatus.CLOSED);
+    }
 }

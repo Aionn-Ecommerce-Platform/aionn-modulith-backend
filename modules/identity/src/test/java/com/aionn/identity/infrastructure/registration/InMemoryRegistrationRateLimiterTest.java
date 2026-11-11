@@ -1,11 +1,13 @@
 package com.aionn.identity.infrastructure.registration;
 
+import java.time.Clock;
+
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class InMemoryRegistrationRateLimiterTest {
 
-    private final InMemoryRegistrationRateLimiter limiter = new InMemoryRegistrationRateLimiter(java.time.Clock.systemUTC());
+    private final InMemoryRegistrationRateLimiter limiter = new InMemoryRegistrationRateLimiter(Clock.systemUTC());
 
     @Test
     void allowsRequestsWithinLimit() {

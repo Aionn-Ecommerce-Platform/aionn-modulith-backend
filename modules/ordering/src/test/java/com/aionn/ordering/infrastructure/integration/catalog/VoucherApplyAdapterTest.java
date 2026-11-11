@@ -1,7 +1,9 @@
 package com.aionn.ordering.infrastructure.integration.catalog;
 
+import java.util.List;
+
 import com.aionn.ordering.application.port.out.VoucherGateway;
-import com.aionn.sharedkernel.integration.port.promotion.VoucherApplyPort;
+import com.aionn.contracts.port.promotion.VoucherApplyPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -28,11 +30,11 @@ class VoucherApplyAdapterTest {
     void applyDelegatesToVoucherApplyPort() {
         VoucherApplyPort.Discount discount = new VoucherApplyPort.Discount(BigDecimal.TEN, "VND", true, "Applied");
         when(voucherApplyPort.apply("usr-1", "m-1", "VOUCHER", "ord-1",
-                BigDecimal.valueOf(100), "VND", java.util.List.of("cat-1")))
+                BigDecimal.valueOf(100), "VND", List.of("cat-1")))
                 .thenReturn(discount);
 
         VoucherGateway.Discount result = adapter.apply("usr-1", "m-1", "VOUCHER", "ord-1",
-                BigDecimal.valueOf(100), "VND", java.util.List.of("cat-1"));
+                BigDecimal.valueOf(100), "VND", List.of("cat-1"));
 
         assertEquals(BigDecimal.TEN, result.amount());
         assertEquals("VND", result.currency());

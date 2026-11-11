@@ -19,6 +19,7 @@ public enum InventoryErrorCode {
     INVENTORY_LOCKED("INV_105", "Inventory item is emergency-locked"),
     INVENTORY_EXPIRY_INVALID("INV_106", "Expiry date must be after creation"),
     INVENTORY_AUDIT_NEGATIVE("INV_107", "Actual quantity in audit cannot be negative"),
+    INVENTORY_AUDIT_BELOW_RESERVED("INV_108", "Actual quantity in audit cannot be below reserved quantity"),
 
     // Stock transfers
     STOCK_TRANSFER_NOT_FOUND("INV_201", "Stock transfer not found"),

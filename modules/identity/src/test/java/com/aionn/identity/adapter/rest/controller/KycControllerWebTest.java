@@ -20,14 +20,14 @@ import com.aionn.identity.application.port.in.kyc.GetKycQueryPort;
 import com.aionn.identity.application.port.in.kyc.ListKycDocumentsQueryPort;
 import com.aionn.identity.application.port.in.kyc.ListMyKycQueryPort;
 import com.aionn.identity.application.port.in.kyc.SubmitKycInputPort;
-import com.aionn.sharedkernel.adapter.web.support.clientip.ClientIpArgumentResolver;
-import com.aionn.sharedkernel.infrastructure.web.ClientIpResolver;
+import com.aionn.platform.web.support.clientip.ClientIpArgumentResolver;
+import com.aionn.platform.infrastructure.web.ClientIpResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -173,10 +173,10 @@ class KycControllerWebTest {
                 Instant now = Instant.now();
                 KycDocumentResult result = new KycDocumentResult(
                                 "doc-1", "kyc-123", "ID_FRONT", "https://cdn.test/front.jpg",
-                                "identity/kyc/user/front", "UPLOADED", now);
+                                "UPLOADED", now);
                 KycDocumentResponse response = new KycDocumentResponse(
                                 "doc-1", "kyc-123", "ID_FRONT", "https://cdn.test/front.jpg",
-                                "identity/kyc/user/front", "UPLOADED", now);
+                                "UPLOADED", now);
 
                 when(attachKycDocumentInputPort.execute(any())).thenReturn(result);
                 when(kycDtoMapper.toDocumentResponse(result)).thenReturn(response);
@@ -203,10 +203,10 @@ class KycControllerWebTest {
                 Instant now = Instant.now();
                 KycDocumentResult result = new KycDocumentResult(
                                 "doc-1", "kyc-123", "ID_BACK", "https://cdn.test/back.jpg",
-                                null, "UPLOADED", now);
+                                "UPLOADED", now);
                 KycDocumentResponse response = new KycDocumentResponse(
                                 "doc-1", "kyc-123", "ID_BACK", "https://cdn.test/back.jpg",
-                                null, "UPLOADED", now);
+                                "UPLOADED", now);
 
                 when(listKycDocumentsQueryPort.execute(any()))
                                 .thenReturn(List.of(result));

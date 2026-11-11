@@ -1,5 +1,7 @@
 package com.aionn.catalog.adapter.rest.controller;
 
+import com.aionn.contracts.port.identity.UserProfileLookupPort;
+
 import com.aionn.catalog.adapter.rest.mapper.review.ReviewDtoMapper;
 
 import org.mapstruct.factory.Mappers;
@@ -47,7 +49,7 @@ import com.aionn.catalog.application.port.in.review.ReportReviewInputPort;
 import com.aionn.catalog.application.port.in.review.RestoreReviewInputPort;
 import com.aionn.catalog.application.port.in.review.SubmitReviewInputPort;
 import com.aionn.catalog.application.port.in.review.UpdateReviewInputPort;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -110,7 +112,7 @@ class ReviewControllerWebTest {
     @Mock
     private CheckReviewEligibilityInputPort checkReviewEligibilityInputPort;
     @Mock
-    private com.aionn.sharedkernel.integration.port.identity.UserProfileLookupPort userProfileLookupPort;
+    private UserProfileLookupPort userProfileLookupPort;
 
     private MockMvc mockMvc;
     private final JsonMapper objectMapper = JacksonMapperFactory.create();
@@ -230,7 +232,7 @@ class ReviewControllerWebTest {
                 .thenReturn(new PageResult<>(List.of(sample()), 0, 20, 1));
         when(userProfileLookupPort.findProfiles(any()))
                 .thenReturn(Map.of("user-1",
-                        new com.aionn.sharedkernel.integration.port.identity.UserProfileLookupPort.UserProfile(
+                        new UserProfileLookupPort.UserProfile(
                                 "user-1", "u1", "User One", "avatar.png")));
 
         mockMvc.perform(get("/api/v1/catalog/products/" + PRODUCT_ID + "/reviews"))

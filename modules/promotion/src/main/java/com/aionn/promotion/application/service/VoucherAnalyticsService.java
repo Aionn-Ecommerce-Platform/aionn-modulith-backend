@@ -1,8 +1,11 @@
 package com.aionn.promotion.application.service;
 
 import com.aionn.promotion.application.dto.analytics.result.MerchantVoucherAnalyticsResult;
+import com.aionn.promotion.application.policy.PromotionLimitPolicy;
 import com.aionn.promotion.application.port.out.VoucherPersistencePort;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.promotion.domain.exception.PromotionErrorCode;
+import com.aionn.promotion.domain.exception.PromotionException;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,11 +20,12 @@ public class VoucherAnalyticsService {
 
     private final VoucherPersistencePort voucherRepository;
     private final MerchantQueryPort merchantQueryPort;
+    private final PromotionLimitPolicy limitPolicy;
 
     @Transactional(readOnly = true)
     public MerchantVoucherAnalyticsResult getMerchantAnalytics(String ownerId) {
         String merchantId = merchantQueryPort.findMerchantIdByOwnerId(ownerId)
-                .orElseThrow(() -> new IllegalStateException("No merchant for owner " + ownerId));
+                .orElseThrow(() -> new PromotionException(PromotionErrorCode.MERCHANT_NOT_FOUND));
         var rows = voucherRepository.findMerchantVoucherRows(merchantId);
 
         long totalIssued = 0;
@@ -46,7 +50,7 @@ public class VoucherAnalyticsService {
                         row.usageLimit(),
                         row.discountAmount() == null ? BigDecimal.ZERO : row.discountAmount()))
                 .sorted(Comparator.comparingLong(MerchantVoucherAnalyticsResult.TopVoucher::redeemed).reversed())
-                .limit(10)
+                .limit(limitPolicy.topVouchersLimit())
                 .toList();
         return new MerchantVoucherAnalyticsResult(totalIssued, totalRedeemed, remaining, rate, totalDiscount, top);
     }

@@ -5,4 +5,8 @@ public interface CatalogProductPolicy {
     int getBulkPriceUpdateMaxSize();
 
     long getBestSellerThreshold();
+
+    int getSearchIndexBatchSize();
+
+    String getCloneNameSuffix();
 }

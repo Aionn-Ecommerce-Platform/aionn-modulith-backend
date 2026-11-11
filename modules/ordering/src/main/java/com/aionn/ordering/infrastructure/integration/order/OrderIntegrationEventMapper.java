@@ -1,36 +1,20 @@
 package com.aionn.ordering.infrastructure.integration.order;
 
+import java.util.UUID;
+
 import com.aionn.ordering.domain.event.OrderEvents;
-import com.aionn.sharedkernel.integration.event.ordering.*;
+import com.aionn.contracts.event.ordering.*;
 import org.springframework.stereotype.Component;
 
 import java.util.stream.Collectors;
 
-/**
- * Maps Ordering domain events to integration events.
- * 
- * <p>
- * This mapper extracts only the necessary data from domain events
- * and converts them into integration events that can be consumed by other
- * modules.
- * </p>
- * 
- * <p>
- * Key responsibilities:
- * </p>
- * <ul>
- * <li>Convert domain-specific types to simple DTOs</li>
- * <li>Generate eventId for each integration event</li>
- * <li>Preserve occurredAt timestamp</li>
- * <li>Avoid leaking internal domain details</li>
- * </ul>
- */
+/** Maps Ordering domain events to transport-safe integration events with a fresh eventId. */
 @Component
 public class OrderIntegrationEventMapper {
 
     public OrderPlacedIntegrationEvent toIntegrationEvent(OrderEvents.OrderPlaced domainEvent) {
         return new OrderPlacedIntegrationEvent(
-                java.util.UUID.randomUUID().toString(),
+                UUID.randomUUID().toString(),
                 domainEvent.orderId(),
                 domainEvent.userId(),
                 domainEvent.merchantId(),
@@ -52,7 +36,7 @@ public class OrderIntegrationEventMapper {
 
     public OrderApprovedIntegrationEvent toIntegrationEvent(OrderEvents.OrderApproved domainEvent) {
         return new OrderApprovedIntegrationEvent(
-                java.util.UUID.randomUUID().toString(),
+                UUID.randomUUID().toString(),
                 domainEvent.orderId(),
                 domainEvent.paymentId(),
                 domainEvent.occurredAt());
@@ -60,7 +44,7 @@ public class OrderIntegrationEventMapper {
 
     public OrderShippedIntegrationEvent toIntegrationEvent(OrderEvents.OrderShipped domainEvent) {
         return new OrderShippedIntegrationEvent(
-                java.util.UUID.randomUUID().toString(),
+                UUID.randomUUID().toString(),
                 domainEvent.orderId(),
                 domainEvent.shipmentId(),
                 domainEvent.occurredAt());
@@ -68,14 +52,14 @@ public class OrderIntegrationEventMapper {
 
     public OrderCompletedIntegrationEvent toIntegrationEvent(OrderEvents.OrderCompleted domainEvent) {
         return new OrderCompletedIntegrationEvent(
-                java.util.UUID.randomUUID().toString(),
+                UUID.randomUUID().toString(),
                 domainEvent.orderId(),
                 domainEvent.occurredAt());
     }
 
     public OrderCancelledIntegrationEvent toIntegrationEvent(OrderEvents.OrderCancelled domainEvent) {
         return new OrderCancelledIntegrationEvent(
-                java.util.UUID.randomUUID().toString(),
+                UUID.randomUUID().toString(),
                 domainEvent.orderId(),
                 domainEvent.reasonCode(),
                 domainEvent.reason(),
@@ -85,7 +69,7 @@ public class OrderIntegrationEventMapper {
 
     public OrderCancelledIntegrationEvent toIntegrationEvent(OrderEvents.OrderAutoCancelled domainEvent) {
         return new OrderCancelledIntegrationEvent(
-                java.util.UUID.randomUUID().toString(),
+                UUID.randomUUID().toString(),
                 domainEvent.orderId(),
                 domainEvent.reasonCode(),
                 "Auto-cancelled by system",
@@ -95,7 +79,7 @@ public class OrderIntegrationEventMapper {
 
     public OrderCancelledIntegrationEvent toIntegrationEvent(OrderEvents.OrderRejectedByMerchant domainEvent) {
         return new OrderCancelledIntegrationEvent(
-                java.util.UUID.randomUUID().toString(),
+                UUID.randomUUID().toString(),
                 domainEvent.orderId(),
                 "MERCHANT_REJECTED",
                 domainEvent.reason(),

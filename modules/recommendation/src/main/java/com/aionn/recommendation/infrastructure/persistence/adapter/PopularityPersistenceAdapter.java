@@ -131,4 +131,15 @@ public class PopularityPersistenceAdapter implements PopularityPersistencePort {
         return writeBatch.execute(status ->
                 jdbcTemplate.update(DELETE_STALE_SQL, Timestamp.from(cutoff)));
     }
+
+    @Override
+    public int deleteByProductIds(Collection<String> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return 0;
+        }
+        List<String> ids = productIds.stream().distinct().toList();
+        String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
+        String sql = "DELETE FROM recommendation_popularity WHERE product_id IN (" + placeholders + ")";
+        return writeBatch.execute(status -> jdbcTemplate.update(sql, ids.toArray()));
+    }
 }

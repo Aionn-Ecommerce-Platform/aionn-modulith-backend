@@ -1,12 +1,13 @@
 package com.aionn.chat.application.service;
 
 import com.aionn.chat.application.dto.autoreply.command.AutoReplyCommands;
+import com.aionn.chat.application.policy.ChatAutoReplyPolicy;
 import com.aionn.chat.application.port.out.MerchantAutoReplyPersistencePort;
 import com.aionn.chat.domain.exception.ChatErrorCode;
 import com.aionn.chat.domain.exception.ChatException;
 import com.aionn.chat.domain.model.MerchantAutoReply;
 import com.aionn.sharedkernel.application.port.EventPublisher;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,12 +22,13 @@ public class AutoReplyService {
     private final MerchantAutoReplyPersistencePort repository;
     private final EventPublisher eventPublisher;
     private final MerchantQueryPort merchantQueryPort;
+    private final ChatAutoReplyPolicy autoReplyPolicy;
     private final Clock clock;
 
     public MerchantAutoReply update(AutoReplyCommands.UpdateAutoReply command) {
         ensureCallerOwnsMerchant(command.ownerId(), command.merchantId());
         MerchantAutoReply autoReply = repository.findByMerchantId(command.merchantId())
-                .orElseGet(() -> MerchantAutoReply.create(command.merchantId(), clock));
+                .orElseGet(() -> createDefault(command.merchantId()));
         autoReply.update(command.enabled(), command.greeting(), command.awayMessage(),
                 command.workingHourStart(), command.workingHourEnd(), command.workingDays(), clock);
         MerchantAutoReply saved = repository.save(autoReply);
@@ -38,7 +40,13 @@ public class AutoReplyService {
     public MerchantAutoReply get(String ownerId, String merchantId) {
         ensureCallerOwnsMerchant(ownerId, merchantId);
         return repository.findByMerchantId(merchantId)
-                .orElseGet(() -> MerchantAutoReply.create(merchantId, clock));
+                .orElseGet(() -> createDefault(merchantId));
+    }
+
+    private MerchantAutoReply createDefault(String merchantId) {
+        return MerchantAutoReply.create(merchantId, autoReplyPolicy.workingHourStart(),
+                autoReplyPolicy.workingHourEnd(), autoReplyPolicy.workingDays(),
+                autoReplyPolicy.timezone(), clock);
     }
 
     private void ensureCallerOwnsMerchant(String ownerId, String merchantId) {

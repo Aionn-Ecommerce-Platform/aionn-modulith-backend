@@ -1,5 +1,7 @@
 package com.aionn.inventory.infrastructure.persistence.entity;
 
+import jakarta.persistence.Version;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -53,7 +55,7 @@ public class StockReservationEntity {
     @Column(name = "decided_at")
     private Instant decidedAt;
 
-    @jakarta.persistence.Version
+    @Version
     @Column(name = "version", nullable = false)
     private long version;
 }

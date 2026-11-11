@@ -1,9 +1,9 @@
 package com.aionn.shipping.infrastructure.integration;
 
-import com.aionn.sharedkernel.integration.event.shipping.ShipmentDeliveredIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.shipping.ShipmentDeliveryFailedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.shipping.ShipmentDispatchedIntegrationEvent;
-import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.contracts.event.shipping.ShipmentDeliveredIntegrationEvent;
+import com.aionn.contracts.event.shipping.ShipmentDeliveryFailedIntegrationEvent;
+import com.aionn.contracts.event.shipping.ShipmentDispatchedIntegrationEvent;
+import com.aionn.contracts.publisher.IntegrationEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

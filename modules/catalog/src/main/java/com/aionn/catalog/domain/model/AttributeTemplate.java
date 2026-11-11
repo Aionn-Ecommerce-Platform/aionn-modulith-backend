@@ -1,5 +1,7 @@
 package com.aionn.catalog.domain.model;
 
+import java.util.ArrayList;
+
 import com.aionn.sharedkernel.domain.Guard;
 import com.aionn.sharedkernel.domain.model.AggregateRoot;
 import com.aionn.catalog.domain.event.AttributeTemplateEvents;
@@ -48,7 +50,7 @@ public class AttributeTemplate extends AggregateRoot {
                                 () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
                                                 "attributes must not be empty"));
                 Map<String, AttributeDefinition> initial = new LinkedHashMap<>();
-                List<String> trimmedKeys = new java.util.ArrayList<>();
+                List<String> trimmedKeys = new ArrayList<>();
                 for (String key : attributeKeys) {
                         Guard.require(key != null && !key.isBlank(),
                                         () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,

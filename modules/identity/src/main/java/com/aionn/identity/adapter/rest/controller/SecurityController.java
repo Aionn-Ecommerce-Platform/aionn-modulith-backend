@@ -13,9 +13,9 @@ import com.aionn.identity.adapter.rest.dto.security.response.SecurityAuditLogRes
 import com.aionn.identity.adapter.rest.mapper.security.SecurityDtoMapper;
 import com.aionn.identity.adapter.rest.support.response.NoStoreResponseFactory;
 import com.aionn.identity.application.port.in.security.*;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
-import com.aionn.sharedkernel.adapter.web.support.clientip.ClientIp;
-import com.aionn.sharedkernel.adapter.web.support.idempotency.IdempotentRequest;
+import com.aionn.platform.web.response.ApiResponse;
+import com.aionn.platform.web.support.clientip.ClientIp;
+import com.aionn.platform.web.support.idempotency.IdempotentRequest;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -134,8 +134,6 @@ public class SecurityController {
 	@Operation(summary = "Get security audit logs", description = "Get security-related audit logs for the authenticated user")
 	public ResponseEntity<ApiResponse<List<SecurityAuditLogResponse>>> getAuditLogs(Authentication authentication) {
 		var result = getSecurityAuditLogsQueryPort.execute(authentication.getName());
-		// Audit rows carry IP addresses and device identifiers; keep parity with
-		// the rest of this controller and mark them uncacheable.
 		return noStoreResponseFactory.ok(
 				ApiResponse.success(securityDtoMapper.toAuditLogResponse(result), "Security audit logs"));
 	}

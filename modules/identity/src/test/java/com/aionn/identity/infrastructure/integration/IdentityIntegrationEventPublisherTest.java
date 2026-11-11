@@ -1,11 +1,14 @@
 package com.aionn.identity.infrastructure.integration;
+
+import java.time.Clock;
+
 import com.aionn.identity.infrastructure.integration.identity.IdentityIntegrationEventPublisher;
 
-import com.aionn.sharedkernel.integration.event.IntegrationEvent;
-import com.aionn.sharedkernel.integration.event.identity.EmailChangedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.identity.PasswordChangedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.identity.PhoneChangedIntegrationEvent;
-import com.aionn.sharedkernel.integration.publisher.IntegrationEventPublisher;
+import com.aionn.contracts.event.IntegrationEvent;
+import com.aionn.contracts.event.identity.EmailChangedIntegrationEvent;
+import com.aionn.contracts.event.identity.PasswordChangedIntegrationEvent;
+import com.aionn.contracts.event.identity.PhoneChangedIntegrationEvent;
+import com.aionn.contracts.publisher.IntegrationEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,7 +29,7 @@ class IdentityIntegrationEventPublisherTest {
 
     @BeforeEach
     void setUp() {
-        publisher = new IdentityIntegrationEventPublisher(integrationEventPublisher, java.time.Clock.systemUTC());
+        publisher = new IdentityIntegrationEventPublisher(integrationEventPublisher, Clock.systemUTC());
     }
 
     @Test

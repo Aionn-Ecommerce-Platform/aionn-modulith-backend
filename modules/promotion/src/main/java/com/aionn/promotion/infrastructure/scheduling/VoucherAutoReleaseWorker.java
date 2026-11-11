@@ -4,6 +4,7 @@ import com.aionn.promotion.application.port.out.UserVoucherPersistencePort;
 import com.aionn.promotion.application.port.out.VoucherPersistencePort;
 import com.aionn.promotion.domain.model.UserVoucher;
 import com.aionn.promotion.domain.model.Voucher;
+import com.aionn.promotion.domain.valueobject.UserVoucherStatus;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -27,8 +28,9 @@ public class VoucherAutoReleaseWorker {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean releaseOne(String userVoucherId) {
-        UserVoucher uv = userVoucherRepository.findById(userVoucherId).orElse(null);
-        if (uv == null || uv.getReservedOrderId() == null) {
+        UserVoucher uv = userVoucherRepository.findByIdForUpdate(userVoucherId).orElse(null);
+        if (uv == null || uv.getReservedOrderId() == null
+                || uv.getStatus() != UserVoucherStatus.RESERVED) {
             return false;
         }
         Voucher voucher = voucherRepository.lockByCode(uv.getVoucherCode()).orElse(null);

@@ -9,5 +9,8 @@ public interface UserPreferencePersistencePort {
 
     Optional<UserPreferenceResult> findById(String userId);
 
+    /** Reads the user's preferences while holding a row lock, serializing concurrent updates. */
+    Optional<UserPreferenceResult> findByIdForUpdate(String userId);
+
     UserPreferenceResult createDefault(String userId);
 }

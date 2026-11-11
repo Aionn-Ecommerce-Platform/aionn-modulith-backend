@@ -1,5 +1,8 @@
 package com.aionn.chat.domain.model;
 
+import java.time.Clock;
+import java.time.ZoneOffset;
+
 import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
 import com.aionn.chat.domain.exception.ChatException;
@@ -113,8 +116,8 @@ class MessageTest {
                 MessagePayload.text("hi"), MessageStatus.SENT, new HashSet<>(), new HashSet<>(),
                 false, longAgo, longAgo);
 
-        java.time.Clock afterRecallWindow = java.time.Clock.fixed(
-                longAgo.plus(Message.RECALL_WINDOW).plusSeconds(1), java.time.ZoneOffset.UTC);
+        Clock afterRecallWindow = Clock.fixed(
+                longAgo.plus(Message.RECALL_WINDOW).plusSeconds(1), ZoneOffset.UTC);
 
         assertThatThrownBy(() -> expired.recall("U_buyer", afterRecallWindow))
                 .isInstanceOf(ChatException.class)

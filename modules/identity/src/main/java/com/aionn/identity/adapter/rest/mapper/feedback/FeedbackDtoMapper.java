@@ -10,7 +10,7 @@ import com.aionn.identity.application.dto.common.PageResult;
 import com.aionn.identity.application.dto.feedback.command.AdminFeedbackCommands;
 import com.aionn.identity.application.dto.feedback.command.SubmitFeedbackCommand;
 import com.aionn.identity.application.dto.feedback.result.FeedbackResult;
-import com.aionn.sharedkernel.adapter.web.response.PageMetadata;
+import com.aionn.platform.web.response.PageMetadata;
 import org.mapstruct.Mapper;
 
 import java.util.List;

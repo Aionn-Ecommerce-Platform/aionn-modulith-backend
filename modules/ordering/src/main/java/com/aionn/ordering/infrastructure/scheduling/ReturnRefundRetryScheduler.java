@@ -1,6 +1,7 @@
 package com.aionn.ordering.infrastructure.scheduling;
 
 import com.aionn.ordering.application.port.out.OrderReturnPersistencePort;
+import com.aionn.ordering.application.policy.RefundRetryPolicy;
 import com.aionn.ordering.application.service.OrderReturnService;
 import java.time.Clock;
 import lombok.RequiredArgsConstructor;
@@ -14,15 +15,16 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ReturnRefundRetryScheduler {
 
-    private static final int MAX_ATTEMPTS = 5;
     private final OrderReturnPersistencePort returnRepository;
     private final OrderReturnService returnService;
+    private final RefundRetryPolicy refundRetryPolicy;
     private final Clock clock;
 
     @Scheduled(fixedDelayString = "${ordering.return-refund.delay-ms:30000}")
     @SchedulerLock(name = "ordering-return-refund", lockAtMostFor = "PT10M", lockAtLeastFor = "PT25S")
     public void run() {
-        for (String returnId : returnRepository.findRefundRetryIds(clock.instant(), MAX_ATTEMPTS, 100)) {
+        for (String returnId : returnRepository.findRefundRetryIds(
+                clock.instant(), refundRetryPolicy.maxAttempts(), refundRetryPolicy.batchSize())) {
             try {
                 returnService.retryRefund(returnId);
             } catch (RuntimeException exception) {

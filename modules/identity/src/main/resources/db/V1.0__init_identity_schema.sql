@@ -114,6 +114,7 @@ CREATE TABLE user_consents (
 CREATE TABLE agent_identities (
     agent_id VARCHAR(26) PRIMARY KEY,
     owner_id VARCHAR(26) NOT NULL,
+    name VARCHAR(128) NOT NULL,
     key_hash VARCHAR(255) NOT NULL,
     permissions JSONB,
     status VARCHAR(20),
@@ -246,6 +247,7 @@ CREATE INDEX idx_user_consents_type ON user_consents(consent_type);
 
 CREATE INDEX idx_agent_owner_id ON agent_identities(owner_id);
 CREATE INDEX idx_agent_status ON agent_identities(status);
+CREATE UNIQUE INDEX uk_agent_key_hash ON agent_identities(key_hash);
 
 CREATE INDEX idx_account_deletion_user_id ON account_deletion_requests(user_id);
 CREATE INDEX idx_account_deletion_status ON account_deletion_requests(status);
@@ -11238,14 +11240,14 @@ ALTER TABLE user_feedbacks
 
 -- Soft-deleted users keep no identifying contact fields and must not block
 -- re-registration, so uniqueness is enforced only on live accounts.
-CREATE UNIQUE INDEX uq_users_active_email
-    ON users (email)
+CREATE UNIQUE INDEX uq_users_active_email_ci
+    ON users (lower(email))
     WHERE deleted_at IS NULL AND email IS NOT NULL;
 
 CREATE UNIQUE INDEX uq_users_active_phone
     ON users (phone)
     WHERE deleted_at IS NULL AND phone IS NOT NULL;
 
-CREATE UNIQUE INDEX uq_users_active_username
-    ON users (username)
+CREATE UNIQUE INDEX uq_users_active_username_ci
+    ON users (lower(username))
     WHERE deleted_at IS NULL AND username IS NOT NULL;

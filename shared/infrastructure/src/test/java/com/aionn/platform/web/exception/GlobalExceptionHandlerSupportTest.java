@@ -1,0 +1,187 @@
+package com.aionn.platform.web.exception;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.aionn.sharedkernel.common.exception.ConflictException;
+import com.aionn.sharedkernel.common.exception.DomainException;
+import com.aionn.sharedkernel.common.exception.ForbiddenException;
+import com.aionn.sharedkernel.common.exception.NotFoundException;
+import com.aionn.sharedkernel.common.exception.UnauthorizedException;
+import com.aionn.sharedkernel.common.exception.ValidationException;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.MutablePropertyValues;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.core.DefaultParameterNameDiscoverer;
+import org.springframework.core.MethodParameter;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.mock.http.MockHttpInputMessage;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.validation.method.MethodValidationResult;
+import org.springframework.validation.method.ParameterValidationResult;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+
+class GlobalExceptionHandlerSupportTest {
+
+    private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
+
+    @Test
+    void globalExceptionHandlerMapsCoreExceptionFamilies() {
+        assertEquals(404, handler.handleNotFound(new NotFoundException("Product", "p-1")).getStatusCode().value());
+        assertEquals(409,
+                handler.handleConflict(new ConflictException("Catalog", "CONFLICT", "dup")).getStatusCode().value());
+        var concurrentModification = handler.handleOptimisticLockingFailure(
+                new OptimisticLockingFailureException("stale aggregate"));
+        assertEquals(409, concurrentModification.getStatusCode().value());
+        assertEquals("CONCURRENT_MODIFICATION", concurrentModification.getBody().data().get("errorCode"));
+        assertEquals(401, handler.handleUnauthorized(new UnauthorizedException()).getStatusCode().value());
+        assertEquals(403, handler.handleForbidden(new ForbiddenException("delete")).getStatusCode().value());
+        assertEquals(422,
+                handler.handleDomain(new DomainException("Catalog", "INVALID", "broken")).getStatusCode().value());
+        assertEquals(400, handler.handleIllegalArgument(new IllegalArgumentException("bad")).getStatusCode().value());
+
+        ValidationException validationException = new ValidationException("Catalog",
+                List.of(new ValidationException.FieldError("name", "required")));
+        var validationResponse = handler.handleValidation(validationException);
+        assertEquals(400, validationResponse.getStatusCode().value());
+        Map<?, ?> fieldErrors = (Map<?, ?>) validationResponse.getBody().data().get("fieldErrors");
+        assertEquals("required", fieldErrors.get("name"));
+
+        var unexpected = handler.handleUnexpected(new RuntimeException("boom"));
+        assertEquals(500, unexpected.getStatusCode().value());
+        assertEquals("INTERNAL_ERROR", unexpected.getBody().data().get("errorCode"));
+    }
+
+    @Test
+    void globalExceptionHandlerMapsSpringWebExceptions() throws Exception {
+        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(new MutablePropertyValues(), "request");
+        bindingResult.addError(new FieldError("request", "name", "required"));
+        MethodParameter parameter = new MethodParameter(
+                SampleController.class.getDeclaredMethod("submit", String.class), 0);
+        MethodArgumentNotValidException notValid = new MethodArgumentNotValidException(parameter, bindingResult);
+        var notValidResponse = handler.handleMethodArgumentNotValid(notValid);
+        assertEquals(400, notValidResponse.getStatusCode().value());
+
+        MethodArgumentTypeMismatchException typeMismatch = new MethodArgumentTypeMismatchException(
+                "abc", Integer.class, "page", parameter, new IllegalArgumentException("bad"));
+        assertEquals(400, handler.handleTypeMismatch(typeMismatch).getStatusCode().value());
+
+        HttpMessageNotReadableException notReadable = new HttpMessageNotReadableException("bad json",
+                new MockHttpInputMessage(new byte[0]));
+        assertEquals(400, handler.handleNotReadable(notReadable).getStatusCode().value());
+
+        MissingRequestHeaderException missingHeader = new MissingRequestHeaderException("X-Trace-Id", parameter);
+        assertEquals(400, handler.handleMissingHeader(missingHeader).getStatusCode().value());
+
+        NoHandlerFoundException noHandler = new NoHandlerFoundException("GET", "/missing", null);
+        assertEquals(404, handler.handleNoHandler(noHandler).getStatusCode().value());
+
+        AuthenticationException authenticationException = new AuthenticationException("login required") {
+            // Anonymous subclass on purpose to exercise handler against framework base
+            // type.
+        };
+        assertEquals(401, handler.handleAuthentication(authenticationException).getStatusCode().value());
+        assertEquals(403, handler.handleAccessDenied(new AccessDeniedException("denied")).getStatusCode().value());
+        assertTrue(handler.handleNoHandler(noHandler).getBody().message().contains("/missing"));
+    }
+
+    /**
+     * Constraints on {@code @RequestParam} arguments are enforced by Spring's own method validator and
+     * surface as {@link HandlerMethodValidationException}, not as {@link MethodArgumentNotValidException}
+     * - which only ever covers a {@code @Valid @RequestBody}. Without a mapping of its own this exception
+     * reached {@code handleUnexpected}, so every module answered a malformed query parameter with 500 and
+     * logged a stack trace at ERROR for what is ordinary bad input.
+     */
+    @Test
+    void globalExceptionHandlerMapsControllerMethodValidation() throws Exception {
+        var search = SampleController.class.getDeclaredMethod("search", int.class);
+        MethodParameter parameter = new MethodParameter(search, 0);
+        parameter.initParameterNameDiscovery(new DefaultParameterNameDiscoverer());
+        ParameterValidationResult violation = new ParameterValidationResult(
+                parameter,
+                0,
+                List.of(new DefaultMessageSourceResolvable(
+                        new String[] { "Min.search.limit" }, "must be greater than or equal to 1")),
+                null,
+                null,
+                null,
+                (resolvable, targetType) -> null);
+
+        var response = handler.handleHandlerMethodValidation(new HandlerMethodValidationException(
+                MethodValidationResult.create(new SampleController(), search, List.of(violation))));
+
+        assertEquals(400, response.getStatusCode().value());
+        assertEquals("VALIDATION_FAILED", response.getBody().data().get("errorCode"));
+        Map<?, ?> fieldErrors = (Map<?, ?>) response.getBody().data().get("fieldErrors");
+        assertEquals(1, fieldErrors.size());
+        assertTrue(fieldErrors.containsValue("must be greater than or equal to 1"));
+        // Either the retained parameter name or its positional fallback; both identify the argument, and
+        // a blank key would collapse every violation in a multi-parameter method onto one entry.
+        assertFalse(fieldErrors.keySet().iterator().next().toString().isEmpty());
+    }
+
+    @Test
+    void globalExceptionHandlerMapsMissingRequestParameter() {
+        var response = handler.handleMissingParameter(
+                new MissingServletRequestParameterException("skuIds", "List"));
+
+        assertEquals(400, response.getStatusCode().value());
+        assertEquals("MISSING_PARAMETER", response.getBody().data().get("errorCode"));
+        assertTrue(response.getBody().message().contains("skuIds"));
+    }
+
+    /**
+     * The right path with the wrong verb. Reported as a 500 this sends whoever is debugging looking for
+     * a server fault that does not exist - the response has to say which verbs the endpoint accepts.
+     */
+    @Test
+    void globalExceptionHandlerMapsUnsupportedRequestMethod() {
+        var response = handler.handleMethodNotSupported(
+                new HttpRequestMethodNotSupportedException("PUT", List.of("POST")));
+
+        assertEquals(405, response.getStatusCode().value());
+        assertEquals("METHOD_NOT_ALLOWED", response.getBody().data().get("errorCode"));
+        assertTrue(response.getBody().message().contains("PUT"));
+        assertTrue(response.getBody().message().contains("POST"));
+    }
+
+    @Test
+    void globalExceptionHandlerMapsUnsupportedRequestMethodAndReturnsAllowHeader() {
+        HttpRequestMethodNotSupportedException exception = new HttpRequestMethodNotSupportedException(
+                "PUT", Set.of("GET", "POST"));
+
+        var response = handler.handleMethodNotSupported(exception);
+
+        assertEquals(405, response.getStatusCode().value());
+        assertEquals(Set.of(HttpMethod.GET, HttpMethod.POST), response.getHeaders().getAllow());
+        assertEquals("METHOD_NOT_ALLOWED", response.getBody().data().get("errorCode"));
+        assertTrue(response.getBody().message().contains("PUT"));
+        assertTrue(response.getBody().message().contains("GET"));
+        assertTrue(response.getBody().message().contains("POST"));
+    }
+
+    static class SampleController {
+        void submit(String body) {
+            // Empty on purpose; only reflective method metadata is needed in this test.
+        }
+
+        void search(int limit) {
+            // Empty on purpose; only reflective method metadata is needed in this test.
+        }
+    }
+}

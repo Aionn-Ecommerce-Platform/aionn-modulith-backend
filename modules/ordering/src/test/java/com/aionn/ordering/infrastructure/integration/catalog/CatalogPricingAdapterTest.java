@@ -1,9 +1,11 @@
 package com.aionn.ordering.infrastructure.integration.catalog;
 
+import java.time.Instant;
+
 import com.aionn.ordering.application.port.out.CatalogPricingGateway;
-import com.aionn.sharedkernel.integration.port.catalog.PricingQueryPort;
-import com.aionn.sharedkernel.integration.port.inventory.WarehouseSelectorPort;
-import com.aionn.sharedkernel.integration.port.promotion.FlashSaleQueryPort;
+import com.aionn.contracts.port.catalog.PricingQueryPort;
+import com.aionn.contracts.port.inventory.WarehouseSelectorPort;
+import com.aionn.contracts.port.promotion.FlashSaleQueryPort;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -65,7 +67,7 @@ class CatalogPricingAdapterTest {
         when(flashSaleQueryPort.findActiveBySkuIds(List.of("sku-1"))).thenReturn(Map.of(
                 "sku-1", new FlashSaleQueryPort.SkuFlashSale(
                         "sku-1", "registration-1", "campaign-1", BigDecimal.valueOf(75), "VND",
-                        java.time.Instant.parse("2026-09-03T00:00:00Z"), 10)));
+                        Instant.parse("2026-09-03T00:00:00Z"), 10)));
         when(warehouseSelector.selectWarehouseForSku("m-1", "sku-1")).thenReturn(Optional.of("wh-1"));
 
         CatalogPricingGateway.SkuPricing result = adapter.resolve(List.of("sku-1")).get("sku-1");

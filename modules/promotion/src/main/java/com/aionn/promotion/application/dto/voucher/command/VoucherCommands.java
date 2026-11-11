@@ -1,5 +1,7 @@
 package com.aionn.promotion.application.dto.voucher.command;
 
+import com.aionn.promotion.domain.valueobject.VoucherType;
+
 import com.aionn.sharedkernel.application.command.Command;
 
 import java.math.BigDecimal;
@@ -30,7 +32,13 @@ public final class VoucherCommands {
                         String currency,
                         int usageLimit,
                         Instant validFrom,
-                        Instant validUntil) implements Command {
+                        Instant validUntil,
+                        VoucherType type) implements Command {
+                        public IssueShopVoucher(String ownerId, String voucherCode, BigDecimal discountAmount,
+                                        String currency, int usageLimit, Instant validFrom, Instant validUntil) {
+                                this(ownerId, voucherCode, discountAmount, currency, usageLimit, validFrom,
+                                                validUntil, VoucherType.ORDER_DISCOUNT);
+                        }
         }
 
         public record ReserveVoucher(

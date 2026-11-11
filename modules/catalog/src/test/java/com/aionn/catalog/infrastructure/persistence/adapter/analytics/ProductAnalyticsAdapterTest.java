@@ -59,7 +59,7 @@ class ProductAnalyticsAdapterTest {
                 statusCount("PUBLISHED", 10L),
                 statusCount("DRAFT", 3L),
                 statusCount("PENDING_REVIEW", 2L),
-                statusCount("ARCHIVED", 1L),
+                statusCount("HIDDEN", 1L),
                 statusCount("UNKNOWN", 9L)));
         when(reviewRepository.countAllVisibleReviews()).thenReturn(42L);
         when(reviewRepository.getPlatformAverageRating()).thenReturn(4.5);

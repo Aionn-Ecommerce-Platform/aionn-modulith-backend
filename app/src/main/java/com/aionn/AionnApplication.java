@@ -1,8 +1,5 @@
 package com.aionn;
 
-import io.github.cdimascio.dotenv.Dotenv;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -10,15 +7,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class AionnApplication {
 
     public static void main(String[] args) {
-        Map<String, Object> defaults = new LinkedHashMap<>();
-        Dotenv.configure()
-                .ignoreIfMissing()
-                .load()
-                .entries()
-                .forEach(entry -> defaults.putIfAbsent(entry.getKey(), entry.getValue()));
-
-        SpringApplication application = new SpringApplication(AionnApplication.class);
-        application.setDefaultProperties(defaults);
-        application.run(args);
+        SpringApplication.run(AionnApplication.class, args);
     }
 }

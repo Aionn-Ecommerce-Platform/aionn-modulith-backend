@@ -1,5 +1,8 @@
 package com.aionn.ucp.adapter.rest.controller;
 
+import com.aionn.ucp.infrastructure.config.UcpProperties;
+import java.util.Set;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.aionn.ucp.infrastructure.schema.PinnedBusinessProfileValidator;
@@ -52,14 +55,14 @@ class DiscoveryControllerTest {
 
         @Test
         void discoveryAdvertisesCartCapabilityWhenConfigured() {
-                com.aionn.ucp.infrastructure.config.UcpProperties properties = new com.aionn.ucp.infrastructure.config.UcpProperties(
+                UcpProperties properties = new UcpProperties(
                                 "2026-08-25",
                                 "http://localhost:8080/ucp/v1",
                                 "Aionn Commerce",
-                                java.util.Set.of("https://ucp.dev/schemas/"),
+                                Set.of("https://ucp.dev/schemas/"),
                                 false,
-                                new com.aionn.ucp.infrastructure.config.UcpProperties.Capabilities(true, false, false,
-                                                false, false));
+                                new UcpProperties.Capabilities(true, false, false,
+                                                false, false), "", "VND", "");
 
                 DiscoveryController controller = new DiscoveryController(new PinnedBusinessProfileValidator(),
                                 properties);
@@ -75,14 +78,14 @@ class DiscoveryControllerTest {
 
         @Test
         void discoveryAdvertisesCheckoutCapabilityWhenConfigured() {
-                com.aionn.ucp.infrastructure.config.UcpProperties properties = new com.aionn.ucp.infrastructure.config.UcpProperties(
+                UcpProperties properties = new UcpProperties(
                                 "2026-08-25",
                                 "http://localhost:8080/ucp/v1",
                                 "Aionn Commerce",
-                                java.util.Set.of("https://ucp.dev/schemas/"),
+                                Set.of("https://ucp.dev/schemas/"),
                                 false,
-                                new com.aionn.ucp.infrastructure.config.UcpProperties.Capabilities(false, true, false,
-                                                false, false));
+                                new UcpProperties.Capabilities(false, true, false,
+                                                false, false), "", "VND", "");
 
                 DiscoveryController controller = new DiscoveryController(new PinnedBusinessProfileValidator(),
                                 properties);
@@ -98,14 +101,14 @@ class DiscoveryControllerTest {
 
         @Test
         void discoveryAdvertisesCatalogCapabilityWhenConfigured() {
-                com.aionn.ucp.infrastructure.config.UcpProperties properties = new com.aionn.ucp.infrastructure.config.UcpProperties(
+                UcpProperties properties = new UcpProperties(
                                 "2026-08-25",
                                 "http://localhost:8080/ucp/v1",
                                 "Aionn Commerce",
-                                java.util.Set.of("https://ucp.dev/schemas/"),
+                                Set.of("https://ucp.dev/schemas/"),
                                 false,
-                                new com.aionn.ucp.infrastructure.config.UcpProperties.Capabilities(false, false, true,
-                                                false, false));
+                                new UcpProperties.Capabilities(false, false, true,
+                                                false, false), "", "VND", "");
 
                 DiscoveryController controller = new DiscoveryController(new PinnedBusinessProfileValidator(),
                                 properties);
@@ -124,14 +127,14 @@ class DiscoveryControllerTest {
 
         @Test
         void discoveryAdvertisesOrderCapabilityWhenConfigured() {
-                com.aionn.ucp.infrastructure.config.UcpProperties properties = new com.aionn.ucp.infrastructure.config.UcpProperties(
+                UcpProperties properties = new UcpProperties(
                                 "2026-08-25",
                                 "http://localhost:8080/ucp/v1",
                                 "Aionn Commerce",
-                                java.util.Set.of("https://ucp.dev/schemas/"),
+                                Set.of("https://ucp.dev/schemas/"),
                                 false,
-                                new com.aionn.ucp.infrastructure.config.UcpProperties.Capabilities(false, false, false,
-                                                true, false));
+                                new UcpProperties.Capabilities(false, false, false,
+                                                true, false), "", "VND", "");
 
                 DiscoveryController controller = new DiscoveryController(new PinnedBusinessProfileValidator(),
                                 properties);
@@ -147,14 +150,14 @@ class DiscoveryControllerTest {
 
         @Test
         void discoveryAdvertisesIdentityLinkingCapabilityWhenConfigured() {
-                com.aionn.ucp.infrastructure.config.UcpProperties properties = new com.aionn.ucp.infrastructure.config.UcpProperties(
+                UcpProperties properties = new UcpProperties(
                                 "2026-08-25",
                                 "http://localhost:8080/ucp/v1",
                                 "Aionn Commerce",
-                                java.util.Set.of("https://ucp.dev/schemas/"),
+                                Set.of("https://ucp.dev/schemas/"),
                                 false,
-                                new com.aionn.ucp.infrastructure.config.UcpProperties.Capabilities(false, false, false,
-                                                false, true));
+                                new UcpProperties.Capabilities(false, false, false,
+                                                false, true), "", "VND", "");
 
                 DiscoveryController controller = new DiscoveryController(new PinnedBusinessProfileValidator(),
                                 properties);

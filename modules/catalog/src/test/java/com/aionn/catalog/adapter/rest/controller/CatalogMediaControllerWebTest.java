@@ -10,7 +10,7 @@ import com.aionn.catalog.adapter.rest.support.TestAuth;
 import com.aionn.catalog.adapter.rest.support.session.CurrentOwnerIdArgumentResolver;
 import com.aionn.catalog.application.dto.media.result.UploadSignatureResult;
 import com.aionn.catalog.application.port.in.media.GenerateProductMediaUploadSignatureInputPort;
-import com.aionn.sharedkernel.infrastructure.config.JacksonMapperFactory;
+import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
