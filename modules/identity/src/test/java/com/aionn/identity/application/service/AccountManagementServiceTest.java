@@ -648,4 +648,29 @@ class AccountManagementServiceTest {
                 assertErrorCode(IdentityErrorCode.DATA_EXPORT_NOT_FOUND,
                                 () -> service.getDataExport(USER_ID, "missing"));
         }
+
+        @Test
+        void aStoredDataExportPayloadIsReturned() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(dataExportPort.findPayload("req-1", USER_ID)).thenReturn(Optional.of(
+                                new DataExportPort.DataExportPayload("req-1", "application/json",
+                                                "{\"profile\":{}}", FIXED_NOW)));
+
+                var view = service.getDataExport(USER_ID, "req-1");
+
+                assertThat(view.payload()).isEqualTo("{\"profile\":{}}");
+                assertThat(view.contentType()).isEqualTo("application/json");
+        }
+
+        @Test
+        void aBlankPasswordIsRejectedWhenTheAccountHasOne() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(
+                                new UserSecurityPort.UserSecurityData(USER_ID, "hash", UserStatus.ACTIVE,
+                                                false, null, null, 0)));
+
+                assertErrorCode(IdentityErrorCode.INVALID_CREDENTIALS,
+                                () -> service.requestAccountDeletion(
+                                                new RequestAccountDeletionCommand(USER_ID, " ", null)));
+        }
 }

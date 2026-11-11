@@ -175,6 +175,34 @@ class GlobalExceptionHandlerSupportTest {
         assertTrue(response.getBody().message().contains("POST"));
     }
 
+    @Test
+    void globalExceptionHandlerMapsConcurrentModification() {
+        var response = handler.handleOptimisticLockingFailure(
+                new org.springframework.dao.OptimisticLockingFailureException("stale"));
+
+        assertEquals(409, response.getStatusCode().value());
+        assertEquals("CONCURRENT_MODIFICATION", response.getBody().data().get("errorCode"));
+    }
+
+    @Test
+    void globalExceptionHandlerMapsIllegalArguments() {
+        var response = handler.handleIllegalArgument(new IllegalArgumentException("bad input"));
+
+        assertEquals(400, response.getStatusCode().value());
+        assertEquals("ILLEGAL_ARGUMENT", response.getBody().data().get("errorCode"));
+        assertTrue(response.getBody().message().contains("bad input"));
+    }
+
+    @Test
+    void globalExceptionHandlerMapsBareDomainExceptions() {
+        var response = handler.handleDomain(
+                new com.aionn.sharedkernel.common.exception.DomainException("Catalog", "CATALOG_999",
+                        "domain failure"));
+
+        assertEquals(422, response.getStatusCode().value());
+        assertEquals("CATALOG_999", response.getBody().data().get("errorCode"));
+    }
+
     static class SampleController {
         void submit(String body) {
             // Empty on purpose; only reflective method metadata is needed in this test.

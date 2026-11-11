@@ -11,6 +11,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.aionn.platform.infrastructure.web.RequestAttributeKeys;
+import com.aionn.platform.web.support.idempotency.IdempotentRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -102,4 +103,69 @@ class IdempotencyResponseBodyAdviceTest {
         return request;
     }
 
+    @Test
+    void supportsOnlyAnnotatedHandlerMethods() throws Exception {
+        IdempotencyResponseBodyAdvice advice = new IdempotencyResponseBodyAdvice(new ObjectMapper(), store);
+        MethodParameter annotated = new MethodParameter(
+                SampleHandler.class.getDeclaredMethod("create"), -1);
+        MethodParameter plain = new MethodParameter(
+                SampleHandler.class.getDeclaredMethod("plain"), -1);
+
+        org.junit.jupiter.api.Assertions.assertTrue(
+                advice.supports(annotated, StringHttpMessageConverter.class));
+        org.junit.jupiter.api.Assertions.assertFalse(
+                advice.supports(plain, StringHttpMessageConverter.class));
+    }
+
+    @Test
+    void returnsBodyForANonServletRequest() throws Exception {
+        IdempotencyResponseBodyAdvice advice = new IdempotencyResponseBodyAdvice(new ObjectMapper(), store);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        response.setStatus(200);
+        org.springframework.http.server.ServerHttpRequest plainRequest =
+                mock(org.springframework.http.server.ServerHttpRequest.class);
+
+        Object result = advice.beforeBodyWrite("body", anyReturnType(), MediaType.APPLICATION_JSON,
+                StringHttpMessageConverter.class, plainRequest, wrap(response));
+
+        assertEquals("body", result);
+    }
+
+    @Test
+    void skipsPersistenceWhenIdempotencyIsInactive() throws Exception {
+        IdempotencyResponseBodyAdvice advice = new IdempotencyResponseBodyAdvice(new ObjectMapper(), store);
+        MockHttpServletRequest request = activeRequestWithKeys();
+        request.setAttribute(RequestAttributeKeys.IDEMPOTENCY_ACTIVE, false);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        response.setStatus(200);
+
+        Object result = advice.beforeBodyWrite("body", anyReturnType(), MediaType.APPLICATION_JSON,
+                StringHttpMessageConverter.class, wrap(request), wrap(response));
+
+        assertEquals("body", result);
+        verify(store, never()).saveCompleted(anyString(), anyString(), any(), any());
+    }
+
+    @Test
+    void skipsPersistenceForANonSuccessStatus() throws Exception {
+        IdempotencyResponseBodyAdvice advice = new IdempotencyResponseBodyAdvice(new ObjectMapper(), store);
+        MockHttpServletRequest request = activeRequestWithKeys();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        response.setStatus(400);
+
+        Object result = advice.beforeBodyWrite("body", anyReturnType(), MediaType.APPLICATION_JSON,
+                StringHttpMessageConverter.class, wrap(request), wrap(response));
+
+        assertEquals("body", result);
+        verify(store, never()).saveCompleted(anyString(), anyString(), any(), any());
+    }
+
+    static class SampleHandler {
+        @IdempotentRequest
+        void create() {
+        }
+
+        void plain() {
+        }
+    }
 }

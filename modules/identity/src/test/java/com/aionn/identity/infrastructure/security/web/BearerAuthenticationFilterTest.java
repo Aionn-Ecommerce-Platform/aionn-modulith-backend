@@ -226,4 +226,46 @@ class BearerAuthenticationFilterTest {
 
         verify(chain, times(2)).doFilter(request, response);
     }
+
+    @Test
+    void anExistingAuthenticationIsNotOverwritten() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                        "existing", "n/a"));
+        request.addHeader("Authorization", "Bearer token");
+
+        filter.doFilter(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        verify(tokenIssuer, org.mockito.Mockito.never()).parseClaims(org.mockito.ArgumentMatchers.anyString());
+        assertThat(SecurityContextHolder.getContext().getAuthentication().getName())
+                .isEqualTo("existing");
+    }
+
+    @Test
+    void aFailingBlacklistCheckFailsClosed() throws Exception {
+        request.addHeader("Authorization", "Bearer token");
+        when(tokenIssuer.parseClaims("token")).thenReturn(Optional.of(
+                new AccessTokenClaims("user-1", "session-1", "jti-1", List.of("BUYER"))));
+        when(tokenBlacklist.isBlacklisted("jti-1"))
+                .thenThrow(new RuntimeException("redis down"));
+
+        filter.doFilter(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    void tokensWithoutAJtiSkipTheBlacklistCheck() throws Exception {
+        request.addHeader("Authorization", "Bearer token");
+        when(tokenIssuer.parseClaims("token")).thenReturn(Optional.of(
+                new AccessTokenClaims("user-1", "session-1", null, List.of("BUYER"))));
+        activeSessionAndUser("user-1", "session-1");
+
+        filter.doFilter(request, response, chain);
+
+        verify(tokenBlacklist, org.mockito.Mockito.never()).isBlacklisted(org.mockito.ArgumentMatchers.anyString());
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+    }
 }
