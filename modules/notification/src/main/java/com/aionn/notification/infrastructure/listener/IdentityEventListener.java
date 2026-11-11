@@ -2,16 +2,18 @@ package com.aionn.notification.infrastructure.listener;
 
 import com.aionn.notification.application.dto.notification.command.NotificationCommands;
 import com.aionn.notification.application.service.NotificationDeliveryOrchestrator;
+import com.aionn.notification.domain.model.Notification;
 import com.aionn.notification.domain.valueobject.NotificationCategory;
-import com.aionn.sharedkernel.integration.event.identity.EmailChangedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.identity.PasswordChangedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.identity.PasswordResetRequestedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.identity.PhoneChangedIntegrationEvent;
+import com.aionn.contracts.event.identity.EmailChangedIntegrationEvent;
+import com.aionn.contracts.event.identity.PasswordChangedIntegrationEvent;
+import com.aionn.contracts.event.identity.PasswordResetRequestedIntegrationEvent;
+import com.aionn.contracts.event.identity.PhoneChangedIntegrationEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -73,8 +75,9 @@ public class IdentityEventListener {
     }
 
     private void dispatch(String userId, String eventType, Map<String, String> context) {
-        deliveryOrchestrator.sendByEvent(new NotificationCommands.SendByEvent(
+        List<Notification> queued = deliveryOrchestrator.enqueueByEvent(new NotificationCommands.SendByEvent(
                 userId, eventType, NotificationCategory.SECURITY,
                 null, null, null, context));
+        deliveryOrchestrator.deliverQueuedAsync(queued);
     }
 }

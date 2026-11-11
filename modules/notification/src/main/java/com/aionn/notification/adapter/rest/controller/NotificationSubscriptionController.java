@@ -11,7 +11,7 @@ import com.aionn.notification.application.port.in.subscription.ListMyDeviceToken
 import com.aionn.notification.application.port.in.subscription.RegisterDeviceTokenInputPort;
 import com.aionn.notification.application.port.in.subscription.RemoveDeviceTokenInputPort;
 import com.aionn.notification.application.port.in.subscription.UpdateSubscriptionChannelInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

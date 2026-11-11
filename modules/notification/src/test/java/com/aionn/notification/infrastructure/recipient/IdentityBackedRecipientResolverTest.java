@@ -5,7 +5,7 @@ import com.aionn.notification.domain.exception.NotificationErrorCode;
 import com.aionn.notification.domain.exception.NotificationException;
 import com.aionn.notification.domain.model.DeviceToken;
 import com.aionn.notification.domain.valueobject.NotificationChannel;
-import com.aionn.sharedkernel.integration.port.identity.RecipientResolverPort;
+import com.aionn.contracts.port.identity.RecipientResolverPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -75,5 +75,14 @@ class IdentityBackedRecipientResolverTest {
                 .isInstanceOf(NotificationException.class)
                 .hasFieldOrPropertyWithValue("errorCode",
                         NotificationErrorCode.DEVICE_TOKEN_NOT_FOUND.getCode());
+    }
+
+    @Test
+    void resolveAllReturnsEveryActivePushToken() {
+        when(deviceTokenRepository.findActiveByUserId("user-1"))
+                .thenReturn(List.of(token("tok-1", "fcm-1"), token("tok-2", "fcm-2")));
+
+        assertThat(resolver.resolveAll("user-1", NotificationChannel.PUSH))
+                .containsExactly("fcm-1", "fcm-2");
     }
 }

@@ -42,7 +42,8 @@ public class NotificationPersistenceAdapter implements NotificationPersistencePo
 
     @Override
     public List<Notification> findRetryable(int limit) {
-        return jpa.findRetryable(PageRequest.of(0, Math.max(1, limit))).stream()
+        return jpa.findRetryable(Notification.MAX_RETRY,
+                PageRequest.of(0, Math.max(1, limit))).stream()
                 .map(mapper::toDomain)
                 .toList();
     }

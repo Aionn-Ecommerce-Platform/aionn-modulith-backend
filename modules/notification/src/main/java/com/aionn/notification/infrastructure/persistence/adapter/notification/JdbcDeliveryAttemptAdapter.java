@@ -17,6 +17,15 @@ public class JdbcDeliveryAttemptAdapter implements DeliveryAttemptPort {
     @Override
     @Transactional
     public Attempt begin(String notificationId, NotificationChannel channel) {
+        // A STARTED attempt older than the stale window means the process died
+        // before recording the provider outcome; fail it so a new attempt can run.
+        jdbc.update("""
+                UPDATE notification_delivery_attempts
+                   SET status = 'FAILED', error = 'STALE_ATTEMPT', completed_at = NOW(), updated_at = NOW()
+                 WHERE notification_id = ?
+                   AND status = 'STARTED'
+                   AND updated_at < NOW() - INTERVAL '5 minutes'
+                """, notificationId);
         List<Attempt> unresolved = jdbc.query("""
                 SELECT attempt_id, status FROM notification_delivery_attempts
                  WHERE notification_id = ? AND status IN ('STARTED', 'SUCCEEDED')

@@ -1,7 +1,9 @@
 package com.aionn.notification.application.service;
 
 import com.aionn.notification.application.dto.notification.command.NotificationCommands;
+import com.aionn.notification.application.policy.NotificationDefaultsPolicy;
 import com.aionn.notification.application.port.out.NotificationPersistencePort;
+import com.aionn.notification.application.port.out.NotificationRealtimePort;
 import com.aionn.notification.application.port.out.NotificationSubscriptionPersistencePort;
 import com.aionn.notification.application.port.out.NotificationTemplatePersistencePort;
 import com.aionn.notification.domain.exception.NotificationException;
@@ -54,11 +56,23 @@ class NotificationDispatchServiceTest {
     @Mock
     private NotificationSubscriptionPersistencePort subscriptionRepository;
     @Mock
+    private NotificationRealtimePort realtimePort;
+    @Mock
     private EventPublisher eventPublisher;
+    @Mock
+    private NotificationDefaultsPolicy defaultsPolicy;
+    @Mock
+    private com.aionn.contracts.port.notification.NotificationPreferenceQueryPort notificationPreferenceQueryPort;
 
     private NotificationDispatchService service() {
+        when(defaultsPolicy.defaultLocale()).thenReturn("vi-VN");
+        when(defaultsPolicy.englishLocale()).thenReturn("en-US");
+        when(notificationPreferenceQueryPort.find(anyString()))
+                .thenReturn(com.aionn.contracts.port.notification.NotificationPreferenceQueryPort
+                        .NotificationPreferenceSnapshot.defaults());
         return new NotificationDispatchService(notificationRepository, templateRepository,
-                subscriptionRepository, eventPublisher, CLOCK);
+                subscriptionRepository, realtimePort, eventPublisher, defaultsPolicy,
+                notificationPreferenceQueryPort, CLOCK);
     }
 
     private static NotificationTemplate template(NotificationChannel channel) {
@@ -97,6 +111,19 @@ class NotificationDispatchServiceTest {
         assertThat(prepared).allMatch(n -> n.getStatus() == NotificationStatus.PENDING);
         assertThat(prepared.get(0).getContent()).isEqualTo("Hello Tran");
         assertThat(prepared.get(0).getCampaignId()).isEqualTo("camp-1");
+    }
+
+    @Test
+    void publishesOnlyInAppNotificationsToRealtime() {
+        when(subscriptionRepository.findByUserId("user-1"))
+                .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
+        when(templateRepository.findByEventChannelLocale(eq(EVENT), any(), anyString()))
+                .thenAnswer(invocation -> Optional.of(template(invocation.getArgument(1))));
+        echoSave();
+
+        Notification created = service().prepareByEvent(byEvent(List.of(NotificationChannel.IN_APP))).get(0);
+
+        verify(realtimePort).publishCreated("user-1", created.getNotiId(), NOW);
     }
 
     @Test
@@ -205,6 +232,40 @@ class NotificationDispatchServiceTest {
         } finally {
             LocaleContextHolder.resetLocaleContext();
         }
+    }
+
+    @Test
+    void usesVietnameseDefaultWhenThereIsNoRequestContext() {
+        LocaleContextHolder.resetLocaleContext();
+        when(subscriptionRepository.findByUserId("user-1"))
+                .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
+        when(templateRepository.findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN"))
+                .thenReturn(Optional.of(template(NotificationChannel.EMAIL)));
+        echoSave();
+
+        List<Notification> prepared = service().prepareByEvent(new NotificationCommands.SendByEvent(
+                "user-1", EVENT, NotificationCategory.SECURITY,
+                List.of(NotificationChannel.EMAIL), null, null, Map.of("name", "Tran")));
+
+        assertThat(prepared).hasSize(1);
+        verify(templateRepository).findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN");
+    }
+
+    @Test
+    void prepareByEventSkipsCategoryDisabledInAccountSettings() {
+        when(subscriptionRepository.findByUserId("user-1"))
+                .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
+        NotificationDispatchService svc = service();
+        when(notificationPreferenceQueryPort.find("user-1"))
+                .thenReturn(new com.aionn.contracts.port.notification.NotificationPreferenceQueryPort
+                        .NotificationPreferenceSnapshot(true, false, true, true));
+
+        List<Notification> prepared = svc.prepareByEvent(new NotificationCommands.SendByEvent(
+                "user-1", EVENT, NotificationCategory.PROMOTION,
+                List.of(NotificationChannel.IN_APP), "vi-VN", null, Map.of("name", "Tran")));
+
+        assertThat(prepared).isEmpty();
+        verify(notificationRepository, never()).save(any());
     }
 
     @Test

@@ -9,11 +9,22 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SpringNotificationDefaultsPolicy implements NotificationDefaultsPolicy {
 
+    private static final String FALLBACK_LOCALE = "vi-VN";
+    private static final String FALLBACK_ENGLISH_LOCALE = "en-US";
+
     private final NotificationDefaultsProperties properties;
 
     @Override
     public String defaultLocale() {
-        String locale = properties.locale();
-        return (locale == null || locale.isBlank()) ? "vi-VN" : locale.trim();
+        return normalize(properties.locale(), FALLBACK_LOCALE);
+    }
+
+    @Override
+    public String englishLocale() {
+        return normalize(properties.englishLocale(), FALLBACK_ENGLISH_LOCALE);
+    }
+
+    private static String normalize(String locale, String fallback) {
+        return (locale == null || locale.isBlank()) ? fallback : locale.trim();
     }
 }

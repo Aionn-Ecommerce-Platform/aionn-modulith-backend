@@ -10,7 +10,7 @@ import com.aionn.notification.application.port.in.analytics.GetCampaignAnalytics
 import com.aionn.notification.application.port.in.provider.ConfigureProviderInputPort;
 import com.aionn.notification.application.port.in.provider.ListProvidersInputPort;
 import com.aionn.notification.application.port.in.provider.UpdateProviderInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

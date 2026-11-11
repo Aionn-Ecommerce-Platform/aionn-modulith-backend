@@ -5,5 +5,6 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 
 @ConfigurationProperties(prefix = "notification.push")
 public record NotificationPushProperties(
-        @DefaultValue("logging") String provider) {
+        @DefaultValue("logging") String provider,
+        @DefaultValue("") String webPushPublicKey) {
 }

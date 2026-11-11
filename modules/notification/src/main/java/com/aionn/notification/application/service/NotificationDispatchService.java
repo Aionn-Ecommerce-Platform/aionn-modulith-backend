@@ -1,9 +1,16 @@
 package com.aionn.notification.application.service;
 
+import com.aionn.notification.domain.valueobject.NotificationCategory;
+import java.util.Optional;
+
 import com.aionn.notification.application.dto.notification.command.NotificationCommands;
+import com.aionn.notification.application.policy.NotificationDefaultsPolicy;
 import com.aionn.notification.application.port.out.NotificationPersistencePort;
+import com.aionn.notification.application.port.out.NotificationRealtimePort;
 import com.aionn.notification.application.port.out.NotificationSubscriptionPersistencePort;
 import com.aionn.notification.application.port.out.NotificationTemplatePersistencePort;
+import com.aionn.contracts.port.notification.NotificationPreferenceQueryPort;
+import com.aionn.contracts.port.notification.NotificationPreferenceQueryPort.NotificationPreferenceSnapshot;
 import com.aionn.notification.domain.exception.NotificationErrorCode;
 import com.aionn.notification.domain.exception.NotificationException;
 import com.aionn.notification.domain.model.Notification;
@@ -31,13 +38,15 @@ import java.util.Map;
 @Transactional
 public class NotificationDispatchService {
 
-    private static final String DEFAULT_LOCALE = "vi-VN";
-    private static final String ENGLISH_LOCALE = "en-US";
+    private static final String ENGLISH_LANGUAGE = "en";
 
     private final NotificationPersistencePort notificationRepository;
     private final NotificationTemplatePersistencePort templateRepository;
     private final NotificationSubscriptionPersistencePort subscriptionRepository;
+    private final NotificationRealtimePort realtimePort;
     private final EventPublisher eventPublisher;
+    private final NotificationDefaultsPolicy defaultsPolicy;
+    private final NotificationPreferenceQueryPort notificationPreferenceQueryPort;
     private final Clock clock;
 
     public List<Notification> prepareByEvent(NotificationCommands.SendByEvent command) {
@@ -50,10 +59,16 @@ public class NotificationDispatchService {
                 : command.channels();
 
         String locale = resolveLocale(command.locale());
+        NotificationPreferenceSnapshot preferences = notificationPreferenceQueryPort.find(command.userId());
         List<Notification> prepared = new ArrayList<>();
         for (NotificationChannel channel : requested) {
             if (!subscription.isEnabled(command.category(), channel)) {
                 log.debug("Skipping {} for user {} - subscription disabled", channel, command.userId());
+                continue;
+            }
+            if (!isCategoryEnabled(command.category(), preferences)) {
+                log.debug("Skipping {} for user {} - account setting disabled",
+                        command.category(), command.userId());
                 continue;
             }
             NotificationTemplate template = findTemplate(command.eventType(), channel, locale).orElse(null);
@@ -134,27 +149,53 @@ public class NotificationDispatchService {
     }
 
     private Notification persistPending(NotificationTemplate template, String userId,
-            NotificationChannel channel, com.aionn.notification.domain.valueobject.NotificationCategory category,
+            NotificationChannel channel, NotificationCategory category,
             String campaignId, Map<String, String> context) {
         NotificationTemplate.Rendered rendered = template.render(context == null ? Map.of() : context);
         Notification notification = Notification.create(IdGenerator.ulid(), userId,
                 template.getTemplateId(), channel, category,
                 rendered.subject(), rendered.content(), campaignId, clock);
-        return notificationRepository.save(notification);
+        Notification saved = notificationRepository.save(notification);
+        if (channel == NotificationChannel.IN_APP) {
+            realtimePort.publishCreated(saved.getUserId(), saved.getNotiId(), saved.getCreatedAt());
+        }
+        return saved;
     }
 
-    private java.util.Optional<NotificationTemplate> findTemplate(String eventType,
+    private Optional<NotificationTemplate> findTemplate(String eventType,
             NotificationChannel channel, String locale) {
         return templateRepository.findByEventChannelLocale(eventType, channel, locale)
-                .or(() -> templateRepository.findByEventChannelLocale(eventType, channel, DEFAULT_LOCALE));
+                .or(() -> templateRepository.findByEventChannelLocale(
+                        eventType, channel, defaultsPolicy.defaultLocale()));
     }
 
-    private static String resolveLocale(String requested) {
-        if (requested != null) {
-            return requested;
+    /**
+     * Account settings expose four coarse toggles. Transaction and security messages are
+     * contractual (receipts, password changes) and therefore stay enabled regardless.
+     */
+    private static boolean isCategoryEnabled(NotificationCategory category,
+            NotificationPreferenceSnapshot preferences) {
+        return switch (category) {
+            case SECURITY, TRANSACTION -> true;
+            case SHIPPING -> preferences.orderUpdatesEnabled();
+            case PROMOTION -> preferences.promotionsEnabled();
+            case CHAT -> preferences.chatEnabled();
+            case SYSTEM -> preferences.systemEnabled();
+        };
+    }
+
+    private String resolveLocale(String requested) {
+        String language = null;
+        if (requested != null && !requested.isBlank()) {
+            language = Locale.forLanguageTag(requested).getLanguage();
+        } else if (LocaleContextHolder.getLocaleContext() != null) {
+            language = LocaleContextHolder.getLocale().getLanguage();
         }
-        Locale current = LocaleContextHolder.getLocale();
-        return "en".equalsIgnoreCase(current.getLanguage()) ? ENGLISH_LOCALE : DEFAULT_LOCALE;
+        // Async/outbox listeners have no request locale; a Vietnamese-first platform must not fall
+        // back to the JVM default (often en-US) in that case.
+        return ENGLISH_LANGUAGE.equalsIgnoreCase(language)
+                ? defaultsPolicy.englishLocale()
+                : defaultsPolicy.defaultLocale();
     }
 
     private Notification ownedBy(String notiId, String userId) {

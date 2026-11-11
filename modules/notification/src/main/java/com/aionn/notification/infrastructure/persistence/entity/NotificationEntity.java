@@ -1,5 +1,7 @@
 package com.aionn.notification.infrastructure.persistence.entity;
 
+import jakarta.persistence.Version;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -82,7 +84,7 @@ public class NotificationEntity {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
-    @jakarta.persistence.Version
+    @Version
     @Column(name = "version", nullable = false)
     private long version;
 }

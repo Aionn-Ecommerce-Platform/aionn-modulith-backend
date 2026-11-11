@@ -8,7 +8,7 @@ import com.aionn.notification.application.port.in.template.CreateTemplateInputPo
 import com.aionn.notification.application.port.in.template.GetTemplateInputPort;
 import com.aionn.notification.application.port.in.template.ListTemplatesInputPort;
 import com.aionn.notification.application.port.in.template.UpdateTemplateInputPort;
-import com.aionn.sharedkernel.adapter.web.response.ApiResponse;
+import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

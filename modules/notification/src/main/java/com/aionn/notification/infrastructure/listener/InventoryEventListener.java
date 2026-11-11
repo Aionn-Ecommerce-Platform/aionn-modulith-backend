@@ -2,17 +2,19 @@ package com.aionn.notification.infrastructure.listener;
 
 import com.aionn.notification.application.dto.notification.command.NotificationCommands;
 import com.aionn.notification.application.service.NotificationDeliveryOrchestrator;
+import com.aionn.notification.domain.model.Notification;
 import com.aionn.notification.domain.valueobject.NotificationCategory;
-import com.aionn.sharedkernel.integration.event.inventory.SafetyStockBreachedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.inventory.StockCommittedIntegrationEvent;
-import com.aionn.sharedkernel.integration.event.inventory.StockReservationFailedIntegrationEvent;
-import com.aionn.sharedkernel.integration.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.event.inventory.SafetyStockBreachedIntegrationEvent;
+import com.aionn.contracts.event.inventory.StockCommittedIntegrationEvent;
+import com.aionn.contracts.event.inventory.StockReservationFailedIntegrationEvent;
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -41,9 +43,10 @@ public class InventoryEventListener {
         context.put("warehouseId", event.warehouseId());
         context.put("availableQty", String.valueOf(event.availableQty()));
         context.put("safetyStockQty", String.valueOf(event.safetyStockQty()));
-        deliveryOrchestrator.sendByEvent(new NotificationCommands.SendByEvent(
+        List<Notification> queued = deliveryOrchestrator.enqueueByEvent(new NotificationCommands.SendByEvent(
                 ownerId, EVENT_SAFETY_STOCK_BREACHED, NotificationCategory.SYSTEM,
                 null, null, null, context));
+        deliveryOrchestrator.deliverQueuedAsync(queued);
     }
 
     /**
