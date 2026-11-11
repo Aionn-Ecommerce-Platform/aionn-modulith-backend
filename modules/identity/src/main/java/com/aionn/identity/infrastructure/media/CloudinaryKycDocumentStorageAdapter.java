@@ -23,11 +23,15 @@ public class CloudinaryKycDocumentStorageAdapter implements KycDocumentStoragePo
     public CloudinaryKycDocumentStorageAdapter(
             CloudinaryCredentialsProperties credentials,
             CloudinaryProperties folders) {
-        this.folders = folders;
-        this.cloudinary = new Cloudinary(ObjectUtils.asMap(
+        this(new Cloudinary(ObjectUtils.asMap(
                 "cloud_name", credentials.cloudName(),
                 "api_key", credentials.apiKey(),
-                "api_secret", credentials.apiSecret()));
+                "api_secret", credentials.apiSecret())), folders);
+    }
+
+    CloudinaryKycDocumentStorageAdapter(Cloudinary cloudinary, CloudinaryProperties folders) {
+        this.cloudinary = cloudinary;
+        this.folders = folders;
     }
 
     @Override

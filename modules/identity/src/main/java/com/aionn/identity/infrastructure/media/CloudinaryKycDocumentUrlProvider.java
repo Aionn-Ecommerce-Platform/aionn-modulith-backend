@@ -19,10 +19,14 @@ public class CloudinaryKycDocumentUrlProvider implements KycDocumentUrlProviderP
     private final Cloudinary cloudinary;
 
     public CloudinaryKycDocumentUrlProvider(CloudinaryCredentialsProperties credentials) {
-        this.cloudinary = new Cloudinary(ObjectUtils.asMap(
+        this(new Cloudinary(ObjectUtils.asMap(
                 "cloud_name", credentials.cloudName(),
                 "api_key", credentials.apiKey(),
-                "api_secret", credentials.apiSecret()));
+                "api_secret", credentials.apiSecret())));
+    }
+
+    CloudinaryKycDocumentUrlProvider(Cloudinary cloudinary) {
+        this.cloudinary = cloudinary;
     }
 
     @Override
