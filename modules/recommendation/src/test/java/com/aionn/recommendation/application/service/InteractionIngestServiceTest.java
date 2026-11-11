@@ -176,6 +176,44 @@ class InteractionIngestServiceTest {
         order.verify(interactionRepository).append(any());
     }
 
+    @Test
+    void searchSignalsAreStoredWithTheirFacets() {
+        stubWeight(InteractionType.SEARCH, 0.5, 7);
+
+        service().ingestInteraction(RecordInteractionCommand.forSearch(
+                "user-1", NOW, "evt-search", List.of("cat-phone"), "brand-apple", "iphone"));
+
+        UserInteraction recorded = captureRecorded();
+        assertThat(recorded.getType()).isEqualTo(InteractionType.SEARCH);
+        assertThat(recorded.getProductId()).isNull();
+        assertThat(recorded.getCategoryIds()).containsExactly("cat-phone");
+        assertThat(recorded.getBrandId()).isEqualTo("brand-apple");
+        assertThat(recorded.getKeyword()).isEqualTo("iphone");
+        verify(productAttributeQuery, never()).findProductIdBySkuId(any());
+    }
+
+    @Test
+    void searchForAnErasedAccountIsDropped() {
+        stubWeight(InteractionType.SEARCH, 0.5, 7);
+        when(interactionRepository.isUserErased("user-1")).thenReturn(true);
+
+        service().ingestInteraction(RecordInteractionCommand.forSearch(
+                "user-1", NOW, "evt-search", List.of(), null, null));
+
+        verify(interactionRepository).lockUser("user-1");
+        verify(interactionRepository, never()).append(any());
+    }
+
+    @Test
+    void signalWithoutAProductOrSkuIsSkipped() {
+        service().ingestInteraction(new RecordInteractionCommand(
+                "user-1", "  ", " ", InteractionType.VIEW, NOW, "evt-empty",
+                List.of(), null, null));
+
+        verify(interactionRepository, never()).lockUser(any());
+        verify(interactionRepository, never()).append(any());
+    }
+
     private void stubWeight(InteractionType type, double base, long halfLifeDays) {
         lenient().when(weightPolicy.weightFor(type)).thenReturn(InteractionWeight.of(
                 BigDecimal.valueOf(base), Duration.ofDays(halfLifeDays)));

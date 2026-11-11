@@ -585,4 +585,67 @@ class AccountManagementServiceTest {
                                 () -> service.requestAccountDeletion(new RequestAccountDeletionCommand(USER_ID)));
         }
 
+        @Test
+        void sendingAVerificationOtpRequiresAnEmailAddress() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(
+                                IdentityUser.createNew(USER_ID, null, "+84900000000", "user", TestClocks.FIXED)));
+
+                assertErrorCode(IdentityErrorCode.EMAIL_REQUIRED,
+                                () -> service.sendVerifyPrimaryEmailOtp(USER_ID));
+                verify(userOtpChallengeStore, never()).save(any());
+        }
+
+        @Test
+        void requestingAnEmailChangeRejectsABlankAddress() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+
+                assertErrorCode(IdentityErrorCode.EMAIL_REQUIRED,
+                                () -> service.requestEmailChangeOtp(USER_ID, " "));
+        }
+
+        @Test
+        void requestingAnEmailChangeRejectsAnAddressOwnedByAnotherUser() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(userPersistencePort.findByIdentity("other@example.com")).thenReturn(Optional.of(
+                                IdentityUser.createNew("other", "other@example.com", null, "other",
+                                                TestClocks.FIXED)));
+
+                assertErrorCode(IdentityErrorCode.EMAIL_ALREADY_EXISTS,
+                                () -> service.requestEmailChangeOtp(USER_ID, "other@example.com"));
+                verify(userOtpChallengeStore, never()).save(any());
+        }
+
+        @Test
+        void requestingAPhoneChangeRejectsABlankNumber() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+
+                assertErrorCode(IdentityErrorCode.PHONE_REQUIRED,
+                                () -> service.requestPhoneChangeOtp(USER_ID, " "));
+        }
+
+        @Test
+        void confirmingAnEmailChangeTranslatesAUniqueConstraintRace() {
+                IdentityUser user = activeUser();
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(user));
+                when(userOtpChallengeStore.find(USER_ID, UserOtpPurpose.CHANGE_EMAIL))
+                                .thenReturn(Optional.of(new UserOtpChallenge(USER_ID,
+                                                UserOtpPurpose.CHANGE_EMAIL, OtpChannel.EMAIL,
+                                                "u@example.com", "123456", "new@example.com",
+                                                FIXED_NOW.plus(Duration.ofMinutes(5)), 0)));
+                when(userPersistencePort.findByIdentity("new@example.com")).thenReturn(Optional.empty());
+                when(userPersistencePort.save(user))
+                                .thenThrow(new org.springframework.dao.DataIntegrityViolationException("dup"));
+
+                assertErrorCode(IdentityErrorCode.EMAIL_ALREADY_EXISTS,
+                                () -> service.confirmEmailChange(USER_ID, "123456"));
+        }
+
+        @Test
+        void aMissingDataExportPayloadIsReported() {
+                when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+                when(dataExportPort.findPayload("missing", USER_ID)).thenReturn(Optional.empty());
+
+                assertErrorCode(IdentityErrorCode.DATA_EXPORT_NOT_FOUND,
+                                () -> service.getDataExport(USER_ID, "missing"));
+        }
 }
