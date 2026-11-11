@@ -554,5 +554,16 @@ class OrderReturnServiceTest {
         assertThrows(OrderingException.class, () -> service.adminAnalytics(
                 LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 1)));
     }
+
+    @Test
+    void retryingARefundWithoutAStoredAmountIsANoOp() {
+        OrderReturn r = requestedReturn();
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(r));
+
+        OrderReturn result = service.retryRefund(RETURN_ID);
+
+        assertEquals(ReturnStatus.REQUESTED, result.getStatus());
+        verify(paymentGateway, never()).refund(any(), any(), any(), any(), any());
+    }
 }
 

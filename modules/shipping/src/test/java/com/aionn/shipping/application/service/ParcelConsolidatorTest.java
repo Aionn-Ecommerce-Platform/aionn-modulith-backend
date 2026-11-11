@@ -76,4 +76,40 @@ class ParcelConsolidatorTest {
         assertThatThrownBy(() -> ParcelConsolidator.consolidate(List.of(missing)))
                 .isInstanceOf(ShippingException.class);
     }
+
+    @Test
+    void rejectsNullParcelsAndNonPositiveQuantities() {
+        var zeroQty = new QuoteShippingCommand.Parcel(1000, null, null, null, 0);
+        var zeroWeight = new QuoteShippingCommand.Parcel(0, null, null, null, 1);
+
+        assertThatThrownBy(() -> ParcelConsolidator.consolidate(java.util.Arrays.asList(
+                (QuoteShippingCommand.Parcel) null))).isInstanceOf(ShippingException.class);
+        assertThatThrownBy(() -> ParcelConsolidator.consolidate(List.of(zeroQty)))
+                .isInstanceOf(ShippingException.class);
+        assertThatThrownBy(() -> ParcelConsolidator.consolidate(List.of(zeroWeight)))
+                .isInstanceOf(ShippingException.class);
+    }
+
+    @Test
+    void startsANewParcelWhenTheNextLineWouldExceedTheCap() {
+        var consignments = ParcelConsolidator.consolidate(List.of(
+                parcel(ParcelConsolidator.MAX_PARCEL_WEIGHT_GRAM - 1_000, 1), parcel(2_000, 1)));
+
+        assertThat(consignments).hasSize(2);
+        assertThat(consignments.stream().mapToInt(ParcelConsolidator.Consignment::weightGram).sum())
+                .isEqualTo(ParcelConsolidator.MAX_PARCEL_WEIGHT_GRAM + 1_000);
+    }
+
+    @Test
+    void treatsMissingDimensionsAsZero() {
+        var noDimensions = new QuoteShippingCommand.Parcel(1_000, null, null, null, 1);
+
+        var consignments = ParcelConsolidator.consolidate(List.of(noDimensions));
+
+        assertThat(consignments).singleElement().satisfies(consignment -> {
+            assertThat(consignment.lengthCm()).isEqualByComparingTo("0");
+            assertThat(consignment.widthCm()).isEqualByComparingTo("0");
+            assertThat(consignment.heightCm()).isEqualByComparingTo("0");
+        });
+    }
 }

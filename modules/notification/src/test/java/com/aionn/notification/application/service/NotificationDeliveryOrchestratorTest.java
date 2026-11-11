@@ -358,4 +358,36 @@ class NotificationDeliveryOrchestratorTest {
         verify(dispatchService, never()).recordSent(any());
         verify(dispatchService, never()).recordFailed(any());
     }
+
+    @Test
+    void anEmptyRecipientListFallsBackToTheSingleRecipient() {
+        when(emailSender.channel()).thenReturn(NotificationChannel.EMAIL);
+        when(dispatchService.prepareByEvent(any()))
+                .thenReturn(List.of(pending("noti-1", NotificationChannel.EMAIL)));
+        when(recipientResolver.resolveAll("user-1", NotificationChannel.EMAIL))
+                .thenReturn(List.of());
+        when(recipientResolver.resolve("user-1", NotificationChannel.EMAIL)).thenReturn("a@b.c");
+        emailSenderReturns(ChannelSender.DeliveryResult.ok("ext-1"));
+        when(dispatchService.recordSent(any())).thenReturn(sent("noti-1"));
+
+        orchestrator(emailSender).sendByEvent(byEvent());
+
+        verify(emailSender).send(any(ChannelSender.DeliveryRequest.class));
+    }
+
+    @Test
+    void aNullRecipientListFallsBackToTheSingleRecipient() {
+        when(emailSender.channel()).thenReturn(NotificationChannel.EMAIL);
+        when(dispatchService.prepareByEvent(any()))
+                .thenReturn(List.of(pending("noti-1", NotificationChannel.EMAIL)));
+        when(recipientResolver.resolveAll("user-1", NotificationChannel.EMAIL))
+                .thenReturn(null);
+        when(recipientResolver.resolve("user-1", NotificationChannel.EMAIL)).thenReturn("a@b.c");
+        emailSenderReturns(ChannelSender.DeliveryResult.ok("ext-1"));
+        when(dispatchService.recordSent(any())).thenReturn(sent("noti-1"));
+
+        orchestrator(emailSender).sendByEvent(byEvent());
+
+        verify(emailSender).send(any(ChannelSender.DeliveryRequest.class));
+    }
 }

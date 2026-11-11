@@ -104,4 +104,25 @@ class MoneyTest {
         assertThat(Money.of(5L, "VND").amount()).isEqualByComparingTo("5");
         assertThat(Money.zero("VND").amount()).isEqualByComparingTo("0");
     }
+
+    @Test
+    void comparisonsTreatEqualAmountsConsistently() {
+        Money ten = Money.of(BigDecimal.TEN, "USD");
+        Money same = Money.of(new BigDecimal("10.00"), "USD");
+
+        assertThat(ten.isGreaterThan(same)).isFalse();
+        assertThat(ten.isGreaterOrEqual(same)).isTrue();
+        assertThat(ten.isLessThan(same)).isFalse();
+        assertThat(ten.isLessOrEqual(same)).isTrue();
+        assertThat(ten.min(same)).isSameAs(ten);
+        assertThat(ten.max(same)).isSameAs(ten);
+    }
+
+    @Test
+    void dividesByAFactorUsingTheCurrencyScale() {
+        assertThat(Money.of(BigDecimal.TEN, "JPY").divide(new BigDecimal("4")).amount())
+                .isEqualByComparingTo("3");
+        assertThat(Money.of(BigDecimal.TEN, "USD").divide(new BigDecimal("3")).amount())
+                .isEqualByComparingTo("3.33");
+    }
 }
