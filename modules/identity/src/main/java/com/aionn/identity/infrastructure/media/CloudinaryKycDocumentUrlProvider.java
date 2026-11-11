@@ -18,6 +18,7 @@ public class CloudinaryKycDocumentUrlProvider implements KycDocumentUrlProviderP
 
     private final Cloudinary cloudinary;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public CloudinaryKycDocumentUrlProvider(CloudinaryCredentialsProperties credentials) {
         this(new Cloudinary(ObjectUtils.asMap(
                 "cloud_name", credentials.cloudName(),

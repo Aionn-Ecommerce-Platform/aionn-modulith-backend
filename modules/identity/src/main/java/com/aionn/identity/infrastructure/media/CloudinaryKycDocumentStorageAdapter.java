@@ -20,6 +20,7 @@ public class CloudinaryKycDocumentStorageAdapter implements KycDocumentStoragePo
     private final Cloudinary cloudinary;
     private final CloudinaryProperties folders;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public CloudinaryKycDocumentStorageAdapter(
             CloudinaryCredentialsProperties credentials,
             CloudinaryProperties folders) {
