@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,5 +62,26 @@ class MerchantFollowServiceTest {
     private MerchantFollowService service() {
         return new MerchantFollowService(merchantRepository, followerRepository,
                 Clock.fixed(NOW, ZoneOffset.UTC));
+    }
+
+    @Test
+    void unfollowDelegatesToTheRepository() {
+        service().unfollow("MER_1", "USER_1");
+
+        verify(followerRepository).unfollow("MER_1", "USER_1");
+    }
+
+    @Test
+    void followerCountDelegatesToTheRepository() {
+        when(followerRepository.countByMerchantId("MER_1")).thenReturn(7L);
+
+        assertThat(service().followerCount("MER_1")).isEqualTo(7L);
+    }
+
+    @Test
+    void isFollowingRequiresAUser() {
+        assertThat(service().isFollowing("MER_1", null)).isFalse();
+        when(followerRepository.exists("MER_1", "USER_1")).thenReturn(true);
+        assertThat(service().isFollowing("MER_1", "USER_1")).isTrue();
     }
 }

@@ -468,8 +468,7 @@ class KycServiceTest {
     }
 
     @Test
-    void submitAcceptsPassportWithSinglePassportDocument() {
-        KycProfile profile = new KycProfile(
+    void submitAcceptsPassportWithSinglePassportDocument() {        KycProfile profile = new KycProfile(
                 KYC_ID, USER_ID, "PASSPORT",
                 null, KycStatus.DRAFT,
                 null, null, null, null, null,
@@ -579,6 +578,56 @@ class KycServiceTest {
 
         assertThat(profile.getStatus()).isEqualTo(KycStatus.APPROVED);
         verify(kycPersistencePort).save(profile);
+    }
+
+    @Test
+    void listDocumentsUsesTheSignedUrlWhenAvailable() {
+        KycDocument document = new KycDocument("doc-1", KYC_ID, KycDocumentType.ID_FRONT,
+                "https://cdn.test/front.jpg", "identity/kyc/user-1/front",
+                KycDocumentStatus.UPLOADED, Instant.now());
+        when(kycPersistencePort.findByKycIdAndUserId(KYC_ID, USER_ID))
+                .thenReturn(Optional.of(draftProfile()));
+        when(kycPersistencePort.findDocumentsByKycId(KYC_ID)).thenReturn(List.of(document));
+        when(kycDocumentUrlProvider.signedDownloadUrl("identity/kyc/user-1/front",
+                "https://cdn.test/front.jpg")).thenReturn("https://signed.test/front");
+
+        List<KycDocument> documents = kycService.listDocuments(USER_ID, KYC_ID);
+
+        assertThat(documents).singleElement()
+                .satisfies(result -> assertThat(result.getUrl()).isEqualTo("https://signed.test/front"));
+    }
+
+    @Test
+    void listDocumentsKeepsTheStoredUrlWhenSigningIsUnavailable() {
+        KycDocument document = new KycDocument("doc-1", KYC_ID, KycDocumentType.ID_FRONT,
+                "https://cdn.test/front.jpg", "identity/kyc/user-1/front",
+                KycDocumentStatus.UPLOADED, Instant.now());
+        when(kycPersistencePort.findByKycIdAndUserId(KYC_ID, USER_ID))
+                .thenReturn(Optional.of(draftProfile()));
+        when(kycPersistencePort.findDocumentsByKycId(KYC_ID)).thenReturn(List.of(document));
+        when(kycDocumentUrlProvider.signedDownloadUrl(any(), any())).thenReturn(" ");
+
+        assertThat(kycService.listDocuments(USER_ID, KYC_ID)).singleElement()
+                .satisfies(result -> assertThat(result.getUrl()).isEqualTo("https://cdn.test/front.jpg"));
+    }
+
+    @Test
+    void attachDocumentRejectsAMalformedUrl() {
+        when(kycPersistencePort.findByKycIdAndUserId(KYC_ID, USER_ID))
+                .thenReturn(Optional.of(draftProfile()));
+
+        assertThat(assertThrows(IdentityException.class, () -> kycService.attachDocument(
+                USER_ID, KYC_ID, "ID_FRONT", "http://", null)).getErrorCode())
+                .isEqualTo(IdentityErrorCode.KYC_DOCUMENT_URL_INVALID.getCode());
+    }
+
+    @Test
+    void planKycCreationRejectsABlankDocumentType() {
+        when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
+
+        assertThat(assertThrows(IdentityException.class,
+                () -> kycService.planKycCreation(USER_ID, " ")).getErrorCode())
+                .isEqualTo(IdentityErrorCode.KYC_DOCUMENT_TYPE_INVALID.getCode());
     }
 
     private static SumsubWebhookCommand webhookCommand(String applicantId, String reviewAnswer) {

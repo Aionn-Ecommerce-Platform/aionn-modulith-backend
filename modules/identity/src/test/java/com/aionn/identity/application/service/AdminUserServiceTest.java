@@ -190,6 +190,36 @@ class AdminUserServiceTest {
         assertThat(ex.getErrorCode()).isEqualTo(IdentityErrorCode.USER_NOT_FOUND.getCode());
     }
 
+    @Test
+    void updateRolesRejectsMissingOrNullRoles() {
+        when(adminUserPersistencePort.findById(USER_ID))
+                .thenReturn(Optional.of(newUser(Set.of(UserRole.BUYER))));
+        Set<UserRole> withNull = new java.util.HashSet<>();
+        withNull.add(null);
+
+        assertThat(assertThrows(IdentityException.class,
+                () -> adminUserService.updateRoles(USER_ID, null)).getErrorCode())
+                .isEqualTo(IdentityErrorCode.INVALID_USER_ROLE.getCode());
+        assertThat(assertThrows(IdentityException.class,
+                () -> adminUserService.updateRoles(USER_ID, Set.of())).getErrorCode())
+                .isEqualTo(IdentityErrorCode.INVALID_USER_ROLE.getCode());
+        assertThat(assertThrows(IdentityException.class,
+                () -> adminUserService.updateRoles(USER_ID, withNull)).getErrorCode())
+                .isEqualTo(IdentityErrorCode.INVALID_USER_ROLE.getCode());
+    }
+
+    @Test
+    void updateStatusRejectsDeletedAccounts() {
+        IdentityUser deleted = new IdentityUser(
+                USER_ID, "alice@example.com", "+84912345678", "alice", "hash", "Alice", null,
+                Set.of(UserRole.BUYER), UserStatus.DELETED, null, null, null, Instant.now());
+        when(adminUserPersistencePort.findById(USER_ID)).thenReturn(Optional.of(deleted));
+
+        assertThat(assertThrows(IdentityException.class,
+                () -> adminUserService.updateStatus(USER_ID, UserStatus.ACTIVE)).getErrorCode())
+                .isEqualTo(IdentityErrorCode.INVALID_USER_STATUS.getCode());
+    }
+
     private IdentityUser newUser(Set<UserRole> roles) {
         return new IdentityUser(
                 USER_ID,

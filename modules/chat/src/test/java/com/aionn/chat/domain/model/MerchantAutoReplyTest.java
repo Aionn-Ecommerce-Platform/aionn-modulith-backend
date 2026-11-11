@@ -151,4 +151,43 @@ class MerchantAutoReplyTest {
                 LocalTime.of(9, 0), LocalTime.of(17, 0), mondayOnly,
                 TZ, Instant.now(), Instant.now());
     }
+
+    @Test
+    void createFallsBackWhenWorkingDaysAndTimezoneAreMissing() {
+        MerchantAutoReply ar = MerchantAutoReply.create(MERCHANT, null, null, null, null, FIXED);
+
+        assertThat(ar.getWorkingDays()).isEmpty();
+        assertThat(ar.getTimezone()).isEqualTo(ZoneId.of("Asia/Ho_Chi_Minh"));
+    }
+
+    @Test
+    void createTreatsAnEmptyWorkingDaySetAsNoDays() {
+        MerchantAutoReply ar = MerchantAutoReply.create(MERCHANT, LocalTime.of(9, 0),
+                LocalTime.of(17, 0), EnumSet.noneOf(DayOfWeek.class), TZ, FIXED);
+
+        assertThat(ar.getWorkingDays()).isEmpty();
+        assertThat(ar.isWithinWorkingHours(
+                ZonedDateTime.of(2025, 1, 6, 10, 0, 0, 0, TZ).toInstant())).isFalse();
+    }
+
+    @Test
+    void updateRejectsEnablingWithoutAnAwayMessage() {
+        MerchantAutoReply ar = MerchantAutoReply.create(MERCHANT, FIXED);
+
+        assertThatThrownBy(() -> ar.update(true, "hi", " ", null, null, null, FIXED))
+                .isInstanceOf(com.aionn.chat.domain.exception.ChatException.class);
+    }
+
+    @Test
+    void updateClearsWorkingDaysAndKeepsHoursWhenTheyAreOmitted() {
+        MerchantAutoReply ar = mondayNineToFive();
+
+        ar.update(true, "hi", "away", null, null, EnumSet.noneOf(DayOfWeek.class), FIXED);
+
+        assertThat(ar.getWorkingDays()).isEmpty();
+        assertThat(ar.getWorkingHourStart()).isEqualTo(LocalTime.of(9, 0));
+        assertThat(ar.getWorkingHourEnd()).isEqualTo(LocalTime.of(17, 0));
+        assertThat(ar.isEnabled()).isTrue();
+        assertThat(ar.pullEvents()).isNotEmpty();
+    }
 }

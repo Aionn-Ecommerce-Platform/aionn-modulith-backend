@@ -243,6 +243,45 @@ class IdempotencyInterceptorTest {
         verify(redisIdempotencyStore, never()).delete(any());
     }
 
+    @Test
+    void preHandleRejectsMissingRequiredKey() throws Exception {
+        HandlerMethod handler = new HandlerMethod(new DummyController(),
+                DummyController.class.getMethod("required"));
+        MockHttpServletRequest raw = new MockHttpServletRequest("POST", "/ucp/v1/carts");
+        CachedBodyHttpServletRequest request = new CachedBodyHttpServletRequest(raw,
+                MAX_CACHED_BODY_BYTES);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        boolean allowed = interceptor.preHandle(request, response, handler);
+
+        assertFalse(allowed);
+        assertEquals(400, response.getStatus());
+        assertTrue(response.getContentAsString().contains("Missing required Idempotency-Key"));
+    }
+
+    @Test
+    void preHandleUsesTheRacedRecordWhenTheSlotIsLost() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("user-1", "n/a"));
+        MockHttpServletRequest rawRequest = new MockHttpServletRequest("POST", "/api/v1/kyc");
+        rawRequest.addHeader("Idempotency-Key", "abc-123");
+        CachedBodyHttpServletRequest request = new CachedBodyHttpServletRequest(rawRequest,
+                MAX_CACHED_BODY_BYTES);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        String requestHash = hash("POST", "/api/v1/kyc", null, "user-1", new byte[0]);
+
+        when(redisIdempotencyStore.find(any()))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(IdempotencyRecord.processing(requestHash)));
+        when(redisIdempotencyStore.beginProcessing(any(), any(), any())).thenReturn(false);
+
+        boolean allowed = interceptor.preHandle(request, response, handlerMethod());
+
+        assertFalse(allowed);
+        assertEquals(409, response.getStatus());
+        assertTrue(response.getContentAsString().contains("already being processed"));
+    }
+
     private Object handlerObject() {
         return new Object();
     }
@@ -262,6 +301,10 @@ class IdempotencyInterceptorTest {
     static class DummyController {
         @IdempotentRequest
         public void create() {
+        }
+
+        @IdempotentRequest(required = true)
+        public void required() {
         }
 
         public void plain() {

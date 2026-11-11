@@ -135,6 +135,53 @@ class CatalogSearchIndexWriterTest {
                 attributes -> "red".equals(attributes.get("color"))), anyDouble(), anyLong());
     }
 
+    @Test
+    void merchantReindexWalksEveryPageUntilAShortOne() {
+        java.util.List<Product> firstPage = new java.util.ArrayList<>();
+        for (int index = 0; index < 100; index++) {
+            firstPage.add(publishedProduct("01HZPRD00000000000000" + String.format("%04d", index)));
+        }
+        when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
+                .thenReturn(firstPage);
+        when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(1, 100)))
+                .thenReturn(java.util.List.of(
+                        publishedProduct("01HZPRD000000000000009999")));
+        when(searchDocumentMapper.toSearchDocument(any(), any(), anyDouble(), anyLong()))
+                .thenReturn(doc());
+
+        writer.reindexMerchantAsync(MERCHANT_ID);
+
+        verify(searchIndex, org.mockito.Mockito.times(2)).indexAll(any());
+    }
+
+    @Test
+    void merchantRemovalWalksEveryPageUntilAShortOne() {
+        java.util.List<Product> firstPage = new java.util.ArrayList<>();
+        for (int index = 0; index < 100; index++) {
+            firstPage.add(Product.create("01HZPRD00000000000000" + String.format("%04d", index),
+                    MERCHANT_ID, "Widget", FIXED));
+        }
+        when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
+                .thenReturn(firstPage);
+        when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(1, 100)))
+                .thenReturn(java.util.List.of(Product.create("01HZPRD000000000000009999",
+                        MERCHANT_ID, "Widget", FIXED)));
+
+        writer.removeMerchantAsync(MERCHANT_ID);
+
+        verify(searchIndex, org.mockito.Mockito.times(2)).removeAll(any());
+    }
+
+    private Product publishedProduct(String productId) {
+        Product product = Product.create(productId, MERCHANT_ID, "Widget", FIXED);
+        product.categorize(List.of("c1"), FIXED);
+        product.defineVariant("sku-" + productId, Map.of("color", "red"),
+                Money.of(new BigDecimal("100"), "VND"), TEST_PARCEL, FIXED);
+        product.publish(ADMIN_ID, FIXED);
+        product.pullEvents();
+        return product;
+    }
+
     private Product publishedProduct() {
         Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
         product.categorize(List.of("c1"), FIXED);
