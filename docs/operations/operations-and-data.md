@@ -34,6 +34,9 @@ Direct `bootRun` requires environment variables to be loaded in the current proc
 
 - Production migrations under `classpath:db` contain schema changes and approved reference data.
 - Demo and test fixtures belong under `classpath:db-demo` and load only in the appropriate environment.
+- Demo migrations must keep derived aggregates consistent across modules. The ordering, payment, shipping, and catalog demo seeds use the same normalized quantities and amounts: order totals, payment amounts, shipment weights, and product sold counters all derive from `order_items`.
+- Demo entity IDs are pure 26-character ULIDs (no `PR_`/`MER_`/`SKU_` prefixes). Because the seed files reference each other by these IDs, changing demo IDs requires recreating the demo database from an empty schema; there is no in-place mapping migration.
+- Product slugs are generated from the canonical product name and are backfilled by `V2.6` plus the demo-only `V900.15.0` migration. Slugs are language-independent and remain stable when a product is renamed.
 - Never edit a migration already applied to a shared environment. Add a new migration with a higher version.
 - Do not duplicate a migration under both `db` and `db/migration`; duplicate versions prevent startup.
 - Timestamp columns use `TIMESTAMPTZ`.
@@ -46,6 +49,10 @@ Direct `bootRun` requires environment variables to be loaded in the current proc
 Durable events are written to `outbox_events` in the same transaction as the business mutation. The dispatcher claims rows through locks, leases, and `FOR UPDATE SKIP LOCKED`, records inbox receipts, and then marks events as published.
 
 Runtime properties use the `aionn.outbox` prefix. Read exact property names and defaults from the configuration-properties class so documentation does not drift from executable configuration.
+
+The outbox schema migration is owned by the deployable (`app/src/main/resources/db/V11.0__transactional_outbox.sql`), not by the reusable `shared/infrastructure` library. A published shared library must not run database migrations in a consumer application; consuming applications copy or provide their own outbox migration.
+
+UCP order webhooks use a separate durable queue (`ucp_webhook_deliveries`) because they leave the process and need independent retry from the internal outbox consumer. The listener enqueues, and a ShedLock-bound scheduler retries with exponential backoff up to `aionn.ucp.webhook.max-attempts`; exhausted rows stay as `DEAD` for investigation. Delivery rows carry the source integration event id, so repeated attempts are idempotent for the receiving platform.
 
 Operations should monitor:
 
@@ -78,9 +85,27 @@ Do not delete dead-letter events before preserving diagnostic evidence and defin
 
 Singleton business schedulers use ShedLock and PostgreSQL database time. A dedicated `schedulerLockExtensionExecutor` renews leases halfway through `lockAtMostFor` using `KeepAliveLockProvider`, independently of the business scheduler threads. Renewal stops on unlock; after process termination the last lease expires normally. Lock names are globally unique. The outbox dispatcher is the exception because it already provides row-level concurrency control.
 
-Business jobs that do not name a scheduler share the pool bean named `taskScheduler`, sized by `SCHEDULER_POOL_SIZE`. The pool needs one thread per such job: a slow job that takes the only free thread stalls every other background job, including the outbox dispatcher if it were sharing the pool. `ApplicationSchedulingConfigTest` counts `@Scheduled` methods off the classpath bytecode and fails the build when the pool is smaller than the number of jobs, so the invariant cannot rot silently when a job is added. The outbox dispatcher names its own single-threaded `outboxTaskScheduler` and is excluded from that count.
+Business jobs that do not name a scheduler share the pool bean named `taskScheduler`. The pool size is configuration: `spring.task.scheduling.pool.size` in `application.yml` defaults to 24 and `SCHEDULER_POOL_SIZE` overrides it per environment. `ApplicationSchedulingConfig` deliberately has no code fallback for that property, so a missing value fails startup instead of silently running a number no test exercises. The pool needs one thread per such job: a slow job that takes the only free thread stalls every other background job, including the outbox dispatcher if it were sharing the pool. `ApplicationSchedulingConfigTest` resolves the shipped YAML value, counts `@Scheduled` methods off the classpath bytecode, and fails the build when the pool is smaller than the number of jobs, so the invariant cannot rot silently when a job is added. The outbox dispatcher names its own single-threaded `outboxTaskScheduler` and is excluded from that count.
 
 Before changing an interval or lock duration, measure worst-case runtime and verify behavior during process termination, multi-instance execution, and overlapping schedules.
+
+### Asynchronous executors
+
+`AsyncExecutionConfig` enables `@Async` with explicit, bounded executors. Defining them is mandatory rather than cosmetic: `ThreadPoolTaskScheduler` also implements `TaskExecutor`, so without these beans the `@Async` resolution can land on the scheduled-job pool and let background work compete with the outbox dispatcher.
+
+| Bean                        | Threads | Queue | Used for                          |
+| --------------------------- | ------- | ----- | --------------------------------- |
+| `taskExecutor`              | 8-16    | 500   | default `@Async`                  |
+| `notificationTaskExecutor`  | 4       | 5000  | SMTP, SMS and push delivery       |
+| `searchIndexTaskExecutor`   | 1       | 5000  | catalog search-index writes       |
+
+Catalog indexing is single-threaded on purpose: writes for the same product must apply in the order they were produced. The notification and search queues discard the async trigger when saturated instead of blocking the caller, which would be the outbox dispatcher thread. That is safe because the work is durable elsewhere - notification rows stay `PENDING` for the retry sweep, and the catalog index is rebuilt from the database at startup.
+
+Event listeners run on the outbox dispatcher thread. They must only persist rows or enqueue work; provider I/O, OpenSearch calls and bulk reindexing belong on these executors. Do not put `@Async` directly on an `@EventListener`: the dispatcher would mark the event published while the work is still pending, and a crash would lose it without a retry.
+
+### Personal data export
+
+`POST /api/v1/users/me/data-exports` records a `REQUESTED` row and returns immediately; the snapshot spans several tables and is built by `DataExportScheduler`. The worker claims rows with `FOR UPDATE SKIP LOCKED` (so several instances can run it), marks them `PROCESSING`, then `COMPLETED` or `FAILED`. Cadence is `identity.data-export.delay-ms` (default 5 s) with batch size `identity.data-export.batch-size` (default 10). Until the row is `COMPLETED`, the download endpoint answers 404, so clients poll and treat "not ready" as a retry rather than an error.
 
 ### Recommendation offline jobs
 
@@ -111,7 +136,38 @@ merchant_balances.receivable = SUM(settlement_ledger.receivable_delta)
 
 The scheduled reconciliation job reports mismatches through metrics and error logs. Never repair a mismatch by editing balances or ledger rows without preserving evidence and reviewing the complete economic event chain.
 
-## 8. Dependencies and security
+## 10. Publishing shared modules
+
+Shared modules are published independently from the application:
+
+```text
+com.aionn:shared-kernel:<version>
+com.aionn:shared-contracts:<version>
+com.aionn:shared-infrastructure:<version>
+com.aionn:shared-bom:<version>
+```
+
+`sharedVersion` in `gradle.properties` (or `-PsharedVersion=...`) controls the release version. Do not publish a `-SNAPSHOT` tag. Consumers should import the BOM and then select only the modules they need:
+
+```groovy
+implementation platform('com.aionn:shared-bom:<version>')
+implementation 'com.aionn:shared-kernel'
+implementation 'com.aionn:shared-contracts'
+implementation 'com.aionn:shared-infrastructure'
+```
+
+Local verification without credentials:
+
+```powershell
+.\gradlew.bat :shared:kernel:publishToMavenLocal :shared:contracts:publishToMavenLocal `
+  :shared:infrastructure:publishToMavenLocal :shared:bom:publishToMavenLocal
+```
+
+GitHub Packages publishing is triggered by the `Publish Shared Modules` workflow through a `shared-v*` tag or manual dispatch. It requires the repository `GITHUB_TOKEN` with `packages:write`; no long-lived registry credential belongs in the repository. When the shared modules move to their own repository, override `githubPackagesUrl` and update the workflow's repository URL.
+
+`shared-infrastructure` deliberately leaves Spring Web, Spring Data JPA, Redis, Security, and the servlet API as consumer-provided dependencies. Publishing it does not make those libraries transitive.
+
+## 11. Dependencies and security
 
 - Read the Java and Spring baseline from the Gradle build rather than copying fixed versions into documentation.
 - Patch updates still require review and tests. Minor and major updates require a full build and E2E checks because they can alter serialization, APIs, or auto-configuration.
@@ -119,7 +175,7 @@ The scheduled reconciliation job reports mismatches through metrics and error lo
 - Dependabot version-update pull requests may be limited to reduce noise. Security alerts and security updates are managed separately in the GitHub repository settings.
 - Critical or actively exploited vulnerabilities receive immediate priority. A suppression needs an owner, evidence that the vulnerable path is unreachable, and an expiry date.
 
-## 9. Release verification
+## 12. Release verification
 
 ```powershell
 .\gradlew.bat build
