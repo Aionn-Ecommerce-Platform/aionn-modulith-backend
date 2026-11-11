@@ -459,5 +459,100 @@ class OrderReturnServiceTest {
                 eq("payment-123"), eq(BigDecimal.valueOf(100)), eq("VND"),
                 ArgumentMatchers.anyString(), eq("return:return-1:refund"));
     }
+
+    @Test
+    void requestReturnRejectsABlankSkuInTheSelection() {
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+        when(returnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThrows(OrderingException.class, () -> service.requestReturn(
+                new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null,
+                        List.of(new RequestReturnCommand.Item(" ", 1)))));
+
+        verify(returnItemRepository, never()).saveAll(any(), any());
+    }
+
+    @Test
+    void requestReturnRejectsDuplicateSelectionLines() {
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+        when(returnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThrows(OrderingException.class, () -> service.requestReturn(
+                new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null,
+                        List.of(new RequestReturnCommand.Item("sku-1", 1),
+                                new RequestReturnCommand.Item("sku-1", 1)))));
+
+        verify(returnItemRepository, never()).saveAll(any(), any());
+    }
+
+    @Test
+    void requestReturnRejectsAnItemOutsideTheOrder() {
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+        when(returnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThrows(OrderingException.class, () -> service.requestReturn(
+                new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null,
+                        List.of(new RequestReturnCommand.Item("sku-9", 1)))));
+
+        verify(returnItemRepository, never()).saveAll(any(), any());
+    }
+
+    @Test
+    void requestReturnRejectsQuantityAboveTheOrderedAmount() {
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+        when(returnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThrows(OrderingException.class, () -> service.requestReturn(
+                new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null,
+                        List.of(new RequestReturnCommand.Item("sku-1", 2)))));
+
+        verify(returnItemRepository, never()).saveAll(any(), any());
+    }
+
+    @Test
+    void requestReturnPersistsTheSelectedItemsWithTheirUnitPrice() {
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+        when(returnRepository.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+        java.util.concurrent.atomic.AtomicReference<List<OrderReturnItemPersistencePort.Item>> saved =
+                new java.util.concurrent.atomic.AtomicReference<>();
+        org.mockito.Mockito.doAnswer(inv -> {
+            saved.set(inv.getArgument(1));
+            return null;
+        }).when(returnItemRepository).saveAll(any(), any());
+
+        service.requestReturn(new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null,
+                List.of(new RequestReturnCommand.Item("sku-1", 1))));
+
+        assertEquals(1, saved.get().size());
+        assertEquals("sku-1", saved.get().get(0).skuId());
+        assertEquals(1, saved.get().get(0).qty());
+        assertEquals(0, saved.get().get(0).unitPrice().compareTo(BigDecimal.valueOf(150)));
+        assertEquals(0, saved.get().get(0).refundAmount().compareTo(BigDecimal.valueOf(150)));
+    }
+
+    @Test
+    void listSelectedItemsReturnsRowsAfterAccessCheck() {
+        when(returnRepository.findById(RETURN_ID)).thenReturn(Optional.of(requestedReturn()));
+        List<OrderReturnItemPersistencePort.Item> rows = List.of(
+                new OrderReturnItemPersistencePort.Item("sku-1", 1,
+                        BigDecimal.valueOf(150), BigDecimal.valueOf(150)));
+        when(returnItemRepository.findByReturnId(RETURN_ID)).thenReturn(rows);
+
+        assertEquals(rows, service.listSelectedItems(RETURN_ID, USER_ID));
+    }
+
+    @Test
+    void adminListByStatusDelegatesToTheRepository() {
+        when(returnRepository.findByStatus(ReturnStatus.REQUESTED, 20))
+                .thenReturn(List.of(requestedReturn()));
+
+        assertEquals(1, service.adminListByStatus(ReturnStatus.REQUESTED, 20).size());
+    }
+
+    @Test
+    void adminAnalyticsRejectsAnInvertedRange() {
+        assertThrows(OrderingException.class, () -> service.adminAnalytics(
+                LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 1)));
+    }
 }
 
