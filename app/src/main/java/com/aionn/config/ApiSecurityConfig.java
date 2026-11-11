@@ -49,7 +49,7 @@ public class ApiSecurityConfig {
 
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-                CookieCsrfTokenRepository csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+                CookieCsrfTokenRepository csrfTokenRepository = new CookieCsrfTokenRepository();
                 csrfTokenRepository.setCookieCustomizer(cookie -> cookie
                                 .httpOnly(true)
                                 .sameSite("Lax")
