@@ -6,12 +6,17 @@ WORKDIR /workspace
 COPY gradlew gradlew.bat settings.gradle build.gradle gradle.properties ./
 COPY gradle gradle
 COPY app/build.gradle app/build.gradle
-COPY shared-kernel/build.gradle shared-kernel/build.gradle
+COPY shared/bom/build.gradle shared/bom/build.gradle
+COPY shared/kernel/build.gradle shared/kernel/build.gradle
+COPY shared/contracts/build.gradle shared/contracts/build.gradle
+COPY shared/infrastructure/build.gradle shared/infrastructure/build.gradle
 COPY modules modules
 RUN --mount=type=cache,target=/root/.gradle ./gradlew :app:dependencies --no-daemon
 
 COPY app/src app/src
-COPY shared-kernel/src shared-kernel/src
+COPY shared/kernel/src shared/kernel/src
+COPY shared/contracts/src shared/contracts/src
+COPY shared/infrastructure/src shared/infrastructure/src
 RUN --mount=type=cache,target=/root/.gradle ./gradlew :app:bootJar --no-daemon \
     && cp app/build/libs/*.jar /workspace/app.jar
 

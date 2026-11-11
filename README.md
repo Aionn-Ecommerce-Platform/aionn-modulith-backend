@@ -9,7 +9,11 @@ The project is structured as a multi-module Gradle build:
 ```text
 aionn-modulith-backend/
 ├── app/                  # Application composition root, Spring Boot startup, security & configuration
-├── shared-kernel/        # Inter-module contracts, application ports, shared Value Objects, outbox primitives
+├── shared/
+│   ├── kernel/           # Shared Value Objects, domain primitives, outbox contracts
+│   ├── contracts/        # Inter-module integration events and query ports
+│   ├── infrastructure/   # Web, outbox, caching and provider adapters shared by modules
+│   └── bom/              # Published platform BOM for the shared modules
 ├── modules/
 │   ├── identity/         # User accounts, authentication, JWT tokens, RBAC, address management
 │   ├── catalog/          # Products, categories, brands, variants, OpenSearch indexing
