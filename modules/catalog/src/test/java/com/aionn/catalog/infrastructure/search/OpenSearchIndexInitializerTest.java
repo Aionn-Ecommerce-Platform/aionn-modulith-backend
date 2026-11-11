@@ -1,5 +1,7 @@
 package com.aionn.catalog.infrastructure.search;
 
+import org.opensearch.client.opensearch._types.ErrorResponse;
+
 import com.aionn.catalog.infrastructure.config.properties.CatalogSearchProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,7 +59,7 @@ class OpenSearchIndexInitializerTest {
     void swallowsClientErrors() throws Exception {
         when(indices.exists(any(ExistsRequest.class)))
                 .thenThrow(new OpenSearchException(
-                        new org.opensearch.client.opensearch._types.ErrorResponse.Builder()
+                        new ErrorResponse.Builder()
                                 .status(500)
                                 .error(e -> e.type("boom").reason("down"))
                                 .build()));

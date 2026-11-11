@@ -46,6 +46,7 @@ public class OpenSearchProductSearchIndex implements ProductSearchIndex {
     private static final String FIELD_PRICE_FROM = "priceFrom";
     private static final String FIELD_BRAND_ID = "brandId";
     private static final String FIELD_CATEGORY_IDS = "categoryIds";
+    private static final String FIELD_COLLECTION_IDS = "collectionIds";
 
     private final OpenSearchClient client;
     private final CatalogSearchProperties searchProperties;
@@ -143,15 +144,18 @@ public class OpenSearchProductSearchIndex implements ProductSearchIndex {
     private List<Query> buildFilters(ProductSearchCriteria criteria) {
         List<Query> filters = new ArrayList<>();
         String statusValue = criteria.status() != null ? criteria.status().name() : "PUBLISHED";
-        filters.add(termFilter("status", statusValue));
+        filters.add(termFilter("status.keyword", statusValue));
         if (criteria.merchantId() != null && !criteria.merchantId().isBlank()) {
-            filters.add(termFilter("merchantId", criteria.merchantId()));
+            filters.add(termFilter("merchantId.keyword", criteria.merchantId()));
         }
         if (!criteria.brandIds().isEmpty()) {
-            filters.add(termsFilter(FIELD_BRAND_ID, criteria.brandIds()));
+            filters.add(termsFilter(FIELD_BRAND_ID + ".keyword", criteria.brandIds()));
         }
         if (!criteria.categoryIds().isEmpty()) {
-            filters.add(termsFilter(FIELD_CATEGORY_IDS, criteria.categoryIds()));
+            filters.add(termsFilter(FIELD_CATEGORY_IDS + ".keyword", criteria.categoryIds()));
+        }
+        if (!criteria.collectionIds().isEmpty()) {
+            filters.add(termsFilter(FIELD_COLLECTION_IDS + ".keyword", criteria.collectionIds()));
         }
         if (criteria.priceMin() != null || criteria.priceMax() != null) {
             filters.add(Query.of(q -> q.range(r -> {
@@ -167,6 +171,9 @@ public class OpenSearchProductSearchIndex implements ProductSearchIndex {
         }
         if (criteria.ratingMin() != null) {
             filters.add(Query.of(q -> q.range(r -> r.field("rating").gte(JsonData.of(criteria.ratingMin())))));
+        }
+        if (Boolean.TRUE.equals(criteria.onSale())) {
+            filters.add(Query.of(q -> q.term(t -> t.field("hasDiscount").value(FieldValue.of(true)))));
         }
         criteria.attributes().forEach((key, values) -> {
             if (values != null && !values.isEmpty()) {
@@ -187,9 +194,9 @@ public class OpenSearchProductSearchIndex implements ProductSearchIndex {
 
     private Map<String, Aggregation> buildAggregations(ProductSearchCriteria criteria) {
         Map<String, Aggregation> aggs = new LinkedHashMap<>();
-        aggs.put(FACET_BRANDS, Aggregation.of(a -> a.terms(t -> t.field(FIELD_BRAND_ID)
+        aggs.put(FACET_BRANDS, Aggregation.of(a -> a.terms(t -> t.field(FIELD_BRAND_ID + ".keyword")
                 .size(searchProperties.opensearch().facetBrandSize()))));
-        aggs.put(FACET_CATEGORIES, Aggregation.of(a -> a.terms(t -> t.field(FIELD_CATEGORY_IDS)
+        aggs.put(FACET_CATEGORIES, Aggregation.of(a -> a.terms(t -> t.field(FIELD_CATEGORY_IDS + ".keyword")
                 .size(searchProperties.opensearch().facetCategorySize()))));
         aggs.put(FACET_PRICE_MIN, Aggregation.of(a -> a.min(m -> m.field(FIELD_PRICE_FROM))));
         aggs.put(FACET_PRICE_MAX, Aggregation.of(a -> a.max(m -> m.field("priceTo"))));
@@ -209,7 +216,8 @@ public class OpenSearchProductSearchIndex implements ProductSearchIndex {
             case BEST_SELLER -> reqBuilder.sort(s -> s.field(f -> f.field("soldCount").order(SortOrder.Desc)));
             case RELEVANCE -> {
                 if (!criteria.hasText()) {
-                    reqBuilder.sort(s -> s.field(f -> f.field("updatedAt").order(SortOrder.Desc)));
+                    reqBuilder.sort(s -> s.field(f -> f.field("rating").order(SortOrder.Desc)));
+                    reqBuilder.sort(s -> s.field(f -> f.field("soldCount").order(SortOrder.Desc)));
                 }
             }
         }

@@ -1,5 +1,7 @@
 package com.aionn.catalog.infrastructure.search;
 
+import org.opensearch.client.opensearch._types.mapping.DynamicMapping;
+
 import com.aionn.catalog.infrastructure.config.properties.CatalogSearchProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -101,7 +103,7 @@ public class OpenSearchIndexInitializer {
                 Property longP = Property.of(b -> b.long_(LongNumberProperty.of(d -> d)));
                 Property dateP = Property.of(b -> b.date(DateProperty.of(d -> d)));
                 Property attributesObj = Property.of(b -> b.object(ObjectProperty.of(o -> o
-                                .dynamic(org.opensearch.client.opensearch._types.mapping.DynamicMapping.True))));
+                                .dynamic(DynamicMapping.True))));
 
                 Property nameField = Property.of(b -> b.text(TextProperty.of(t -> t
                                 .analyzer(ANALYZER_TEXT)

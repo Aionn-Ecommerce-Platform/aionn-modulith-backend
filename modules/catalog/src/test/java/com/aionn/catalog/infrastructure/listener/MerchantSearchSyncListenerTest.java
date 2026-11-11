@@ -1,128 +1,72 @@
 package com.aionn.catalog.infrastructure.listener;
 
-import com.aionn.catalog.application.dto.search.ProductSearchDocument;
-import com.aionn.catalog.application.mapper.ProductSearchDocumentMapper;
-import com.aionn.catalog.application.port.out.attribute.AttributeTemplatePersistencePort;
-import com.aionn.catalog.application.port.out.product.ProductPersistencePort;
-import com.aionn.catalog.application.port.out.search.ProductSearchIndex;
 import com.aionn.catalog.domain.event.MerchantEvents;
-import com.aionn.catalog.domain.model.Product;
-import com.aionn.sharedkernel.domain.vo.Money;
-import com.aionn.sharedkernel.domain.vo.OffsetPagination;
+import com.aionn.catalog.infrastructure.search.CatalogSearchIndexWriter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyDouble;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 
+/**
+ * Merchant lifecycle changes must be queued for the async search writer rather than reindexing inline:
+ * a single activation can touch hundreds of products, and this listener runs on the outbox thread.
+ */
 @ExtendWith(MockitoExtension.class)
 class MerchantSearchSyncListenerTest {
 
-        private static final String MERCHANT_ID = "01HZMER0000000000000000001";
-        private static final String ADMIN_ID = "01HZADM0000000000000000001";
+    private static final String MERCHANT_ID = "01HZMER0000000000000000001";
+    private static final String ADMIN_ID = "01HZADM0000000000000000001";
 
-        @Mock
-        private ProductPersistencePort productRepository;
-        @Mock
-        private ProductSearchIndex searchIndex;
-        @Mock
-        private ProductSearchDocumentMapper searchDocumentMapper;
-        @Mock
-        private AttributeTemplatePersistencePort attributeTemplateRepository;
-        @Mock
-        private com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort reviewRepository;
-        @Mock
-        private com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort soldCounterRepository;
+    @Mock
+    private CatalogSearchIndexWriter writer;
 
-        @InjectMocks
-        private MerchantSearchSyncListener listener;
+    @InjectMocks
+    private MerchantSearchSyncListener listener;
 
-        private Product publishedProduct() {
-                Product product = Product.create("01HZPRD0000000000000000001", MERCHANT_ID, "Widget", FIXED);
-                product.categorize(List.of("c1"), FIXED);
-                product.defineVariant("sku-1", Map.of("color", "red"), Money.of(new BigDecimal("100"), "VND"), FIXED);
-                product.publish(ADMIN_ID, FIXED);
-                product.pullEvents();
-                return product;
-        }
+    @Test
+    void suspensionQueuesMerchantRemoval() {
+        listener.onSuspended(new MerchantEvents.MerchantSuspended(
+                MERCHANT_ID, "fraud", ADMIN_ID, Instant.now(), Instant.now()));
 
-        @Test
-        void onSuspendedRemovesMerchantProducts() {
-                when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
-                                .thenReturn(List.of(publishedProduct()));
+        verify(writer).removeMerchantAsync(MERCHANT_ID);
+    }
 
-                listener.onSuspended(new MerchantEvents.MerchantSuspended(
-                                MERCHANT_ID, "fraud", ADMIN_ID, Instant.now(), Instant.now()));
+    @Test
+    void closureQueuesMerchantRemoval() {
+        listener.onClosed(new MerchantEvents.MerchantClosed(
+                MERCHANT_ID, "shutdown", Instant.now(), Instant.now()));
 
-                verify(searchIndex).removeAll(anyList());
-        }
+        verify(writer).removeMerchantAsync(MERCHANT_ID);
+    }
 
-        @Test
-        void onActivatedReindexesPublishedProducts() {
-                when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
-                                .thenReturn(List.of(publishedProduct()));
-                when(searchDocumentMapper.toSearchDocument(any(), any(), anyDouble(), anyLong())).thenReturn(mock());
+    @Test
+    void activationQueuesMerchantReindex() {
+        listener.onActivated(new MerchantEvents.MerchantActivated(
+                MERCHANT_ID, ADMIN_ID, "ok", Instant.now(), Instant.now()));
 
-                listener.onActivated(new MerchantEvents.MerchantActivated(
-                                MERCHANT_ID, ADMIN_ID, "ok", Instant.now(), Instant.now()));
+        verify(writer).reindexMerchantAsync(MERCHANT_ID);
+    }
 
-                verify(searchIndex).indexAll(anyList());
-        }
+    @Test
+    void provinceChangeQueuesMerchantReindex() {
+        listener.onProfileUpdated(new MerchantEvents.MerchantProfileUpdated(
+                MERCHANT_ID, "Name", null, null, "79", "HCM", true, Instant.now()));
 
-        @Test
-        void onProfileUpdatedSkipsWhenProvinceUnchanged() {
-                listener.onProfileUpdated(new MerchantEvents.MerchantProfileUpdated(
-                                MERCHANT_ID, "Name", null, null, "01", "Ha Noi", false, Instant.now()));
+        verify(writer).reindexMerchantAsync(MERCHANT_ID);
+    }
 
-                verify(productRepository, never()).listByMerchant(any(), any());
-        }
+    @Test
+    void unchangedProvinceDoesNothing() {
+        listener.onProfileUpdated(new MerchantEvents.MerchantProfileUpdated(
+                MERCHANT_ID, "Name", null, null, "01", "Ha Noi", false, Instant.now()));
 
-        @Test
-        void onClosedRemovesMerchantProducts() {
-                when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
-                                .thenReturn(List.of(publishedProduct()));
-
-                listener.onClosed(new MerchantEvents.MerchantClosed(
-                                MERCHANT_ID, "shutdown", Instant.now(), Instant.now()));
-
-                verify(searchIndex).removeAll(anyList());
-        }
-
-        @Test
-        void onProfileUpdatedReindexesWhenProvinceChanged() {
-                Product product = publishedProduct();
-                product.defineAttributes(Map.of("color", "red"), FIXED);
-                product.pullEvents();
-                com.aionn.catalog.domain.model.AttributeTemplate template = com.aionn.catalog.domain.model.AttributeTemplate
-                                .create("t1", "c1", List.of("color"), FIXED);
-                when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
-                                .thenReturn(List.of(product));
-                when(attributeTemplateRepository.findByCategoryId("c1")).thenReturn(java.util.Optional.of(template));
-                when(searchDocumentMapper.toSearchDocument(any(), any(), anyDouble(), anyLong())).thenReturn(mock());
-
-                listener.onProfileUpdated(new MerchantEvents.MerchantProfileUpdated(
-                                MERCHANT_ID, "Name", null, null, "79", "HCM", true, Instant.now()));
-
-                verify(searchIndex).indexAll(anyList());
-        }
-
-        private static ProductSearchDocument mock() {
-                return new ProductSearchDocument("01HZPRD0000000000000000001", MERCHANT_ID, "Widget", null, null,
-                                List.of("c1"), List.of(), List.of(), List.of(), Map.of(), null, null, null, "PUBLISHED",
-                                Instant.now(), 0.0, 0L);
-        }
+        verify(writer, never()).reindexMerchantAsync(MERCHANT_ID);
+        verify(writer, never()).removeMerchantAsync(MERCHANT_ID);
+    }
 }
