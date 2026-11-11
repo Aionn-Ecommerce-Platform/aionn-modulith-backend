@@ -43,6 +43,7 @@ class ControllerAuthorizationArchitectureTest {
             "com.aionn.catalog.adapter.rest.controller.ProductController#searchProductCatalog",
             "com.aionn.catalog.adapter.rest.controller.ReviewController#listByProduct",
             "com.aionn.catalog.adapter.rest.controller.ReviewController#ratingSummary",
+            "com.aionn.identity.adapter.rest.controller.AuthController#csrf",
             "com.aionn.identity.adapter.rest.controller.AuthController#login",
             "com.aionn.identity.adapter.rest.controller.AuthController#refreshToken",
             "com.aionn.identity.adapter.rest.controller.AuthController#socialLogin",
