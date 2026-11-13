@@ -38,8 +38,8 @@ public class ProfileRefreshService {
     private static final int PRICE_BAND_LOWER_PERCENTILE = 20;
     private static final int PRICE_BAND_UPPER_PERCENTILE = 80;
 
-    private final InteractionPersistencePort interactionRepository;
-    private final UserAffinityProfilePersistencePort profileRepository;
+    private final InteractionPersistencePort interactionPersistencePort;
+    private final UserAffinityProfilePersistencePort userAffinityProfilePersistencePort;
     private final ProductAttributeQueryPort productAttributeQuery;
     private final InteractionWeightPolicy weightPolicy;
     private final Clock clock;
@@ -49,26 +49,26 @@ public class ProfileRefreshService {
         Instant now = clock.instant();
         // The sweep reads its batch before processing, so an account can be erased meanwhile. Lock, then
         // check under it, or this method writes back the profile erasure just deleted.
-        interactionRepository.lockUser(userId);
-        if (interactionRepository.isUserErased(userId)) {
+        interactionPersistencePort.lockUser(userId);
+        if (interactionPersistencePort.isUserErased(userId)) {
             log.debug("Skipping profile refresh for an erased account");
             return;
         }
 
-        List<UserInteraction> interactions = interactionRepository.findByUser(
+        List<UserInteraction> interactions = interactionPersistencePort.findByUser(
                 userId, now.minus(lookback), Integer.MAX_VALUE);
 
         if (interactions.isEmpty()) {
             // Clear an existing profile only; writing one for an unknown user would create personal data.
-            if (profileRepository.existsByUserId(userId)) {
-                profileRepository.save(UserAffinityProfile.empty(userId), now);
+            if (userAffinityProfilePersistencePort.existsByUserId(userId)) {
+                userAffinityProfilePersistencePort.save(UserAffinityProfile.empty(userId), now);
             } else {
                 log.debug("No interactions and no stored profile for user; nothing to refresh");
             }
             return;
         }
 
-        profileRepository.save(buildProfile(userId, interactions, now, maxAffinities), now);
+        userAffinityProfilePersistencePort.save(buildProfile(userId, interactions, now, maxAffinities), now);
     }
 
     private UserAffinityProfile buildProfile(
@@ -132,7 +132,7 @@ public class ProfileRefreshService {
 
     @Transactional(readOnly = true)
     public UserAffinityProfile profileOf(String userId) {
-        return profileRepository.findByUserId(userId)
+        return userAffinityProfilePersistencePort.findByUserId(userId)
                 .orElseGet(() -> UserAffinityProfile.empty(userId));
     }
 

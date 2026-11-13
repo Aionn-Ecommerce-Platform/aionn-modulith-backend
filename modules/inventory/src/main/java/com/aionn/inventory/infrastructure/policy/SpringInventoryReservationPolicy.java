@@ -12,7 +12,7 @@ public class SpringInventoryReservationPolicy implements InventoryReservationPol
     private final InventoryProperties properties;
 
     @Override
-    public int getDefaultTtlSeconds() {
+    public int defaultTtlSeconds() {
         return properties.reservation().defaultTtlSeconds();
     }
 }

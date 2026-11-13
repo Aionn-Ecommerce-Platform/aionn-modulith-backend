@@ -46,9 +46,9 @@ class ProfileRefreshServiceTest {
 	private static final Duration LOOKBACK = Duration.ofDays(180);
 
 	@Mock
-	private InteractionPersistencePort interactionRepository;
+	private InteractionPersistencePort interactionPersistencePort;
 	@Mock
-	private UserAffinityProfilePersistencePort profileRepository;
+	private UserAffinityProfilePersistencePort userAffinityProfilePersistencePort;
 	@Mock
 	private ProductAttributeQueryPort productAttributeQuery;
 	@Mock
@@ -58,7 +58,7 @@ class ProfileRefreshServiceTest {
 
 	private ProfileRefreshService service() {
 		return new ProfileRefreshService(
-				interactionRepository, profileRepository, productAttributeQuery, weightPolicy, clock);
+				interactionPersistencePort, userAffinityProfilePersistencePort, productAttributeQuery, weightPolicy, clock);
 	}
 
 	@Test
@@ -67,7 +67,7 @@ class ProfileRefreshServiceTest {
 		// identical tastes
 		// directly comparable.
 		stubWeights();
-		when(interactionRepository.findByUser(eq(USER_ID), any(), anyInt())).thenReturn(List.of(
+		when(interactionPersistencePort.findByUser(eq(USER_ID), any(), anyInt())).thenReturn(List.of(
 				interaction("p-phone", InteractionType.PURCHASE, NOW),
 				interaction("p-cable", InteractionType.VIEW, NOW)));
 		stubAttributes(Map.of(
@@ -85,7 +85,7 @@ class ProfileRefreshServiceTest {
 	@Test
 	void olderInteractionsCountForLessThanRecentOnes() {
 		stubWeights();
-		when(interactionRepository.findByUser(eq(USER_ID), any(), anyInt())).thenReturn(List.of(
+		when(interactionPersistencePort.findByUser(eq(USER_ID), any(), anyInt())).thenReturn(List.of(
 				interaction("p-old", InteractionType.VIEW, NOW.minus(Duration.ofDays(60))),
 				interaction("p-new", InteractionType.VIEW, NOW)));
 		stubAttributes(Map.of(
@@ -102,7 +102,7 @@ class ProfileRefreshServiceTest {
 	@Test
 	void onlyTheTopAffinitiesAreKept() {
 		stubWeights();
-		when(interactionRepository.findByUser(eq(USER_ID), any(), anyInt())).thenReturn(List.of(
+		when(interactionPersistencePort.findByUser(eq(USER_ID), any(), anyInt())).thenReturn(List.of(
 				interaction("p-1", InteractionType.VIEW, NOW),
 				interaction("p-2", InteractionType.VIEW, NOW),
 				interaction("p-3", InteractionType.VIEW, NOW)));
@@ -122,7 +122,7 @@ class ProfileRefreshServiceTest {
 		// does not stretch
 		// the band across the whole catalog.
 		stubWeights();
-		when(interactionRepository.findByUser(eq(USER_ID), any(), anyInt())).thenReturn(List.of(
+		when(interactionPersistencePort.findByUser(eq(USER_ID), any(), anyInt())).thenReturn(List.of(
 				interaction("p-cheap", InteractionType.VIEW, NOW),
 				interaction("p-mid1", InteractionType.VIEW, NOW),
 				interaction("p-mid2", InteractionType.VIEW, NOW),
@@ -145,7 +145,7 @@ class ProfileRefreshServiceTest {
 	@Test
 	void historyOfUnpublishedProductsDoesNotShapeTheProfile() {
 		stubWeights();
-		when(interactionRepository.findByUser(eq(USER_ID), any(), anyInt()))
+		when(interactionPersistencePort.findByUser(eq(USER_ID), any(), anyInt()))
 				.thenReturn(List.of(interaction("p-gone", InteractionType.PURCHASE, NOW)));
 		stubAttributes(Map.of());
 
@@ -158,8 +158,8 @@ class ProfileRefreshServiceTest {
 	void aStoredProfileIsClearedWhenItsSignalHasAgedOut() {
 		// An empty row still records that the refresh ran, so cold-start weighting has
 		// something to read.
-		when(interactionRepository.findByUser(eq(USER_ID), any(), anyInt())).thenReturn(List.of());
-		when(profileRepository.existsByUserId(USER_ID)).thenReturn(true);
+		when(interactionPersistencePort.findByUser(eq(USER_ID), any(), anyInt())).thenReturn(List.of());
+		when(userAffinityProfilePersistencePort.existsByUserId(USER_ID)).thenReturn(true);
 
 		service().refresh(USER_ID, LOOKBACK, 10);
 
@@ -171,42 +171,42 @@ class ProfileRefreshServiceTest {
 		// An empty profile is still personal data about an identifiable person. With no row to
 		// correct there is nothing to write, and creating one would manufacture a record this
 		// module never held.
-		when(interactionRepository.findByUser(eq(USER_ID), any(), anyInt())).thenReturn(List.of());
+		when(interactionPersistencePort.findByUser(eq(USER_ID), any(), anyInt())).thenReturn(List.of());
 
 		service().refresh(USER_ID, LOOKBACK, 10);
 
-		verify(profileRepository, never()).save(any(), any());
+		verify(userAffinityProfilePersistencePort, never()).save(any(), any());
 	}
 
 	@Test
 	void anErasedAccountIsNeverRefreshed() {
 		// The sweep reads its whole batch of user IDs before processing any of them, so an
 		// account can be erased in between. Writing the profile back would undo the erasure.
-		when(interactionRepository.isUserErased(USER_ID)).thenReturn(true);
+		when(interactionPersistencePort.isUserErased(USER_ID)).thenReturn(true);
 
 		service().refresh(USER_ID, LOOKBACK, 10);
 
-		verify(interactionRepository).lockUser(USER_ID);
-		verify(interactionRepository, never()).findByUser(any(), any(), anyInt());
-		verify(profileRepository, never()).save(any(), any());
+		verify(interactionPersistencePort).lockUser(USER_ID);
+		verify(interactionPersistencePort, never()).findByUser(any(), any(), anyInt());
+		verify(userAffinityProfilePersistencePort, never()).save(any(), any());
 	}
 
 	@Test
 	void theErasureCheckHappensUnderTheUserLock() {
 		// Checking without holding the lock is a race: an erasure committing between the check
 		// and the save would still be overwritten by the profile this method writes.
-		InOrder inOrder = inOrder(interactionRepository);
-		when(interactionRepository.isUserErased(USER_ID)).thenReturn(true);
+		InOrder inOrder = inOrder(interactionPersistencePort);
+		when(interactionPersistencePort.isUserErased(USER_ID)).thenReturn(true);
 
 		service().refresh(USER_ID, LOOKBACK, 10);
 
-		inOrder.verify(interactionRepository).lockUser(USER_ID);
-		inOrder.verify(interactionRepository).isUserErased(USER_ID);
+		inOrder.verify(interactionPersistencePort).lockUser(USER_ID);
+		inOrder.verify(interactionPersistencePort).isUserErased(USER_ID);
 	}
 
 	@Test
 	void profileOfFallsBackToAnEmptyProfileWhenNoneIsStored() {
-		when(profileRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+		when(userAffinityProfilePersistencePort.findByUserId(USER_ID)).thenReturn(Optional.empty());
 
 		assertThat(service().profileOf(USER_ID).hasNoSignal()).isTrue();
 	}
@@ -227,7 +227,7 @@ class ProfileRefreshServiceTest {
 
 	private UserAffinityProfile captureSaved() {
 		ArgumentCaptor<UserAffinityProfile> captor = ArgumentCaptor.forClass(UserAffinityProfile.class);
-		verify(profileRepository).save(captor.capture(), eq(NOW));
+		verify(userAffinityProfilePersistencePort).save(captor.capture(), eq(NOW));
 		return captor.getValue();
 	}
 

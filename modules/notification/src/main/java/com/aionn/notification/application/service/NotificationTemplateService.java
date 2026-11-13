@@ -19,19 +19,19 @@ import java.util.List;
 @Transactional
 public class NotificationTemplateService {
 
-    private final NotificationTemplatePersistencePort repository;
+    private final NotificationTemplatePersistencePort notificationTemplatePersistencePort;
     private final EventPublisher eventPublisher;
     private final Clock clock;
 
     public NotificationTemplate create(TemplateCommands.CreateTemplate command) {
         String locale = command.locale() == null ? "vi-VN" : command.locale();
-        if (repository.findByEventChannelLocale(command.eventType(), command.channel(), locale).isPresent()) {
+        if (notificationTemplatePersistencePort.findByEventChannelLocale(command.eventType(), command.channel(), locale).isPresent()) {
             throw new NotificationException(NotificationErrorCode.TEMPLATE_DUPLICATE);
         }
         NotificationTemplate template = NotificationTemplate.create(IdGenerator.ulid(),
                 command.eventType(), command.channel(), command.category(), locale,
                 command.subject(), command.content(), clock);
-        NotificationTemplate saved = repository.save(template);
+        NotificationTemplate saved = notificationTemplatePersistencePort.save(template);
         eventPublisher.publish(template.pullEvents());
         return saved;
     }
@@ -39,7 +39,7 @@ public class NotificationTemplateService {
     public NotificationTemplate update(TemplateCommands.UpdateTemplate command) {
         NotificationTemplate template = required(command.templateId());
         template.update(command.subject(), command.content(), clock);
-        NotificationTemplate saved = repository.save(template);
+        NotificationTemplate saved = notificationTemplatePersistencePort.save(template);
         eventPublisher.publish(template.pullEvents());
         return saved;
     }
@@ -51,11 +51,11 @@ public class NotificationTemplateService {
 
     @Transactional(readOnly = true)
     public List<NotificationTemplate> list(int limit) {
-        return repository.findAll(limit);
+        return notificationTemplatePersistencePort.findAll(limit);
     }
 
     private NotificationTemplate required(String templateId) {
-        return repository.findById(templateId)
+        return notificationTemplatePersistencePort.findById(templateId)
                 .orElseThrow(() -> new NotificationException(NotificationErrorCode.TEMPLATE_NOT_FOUND));
     }
 }

@@ -94,7 +94,7 @@ public class AccountManagementService {
                 user.getEmail(),
                 otpCode,
                 null,
-                nowUtc().plusSeconds(accountManagementPolicy.getOtpExpirySeconds()),
+                nowUtc().plusSeconds(accountManagementPolicy.otpExpirySeconds()),
                 0));
         notificationPort.sendEmailOtp(user.getEmail(), otpCode);
         log.info("Verification OTP sent to email for user: {}", userId);
@@ -133,7 +133,7 @@ public class AccountManagementService {
                 newEmail,
                 otpCode,
                 newEmail,
-                nowUtc().plusSeconds(accountManagementPolicy.getOtpExpirySeconds()),
+                nowUtc().plusSeconds(accountManagementPolicy.otpExpirySeconds()),
                 0));
         notificationPort.sendEmailOtp(newEmail, otpCode);
         log.info("Email change OTP sent to new email for user: {}", userId);
@@ -185,7 +185,7 @@ public class AccountManagementService {
                 newPhone,
                 otpCode,
                 newPhone,
-                nowUtc().plusSeconds(accountManagementPolicy.getOtpExpirySeconds()),
+                nowUtc().plusSeconds(accountManagementPolicy.otpExpirySeconds()),
                 0));
         notificationPort.sendPhoneOtp(newPhone, otpCode);
         log.info("Phone change OTP sent to new phone for user: {}", userId);
@@ -232,7 +232,7 @@ public class AccountManagementService {
             throw new IdentityException(IdentityErrorCode.ACCOUNT_DELETION_ALREADY_REQUESTED);
         }
         Instant scheduledDeletionAt = nowUtc()
-                .plus(Duration.ofDays(accountManagementPolicy.getDeletionGraceDays()));
+                .plus(Duration.ofDays(accountManagementPolicy.deletionGraceDays()));
         DeletionRequestView result = accountDeletionPort.save(userId, scheduledDeletionAt);
         log.info("Account deletion requested for user: {}, scheduled at: {}", userId, scheduledDeletionAt);
         return result;
@@ -339,13 +339,13 @@ public class AccountManagementService {
         }
         if (!userOtpChallengeStore.tryAcquireAttempt(
                 challenge.userId(), challenge.purpose(),
-                accountManagementPolicy.getOtpMaxAttempts(), challenge.expiresAt())) {
+                accountManagementPolicy.otpMaxAttempts(), challenge.expiresAt())) {
             userOtpChallengeStore.delete(challenge.userId(), challenge.purpose());
             throw new IdentityException(IdentityErrorCode.OTP_ATTEMPTS_EXCEEDED);
         }
         if (!challenge.otpCode().equals(otpCode)) {
             int attempts = challenge.attempts() + 1;
-            if (attempts >= accountManagementPolicy.getOtpMaxAttempts()) {
+            if (attempts >= accountManagementPolicy.otpMaxAttempts()) {
                 userOtpChallengeStore.delete(challenge.userId(), challenge.purpose());
                 throw new IdentityException(IdentityErrorCode.OTP_ATTEMPTS_EXCEEDED);
             }

@@ -18,7 +18,7 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "shipping.status-poller", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class ShipmentStatusPollScheduler {
 
-    private final ShipmentPersistencePort shipmentRepository;
+    private final ShipmentPersistencePort shipmentPersistencePort;
     private final ShipmentStatusPollWorker worker;
     private final ShippingProperties properties;
 
@@ -27,7 +27,7 @@ public class ShipmentStatusPollScheduler {
     public void pollActive() {
         try {
             int batchSize = properties.statusPoller().batchSize();
-            List<Shipment> active = shipmentRepository.findActiveTracking(batchSize);
+            List<Shipment> active = shipmentPersistencePort.findActiveTracking(batchSize);
             if (active.isEmpty()) {
                 return;
             }

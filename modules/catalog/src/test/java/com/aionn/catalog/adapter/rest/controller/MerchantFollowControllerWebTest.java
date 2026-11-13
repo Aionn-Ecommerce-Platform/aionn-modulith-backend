@@ -1,9 +1,11 @@
 package com.aionn.catalog.adapter.rest.controller;
 
 import com.aionn.catalog.adapter.rest.exception.CatalogExceptionHandler;
+import com.aionn.catalog.adapter.rest.mapper.merchant.MerchantDtoMapper;
 import com.aionn.catalog.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.catalog.adapter.rest.support.TestAuth;
 import com.aionn.catalog.adapter.rest.support.session.CurrentOwnerIdArgumentResolver;
+import com.aionn.catalog.adapter.rest.support.session.OptionalOwnerIdArgumentResolver;
 import com.aionn.catalog.application.dto.merchant.result.MerchantStorefrontStatsResult;
 import com.aionn.catalog.application.service.MerchantFollowService;
 import com.aionn.catalog.application.service.MerchantStorefrontStatsService;
@@ -11,6 +13,7 @@ import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mapstruct.factory.Mappers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
@@ -48,9 +51,11 @@ class MerchantFollowControllerWebTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(
-                new MerchantFollowController(followService, statsService))
+                new MerchantFollowController(followService, statsService,
+                        Mappers.getMapper(MerchantDtoMapper.class)))
                 .setControllerAdvice(new CatalogExceptionHandler())
-                .setCustomArgumentResolvers(new CurrentOwnerIdArgumentResolver())
+                .setCustomArgumentResolvers(new CurrentOwnerIdArgumentResolver(),
+                        new OptionalOwnerIdArgumentResolver())
                 .addInterceptors(new MockSecurityInterceptor())
                 .setMessageConverters(new JacksonJsonHttpMessageConverter(objectMapper))
                 .build();

@@ -31,7 +31,7 @@ import static org.mockito.Mockito.when;
 class ReconciliationServiceTest {
 
     @Mock
-    private TransactionLedgerPersistencePort ledgerRepository;
+    private TransactionLedgerPersistencePort transactionLedgerPersistencePort;
     @Mock
     private EventPublisher eventPublisher;
 
@@ -42,7 +42,7 @@ class ReconciliationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ReconciliationService(ledgerRepository, eventPublisher, clock);
+        service = new ReconciliationService(transactionLedgerPersistencePort, eventPublisher, clock);
     }
 
     @Test
@@ -56,7 +56,7 @@ class ReconciliationServiceTest {
 
         Instant from = Instant.parse("2024-01-01T00:00:00Z");
         Instant to = Instant.parse("2024-01-02T00:00:00Z");
-        when(ledgerRepository.findByGatewayBetween("STRIPE", from, to))
+        when(transactionLedgerPersistencePort.findByGatewayBetween("STRIPE", from, to))
                 .thenReturn(List.of(matched, mismatched, missing));
 
         Map<String, BigDecimal> report = Map.of(
@@ -82,7 +82,7 @@ class ReconciliationServiceTest {
                 Money.of(new BigDecimal("75"), "VND"), LedgerEntryType.CREDIT, "VNPAY", "vn-1", fixedInstant);
         Instant from = fixedInstant.minusSeconds(60);
         Instant to = fixedInstant;
-        when(ledgerRepository.findByGatewayBetween(eq("VNPAY"), any(), any()))
+        when(transactionLedgerPersistencePort.findByGatewayBetween(eq("VNPAY"), any(), any()))
                 .thenReturn(List.of(entry));
 
         ReconciliationResult result = service.reconcile("VNPAY", from, to, Map.of());

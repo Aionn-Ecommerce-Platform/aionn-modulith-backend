@@ -1,5 +1,6 @@
 package com.aionn.notification.adapter.rest.controller;
 
+import com.aionn.notification.adapter.rest.dto.notification.response.PushPublicKeyResponse;
 import com.aionn.notification.infrastructure.config.properties.NotificationPushProperties;
 import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,8 +28,5 @@ public class NotificationPushController {
         return ResponseEntity.ok(ApiResponse.success(
                 new PushPublicKeyResponse(key == null ? "" : key.trim()),
                 "Push public key fetched"));
-    }
-
-    public record PushPublicKeyResponse(String publicKey) {
     }
 }

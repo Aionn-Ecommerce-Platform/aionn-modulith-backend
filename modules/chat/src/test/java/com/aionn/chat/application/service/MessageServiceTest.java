@@ -51,13 +51,13 @@ class MessageServiceTest {
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
     @Mock
-    private ConversationPersistencePort conversationRepository;
+    private ConversationPersistencePort conversationPersistencePort;
     @Mock
-    private MessagePersistencePort messageRepository;
+    private MessagePersistencePort messagePersistencePort;
     @Mock
-    private UserBlockPersistencePort userBlockRepository;
+    private UserBlockPersistencePort userBlockPersistencePort;
     @Mock
-    private MerchantAutoReplyPersistencePort autoReplyRepository;
+    private MerchantAutoReplyPersistencePort merchantAutoReplyPersistencePort;
     @Mock
     private EventPublisher eventPublisher;
     @Mock
@@ -66,10 +66,10 @@ class MessageServiceTest {
     private ChatMessagePolicy messagePolicy;
 
     private MessageService service() {
-        when(messagePolicy.getMaxTextLength()).thenReturn(Message.MAX_TEXT_LENGTH);
-        when(messagePolicy.getRecallWindow()).thenReturn(Message.RECALL_WINDOW);
-        return new MessageService(conversationRepository, messageRepository, userBlockRepository,
-                autoReplyRepository, eventPublisher, participantResolver, messagePolicy, CLOCK);
+        when(messagePolicy.maxTextLength()).thenReturn(Message.MAX_TEXT_LENGTH);
+        when(messagePolicy.recallWindow()).thenReturn(Message.RECALL_WINDOW);
+        return new MessageService(conversationPersistencePort, messagePersistencePort, userBlockPersistencePort,
+                merchantAutoReplyPersistencePort, eventPublisher, participantResolver, messagePolicy, CLOCK);
     }
 
     private static Conversation conversation() {
@@ -84,15 +84,15 @@ class MessageServiceTest {
     }
 
     private void conversationFound(Conversation conversation) {
-        when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(conversation));
-        when(conversationRepository.save(any(Conversation.class)))
+        when(conversationPersistencePort.findById("conv-1")).thenReturn(Optional.of(conversation));
+        when(conversationPersistencePort.save(any(Conversation.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(participantResolver.resolve(anyString(), any(Conversation.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     private void echoMessageSave() {
-        when(messageRepository.save(any(Message.class)))
+        when(messagePersistencePort.save(any(Message.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
@@ -100,7 +100,7 @@ class MessageServiceTest {
     void persistSendStoresMessageAndReturnsFanOutContext() {
         conversationFound(conversation());
         echoMessageSave();
-        when(userBlockRepository.exists(anyString(), anyString())).thenReturn(false);
+        when(userBlockPersistencePort.exists(anyString(), anyString())).thenReturn(false);
 
         MessageService.Sent sent = service().persistSend(sendText());
 
@@ -128,7 +128,7 @@ class MessageServiceTest {
     @Test
     void persistSendRejectsWhenRecipientBlockedSender() {
         conversationFound(conversation());
-        when(userBlockRepository.exists("mer-1", "buyer-1")).thenReturn(true);
+        when(userBlockPersistencePort.exists("mer-1", "buyer-1")).thenReturn(true);
 
         MessageService service = service();
         MessageCommands.SendMessage command = sendText();
@@ -136,13 +136,13 @@ class MessageServiceTest {
         assertThatThrownBy(() -> service.persistSend(command))
                 .isInstanceOf(ChatException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ChatErrorCode.USER_BLOCKED.getCode());
-        verify(messageRepository, never()).save(any());
+        verify(messagePersistencePort, never()).save(any());
     }
 
     @Test
     void persistSendRejectsWhenSenderBlockedRecipient() {
         conversationFound(conversation());
-        when(userBlockRepository.exists("buyer-1", "mer-1")).thenReturn(true);
+        when(userBlockPersistencePort.exists("buyer-1", "mer-1")).thenReturn(true);
 
         MessageService service = service();
         MessageCommands.SendMessage command = sendText();
@@ -153,7 +153,7 @@ class MessageServiceTest {
 
     @Test
     void persistSendRejectsNonParticipant() {
-        when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(conversation()));
+        when(conversationPersistencePort.findById("conv-1")).thenReturn(Optional.of(conversation()));
         when(participantResolver.resolve(anyString(), any(Conversation.class))).thenReturn("stranger");
 
         MessageService service = service();
@@ -167,7 +167,7 @@ class MessageServiceTest {
 
     @Test
     void persistSendRejectsMissingConversation() {
-        when(conversationRepository.findById("conv-1")).thenReturn(Optional.empty());
+        when(conversationPersistencePort.findById("conv-1")).thenReturn(Optional.empty());
 
         MessageService service = service();
         MessageCommands.SendMessage command = sendText();
@@ -186,8 +186,8 @@ class MessageServiceTest {
         assertThatThrownBy(() -> service.persistSend(command))
                 .isInstanceOf(ChatException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ChatErrorCode.INVALID_ARGUMENT.getCode());
-        verify(conversationRepository, never()).findById(anyString());
-        verify(messageRepository, never()).save(any());
+        verify(conversationPersistencePort, never()).findById(anyString());
+        verify(messagePersistencePort, never()).save(any());
     }
 
     @Test
@@ -211,13 +211,13 @@ class MessageServiceTest {
     @Test
     void persistAutoReplySkipsWhenSenderIsNotBuyer() {
         assertThat(service().persistAutoReply("conv-1", ParticipantRole.MERCHANT)).isEmpty();
-        verify(conversationRepository, never()).findById(anyString());
+        verify(conversationPersistencePort, never()).findById(anyString());
     }
 
     @Test
     void persistAutoReplySkipsWhenNotConfigured() {
         conversationFound(conversation());
-        when(autoReplyRepository.findByMerchantId("mer-1")).thenReturn(Optional.empty());
+        when(merchantAutoReplyPersistencePort.findByMerchantId("mer-1")).thenReturn(Optional.empty());
 
         assertThat(service().persistAutoReply("conv-1", ParticipantRole.BUYER)).isEmpty();
     }
@@ -225,7 +225,7 @@ class MessageServiceTest {
     @Test
     void persistAutoReplySkipsWhenDisabled() {
         conversationFound(conversation());
-        when(autoReplyRepository.findByMerchantId("mer-1"))
+        when(merchantAutoReplyPersistencePort.findByMerchantId("mer-1"))
                 .thenReturn(Optional.of(awayAutoReply(false)));
 
         assertThat(service().persistAutoReply("conv-1", ParticipantRole.BUYER)).isEmpty();
@@ -237,7 +237,7 @@ class MessageServiceTest {
         MerchantAutoReply autoReply = new MerchantAutoReply("mer-1", true, "Hi", "We are away",
                 LocalTime.of(9, 0), LocalTime.of(18, 0),
                 EnumSet.of(DayOfWeek.WEDNESDAY), ZoneId.of("UTC"), NOW, NOW);
-        when(autoReplyRepository.findByMerchantId("mer-1")).thenReturn(Optional.of(autoReply));
+        when(merchantAutoReplyPersistencePort.findByMerchantId("mer-1")).thenReturn(Optional.of(autoReply));
 
         assertThat(service().persistAutoReply("conv-1", ParticipantRole.BUYER)).isEmpty();
     }
@@ -246,7 +246,7 @@ class MessageServiceTest {
     void persistAutoReplyStoresSystemMessageOutsideWorkingHours() {
         conversationFound(conversation());
         echoMessageSave();
-        when(autoReplyRepository.findByMerchantId("mer-1"))
+        when(merchantAutoReplyPersistencePort.findByMerchantId("mer-1"))
                 .thenReturn(Optional.of(awayAutoReply(true)));
 
         Optional<MessageService.Sent> reply = service().persistAutoReply("conv-1", ParticipantRole.BUYER);
@@ -265,7 +265,7 @@ class MessageServiceTest {
                 MessageType.TEXT, MessagePayload.text("Hi"),
                 List.of("mer-1"), CLOCK);
         message.pullEvents();
-        when(messageRepository.findById("msg-1")).thenReturn(Optional.of(message));
+        when(messagePersistencePort.findById("msg-1")).thenReturn(Optional.of(message));
         echoMessageSave();
 
         Message saved = service().markDelivered(new MessageCommands.DeliverMessage("mer-1", "msg-1"));
@@ -279,8 +279,8 @@ class MessageServiceTest {
         Message message = Message.send("msg-1", "conv-1", "buyer-1", ParticipantRole.BUYER,
                 MessageType.TEXT, MessagePayload.text("Hi"),
                 List.of("mer-1"), CLOCK);
-        when(messageRepository.findById("msg-1")).thenReturn(Optional.of(message));
-        when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(conversation()));
+        when(messagePersistencePort.findById("msg-1")).thenReturn(Optional.of(message));
+        when(conversationPersistencePort.findById("conv-1")).thenReturn(Optional.of(conversation()));
         when(participantResolver.resolve(anyString(), any(Conversation.class))).thenReturn("stranger");
 
         MessageService service = service();
@@ -298,7 +298,7 @@ class MessageServiceTest {
                 MessageType.TEXT, MessagePayload.text("Hi"),
                 List.of("mer-1"), CLOCK);
         message.pullEvents();
-        when(messageRepository.findById("msg-1")).thenReturn(Optional.of(message));
+        when(messagePersistencePort.findById("msg-1")).thenReturn(Optional.of(message));
         echoMessageSave();
 
         Message saved = service().markRead(new MessageCommands.ReadMessage("mer-1", "msg-1"));
@@ -314,7 +314,7 @@ class MessageServiceTest {
                 MessageType.TEXT, MessagePayload.text("Hi"),
                 List.of("mer-1"), CLOCK);
         message.pullEvents();
-        when(messageRepository.findById("msg-1")).thenReturn(Optional.of(message));
+        when(messagePersistencePort.findById("msg-1")).thenReturn(Optional.of(message));
         echoMessageSave();
 
         Message saved = service().recall(new MessageCommands.RecallMessage("buyer-1", "msg-1"));
@@ -325,7 +325,7 @@ class MessageServiceTest {
 
     @Test
     void recallRejectsMissingMessage() {
-        when(messageRepository.findById("nope")).thenReturn(Optional.empty());
+        when(messagePersistencePort.findById("nope")).thenReturn(Optional.empty());
 
         MessageService service = service();
         MessageCommands.RecallMessage command = new MessageCommands.RecallMessage("buyer-1", "nope");
@@ -351,7 +351,7 @@ class MessageServiceTest {
         Message message = Message.send("msg-1", "conv-1", "buyer-1", ParticipantRole.BUYER,
                 MessageType.TEXT, MessagePayload.text("Hi"),
                 List.of("mer-1"), CLOCK);
-        when(messageRepository.findById("msg-1")).thenReturn(Optional.of(message));
+        when(messagePersistencePort.findById("msg-1")).thenReturn(Optional.of(message));
 
         assertThat(service().getForUser("buyer-1", "msg-1").getMessageId()).isEqualTo("msg-1");
     }
@@ -359,26 +359,26 @@ class MessageServiceTest {
     @Test
     void listLatestDelegatesToRepository() {
         conversationFound(conversation());
-        when(messageRepository.findByConversationLatest("conv-1", 10)).thenReturn(List.of());
+        when(messagePersistencePort.findByConversationLatest("conv-1", 10)).thenReturn(List.of());
 
         assertThat(service().listLatest("buyer-1", "conv-1", 10)).isEmpty();
-        verify(messageRepository).findByConversationLatest("conv-1", 10);
+        verify(messagePersistencePort).findByConversationLatest("conv-1", 10);
     }
 
     @Test
     void listBeforeDelegatesToRepository() {
         conversationFound(conversation());
-        when(messageRepository.findByConversationBefore("conv-1", NOW, 10)).thenReturn(List.of());
+        when(messagePersistencePort.findByConversationBefore("conv-1", NOW, 10)).thenReturn(List.of());
 
         assertThat(service().listBefore("buyer-1", "conv-1", NOW, 10)).isEmpty();
-        verify(messageRepository).findByConversationBefore("conv-1", NOW, 10);
+        verify(messagePersistencePort).findByConversationBefore("conv-1", NOW, 10);
     }
 
     @Test
     void persistSend_imageWithBodyPopulatesImageUrlMetadata() {
         conversationFound(conversation());
         echoMessageSave();
-        when(userBlockRepository.exists(anyString(), anyString())).thenReturn(false);
+        when(userBlockPersistencePort.exists(anyString(), anyString())).thenReturn(false);
 
         MessageCommands.SendMessage command = new MessageCommands.SendMessage(
                 "buyer-1", "conv-1", MessageType.IMAGE, "https://cdn.example.com/photo.jpg", null);
@@ -394,7 +394,7 @@ class MessageServiceTest {
     void persistSend_imageWithExplicitMetadataPreserved() {
         conversationFound(conversation());
         echoMessageSave();
-        when(userBlockRepository.exists(anyString(), anyString())).thenReturn(false);
+        when(userBlockPersistencePort.exists(anyString(), anyString())).thenReturn(false);
 
         MessageCommands.SendMessage command = new MessageCommands.SendMessage(
                 "buyer-1", "conv-1", MessageType.IMAGE, "https://cdn.example.com/caption", Map.of("imageUrl", "https://cdn.example.com/photo.jpg"));

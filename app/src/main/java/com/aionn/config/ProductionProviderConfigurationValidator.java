@@ -1,6 +1,6 @@
 package com.aionn.config;
 
-import com.aionn.identity.application.policy.IdentityValidationConstants;
+import com.aionn.identity.application.policy.TokenConstants;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
@@ -24,7 +24,7 @@ public class ProductionProviderConfigurationValidator {
         List<String> errors = new ArrayList<>();
 
         requireMinimumLength(errors, "IDENTITY_JWT_SECRET", "identity.jwt.secret",
-                IdentityValidationConstants.JWT_SECRET_MIN_LENGTH);
+                TokenConstants.JWT_SECRET_MIN_LENGTH);
         requireRemoteProvider(errors, "identity.registration.captcha.provider", "google",
                 "CAPTCHA_GOOGLE_SECRET_KEY", "identity.registration.captcha.google-secret-key");
         requireRemoteProvider(errors, "identity.auth.social.google.provider", "remote",

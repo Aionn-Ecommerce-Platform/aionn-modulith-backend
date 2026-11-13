@@ -32,17 +32,17 @@ import java.time.Instant;
 @Transactional
 public class StockReservationService {
 
-        private final InventoryItemPersistencePort itemRepository;
-        private final StockReservationPersistencePort reservationRepository;
-        private final StockAdjustmentPersistencePort adjustmentRepository;
-        private final WarehousePersistencePort warehouseRepository;
+        private final InventoryItemPersistencePort inventoryItemPersistencePort;
+        private final StockReservationPersistencePort stockReservationPersistencePort;
+        private final StockAdjustmentPersistencePort stockAdjustmentPersistencePort;
+        private final WarehousePersistencePort warehousePersistencePort;
         private final EventPublisher eventPublisher;
         private final InventoryReservationPolicy reservationPolicy;
         private final Clock clock;
 
         public StockReservation reserve(ReserveStockCommand command) {
                 if (command.orderId() != null && !command.orderId().isBlank()) {
-                        var existing = reservationRepository.findActiveReservation(
+                        var existing = stockReservationPersistencePort.findActiveReservation(
                                         command.orderId(), command.skuId(), command.warehouseId());
                         if (existing.isPresent()) {
                                 return existing.get();
@@ -50,10 +50,10 @@ public class StockReservationService {
                 }
 
                 InventoryItemKey key = new InventoryItemKey(command.skuId(), command.warehouseId());
-                InventoryItem item = itemRepository.lockByKey(key)
+                InventoryItem item = inventoryItemPersistencePort.lockByKey(key)
                                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND));
 
-                boolean warehouseCanFulfill = warehouseRepository.findById(command.warehouseId())
+                boolean warehouseCanFulfill = warehousePersistencePort.findById(command.warehouseId())
                                 .map(warehouse -> warehouse.getStatus().canFulfill())
                                 .orElse(false);
                 if (!warehouseCanFulfill || item.isLocked() || item.getAvailableQty() < command.qty()) {
@@ -63,32 +63,32 @@ public class StockReservationService {
                         StockReservation failed = StockReservation.failed(IdGenerator.ulid(),
                                         command.skuId(), command.warehouseId(), command.orderId(),
                                         command.qty(), reason, clock);
-                        StockReservation saved = reservationRepository.save(failed);
+                        StockReservation saved = stockReservationPersistencePort.save(failed);
                         eventPublisher.publish(failed.pullEvents());
                         return saved;
                 }
 
                 item.reserve(command.qty(), clock);
-                itemRepository.save(item);
+                inventoryItemPersistencePort.save(item);
 
                 Instant expiresAt = clock.instant().plus(Duration.ofSeconds(ttlSeconds(command)));
                 StockReservation reservation = StockReservation.reserve(IdGenerator.ulid(),
                                 command.skuId(), command.warehouseId(), command.orderId(), command.qty(), expiresAt,
                                 clock);
                 try {
-                        StockReservation saved = reservationRepository.save(reservation);
+                        StockReservation saved = stockReservationPersistencePort.save(reservation);
                         eventPublisher.publish(reservation.pullEvents());
                         eventPublisher.publish(item.pullEvents());
                         return saved;
                 } catch (org.springframework.dao.DataIntegrityViolationException ex) {
-                        return reservationRepository.findActiveReservation(
+                        return stockReservationPersistencePort.findActiveReservation(
                                         command.orderId(), command.skuId(), command.warehouseId())
                                         .orElseThrow(() -> ex);
                 }
         }
 
         public StockReservation commit(CommitReservationCommand command) {
-                StockReservation reservation = reservationRepository.lockForUpdate(command.reservationId())
+                StockReservation reservation = stockReservationPersistencePort.lockForUpdate(command.reservationId())
                                 .orElseThrow(() -> new InventoryException(
                                                 InventoryErrorCode.STOCK_RESERVATION_NOT_FOUND));
                 if (reservation.getStatus() == ReservationStatus.COMMITTED) {
@@ -97,20 +97,20 @@ public class StockReservationService {
                 if (reservation.getStatus() != ReservationStatus.RESERVED) {
                         throw new InventoryException(InventoryErrorCode.STOCK_RESERVATION_INVALID_STATE);
                 }
-                InventoryItem item = itemRepository.lockByKey(
+                InventoryItem item = inventoryItemPersistencePort.lockByKey(
                                 new InventoryItemKey(reservation.getSkuId(), reservation.getWarehouseId()))
                                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND));
 
                 item.commit(reservation.getQty(), clock);
-                itemRepository.save(item);
+                inventoryItemPersistencePort.save(item);
 
                 reservation.commit(clock);
-                StockReservation saved = reservationRepository.save(reservation);
+                StockReservation saved = stockReservationPersistencePort.save(reservation);
 
                 StockAdjustment outbound = StockAdjustment.outbound(IdGenerator.ulid(),
                                 reservation.getSkuId(), reservation.getWarehouseId(), reservation.getQty(),
                                 reservation.getOrderId(), clock);
-                adjustmentRepository.save(outbound);
+                stockAdjustmentPersistencePort.save(outbound);
 
                 eventPublisher.publish(reservation.pullEvents());
                 eventPublisher.publish(item.pullEvents());
@@ -119,7 +119,7 @@ public class StockReservationService {
         }
 
         public StockReservation release(ReleaseReservationCommand command) {
-                StockReservation reservation = reservationRepository.lockForUpdate(command.reservationId())
+                StockReservation reservation = stockReservationPersistencePort.lockForUpdate(command.reservationId())
                                 .orElseThrow(() -> new InventoryException(
                                                 InventoryErrorCode.STOCK_RESERVATION_NOT_FOUND));
                 if (reservation.getStatus() == ReservationStatus.RELEASED) {
@@ -128,15 +128,15 @@ public class StockReservationService {
                 if (reservation.getStatus() != ReservationStatus.RESERVED) {
                         throw new InventoryException(InventoryErrorCode.STOCK_RESERVATION_INVALID_STATE);
                 }
-                InventoryItem item = itemRepository.lockByKey(
+                InventoryItem item = inventoryItemPersistencePort.lockByKey(
                                 new InventoryItemKey(reservation.getSkuId(), reservation.getWarehouseId()))
                                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND));
 
                 item.release(reservation.getQty(), clock);
-                itemRepository.save(item);
+                inventoryItemPersistencePort.save(item);
 
                 reservation.release(command.reason(), clock);
-                StockReservation saved = reservationRepository.save(reservation);
+                StockReservation saved = stockReservationPersistencePort.save(reservation);
 
                 eventPublisher.publish(reservation.pullEvents());
                 eventPublisher.publish(item.pullEvents());
@@ -145,7 +145,7 @@ public class StockReservationService {
 
         @Transactional(readOnly = true)
         public StockReservation get(String reservationId) {
-                return reservationRepository.findById(reservationId)
+                return stockReservationPersistencePort.findById(reservationId)
                                 .orElseThrow(() -> new InventoryException(
                                                 InventoryErrorCode.STOCK_RESERVATION_NOT_FOUND));
         }
@@ -153,6 +153,6 @@ public class StockReservationService {
         private int ttlSeconds(ReserveStockCommand command) {
                 return command.ttlSeconds() != null && command.ttlSeconds() > 0
                                 ? command.ttlSeconds()
-                                : reservationPolicy.getDefaultTtlSeconds();
+                                : reservationPolicy.defaultTtlSeconds();
         }
 }

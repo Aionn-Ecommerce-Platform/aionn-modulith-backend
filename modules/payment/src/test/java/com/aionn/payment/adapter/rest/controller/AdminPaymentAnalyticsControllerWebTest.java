@@ -53,6 +53,8 @@ class AdminPaymentAnalyticsControllerWebTest {
                 from, to, "USD", BigDecimal.TEN, 1, 4, 0.25,
                 BigDecimal.valueOf(100), 2, List.of(), List.of(), List.of());
         when(analyticsInputPort.execute(any(GetAdminPaymentAnalyticsQuery.class))).thenReturn(result);
+        when(dtoMapper.toAnalyticsQuery(from, to, "USD"))
+                .thenReturn(new GetAdminPaymentAnalyticsQuery(from, to, "USD"));
         when(dtoMapper.toResponse(result)).thenReturn(response);
 
         mockMvc.perform(get("/api/v1/payments/admin/analytics")

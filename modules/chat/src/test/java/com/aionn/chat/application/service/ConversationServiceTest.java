@@ -45,9 +45,9 @@ class ConversationServiceTest {
         private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
         @Mock
-        private ConversationPersistencePort conversationRepository;
+        private ConversationPersistencePort conversationPersistencePort;
         @Mock
-        private MessagePersistencePort messageRepository;
+        private MessagePersistencePort messagePersistencePort;
         @Mock
         private MerchantQueryPort merchantQueryPort;
         @Mock
@@ -60,10 +60,10 @@ class ConversationServiceTest {
         private ChatConversationPolicy conversationPolicy;
 
         private ConversationService service() {
-                when(conversationPolicy.getUnreadScanLimit()).thenReturn(100);
+                when(conversationPolicy.unreadScanLimit()).thenReturn(100);
                 when(merchantQueryPort.findOwnerIdByMerchantId(anyString()))
                                 .thenReturn(Optional.of("owner-1"));
-                return new ConversationService(conversationRepository, messageRepository,
+                return new ConversationService(conversationPersistencePort, messagePersistencePort,
                                 merchantQueryPort, mapper, eventPublisher, participantResolver,
                                 conversationPolicy, CLOCK);
         }
@@ -96,29 +96,29 @@ class ConversationServiceTest {
         void startOrGetReturnsExistingWithoutCreating() {
                 mapperEchoes();
                 identityResolver();
-                when(conversationRepository.findByBuyerAndMerchant("buyer-1", "mer-1"))
+                when(conversationPersistencePort.findByBuyerAndMerchant("buyer-1", "mer-1"))
                                 .thenReturn(Optional.of(conversation()));
 
                 ConversationResult result = service().startOrGet(new ConversationCommands.StartConversation(
                                 "buyer-1", "Buyer", null, "mer-1", "Shop", null, "buyer-1"));
 
                 assertThat(result.conversationId()).isEqualTo("conv-1");
-                verify(conversationRepository, never()).save(any());
+                verify(conversationPersistencePort, never()).save(any());
         }
 
         @Test
         void startOrGetCreatesWhenAbsent() {
                 mapperEchoes();
                 identityResolver();
-                when(conversationRepository.findByBuyerAndMerchant("buyer-1", "mer-1"))
+                when(conversationPersistencePort.findByBuyerAndMerchant("buyer-1", "mer-1"))
                                 .thenReturn(Optional.empty());
-                when(conversationRepository.save(any(Conversation.class)))
+                when(conversationPersistencePort.save(any(Conversation.class)))
                                 .thenAnswer(invocation -> invocation.getArgument(0));
 
                 service().startOrGet(new ConversationCommands.StartConversation(
                                 "buyer-1", "Buyer", null, "mer-1", "Shop", null, "buyer-1"));
 
-                verify(conversationRepository).save(any(Conversation.class));
+                verify(conversationPersistencePort).save(any(Conversation.class));
                 verify(eventPublisher).publish(anyCollection());
         }
 
@@ -134,7 +134,7 @@ class ConversationServiceTest {
                                 "buyer-1", "Buyer", null, "mer-1", "Shop", null, "buyer-1")))
                                 .isInstanceOf(ChatException.class);
 
-                verify(conversationRepository, never()).save(any());
+                verify(conversationPersistencePort, never()).save(any());
         }
 
         @Test
@@ -142,8 +142,8 @@ class ConversationServiceTest {
                 mapperEchoes();
                 identityResolver();
                 Conversation conversation = conversation();
-                when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(conversation));
-                when(conversationRepository.save(any(Conversation.class)))
+                when(conversationPersistencePort.findById("conv-1")).thenReturn(Optional.of(conversation));
+                when(conversationPersistencePort.save(any(Conversation.class)))
                                 .thenAnswer(invocation -> invocation.getArgument(0));
 
                 ConversationService.ReadReceipt receipt = service()
@@ -157,7 +157,7 @@ class ConversationServiceTest {
 
         @Test
         void markReadRejectsNonParticipant() {
-                when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(conversation()));
+                when(conversationPersistencePort.findById("conv-1")).thenReturn(Optional.of(conversation()));
                 when(participantResolver.resolve(anyString(), any(Conversation.class))).thenReturn("stranger");
 
                 ConversationService service = service();
@@ -174,8 +174,8 @@ class ConversationServiceTest {
                 mapperEchoes();
                 identityResolver();
                 Conversation conversation = conversation();
-                when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(conversation));
-                when(conversationRepository.save(any(Conversation.class)))
+                when(conversationPersistencePort.findById("conv-1")).thenReturn(Optional.of(conversation));
+                when(conversationPersistencePort.save(any(Conversation.class)))
                                 .thenAnswer(invocation -> invocation.getArgument(0));
 
                 ConversationService service = service();
@@ -190,8 +190,8 @@ class ConversationServiceTest {
         void joinSupportAddsParticipantOnce() {
                 mapperEchoes();
                 Conversation conversation = conversation();
-                when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(conversation));
-                when(conversationRepository.save(any(Conversation.class)))
+                when(conversationPersistencePort.findById("conv-1")).thenReturn(Optional.of(conversation));
+                when(conversationPersistencePort.save(any(Conversation.class)))
                                 .thenAnswer(invocation -> invocation.getArgument(0));
 
                 ConversationService service = service();
@@ -203,7 +203,7 @@ class ConversationServiceTest {
 
         @Test
         void getForUserThrowsWhenMissing() {
-                when(conversationRepository.findById("nope")).thenReturn(Optional.empty());
+                when(conversationPersistencePort.findById("nope")).thenReturn(Optional.empty());
 
                 ConversationService service = service();
 
@@ -219,25 +219,25 @@ class ConversationServiceTest {
                 identityResolver();
                 Conversation conversation = conversation();
                 conversation.markRead("buyer-1", CLOCK);
-                when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(conversation));
-                when(messageRepository.countUnread("conv-1", "buyer-1", NOW)).thenReturn(4L);
+                when(conversationPersistencePort.findById("conv-1")).thenReturn(Optional.of(conversation));
+                when(messagePersistencePort.countUnread("conv-1", "buyer-1", NOW)).thenReturn(4L);
 
                 ConversationResult result = service().getForUser("buyer-1", "conv-1");
 
                 assertThat(result.unreadCount()).isEqualTo(4);
-                verify(messageRepository).countUnread("conv-1", "buyer-1", NOW);
+                verify(messagePersistencePort).countUnread("conv-1", "buyer-1", NOW);
         }
 
         @Test
         void getForUserFallsBackToCreatedAtWhenNeverRead() {
                 mapperEchoes();
                 identityResolver();
-                when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(conversation()));
-                when(messageRepository.countUnread(eq("conv-1"), eq("buyer-1"), any())).thenReturn(1L);
+                when(conversationPersistencePort.findById("conv-1")).thenReturn(Optional.of(conversation()));
+                when(messagePersistencePort.countUnread(eq("conv-1"), eq("buyer-1"), any())).thenReturn(1L);
 
                 service().getForUser("buyer-1", "conv-1");
 
-                verify(messageRepository).countUnread("conv-1", "buyer-1", NOW);
+                verify(messagePersistencePort).countUnread("conv-1", "buyer-1", NOW);
         }
 
         @Test
@@ -245,14 +245,14 @@ class ConversationServiceTest {
                 mapperEchoes();
                 identityResolver();
                 when(participantResolver.merchantIdOrNull("owner-1")).thenReturn("mer-1");
-                when(conversationRepository.findByParticipant("owner-1", "mer-1", true, 25))
+                when(conversationPersistencePort.findByParticipant("owner-1", "mer-1", true, 25))
                                 .thenReturn(List.of(conversation()));
-                when(messageRepository.countUnreadForConversations(any()))
+                when(messagePersistencePort.countUnreadForConversations(any()))
                                 .thenReturn(Map.of("conv-1", 0L));
 
                 assertThat(service().listForUser("owner-1", true, 25)).hasSize(1);
-                verify(conversationRepository).findByParticipant("owner-1", "mer-1", true, 25);
-                verify(messageRepository).countUnreadForConversations(any());
+                verify(conversationPersistencePort).findByParticipant("owner-1", "mer-1", true, 25);
+                verify(messagePersistencePort).countUnreadForConversations(any());
         }
 
         @Test
@@ -262,14 +262,14 @@ class ConversationServiceTest {
                 Conversation second = Conversation.start("conv-2", "buyer-1", "Buyer", null,
                                 "mer-2", "Shop2", null, "buyer-1", CLOCK);
                 when(participantResolver.merchantIdOrNull("buyer-1")).thenReturn(null);
-                when(conversationRepository.findByParticipant("buyer-1", null, false, 100))
+                when(conversationPersistencePort.findByParticipant("buyer-1", null, false, 100))
                                 .thenReturn(List.of(first, second));
-                when(messageRepository.countUnreadForConversations(any()))
+                when(messagePersistencePort.countUnreadForConversations(any()))
                                 .thenReturn(Map.of("conv-1", 3L, "conv-2", 0L));
 
                 Map<String, Long> counts = service().getUnreadCounts("buyer-1");
 
                 assertThat(counts).containsEntry("conv-1", 3L).containsEntry("conv-2", 0L);
-                verify(messageRepository).countUnreadForConversations(any());
+                verify(messagePersistencePort).countUnreadForConversations(any());
         }
 }

@@ -30,8 +30,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class FlashSaleQueryAdapter implements FlashSaleQueryPort {
 
-    private final FlashSaleRegistrationPersistencePort registrationRepository;
-    private final PromotionCampaignPersistencePort campaignRepository;
+    private final FlashSaleRegistrationPersistencePort flashSaleRegistrationPersistencePort;
+    private final PromotionCampaignPersistencePort promotionCampaignPersistencePort;
     private final PromotionCampaignRepository campaignJpaRepository;
     private final JdbcTemplate jdbcTemplate;
     private final PromotionLimitPolicy limitPolicy;
@@ -104,12 +104,12 @@ public class FlashSaleQueryAdapter implements FlashSaleQueryPort {
         }
         Map<String, SkuFlashSale> result = new HashMap<>();
         Map<String, PromotionCampaign> campaigns = new HashMap<>();
-        for (FlashSaleRegistration registration : registrationRepository.findApprovedRunningBySkuIds(skuIds)) {
+        for (FlashSaleRegistration registration : flashSaleRegistrationPersistencePort.findApprovedRunningBySkuIds(skuIds)) {
             if (!registration.hasStockLeft()) {
                 continue;
             }
             PromotionCampaign campaign = campaigns.computeIfAbsent(registration.getCampaignId(),
-                    id -> campaignRepository.findById(id).orElse(null));
+                    id -> promotionCampaignPersistencePort.findById(id).orElse(null));
             if (campaign == null || campaign.getStatus() != CampaignStatus.RUNNING) {
                 continue;
             }
@@ -131,7 +131,7 @@ public class FlashSaleQueryAdapter implements FlashSaleQueryPort {
         if (productIds == null || productIds.isEmpty()) {
             return Map.of();
         }
-        List<FlashSaleRegistration> regs = registrationRepository
+        List<FlashSaleRegistration> regs = flashSaleRegistrationPersistencePort
                 .findApprovedRunningByProductIds(productIds);
         if (regs.isEmpty()) {
             return Map.of();
@@ -140,7 +140,7 @@ public class FlashSaleQueryAdapter implements FlashSaleQueryPort {
         Map<String, PromotionCampaign> campaigns = new HashMap<>();
         for (FlashSaleRegistration reg : regs) {
             campaigns.computeIfAbsent(reg.getCampaignId(),
-                    id -> campaignRepository.findById(id).orElse(null));
+                    id -> promotionCampaignPersistencePort.findById(id).orElse(null));
         }
 
         Map<String, List<SkuOffer>> offersByProduct = new HashMap<>();
@@ -181,7 +181,7 @@ public class FlashSaleQueryAdapter implements FlashSaleQueryPort {
         campaignJpaRepository.findByTypeAndStatus(
                         CampaignType.FLASH_SALE.name(), CampaignStatus.RUNNING.name(), PageRequest.of(0, safe)).stream()
                 .forEach(c -> {
-                    List<FlashSaleRegistration> regs = registrationRepository
+                    List<FlashSaleRegistration> regs = flashSaleRegistrationPersistencePort
                             .findByCampaign(c.getCampaignId(),
                                     FlashSaleRegistrationStatus.APPROVED,
                                     limitPolicy.maxRegistrationLimit());

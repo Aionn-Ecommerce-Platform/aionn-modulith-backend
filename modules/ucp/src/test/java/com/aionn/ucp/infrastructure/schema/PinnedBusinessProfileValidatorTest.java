@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.aionn.ucp.adapter.rest.controller.DiscoveryController;
-import com.aionn.ucp.adapter.rest.dto.BusinessProfileResponse;
+import com.aionn.ucp.adapter.rest.dto.response.BusinessProfileResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;

@@ -114,7 +114,7 @@ public class RegistrationVerificationSession implements Serializable {
         return attemptCount;
     }
 
-    public int getMaxVerifyAttempts() {
+    public int maxVerifyAttempts() {
         return maxVerifyAttempts;
     }
 

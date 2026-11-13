@@ -31,18 +31,18 @@ class CollectionServiceTest {
     private static final Instant NOW = Instant.parse("2026-07-01T10:00:00Z");
 
     @Mock
-    private CollectionPersistencePort repository;
+    private CollectionPersistencePort collectionPersistencePort;
 
     private CollectionService service;
 
     @BeforeEach
     void setUp() {
-        service = new CollectionService(repository, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new CollectionService(collectionPersistencePort, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
     void createNormalizesTheInputAndStoresIt() {
-        when(repository.save(any(CollectionView.class)))
+        when(collectionPersistencePort.save(any(CollectionView.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         CollectionView created = service.create("  Summer-Sale ", "  Summer Sale  ", "  ", "",
@@ -59,8 +59,33 @@ class CollectionServiceTest {
     }
 
     @Test
+    void createDefaultsActiveAndDisplayOrderWhenOmitted() {
+        when(collectionPersistencePort.save(any(CollectionView.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        CollectionView created = service.create("summer", "Summer", null, null, null, null);
+
+        assertThat(created.active()).isTrue();
+        assertThat(created.displayOrder()).isZero();
+    }
+
+    @Test
+    void updateDefaultsActiveAndDisplayOrderWhenOmitted() {
+        CollectionView existing = new CollectionView("col_1", "summer", "Summer", null, null,
+                false, 5, NOW, NOW);
+        when(collectionPersistencePort.findByIdOrSlug("col_1")).thenReturn(Optional.of(existing));
+        when(collectionPersistencePort.save(any(CollectionView.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        CollectionView updated = service.update("col_1", null, null, null, null, null, null);
+
+        assertThat(updated.active()).isTrue();
+        assertThat(updated.displayOrder()).isZero();
+    }
+
+    @Test
     void createTranslatesADuplicateSlugIntoTheDomainError() {
-        when(repository.save(any(CollectionView.class))).thenThrow(new DuplicateKeyException("dup"));
+        when(collectionPersistencePort.save(any(CollectionView.class))).thenThrow(new DuplicateKeyException("dup"));
 
         assertThatThrownBy(() -> service.create("summer", "Summer", null, null, true, 0))
                 .isInstanceOfSatisfying(CatalogException.class,
@@ -76,7 +101,7 @@ class CollectionServiceTest {
                 .isInstanceOf(CatalogException.class);
         assertThatThrownBy(() -> service.create("a".repeat(101), "Name", null, null, true, 0))
                 .isInstanceOf(CatalogException.class);
-        verify(repository, never()).save(any());
+        verify(collectionPersistencePort, never()).save(any());
     }
 
     @Test
@@ -85,14 +110,14 @@ class CollectionServiceTest {
                 .isInstanceOf(CatalogException.class);
         assertThatThrownBy(() -> service.create("slug", "n".repeat(256), null, null, true, 0))
                 .isInstanceOf(CatalogException.class);
-        verify(repository, never()).save(any());
+        verify(collectionPersistencePort, never()).save(any());
     }
 
     @Test
     void updateKeepsFieldsThatWereNotProvided() {
         CollectionView existing = existing();
-        when(repository.findByIdOrSlug("col_1")).thenReturn(Optional.of(existing));
-        when(repository.save(any(CollectionView.class)))
+        when(collectionPersistencePort.findByIdOrSlug("col_1")).thenReturn(Optional.of(existing));
+        when(collectionPersistencePort.save(any(CollectionView.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         CollectionView updated = service.update("col_1", null, null, "  new description ",
@@ -110,9 +135,9 @@ class CollectionServiceTest {
 
     @Test
     void updateNormalizesAProvidedSlugAndTranslatesConflicts() {
-        when(repository.findByIdOrSlug("col_1")).thenReturn(Optional.of(existing()));
+        when(collectionPersistencePort.findByIdOrSlug("col_1")).thenReturn(Optional.of(existing()));
         ArgumentCaptor<CollectionView> captor = ArgumentCaptor.forClass(CollectionView.class);
-        when(repository.save(captor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(collectionPersistencePort.save(captor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
 
         service.update("col_1", " New-Slug ", "New name", null, null, true, 0);
 
@@ -122,7 +147,7 @@ class CollectionServiceTest {
 
     @Test
     void updateReportsAMissingCollection() {
-        when(repository.findByIdOrSlug("missing")).thenReturn(Optional.empty());
+        when(collectionPersistencePort.findByIdOrSlug("missing")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.update("missing", null, null, null, null, true, 0))
                 .isInstanceOfSatisfying(CatalogException.class,
@@ -132,33 +157,33 @@ class CollectionServiceTest {
 
     @Test
     void deleteRefusesCollectionsThatStillContainProducts() {
-        when(repository.findByIdOrSlug("col_1")).thenReturn(Optional.of(existing()));
-        when(repository.countProducts("col_1")).thenReturn(3L);
+        when(collectionPersistencePort.findByIdOrSlug("col_1")).thenReturn(Optional.of(existing()));
+        when(collectionPersistencePort.countProducts("col_1")).thenReturn(3L);
 
         assertThatThrownBy(() -> service.delete("col_1"))
                 .isInstanceOfSatisfying(CatalogException.class,
                         ex -> assertThat(ex.getErrorCode())
                                 .isEqualTo(CatalogErrorCode.COLLECTION_HAS_PRODUCTS.getCode()));
-        verify(repository, never()).delete(any());
+        verify(collectionPersistencePort, never()).delete(any());
     }
 
     @Test
     void deleteRemovesAnEmptyCollection() {
-        when(repository.findByIdOrSlug("col_1")).thenReturn(Optional.of(existing()));
-        when(repository.countProducts("col_1")).thenReturn(0L);
+        when(collectionPersistencePort.findByIdOrSlug("col_1")).thenReturn(Optional.of(existing()));
+        when(collectionPersistencePort.countProducts("col_1")).thenReturn(0L);
 
         service.delete("col_1");
 
-        verify(repository).delete("col_1");
+        verify(collectionPersistencePort).delete("col_1");
     }
 
     @Test
     void requireExistingSkipsEmptyInputAndRejectsUnknownIds() {
         service.requireExisting(null);
         service.requireExisting(List.of());
-        verify(repository, never()).existsAll(any());
+        verify(collectionPersistencePort, never()).existsAll(any());
 
-        when(repository.existsAll(List.of("a", "b"))).thenReturn(false);
+        when(collectionPersistencePort.existsAll(List.of("a", "b"))).thenReturn(false);
         assertThatThrownBy(() -> service.requireExisting(List.of("a", "b")))
                 .isInstanceOfSatisfying(CatalogException.class,
                         ex -> assertThat(ex.getErrorCode())
@@ -167,17 +192,17 @@ class CollectionServiceTest {
 
     @Test
     void requireExistingAcceptsKnownIds() {
-        when(repository.existsAll(List.of("a"))).thenReturn(true);
+        when(collectionPersistencePort.existsAll(List.of("a"))).thenReturn(true);
 
         service.requireExisting(List.of("a"));
 
-        verify(repository).existsAll(List.of("a"));
+        verify(collectionPersistencePort).existsAll(List.of("a"));
     }
 
     @Test
     void listAndGetDelegateToTheRepository() {
-        when(repository.findAll(true)).thenReturn(List.of(existing()));
-        when(repository.findByIdOrSlug("missing")).thenReturn(Optional.empty());
+        when(collectionPersistencePort.findAll(true)).thenReturn(List.of(existing()));
+        when(collectionPersistencePort.findByIdOrSlug("missing")).thenReturn(Optional.empty());
 
         assertThat(service.list(true)).hasSize(1);
         assertThatThrownBy(() -> service.get("missing"))

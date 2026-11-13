@@ -22,7 +22,7 @@ public class CompensationRetryService {
     private final StockReservationGateway stockGateway;
     private final VoucherGateway voucherGateway;
     private final PaymentGateway paymentGateway;
-    private final OrderPersistencePort orderRepository;
+    private final OrderPersistencePort orderPersistencePort;
     private final FlashSaleQueryPort flashSaleQueryPort;
     private final CompensationRetryPolicy retryPolicy;
     private final Clock clock;
@@ -38,7 +38,7 @@ public class CompensationRetryService {
                 case FLASH_SALE_RELEASE -> flashSaleQueryPort.release(task.resourceId());
                 case STOCK_COMMIT -> stockGateway.commit(task.resourceId());
                 case REFUND -> {
-                    var order = orderRepository.findById(task.orderId()).orElseThrow();
+                    var order = orderPersistencePort.findById(task.orderId()).orElseThrow();
                     if (task.resourceId() != null) {
                         paymentGateway.refund(task.resourceId(), order.getTotalAmount().amount(),
                                 order.getCurrency(), task.reason(),

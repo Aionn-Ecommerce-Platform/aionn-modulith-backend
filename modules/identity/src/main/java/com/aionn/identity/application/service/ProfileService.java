@@ -1,11 +1,12 @@
 package com.aionn.identity.application.service;
 
+import com.aionn.identity.application.policy.UserValidationConstants;
+
 import com.aionn.identity.application.dto.user.command.UpdateAvatarCommand;
 import com.aionn.identity.application.dto.user.command.UpdateDisplayNameCommand;
 import com.aionn.identity.application.dto.user.query.GetMyProfileQuery;
 import com.aionn.identity.application.dto.user.view.UserProfileView;
 import com.aionn.identity.application.mapper.UserResultMapper;
-import com.aionn.identity.application.policy.IdentityValidationConstants;
 import com.aionn.identity.application.port.out.user.UserPersistencePort;
 import com.aionn.identity.domain.exception.IdentityErrorCode;
 import com.aionn.identity.domain.exception.IdentityException;
@@ -36,9 +37,9 @@ public class ProfileService {
     public UserProfileView updateDisplayName(UpdateDisplayNameCommand command) {
         log.info("Updating display name for user: {}", command.userId());
         if (command.displayName() != null
-                && command.displayName().length() > IdentityValidationConstants.DISPLAY_NAME_MAX_LENGTH) {
+                && command.displayName().length() > UserValidationConstants.DISPLAY_NAME_MAX_LENGTH) {
             throw new IdentityException(IdentityErrorCode.INVALID_DISPLAY_NAME,
-                    "Display name exceeds " + IdentityValidationConstants.DISPLAY_NAME_MAX_LENGTH + " characters");
+                    "Display name exceeds " + UserValidationConstants.DISPLAY_NAME_MAX_LENGTH + " characters");
         }
         IdentityUser user = getActiveUser(command.userId());
         user.updateDisplayName(command.displayName());
@@ -66,7 +67,7 @@ public class ProfileService {
         if (avatarUrl == null || avatarUrl.isBlank()) {
             throw new IdentityException(IdentityErrorCode.AVATAR_URL_INVALID);
         }
-        if (avatarUrl.length() > IdentityValidationConstants.AVATAR_URL_MAX_LENGTH) {
+        if (avatarUrl.length() > UserValidationConstants.AVATAR_URL_MAX_LENGTH) {
             throw new IdentityException(IdentityErrorCode.AVATAR_URL_INVALID,
                     "Avatar URL exceeds maximum length");
         }

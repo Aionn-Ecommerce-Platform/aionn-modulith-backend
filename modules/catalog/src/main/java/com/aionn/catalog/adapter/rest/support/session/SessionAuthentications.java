@@ -12,13 +12,21 @@ final class SessionAuthentications {
     }
 
     static String requirePrincipalName() {
+        String principal = optionalPrincipalName();
+        if (principal == null) {
+            throw new CatalogException(CatalogErrorCode.MERCHANT_FORBIDDEN, "Authenticated principal required");
+        }
+        return principal;
+    }
+
+    static String optionalPrincipalName() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null
                 || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken
                 || authentication.getName() == null
                 || authentication.getName().isBlank()) {
-            throw new CatalogException(CatalogErrorCode.MERCHANT_FORBIDDEN, "Authenticated principal required");
+            return null;
         }
         return authentication.getName();
     }

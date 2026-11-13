@@ -1,12 +1,12 @@
 package com.aionn.ucp.adapter.rest.controller;
 
 import com.aionn.ucp.adapter.rest.advice.UcpControllerAdvice;
-import com.aionn.ucp.adapter.rest.dto.cart.UcpCartRequest;
-import com.aionn.ucp.adapter.rest.dto.cart.UcpCartResponse;
-import com.aionn.ucp.adapter.rest.dto.cart.UcpItemResponse;
-import com.aionn.ucp.adapter.rest.dto.cart.UcpLineItemResponse;
+import com.aionn.ucp.adapter.rest.dto.cart.request.UcpCartRequest;
+import com.aionn.ucp.adapter.rest.dto.cart.response.UcpCartResponse;
+import com.aionn.ucp.adapter.rest.dto.cart.response.UcpItemResponse;
+import com.aionn.ucp.adapter.rest.dto.cart.response.UcpLineItemResponse;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpResponseMetadata;
-import com.aionn.ucp.adapter.rest.dto.cart.UcpTotalResponse;
+import com.aionn.ucp.adapter.rest.dto.cart.response.UcpTotalResponse;
 import com.aionn.ucp.application.cart.UcpCartApplicationService;
 import com.aionn.ucp.domain.exception.UcpProtocolException;
 import java.util.List;

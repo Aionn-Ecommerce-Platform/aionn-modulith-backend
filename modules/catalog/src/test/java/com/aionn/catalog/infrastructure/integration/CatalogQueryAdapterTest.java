@@ -34,9 +34,9 @@ class CatalogQueryAdapterTest {
     private static final ProductVariant.ParcelDimensions TEST_PARCEL = new ProductVariant.ParcelDimensions(500, BigDecimal.valueOf(15), BigDecimal.valueOf(10), BigDecimal.valueOf(5));
 
     @Mock
-    private ProductPersistencePort productRepository;
+    private ProductPersistencePort productPersistencePort;
     @Mock
-    private MerchantPersistencePort merchantRepository;
+    private MerchantPersistencePort merchantPersistencePort;
 
     @InjectMocks
     private CatalogQueryAdapter adapter;
@@ -45,7 +45,7 @@ class CatalogQueryAdapterTest {
     void setUp() {
         Merchant merchant = Merchant.register(MERCHANT_ID, "owner-1", "Acme", BigDecimal.valueOf(0.05), FIXED);
         merchant.activate(ADMIN_ID, "test", FIXED);
-        org.mockito.Mockito.lenient().when(merchantRepository.findById(MERCHANT_ID))
+        org.mockito.Mockito.lenient().when(merchantPersistencePort.findById(MERCHANT_ID))
                 .thenReturn(Optional.of(merchant));
     }
 
@@ -63,7 +63,7 @@ class CatalogQueryAdapterTest {
         // Price bounds are pushed into the persistence query (cheapest-variant
         // window) so offset paging runs on an already-filtered set. The adapter
         // over-fetches limit+1 as the next-page signal.
-        when(productRepository.searchPublished("widget", new BigDecimal("50"), new BigDecimal("150"), 11, 0))
+        when(productPersistencePort.searchPublished("widget", new BigDecimal("50"), new BigDecimal("150"), 11, 0))
                 .thenReturn(List.of(publishedProduct()));
 
         List<CatalogQueryPort.ProductView> views = adapter.search(
@@ -79,7 +79,7 @@ class CatalogQueryAdapterTest {
     void searchExcludesProductsOutsidePriceRange() {
         // Exclusion is enforced by the SQL price predicate; an out-of-window query
         // returns nothing to map.
-        when(productRepository.searchPublished("widget", new BigDecimal("200"), new BigDecimal("300"), 11, 0))
+        when(productPersistencePort.searchPublished("widget", new BigDecimal("200"), new BigDecimal("300"), 11, 0))
                 .thenReturn(List.of());
 
         List<CatalogQueryPort.ProductView> views = adapter.search(
@@ -91,7 +91,7 @@ class CatalogQueryAdapterTest {
 
     @Test
     void findByProductOrSkuIdResolvesByProductId() {
-        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(publishedProduct()));
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(publishedProduct()));
 
         Optional<CatalogQueryPort.ProductView> view = adapter.findByProductOrSkuId(PRODUCT_ID);
 
@@ -101,8 +101,8 @@ class CatalogQueryAdapterTest {
 
     @Test
     void findByProductOrSkuIdFallsBackToSkuLookup() {
-        when(productRepository.findById("sku-1")).thenReturn(Optional.empty());
-        when(productRepository.findAllBySkuIds(List.of("sku-1"))).thenReturn(List.of(publishedProduct()));
+        when(productPersistencePort.findById("sku-1")).thenReturn(Optional.empty());
+        when(productPersistencePort.findAllBySkuIds(List.of("sku-1"))).thenReturn(List.of(publishedProduct()));
 
         Optional<CatalogQueryPort.ProductView> view = adapter.findByProductOrSkuId("sku-1");
 
@@ -111,9 +111,9 @@ class CatalogQueryAdapterTest {
 
     @Test
     void lookupReportsNotFoundIds() {
-        when(productRepository.findAllBySkuIds(List.of("sku-1", "missing")))
+        when(productPersistencePort.findAllBySkuIds(List.of("sku-1", "missing")))
                 .thenReturn(List.of(publishedProduct()));
-        when(productRepository.findById("missing")).thenReturn(Optional.empty());
+        when(productPersistencePort.findById("missing")).thenReturn(Optional.empty());
 
         CatalogQueryPort.LookupResult result = adapter.lookupByProductOrSkuIds(List.of("sku-1", "missing"));
 
@@ -123,7 +123,7 @@ class CatalogQueryAdapterTest {
 
     @Test
     void searchWithoutPriceBoundsReturnsAll() {
-        when(productRepository.searchPublished("widget", null, null, 11, 0))
+        when(productPersistencePort.searchPublished("widget", null, null, 11, 0))
                 .thenReturn(List.of(publishedProduct()));
 
         List<CatalogQueryPort.ProductView> views = adapter.search(
@@ -138,7 +138,7 @@ class CatalogQueryAdapterTest {
         Product takenDown = publishedProduct();
         takenDown.emergencyTakedown(ADMIN_ID, "abuse", FIXED);
         takenDown.pullEvents();
-        when(productRepository.searchPublished("widget", null, null, 11, 0)).thenReturn(List.of(takenDown));
+        when(productPersistencePort.searchPublished("widget", null, null, 11, 0)).thenReturn(List.of(takenDown));
 
         List<CatalogQueryPort.ProductView> views = adapter.search(
                 new CatalogQueryPort.SearchCriteria("widget", 10, null, null));
@@ -149,8 +149,8 @@ class CatalogQueryAdapterTest {
     @Test
     void lookupResolvesByProductIdWhenNotSku() {
         Product product = publishedProduct();
-        when(productRepository.findAllBySkuIds(List.of(PRODUCT_ID))).thenReturn(List.of());
-        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+        when(productPersistencePort.findAllBySkuIds(List.of(PRODUCT_ID))).thenReturn(List.of());
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
 
         CatalogQueryPort.LookupResult result = adapter.lookupByProductOrSkuIds(List.of(PRODUCT_ID));
 
@@ -160,15 +160,15 @@ class CatalogQueryAdapterTest {
 
     @Test
     void findByProductOrSkuIdReturnsEmptyWhenUnknown() {
-        when(productRepository.findById("nope")).thenReturn(Optional.empty());
-        when(productRepository.findAllBySkuIds(List.of("nope"))).thenReturn(List.of());
+        when(productPersistencePort.findById("nope")).thenReturn(Optional.empty());
+        when(productPersistencePort.findAllBySkuIds(List.of("nope"))).thenReturn(List.of());
 
         assertThat(adapter.findByProductOrSkuId("nope")).isEmpty();
     }
 
     @Test
     void searchIncludesWhenPriceMinOnlySatisfied() {
-        when(productRepository.searchPublished("widget", new BigDecimal("50"), null, 11, 0))
+        when(productPersistencePort.searchPublished("widget", new BigDecimal("50"), null, 11, 0))
                 .thenReturn(List.of(publishedProduct()));
 
         List<CatalogQueryPort.ProductView> views = adapter.search(
@@ -181,7 +181,7 @@ class CatalogQueryAdapterTest {
     void searchExcludesWhenAboveMaxOnly() {
         // Above-max exclusion is now applied by the SQL predicate; the port returns
         // no product for the adapter to map.
-        when(productRepository.searchPublished("widget", null, new BigDecimal("80"), 11, 0))
+        when(productPersistencePort.searchPublished("widget", null, new BigDecimal("80"), 11, 0))
                 .thenReturn(List.of());
 
         List<CatalogQueryPort.ProductView> views = adapter.search(

@@ -3,6 +3,7 @@ package com.aionn.catalog.application.service;
 import com.aionn.catalog.application.dto.product.command.AssignCollectionsCommand;
 import com.aionn.catalog.application.dto.product.command.ChangeVariantParcelCommand;
 import com.aionn.catalog.application.dto.product.command.EmergencyTakedownCommand;
+import com.aionn.catalog.application.dto.product.command.RecordSearchIntentCommand;
 import com.aionn.catalog.application.dto.product.command.RemoveVariantCommand;
 import com.aionn.catalog.application.dto.product.command.UpdateAiMetadataCommand;
 import com.aionn.catalog.application.dto.product.command.UpdateMediaCommand;
@@ -28,7 +29,9 @@ import com.aionn.catalog.application.dto.search.ProductSearchDocument;
 import com.aionn.catalog.application.dto.search.ProductSearchResult;
 import com.aionn.catalog.application.mapper.ProductResultMapper;
 import com.aionn.catalog.application.mapper.ProductSearchDocumentMapper;
-import com.aionn.catalog.application.policy.CatalogProductPolicy;
+import com.aionn.catalog.application.policy.BulkPriceUpdatePolicy;
+import com.aionn.catalog.application.policy.ProductClonePolicy;
+import com.aionn.catalog.application.policy.SearchIndexBatchPolicy;
 import com.aionn.catalog.application.port.out.attribute.AttributeTemplatePersistencePort;
 import com.aionn.catalog.application.port.out.integration.CatalogIntegrationEventPublisherPort;
 import com.aionn.catalog.application.port.out.search.ProductSearchIndex;
@@ -73,18 +76,20 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class ProductService {
 
-    private final ProductPersistencePort productRepository;
-    private final UserBrowsingHistoryPersistencePort userBrowsingHistoryRepository;
-    private final MerchantPersistencePort merchantRepository;
-    private final BrandPersistencePort brandRepository;
-    private final CategoryPersistencePort categoryRepository;
+    private final ProductPersistencePort productPersistencePort;
+    private final UserBrowsingHistoryPersistencePort userBrowsingHistoryPersistencePort;
+    private final MerchantPersistencePort merchantPersistencePort;
+    private final BrandPersistencePort brandPersistencePort;
+    private final CategoryPersistencePort categoryPersistencePort;
     private final ProductSearchIndex catalogSearchIndex;
     private final ProductSearchDocumentMapper searchDocumentMapper;
-    private final AttributeTemplatePersistencePort attributeTemplateRepository;
-    private final ProductReviewPersistencePort reviewRepository;
-    private final ProductSoldCounterPersistencePort soldCounterRepository;
+    private final AttributeTemplatePersistencePort attributeTemplatePersistencePort;
+    private final ProductReviewPersistencePort productReviewPersistencePort;
+    private final ProductSoldCounterPersistencePort productSoldCounterPersistencePort;
     private final ProductResultMapper productResultMapper;
-    private final CatalogProductPolicy productPolicy;
+    private final BulkPriceUpdatePolicy bulkPriceUpdatePolicy;
+    private final ProductClonePolicy productClonePolicy;
+    private final SearchIndexBatchPolicy searchIndexBatchPolicy;
     private final EventPublisher eventPublisher;
     private final CatalogIntegrationEventPublisherPort integrationEventPublisher;
     private final Clock clock;
@@ -93,7 +98,7 @@ public class ProductService {
     public Product create(CreateProductCommand command) {
         requireActiveMerchant(command.merchantId());
         Product product = Product.create(IdGenerator.ulid(), command.merchantId(), command.name(), clock);
-        Product saved = productRepository.save(product);
+        Product saved = productPersistencePort.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
     }
@@ -118,7 +123,7 @@ public class ProductService {
         Product clone = new Product(
                 newId,
                 command.merchantId(),
-                source.getName() + productPolicy.getCloneNameSuffix(),
+                source.getName() + productClonePolicy.nameSuffix(),
                 source.getBrandId(),
                 source.categoryIds(),
                 source.imageList(),
@@ -132,7 +137,7 @@ public class ProductService {
                 clock.instant(),
                 0L,
                 source.translations());
-        Product saved = productRepository.save(clone);
+        Product saved = productPersistencePort.save(clone);
         eventPublisher.publish(clone.pullEvents());
         return saved;
     }
@@ -146,7 +151,7 @@ public class ProductService {
                         : new ProductVariant.ParcelDimensions(
                                 command.weightGram(), command.lengthCm(), command.widthCm(), command.heightCm());
         product.defineVariant(command.skuId(), command.attributeValues(), price, parcel, clock);
-        Product saved = productRepository.save(product);
+        Product saved = productPersistencePort.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
     }
@@ -154,7 +159,7 @@ public class ProductService {
     public Product removeVariant(RemoveVariantCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         product.removeVariant(command.skuId(), clock);
-        Product saved = productRepository.save(product);
+        Product saved = productPersistencePort.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
     }
@@ -162,7 +167,7 @@ public class ProductService {
     public Product updateMedia(UpdateMediaCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         product.updateMedia(command.images(), clock);
-        Product saved = productRepository.save(product);
+        Product saved = productPersistencePort.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
     }
@@ -171,7 +176,7 @@ public class ProductService {
             UpdateAiMetadataCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         product.updateAiMetadata(command.tags(), command.aiDescription(), clock);
-        Product saved = productRepository.save(product);
+        Product saved = productPersistencePort.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
     }
@@ -180,7 +185,7 @@ public class ProductService {
             AssignCollectionsCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         product.assignToCollections(command.collectionIds(), clock);
-        Product saved = productRepository.save(product);
+        Product saved = productPersistencePort.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
     }
@@ -189,7 +194,7 @@ public class ProductService {
             EmergencyTakedownCommand command) {
         Product product = required(command.productId());
         product.emergencyTakedown(command.adminId(), command.reason(), clock);
-        Product saved = productRepository.save(product);
+        Product saved = productPersistencePort.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
     }
@@ -204,13 +209,13 @@ public class ProductService {
         if (hits.isPresent()) {
             ProductSearchIndex.SearchHits result = hits.get();
             List<Product> products = transactionTemplate.execute(
-                    status -> productRepository.findByIdsPreserveOrder(result.productIds()));
+                    status -> productPersistencePort.findByIdsPreserveOrder(result.productIds()));
             return new PageResult<>(products, pagination.page(), pagination.size(), result.totalHits());
         }
         return transactionTemplate.execute(status -> {
             int offset = pagination.page() * pagination.size();
-            List<Product> products = productRepository.searchPublished(keyword, pagination.size(), offset);
-            long total = productRepository.countSearchPublished(keyword);
+            List<Product> products = productPersistencePort.searchPublished(keyword, pagination.size(), offset);
+            long total = productPersistencePort.countSearchPublished(keyword);
             return new PageResult<>(products, pagination.page(), pagination.size(), total);
         });
     }
@@ -218,7 +223,7 @@ public class ProductService {
     public Product changeVariantPrice(ChangeVariantPriceCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         product.changeVariantPrice(command.skuId(), Money.of(command.newPrice(), command.currency()), clock);
-        Product saved = productRepository.save(product);
+        Product saved = productPersistencePort.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
     }
@@ -229,7 +234,7 @@ public class ProductService {
         ProductVariant.ParcelDimensions parcel = new ProductVariant.ParcelDimensions(
                 command.weightGram(), command.lengthCm(), command.widthCm(), command.heightCm());
         product.changeVariantParcel(command.skuId(), parcel, clock);
-        Product saved = productRepository.save(product);
+        Product saved = productPersistencePort.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
     }
@@ -238,7 +243,7 @@ public class ProductService {
         if (command.items() == null || command.items().isEmpty()) {
             return new BulkPriceUpdateResult(0, 0, List.of());
         }
-        int max = productPolicy.getBulkPriceUpdateMaxSize();
+        int max = bulkPriceUpdatePolicy.maxUpdateSize();
         if (command.items().size() > max) {
             throw new CatalogException(CatalogErrorCode.PRODUCT_BULK_TOO_LARGE,
                     "Bulk price update exceeds allowed batch size: " + max);
@@ -250,7 +255,7 @@ public class ProductService {
             try {
                 Product product = ownedBy(item.productId(), command.merchantId());
                 product.changeVariantPrice(item.skuId(), Money.of(item.newPrice(), item.currency()), clock);
-                productRepository.save(product);
+                productPersistencePort.save(product);
                 eventPublisher.publish(product.pullEvents());
                 updated++;
             } catch (CatalogException e) {
@@ -263,13 +268,13 @@ public class ProductService {
 
     public Product assignBrand(AssignBrandCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
-        Brand brand = brandRepository.findById(command.brandId())
+        Brand brand = brandPersistencePort.findById(command.brandId())
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.BRAND_NOT_FOUND));
         if (brand.getStatus() != BrandStatus.ACTIVE) {
             throw new CatalogException(CatalogErrorCode.PRODUCT_BRAND_NOT_APPROVED);
         }
         product.assignBrand(command.brandId(), clock);
-        Product saved = productRepository.save(product);
+        Product saved = productPersistencePort.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
     }
@@ -280,12 +285,12 @@ public class ProductService {
             throw new CatalogException(CatalogErrorCode.PRODUCT_CATEGORY_REQUIRED);
         }
         for (String categoryId : command.categoryIds()) {
-            categoryRepository.findById(categoryId)
+            categoryPersistencePort.findById(categoryId)
                     .orElseThrow(() -> new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND,
                             "Category not found: " + categoryId));
         }
         product.categorize(command.categoryIds(), clock);
-        Product saved = productRepository.save(product);
+        Product saved = productPersistencePort.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
     }
@@ -293,7 +298,7 @@ public class ProductService {
     public Product defineAttributes(DefineAttributesCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         product.defineAttributes(command.attributes(), clock);
-        Product saved = productRepository.save(product);
+        Product saved = productPersistencePort.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
     }
@@ -302,7 +307,7 @@ public class ProductService {
         requireActiveMerchant(command.actorId());
         Product product = ownedBy(command.productId(), command.actorId());
         product.publish(command.actorId(), clock);
-        Product saved = productRepository.save(product);
+        Product saved = productPersistencePort.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
     }
@@ -310,7 +315,7 @@ public class ProductService {
     public Product submitForReview(SubmitForReviewCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         product.submitForReview(command.merchantId(), clock);
-        Product saved = productRepository.save(product);
+        Product saved = productPersistencePort.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
     }
@@ -318,7 +323,7 @@ public class ProductService {
     public Product reject(RejectProductCommand command) {
         Product product = required(command.productId());
         product.reject(command.adminId(), command.reasonCode(), command.feedback(), clock);
-        Product saved = productRepository.save(product);
+        Product saved = productPersistencePort.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
     }
@@ -326,7 +331,7 @@ public class ProductService {
     public Product deactivate(DeactivateProductCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
         product.deactivate(command.reason(), clock);
-        Product saved = productRepository.save(product);
+        Product saved = productPersistencePort.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
     }
@@ -334,7 +339,7 @@ public class ProductService {
     public Product restore(RestoreProductCommand command) {
         Product product = required(command.productId());
         product.restore(clock);
-        Product saved = productRepository.save(product);
+        Product saved = productPersistencePort.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
     }
@@ -346,27 +351,27 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public List<Product> getBySkuIds(List<String> skuIds) {
-        return productRepository.findAllBySkuIds(skuIds);
+        return productPersistencePort.findAllBySkuIds(skuIds);
     }
 
     @Transactional(readOnly = true)
     public PageResult<Product> listByMerchant(String merchantId, OffsetPagination pagination) {
-        List<Product> content = productRepository.listByMerchant(merchantId, pagination);
-        long total = productRepository.countByMerchant(merchantId);
+        List<Product> content = productPersistencePort.listByMerchant(merchantId, pagination);
+        long total = productPersistencePort.countByMerchant(merchantId);
         return new PageResult<>(content, pagination.page(), pagination.size(), total);
     }
 
     @Transactional(readOnly = true)
     public PageResult<Product> listByStatus(ProductStatus status, OffsetPagination pagination) {
-        List<Product> content = productRepository.listByStatus(status, pagination);
-        long total = productRepository.countByStatus(status);
+        List<Product> content = productPersistencePort.listByStatus(status, pagination);
+        long total = productPersistencePort.countByStatus(status);
         return new PageResult<>(content, pagination.page(), pagination.size(), total);
     }
 
     @Transactional(readOnly = true)
     public List<Product> getRelatedProducts(String productId, int limit) {
         Product product = required(productId);
-        return productRepository.findRelatedProducts(
+        return productPersistencePort.findRelatedProducts(
                 product.getProductId(),
                 product.getBrandId(),
                 product.categoryIds(),
@@ -379,7 +384,7 @@ public class ProductService {
     }
 
     private List<Product> popularProducts(int limit) {
-        return productRepository.findPopularProducts(limit);
+        return productPersistencePort.findPopularProducts(limit);
     }
 
     @Transactional(readOnly = true)
@@ -389,7 +394,7 @@ public class ProductService {
         List<String> activeBrandIds = brandIds != null ? brandIds : List.of();
 
         if (isRealUser(userId)) {
-            Optional<UserBrowsingHistory> history = userBrowsingHistoryRepository.findByUserId(userId);
+            Optional<UserBrowsingHistory> history = userBrowsingHistoryPersistencePort.findByUserId(userId);
             if (history.isPresent()) {
                 activeCategoryIds = history.get().getCategoryIds();
                 activeBrandIds = history.get().getBrandIds();
@@ -400,7 +405,7 @@ public class ProductService {
             return popularProducts(limit);
         }
 
-        List<Product> products = productRepository.findPersonalizedProducts(activeCategoryIds, activeBrandIds, limit);
+        List<Product> products = productPersistencePort.findPersonalizedProducts(activeCategoryIds, activeBrandIds, limit);
         if (products.isEmpty()) {
             return popularProducts(limit);
         }
@@ -413,15 +418,38 @@ public class ProductService {
             return;
         }
         Product product = required(productId);
-        UserBrowsingHistory history = userBrowsingHistoryRepository.findByUserId(userId)
+        UserBrowsingHistory history = userBrowsingHistoryPersistencePort.findByUserId(userId)
                 .orElseGet(() -> UserBrowsingHistory.create(userId));
         history.trackView(product.categoryIds(), product.getBrandId());
-        userBrowsingHistoryRepository.save(history);
+        userBrowsingHistoryPersistencePort.save(history);
         integrationEventPublisher.publishProductViewed(
                 product.getProductId(),
                 userId,
                 product.getBrandId(),
                 product.categoryIds(),
+                clock.instant());
+    }
+
+    /**
+     * Records a user's explicit search intent as a behavioural signal for the recommendation module.
+     * Only published when there is something to learn from - a keyword or a chosen facet - and only
+     * for real users; anonymous browsing is not personalised.
+     */
+    public void recordSearchIntent(RecordSearchIntentCommand command) {
+        if (!isRealUser(command.userId())) {
+            return;
+        }
+        boolean hasKeyword = command.keyword() != null && !command.keyword().isBlank();
+        boolean hasFacets = (command.categoryIds() != null && !command.categoryIds().isEmpty())
+                || (command.brandIds() != null && !command.brandIds().isEmpty());
+        if (!hasKeyword && !hasFacets) {
+            return;
+        }
+        integrationEventPublisher.publishSearchPerformed(
+                command.userId(),
+                hasKeyword ? command.keyword().trim() : null,
+                command.categoryIds() == null ? List.of() : command.categoryIds(),
+                command.brandIds() == null || command.brandIds().isEmpty() ? null : command.brandIds().get(0),
                 clock.instant());
     }
 
@@ -431,7 +459,7 @@ public class ProductService {
         if (hitsOpt.isPresent()) {
             ProductSearchIndex.SearchHits hits = hitsOpt.get();
             List<Product> products = transactionTemplate.execute(
-                    status -> productRepository.findByIdsPreserveOrder(hits.productIds()));
+                    status -> productPersistencePort.findByIdsPreserveOrder(hits.productIds()));
             List<ProductResult> results = products.stream()
                     .map(productResultMapper::toResult)
                     .toList();
@@ -450,13 +478,13 @@ public class ProductService {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void syncAllToSearchIndex() {
         log.info("Syncing all published products to the catalog search index...");
-        int limit = productPolicy.getSearchIndexBatchSize();
+        int limit = searchIndexBatchPolicy.batchSize();
         int offset = 0;
         long total = 0;
         while (true) {
             int pageOffset = offset;
             List<ProductSearchDocument> docs = transactionTemplate.execute(status ->
-                    productRepository.findPublished(limit, pageOffset).stream()
+                    productPersistencePort.findPublished(limit, pageOffset).stream()
                             .map(this::buildSearchDocument)
                             .toList());
             if (docs == null || docs.isEmpty()) {
@@ -473,7 +501,7 @@ public class ProductService {
         Map<String, String> filterable = new LinkedHashMap<>();
         if (!product.attributes().isEmpty()) {
             for (String categoryId : product.categoryIds()) {
-                Optional<AttributeTemplate> template = attributeTemplateRepository.findByCategoryId(categoryId);
+                Optional<AttributeTemplate> template = attributeTemplatePersistencePort.findByCategoryId(categoryId);
                 template.ifPresent(t -> {
                     for (Map.Entry<String, AttributeTemplate.AttributeDefinition> def : t.snapshot().entrySet()) {
                         if (def.getValue().filterable()) {
@@ -486,13 +514,13 @@ public class ProductService {
                 });
             }
         }
-        double rating = reviewRepository.getAverageRating(product.getProductId());
-        long soldCount = soldCounterRepository.getSoldCount(product.getProductId());
+        double rating = productReviewPersistencePort.getAverageRating(product.getProductId());
+        long soldCount = productSoldCounterPersistencePort.getSoldCount(product.getProductId());
         return searchDocumentMapper.toSearchDocument(product, filterable, rating, soldCount);
     }
 
     private PageResult<ProductResult> jpaSearchFallback(ProductSearchCriteria criteria) {
-        var page = productRepository.searchFallback(
+        var page = productPersistencePort.searchFallback(
                 new ProductPersistencePort.FallbackFilter(
                         criteria.q(), criteria.merchantId(), criteria.status(), criteria.brandIds(),
                         criteria.categoryIds(), criteria.priceMin(), criteria.priceMax(), criteria.attributes(),
@@ -510,7 +538,7 @@ public class ProductService {
     }
 
     private Product required(String productId) {
-        return productRepository.findById(productId)
+        return productPersistencePort.findById(productId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.PRODUCT_NOT_FOUND));
     }
 
@@ -521,7 +549,7 @@ public class ProductService {
     }
 
     private void requireActiveMerchant(String merchantId) {
-        var merchant = merchantRepository.findById(merchantId)
+        var merchant = merchantPersistencePort.findById(merchantId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.MERCHANT_NOT_FOUND));
         if (merchant.getStatus() != MerchantStatus.ACTIVE) {
             throw new CatalogException(CatalogErrorCode.MERCHANT_FORBIDDEN,

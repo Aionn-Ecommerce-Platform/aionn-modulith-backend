@@ -39,7 +39,7 @@ class AutoReplyServiceTest {
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
     @Mock
-    private MerchantAutoReplyPersistencePort repository;
+    private MerchantAutoReplyPersistencePort merchantAutoReplyPersistencePort;
     @Mock
     private EventPublisher eventPublisher;
     @Mock
@@ -53,7 +53,7 @@ class AutoReplyServiceTest {
         lenient().when(autoReplyPolicy.workingDays())
                 .thenReturn(EnumSet.range(DayOfWeek.MONDAY, DayOfWeek.SATURDAY));
         lenient().when(autoReplyPolicy.timezone()).thenReturn(ZoneId.of("Asia/Ho_Chi_Minh"));
-        return new AutoReplyService(repository, eventPublisher, merchantQueryPort,
+        return new AutoReplyService(merchantAutoReplyPersistencePort, eventPublisher, merchantQueryPort,
                 autoReplyPolicy, CLOCK);
     }
 
@@ -86,20 +86,20 @@ class AutoReplyServiceTest {
     @Test
     void getReturnsDefaultsWhenNotConfigured() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(repository.findByMerchantId("mer-1")).thenReturn(Optional.empty());
+        when(merchantAutoReplyPersistencePort.findByMerchantId("mer-1")).thenReturn(Optional.empty());
 
         MerchantAutoReply autoReply = service().get("owner-1", "mer-1");
 
         assertThat(autoReply.getMerchantId()).isEqualTo("mer-1");
         assertThat(autoReply.isEnabled()).isFalse();
         assertThat(autoReply.getCreatedAt()).isEqualTo(NOW);
-        verify(repository, never()).save(any());
+        verify(merchantAutoReplyPersistencePort, never()).save(any());
     }
 
     @Test
     void getReturnsStoredConfig() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(repository.findByMerchantId("mer-1"))
+        when(merchantAutoReplyPersistencePort.findByMerchantId("mer-1"))
                 .thenReturn(Optional.of(MerchantAutoReply.create("mer-1", CLOCK)));
 
         assertThat(service().get("owner-1", "mer-1").getMerchantId()).isEqualTo("mer-1");
@@ -114,14 +114,14 @@ class AutoReplyServiceTest {
 
         assertThatThrownBy(() -> service.update(command))
                 .isInstanceOf(ChatException.class);
-        verify(repository, never()).save(any());
+        verify(merchantAutoReplyPersistencePort, never()).save(any());
     }
 
     @Test
     void updatePersistsAndPublishesEvent() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(repository.findByMerchantId("mer-1")).thenReturn(Optional.empty());
-        when(repository.save(any(MerchantAutoReply.class)))
+        when(merchantAutoReplyPersistencePort.findByMerchantId("mer-1")).thenReturn(Optional.empty());
+        when(merchantAutoReplyPersistencePort.save(any(MerchantAutoReply.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         MerchantAutoReply saved = service().update(updateCommand("owner-1", "mer-1"));
@@ -136,7 +136,7 @@ class AutoReplyServiceTest {
     @Test
     void updateRejectsInvertedWorkingHours() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(repository.findByMerchantId("mer-1")).thenReturn(Optional.empty());
+        when(merchantAutoReplyPersistencePort.findByMerchantId("mer-1")).thenReturn(Optional.empty());
 
         AutoReplyService service = service();
         AutoReplyCommands.UpdateAutoReply command = new AutoReplyCommands.UpdateAutoReply(

@@ -20,7 +20,7 @@ import static org.mockito.Mockito.*;
 class InventoryAnalyticsServiceTest {
 
     @Mock
-    private InventoryItemPersistencePort inventoryRepository;
+    private InventoryItemPersistencePort inventoryItemPersistencePort;
 
     @Mock
     private MerchantQueryPort merchantQueryPort;
@@ -34,7 +34,7 @@ class InventoryAnalyticsServiceTest {
 
         LowStockItem row = new LowStockItem("sku-1", "wh-1", 5, 3, 10);
 
-        when(inventoryRepository.findLowStockForMerchant("merchant-1")).thenReturn(List.of(row));
+        when(inventoryItemPersistencePort.findLowStockForMerchant("merchant-1")).thenReturn(List.of(row));
 
         List<LowStockAlertResult> results = analyticsService.getMerchantLowStock("owner-1");
 
@@ -53,6 +53,6 @@ class InventoryAnalyticsServiceTest {
 
         assertThrows(com.aionn.inventory.domain.exception.InventoryException.class,
                 () -> analyticsService.getMerchantLowStock("owner-1"));
-        verifyNoInteractions(inventoryRepository);
+        verifyNoInteractions(inventoryItemPersistencePort);
     }
 }

@@ -17,14 +17,14 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class ShipmentStatusPollWorker {
 
-    private final ShipmentPersistencePort shipmentRepository;
+    private final ShipmentPersistencePort shipmentPersistencePort;
     private final CarrierClient carrierClient;
     private final GhnStatusMapper statusMapper;
     private final ShipmentStatusApplier shipmentStatusApplier;
     private final Clock clock;
 
     public void syncOne(String shipmentId) {
-        Shipment shipment = shipmentRepository.findById(shipmentId).orElse(null);
+        Shipment shipment = shipmentPersistencePort.findById(shipmentId).orElse(null);
         if (shipment == null || shipment.getTrackingCode() == null
                 || shipment.getStatus().isTerminal()) {
             return;
@@ -33,7 +33,7 @@ public class ShipmentStatusPollWorker {
         try {
             // Stamp the attempt before the remote call so failing carriers cannot
             // monopolise the front of the polling queue forever.
-            shipmentRepository.markPolled(shipmentId, clock.instant());
+            shipmentPersistencePort.markPolled(shipmentId, clock.instant());
             detail = carrierClient.fetchOrderDetail(shipment.getTrackingCode());
         } catch (RuntimeException ex) {
             log.warn("GHN detail failed for {} ({}): {}", shipment.getShipmentId(),

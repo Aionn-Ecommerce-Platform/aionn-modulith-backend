@@ -1,7 +1,7 @@
 package com.aionn.promotion.adapter.rest.mapper.banner;
 
-import com.aionn.promotion.adapter.rest.dto.banner.CreateBannerRequest;
-import com.aionn.promotion.adapter.rest.dto.banner.UpdateBannerRequest;
+import com.aionn.promotion.adapter.rest.dto.banner.request.CreateBannerRequest;
+import com.aionn.promotion.adapter.rest.dto.banner.request.UpdateBannerRequest;
 import com.aionn.promotion.adapter.rest.dto.banner.response.PromotionBannerResponse;
 import com.aionn.promotion.application.dto.banner.command.BannerCommands;
 import com.aionn.promotion.application.dto.banner.result.PromotionBannerResult;

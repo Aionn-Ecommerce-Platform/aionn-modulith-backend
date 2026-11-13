@@ -57,7 +57,7 @@ Clock.systemUTC());
     @Test
     void createAddressSetsAsDefaultWhenFirstAddress() {
         when(userPersistencePort.existsById(USER_ID)).thenReturn(true);
-        when(addressPolicy.getMaxAddressNumbers()).thenReturn(5L);
+        when(addressPolicy.maxAddressNumbers()).thenReturn(5L);
         when(geographyService.resolveLocation("VN-HN", "VN-HN-BA", "VN-HN-BA-PX"))
                 .thenReturn(resolved());
         when(addressPersistencePort.createAtomically(any(Address.class), eq(5L), eq(true)))
@@ -93,7 +93,7 @@ Clock.systemUTC());
     @Test
     void createAddressRespectsExplicitDefaultFlag() {
         when(userPersistencePort.existsById(USER_ID)).thenReturn(true);
-        when(addressPolicy.getMaxAddressNumbers()).thenReturn(5L);
+        when(addressPolicy.maxAddressNumbers()).thenReturn(5L);
         when(geographyService.resolveLocation("VN-HN", "VN-HN-BA", "VN-HN-BA-PX"))
                 .thenReturn(resolved());
         when(addressPersistencePort.createAtomically(any(Address.class), eq(5L), eq(true)))
@@ -110,7 +110,7 @@ Clock.systemUTC());
     @Test
     void createAddressLeavesNonDefaultWhenNotFlagged() {
         when(userPersistencePort.existsById(USER_ID)).thenReturn(true);
-        when(addressPolicy.getMaxAddressNumbers()).thenReturn(5L);
+        when(addressPolicy.maxAddressNumbers()).thenReturn(5L);
         when(geographyService.resolveLocation("VN-HN", "VN-HN-BA", "VN-HN-BA-PX"))
                 .thenReturn(resolved());
         when(addressPersistencePort.createAtomically(any(Address.class), eq(5L), eq(true)))
@@ -137,7 +137,7 @@ Clock.systemUTC());
     @Test
     void createAddressRejectsWhenLimitExceeded() {
         when(userPersistencePort.existsById(USER_ID)).thenReturn(true);
-        when(addressPolicy.getMaxAddressNumbers()).thenReturn(5L);
+        when(addressPolicy.maxAddressNumbers()).thenReturn(5L);
         when(geographyService.resolveLocation("VN-HN", "VN-HN-BA", "VN-HN-BA-PX"))
                 .thenReturn(resolved());
         when(addressPersistencePort.createAtomically(any(Address.class), eq(5L), eq(true)))

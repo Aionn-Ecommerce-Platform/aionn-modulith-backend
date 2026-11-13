@@ -1,7 +1,7 @@
 package com.aionn.notification.adapter.rest.controller;
 
-import com.aionn.notification.adapter.rest.dto.template.CreateTemplateRequest;
-import com.aionn.notification.adapter.rest.dto.template.UpdateTemplateRequest;
+import com.aionn.notification.adapter.rest.dto.template.request.CreateTemplateRequest;
+import com.aionn.notification.adapter.rest.dto.template.request.UpdateTemplateRequest;
 import com.aionn.notification.adapter.rest.dto.template.response.TemplateResponse;
 import com.aionn.notification.adapter.rest.mapper.template.NotificationTemplateDtoMapper;
 import com.aionn.notification.application.port.in.template.CreateTemplateInputPort;

@@ -32,7 +32,7 @@ class CartServiceTest {
     private static final String USER_ID = "user-123";
     private static final String CART_ID = "cart-1";
 
-    @Mock private CartPersistencePort cartRepository;
+    @Mock private CartPersistencePort cartPersistencePort;
     @Mock private EventPublisher eventPublisher;
     @Mock private CartIntegrationEventPublisherPort integrationEventPublisher;
     @Mock private Clock clock;
@@ -62,13 +62,13 @@ class CartServiceTest {
     @DisplayName("removeVoucher() should clear voucher from cart and save changes")
     void removeVoucher_clearsVoucher_whenCartExists() {
         Cart cart = new Cart(CART_ID, USER_ID, new HashMap<>(), "DISCOUNT50", fixedInstant, fixedInstant);
-        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(cart));
-        when(cartRepository.save(any(Cart.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(cartPersistencePort.findByUserId(USER_ID)).thenReturn(Optional.of(cart));
+        when(cartPersistencePort.save(any(Cart.class))).thenAnswer(inv -> inv.getArgument(0));
 
         cartService.removeVoucher(new RemoveVoucherCommand(USER_ID));
 
         assertNull(cart.getVoucherCode());
-        verify(cartRepository).save(cart);
+        verify(cartPersistencePort).save(cart);
         verify(eventPublisher).publish(anyCollection());
     }
 
@@ -77,13 +77,13 @@ class CartServiceTest {
     void addItem_addsItemToCart() {
         Cart cart = emptyCart();
         Cart saved = cartWithItem("sku-1", 2);
-        when(cartRepository.findOrCreate(anyString(), eq(USER_ID), eq(fixedInstant))).thenReturn(cart);
-        when(cartRepository.save(any(Cart.class))).thenReturn(saved);
+        when(cartPersistencePort.findOrCreate(anyString(), eq(USER_ID), eq(fixedInstant))).thenReturn(cart);
+        when(cartPersistencePort.save(any(Cart.class))).thenReturn(saved);
 
         Cart result = cartService.addItem(new AddItemCommand(USER_ID, "sku-1", 2));
 
         assertNotNull(result);
-        verify(cartRepository).save(any());
+        verify(cartPersistencePort).save(any());
         verify(eventPublisher).publish(anyCollection());
         verify(integrationEventPublisher)
                 .publishCartItemAdded(CART_ID, USER_ID, "sku-1", 2, fixedInstant);
@@ -93,21 +93,21 @@ class CartServiceTest {
     @DisplayName("addItem() creates new cart if none exists")
     void addItem_createsNewCartIfNoneExists() {
         Cart newCart = emptyCart();
-        when(cartRepository.findOrCreate(anyString(), eq(USER_ID), eq(fixedInstant))).thenReturn(newCart);
-        when(cartRepository.save(any(Cart.class))).thenReturn(newCart);
+        when(cartPersistencePort.findOrCreate(anyString(), eq(USER_ID), eq(fixedInstant))).thenReturn(newCart);
+        when(cartPersistencePort.save(any(Cart.class))).thenReturn(newCart);
 
         Cart result = cartService.addItem(new AddItemCommand(USER_ID, "sku-1", 1));
 
         assertNotNull(result);
-        verify(cartRepository).save(any());
+        verify(cartPersistencePort).save(any());
     }
 
     @Test
     @DisplayName("updateItemQty() updates quantity")
     void updateItemQty_updatesExistingItem() {
         Cart cart = cartWithItem("sku-1", 1);
-        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(cart));
-        when(cartRepository.save(any(Cart.class))).thenReturn(cart);
+        when(cartPersistencePort.findByUserId(USER_ID)).thenReturn(Optional.of(cart));
+        when(cartPersistencePort.save(any(Cart.class))).thenReturn(cart);
 
         Cart result = cartService.updateItemQty(new UpdateItemQtyCommand(USER_ID, "sku-1", 5));
 
@@ -117,7 +117,7 @@ class CartServiceTest {
     @Test
     @DisplayName("updateItemQty() throws if cart not found")
     void updateItemQty_throwsWhenCartNotFound() {
-        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
+        when(cartPersistencePort.findByUserId(USER_ID)).thenReturn(Optional.empty());
         assertThrows(OrderingException.class,
                 () -> cartService.updateItemQty(new UpdateItemQtyCommand(USER_ID, "sku-1", 5)));
     }
@@ -126,8 +126,8 @@ class CartServiceTest {
     @DisplayName("removeItem() removes item from cart")
     void removeItem_removesItemFromCart() {
         Cart cart = cartWithItem("sku-1", 3);
-        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(cart));
-        when(cartRepository.save(any(Cart.class))).thenReturn(cart);
+        when(cartPersistencePort.findByUserId(USER_ID)).thenReturn(Optional.of(cart));
+        when(cartPersistencePort.save(any(Cart.class))).thenReturn(cart);
 
         Cart result = cartService.removeItem(new RemoveItemCommand(USER_ID, "sku-1"));
 
@@ -138,8 +138,8 @@ class CartServiceTest {
     @DisplayName("clearCart() clears all items")
     void clearCart_clearsAllItems() {
         Cart cart = cartWithItem("sku-1", 2);
-        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(cart));
-        when(cartRepository.save(any(Cart.class))).thenReturn(cart);
+        when(cartPersistencePort.findByUserId(USER_ID)).thenReturn(Optional.of(cart));
+        when(cartPersistencePort.save(any(Cart.class))).thenReturn(cart);
 
         Cart result = cartService.clearCart(new ClearCartCommand(USER_ID, "reason"));
 
@@ -151,8 +151,8 @@ class CartServiceTest {
     @DisplayName("applyVoucher() applies voucher code")
     void applyVoucher_appliesVoucherCode() {
         Cart cart = emptyCart();
-        when(cartRepository.findByUserId(USER_ID)).thenReturn(Optional.of(cart));
-        when(cartRepository.save(any(Cart.class))).thenReturn(cart);
+        when(cartPersistencePort.findByUserId(USER_ID)).thenReturn(Optional.of(cart));
+        when(cartPersistencePort.save(any(Cart.class))).thenReturn(cart);
 
         Cart result = cartService.applyVoucher(new ApplyVoucherCommand(USER_ID, "PROMO10"));
 
@@ -164,7 +164,7 @@ class CartServiceTest {
     @DisplayName("getMyCart() returns existing cart")
     void getMyCart_returnsExistingCart() {
         Cart cart = emptyCart();
-        when(cartRepository.findOrCreate(anyString(), eq(USER_ID), eq(fixedInstant))).thenReturn(cart);
+        when(cartPersistencePort.findOrCreate(anyString(), eq(USER_ID), eq(fixedInstant))).thenReturn(cart);
 
         Cart result = cartService.getMyCart(USER_ID);
 
@@ -174,13 +174,13 @@ class CartServiceTest {
     @Test
     @DisplayName("getMyCart() atomically creates an empty cart when absent")
     void getMyCart_createsPersistentCartWhenAbsent() {
-        when(cartRepository.findOrCreate(anyString(), eq(USER_ID), eq(fixedInstant))).thenReturn(emptyCart());
+        when(cartPersistencePort.findOrCreate(anyString(), eq(USER_ID), eq(fixedInstant))).thenReturn(emptyCart());
 
         Cart result = cartService.getMyCart(USER_ID);
 
         assertNotNull(result);
         assertTrue(result.getItems().isEmpty());
-        verify(cartRepository).findOrCreate(anyString(), eq(USER_ID), eq(fixedInstant));
+        verify(cartPersistencePort).findOrCreate(anyString(), eq(USER_ID), eq(fixedInstant));
         verifyNoInteractions(eventPublisher);
     }
 }

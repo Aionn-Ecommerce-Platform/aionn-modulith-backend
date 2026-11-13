@@ -11,7 +11,7 @@ class SpringAgentPolicyTest {
     void mapsConfiguredValues() {
         SpringAgentPolicy policy = new SpringAgentPolicy(new AgentProperties(3, 250));
 
-        assertThat(policy.getKeyExpiryYears()).isEqualTo(3);
-        assertThat(policy.getAuditLogLimit()).isEqualTo(250);
+        assertThat(policy.keyExpiryYears()).isEqualTo(3);
+        assertThat(policy.auditLogLimit()).isEqualTo(250);
     }
 }

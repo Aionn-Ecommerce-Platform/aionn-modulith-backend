@@ -23,16 +23,16 @@ import static org.mockito.Mockito.*;
 class PaymentPreferenceServiceTest {
 
     @Mock
-    private PaymentPreferencePersistencePort preferenceRepository;
+    private PaymentPreferencePersistencePort paymentPreferencePersistencePort;
     @Mock
-    private PaymentMethodPersistencePort paymentMethodRepository;
+    private PaymentMethodPersistencePort paymentMethodPersistencePort;
 
     @InjectMocks
     private PaymentPreferenceService preferenceService;
 
     @Test
     void shouldReturnCodWhenNoPreferenceFound() {
-        when(preferenceRepository.findByUserId("user-1")).thenReturn(Optional.empty());
+        when(paymentPreferencePersistencePort.findByUserId("user-1")).thenReturn(Optional.empty());
 
         PaymentPreferenceResult result = preferenceService.get("user-1");
 
@@ -42,7 +42,7 @@ class PaymentPreferenceServiceTest {
 
     @Test
     void shouldReturnCodWhenPreferenceIsCod() {
-        when(preferenceRepository.findByUserId("user-1"))
+        when(paymentPreferencePersistencePort.findByUserId("user-1"))
                 .thenReturn(Optional.of(new Preference("user-1", "COD", null)));
 
         PaymentPreferenceResult result = preferenceService.get("user-1");
@@ -53,11 +53,11 @@ class PaymentPreferenceServiceTest {
 
     @Test
     void shouldReturnSavedCardWhenCardIsUsable() {
-        when(preferenceRepository.findByUserId("user-1"))
+        when(paymentPreferencePersistencePort.findByUserId("user-1"))
                 .thenReturn(Optional.of(new Preference("user-1", "SAVED_CARD", "card-1")));
 
         PaymentMethod card = new PaymentMethod("card-1", "user-1", "VISA", "4242", "tok-1", PaymentMethodStatus.VERIFIED, Instant.now(), Instant.now(), Instant.now());
-        when(paymentMethodRepository.findById("card-1")).thenReturn(Optional.of(card));
+        when(paymentMethodPersistencePort.findById("card-1")).thenReturn(Optional.of(card));
 
         PaymentPreferenceResult result = preferenceService.get("user-1");
 
@@ -67,16 +67,16 @@ class PaymentPreferenceServiceTest {
 
     @Test
     void shouldResetToCodWhenCardIsNotUsable() {
-        when(preferenceRepository.findByUserId("user-1"))
+        when(paymentPreferencePersistencePort.findByUserId("user-1"))
                 .thenReturn(Optional.of(new Preference("user-1", "SAVED_CARD", "card-1")));
 
-        when(paymentMethodRepository.findById("card-1")).thenReturn(Optional.empty());
+        when(paymentMethodPersistencePort.findById("card-1")).thenReturn(Optional.empty());
 
         PaymentPreferenceResult result = preferenceService.get("user-1");
 
         assertEquals("COD", result.paymentType());
         assertNull(result.paymentMethodId());
-        verify(preferenceRepository).save(new Preference("user-1", "COD", null));
+        verify(paymentPreferencePersistencePort).save(new Preference("user-1", "COD", null));
     }
 
     @Test
@@ -84,7 +84,7 @@ class PaymentPreferenceServiceTest {
         PaymentPreferenceResult result = preferenceService.update("user-1", "COD", null);
 
         assertEquals("COD", result.paymentType());
-        verify(preferenceRepository).save(new Preference("user-1", "COD", null));
+        verify(paymentPreferencePersistencePort).save(new Preference("user-1", "COD", null));
     }
 
     @Test
@@ -92,25 +92,25 @@ class PaymentPreferenceServiceTest {
         PaymentPreferenceResult result = preferenceService.update("user-1", "VNPAY", null);
 
         assertEquals("VNPAY", result.paymentType());
-        verify(preferenceRepository).save(new Preference("user-1", "VNPAY", null));
+        verify(paymentPreferencePersistencePort).save(new Preference("user-1", "VNPAY", null));
     }
 
     @Test
     void shouldUpdateToSavedCardSuccessfully() {
         PaymentMethod card = new PaymentMethod("card-1", "user-1", "VISA", "4242", "tok-1", PaymentMethodStatus.VERIFIED, Instant.now(), Instant.now(), Instant.now());
-        when(paymentMethodRepository.findById("card-1")).thenReturn(Optional.of(card));
+        when(paymentMethodPersistencePort.findById("card-1")).thenReturn(Optional.of(card));
 
         PaymentPreferenceResult result = preferenceService.update("user-1", "SAVED_CARD", "card-1");
 
         assertEquals("SAVED_CARD", result.paymentType());
         assertEquals("card-1", result.paymentMethodId());
-        verify(preferenceRepository).save(new Preference("user-1", "SAVED_CARD", "card-1"));
+        verify(paymentPreferencePersistencePort).save(new Preference("user-1", "SAVED_CARD", "card-1"));
     }
 
     @Test
     void shouldFailToUpdateToSavedCardWhenNotVerified() {
         PaymentMethod card = new PaymentMethod("card-1", "user-1", "VISA", "4242", "tok-1", PaymentMethodStatus.LINKED, Instant.now(), Instant.now(), null);
-        when(paymentMethodRepository.findById("card-1")).thenReturn(Optional.of(card));
+        when(paymentMethodPersistencePort.findById("card-1")).thenReturn(Optional.of(card));
 
         assertThrows(PaymentException.class, () -> preferenceService.update("user-1", "SAVED_CARD", "card-1"));
     }

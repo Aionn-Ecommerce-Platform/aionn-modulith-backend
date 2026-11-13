@@ -1,14 +1,14 @@
 package com.aionn.ucp.adapter.rest.controller;
 
 import com.aionn.ucp.adapter.rest.advice.UcpControllerAdvice;
-import com.aionn.ucp.adapter.rest.dto.cart.UcpItemResponse;
-import com.aionn.ucp.adapter.rest.dto.cart.UcpLineItemResponse;
+import com.aionn.ucp.adapter.rest.dto.cart.response.UcpItemResponse;
+import com.aionn.ucp.adapter.rest.dto.cart.response.UcpLineItemResponse;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpResponseMetadata;
-import com.aionn.ucp.adapter.rest.dto.cart.UcpTotalResponse;
-import com.aionn.ucp.adapter.rest.dto.checkout.UcpCheckoutRequest;
-import com.aionn.ucp.adapter.rest.dto.checkout.UcpCheckoutResponse;
-import com.aionn.ucp.adapter.rest.dto.checkout.UcpLinkResponse;
-import com.aionn.ucp.adapter.rest.dto.checkout.UcpOrderConfirmationResponse;
+import com.aionn.ucp.adapter.rest.dto.cart.response.UcpTotalResponse;
+import com.aionn.ucp.adapter.rest.dto.checkout.request.UcpCheckoutRequest;
+import com.aionn.ucp.adapter.rest.dto.checkout.response.UcpCheckoutResponse;
+import com.aionn.ucp.adapter.rest.dto.checkout.response.UcpLinkResponse;
+import com.aionn.ucp.adapter.rest.dto.checkout.response.UcpOrderConfirmationResponse;
 import com.aionn.ucp.application.checkout.UcpCheckoutApplicationService;
 import com.aionn.ucp.domain.exception.UcpProtocolException;
 import org.junit.jupiter.api.BeforeEach;

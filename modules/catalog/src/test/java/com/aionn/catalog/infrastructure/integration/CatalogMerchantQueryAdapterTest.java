@@ -29,21 +29,21 @@ import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 class CatalogMerchantQueryAdapterTest {
 
     @Mock
-    private MerchantPersistencePort merchantRepository;
+    private MerchantPersistencePort merchantPersistencePort;
 
     private CatalogMerchantQueryAdapter adapter;
 
     @BeforeEach
     void setUp() {
         adapter = new CatalogMerchantQueryAdapter(
-                merchantRepository,
+                merchantPersistencePort,
                 FIXED);
     }
 
     @Test
     void findMerchantIdByOwnerIdReturnsIdWhenPresent() {
         Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
-        when(merchantRepository.findByOwnerId("owner-1")).thenReturn(Optional.of(merchant));
+        when(merchantPersistencePort.findByOwnerId("owner-1")).thenReturn(Optional.of(merchant));
 
         assertThat(adapter.findMerchantIdByOwnerId("owner-1")).contains("m-1");
     }
@@ -57,7 +57,7 @@ class CatalogMerchantQueryAdapterTest {
     @Test
     void findOwnerIdByMerchantIdReturnsOwner() {
         Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
-        when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
+        when(merchantPersistencePort.findById("m-1")).thenReturn(Optional.of(merchant));
 
         assertThat(adapter.findOwnerIdByMerchantId("m-1")).contains("owner-1");
     }
@@ -71,7 +71,7 @@ class CatalogMerchantQueryAdapterTest {
     @Test
     void findCommissionRateReturnsRateWhenMerchantExists() {
         Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.0750"), FIXED);
-        when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
+        when(merchantPersistencePort.findById("m-1")).thenReturn(Optional.of(merchant));
 
         assertThat(adapter.findCommissionRate("m-1")).contains(new BigDecimal("0.0750"));
     }
@@ -85,7 +85,7 @@ class CatalogMerchantQueryAdapterTest {
     @Test
     void findStripeConnectInfoReturnsEmptyWhenNoStripeAccount() {
         Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
-        when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
+        when(merchantPersistencePort.findById("m-1")).thenReturn(Optional.of(merchant));
 
         assertThat(adapter.findStripeConnectInfo("m-1")).isEmpty();
     }
@@ -95,7 +95,7 @@ class CatalogMerchantQueryAdapterTest {
         Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
         merchant.linkStripeAccount("acct_test", FIXED);
         merchant.updateStripeCapabilities(true, false, FIXED);
-        when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
+        when(merchantPersistencePort.findById("m-1")).thenReturn(Optional.of(merchant));
 
         Optional<StripeConnectInfo> info = adapter.findStripeConnectInfo("m-1");
 
@@ -108,42 +108,42 @@ class CatalogMerchantQueryAdapterTest {
     @Test
     void saveStripeAccountIdPersistsChanges() {
         Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
-        when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
+        when(merchantPersistencePort.findById("m-1")).thenReturn(Optional.of(merchant));
 
         adapter.saveStripeAccountId("m-1", "acct_test");
 
         ArgumentCaptor<Merchant> captor = ArgumentCaptor.forClass(Merchant.class);
-        verify(merchantRepository).save(captor.capture());
+        verify(merchantPersistencePort).save(captor.capture());
         assertThat(captor.getValue().getStripeAccountId()).isEqualTo("acct_test");
     }
 
     @Test
     void saveStripeAccountIdThrowsWhenMerchantMissing() {
-        when(merchantRepository.findById("m-1")).thenReturn(Optional.empty());
+        when(merchantPersistencePort.findById("m-1")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> adapter.saveStripeAccountId("m-1", "acct_test"))
                 .isInstanceOf(CatalogException.class);
 
-        verify(merchantRepository, never()).save(any(Merchant.class));
+        verify(merchantPersistencePort, never()).save(any(Merchant.class));
     }
 
     @Test
     void updateStripeCapabilitiesPersistsChanges() {
         Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
         merchant.linkStripeAccount("acct_test", FIXED);
-        when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
+        when(merchantPersistencePort.findById("m-1")).thenReturn(Optional.of(merchant));
 
         adapter.updateStripeCapabilities("m-1", true, true);
 
         ArgumentCaptor<Merchant> captor = ArgumentCaptor.forClass(Merchant.class);
-        verify(merchantRepository).save(captor.capture());
+        verify(merchantPersistencePort).save(captor.capture());
         assertThat(captor.getValue().isStripeChargesEnabled()).isTrue();
         assertThat(captor.getValue().isStripePayoutsEnabled()).isTrue();
     }
 
     @Test
     void updateStripeCapabilitiesThrowsWhenMerchantMissing() {
-        when(merchantRepository.findById("m-1")).thenReturn(Optional.empty());
+        when(merchantPersistencePort.findById("m-1")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> adapter.updateStripeCapabilities("m-1", true, true))
                 .isInstanceOf(CatalogException.class);

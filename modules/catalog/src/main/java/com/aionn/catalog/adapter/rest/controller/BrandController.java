@@ -4,8 +4,6 @@ import com.aionn.catalog.adapter.rest.dto.brand.request.CreateBrandRequest;
 import com.aionn.catalog.adapter.rest.dto.brand.request.DeleteBrandRequest;
 import com.aionn.catalog.adapter.rest.dto.brand.request.UpdateBrandRequest;
 import com.aionn.catalog.adapter.rest.dto.brand.response.BrandResponse;
-import com.aionn.catalog.application.dto.brand.query.GetBrandQuery;
-import com.aionn.catalog.application.dto.brand.query.ListBrandsQuery;
 import com.aionn.catalog.application.dto.brand.result.BrandResult;
 import com.aionn.catalog.application.dto.common.PageResult;
 import com.aionn.catalog.application.port.in.brand.CreateBrandInputPort;
@@ -14,7 +12,6 @@ import com.aionn.catalog.application.port.in.brand.GetBrandInputPort;
 import com.aionn.catalog.application.port.in.brand.ListBrandsInputPort;
 import com.aionn.catalog.application.port.in.brand.UpdateBrandInputPort;
 import com.aionn.platform.web.response.ApiResponse;
-import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -73,7 +70,7 @@ public class BrandController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         PageResult<BrandResult> result = listBrandsInputPort.execute(
-                new ListBrandsQuery(OffsetPagination.of(page, size)));
+                brandDtoMapper.toListQuery(page, size));
         return ResponseEntity.ok(ApiResponse.successWithPaging(
                 brandDtoMapper.toResponses(result.content()),
                 PageMetadata.of(result.page(), result.size(), result.totalElements()),
@@ -84,6 +81,6 @@ public class BrandController {
     @Operation(summary = "Get brand", description = "Public read")
     public ResponseEntity<ApiResponse<BrandResponse>> get(@PathVariable String brandId) {
         return ResponseEntity.ok(ApiResponse.success(
-                brandDtoMapper.toResponse(getBrandInputPort.execute(new GetBrandQuery(brandId))), "Brand fetched"));
+                brandDtoMapper.toResponse(getBrandInputPort.execute(brandDtoMapper.toGetQuery(brandId))), "Brand fetched"));
     }
 }

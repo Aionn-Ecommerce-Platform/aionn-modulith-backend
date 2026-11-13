@@ -13,13 +13,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class ListAdminLowStockUseCase implements ListAdminLowStockInputPort {
-    private final InventoryItemPersistencePort inventoryRepository;
+    private final InventoryItemPersistencePort inventoryItemPersistencePort;
     private final InventoryItemResultMapper resultMapper;
 
     @Override
     @Transactional(readOnly = true)
     public PageResult<InventoryItemResult> execute(OffsetPagination pagination) {
-        var page = inventoryRepository.findAllLowStock(pagination);
+        var page = inventoryItemPersistencePort.findAllLowStock(pagination);
         return new PageResult<>(resultMapper.toResults(page.content()), page.page(), page.size(),
                 page.returned(), page.totalElements());
     }

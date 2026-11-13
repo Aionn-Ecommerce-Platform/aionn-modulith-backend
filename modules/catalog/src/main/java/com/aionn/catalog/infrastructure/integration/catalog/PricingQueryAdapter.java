@@ -21,8 +21,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PricingQueryAdapter implements PricingQueryPort {
 
-    private final ProductPersistencePort productRepository;
-    private final MerchantPersistencePort merchantRepository;
+    private final ProductPersistencePort productPersistencePort;
+    private final MerchantPersistencePort merchantPersistencePort;
     private final CatalogProductProperties productProperties;
 
     @Override
@@ -32,9 +32,9 @@ public class PricingQueryAdapter implements PricingQueryPort {
             return Map.of();
         }
         Map<String, SkuPricing> result = new LinkedHashMap<>();
-        List<Product> products = productRepository.findAllBySkuIds(skuIds);
+        List<Product> products = productPersistencePort.findAllBySkuIds(skuIds);
         for (Product product : products) {
-            boolean merchantActive = merchantRepository.findById(product.getMerchantId())
+            boolean merchantActive = merchantPersistencePort.findById(product.getMerchantId())
                     .map(m -> m.getStatus() == MerchantStatus.ACTIVE)
                     .orElse(false);
             boolean active = product.getStatus() == ProductStatus.PUBLISHED && merchantActive;

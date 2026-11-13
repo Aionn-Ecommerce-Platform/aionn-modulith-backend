@@ -20,7 +20,7 @@ import static org.mockito.Mockito.*;
 class ReservationAutoReleaseSchedulerTest {
 
     @Mock
-    private StockReservationPersistencePort reservationRepository;
+    private StockReservationPersistencePort stockReservationPersistencePort;
     @Mock
     private ReservationAutoReleaseWorker worker;
     @Mock
@@ -37,7 +37,7 @@ class ReservationAutoReleaseSchedulerTest {
 
     @BeforeEach
     void setUp() {
-        scheduler = new ReservationAutoReleaseScheduler(reservationRepository, worker, properties, clock);
+        scheduler = new ReservationAutoReleaseScheduler(stockReservationPersistencePort, worker, properties, clock);
         when(properties.reservation()).thenReturn(reservationConfig);
         when(reservationConfig.autoRelease()).thenReturn(autoReleaseConfig);
         when(autoReleaseConfig.batchSize()).thenReturn(100);
@@ -50,7 +50,7 @@ class ReservationAutoReleaseSchedulerTest {
         when(r1.getReservationId()).thenReturn("RES_1");
         when(r2.getReservationId()).thenReturn("RES_2");
 
-        when(reservationRepository.findExpired(fixedInstant, 100)).thenReturn(List.of(r1, r2));
+        when(stockReservationPersistencePort.findExpired(fixedInstant, 100)).thenReturn(List.of(r1, r2));
 
         scheduler.releaseExpired();
 
@@ -65,7 +65,7 @@ class ReservationAutoReleaseSchedulerTest {
         when(r1.getReservationId()).thenReturn("RES_1");
         when(r2.getReservationId()).thenReturn("RES_2");
 
-        when(reservationRepository.findExpired(fixedInstant, 100)).thenReturn(List.of(r1, r2));
+        when(stockReservationPersistencePort.findExpired(fixedInstant, 100)).thenReturn(List.of(r1, r2));
         doThrow(new RuntimeException("database down")).when(worker).releaseOne("RES_1");
 
         scheduler.releaseExpired();

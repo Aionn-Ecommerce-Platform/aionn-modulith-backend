@@ -5,6 +5,7 @@ import com.aionn.identity.adapter.rest.dto.auth.request.RefreshTokenRequest;
 import com.aionn.identity.adapter.rest.dto.auth.request.SocialAuthRequest;
 import com.aionn.identity.adapter.rest.dto.auth.response.AuthSessionResponse;
 import com.aionn.identity.adapter.rest.dto.auth.response.AuthTokenResponse;
+import com.aionn.identity.adapter.rest.dto.auth.response.CsrfTokenResponse;
 import com.aionn.identity.adapter.rest.dto.auth.response.LogoutAllResponse;
 import com.aionn.identity.adapter.rest.mapper.auth.AuthDtoMapper;
 import com.aionn.identity.adapter.rest.support.client.AuthClientType;
@@ -50,9 +51,6 @@ public class AuthController {
 		CsrfToken token = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
 		return ResponseEntity.ok(ApiResponse.success(
 				new CsrfTokenResponse(token == null ? "" : token.getToken()), "CSRF token fetched"));
-	}
-
-	public record CsrfTokenResponse(String token) {
 	}
 
 	@PostMapping("/login")

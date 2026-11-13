@@ -19,7 +19,7 @@ import java.time.Clock;
 @Transactional
 public class AutoReplyService {
 
-    private final MerchantAutoReplyPersistencePort repository;
+    private final MerchantAutoReplyPersistencePort merchantAutoReplyPersistencePort;
     private final EventPublisher eventPublisher;
     private final MerchantQueryPort merchantQueryPort;
     private final ChatAutoReplyPolicy autoReplyPolicy;
@@ -27,11 +27,11 @@ public class AutoReplyService {
 
     public MerchantAutoReply update(AutoReplyCommands.UpdateAutoReply command) {
         ensureCallerOwnsMerchant(command.ownerId(), command.merchantId());
-        MerchantAutoReply autoReply = repository.findByMerchantId(command.merchantId())
+        MerchantAutoReply autoReply = merchantAutoReplyPersistencePort.findByMerchantId(command.merchantId())
                 .orElseGet(() -> createDefault(command.merchantId()));
         autoReply.update(command.enabled(), command.greeting(), command.awayMessage(),
                 command.workingHourStart(), command.workingHourEnd(), command.workingDays(), clock);
-        MerchantAutoReply saved = repository.save(autoReply);
+        MerchantAutoReply saved = merchantAutoReplyPersistencePort.save(autoReply);
         eventPublisher.publish(autoReply.pullEvents());
         return saved;
     }
@@ -39,7 +39,7 @@ public class AutoReplyService {
     @Transactional(readOnly = true)
     public MerchantAutoReply get(String ownerId, String merchantId) {
         ensureCallerOwnsMerchant(ownerId, merchantId);
-        return repository.findByMerchantId(merchantId)
+        return merchantAutoReplyPersistencePort.findByMerchantId(merchantId)
                 .orElseGet(() -> createDefault(merchantId));
     }
 

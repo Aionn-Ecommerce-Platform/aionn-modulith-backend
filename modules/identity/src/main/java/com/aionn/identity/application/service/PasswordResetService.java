@@ -1,7 +1,8 @@
 package com.aionn.identity.application.service;
 
+import com.aionn.identity.application.policy.PasswordConstants;
+
 import com.aionn.identity.application.policy.AuthPolicy;
-import com.aionn.identity.application.policy.IdentityValidationConstants;
 import com.aionn.identity.application.port.out.auth.AuthSessionPersistencePort;
 import com.aionn.identity.application.port.out.auth.RefreshTokenStorePort;
 import com.aionn.identity.application.port.out.integration.IdentityIntegrationEventPublisherPort;
@@ -85,12 +86,12 @@ public class PasswordResetService {
             return;
         }
 
-        byte[] bytes = new byte[IdentityValidationConstants.RESET_TOKEN_BYTES];
+        byte[] bytes = new byte[PasswordConstants.RESET_TOKEN_BYTES];
         SECURE_RANDOM.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 
         passwordResetPort.savePasswordResetTokenHash(hashToken(token), user.get().userId(),
-                nowUtc().plus(Duration.ofMinutes(authPolicy.getPasswordResetTokenTtlMinutes())));
+                nowUtc().plus(Duration.ofMinutes(authPolicy.passwordResetTokenTtlMinutes())));
         securityAuditPort.saveAuditLog(user.get().userId(), SecurityAuditEventType.PASSWORD_RESET_REQUESTED, ipAddress);
         identityMetrics.passwordResetLifecycle("requested");
         integrationEventPublisher.publishPasswordResetRequested(user.get().userId(), token);
@@ -99,9 +100,9 @@ public class PasswordResetService {
     private void enforcePasswordResetRateLimit(String identity, String ipAddress) {
         String identityKey = Sha256Hasher.hexDigest(identity.trim().toLowerCase(Locale.ROOT));
         boolean ipAllowed = abuseRateLimiter.check("PASSWORD_RESET_IP", ipAddress,
-                authPolicy.getPasswordResetIpMaxAttempts(), authPolicy.getPasswordResetRateLimitWindowSeconds());
+                authPolicy.passwordResetIpMaxAttempts(), authPolicy.passwordResetRateLimitWindowSeconds());
         boolean identityAllowed = abuseRateLimiter.check("PASSWORD_RESET_IDENTITY", identityKey,
-                authPolicy.getPasswordResetIdentityMaxAttempts(), authPolicy.getPasswordResetRateLimitWindowSeconds());
+                authPolicy.passwordResetIdentityMaxAttempts(), authPolicy.passwordResetRateLimitWindowSeconds());
         if (!ipAllowed || !identityAllowed) {
             throw new IdentityException(IdentityErrorCode.RATE_LIMIT_EXCEEDED);
         }
@@ -140,11 +141,11 @@ public class PasswordResetService {
 
     private void validateNewPassword(String newPassword) {
         if (newPassword == null
-                || newPassword.length() < IdentityValidationConstants.PASSWORD_MIN_LENGTH
-                || newPassword.length() > IdentityValidationConstants.PASSWORD_MAX_LENGTH) {
+                || newPassword.length() < PasswordConstants.PASSWORD_MIN_LENGTH
+                || newPassword.length() > PasswordConstants.PASSWORD_MAX_LENGTH) {
             throw new IdentityException(IdentityErrorCode.INVALID_CREDENTIALS,
-                    "Password must be between " + IdentityValidationConstants.PASSWORD_MIN_LENGTH + " and "
-                            + IdentityValidationConstants.PASSWORD_MAX_LENGTH + " characters");
+                    "Password must be between " + PasswordConstants.PASSWORD_MIN_LENGTH + " and "
+                            + PasswordConstants.PASSWORD_MAX_LENGTH + " characters");
         }
         boolean hasLetter = newPassword.chars().anyMatch(Character::isLetter);
         boolean hasDigit = newPassword.chars().anyMatch(Character::isDigit);

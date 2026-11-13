@@ -19,7 +19,7 @@ public record RegistrationSessionDocument(
     static RegistrationSessionDocument from(RegistrationVerificationSession session) {
         return new RegistrationSessionDocument(
                 session.getRegId(), session.getPhoneNumber(), session.getOtpCode(), session.getAttemptCount(),
-                session.getMaxVerifyAttempts(), session.getResendAvailableAt(), session.getExpiredAt(),
+                session.maxVerifyAttempts(), session.getResendAvailableAt(), session.getExpiredAt(),
                 session.isVerified(), session.getVerificationToken(), session.getVerifiedAt());
     }
 

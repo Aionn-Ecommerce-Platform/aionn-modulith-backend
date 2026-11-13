@@ -1,0 +1,11 @@
+package com.aionn.promotion.adapter.rest.dto.banner.request;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+public record CreateBannerRequest(
+        @NotBlank @Size(max = 150) String title,
+        @NotBlank @Size(max = 500) String imageUrl,
+        @NotBlank @Size(max = 255) String imagePublicId,
+        @Size(max = 500) String linkUrl) {
+}

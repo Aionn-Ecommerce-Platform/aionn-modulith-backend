@@ -132,7 +132,7 @@ class AccountManagementServiceTest {
                 when(orderQueryPort.hasOpenOrdersForUser(USER_ID)).thenReturn(false);
                 when(merchantQueryPort.findMerchantIdByOwnerId(USER_ID)).thenReturn(Optional.empty());
                 when(accountDeletionPort.findPendingByUserId(USER_ID)).thenReturn(Optional.empty());
-                when(accountManagementPolicy.getDeletionGraceDays()).thenReturn(30);
+                when(accountManagementPolicy.deletionGraceDays()).thenReturn(30);
                 when(accountDeletionPort.save(eq(USER_ID), any(Instant.class))).thenReturn(view);
 
                 DeletionRequestView result = service.requestAccountDeletion(
@@ -257,7 +257,7 @@ class AccountManagementServiceTest {
         @Test
         void sendVerifyPrimaryEmailOtpSendsAndStoresChallenge() {
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
-                when(accountManagementPolicy.getOtpExpirySeconds()).thenReturn(300);
+                when(accountManagementPolicy.otpExpirySeconds()).thenReturn(300);
 
                 service.sendVerifyPrimaryEmailOtp(USER_ID);
 
@@ -343,7 +343,7 @@ class AccountManagementServiceTest {
                 when(userOtpChallengeStore.find(USER_ID, UserOtpPurpose.VERIFY_PRIMARY_EMAIL)).thenReturn(
                                 Optional.of(challenge(UserOtpPurpose.VERIFY_PRIMARY_EMAIL, OtpChannel.EMAIL,
                                                 "u@example.com", "123456", null, future(), 0)));
-                when(accountManagementPolicy.getOtpMaxAttempts()).thenReturn(5);
+                when(accountManagementPolicy.otpMaxAttempts()).thenReturn(5);
 
                 assertErrorCode(IdentityErrorCode.OTP_INVALID,
                                 () -> service.confirmVerifyPrimaryEmailOtp(USER_ID, "000000"));
@@ -357,7 +357,7 @@ class AccountManagementServiceTest {
                 when(userOtpChallengeStore.find(USER_ID, UserOtpPurpose.VERIFY_PRIMARY_EMAIL)).thenReturn(
                                 Optional.of(challenge(UserOtpPurpose.VERIFY_PRIMARY_EMAIL, OtpChannel.EMAIL,
                                                 "u@example.com", "123456", null, future(), 4)));
-                when(accountManagementPolicy.getOtpMaxAttempts()).thenReturn(5);
+                when(accountManagementPolicy.otpMaxAttempts()).thenReturn(5);
 
                 assertErrorCode(IdentityErrorCode.OTP_ATTEMPTS_EXCEEDED,
                                 () -> service.confirmVerifyPrimaryEmailOtp(USER_ID, "000000"));
@@ -371,7 +371,7 @@ class AccountManagementServiceTest {
                 when(userOtpChallengeStore.find(USER_ID, UserOtpPurpose.VERIFY_PRIMARY_EMAIL)).thenReturn(
                                 Optional.of(challenge(UserOtpPurpose.VERIFY_PRIMARY_EMAIL, OtpChannel.EMAIL,
                                                 "u@example.com", "123456", null, future(), 0)));
-                when(accountManagementPolicy.getOtpMaxAttempts()).thenReturn(5);
+                when(accountManagementPolicy.otpMaxAttempts()).thenReturn(5);
                 when(userOtpChallengeStore.tryAcquireAttempt(
                                 eq(USER_ID), eq(UserOtpPurpose.VERIFY_PRIMARY_EMAIL), eq(5), any()))
                                 .thenReturn(false);
@@ -386,7 +386,7 @@ class AccountManagementServiceTest {
         void requestEmailChangeOtpSendsToNewEmail() {
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
                 when(userPersistencePort.findByIdentity("new@example.com")).thenReturn(Optional.empty());
-                when(accountManagementPolicy.getOtpExpirySeconds()).thenReturn(300);
+                when(accountManagementPolicy.otpExpirySeconds()).thenReturn(300);
 
                 service.requestEmailChangeOtp(USER_ID, "new@example.com");
 
@@ -459,7 +459,7 @@ class AccountManagementServiceTest {
         void requestPhoneChangeOtpSendsToNewPhone() {
                 when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
                 when(userPersistencePort.existsByPhone("+15550001")).thenReturn(false);
-                when(accountManagementPolicy.getOtpExpirySeconds()).thenReturn(300);
+                when(accountManagementPolicy.otpExpirySeconds()).thenReturn(300);
 
                 service.requestPhoneChangeOtp(USER_ID, "+15550001");
 
@@ -552,7 +552,7 @@ class AccountManagementServiceTest {
                 when(orderQueryPort.hasOpenOrdersForUser(USER_ID)).thenReturn(false);
                 when(merchantQueryPort.findMerchantIdByOwnerId(USER_ID)).thenReturn(Optional.empty());
                 when(accountDeletionPort.findPendingByUserId(USER_ID)).thenReturn(Optional.empty());
-                when(accountManagementPolicy.getDeletionGraceDays()).thenReturn(30);
+                when(accountManagementPolicy.deletionGraceDays()).thenReturn(30);
                 when(accountDeletionPort.save(eq(USER_ID), any(Instant.class))).thenReturn(view);
 
                 assertThat(service.requestAccountDeletion(
@@ -697,7 +697,7 @@ class AccountManagementServiceTest {
                 when(orderQueryPort.hasOpenOrdersForUser(USER_ID)).thenReturn(false);
                 when(merchantQueryPort.findMerchantIdByOwnerId(USER_ID)).thenReturn(Optional.empty());
                 when(accountDeletionPort.findPendingByUserId(USER_ID)).thenReturn(Optional.empty());
-                when(accountManagementPolicy.getDeletionGraceDays()).thenReturn(30);
+                when(accountManagementPolicy.deletionGraceDays()).thenReturn(30);
                 when(accountDeletionPort.save(eq(USER_ID), any(Instant.class))).thenReturn(view);
 
                 assertThat(service.requestAccountDeletion(
@@ -717,7 +717,7 @@ class AccountManagementServiceTest {
                 when(orderQueryPort.hasOpenOrdersForUser(USER_ID)).thenReturn(false);
                 when(merchantQueryPort.findMerchantIdByOwnerId(USER_ID)).thenReturn(Optional.empty());
                 when(accountDeletionPort.findPendingByUserId(USER_ID)).thenReturn(Optional.empty());
-                when(accountManagementPolicy.getDeletionGraceDays()).thenReturn(30);
+                when(accountManagementPolicy.deletionGraceDays()).thenReturn(30);
                 when(accountDeletionPort.save(eq(USER_ID), any(Instant.class))).thenReturn(view);
 
                 assertThat(service.requestAccountDeletion(
@@ -751,7 +751,7 @@ class AccountManagementServiceTest {
                 when(merchantQueryPort.findMerchantIdByOwnerId(USER_ID)).thenReturn(Optional.of("merchant-1"));
                 when(orderQueryPort.hasOpenOrdersForMerchant("merchant-1")).thenReturn(false);
                 when(accountDeletionPort.findPendingByUserId(USER_ID)).thenReturn(Optional.empty());
-                when(accountManagementPolicy.getDeletionGraceDays()).thenReturn(30);
+                when(accountManagementPolicy.deletionGraceDays()).thenReturn(30);
                 when(accountDeletionPort.save(eq(USER_ID), any(Instant.class))).thenReturn(view);
 
                 assertThat(service.requestAccountDeletion(

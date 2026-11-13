@@ -3,7 +3,7 @@ package com.aionn.ucp.adapter.rest.controller;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-import com.aionn.ucp.adapter.rest.dto.BusinessProfileResponse;
+import com.aionn.ucp.adapter.rest.dto.response.BusinessProfileResponse;
 import com.aionn.ucp.application.UcpProtocolConstants;
 import com.aionn.ucp.application.port.out.BusinessProfileValidationPort;
 import com.aionn.ucp.application.port.out.UcpSigningPort;

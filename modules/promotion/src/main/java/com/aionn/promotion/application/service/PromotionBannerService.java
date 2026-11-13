@@ -17,14 +17,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class PromotionBannerService {
 
-    private final PromotionBannerPersistencePort bannerRepository;
+    private final PromotionBannerPersistencePort promotionBannerPersistencePort;
 
     public PageResult<PromotionBanner> listActive(OffsetPagination pagination) {
-        return bannerRepository.findAllActive(pagination);
+        return promotionBannerPersistencePort.findAllActive(pagination);
     }
 
     public PageResult<PromotionBanner> listAll(OffsetPagination pagination) {
-        return bannerRepository.findAll(pagination);
+        return promotionBannerPersistencePort.findAll(pagination);
     }
 
     public PromotionBanner get(String bannerId) {
@@ -39,9 +39,9 @@ public class PromotionBannerService {
                 command.imageUrl(),
                 command.imagePublicId(),
                 command.linkUrl(),
-                bannerRepository.nextDisplayOrder(),
+                promotionBannerPersistencePort.nextDisplayOrder(),
                 true);
-        return bannerRepository.save(banner);
+        return promotionBannerPersistencePort.save(banner);
     }
 
     @Transactional
@@ -50,19 +50,19 @@ public class PromotionBannerService {
         banner.update(command.title(), command.imageUrl(), command.imagePublicId(), command.linkUrl(),
                 command.displayOrder(), command.active());
         if (command.displayOrder() != null) {
-            bannerRepository.syncDisplayOrderSequence(command.displayOrder());
+            promotionBannerPersistencePort.syncDisplayOrderSequence(command.displayOrder());
         }
-        return bannerRepository.save(banner);
+        return promotionBannerPersistencePort.save(banner);
     }
 
     @Transactional
     public void delete(BannerCommands.DeleteBanner command) {
         required(command.bannerId());
-        bannerRepository.deleteById(command.bannerId());
+        promotionBannerPersistencePort.deleteById(command.bannerId());
     }
 
     private PromotionBanner required(String bannerId) {
-        return bannerRepository.findById(bannerId)
+        return promotionBannerPersistencePort.findById(bannerId)
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.BANNER_NOT_FOUND));
     }
 }

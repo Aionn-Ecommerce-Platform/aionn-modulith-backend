@@ -13,7 +13,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class InventoryAnalyticsService {
 
-    private final InventoryItemPersistencePort inventoryRepository;
+    private final InventoryItemPersistencePort inventoryItemPersistencePort;
     private final MerchantQueryPort merchantQueryPort;
 
     @Transactional(readOnly = true)
@@ -22,7 +22,7 @@ public class InventoryAnalyticsService {
                 .orElseThrow(() -> new com.aionn.inventory.domain.exception.InventoryException(
                         com.aionn.inventory.domain.exception.InventoryErrorCode.WAREHOUSE_FORBIDDEN,
                         "No merchant registered for the authenticated user"));
-        return inventoryRepository.findLowStockForMerchant(merchantId).stream()
+        return inventoryItemPersistencePort.findLowStockForMerchant(merchantId).stream()
                 .map(row -> new LowStockAlertResult(
                         row.skuId(),
                         row.warehouseId(),

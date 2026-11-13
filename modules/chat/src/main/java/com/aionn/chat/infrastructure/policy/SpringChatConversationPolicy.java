@@ -12,17 +12,17 @@ public class SpringChatConversationPolicy implements ChatConversationPolicy {
     private final ChatConversationProperties properties;
 
     @Override
-    public int getListDefaultLimit() {
+    public int listDefaultLimit() {
         return properties.listDefaultLimit();
     }
 
     @Override
-    public int getListMaxLimit() {
+    public int listMaxLimit() {
         return properties.listMaxLimit();
     }
 
     @Override
-    public int getUnreadScanLimit() {
+    public int unreadScanLimit() {
         return properties.unreadScanLimit();
     }
 }

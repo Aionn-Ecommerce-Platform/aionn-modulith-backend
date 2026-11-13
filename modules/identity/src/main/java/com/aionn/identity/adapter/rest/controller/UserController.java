@@ -1,11 +1,5 @@
 package com.aionn.identity.adapter.rest.controller;
 
-import com.aionn.identity.application.dto.user.command.ConfirmEmailChangeCommand;
-import com.aionn.identity.application.dto.user.command.ConfirmEmailVerificationCommand;
-import com.aionn.identity.application.dto.user.command.ConfirmPhoneChangeCommand;
-import com.aionn.identity.application.dto.user.command.RequestEmailChangeOtpCommand;
-import com.aionn.identity.application.dto.user.command.RequestEmailVerificationOtpCommand;
-import com.aionn.identity.application.dto.user.command.RequestPhoneChangeOtpCommand;
 
 import com.aionn.identity.adapter.rest.dto.user.request.ChangeAvatarRequest;
 import com.aionn.identity.adapter.rest.dto.user.request.ChangeDisplayNameRequest;
@@ -62,7 +56,7 @@ public class UserController {
 	@Operation(summary = "Send verification email OTP", description = "Send OTP to the current primary email for verification")
 	public ResponseEntity<ApiResponse<Void>> sendVerifyEmailOtp(Authentication authentication) {
 		verifyEmailInputPort.requestOtp(
-				new RequestEmailVerificationOtpCommand(
+				userDtoMapper.toRequestEmailVerificationOtpCommand(
 						authentication.getName()));
 		return ResponseEntity.ok(ApiResponse.success("Verification OTP sent to email"));
 	}
@@ -73,7 +67,7 @@ public class UserController {
 			Authentication authentication,
 			@Valid @RequestBody ConfirmOtpRequest request) {
 		verifyEmailInputPort.confirm(
-				new ConfirmEmailVerificationCommand(
+				userDtoMapper.toConfirmEmailVerificationCommand(
 						authentication.getName(), request.otpCode()));
 		return ResponseEntity.ok(ApiResponse.success("Email verified"));
 	}
@@ -106,7 +100,7 @@ public class UserController {
 			Authentication authentication,
 			@Valid @RequestBody RequestEmailChangeOtpRequest request) {
 		changeEmailInputPort.requestOtp(
-				new RequestEmailChangeOtpCommand(
+				userDtoMapper.toRequestEmailChangeOtpCommand(
 						authentication.getName(), request.newEmail()));
 		return ResponseEntity.ok(ApiResponse.success("OTP sent to new email"));
 	}
@@ -117,7 +111,7 @@ public class UserController {
 			Authentication authentication,
 			@Valid @RequestBody ConfirmOtpRequest request) {
 		var result = changeEmailInputPort.confirm(
-				new ConfirmEmailChangeCommand(
+				userDtoMapper.toConfirmEmailChangeCommand(
 						authentication.getName(), request.otpCode()));
 		var response = userDtoMapper.toProfileResponse(result);
 		return ResponseEntity.ok(ApiResponse.success(response, "Email updated"));
@@ -129,7 +123,7 @@ public class UserController {
 			Authentication authentication,
 			@Valid @RequestBody RequestPhoneChangeOtpRequest request) {
 		changePhoneInputPort.requestOtp(
-				new RequestPhoneChangeOtpCommand(
+				userDtoMapper.toRequestPhoneChangeOtpCommand(
 						authentication.getName(), request.newPhone()));
 		return ResponseEntity.ok(ApiResponse.success("OTP sent to new phone"));
 	}
@@ -140,7 +134,7 @@ public class UserController {
 			Authentication authentication,
 			@Valid @RequestBody ConfirmOtpRequest request) {
 		var result = changePhoneInputPort.confirm(
-				new ConfirmPhoneChangeCommand(
+				userDtoMapper.toConfirmPhoneChangeCommand(
 						authentication.getName(), request.otpCode()));
 		var response = userDtoMapper.toProfileResponse(result);
 		return ResponseEntity.ok(ApiResponse.success(response, "Phone updated"));

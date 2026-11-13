@@ -1,6 +1,6 @@
 package com.aionn.identity.infrastructure.policy;
 
-import com.aionn.identity.application.policy.IdentityValidationConstants;
+import com.aionn.identity.application.policy.MfaConstants;
 import com.aionn.identity.application.policy.MfaCodeFormatPolicy;
 import com.aionn.identity.application.policy.MfaPolicy;
 import com.aionn.identity.infrastructure.config.properties.MfaProperties;
@@ -14,18 +14,13 @@ public class SpringMfaPolicy implements MfaPolicy, MfaCodeFormatPolicy {
     private final MfaProperties properties;
 
     @Override
-    public String getMfaIssuer() {
+    public String mfaIssuer() {
         return properties.issuer();
     }
 
     @Override
-    public int getBackupCodeCount() {
+    public int backupCodeCount() {
         return properties.backupCodeCount();
-    }
-
-    @Override
-    public int getBackupCodeLength() {
-        return properties.backupCodeLength();
     }
 
     @Override
@@ -35,6 +30,6 @@ public class SpringMfaPolicy implements MfaPolicy, MfaCodeFormatPolicy {
 
     @Override
     public int totpCodeLength() {
-        return IdentityValidationConstants.TOTP_CODE_LENGTH;
+        return MfaConstants.TOTP_CODE_LENGTH;
     }
 }

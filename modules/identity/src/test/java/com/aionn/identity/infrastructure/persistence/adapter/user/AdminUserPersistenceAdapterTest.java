@@ -7,7 +7,7 @@ import com.aionn.identity.domain.model.IdentityUser;
 import com.aionn.identity.domain.valueobject.UserRole;
 import com.aionn.identity.domain.valueobject.UserStatus;
 import com.aionn.identity.infrastructure.persistence.entity.UserEntity;
-import com.aionn.identity.infrastructure.persistence.mapper.IdentityUserMapper;
+import com.aionn.identity.infrastructure.persistence.mapper.IdentityUserDomainMapper;
 import com.aionn.identity.infrastructure.persistence.repository.user.UserRepository;
 import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import org.junit.jupiter.api.Test;
@@ -35,7 +35,7 @@ class AdminUserPersistenceAdapterTest {
     @Mock
     private UserRepository userRepository;
     @Mock
-    private IdentityUserMapper identityUserMapper;
+    private IdentityUserDomainMapper IdentityUserDomainMapper;
     @Mock
     private IdentityUserEntitySaveSupport identityUserEntitySaveSupport;
 
@@ -51,7 +51,7 @@ class AdminUserPersistenceAdapterTest {
         UserEntity entity = UserEntity.builder().userId(USER_ID).build();
         IdentityUser user = user();
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(entity));
-        when(identityUserMapper.toDomain(entity)).thenReturn(user);
+        when(IdentityUserDomainMapper.toDomain(entity)).thenReturn(user);
 
         assertThat(adapter.findById(USER_ID)).contains(user);
     }
@@ -77,7 +77,7 @@ class AdminUserPersistenceAdapterTest {
         IdentityUser user = user();
         when(userRepository.findUsersWithFilters(eq(UserStatus.ACTIVE), eq(UserRole.BUYER), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(entity), PageRequest.of(0, 10), 1));
-        when(identityUserMapper.toDomain(entity)).thenReturn(user);
+        when(IdentityUserDomainMapper.toDomain(entity)).thenReturn(user);
 
         PageResult<IdentityUser> result = adapter.findUsersWithFilters(
                 UserStatus.ACTIVE, UserRole.BUYER, OffsetPagination.of(0, 10));

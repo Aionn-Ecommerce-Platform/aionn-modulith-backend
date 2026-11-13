@@ -1,6 +1,7 @@
 package com.aionn.shipping.adapter.rest.controller;
 
-import com.aionn.shipping.adapter.rest.dto.shipment.CarrierWebhookRequest;
+import com.aionn.shipping.adapter.rest.dto.shipment.request.CarrierWebhookRequest;
+import com.aionn.shipping.adapter.rest.mapper.shipment.ShippingWebhookDtoMapper;
 import com.aionn.shipping.application.dto.shipment.command.CarrierWebhookCommand;
 import com.aionn.shipping.application.port.in.shipment.ApplyCarrierWebhookInputPort;
 import com.aionn.shipping.domain.exception.ShippingErrorCode;
@@ -31,6 +32,7 @@ import java.util.HexFormat;
 public class ShippingWebhookController {
 
         private final ApplyCarrierWebhookInputPort applyCarrierWebhookInputPort;
+        private final ShippingWebhookDtoMapper webhookDtoMapper;
         private final ObjectMapper objectMapper;
 
         @PostMapping("/carrier")
@@ -46,21 +48,8 @@ public class ShippingWebhookController {
                 String effectiveEventId = eventId == null || eventId.isBlank()
                                 ? payloadDigest(rawPayload)
                                 : eventId;
-                CarrierWebhookCommand command = new CarrierWebhookCommand(
-                                request.trackingCode(),
-                                request.type(),
-                                request.currentLocation(),
-                                request.statusDesc(),
-                                request.shipperName(),
-                                request.shipperPhone(),
-                                request.signatureUrl(),
-                                request.reason(),
-                                request.warehouseId(),
-                                legacySecret,
-                                rawPayload,
-                                signature,
-                                timestamp,
-                                effectiveEventId);
+                CarrierWebhookCommand command = webhookDtoMapper.toCommand(
+                                request, legacySecret, rawPayload, signature, timestamp, effectiveEventId);
                 applyCarrierWebhookInputPort.execute(command);
                 return ResponseEntity.ok(ApiResponse.success(null, "Webhook applied"));
         }

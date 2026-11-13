@@ -25,19 +25,19 @@ class NotificationAnalyticsServiceTest {
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
     @Mock
-    private NotificationPersistencePort notificationRepository;
+    private NotificationPersistencePort notificationPersistencePort;
     @Mock
     private EventPublisher eventPublisher;
 
     private NotificationAnalyticsService service() {
-        return new NotificationAnalyticsService(notificationRepository, eventPublisher, CLOCK);
+        return new NotificationAnalyticsService(notificationPersistencePort, eventPublisher, CLOCK);
     }
 
     @Test
     void reportAggregatesCountsPerStatus() {
-        when(notificationRepository.countByCampaignAndStatus("camp-1", "SENT")).thenReturn(10L);
-        when(notificationRepository.countByCampaignAndStatus("camp-1", "READ")).thenReturn(4L);
-        when(notificationRepository.countByCampaignAndStatus("camp-1", "FAILED")).thenReturn(1L);
+        when(notificationPersistencePort.countByCampaignAndStatus("camp-1", "SENT")).thenReturn(10L);
+        when(notificationPersistencePort.countByCampaignAndStatus("camp-1", "READ")).thenReturn(4L);
+        when(notificationPersistencePort.countByCampaignAndStatus("camp-1", "FAILED")).thenReturn(1L);
 
         AnalyticsResult result = service().report("camp-1");
 
@@ -51,9 +51,9 @@ class NotificationAnalyticsServiceTest {
 
     @Test
     void reportPublishesAnalyticsEnvelope() {
-        when(notificationRepository.countByCampaignAndStatus("camp-1", "SENT")).thenReturn(0L);
-        when(notificationRepository.countByCampaignAndStatus("camp-1", "READ")).thenReturn(0L);
-        when(notificationRepository.countByCampaignAndStatus("camp-1", "FAILED")).thenReturn(0L);
+        when(notificationPersistencePort.countByCampaignAndStatus("camp-1", "SENT")).thenReturn(0L);
+        when(notificationPersistencePort.countByCampaignAndStatus("camp-1", "READ")).thenReturn(0L);
+        when(notificationPersistencePort.countByCampaignAndStatus("camp-1", "FAILED")).thenReturn(0L);
 
         AnalyticsResult result = service().report("camp-1");
 

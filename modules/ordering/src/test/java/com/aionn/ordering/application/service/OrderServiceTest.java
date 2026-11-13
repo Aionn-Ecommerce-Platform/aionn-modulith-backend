@@ -81,8 +81,8 @@ class OrderServiceTest {
     private static final String MERCHANT_ID = "merchant-1";
     private static final String ORDER_ID = "order-1";
 
-    @Mock private CartPersistencePort cartRepository;
-    @Mock private OrderPersistencePort orderRepository;
+    @Mock private CartPersistencePort cartPersistencePort;
+    @Mock private OrderPersistencePort orderPersistencePort;
     @Mock private EventPublisher eventPublisher;
     @Mock private StockReservationGateway stockReservationGateway;
     @Mock private PaymentGateway paymentGateway;
@@ -118,7 +118,7 @@ class OrderServiceTest {
             return null;
         }).when(transactionTemplate).executeWithoutResult(any());
         orderService = new OrderService(
-                cartRepository, orderRepository, eventPublisher,
+                cartPersistencePort, orderPersistencePort, eventPublisher,
                 stockReservationGateway, paymentGateway, shippingGateway,
                 catalogPricingGateway, voucherGateway, cartService, merchantQueryPort,
                 integrationEventPublisher, reservationPolicy, orderDefaultsPolicy, analyticsPolicy,
@@ -156,8 +156,8 @@ class OrderServiceTest {
     @Test
     void cancelMovesOrderToCancelledAndReleasesNothingWhenNoReservations() {
         Order order = pendingOrder();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(order)).thenReturn(order);
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
 
         Order result = orderService.cancel(new CancelOrderCommand(ORDER_ID, USER_ID, "changed"));
 
@@ -169,7 +169,7 @@ class OrderServiceTest {
 
     @Test
     void cancelRejectsForeignUser() {
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(pendingOrder()));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(pendingOrder()));
 
         assertThrows(OrderingException.class,
                 () -> orderService.cancel(new CancelOrderCommand(ORDER_ID, "other-user", "x")));
@@ -177,7 +177,7 @@ class OrderServiceTest {
 
     @Test
     void cancelOnUnknownOrderThrows() {
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.empty());
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.empty());
 
         assertThrows(OrderingException.class,
                 () -> orderService.cancel(new CancelOrderCommand(ORDER_ID, USER_ID, "n")));
@@ -186,7 +186,7 @@ class OrderServiceTest {
     @Test
     void completeRequiresShippedStatus() {
         Order order = pendingOrder();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
 
         assertThrows(OrderingException.class,
                 () -> orderService.complete(new ConfirmDeliveredCommand(ORDER_ID)));
@@ -200,8 +200,8 @@ class OrderServiceTest {
         order.approve("p", now);
         order.confirmPreparation(now);
         order.markShipped("ship-1", now);
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(order)).thenReturn(order);
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
 
         Order result = orderService.complete(new ConfirmDeliveredCommand(ORDER_ID));
 
@@ -221,8 +221,8 @@ class OrderServiceTest {
     @Test
     void rejectByMerchantSucceedsWhenOwnerOwnsTheMerchant() {
         Order order = pendingOrder();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(order)).thenReturn(order);
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
 
         Order result = orderService.rejectByMerchant(
                 new RejectOrderCommand(ORDER_ID, MERCHANT_ID, "no stock"));
@@ -236,7 +236,7 @@ class OrderServiceTest {
     @Test
     void getForRequesterReturnsResultWhenUserOwnsOrder() {
         Order order = pendingOrder();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
 
         Order result = orderService.getForRequester(ORDER_ID, USER_ID);
 
@@ -246,7 +246,7 @@ class OrderServiceTest {
     @Test
     void getForRequesterRejectsUnrelatedRequester() {
         Order order = pendingOrder();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
         when(merchantQueryPort.findMerchantIdByOwnerId("intruder"))
                 .thenReturn(Optional.empty());
 
@@ -257,7 +257,7 @@ class OrderServiceTest {
     @Test
     void listByUserMapsOrdersToResults() {
         Order order = pendingOrder();
-        when(orderRepository.findByUser(USER_ID, 20)).thenReturn(List.of(order));
+        when(orderPersistencePort.findByUser(USER_ID, 20)).thenReturn(List.of(order));
 
         List<Order> results = orderService.listByUser(USER_ID, 20);
 
@@ -271,8 +271,8 @@ class OrderServiceTest {
         Order order = pendingOrder();
         order.approve("p", now);
         order.confirmPreparation(now);
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(order)).thenReturn(order);
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
 
         Order result = orderService.markShipped(new ConfirmShippedCommand(ORDER_ID, "ship-1"));
 
@@ -304,7 +304,7 @@ class OrderServiceTest {
         when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND"), anyList(), any()))
                 .thenReturn(new ShippingGateway.ShippingQuote(BigDecimal.valueOf(30000), "VND"));
 
-        when(orderRepository.save(ArgumentMatchers.any(Order.class)))
+        when(orderPersistencePort.save(ArgumentMatchers.any(Order.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         Order result = orderService.placeOrderHeadless(command);
@@ -388,7 +388,7 @@ class OrderServiceTest {
         when(shippingGateway.quote(anyString(), eq(MERCHANT_ID), eq(address()), eq("VND"), anyList(), any()))
                 .thenReturn(new ShippingGateway.ShippingQuote(BigDecimal.valueOf(25000), "VND"));
 
-        when(orderRepository.save(ArgumentMatchers.any(Order.class)))
+        when(orderPersistencePort.save(ArgumentMatchers.any(Order.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         Order result = orderService.placeOrder(command);
@@ -414,7 +414,7 @@ class OrderServiceTest {
         assertThrows(RuntimeException.class, () -> orderService.placeOrderHeadless(command));
 
         verify(stockReservationGateway, never()).reserveAll(anyString(), any(), eq(86400));
-        verify(orderRepository, never()).save(any());
+        verify(orderPersistencePort, never()).save(any());
     }
 
     @ParameterizedTest
@@ -435,7 +435,7 @@ class OrderServiceTest {
         assertThrows(OrderingException.class, () -> orderService.placeOrderHeadless(command));
 
         verify(stockReservationGateway, never()).reserveAll(anyString(), any(), eq(86400));
-        verify(orderRepository, never()).save(any());
+        verify(orderPersistencePort, never()).save(any());
     }
 
     @Test
@@ -460,7 +460,7 @@ class OrderServiceTest {
 
         verify(shippingGateway, never()).quote(any(), any(), any(), any(), anyList(), any());
         verify(stockReservationGateway, never()).reserveAll(anyString(), any(), any(Integer.class));
-        verify(orderRepository, never()).save(any());
+        verify(orderPersistencePort, never()).save(any());
     }
 
     @Test
@@ -476,7 +476,7 @@ class OrderServiceTest {
         when(placementOperationPort.start(eq(USER_ID), eq("client-order-1"), anyString(), anyString()))
                 .thenAnswer(invocation -> new OrderPlacementOperationPort.Operation(
                         ORDER_ID, invocation.getArgument(2), true, true));
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(existing));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(existing));
 
         Order replay = orderService.placeOrderHeadless(command);
 
@@ -514,7 +514,7 @@ class OrderServiceTest {
         when(voucherGateway.apply(eq(USER_ID), eq(MERCHANT_ID), eq("SAVE10"), anyString(),
                 eq(BigDecimal.valueOf(100)), eq("VND"), eq(List.of("category-1"))))
                 .thenReturn(new VoucherGateway.Discount(BigDecimal.TEN, "VND", true, null));
-        when(orderRepository.save(any(Order.class))).thenThrow(new RuntimeException("database unavailable"));
+        when(orderPersistencePort.save(any(Order.class))).thenThrow(new RuntimeException("database unavailable"));
 
         assertThrows(RuntimeException.class, () -> orderService.placeOrderHeadless(command));
 
@@ -543,7 +543,7 @@ class OrderServiceTest {
         when(voucherGateway.apply(eq(USER_ID), eq(MERCHANT_ID), eq("SAVE10"), anyString(),
                 eq(BigDecimal.valueOf(100)), eq("VND"), eq(List.of("category-1"))))
                 .thenReturn(new VoucherGateway.Discount(BigDecimal.TEN, "VND", true, null));
-        when(orderRepository.save(any(Order.class))).thenThrow(new RuntimeException("database unavailable"));
+        when(orderPersistencePort.save(any(Order.class))).thenThrow(new RuntimeException("database unavailable"));
         doThrow(new RuntimeException("inventory unavailable"))
                 .when(stockReservationGateway).release("res-1", "order-placement-failed");
 
@@ -578,7 +578,7 @@ class OrderServiceTest {
 
         verify(voucherGateway, never()).release(anyString(), anyString(), anyString());
         verify(stockReservationGateway).release("res-1", "order-placement-failed");
-        verify(orderRepository, never()).save(any());
+        verify(orderPersistencePort, never()).save(any());
     }
 
     @Test
@@ -603,7 +603,7 @@ class OrderServiceTest {
 
         AtomicReference<Order> saved =
                 new AtomicReference<>();
-        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> {
+        when(orderPersistencePort.save(any(Order.class))).thenAnswer(inv -> {
             Order o = inv.getArgument(0);
             saved.set(o);
             return o;
@@ -624,7 +624,7 @@ class OrderServiceTest {
         Order order = pendingOrder();
         ShippingAddress replacement = new ShippingAddress("addr-2", "User", "+84912345678",
                 "99 new street", "WARD-2", "DIST-2", "PROV-2", "VN");
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
         when(catalogPricingGateway.resolve(List.of("sku-1"))).thenReturn(Map.of("sku-1",
                 new CatalogPricingGateway.SkuPricing(
                         "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true,
@@ -632,7 +632,7 @@ class OrderServiceTest {
                         new CatalogPricingGateway.SkuPricing.Parcel(500, null, null, null))));
         when(shippingGateway.quote(eq(ORDER_ID), eq(MERCHANT_ID), eq(replacement), eq("VND"), anyList(), any()))
                 .thenReturn(new ShippingGateway.ShippingQuote(BigDecimal.valueOf(45000), "VND"));
-        when(orderRepository.save(order)).thenReturn(order);
+        when(orderPersistencePort.save(order)).thenReturn(order);
 
         Order result = orderService.changeShippingInfo(
                 new ChangeShippingInfoCommand(
@@ -645,8 +645,8 @@ class OrderServiceTest {
     @Test
     void approvePaymentSucceedsOnPendingOrder() {
         Order order = pendingOrder();
-        when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(ArgumentMatchers.any(Order.class))).thenReturn(order);
+        when(orderPersistencePort.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(ArgumentMatchers.any(Order.class))).thenReturn(order);
         when(cartService.loadOwned(USER_ID)).thenReturn(Cart.create("cart-1", USER_ID, Instant.now()));
 
         Order result = orderService.approvePayment(ORDER_ID, "pay-1");
@@ -658,7 +658,7 @@ class OrderServiceTest {
     @Test
     void getForRequesterReturnsOrderForOwner() {
         Order order = pendingOrder();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
 
         Order result = orderService.getForRequester(ORDER_ID, USER_ID);
 
@@ -668,7 +668,7 @@ class OrderServiceTest {
     @Test
     void getForRequesterAllowsMerchantAccess() {
         Order order = pendingOrder();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of(MERCHANT_ID));
 
         Order result = orderService.getForRequester(ORDER_ID, "owner-1");
@@ -679,7 +679,7 @@ class OrderServiceTest {
     @Test
     void getForRequesterThrowsForUnrelatedUser() {
         Order order = pendingOrder();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
         when(merchantQueryPort.findMerchantIdByOwnerId("intruder")).thenReturn(Optional.empty());
 
         assertThrows(OrderingException.class,
@@ -689,7 +689,7 @@ class OrderServiceTest {
     @Test
     void listByUserReturnsOrderList() {
         Order order = pendingOrder();
-        when(orderRepository.findByUser(USER_ID, 20)).thenReturn(List.of(order));
+        when(orderPersistencePort.findByUser(USER_ID, 20)).thenReturn(List.of(order));
 
         List<Order> results = orderService.listByUser(USER_ID, 20);
 
@@ -699,7 +699,7 @@ class OrderServiceTest {
     @Test
     void listByUserWithStatusFilterReturnsFilteredOrders() {
         Order order = pendingOrder();
-        when(orderRepository.findByUserAndStatuses(eq(USER_ID), ArgumentMatchers.anyList(), eq(20)))
+        when(orderPersistencePort.findByUserAndStatuses(eq(USER_ID), ArgumentMatchers.anyList(), eq(20)))
                 .thenReturn(List.of(order));
 
         List<Order> results = orderService.listByUser(USER_ID, "PENDING", 20);
@@ -710,7 +710,7 @@ class OrderServiceTest {
     @Test
     void listByMerchantOwnerReturnsOrdersForMerchant() {
         Order order = pendingOrder();
-        when(orderRepository.findByMerchant(MERCHANT_ID, 20)).thenReturn(List.of(order));
+        when(orderPersistencePort.findByMerchant(MERCHANT_ID, 20)).thenReturn(List.of(order));
 
         List<Order> results = orderService.listByMerchantOwner(MERCHANT_ID, null, 20);
 
@@ -720,8 +720,8 @@ class OrderServiceTest {
     @Test
     void cancelOnPaymentFailureCancelsWhenPending() {
         Order order = pendingOrder();
-        when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(ArgumentMatchers.any())).thenReturn(order);
+        when(orderPersistencePort.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(ArgumentMatchers.any())).thenReturn(order);
 
         Order result = orderService.cancelOnPaymentFailure(ORDER_ID, "ERR_001", "payment gateway error");
 
@@ -731,7 +731,7 @@ class OrderServiceTest {
     @Test
     void statusOfReturnsPendingForNewOrder() {
         Order order = pendingOrder();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
 
         OrderStatus status = orderService.statusOf(ORDER_ID);
 
@@ -757,7 +757,7 @@ class OrderServiceTest {
                         "COMPLETED", BigDecimal.valueOf(100), "VND", 
                         to.atStartOfDay(ZoneId.of("Asia/Ho_Chi_Minh")).toInstant())
         );
-        when(orderRepository.findMerchantAnalyticsRows(eq(MERCHANT_ID), ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(analyticsRows);
+        when(orderPersistencePort.findMerchantAnalyticsRows(eq(MERCHANT_ID), ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(analyticsRows);
 
         var result = orderService.getMerchantAnalytics(MERCHANT_ID, start, to);
 
@@ -775,7 +775,7 @@ class OrderServiceTest {
                         MERCHANT_ID, "COMPLETED", BigDecimal.valueOf(200), "VND", 
                         to.atStartOfDay(ZoneId.of("Asia/Ho_Chi_Minh")).toInstant())
         );
-        when(orderRepository.findPlatformAnalyticsRows(ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(platformRows);
+        when(orderPersistencePort.findPlatformAnalyticsRows(ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(platformRows);
 
         var result = orderService.getPlatformAnalytics(start, to);
 
@@ -786,7 +786,7 @@ class OrderServiceTest {
 
     @Test
     void getMerchantTopProductsUsesClockForDefaultDateRange() {
-        when(orderRepository.findMerchantTopProductRows(
+        when(orderPersistencePort.findMerchantTopProductRows(
                 eq(MERCHANT_ID), ArgumentMatchers.any(), ArgumentMatchers.any()))
                 .thenReturn(List.of(new OrderPersistencePort.TopProductRow(
                         "sku-1", 3, BigDecimal.valueOf(300))));
@@ -801,8 +801,8 @@ class OrderServiceTest {
     void statusOfFallsBackToOrderSnWhenNotFoundById() {
         Order order = pendingOrder();
         String orderSn = order.getOrderSn();
-        when(orderRepository.findById(orderSn)).thenReturn(Optional.empty());
-        when(orderRepository.findByIdOrOrderSn(orderSn)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findById(orderSn)).thenReturn(Optional.empty());
+        when(orderPersistencePort.findByIdOrOrderSn(orderSn)).thenReturn(Optional.of(order));
 
         OrderStatus status = orderService.statusOf(orderSn);
 
@@ -935,7 +935,7 @@ class OrderServiceTest {
         when(stockReservationGateway.reserveAll(anyString(), anyList(), eq(86400)))
                 .thenReturn(List.of(new StockReservationGateway.Reservation(
                         "res-1", "sku-1", "wh-1", 2, BigDecimal.valueOf(100), "VND")));
-        when(orderRepository.save(any(Order.class)))
+        when(orderPersistencePort.save(any(Order.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         PlaceOrderCommand command = new PlaceOrderCommand(
@@ -1164,7 +1164,7 @@ class OrderServiceTest {
                 () -> orderService.placeOrderHeadless(command));
 
         verify(flashSaleQueryPort).release(anyString());
-        verify(orderRepository, never()).save(any());
+        verify(orderPersistencePort, never()).save(any());
     }
 
     @Test
@@ -1190,7 +1190,7 @@ class OrderServiceTest {
                 () -> orderService.placeOrderHeadless(command));
 
         verify(stockReservationGateway).release("res-1", "order-placement-failed");
-        verify(orderRepository, never()).save(any());
+        verify(orderPersistencePort, never()).save(any());
     }
 
     @ParameterizedTest
@@ -1240,7 +1240,7 @@ class OrderServiceTest {
                 .thenReturn(new VoucherGateway.Discount(
                         BigDecimal.TEN, "VND", true, null));
         AtomicReference<Order> saved = new AtomicReference<>();
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+        when(orderPersistencePort.save(any(Order.class))).thenAnswer(invocation -> {
             Order order = invocation.getArgument(0);
             saved.set(order);
             return order;
@@ -1268,7 +1268,7 @@ class OrderServiceTest {
         when(stockReservationGateway.reserveAll(anyString(), anyList(), eq(86400)))
                 .thenReturn(List.of(new StockReservationGateway.Reservation(
                         "res-1", "sku-1", "wh-1", 1, BigDecimal.valueOf(100), "VND")));
-        when(orderRepository.save(any(Order.class)))
+        when(orderPersistencePort.save(any(Order.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         PlaceOrderHeadlessCommand command = new PlaceOrderHeadlessCommand(
                 USER_ID,
@@ -1291,7 +1291,7 @@ class OrderServiceTest {
         when(stockReservationGateway.reserveAll(anyString(), anyList(), eq(86400)))
                 .thenReturn(List.of(new StockReservationGateway.Reservation(
                         "res-1", "sku-1", "wh-1", 1, BigDecimal.valueOf(100), "VND")));
-        when(orderRepository.save(any(Order.class)))
+        when(orderPersistencePort.save(any(Order.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         PlaceOrderHeadlessCommand command = new PlaceOrderHeadlessCommand(
                 USER_ID,
@@ -1314,7 +1314,7 @@ class OrderServiceTest {
 
     @Test
     void approvePaymentThrowsWhenOrderIsMissing() {
-        when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.empty());
+        when(orderPersistencePort.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.empty());
 
         assertOrderingError(OrderingErrorCode.ORDER_NOT_FOUND,
                 () -> orderService.approvePayment(ORDER_ID, "pay-1"));
@@ -1324,14 +1324,14 @@ class OrderServiceTest {
     void approvePaymentIsIdempotentWhenSamePaymentAlreadyRecorded() {
         Order order = pendingOrder();
         order.approve("pay-1", Instant.parse("2026-07-18T12:00:00Z"));
-        when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
         when(cartService.loadOwned(USER_ID))
                 .thenReturn(Cart.create("cart-1", USER_ID, Instant.now()));
 
         Order result = orderService.approvePayment(ORDER_ID, "pay-1");
 
         assertEquals(OrderStatus.APPROVED, result.getStatus());
-        verify(orderRepository, never()).save(any());
+        verify(orderPersistencePort, never()).save(any());
         verify(paymentGateway, never()).refund(anyString(), any(), anyString(), anyString(),
                 anyString());
         verify(integrationEventPublisher, never()).publishOrderApproved(anyString(), anyString());
@@ -1341,7 +1341,7 @@ class OrderServiceTest {
     void approvePaymentRefundsDuplicateCaptureWithDifferentPaymentId() {
         Order order = pendingOrder();
         order.approve("pay-1", Instant.parse("2026-07-18T12:00:00Z"));
-        when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
         when(cartService.loadOwned(USER_ID))
                 .thenReturn(Cart.create("cart-1", USER_ID, Instant.now()));
 
@@ -1351,7 +1351,7 @@ class OrderServiceTest {
         verify(paymentGateway).refund(eq("pay-2"), eq(BigDecimal.valueOf(200)), eq("VND"),
                 eq("duplicate payment capture"), eq("order:order-1:refund:pay-2"));
         verify(compensationTaskPort).markCompleted("refund:order-1:pay-2");
-        verify(orderRepository, never()).save(any());
+        verify(orderPersistencePort, never()).save(any());
     }
 
     @Test
@@ -1359,7 +1359,7 @@ class OrderServiceTest {
         Order order = pendingOrder();
         order.cancel("USER_CANCELLED", "changed mind",
                 Instant.parse("2026-07-18T12:00:00Z"));
-        when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
         when(cartService.loadOwned(USER_ID))
                 .thenReturn(Cart.create("cart-1", USER_ID, Instant.now()));
 
@@ -1370,7 +1370,7 @@ class OrderServiceTest {
         verify(paymentGateway).refund(eq("pay-9"), eq(BigDecimal.valueOf(150)), eq("VND"),
                 eq("payment captured after cancellation"),
                 eq("order:order-1:refund:pay-9"));
-        verify(orderRepository, never()).save(any());
+        verify(orderPersistencePort, never()).save(any());
         verify(integrationEventPublisher, never()).publishOrderApproved(anyString(), anyString());
     }
 
@@ -1378,8 +1378,8 @@ class OrderServiceTest {
     void approvePaymentRemovesVoucherWhenItemsRemainInCart() {
         Instant now = Instant.now();
         Order order = pendingOrder();
-        when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(any(Order.class)))
+        when(orderPersistencePort.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(any(Order.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         Cart cart = Cart.create("cart-1", USER_ID, now);
@@ -1393,14 +1393,14 @@ class OrderServiceTest {
         assertEquals(1, cart.snapshot().size());
         assertEquals("sku-2", cart.snapshot().getFirst().getKey());
         assertNull(cart.getVoucherCode());
-        verify(cartRepository).save(cart);
+        verify(cartPersistencePort).save(cart);
     }
 
     @Test
     void cancelToleratesCompensationCompletionFailure() {
         Order order = approvedReservedOrder();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(order)).thenReturn(order);
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
         doThrow(new RuntimeException("task store down"))
                 .when(compensationTaskPort).markCompleted(anyString());
 
@@ -1420,8 +1420,8 @@ class OrderServiceTest {
     void confirmPreparationRegistersShipment() {
         Order order = pendingOrder();
         order.approve("pay-1", Instant.parse("2026-07-18T12:00:00Z"));
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(order)).thenReturn(order);
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
         when(catalogPricingGateway.resolve(List.of("sku-1")))
                 .thenReturn(Map.of("sku-1", pricedSku("sku-1")));
 
@@ -1438,8 +1438,8 @@ class OrderServiceTest {
     void confirmPreparationSwallowsShipmentRegistrationFailure() {
         Order order = pendingOrder();
         order.approve("pay-1", Instant.parse("2026-07-18T12:00:00Z"));
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(order)).thenReturn(order);
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
         when(catalogPricingGateway.resolve(List.of("sku-1")))
                 .thenReturn(Map.of("sku-1", pricedSku("sku-1")));
         doThrow(new RuntimeException("carrier unavailable"))
@@ -1459,8 +1459,8 @@ class OrderServiceTest {
                 Money.of(BigDecimal.valueOf(200), "VND"),
                 Instant.parse("2026-07-18T12:00:00Z"));
         order.approve("pay-1", Instant.parse("2026-07-18T12:00:00Z"));
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(order)).thenReturn(order);
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
         when(catalogPricingGateway.resolve(List.of("sku-1")))
                 .thenReturn(Map.of("sku-1", pricedSku("sku-1")));
 
@@ -1475,7 +1475,7 @@ class OrderServiceTest {
 
     @Test
     void confirmPreparationRejectsOrderOwnedByAnotherMerchant() {
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(pendingOrder()));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(pendingOrder()));
 
         assertOrderingError(OrderingErrorCode.ORDER_NOT_OWNED_BY_MERCHANT,
                 () -> orderService.confirmPreparation(
@@ -1493,7 +1493,7 @@ class OrderServiceTest {
         order.approve("pay-1", now);
         order.confirmPreparation(now);
         order.markShipped("ship-1", now);
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
 
         assertOrderingError(OrderingErrorCode.ORDER_ALREADY_PICKED_UP,
                 () -> orderService.cancel(
@@ -1503,8 +1503,8 @@ class OrderServiceTest {
     @Test
     void cancelReleasesReservationsAndRefundsPaidOrder() {
         Order order = approvedReservedOrder();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(order)).thenReturn(order);
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
 
         Order result = orderService.cancel(
                 new CancelOrderCommand(ORDER_ID, USER_ID, "changed mind"));
@@ -1519,8 +1519,8 @@ class OrderServiceTest {
     @Test
     void cancelEnqueuesReservationReleaseWhenImmediateReleaseFails() {
         Order order = orderWithReservation();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(order)).thenReturn(order);
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
         doThrow(new RuntimeException("inventory unavailable"))
                 .when(stockReservationGateway).release("res-1", "order-cancelled");
 
@@ -1539,8 +1539,8 @@ class OrderServiceTest {
     @Test
     void cancelEnqueuesFlashSaleReleaseWhenImmediateReleaseFails() {
         Order order = pendingOrder();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(order)).thenReturn(order);
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
         doThrow(new RuntimeException("promotion unavailable"))
                 .when(flashSaleQueryPort).release(ORDER_ID);
 
@@ -1559,8 +1559,8 @@ class OrderServiceTest {
     @Test
     void cancelToleratesCompensationPersistenceFailure() {
         Order order = orderWithReservation();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(order)).thenReturn(order);
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
         doThrow(new RuntimeException("inventory unavailable"))
                 .when(stockReservationGateway).release("res-1", "order-cancelled");
         doThrow(new RuntimeException("task store down"))
@@ -1575,8 +1575,8 @@ class OrderServiceTest {
     @Test
     void cancelToleratesRefundFailure() {
         Order order = approvedReservedOrder();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(order)).thenReturn(order);
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
         doThrow(new RuntimeException("payment gateway down"))
                 .when(paymentGateway).refund(anyString(), any(), anyString(), anyString(),
                         anyString());
@@ -1593,19 +1593,19 @@ class OrderServiceTest {
     void cancelOnPaymentFailureSkipsOrderThatIsNoLongerPending() {
         Order order = pendingOrder();
         order.approve("pay-1", Instant.parse("2026-07-18T12:00:00Z"));
-        when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
 
         Order result = orderService.cancelOnPaymentFailure(ORDER_ID, "ERR_001", "late failure");
 
         assertEquals(OrderStatus.APPROVED, result.getStatus());
-        verify(orderRepository, never()).save(any());
+        verify(orderPersistencePort, never()).save(any());
         verify(integrationEventPublisher, never()).publishOrderCancelled(anyString(), anyString(),
                 anyString(), any());
     }
 
     @Test
     void cancelOnPaymentFailureThrowsWhenOrderIsMissing() {
-        when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.empty());
+        when(orderPersistencePort.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.empty());
 
         assertOrderingError(OrderingErrorCode.ORDER_NOT_FOUND,
                 () -> orderService.cancelOnPaymentFailure(ORDER_ID, "ERR_001", "failure"));
@@ -1614,8 +1614,8 @@ class OrderServiceTest {
     @Test
     void cancelOnPaymentFailureFallsBackToErrorCodeWhenReasonIsNull() {
         Order order = pendingOrder();
-        when(orderRepository.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(any(Order.class)))
+        when(orderPersistencePort.findByIdForUpdate(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(any(Order.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         Order result = orderService.cancelOnPaymentFailure(ORDER_ID, "ERR_001", null);
@@ -1628,7 +1628,7 @@ class OrderServiceTest {
 
     @Test
     void rejectByMerchantRejectsOrderOwnedByAnotherMerchant() {
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(pendingOrder()));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(pendingOrder()));
 
         assertOrderingError(OrderingErrorCode.ORDER_NOT_OWNED_BY_MERCHANT,
                 () -> orderService.rejectByMerchant(
@@ -1638,8 +1638,8 @@ class OrderServiceTest {
     @Test
     void rejectByMerchantReleasesReservationsAndRefundsPaidOrder() {
         Order order = approvedReservedOrder();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(order)).thenReturn(order);
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
 
         Order result = orderService.rejectByMerchant(
                 new RejectOrderCommand(ORDER_ID, MERCHANT_ID, "no stock"));
@@ -1658,7 +1658,7 @@ class OrderServiceTest {
     void changeShippingInfoRejectsOrderWithInitiatedPayment() {
         Order order = pendingOrder();
         order.approve("pay-1", Instant.parse("2026-07-18T12:00:00Z"));
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
         ShippingAddress replacement = new ShippingAddress("addr-2", "User", "+84912345678",
                 "99 new street", "WARD-2", "DIST-2", "PROV-2", "VN");
 
@@ -1667,12 +1667,12 @@ class OrderServiceTest {
                         new ChangeShippingInfoCommand(ORDER_ID, USER_ID, replacement)));
 
         verify(shippingGateway, never()).quote(any(), any(), any(), any(), anyList(), any());
-        verify(orderRepository, never()).save(any());
+        verify(orderPersistencePort, never()).save(any());
     }
 
     @Test
     void changeShippingInfoRejectsForeignUser() {
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(pendingOrder()));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(pendingOrder()));
         ShippingAddress replacement = new ShippingAddress("addr-2", "User", "+84912345678",
                 "99 new street", "WARD-2", "DIST-2", "PROV-2", "VN");
 
@@ -1688,8 +1688,8 @@ class OrderServiceTest {
     @Test
     void markShippedCommitsReservationsAndCompletesCompensationTasks() {
         Order order = reservedOrderInPreparation();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(order)).thenReturn(order);
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
 
         Order result = orderService.markShipped(
                 new ConfirmShippedCommand(ORDER_ID, "ship-1"));
@@ -1703,8 +1703,8 @@ class OrderServiceTest {
     @Test
     void markShippedEnqueuesRetryWhenReservationCommitFails() {
         Order order = reservedOrderInPreparation();
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
-        when(orderRepository.save(order)).thenReturn(order);
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
         doThrow(new RuntimeException("inventory unavailable"))
                 .when(stockReservationGateway).commit("res-1");
 
@@ -1728,7 +1728,7 @@ class OrderServiceTest {
 
     @Test
     void listByUserTreatsBlankFilterAsUnfiltered() {
-        when(orderRepository.findByUser(USER_ID, 10)).thenReturn(List.of(pendingOrder()));
+        when(orderPersistencePort.findByUser(USER_ID, 10)).thenReturn(List.of(pendingOrder()));
 
         List<Order> results = orderService.listByUser(USER_ID, " , ", 10);
 
@@ -1737,7 +1737,7 @@ class OrderServiceTest {
 
     @Test
     void listByMerchantOwnerPassesTrimmedDistinctStatuses() {
-        when(orderRepository.findByMerchantAndStatuses(
+        when(orderPersistencePort.findByMerchantAndStatuses(
                 eq(MERCHANT_ID), eq(List.of("PENDING", "SHIPPED")), eq(10)))
                 .thenReturn(List.of(pendingOrder()));
 
@@ -1749,7 +1749,7 @@ class OrderServiceTest {
 
     @Test
     void getForRequesterRejectsMerchantOwnerOfAnotherMerchant() {
-        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(pendingOrder()));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(pendingOrder()));
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-2"))
                 .thenReturn(Optional.of("merchant-2"));
 
@@ -1763,7 +1763,7 @@ class OrderServiceTest {
 
     @Test
     void getMerchantAnalyticsUsesDefaultRangeAndCurrency() {
-        when(orderRepository.findMerchantAnalyticsRows(eq(MERCHANT_ID), any(), any()))
+        when(orderPersistencePort.findMerchantAnalyticsRows(eq(MERCHANT_ID), any(), any()))
                 .thenReturn(List.of());
 
         var result = orderService.getMerchantAnalytics(MERCHANT_ID, null, null);
@@ -1785,7 +1785,7 @@ class OrderServiceTest {
 
     @Test
     void getMerchantAnalyticsRejectsRangeLongerThanOneYear() {
-        when(orderRepository.findMerchantAnalyticsRows(eq(MERCHANT_ID), any(), any()))
+        when(orderPersistencePort.findMerchantAnalyticsRows(eq(MERCHANT_ID), any(), any()))
                 .thenReturn(List.of());
 
         assertOrderingError(OrderingErrorCode.INVALID_ARGUMENT,
@@ -1797,7 +1797,7 @@ class OrderServiceTest {
     void getMerchantAnalyticsRejectsMultipleCurrenciesIgnoringBlankValues() {
         ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
         Instant day = LocalDate.of(2026, 7, 18).atStartOfDay(zone).toInstant();
-        when(orderRepository.findMerchantAnalyticsRows(eq(MERCHANT_ID), any(), any()))
+        when(orderPersistencePort.findMerchantAnalyticsRows(eq(MERCHANT_ID), any(), any()))
                 .thenReturn(List.of(
                         new OrderPersistencePort.OrderAnalyticsRow(
                                 "COMPLETED", BigDecimal.TEN, "VND", day),
@@ -1819,7 +1819,7 @@ class OrderServiceTest {
         LocalDate to = LocalDate.of(2026, 7, 18);
         Instant inRange = to.atStartOfDay(zone).toInstant();
         Instant outOfRange = LocalDate.of(2026, 7, 10).atStartOfDay(zone).toInstant();
-        when(orderRepository.findMerchantAnalyticsRows(eq(MERCHANT_ID), any(), any()))
+        when(orderPersistencePort.findMerchantAnalyticsRows(eq(MERCHANT_ID), any(), any()))
                 .thenReturn(List.of(
                         new OrderPersistencePort.OrderAnalyticsRow(
                                 "COMPLETED", null, "VND", inRange),
@@ -1854,7 +1854,7 @@ class OrderServiceTest {
 
     @Test
     void getPlatformAnalyticsUsesDefaultRangeAndCurrency() {
-        when(orderRepository.findPlatformAnalyticsRows(any(), any()))
+        when(orderPersistencePort.findPlatformAnalyticsRows(any(), any()))
                 .thenReturn(List.of());
 
         var result = orderService.getPlatformAnalytics(null, null);
@@ -1877,7 +1877,7 @@ class OrderServiceTest {
     void getPlatformAnalyticsRejectsMultipleCurrencies() {
         ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
         Instant day = LocalDate.of(2026, 7, 18).atStartOfDay(zone).toInstant();
-        when(orderRepository.findPlatformAnalyticsRows(any(), any()))
+        when(orderPersistencePort.findPlatformAnalyticsRows(any(), any()))
                 .thenReturn(List.of(
                         new OrderPersistencePort.PlatformAnalyticsRow(
                                 MERCHANT_ID, "COMPLETED", BigDecimal.TEN, "VND", day),
@@ -1898,7 +1898,7 @@ class OrderServiceTest {
         Instant day18 = LocalDate.of(2026, 7, 18).atStartOfDay(zone).toInstant();
         Instant day17 = LocalDate.of(2026, 7, 17).atStartOfDay(zone).toInstant();
         Instant outOfRange = LocalDate.of(2026, 7, 10).atStartOfDay(zone).toInstant();
-        when(orderRepository.findPlatformAnalyticsRows(any(), any()))
+        when(orderPersistencePort.findPlatformAnalyticsRows(any(), any()))
                 .thenReturn(List.of(
                         new OrderPersistencePort.PlatformAnalyticsRow(
                                 "merchant-2", "COMPLETED", BigDecimal.valueOf(300), "VND", day18),
@@ -1929,7 +1929,7 @@ class OrderServiceTest {
 
     @Test
     void getMerchantTopProductsClampsLimitToConfiguredBounds() {
-        when(orderRepository.findMerchantTopProductRows(eq(MERCHANT_ID), any(), any()))
+        when(orderPersistencePort.findMerchantTopProductRows(eq(MERCHANT_ID), any(), any()))
                 .thenReturn(List.of(
                         new OrderPersistencePort.TopProductRow("sku-1", 3, BigDecimal.valueOf(300)),
                         new OrderPersistencePort.TopProductRow("sku-2", 2, BigDecimal.valueOf(200)),

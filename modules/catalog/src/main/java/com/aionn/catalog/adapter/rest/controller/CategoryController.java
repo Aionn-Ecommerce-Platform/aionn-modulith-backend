@@ -5,8 +5,6 @@ import com.aionn.catalog.adapter.rest.dto.category.request.MoveCategoryRequest;
 import com.aionn.catalog.adapter.rest.dto.category.request.UpdateCategoryRequest;
 import com.aionn.catalog.adapter.rest.dto.category.response.CategoryResponse;
 import com.aionn.catalog.adapter.rest.dto.category.response.CategoryTreeNodeResponse;
-import com.aionn.catalog.application.dto.category.query.GetCategoryQuery;
-import com.aionn.catalog.application.dto.category.query.ListCategoryChildrenQuery;
 import com.aionn.catalog.application.dto.category.result.CategoryResult;
 import com.aionn.catalog.application.port.in.category.CreateCategoryInputPort;
 import com.aionn.catalog.application.port.in.category.DeleteCategoryInputPort;
@@ -95,7 +93,7 @@ public class CategoryController {
     public ResponseEntity<ApiResponse<List<CategoryResponse>>> listChildren(@PathVariable String categoryId) {
         return ResponseEntity.ok(ApiResponse.success(
                 categoryDtoMapper
-                        .toResponses(listCategoryChildrenInputPort.execute(new ListCategoryChildrenQuery(categoryId))),
+                        .toResponses(listCategoryChildrenInputPort.execute(categoryDtoMapper.toListChildrenQuery(categoryId))),
                 "Children fetched"));
     }
 
@@ -110,7 +108,7 @@ public class CategoryController {
     @Operation(summary = "Get category", description = "Public read")
     public ResponseEntity<ApiResponse<CategoryResponse>> get(@PathVariable String categoryId) {
         return ResponseEntity.ok(ApiResponse.success(
-                categoryDtoMapper.toResponse(getCategoryInputPort.execute(new GetCategoryQuery(categoryId))),
+                categoryDtoMapper.toResponse(getCategoryInputPort.execute(categoryDtoMapper.toGetQuery(categoryId))),
                 "Category fetched"));
     }
 }

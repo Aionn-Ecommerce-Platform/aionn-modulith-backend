@@ -1,7 +1,7 @@
 package com.aionn.promotion.adapter.rest.controller;
 
-import com.aionn.promotion.adapter.rest.dto.flashsale.RegisterFlashSaleRequest;
-import com.aionn.promotion.adapter.rest.dto.flashsale.RejectFlashSaleRequest;
+import com.aionn.promotion.adapter.rest.dto.flashsale.request.RegisterFlashSaleRequest;
+import com.aionn.promotion.adapter.rest.dto.flashsale.request.RejectFlashSaleRequest;
 import com.aionn.promotion.adapter.rest.dto.flashsale.response.ActiveFlashSaleResponse;
 import com.aionn.promotion.adapter.rest.dto.flashsale.response.FlashSaleRegistrationResponse;
 import com.aionn.promotion.adapter.rest.mapper.flashsale.FlashSaleDtoMapper;

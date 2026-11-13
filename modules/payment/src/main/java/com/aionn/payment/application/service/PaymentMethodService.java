@@ -24,7 +24,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PaymentMethodService {
 
-    private final PaymentMethodPersistencePort repository;
+    private final PaymentMethodPersistencePort paymentMethodPersistencePort;
     private final EventPublisher eventPublisher;
     private final StripeSetupIntentPort stripeSetupIntentPort;
     private final Clock clock;
@@ -38,7 +38,7 @@ public class PaymentMethodService {
         PaymentMethod method = ownedBy(command.methodId(), command.userId());
         Instant now = clock.instant();
         method.verify(now);
-        PaymentMethod saved = repository.save(method);
+        PaymentMethod saved = paymentMethodPersistencePort.save(method);
         eventPublisher.publish(method.pullEvents());
         return saved;
     }
@@ -64,12 +64,12 @@ public class PaymentMethodService {
         PaymentMethod method = ownedBy(command.methodId(), command.userId());
         Instant now = clock.instant();
         method.remove(now);
-        repository.save(method);
+        paymentMethodPersistencePort.save(method);
         eventPublisher.publish(method.pullEvents());
     }
 
     public List<PaymentMethod> listMine(String userId) {
-        return inTransaction(() -> repository.findActiveByUserId(userId));
+        return inTransaction(() -> paymentMethodPersistencePort.findActiveByUserId(userId));
     }
 
     public PaymentMethod get(String userId, String methodId) {
@@ -82,7 +82,7 @@ public class PaymentMethodService {
         PaymentMethod method = PaymentMethod.link(IdGenerator.ulid(),
                 userId, provider, last4, stripePaymentMethodId, now);
         method.verify(now);
-        PaymentMethod saved = repository.save(method);
+        PaymentMethod saved = paymentMethodPersistencePort.save(method);
         eventPublisher.publish(method.pullEvents());
         return saved;
     }
@@ -92,7 +92,7 @@ public class PaymentMethodService {
     }
 
     private PaymentMethod ownedBy(String methodId, String userId) {
-        PaymentMethod method = repository.findById(methodId)
+        PaymentMethod method = paymentMethodPersistencePort.findById(methodId)
                 .orElseThrow(() -> new PaymentException(PaymentErrorCode.METHOD_NOT_FOUND));
         method.ensureOwnedBy(userId);
         return method;

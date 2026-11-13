@@ -2,33 +2,33 @@ package com.aionn.identity.application.policy;
 
 public interface RegistrationPolicy {
 
-    int getMaxVerifyAttempts();
+    int maxVerifyAttempts();
 
-    int getResendCooldownSeconds();
+    int resendCooldownSeconds();
 
-    int getOtpExpirySeconds();
+    int otpExpirySeconds();
 
-    int getLockTimeoutSeconds();
+    int lockTimeoutSeconds();
 
-    long getSessionExpiresDays();
+    long sessionExpiresDays();
 
-    String getDefaultCountryCallingCode();
+    String defaultCountryCallingCode();
 
     boolean isExposeOtpInResponse();
 
-    int getIpRateLimitMaxAttempts();
+    int ipRateLimitMaxAttempts();
 
-    int getIpRateLimitWindowSeconds();
+    int ipRateLimitWindowSeconds();
 
-    int getPhoneRateLimitMaxAttempts();
+    int phoneRateLimitMaxAttempts();
 
-    int getPhoneRateLimitWindowSeconds();
+    int phoneRateLimitWindowSeconds();
 
-    int getVerifyIpMaxAttempts();
+    int verifyIpMaxAttempts();
 
-    int getVerifyIpWindowSeconds();
+    int verifyIpWindowSeconds();
 
-    int getResendIpMaxAttempts();
+    int resendIpMaxAttempts();
 
-    int getResendIpWindowSeconds();
+    int resendIpWindowSeconds();
 }

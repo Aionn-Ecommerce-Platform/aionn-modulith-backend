@@ -11,6 +11,6 @@ class SpringAddressPolicyTest {
     void mapsMaxAddressNumbers() {
         SpringAddressPolicy policy = new SpringAddressPolicy(new AddressProperties(8));
 
-        assertThat(policy.getMaxAddressNumbers()).isEqualTo(8L);
+        assertThat(policy.maxAddressNumbers()).isEqualTo(8L);
     }
 }

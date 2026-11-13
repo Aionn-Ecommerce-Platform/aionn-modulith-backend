@@ -29,9 +29,9 @@ class StockAlertServiceTest {
     private static final Instant NOW = Instant.parse("2026-11-11T00:00:00Z");
 
     @Mock
-    private StockAlertPersistencePort alertRepository;
+    private StockAlertPersistencePort stockAlertPersistencePort;
     @Mock
-    private ProductPersistencePort productRepository;
+    private ProductPersistencePort productPersistencePort;
     @Mock
     private IntegrationEventPublisher integrationEventPublisher;
     @Mock
@@ -39,12 +39,12 @@ class StockAlertServiceTest {
 
     @Test
     void notifiesEveryPendingAlertOnce() {
-        when(alertRepository.findPendingBySku("SKU_1")).thenReturn(List.of(
+        when(stockAlertPersistencePort.findPendingBySku("SKU_1")).thenReturn(List.of(
                 new StockAlertPersistencePort.PendingAlert(
                         "alert-1", "user-1", "product-1", "SKU_1", NOW),
                 new StockAlertPersistencePort.PendingAlert(
                         "alert-2", "user-2", "product-1", "SKU_1", NOW)));
-        when(productRepository.findById("product-1")).thenReturn(Optional.of(product));
+        when(productPersistencePort.findById("product-1")).thenReturn(Optional.of(product));
         when(product.getName()).thenReturn("Ao thun");
 
         service().notifyRestocked("SKU_1", NOW);
@@ -55,13 +55,13 @@ class StockAlertServiceTest {
         assertThat(captor.getAllValues())
                 .extracting(ProductBackInStockIntegrationEvent::userId)
                 .containsExactly("user-1", "user-2");
-        verify(alertRepository).markNotified("alert-1", NOW);
-        verify(alertRepository).markNotified("alert-2", NOW);
+        verify(stockAlertPersistencePort).markNotified("alert-1", NOW);
+        verify(stockAlertPersistencePort).markNotified("alert-2", NOW);
     }
 
     @Test
     void doesNothingWhenNoAlertIsPending() {
-        when(alertRepository.findPendingBySku("SKU_1")).thenReturn(List.of());
+        when(stockAlertPersistencePort.findPendingBySku("SKU_1")).thenReturn(List.of());
 
         service().notifyRestocked("SKU_1", NOW);
 
@@ -69,7 +69,7 @@ class StockAlertServiceTest {
     }
 
     private StockAlertService service() {
-        return new StockAlertService(alertRepository, productRepository, integrationEventPublisher,
+        return new StockAlertService(stockAlertPersistencePort, productPersistencePort, integrationEventPublisher,
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
 }

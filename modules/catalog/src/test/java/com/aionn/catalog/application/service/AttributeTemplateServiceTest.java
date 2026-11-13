@@ -39,9 +39,9 @@ class AttributeTemplateServiceTest {
         private static final String CATEGORY_ID = "01HZCAT0000000000000000001";
 
         @Mock
-        private AttributeTemplatePersistencePort attributeTemplateRepository;
+        private AttributeTemplatePersistencePort attributeTemplatePersistencePort;
         @Mock
-        private CategoryPersistencePort categoryRepository;
+        private CategoryPersistencePort categoryPersistencePort;
         @Mock
         private EventPublisher eventPublisher;
 
@@ -54,9 +54,9 @@ class AttributeTemplateServiceTest {
         @Test
         void createPersistsTemplateAndPublishesEvent() {
                 Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", FIXED);
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
-                when(attributeTemplateRepository.findByCategoryId(CATEGORY_ID)).thenReturn(Optional.empty());
-                when(attributeTemplateRepository.save(any(AttributeTemplate.class)))
+                when(categoryPersistencePort.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+                when(attributeTemplatePersistencePort.findByCategoryId(CATEGORY_ID)).thenReturn(Optional.empty());
+                when(attributeTemplatePersistencePort.save(any(AttributeTemplate.class)))
                                 .thenAnswer(inv -> inv.getArgument(0));
 
                 AttributeTemplate result = attributeTemplateService.create(
@@ -64,13 +64,13 @@ class AttributeTemplateServiceTest {
 
                 assertThat(result).isNotNull();
                 assertThat(result.getCategoryId()).isEqualTo(CATEGORY_ID);
-                verify(attributeTemplateRepository).save(any(AttributeTemplate.class));
+                verify(attributeTemplatePersistencePort).save(any(AttributeTemplate.class));
                 verify(eventPublisher).publish(anyCollection());
         }
 
         @Test
         void createThrowsWhenCategoryMissing() {
-                when(categoryRepository.findById("missing")).thenReturn(Optional.empty());
+                when(categoryPersistencePort.findById("missing")).thenReturn(Optional.empty());
 
                 assertThatThrownBy(() -> attributeTemplateService.create(
                                 new CreateAttributeTemplateCommand("missing", List.of("color"))))
@@ -78,16 +78,16 @@ class AttributeTemplateServiceTest {
                                 .extracting("errorCode")
                                 .isEqualTo(CatalogErrorCode.CATEGORY_NOT_FOUND.getCode());
 
-                verify(attributeTemplateRepository, never()).save(any());
+                verify(attributeTemplatePersistencePort, never()).save(any());
         }
 
         @Test
         void createThrowsWhenTemplateAlreadyExistsForCategory() {
                 Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", FIXED);
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+                when(categoryPersistencePort.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
                 AttributeTemplate existing = AttributeTemplate.create(
                                 TEMPLATE_ID, CATEGORY_ID, List.of("color"), FIXED);
-                when(attributeTemplateRepository.findByCategoryId(CATEGORY_ID))
+                when(attributeTemplatePersistencePort.findByCategoryId(CATEGORY_ID))
                                 .thenReturn(Optional.of(existing));
 
                 assertThatThrownBy(() -> attributeTemplateService.create(
@@ -96,15 +96,15 @@ class AttributeTemplateServiceTest {
                                 .extracting("errorCode")
                                 .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
 
-                verify(attributeTemplateRepository, never()).save(any());
+                verify(attributeTemplatePersistencePort, never()).save(any());
         }
 
         @Test
         void configureFilterableUpdatesExistingAttribute() {
                 AttributeTemplate template = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), FIXED);
                 template.pullEvents();
-                when(attributeTemplateRepository.findById(TEMPLATE_ID)).thenReturn(Optional.of(template));
-                when(attributeTemplateRepository.save(template)).thenReturn(template);
+                when(attributeTemplatePersistencePort.findById(TEMPLATE_ID)).thenReturn(Optional.of(template));
+                when(attributeTemplatePersistencePort.save(template)).thenReturn(template);
 
                 attributeTemplateService.configureFilterable(
                                 new ConfigureFilterableCommand(TEMPLATE_ID, "color", false));
@@ -115,7 +115,7 @@ class AttributeTemplateServiceTest {
 
         @Test
         void configureFilterableThrowsWhenTemplateMissing() {
-                when(attributeTemplateRepository.findById("nope")).thenReturn(Optional.empty());
+                when(attributeTemplatePersistencePort.findById("nope")).thenReturn(Optional.empty());
 
                 assertThatThrownBy(() -> attributeTemplateService.configureFilterable(
                                 new ConfigureFilterableCommand("nope", "color", true)))
@@ -127,7 +127,7 @@ class AttributeTemplateServiceTest {
         @Test
         void getReturnsResultWhenTemplateFound() {
                 AttributeTemplate template = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), FIXED);
-                when(attributeTemplateRepository.findById(TEMPLATE_ID)).thenReturn(Optional.of(template));
+                when(attributeTemplatePersistencePort.findById(TEMPLATE_ID)).thenReturn(Optional.of(template));
 
                 AttributeTemplate result = attributeTemplateService.get(TEMPLATE_ID);
 
@@ -137,7 +137,7 @@ class AttributeTemplateServiceTest {
 
         @Test
         void getThrowsWhenTemplateMissing() {
-                when(attributeTemplateRepository.findById("nope")).thenReturn(Optional.empty());
+                when(attributeTemplatePersistencePort.findById("nope")).thenReturn(Optional.empty());
 
                 assertThatThrownBy(() -> attributeTemplateService.get("nope"))
                                 .isInstanceOf(CatalogException.class)
@@ -148,7 +148,7 @@ class AttributeTemplateServiceTest {
         @Test
         void getByCategoryReturnsResultWhenTemplateFound() {
                 AttributeTemplate template = AttributeTemplate.create(TEMPLATE_ID, CATEGORY_ID, List.of("color"), FIXED);
-                when(attributeTemplateRepository.findByCategoryId(CATEGORY_ID)).thenReturn(Optional.of(template));
+                when(attributeTemplatePersistencePort.findByCategoryId(CATEGORY_ID)).thenReturn(Optional.of(template));
 
                 AttributeTemplate result = attributeTemplateService.getByCategory(CATEGORY_ID);
 
@@ -158,7 +158,7 @@ class AttributeTemplateServiceTest {
 
         @Test
         void getByCategoryThrowsWhenNotFound() {
-                when(attributeTemplateRepository.findByCategoryId("no-category")).thenReturn(Optional.empty());
+                when(attributeTemplatePersistencePort.findByCategoryId("no-category")).thenReturn(Optional.empty());
 
                 assertThatThrownBy(() -> attributeTemplateService.getByCategory("no-category"))
                                 .isInstanceOf(CatalogException.class)

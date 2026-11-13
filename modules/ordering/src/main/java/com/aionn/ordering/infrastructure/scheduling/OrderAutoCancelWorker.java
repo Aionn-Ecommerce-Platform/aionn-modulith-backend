@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OrderAutoCancelWorker {
 
-    private final OrderPersistencePort orderRepository;
+    private final OrderPersistencePort orderPersistencePort;
     private final StockReservationGateway stockReservationGateway;
     private final EventPublisher eventPublisher;
     private final OrderingIntegrationEventPublisherPort integrationEventPublisher;
@@ -32,10 +32,10 @@ public class OrderAutoCancelWorker {
     /** Uses an independent transaction so a single failure does not poison the batch. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void cancelOneExpired(String orderId) {
-        Order order = orderRepository.findByIdForUpdate(orderId)
+        Order order = orderPersistencePort.findByIdForUpdate(orderId)
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.ORDER_NOT_FOUND));
         order.autoCancel("PAYMENT_TIMEOUT", clock.instant());
-        Order saved = orderRepository.save(order);
+        Order saved = orderPersistencePort.save(order);
         eventPublisher.publish(order.pullEvents());
         integrationEventPublisher.publishOrderCancelled(saved.getOrderId(), "PAYMENT_TIMEOUT",
                 "Payment timeout", CancellationKind.AUTO_CANCELLED);

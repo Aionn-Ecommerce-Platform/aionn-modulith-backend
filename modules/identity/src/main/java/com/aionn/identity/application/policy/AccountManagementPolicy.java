@@ -2,9 +2,9 @@ package com.aionn.identity.application.policy;
 
 public interface AccountManagementPolicy {
 
-    int getOtpExpirySeconds();
+    int otpExpirySeconds();
 
-    int getOtpMaxAttempts();
+    int otpMaxAttempts();
 
-    int getDeletionGraceDays();
+    int deletionGraceDays();
 }

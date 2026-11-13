@@ -30,7 +30,7 @@ class InventoryIntegrationEventPublisherTest {
     private InventoryIntegrationEventMapper mapper;
 
     @Mock
-    private WarehousePersistencePort warehouseRepository;
+    private WarehousePersistencePort warehousePersistencePort;
 
     @InjectMocks
     private InventoryIntegrationEventPublisher publisher;
@@ -96,7 +96,7 @@ class InventoryIntegrationEventPublisherTest {
         );
         Warehouse warehouse = mock(Warehouse.class);
         when(warehouse.getMerchantId()).thenReturn("merchant-1");
-        when(warehouseRepository.findById("wh-1")).thenReturn(Optional.of(warehouse));
+        when(warehousePersistencePort.findById("wh-1")).thenReturn(Optional.of(warehouse));
 
         SafetyStockBreachedIntegrationEvent integrationEvent = mock(SafetyStockBreachedIntegrationEvent.class);
         when(mapper.toIntegrationEvent("merchant-1", domainEvent)).thenReturn(integrationEvent);
@@ -111,7 +111,7 @@ class InventoryIntegrationEventPublisherTest {
         InventoryItemEvents.SafetyStockBreached domainEvent = new InventoryItemEvents.SafetyStockBreached(
                 "sku-1", "wh-1", 5, 10, OCCURRED_AT
         );
-        when(warehouseRepository.findById("wh-1")).thenReturn(Optional.empty());
+        when(warehousePersistencePort.findById("wh-1")).thenReturn(Optional.empty());
 
         publisher.onSafetyStockBreached(domainEvent);
 

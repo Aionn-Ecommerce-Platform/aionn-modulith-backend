@@ -2,25 +2,25 @@ package com.aionn.identity.application.policy;
 
 public interface AuthPolicy {
 
-    long getSessionExpiresDays();
+    long sessionExpiresDays();
 
-    int getAccessTokenExpiryMinutes();
+    int accessTokenExpiryMinutes();
 
-    int getMaxFailedLoginAttempts();
+    int maxFailedLoginAttempts();
 
-    int getLockoutMinutes();
+    int lockoutMinutes();
 
-    int getPasswordResetTokenTtlMinutes();
+    int passwordResetTokenTtlMinutes();
 
-    int getLoginIpMaxAttempts();
+    int loginIpMaxAttempts();
 
-    int getLoginIdentityMaxAttempts();
+    int loginIdentityMaxAttempts();
 
-    int getLoginRateLimitWindowSeconds();
+    int loginRateLimitWindowSeconds();
 
-    int getPasswordResetIpMaxAttempts();
+    int passwordResetIpMaxAttempts();
 
-    int getPasswordResetIdentityMaxAttempts();
+    int passwordResetIdentityMaxAttempts();
 
-    int getPasswordResetRateLimitWindowSeconds();
+    int passwordResetRateLimitWindowSeconds();
 }

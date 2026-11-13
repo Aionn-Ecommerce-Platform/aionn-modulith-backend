@@ -4,7 +4,7 @@ import com.aionn.identity.domain.model.IdentityUser;
 import com.aionn.identity.domain.valueobject.UserRole;
 import com.aionn.identity.domain.valueobject.UserStatus;
 import com.aionn.identity.infrastructure.persistence.entity.UserEntity;
-import com.aionn.identity.infrastructure.persistence.mapper.IdentityUserMapper;
+import com.aionn.identity.infrastructure.persistence.mapper.IdentityUserDomainMapper;
 import com.aionn.identity.infrastructure.persistence.repository.user.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,7 +31,7 @@ class IdentityUserEntitySaveSupportTest {
     @Mock
     private UserRepository userRepository;
     @Mock
-    private IdentityUserMapper identityUserMapper;
+    private IdentityUserDomainMapper IdentityUserDomainMapper;
 
     @InjectMocks
     private IdentityUserEntitySaveSupport saveSupport;
@@ -54,7 +54,7 @@ class IdentityUserEntitySaveSupportTest {
         IdentityUser mapped = user;
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(existing));
         when(userRepository.save(existing)).thenReturn(existing);
-        when(identityUserMapper.toDomain(existing)).thenReturn(mapped);
+        when(IdentityUserDomainMapper.toDomain(existing)).thenReturn(mapped);
 
         IdentityUser result = saveSupport.save(user);
 
@@ -70,7 +70,7 @@ class IdentityUserEntitySaveSupportTest {
         IdentityUser user = domainUser();
         when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
         when(userRepository.save(any(UserEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(identityUserMapper.toDomain(any(UserEntity.class))).thenReturn(user);
+        when(IdentityUserDomainMapper.toDomain(any(UserEntity.class))).thenReturn(user);
 
         IdentityUser result = saveSupport.save(user);
 

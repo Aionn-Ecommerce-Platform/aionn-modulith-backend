@@ -29,10 +29,9 @@ import com.aionn.catalog.application.port.in.product.RemoveVariantInputPort;
 import com.aionn.catalog.application.port.in.product.SearchProductCatalogInputPort;
 import com.aionn.catalog.application.port.in.product.SearchProductsInputPort;
 import com.aionn.catalog.application.port.in.product.TrackProductViewInputPort;
+import com.aionn.catalog.adapter.rest.mapper.product.ProductSearchCriteriaAssembler;
 import com.aionn.catalog.application.port.in.product.UpdateAiMetadataInputPort;
 import com.aionn.catalog.application.port.in.product.UpdateMediaInputPort;
-import com.aionn.contracts.publisher.IntegrationEventPublisher;
-import java.time.Clock;
 
 import com.aionn.catalog.adapter.rest.mapper.product.ProductDtoMapper;
 
@@ -54,6 +53,7 @@ import com.aionn.catalog.adapter.rest.support.TestAuth;
 import com.aionn.catalog.adapter.rest.support.session.CurrentAdminIdArgumentResolver;
 import com.aionn.catalog.adapter.rest.support.session.CurrentMerchantIdArgumentResolver;
 import com.aionn.catalog.adapter.rest.support.session.CurrentOwnerIdArgumentResolver;
+import com.aionn.catalog.adapter.rest.support.session.OptionalOwnerIdArgumentResolver;
 import com.aionn.catalog.application.dto.common.PageResult;
 import com.aionn.catalog.application.dto.product.command.AssignBrandCommand;
 import com.aionn.catalog.application.dto.product.command.AssignCategoriesCommand;
@@ -112,6 +112,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -186,8 +188,6 @@ class ProductControllerWebTest {
         private GetProductAnalyticsInputPort getProductAnalyticsInputPort;
         @Mock
         private SearchProductCatalogInputPort searchProductCatalogInputPort;
-        @Mock
-        private IntegrationEventPublisher integrationEventPublisher;
 
         private MockMvc mockMvc;
         private final JsonMapper objectMapper = JacksonMapperFactory.create();
@@ -207,16 +207,16 @@ class ProductControllerWebTest {
                                 getRelatedProductsInputPort, getPopularProductsInputPort,
                                 getPersonalizedProductsInputPort, trackProductViewInputPort,
                                 getProductAnalyticsInputPort, searchProductCatalogInputPort,
-                                Mappers.getMapper(ProductDtoMapper.class),
-                                integrationEventPublisher,
-                                Clock.systemUTC());
+                                new ProductSearchCriteriaAssembler(),
+                                Mappers.getMapper(ProductDtoMapper.class));
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new CatalogExceptionHandler())
                                 .setCustomArgumentResolvers(
                                                 new CurrentMerchantIdArgumentResolver(
                                                                 new MockOwnershipVerifier()),
                                                 new CurrentAdminIdArgumentResolver(),
-                                                new CurrentOwnerIdArgumentResolver())
+                                                new CurrentOwnerIdArgumentResolver(),
+                                                new OptionalOwnerIdArgumentResolver())
                                 .addInterceptors(new MockSecurityInterceptor())
                                 .setMessageConverters(new JacksonJsonHttpMessageConverter(objectMapper))
                                 .build();
@@ -591,20 +591,41 @@ class ProductControllerWebTest {
         }
 
         @Test
-        void searchCatalogReturnsOk() throws Exception {
+        void searchCatalogReturnsOkAndPassesTheAuthenticatedUserToTheUseCase() throws Exception {
                 ProductSearchResult result = ProductSearchResult
                                 .of(
                                                 new PageResult<>(List.of(sample()), 0, 20, 1));
                 when(searchProductCatalogInputPort.execute(
-                                any(ProductSearchCriteria.class)))
+                                any(ProductSearchCriteria.class), any()))
                                 .thenReturn(result);
 
                 mockMvc.perform(get("/api/v1/catalog/products/search/catalog")
+                                .with(TestAuth.authUser("user-1"))
                                 .param("q", "widget")
                                 .param("brandIds", "b1")
                                 .param("attr.color", "red")
                                 .param("sort", "PRICE_ASC"))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.data.page.content[0].productId").value(PRODUCT_ID));
+
+                verify(searchProductCatalogInputPort).execute(
+                                any(ProductSearchCriteria.class), eq("user-1"));
+        }
+
+        @Test
+        void searchCatalogPassesAnonymousCallersWithoutAUser() throws Exception {
+                ProductSearchResult result = ProductSearchResult
+                                .of(
+                                                new PageResult<>(List.of(sample()), 0, 20, 1));
+                when(searchProductCatalogInputPort.execute(
+                                any(ProductSearchCriteria.class), any()))
+                                .thenReturn(result);
+
+                mockMvc.perform(get("/api/v1/catalog/products/search/catalog")
+                                .param("q", "widget"))
+                                .andExpect(status().isOk());
+
+                verify(searchProductCatalogInputPort).execute(
+                                any(ProductSearchCriteria.class), isNull());
         }
 }

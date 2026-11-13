@@ -99,7 +99,7 @@ class StockReservationServiceTest {
         when(itemRepository.lockByKey(KEY)).thenReturn(Optional.of(item));
         when(itemRepository.save(any(InventoryItem.class))).thenAnswer(inv -> inv.getArgument(0));
         when(reservationRepository.save(any(StockReservation.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(reservationPolicy.getDefaultTtlSeconds()).thenReturn(900);
+        when(reservationPolicy.defaultTtlSeconds()).thenReturn(900);
 
         service.reserve(new ReserveStockCommand("SKU_1", "WH_1", "ORDER_1", 5, 0));
 

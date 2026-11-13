@@ -4,6 +4,8 @@ import com.aionn.ordering.adapter.rest.dto.request.*;
 import com.aionn.ordering.adapter.rest.dto.response.CartResponse;
 import com.aionn.ordering.adapter.rest.dto.response.OrderResponse;
 import com.aionn.ordering.adapter.rest.dto.response.OrderReturnResponse;
+import com.aionn.ordering.adapter.rest.dto.response.ReturnItemResponse;
+import com.aionn.ordering.application.port.out.OrderReturnItemPersistencePort;
 import com.aionn.ordering.adapter.rest.dto.response.MerchantOrderAnalyticsResponse;
 import com.aionn.ordering.adapter.rest.dto.response.PlatformOrderAnalyticsResponse;
 import com.aionn.ordering.adapter.rest.dto.response.TopProductResponse;
@@ -91,6 +93,10 @@ public interface OrderingDtoMapper {
     OrderResponse toResponse(OrderResult result);
 
     OrderReturnResponse toResponse(ReturnResult result);
+
+    ReturnItemResponse toResponse(OrderReturnItemPersistencePort.Item item);
+
+    List<ReturnItemResponse> toReturnItemResponses(List<OrderReturnItemPersistencePort.Item> items);
 
     MerchantOrderAnalyticsResponse toResponse(MerchantOrderAnalyticsResult result);
 

@@ -1,5 +1,7 @@
 package com.aionn.identity.adapter.rest.controller;
 
+import com.aionn.identity.application.policy.AdminValidationConstants;
+
 import com.aionn.identity.adapter.rest.dto.feedback.request.AdminChangeFeedbackStatusRequest;
 import com.aionn.identity.adapter.rest.dto.feedback.request.AdminReplyFeedbackRequest;
 import com.aionn.identity.adapter.rest.dto.feedback.response.FeedbackAnalyticsResponse;
@@ -7,7 +9,6 @@ import com.aionn.identity.adapter.rest.dto.feedback.response.FeedbackResponse;
 import com.aionn.identity.adapter.rest.mapper.feedback.FeedbackDtoMapper;
 import com.aionn.identity.application.dto.common.PageResult;
 import com.aionn.identity.application.dto.feedback.result.FeedbackResult;
-import com.aionn.identity.application.policy.IdentityValidationConstants;
 import com.aionn.identity.application.port.in.feedback.ChangeFeedbackStatusInputPort;
 import com.aionn.identity.application.port.in.feedback.GetFeedbackAnalyticsQueryPort;
 import com.aionn.identity.application.port.in.feedback.GetAdminFeedbackQueryPort;
@@ -72,7 +73,7 @@ public class AdminFeedbackController {
     public ResponseEntity<ApiResponse<List<FeedbackResponse>>> list(
             @RequestParam(required = false) FeedbackStatus status,
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(IdentityValidationConstants.ADMIN_PAGE_MAX_SIZE) int size) {
+            @RequestParam(defaultValue = "20") @Min(1) @Max(AdminValidationConstants.ADMIN_PAGE_MAX_SIZE) int size) {
         PageResult<FeedbackResult> result = listAdminFeedbackQueryPort.execute(status, page, size);
         return ResponseEntity.ok(ApiResponse.successWithPaging(
                 feedbackDtoMapper.toResponses(result.content()),

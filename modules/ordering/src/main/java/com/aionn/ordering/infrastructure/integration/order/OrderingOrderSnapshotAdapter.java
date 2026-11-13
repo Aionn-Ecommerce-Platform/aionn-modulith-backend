@@ -22,11 +22,11 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class OrderingOrderSnapshotAdapter implements OrderSnapshotQueryPort {
 
-    private final OrderPersistencePort orderRepository;
+    private final OrderPersistencePort orderPersistencePort;
 
     @Override
     public Optional<OrderSnapshot> findOrderById(String orderId) {
-        return orderRepository.findById(orderId).map(OrderingOrderSnapshotAdapter::toSnapshot);
+        return orderPersistencePort.findById(orderId).map(OrderingOrderSnapshotAdapter::toSnapshot);
     }
 
     private static OrderSnapshot toSnapshot(Order order) {

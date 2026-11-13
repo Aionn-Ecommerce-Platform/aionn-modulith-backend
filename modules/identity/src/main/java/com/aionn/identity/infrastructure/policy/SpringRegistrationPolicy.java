@@ -12,32 +12,32 @@ public class SpringRegistrationPolicy implements RegistrationPolicy {
     private final RegistrationProperties properties;
 
     @Override
-    public int getMaxVerifyAttempts() {
+    public int maxVerifyAttempts() {
         return properties.maxVerifyAttempts();
     }
 
     @Override
-    public int getResendCooldownSeconds() {
+    public int resendCooldownSeconds() {
         return properties.resendCooldownSeconds();
     }
 
     @Override
-    public int getOtpExpirySeconds() {
+    public int otpExpirySeconds() {
         return properties.otpExpirySeconds();
     }
 
     @Override
-    public int getLockTimeoutSeconds() {
+    public int lockTimeoutSeconds() {
         return properties.lockTimeoutSeconds();
     }
 
     @Override
-    public long getSessionExpiresDays() {
+    public long sessionExpiresDays() {
         return properties.sessionExpiresDays();
     }
 
     @Override
-    public String getDefaultCountryCallingCode() {
+    public String defaultCountryCallingCode() {
         return properties.defaultCountryCallingCode();
     }
 
@@ -47,42 +47,42 @@ public class SpringRegistrationPolicy implements RegistrationPolicy {
     }
 
     @Override
-    public int getIpRateLimitMaxAttempts() {
+    public int ipRateLimitMaxAttempts() {
         return properties.rateLimit().ipMaxAttempts();
     }
 
     @Override
-    public int getIpRateLimitWindowSeconds() {
+    public int ipRateLimitWindowSeconds() {
         return properties.rateLimit().ipWindowSeconds();
     }
 
     @Override
-    public int getPhoneRateLimitMaxAttempts() {
+    public int phoneRateLimitMaxAttempts() {
         return properties.rateLimit().phoneMaxAttempts();
     }
 
     @Override
-    public int getPhoneRateLimitWindowSeconds() {
+    public int phoneRateLimitWindowSeconds() {
         return properties.rateLimit().phoneWindowSeconds();
     }
 
     @Override
-    public int getVerifyIpMaxAttempts() {
+    public int verifyIpMaxAttempts() {
         return properties.rateLimit().verifyIpMaxAttempts();
     }
 
     @Override
-    public int getVerifyIpWindowSeconds() {
+    public int verifyIpWindowSeconds() {
         return properties.rateLimit().verifyIpWindowSeconds();
     }
 
     @Override
-    public int getResendIpMaxAttempts() {
+    public int resendIpMaxAttempts() {
         return properties.rateLimit().resendIpMaxAttempts();
     }
 
     @Override
-    public int getResendIpWindowSeconds() {
+    public int resendIpWindowSeconds() {
         return properties.rateLimit().resendIpWindowSeconds();
     }
 }

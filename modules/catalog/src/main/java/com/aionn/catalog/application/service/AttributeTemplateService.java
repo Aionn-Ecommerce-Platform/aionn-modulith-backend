@@ -22,43 +22,43 @@ import java.time.Clock;
 @RequiredArgsConstructor
 public class AttributeTemplateService {
 
-    private final AttributeTemplatePersistencePort attributeTemplateRepository;
-    private final CategoryPersistencePort categoryRepository;
+    private final AttributeTemplatePersistencePort attributeTemplatePersistencePort;
+    private final CategoryPersistencePort categoryPersistencePort;
     private final EventPublisher eventPublisher;
     private final Clock clock;
 
     public AttributeTemplate create(CreateAttributeTemplateCommand command) {
-        categoryRepository.findById(command.categoryId())
+        categoryPersistencePort.findById(command.categoryId())
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.CATEGORY_NOT_FOUND));
-        if (attributeTemplateRepository.findByCategoryId(command.categoryId()).isPresent()) {
+        if (attributeTemplatePersistencePort.findByCategoryId(command.categoryId()).isPresent()) {
             throw new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
                     "Attribute template already exists for this category");
         }
         AttributeTemplate template = AttributeTemplate.create(IdGenerator.ulid(),
                 command.categoryId(), command.attributeKeys(), clock);
-        AttributeTemplate saved = attributeTemplateRepository.save(template);
+        AttributeTemplate saved = attributeTemplatePersistencePort.save(template);
         eventPublisher.publish(template.pullEvents());
         return saved;
     }
 
     public AttributeTemplate configureFilterable(ConfigureFilterableCommand command) {
-        AttributeTemplate template = attributeTemplateRepository.findById(command.templateId())
+        AttributeTemplate template = attributeTemplatePersistencePort.findById(command.templateId())
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.ATTRIBUTE_TEMPLATE_NOT_FOUND));
         template.configureFilterable(command.attributeKey(), command.filterable(), clock);
-        AttributeTemplate saved = attributeTemplateRepository.save(template);
+        AttributeTemplate saved = attributeTemplatePersistencePort.save(template);
         eventPublisher.publish(template.pullEvents());
         return saved;
     }
 
     @Transactional(readOnly = true)
     public AttributeTemplate get(String templateId) {
-        return attributeTemplateRepository.findById(templateId)
+        return attributeTemplatePersistencePort.findById(templateId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.ATTRIBUTE_TEMPLATE_NOT_FOUND));
     }
 
     @Transactional(readOnly = true)
     public AttributeTemplate getByCategory(String categoryId) {
-        return attributeTemplateRepository.findByCategoryId(categoryId)
+        return attributeTemplatePersistencePort.findByCategoryId(categoryId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.ATTRIBUTE_TEMPLATE_NOT_FOUND));
     }
 }

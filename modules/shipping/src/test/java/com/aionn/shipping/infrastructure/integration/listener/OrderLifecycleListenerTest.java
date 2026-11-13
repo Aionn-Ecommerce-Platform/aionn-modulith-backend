@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class OrderLifecycleListenerTest {
 
     @Mock
-    private ShipmentPersistencePort shipmentRepository;
+    private ShipmentPersistencePort shipmentPersistencePort;
 
     @Mock
     private ShipmentCarrierOrchestrator shipmentCarrierOrchestrator;
@@ -36,7 +36,7 @@ class OrderLifecycleListenerTest {
 
     @BeforeEach
     void setUp() {
-        listener = new OrderLifecycleListener(shipmentRepository, shipmentCarrierOrchestrator);
+        listener = new OrderLifecycleListener(shipmentPersistencePort, shipmentCarrierOrchestrator);
     }
 
     @Test
@@ -50,7 +50,7 @@ class OrderLifecycleListenerTest {
                 Instant.now()
         );
 
-        when(shipmentRepository.findByOrderId("O_1")).thenReturn(List.of(shipment1, shipment2));
+        when(shipmentPersistencePort.findByOrderId("O_1")).thenReturn(List.of(shipment1, shipment2));
         when(shipment1.isCancellable()).thenReturn(true);
         when(shipment1.getShipmentId()).thenReturn("S_1");
         when(shipment2.isCancellable()).thenReturn(false);
@@ -72,7 +72,7 @@ class OrderLifecycleListenerTest {
                 Instant.now()
         );
 
-        when(shipmentRepository.findByOrderId("O_1")).thenReturn(List.of(shipment1));
+        when(shipmentPersistencePort.findByOrderId("O_1")).thenReturn(List.of(shipment1));
         when(shipment1.isCancellable()).thenReturn(true);
         when(shipment1.getShipmentId()).thenReturn("S_1");
         doThrow(new RuntimeException("Error")).when(shipmentCarrierOrchestrator)

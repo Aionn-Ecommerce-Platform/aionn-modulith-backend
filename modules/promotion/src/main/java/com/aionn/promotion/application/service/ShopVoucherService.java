@@ -25,7 +25,7 @@ import java.util.List;
 @Transactional
 public class ShopVoucherService {
 
-    private final VoucherPersistencePort voucherRepository;
+    private final VoucherPersistencePort voucherPersistencePort;
     private final MerchantQueryPort merchantQueryPort;
     private final EventPublisher eventPublisher;
     private final PromotionDefaultsPolicy defaultsPolicy;
@@ -35,7 +35,7 @@ public class ShopVoucherService {
     public Voucher issue(VoucherCommands.IssueShopVoucher command) {
         String merchantId = merchantIdFor(command.ownerId());
         String voucherCode = command.voucherCode().trim().toUpperCase();
-        if (voucherRepository.findByCode(voucherCode).isPresent()) {
+        if (voucherPersistencePort.findByCode(voucherCode).isPresent()) {
             throw new PromotionException(PromotionErrorCode.VOUCHER_DUPLICATE_CODE);
         }
         Voucher voucher = Voucher.issueForShop(
@@ -48,7 +48,7 @@ public class ShopVoucherService {
                 command.usageLimit(), command.validFrom(), command.validUntil(), clock);
         Voucher saved;
         try {
-            saved = voucherRepository.save(voucher);
+            saved = voucherPersistencePort.save(voucher);
         } catch (DataIntegrityViolationException ex) {
             throw new PromotionException(PromotionErrorCode.VOUCHER_DUPLICATE_CODE);
         }
@@ -58,12 +58,12 @@ public class ShopVoucherService {
 
     @Transactional(readOnly = true)
     public List<Voucher> listMine(String ownerId, int limit) {
-        return voucherRepository.findByMerchantId(merchantIdFor(ownerId), safeLimit(limit));
+        return voucherPersistencePort.findByMerchantId(merchantIdFor(ownerId), safeLimit(limit));
     }
 
     @Transactional(readOnly = true)
     public List<Voucher> listByMerchant(String merchantId, int limit) {
-        return voucherRepository.findByMerchantId(merchantId, safeLimit(limit)).stream()
+        return voucherPersistencePort.findByMerchantId(merchantId, safeLimit(limit)).stream()
                 .filter(voucher -> voucher.isValidNow(clock.instant()))
                 .toList();
     }

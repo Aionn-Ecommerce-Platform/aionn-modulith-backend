@@ -39,18 +39,18 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ReviewService {
 
-    private final ProductReviewPersistencePort reviewRepository;
-    private final ProductPersistencePort productRepository;
-    private final MerchantPersistencePort merchantRepository;
+    private final ProductReviewPersistencePort productReviewPersistencePort;
+    private final ProductPersistencePort productPersistencePort;
+    private final MerchantPersistencePort merchantPersistencePort;
     private final OrderQueryPort orderQueryPort;
     private final EventPublisher eventPublisher;
     private final Clock clock;
 
     public ProductReview submit(SubmitReviewCommand command) {
-        if (reviewRepository.existsByUserIdAndProductId(command.userId(), command.productId())) {
+        if (productReviewPersistencePort.existsByUserIdAndProductId(command.userId(), command.productId())) {
             throw new CatalogException(CatalogErrorCode.REVIEW_ALREADY_EXISTS);
         }
-        Product product = productRepository.findById(command.productId())
+        Product product = productPersistencePort.findById(command.productId())
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.PRODUCT_NOT_FOUND));
         List<String> skuIds = product.variants().stream().map(ProductVariant::skuId).toList();
         String orderId = orderQueryPort.findCompletedOrderIdForSkus(command.userId(), skuIds);
@@ -62,7 +62,7 @@ public class ReviewService {
                         IdGenerator.ulid(), command.productId(), command.userId(), orderId,
                         command.rating(), command.title(), command.content(), command.imageUrls()),
                 clock);
-        ProductReview saved = reviewRepository.save(review);
+        ProductReview saved = productReviewPersistencePort.save(review);
         eventPublisher.publish(review.pullEvents());
         return saved;
     }
@@ -73,7 +73,7 @@ public class ReviewService {
             throw new CatalogException(CatalogErrorCode.REVIEW_FORBIDDEN, "User does not own this review");
         }
         review.update(command.rating(), command.title(), command.content(), command.imageUrls(), clock);
-        ProductReview saved = reviewRepository.save(review);
+        ProductReview saved = productReviewPersistencePort.save(review);
         eventPublisher.publish(review.pullEvents());
         return saved;
     }
@@ -84,7 +84,7 @@ public class ReviewService {
             throw new CatalogException(CatalogErrorCode.REVIEW_FORBIDDEN, "User does not own this review");
         }
         review.withdraw(command.userId(), clock);
-        reviewRepository.save(review);
+        productReviewPersistencePort.save(review);
         eventPublisher.publish(review.pullEvents());
     }
 
@@ -92,7 +92,7 @@ public class ReviewService {
         ProductReview review = required(command.reviewId());
         ensureMerchantOwnsProduct(command.ownerId(), review.getProductId());
         review.reply(command.content(), clock);
-        ProductReview saved = reviewRepository.save(review);
+        ProductReview saved = productReviewPersistencePort.save(review);
         eventPublisher.publish(review.pullEvents());
         return saved;
     }
@@ -101,7 +101,7 @@ public class ReviewService {
         ProductReview review = required(command.reviewId());
         Merchant merchant = ensureMerchantOwnsProduct(command.ownerId(), review.getProductId());
         review.report(merchant.getMerchantId(), command.reason(), clock);
-        ProductReview saved = reviewRepository.save(review);
+        ProductReview saved = productReviewPersistencePort.save(review);
         eventPublisher.publish(review.pullEvents());
         return saved;
     }
@@ -109,7 +109,7 @@ public class ReviewService {
     public ProductReview hide(HideReviewCommand command) {
         ProductReview review = required(command.reviewId());
         review.hide(clock);
-        ProductReview saved = reviewRepository.save(review);
+        ProductReview saved = productReviewPersistencePort.save(review);
         eventPublisher.publish(review.pullEvents());
         return saved;
     }
@@ -117,75 +117,75 @@ public class ReviewService {
     public void adminDelete(AdminDeleteReviewCommand command) {
         ProductReview review = required(command.reviewId());
         review.adminDelete(command.adminId(), clock);
-        reviewRepository.save(review);
+        productReviewPersistencePort.save(review);
         eventPublisher.publish(review.pullEvents());
     }
 
     public ProductReview restore(RestoreReviewCommand command) {
         ProductReview review = required(command.reviewId());
         review.restore(command.adminId(), clock);
-        ProductReview saved = reviewRepository.save(review);
+        ProductReview saved = productReviewPersistencePort.save(review);
         eventPublisher.publish(review.pullEvents());
         return saved;
     }
 
     @Transactional(readOnly = true)
     public PageResult<ProductReview> getByProduct(String productId, OffsetPagination pagination) {
-        List<ProductReview> content = reviewRepository
+        List<ProductReview> content = productReviewPersistencePort
                 .findByProductIdAndStatus(productId, ReviewStatus.VISIBLE, pagination);
-        long total = reviewRepository.countByProductIdAndStatus(productId, ReviewStatus.VISIBLE);
+        long total = productReviewPersistencePort.countByProductIdAndStatus(productId, ReviewStatus.VISIBLE);
         return new PageResult<>(content, pagination.page(), pagination.size(), total);
     }
 
     @Transactional(readOnly = true)
     public PageResult<ProductReview> getMyReviews(String userId, OffsetPagination pagination) {
-        List<ProductReview> content = reviewRepository.findByUserId(userId, pagination);
-        long total = reviewRepository.countByUserId(userId);
+        List<ProductReview> content = productReviewPersistencePort.findByUserId(userId, pagination);
+        long total = productReviewPersistencePort.countByUserId(userId);
         return new PageResult<>(content, pagination.page(), pagination.size(), total);
     }
 
     @Transactional(readOnly = true)
     public PageResult<ProductReview> getAdminProductReviews(String productId, OffsetPagination pagination) {
-        productRepository.findById(productId)
+        productPersistencePort.findById(productId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.PRODUCT_NOT_FOUND));
-        List<ProductReview> content = reviewRepository.findByProductId(productId, pagination);
+        List<ProductReview> content = productReviewPersistencePort.findByProductId(productId, pagination);
         return new PageResult<>(content, pagination.page(), pagination.size(),
-                reviewRepository.countByProductId(productId));
+                productReviewPersistencePort.countByProductId(productId));
     }
 
     @Transactional(readOnly = true)
     public PageResult<ProductReview> getMerchantReviews(
             String ownerId, Boolean replied, OffsetPagination pagination) {
-        Merchant merchant = merchantRepository.findByOwnerId(ownerId)
+        Merchant merchant = merchantPersistencePort.findByOwnerId(ownerId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.MERCHANT_NOT_FOUND));
-        List<ProductReview> content = reviewRepository.findByMerchantId(
+        List<ProductReview> content = productReviewPersistencePort.findByMerchantId(
                 merchant.getMerchantId(), replied, pagination);
-        long total = reviewRepository.countByMerchantId(merchant.getMerchantId(), replied);
+        long total = productReviewPersistencePort.countByMerchantId(merchant.getMerchantId(), replied);
         return new PageResult<>(content, pagination.page(), pagination.size(), total);
     }
 
     @Transactional(readOnly = true)
     public PageResult<ProductReview> getReportedReviews(OffsetPagination pagination) {
-        List<ProductReview> content = reviewRepository.findByStatus(ReviewStatus.REPORTED, pagination);
-        long total = reviewRepository.countByStatus(ReviewStatus.REPORTED);
+        List<ProductReview> content = productReviewPersistencePort.findByStatus(ReviewStatus.REPORTED, pagination);
+        long total = productReviewPersistencePort.countByStatus(ReviewStatus.REPORTED);
         return new PageResult<>(content, pagination.page(), pagination.size(), total);
     }
 
     @Transactional(readOnly = true)
     public RatingSummary getProductRatingSummary(String productId) {
-        productRepository.findById(productId)
+        productPersistencePort.findById(productId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.PRODUCT_NOT_FOUND));
-        double avg = reviewRepository.getAverageRating(productId);
-        long total = reviewRepository.countByProductIdAndStatus(productId, ReviewStatus.VISIBLE);
-        return new RatingSummary(productId, avg, total, reviewRepository.getRatingDistribution(productId));
+        double avg = productReviewPersistencePort.getAverageRating(productId);
+        long total = productReviewPersistencePort.countByProductIdAndStatus(productId, ReviewStatus.VISIBLE);
+        return new RatingSummary(productId, avg, total, productReviewPersistencePort.getRatingDistribution(productId));
     }
 
     @Transactional(readOnly = true)
     public ReviewEligibilityResult checkEligibility(String userId, String productId) {
-        if (reviewRepository.existsByUserIdAndProductId(userId, productId)) {
+        if (productReviewPersistencePort.existsByUserIdAndProductId(userId, productId)) {
             return new ReviewEligibilityResult(false, "ALREADY_REVIEWED");
         }
-        Product product = productRepository.findById(productId)
+        Product product = productPersistencePort.findById(productId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.PRODUCT_NOT_FOUND));
         List<String> skuIds = product.variants().stream().map(ProductVariant::skuId).toList();
         String orderId = orderQueryPort.findCompletedOrderIdForSkus(userId, skuIds);
@@ -196,14 +196,14 @@ public class ReviewService {
     }
 
     private ProductReview required(String reviewId) {
-        return reviewRepository.findById(reviewId)
+        return productReviewPersistencePort.findById(reviewId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.REVIEW_NOT_FOUND));
     }
 
     private Merchant ensureMerchantOwnsProduct(String ownerId, String productId) {
-        Product product = productRepository.findById(productId)
+        Product product = productPersistencePort.findById(productId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.PRODUCT_NOT_FOUND));
-        Merchant merchant = merchantRepository.findByOwnerId(ownerId)
+        Merchant merchant = merchantPersistencePort.findByOwnerId(ownerId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.MERCHANT_NOT_FOUND));
         if (!product.getMerchantId().equals(merchant.getMerchantId())) {
             throw new CatalogException(CatalogErrorCode.REVIEW_FORBIDDEN,

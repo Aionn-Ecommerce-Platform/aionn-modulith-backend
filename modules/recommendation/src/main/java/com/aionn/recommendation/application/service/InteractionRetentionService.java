@@ -26,10 +26,10 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class InteractionRetentionService {
 
-    private final InteractionPersistencePort interactionRepository;
-    private final UserAffinityProfilePersistencePort profileRepository;
-    private final ItemSimilarityPersistencePort similarityRepository;
-    private final PopularityPersistencePort popularityRepository;
+    private final InteractionPersistencePort interactionPersistencePort;
+    private final UserAffinityProfilePersistencePort userAffinityProfilePersistencePort;
+    private final ItemSimilarityPersistencePort itemSimilarityPersistencePort;
+    private final PopularityPersistencePort popularityPersistencePort;
     private final RecommendationCachePort cache;
     private final Clock clock;
 
@@ -38,13 +38,13 @@ public class InteractionRetentionService {
     public int prune(Duration maxAge, int batchSize) {
         Instant cutoff = clock.instant().minus(maxAge);
         InteractionPersistencePort.PrunedInteractions pruned =
-                interactionRepository.pruneOlderThan(cutoff, batchSize);
+                interactionPersistencePort.pruneOlderThan(cutoff, batchSize);
         if (pruned.deleted() == 0) {
             return 0;
         }
-        profileRepository.deleteByUserIds(pruned.userIds());
-        similarityRepository.deleteByProductIds(pruned.productIds());
-        popularityRepository.deleteByProductIds(pruned.productIds());
+        userAffinityProfilePersistencePort.deleteByUserIds(pruned.userIds());
+        itemSimilarityPersistencePort.deleteByProductIds(pruned.productIds());
+        popularityPersistencePort.deleteByProductIds(pruned.productIds());
         afterCommit(() -> invalidateCache(pruned));
         log.info("Pruned {} interaction(s) older than {} and invalidated derived signals for {} user(s), {} product(s)",
                 pruned.deleted(), cutoff, pruned.userIds().size(), pruned.productIds().size());
@@ -67,10 +67,10 @@ public class InteractionRetentionService {
     /** Erases everything held for one account, leaving a tombstone so replays and stale refreshes can't undo it. */
     @Transactional
     public void eraseUser(String userId) {
-        interactionRepository.lockUser(userId);
-        interactionRepository.markUserErased(userId, clock.instant());
-        int interactions = interactionRepository.deleteByUser(userId);
-        int profiles = profileRepository.deleteByUserId(userId);
+        interactionPersistencePort.lockUser(userId);
+        interactionPersistencePort.markUserErased(userId, clock.instant());
+        int interactions = interactionPersistencePort.deleteByUser(userId);
+        int profiles = userAffinityProfilePersistencePort.deleteByUserId(userId);
         afterCommit(() -> cache.evictUserFeed(userId));
         // Counts only: logging product IDs would put the erased history back into the log.
         log.info("Erased recommendation data for a deleted account: {} interaction(s), {} profile(s)",

@@ -3,8 +3,6 @@ package com.aionn.catalog.adapter.rest.controller;
 import com.aionn.catalog.adapter.rest.dto.attribute.request.ConfigureFilterableRequest;
 import com.aionn.catalog.adapter.rest.dto.attribute.request.CreateAttributeTemplateRequest;
 import com.aionn.catalog.adapter.rest.dto.attribute.response.AttributeTemplateResponse;
-import com.aionn.catalog.application.dto.attribute.query.GetAttributeTemplateByCategoryQuery;
-import com.aionn.catalog.application.dto.attribute.query.GetAttributeTemplateQuery;
 import com.aionn.catalog.application.dto.attribute.result.AttributeTemplateResult;
 import com.aionn.catalog.application.port.in.attribute.ConfigureFilterableInputPort;
 import com.aionn.catalog.application.port.in.attribute.CreateAttributeTemplateInputPort;
@@ -64,7 +62,7 @@ public class AttributeTemplateController {
         @Operation(summary = "Get attribute template", description = "Public read")
         public ResponseEntity<ApiResponse<AttributeTemplateResponse>> get(@PathVariable String templateId) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                attributeDtoMapper.toResponse(getAttributeTemplateInputPort.execute(new GetAttributeTemplateQuery(templateId))),
+                                attributeDtoMapper.toResponse(getAttributeTemplateInputPort.execute(attributeDtoMapper.toGetQuery(templateId))),
                                 "Attribute template fetched"));
         }
 
@@ -74,7 +72,7 @@ public class AttributeTemplateController {
                         @RequestParam String categoryId) {
                 return ResponseEntity.ok(ApiResponse.success(
                                 attributeDtoMapper.toResponse(getAttributeTemplateByCategoryInputPort
-                                                 .execute(new GetAttributeTemplateByCategoryQuery(categoryId))),
+                                                 .execute(attributeDtoMapper.toGetByCategoryQuery(categoryId))),
                                 "Attribute template fetched"));
         }
 }

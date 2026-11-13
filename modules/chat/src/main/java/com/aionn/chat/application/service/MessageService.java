@@ -33,10 +33,10 @@ import java.util.Optional;
 @Transactional
 public class MessageService {
 
-    private final ConversationPersistencePort conversationRepository;
-    private final MessagePersistencePort messageRepository;
-    private final UserBlockPersistencePort userBlockRepository;
-    private final MerchantAutoReplyPersistencePort autoReplyRepository;
+    private final ConversationPersistencePort conversationPersistencePort;
+    private final MessagePersistencePort messagePersistencePort;
+    private final UserBlockPersistencePort userBlockPersistencePort;
+    private final MerchantAutoReplyPersistencePort merchantAutoReplyPersistencePort;
     private final EventPublisher eventPublisher;
     private final ChatParticipantResolver participantResolver;
     private final ChatMessagePolicy messagePolicy;
@@ -57,20 +57,20 @@ public class MessageService {
 
         List<String> recipients = conversation.recipientsExcept(senderPid);
         for (String recipientId : recipients) {
-            if (userBlockRepository.exists(recipientId, senderPid)
-                    || userBlockRepository.exists(senderPid, recipientId)) {
+            if (userBlockPersistencePort.exists(recipientId, senderPid)
+                    || userBlockPersistencePort.exists(senderPid, recipientId)) {
                 throw new ChatException(ChatErrorCode.USER_BLOCKED);
             }
         }
 
         Message message = Message.send(IdGenerator.ulid(), conversation.getConversationId(),
                 senderPid, sender.role(), command.type(), buildPayload(command), recipients,
-                messagePolicy.getMaxTextLength(), clock);
+                messagePolicy.maxTextLength(), clock);
         conversation.recordMessageSent(message.getMessageId(), command.type(),
                 message.previewBody(), senderPid, clock);
 
-        Message savedMessage = messageRepository.save(message);
-        conversationRepository.save(conversation);
+        Message savedMessage = messagePersistencePort.save(message);
+        conversationPersistencePort.save(conversation);
         eventPublisher.publish(message.pullEvents());
         eventPublisher.publish(conversation.pullEvents());
 
@@ -84,7 +84,7 @@ public class MessageService {
             return Optional.empty();
         }
         Conversation conversation = requiredConversation(conversationId);
-        Optional<MerchantAutoReply> configured = autoReplyRepository
+        Optional<MerchantAutoReply> configured = merchantAutoReplyPersistencePort
                 .findByMerchantId(conversation.getMerchantId());
         if (configured.isEmpty()) {
             return Optional.empty();
@@ -103,8 +103,8 @@ public class MessageService {
         conversation.recordMessageSent(reply.getMessageId(), MessageType.SYSTEM,
                 reply.previewBody(), merchantId, clock);
 
-        Message savedReply = messageRepository.save(reply);
-        conversationRepository.save(conversation);
+        Message savedReply = messagePersistencePort.save(reply);
+        conversationPersistencePort.save(conversation);
         eventPublisher.publish(reply.pullEvents());
         eventPublisher.publish(conversation.pullEvents());
 
@@ -115,7 +115,7 @@ public class MessageService {
     public Message markDelivered(MessageCommands.DeliverMessage command) {
         Message message = required(command.messageId());
         message.markDeliveredTo(participantOf(message, command.userId()), clock);
-        Message saved = messageRepository.save(message);
+        Message saved = messagePersistencePort.save(message);
         eventPublisher.publish(message.pullEvents());
         return saved;
     }
@@ -123,7 +123,7 @@ public class MessageService {
     public Message markRead(MessageCommands.ReadMessage command) {
         Message message = required(command.messageId());
         message.markReadBy(participantOf(message, command.userId()), clock);
-        Message saved = messageRepository.save(message);
+        Message saved = messagePersistencePort.save(message);
         eventPublisher.publish(message.pullEvents());
         return saved;
     }
@@ -131,8 +131,8 @@ public class MessageService {
     public Message recall(MessageCommands.RecallMessage command) {
         Message message = required(command.messageId());
         message.recall(participantOf(message, command.userId()),
-                messagePolicy.getRecallWindow(), clock);
-        Message saved = messageRepository.save(message);
+                messagePolicy.recallWindow(), clock);
+        Message saved = messagePersistencePort.save(message);
         eventPublisher.publish(message.pullEvents());
         return saved;
     }
@@ -155,13 +155,13 @@ public class MessageService {
     @Transactional(readOnly = true)
     public List<Message> listLatest(String userId, String conversationId, int limit) {
         requireParticipantIn(conversationId, userId);
-        return messageRepository.findByConversationLatest(conversationId, limit);
+        return messagePersistencePort.findByConversationLatest(conversationId, limit);
     }
 
     @Transactional(readOnly = true)
     public List<Message> listBefore(String userId, String conversationId, Instant before, int limit) {
         requireParticipantIn(conversationId, userId);
-        return messageRepository.findByConversationBefore(conversationId, before, limit);
+        return messagePersistencePort.findByConversationBefore(conversationId, before, limit);
     }
 
     private static MessagePayload buildPayload(MessageCommands.SendMessage command) {
@@ -181,12 +181,12 @@ public class MessageService {
     }
 
     private Message required(String messageId) {
-        return messageRepository.findById(messageId)
+        return messagePersistencePort.findById(messageId)
                 .orElseThrow(() -> new ChatException(ChatErrorCode.MESSAGE_NOT_FOUND));
     }
 
     private Conversation requiredConversation(String conversationId) {
-        return conversationRepository.findById(conversationId)
+        return conversationPersistencePort.findById(conversationId)
                 .orElseThrow(() -> new ChatException(ChatErrorCode.CONVERSATION_NOT_FOUND));
     }
 

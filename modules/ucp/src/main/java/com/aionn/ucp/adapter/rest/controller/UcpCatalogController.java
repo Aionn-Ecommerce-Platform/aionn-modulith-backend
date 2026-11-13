@@ -1,11 +1,11 @@
 package com.aionn.ucp.adapter.rest.controller;
 
-import com.aionn.ucp.adapter.rest.dto.catalog.UcpCatalogLookupRequest;
-import com.aionn.ucp.adapter.rest.dto.catalog.UcpCatalogLookupResponse;
-import com.aionn.ucp.adapter.rest.dto.catalog.UcpCatalogSearchRequest;
-import com.aionn.ucp.adapter.rest.dto.catalog.UcpCatalogSearchResponse;
-import com.aionn.ucp.adapter.rest.dto.catalog.UcpProductDetailRequest;
-import com.aionn.ucp.adapter.rest.dto.catalog.UcpProductDetailResponse;
+import com.aionn.ucp.adapter.rest.dto.catalog.request.UcpCatalogLookupRequest;
+import com.aionn.ucp.adapter.rest.dto.catalog.response.UcpCatalogLookupResponse;
+import com.aionn.ucp.adapter.rest.dto.catalog.request.UcpCatalogSearchRequest;
+import com.aionn.ucp.adapter.rest.dto.catalog.response.UcpCatalogSearchResponse;
+import com.aionn.ucp.adapter.rest.dto.catalog.request.UcpProductDetailRequest;
+import com.aionn.ucp.adapter.rest.dto.catalog.response.UcpProductDetailResponse;
 import com.aionn.ucp.application.catalog.UcpCatalogApplicationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

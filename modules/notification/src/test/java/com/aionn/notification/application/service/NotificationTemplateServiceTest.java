@@ -35,12 +35,12 @@ class NotificationTemplateServiceTest {
     private static final String EVENT = "identity.password-changed";
 
     @Mock
-    private NotificationTemplatePersistencePort repository;
+    private NotificationTemplatePersistencePort notificationTemplatePersistencePort;
     @Mock
     private EventPublisher eventPublisher;
 
     private NotificationTemplateService service() {
-        return new NotificationTemplateService(repository, eventPublisher, CLOCK);
+        return new NotificationTemplateService(notificationTemplatePersistencePort, eventPublisher, CLOCK);
     }
 
     private static NotificationTemplate existing() {
@@ -55,9 +55,9 @@ class NotificationTemplateServiceTest {
 
     @Test
     void createExtractsPlaceholdersAndPublishesEvent() {
-        when(repository.findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN"))
+        when(notificationTemplatePersistencePort.findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN"))
                 .thenReturn(Optional.empty());
-        when(repository.save(any(NotificationTemplate.class)))
+        when(notificationTemplatePersistencePort.save(any(NotificationTemplate.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         NotificationTemplate created = service().create(createCommand("vi-VN"));
@@ -70,9 +70,9 @@ class NotificationTemplateServiceTest {
 
     @Test
     void createDefaultsLocaleToVietnamese() {
-        when(repository.findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN"))
+        when(notificationTemplatePersistencePort.findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN"))
                 .thenReturn(Optional.empty());
-        when(repository.save(any(NotificationTemplate.class)))
+        when(notificationTemplatePersistencePort.save(any(NotificationTemplate.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         assertThat(service().create(createCommand(null)).getLocale()).isEqualTo("vi-VN");
@@ -80,7 +80,7 @@ class NotificationTemplateServiceTest {
 
     @Test
     void createRejectsDuplicateEventChannelLocale() {
-        when(repository.findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN"))
+        when(notificationTemplatePersistencePort.findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN"))
                 .thenReturn(Optional.of(existing()));
 
         NotificationTemplateService service = service();
@@ -90,13 +90,13 @@ class NotificationTemplateServiceTest {
                 .isInstanceOf(NotificationException.class)
                 .hasFieldOrPropertyWithValue("errorCode",
                         NotificationErrorCode.TEMPLATE_DUPLICATE.getCode());
-        verify(repository, never()).save(any());
+        verify(notificationTemplatePersistencePort, never()).save(any());
     }
 
     @Test
     void updateBumpsVersionAndReExtractsPlaceholders() {
-        when(repository.findById("tpl-1")).thenReturn(Optional.of(existing()));
-        when(repository.save(any(NotificationTemplate.class)))
+        when(notificationTemplatePersistencePort.findById("tpl-1")).thenReturn(Optional.of(existing()));
+        when(notificationTemplatePersistencePort.save(any(NotificationTemplate.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         NotificationTemplate updated = service().update(
@@ -109,7 +109,7 @@ class NotificationTemplateServiceTest {
 
     @Test
     void updateThrowsWhenTemplateMissing() {
-        when(repository.findById("nope")).thenReturn(Optional.empty());
+        when(notificationTemplatePersistencePort.findById("nope")).thenReturn(Optional.empty());
 
         NotificationTemplateService service = service();
         TemplateCommands.UpdateTemplate command = new TemplateCommands.UpdateTemplate("nope", null, "content");
@@ -122,14 +122,14 @@ class NotificationTemplateServiceTest {
 
     @Test
     void getReturnsTemplate() {
-        when(repository.findById("tpl-1")).thenReturn(Optional.of(existing()));
+        when(notificationTemplatePersistencePort.findById("tpl-1")).thenReturn(Optional.of(existing()));
 
         assertThat(service().get("tpl-1").getTemplateId()).isEqualTo("tpl-1");
     }
 
     @Test
     void getThrowsWhenMissing() {
-        when(repository.findById("nope")).thenReturn(Optional.empty());
+        when(notificationTemplatePersistencePort.findById("nope")).thenReturn(Optional.empty());
 
         NotificationTemplateService service = service();
 
@@ -138,7 +138,7 @@ class NotificationTemplateServiceTest {
 
     @Test
     void listDelegatesToRepository() {
-        when(repository.findAll(10)).thenReturn(List.of(existing()));
+        when(notificationTemplatePersistencePort.findAll(10)).thenReturn(List.of(existing()));
 
         assertThat(service().list(10)).hasSize(1);
     }

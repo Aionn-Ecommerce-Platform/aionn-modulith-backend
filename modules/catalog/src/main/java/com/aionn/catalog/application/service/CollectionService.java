@@ -24,22 +24,22 @@ public class CollectionService {
 
     private static final Pattern SLUG = Pattern.compile("^[a-z0-9]++(?:-[a-z0-9]++)*+$");
 
-    private final CollectionPersistencePort collectionRepository;
+    private final CollectionPersistencePort collectionPersistencePort;
     private final Clock clock;
 
     @Transactional(readOnly = true)
     public List<CollectionView> list(boolean activeOnly) {
-        return collectionRepository.findAll(activeOnly);
+        return collectionPersistencePort.findAll(activeOnly);
     }
 
     @Transactional(readOnly = true)
     public CollectionView get(String key) {
-        return collectionRepository.findByIdOrSlug(key)
+        return collectionPersistencePort.findByIdOrSlug(key)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.COLLECTION_NOT_FOUND));
     }
 
     public CollectionView create(String slug, String name, String description, String imageUrl,
-            boolean active, int displayOrder) {
+            Boolean active, Integer displayOrder) {
         String normalizedSlug = requireSlug(slug);
         String normalizedName = requireName(name);
         Instant now = clock.instant();
@@ -49,19 +49,19 @@ public class CollectionService {
                 normalizedName,
                 blankToNull(description),
                 blankToNull(imageUrl),
-                active,
-                Math.max(0, displayOrder),
+                active == null || active,
+                displayOrder == null ? 0 : Math.max(0, displayOrder),
                 now,
                 now);
         try {
-            return collectionRepository.save(view);
+            return collectionPersistencePort.save(view);
         } catch (DuplicateKeyException ex) {
             throw new CatalogException(CatalogErrorCode.COLLECTION_SLUG_CONFLICT);
         }
     }
 
     public CollectionView update(String collectionId, String slug, String name, String description,
-            String imageUrl, boolean active, int displayOrder) {
+            String imageUrl, Boolean active, Integer displayOrder) {
         CollectionView existing = get(collectionId);
         Instant now = clock.instant();
         CollectionView updated = new CollectionView(
@@ -70,12 +70,12 @@ public class CollectionService {
                 name == null ? existing.name() : requireName(name),
                 description == null ? existing.description() : blankToNull(description),
                 imageUrl == null ? existing.imageUrl() : blankToNull(imageUrl),
-                active,
-                Math.max(0, displayOrder),
+                active == null || active,
+                displayOrder == null ? 0 : Math.max(0, displayOrder),
                 existing.createdAt(),
                 now);
         try {
-            return collectionRepository.save(updated);
+            return collectionPersistencePort.save(updated);
         } catch (DuplicateKeyException ex) {
             throw new CatalogException(CatalogErrorCode.COLLECTION_SLUG_CONFLICT);
         }
@@ -83,10 +83,10 @@ public class CollectionService {
 
     public void delete(String collectionId) {
         CollectionView existing = get(collectionId);
-        if (collectionRepository.countProducts(existing.collectionId()) > 0) {
+        if (collectionPersistencePort.countProducts(existing.collectionId()) > 0) {
             throw new CatalogException(CatalogErrorCode.COLLECTION_HAS_PRODUCTS);
         }
-        collectionRepository.delete(existing.collectionId());
+        collectionPersistencePort.delete(existing.collectionId());
     }
 
     @Transactional(readOnly = true)
@@ -94,7 +94,7 @@ public class CollectionService {
         if (collectionIds == null || collectionIds.isEmpty()) {
             return;
         }
-        if (!collectionRepository.existsAll(collectionIds)) {
+        if (!collectionPersistencePort.existsAll(collectionIds)) {
             throw new CatalogException(CatalogErrorCode.COLLECTION_NOT_FOUND,
                     "One or more collection ids do not exist");
         }

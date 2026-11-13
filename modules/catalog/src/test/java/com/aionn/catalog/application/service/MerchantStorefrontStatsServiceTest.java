@@ -35,13 +35,13 @@ class MerchantStorefrontStatsServiceTest {
     private static final String MERCHANT_ID = "merchant-1";
 
     @Mock
-    private MerchantPersistencePort merchantRepository;
+    private MerchantPersistencePort merchantPersistencePort;
     @Mock
-    private ProductPersistencePort productRepository;
+    private ProductPersistencePort productPersistencePort;
     @Mock
-    private ProductReviewPersistencePort reviewRepository;
+    private ProductReviewPersistencePort productReviewPersistencePort;
     @Mock
-    private MerchantFollowerPersistencePort followerRepository;
+    private MerchantFollowerPersistencePort merchantFollowerPersistencePort;
     @Mock
     private ObjectProvider<MerchantChatStatsPort> chatStatsProvider;
 
@@ -49,12 +49,12 @@ class MerchantStorefrontStatsServiceTest {
     void reportsTheMerchantAggregates() {
         Merchant merchant = mock(Merchant.class);
         when(merchant.getCreatedAt()).thenReturn(Instant.parse("2026-01-01T00:00:00Z"));
-        when(merchantRepository.findById(MERCHANT_ID)).thenReturn(Optional.of(merchant));
-        when(reviewRepository.getMerchantRatingStats(MERCHANT_ID))
+        when(merchantPersistencePort.findById(MERCHANT_ID)).thenReturn(Optional.of(merchant));
+        when(productReviewPersistencePort.getMerchantRatingStats(MERCHANT_ID))
                 .thenReturn(new ProductReviewPersistencePort.MerchantRatingStats(4.5, 12));
-        when(productRepository.countByMerchantAndStatus(MERCHANT_ID, ProductStatus.PUBLISHED)).thenReturn(7L);
-        when(followerRepository.countByMerchantId(MERCHANT_ID)).thenReturn(30L);
-        when(followerRepository.exists(MERCHANT_ID, "user-1")).thenReturn(true);
+        when(productPersistencePort.countByMerchantAndStatus(MERCHANT_ID, ProductStatus.PUBLISHED)).thenReturn(7L);
+        when(merchantFollowerPersistencePort.countByMerchantId(MERCHANT_ID)).thenReturn(30L);
+        when(merchantFollowerPersistencePort.exists(MERCHANT_ID, "user-1")).thenReturn(true);
         MerchantChatStatsPort chatPort = mock(MerchantChatStatsPort.class);
         when(chatPort.responseStats(eq(MERCHANT_ID), any()))
                 .thenReturn(new MerchantChatStatsPort.ResponseStats(10, 8, 60L));
@@ -76,8 +76,8 @@ class MerchantStorefrontStatsServiceTest {
     @Test
     void reportsUnknownChatMetricsWhenTheModuleIsAbsent() {
         Merchant merchant = mock(Merchant.class);
-        when(merchantRepository.findById(MERCHANT_ID)).thenReturn(Optional.of(merchant));
-        when(reviewRepository.getMerchantRatingStats(MERCHANT_ID))
+        when(merchantPersistencePort.findById(MERCHANT_ID)).thenReturn(Optional.of(merchant));
+        when(productReviewPersistencePort.getMerchantRatingStats(MERCHANT_ID))
                 .thenReturn(new ProductReviewPersistencePort.MerchantRatingStats(0.0, 0));
         when(chatStatsProvider.getIfAvailable()).thenReturn(null);
 
@@ -93,8 +93,8 @@ class MerchantStorefrontStatsServiceTest {
     @Test
     void bucketsResponseTimesByMagnitude() {
         Merchant merchant = mock(Merchant.class);
-        when(merchantRepository.findById(MERCHANT_ID)).thenReturn(Optional.of(merchant));
-        when(reviewRepository.getMerchantRatingStats(MERCHANT_ID))
+        when(merchantPersistencePort.findById(MERCHANT_ID)).thenReturn(Optional.of(merchant));
+        when(productReviewPersistencePort.getMerchantRatingStats(MERCHANT_ID))
                 .thenReturn(new ProductReviewPersistencePort.MerchantRatingStats(0.0, 0));
         MerchantChatStatsPort chatPort = mock(MerchantChatStatsPort.class);
         when(chatStatsProvider.getIfAvailable()).thenReturn(chatPort);
@@ -108,7 +108,7 @@ class MerchantStorefrontStatsServiceTest {
 
     @Test
     void reportsAMissingMerchant() {
-        when(merchantRepository.findById("missing")).thenReturn(Optional.empty());
+        when(merchantPersistencePort.findById("missing")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service().stats("missing", null))
                 .isInstanceOfSatisfying(CatalogException.class,
@@ -123,7 +123,7 @@ class MerchantStorefrontStatsServiceTest {
     }
 
     private MerchantStorefrontStatsService service() {
-        return new MerchantStorefrontStatsService(merchantRepository, productRepository, reviewRepository,
-                followerRepository, chatStatsProvider, Clock.fixed(NOW, ZoneOffset.UTC));
+        return new MerchantStorefrontStatsService(merchantPersistencePort, productPersistencePort, productReviewPersistencePort,
+                merchantFollowerPersistencePort, chatStatsProvider, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 }

@@ -1,5 +1,7 @@
 package com.aionn.catalog.application.service;
 
+import com.aionn.catalog.application.dto.question.result.ProductQuestionResult;
+import com.aionn.catalog.application.mapper.ProductQuestionResultMapper;
 import com.aionn.catalog.application.port.out.merchant.ProductQuestionPersistencePort;
 import com.aionn.catalog.application.port.out.product.ProductPersistencePort;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
@@ -19,12 +21,13 @@ import java.util.List;
 @Transactional
 public class ProductQuestionService {
 
-    private final ProductQuestionPersistencePort questionRepository;
-    private final ProductPersistencePort productRepository;
+    private final ProductQuestionPersistencePort productQuestionPersistencePort;
+    private final ProductPersistencePort productPersistencePort;
+    private final ProductQuestionResultMapper resultMapper;
     private final Clock clock;
 
-    public ProductQuestionPersistencePort.Question ask(String userId, String productId, String question) {
-        Product product = productRepository.findById(productId)
+    public ProductQuestionResult ask(String userId, String productId, String question) {
+        Product product = productPersistencePort.findById(productId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.PRODUCT_NOT_FOUND));
         if (product.getStatus() != ProductStatus.PUBLISHED) {
             throw new CatalogException(CatalogErrorCode.PRODUCT_INVALID_TRANSITION,
@@ -32,45 +35,47 @@ public class ProductQuestionService {
         }
         String text = requireText(question, "Question");
         var now = clock.instant();
-        return questionRepository.save(new ProductQuestionPersistencePort.Question(
+        var saved = productQuestionPersistencePort.save(new ProductQuestionPersistencePort.Question(
                 IdGenerator.ulid(), productId, userId, text, null, null, null, now, now));
+        return resultMapper.toResult(saved);
     }
 
     @Transactional(readOnly = true)
     public QuestionPage listByProduct(String productId, int page, int size) {
         return new QuestionPage(
-                questionRepository.findByProduct(productId, page * size, size),
-                questionRepository.countByProduct(productId));
+                resultMapper.toResults(productQuestionPersistencePort.findByProduct(productId, page * size, size)),
+                productQuestionPersistencePort.countByProduct(productId));
     }
 
     @Transactional(readOnly = true)
     public QuestionPage listByMerchant(String merchantId, Boolean answered, int page, int size) {
         return new QuestionPage(
-                questionRepository.findByMerchant(merchantId, answered, page * size, size),
-                questionRepository.countByMerchant(merchantId, answered));
+                resultMapper.toResults(productQuestionPersistencePort.findByMerchant(merchantId, answered, page * size, size)),
+                productQuestionPersistencePort.countByMerchant(merchantId, answered));
     }
 
-    public ProductQuestionPersistencePort.Question answer(String merchantId, String questionId, String answer) {
+    public ProductQuestionResult answer(String merchantId, String questionId, String answer) {
         String text = requireText(answer, "Answer");
         var now = clock.instant();
-        if (!questionRepository.answer(questionId, merchantId, text, now)) {
+        if (!productQuestionPersistencePort.answer(questionId, merchantId, text, now)) {
             // Distinguish a missing question from a product owned by another merchant only when
             // the row is visible to this merchant is not possible without another query; a single
             // forbidden error avoids leaking other merchants' question ids.
             throw new CatalogException(CatalogErrorCode.QUESTION_FORBIDDEN,
                     "Question does not exist or is not owned by this merchant");
         }
-        return questionRepository.findById(questionId)
+        var question = productQuestionPersistencePort.findById(questionId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.QUESTION_NOT_FOUND));
+        return resultMapper.toResult(question);
     }
 
     public void delete(String userId, String questionId) {
-        ProductQuestionPersistencePort.Question question = questionRepository.findById(questionId)
+        ProductQuestionPersistencePort.Question question = productQuestionPersistencePort.findById(questionId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.QUESTION_NOT_FOUND));
         if (!question.userId().equals(userId)) {
             throw new CatalogException(CatalogErrorCode.QUESTION_FORBIDDEN);
         }
-        questionRepository.delete(questionId, userId);
+        productQuestionPersistencePort.delete(questionId, userId);
     }
 
     private static String requireText(String value, String field) {
@@ -85,6 +90,6 @@ public class ProductQuestionService {
         return trimmed;
     }
 
-    public record QuestionPage(List<ProductQuestionPersistencePort.Question> content, long totalElements) {
+    public record QuestionPage(List<ProductQuestionResult> content, long totalElements) {
     }
 }

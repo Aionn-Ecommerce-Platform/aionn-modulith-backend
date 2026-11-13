@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 class OrderingOrderSnapshotAdapterTest {
 
     @Mock
-    private OrderPersistencePort orderRepository;
+    private OrderPersistencePort orderPersistencePort;
 
     @InjectMocks
     private OrderingOrderSnapshotAdapter adapter;
@@ -43,7 +43,7 @@ class OrderingOrderSnapshotAdapterTest {
         Order order = Order.place("ord-1", "usr-1", "m-1", "prop-1", "pm-1", "VND",
                 List.of(item()), address(), Money.zero("VND"), Money.of(BigDecimal.valueOf(200), "VND"), Instant.now());
 
-        when(orderRepository.findById("ord-1")).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findById("ord-1")).thenReturn(Optional.of(order));
 
         Optional<OrderSnapshotQueryPort.OrderSnapshot> snapshotOpt = adapter.findOrderById("ord-1");
 

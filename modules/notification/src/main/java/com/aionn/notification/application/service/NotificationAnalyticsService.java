@@ -18,14 +18,14 @@ import java.time.Instant;
 @Transactional
 public class NotificationAnalyticsService {
 
-    private final NotificationPersistencePort notificationRepository;
+    private final NotificationPersistencePort notificationPersistencePort;
     private final EventPublisher eventPublisher;
     private final Clock clock;
 
     public AnalyticsResult report(String campaignId) {
-        long sent = notificationRepository.countByCampaignAndStatus(campaignId, "SENT");
-        long read = notificationRepository.countByCampaignAndStatus(campaignId, "READ");
-        long failed = notificationRepository.countByCampaignAndStatus(campaignId, "FAILED");
+        long sent = notificationPersistencePort.countByCampaignAndStatus(campaignId, "SENT");
+        long read = notificationPersistencePort.countByCampaignAndStatus(campaignId, "READ");
+        long failed = notificationPersistencePort.countByCampaignAndStatus(campaignId, "FAILED");
         Instant now = clock.instant();
         String reportId = "ana-" + IdGenerator.ulid();
 

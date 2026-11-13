@@ -18,7 +18,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class InventoryStockAvailabilityAdapter implements StockAvailabilityQueryPort {
 
-    private final InventoryItemPersistencePort itemRepository;
+    private final InventoryItemPersistencePort inventoryItemPersistencePort;
 
     @Override
     @Transactional(readOnly = true)
@@ -28,6 +28,6 @@ public class InventoryStockAvailabilityAdapter implements StockAvailabilityQuery
         }
         // One projection query for the whole set. A SKU counts as available when any warehouse can
         // ship it; which warehouse serves the order is decided later by the warehouse selector.
-        return itemRepository.findAvailableSkus(skuIds);
+        return inventoryItemPersistencePort.findAvailableSkus(skuIds);
     }
 }

@@ -1,7 +1,5 @@
 package com.aionn.catalog.adapter.rest.controller;
 
-import com.aionn.contracts.port.identity.UserProfileLookupPort;
-
 import com.aionn.catalog.adapter.rest.mapper.review.ReviewDtoMapper;
 
 import org.mapstruct.factory.Mappers;
@@ -111,8 +109,6 @@ class ReviewControllerWebTest {
     private GetProductRatingSummaryInputPort getProductRatingSummaryInputPort;
     @Mock
     private CheckReviewEligibilityInputPort checkReviewEligibilityInputPort;
-    @Mock
-    private UserProfileLookupPort userProfileLookupPort;
 
     private MockMvc mockMvc;
     private final JsonMapper objectMapper = JacksonMapperFactory.create();
@@ -126,7 +122,7 @@ class ReviewControllerWebTest {
                 getReviewsByProductInputPort, getMyReviewsInputPort, getMerchantReviewsInputPort,
                 getAdminProductReviewsInputPort, getReportedReviewsInputPort,
                 getProductRatingSummaryInputPort, checkReviewEligibilityInputPort,
-                Mappers.getMapper(ReviewDtoMapper.class), userProfileLookupPort);
+                Mappers.getMapper(ReviewDtoMapper.class));
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new CatalogExceptionHandler())
                 .setCustomArgumentResolvers(
@@ -140,7 +136,7 @@ class ReviewControllerWebTest {
     private ReviewResult sample() {
         return new ReviewResult(REVIEW_ID, PRODUCT_ID, "user-1", "order-1", 5,
                 "t", "c", List.of(), "VISIBLE", null, null, null, null, null,
-                Instant.now(), Instant.now());
+                Instant.now(), Instant.now(), null, null, null);
     }
 
     @Test
@@ -230,30 +226,10 @@ class ReviewControllerWebTest {
     void listByProductReturnsOk() throws Exception {
         when(getReviewsByProductInputPort.execute(any(GetReviewsByProductQuery.class)))
                 .thenReturn(new PageResult<>(List.of(sample()), 0, 20, 1));
-        when(userProfileLookupPort.findProfiles(any()))
-                .thenReturn(Map.of("user-1",
-                        new UserProfileLookupPort.UserProfile(
-                                "user-1", "u1", "User One", "avatar.png")));
 
         mockMvc.perform(get("/api/v1/catalog/products/" + PRODUCT_ID + "/reviews"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].reviewId").value(REVIEW_ID))
-                .andExpect(jsonPath("$.data[0].userName").value("u1"))
-                .andExpect(jsonPath("$.data[0].userDisplayName").value("User One"))
-                .andExpect(jsonPath("$.data[0].userAvatarUrl").value("avatar.png"));
-    }
-
-    @Test
-    void listByProductLeavesReviewUntouchedWhenProfileMissing() throws Exception {
-        when(getReviewsByProductInputPort.execute(any(GetReviewsByProductQuery.class)))
-                .thenReturn(new PageResult<>(List.of(sample()), 0, 20, 1));
-        // Lookup returns no profile for user-1 -> controller returns the review as-is.
-        when(userProfileLookupPort.findProfiles(any())).thenReturn(Map.of());
-
-        mockMvc.perform(get("/api/v1/catalog/products/" + PRODUCT_ID + "/reviews"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].reviewId").value(REVIEW_ID))
-                .andExpect(jsonPath("$.data[0].userName").doesNotExist());
+                .andExpect(jsonPath("$.data[0].reviewId").value(REVIEW_ID));
     }
 
     @Test

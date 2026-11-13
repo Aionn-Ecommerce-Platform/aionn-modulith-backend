@@ -1,7 +1,8 @@
 package com.aionn.identity.application.service;
 
+import com.aionn.identity.application.policy.TokenConstants;
+
 import com.aionn.identity.application.policy.AgentPolicy;
-import com.aionn.identity.application.policy.IdentityValidationConstants;
 import com.aionn.identity.application.port.out.agent.AgentAuditPort;
 import com.aionn.identity.application.port.out.agent.AgentPersistencePort;
 import com.aionn.identity.domain.exception.IdentityErrorCode;
@@ -43,7 +44,7 @@ public class AgentService {
 
     public Created create(String ownerUserId) {
         log.info("Creating agent for owner: {}", ownerUserId);
-        byte[] keyBytes = new byte[IdentityValidationConstants.AGENT_KEY_BYTES];
+        byte[] keyBytes = new byte[TokenConstants.AGENT_KEY_BYTES];
         SECURE_RANDOM.nextBytes(keyBytes);
         String apiKey = Base64.getEncoder().encodeToString(keyBytes);
         String keyHash = Sha256Hasher.hexDigest(apiKey);
@@ -56,7 +57,7 @@ public class AgentService {
                 .keyHash(keyHash)
                 .permissions("{\"scope\":\"basic\"}")
                 .status(AgentStatus.ACTIVE)
-                .expiresAt(now.atZone(ZoneOffset.UTC).plusYears(agentPolicy.getKeyExpiryYears()).toInstant())
+                .expiresAt(now.atZone(ZoneOffset.UTC).plusYears(agentPolicy.keyExpiryYears()).toInstant())
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
@@ -98,7 +99,7 @@ public class AgentService {
     public List<SecurityAudit> getAgentAuditLogs(String ownerUserId, String agentId) {
         log.debug("Retrieving audit logs for agent: {} owned by: {}", agentId, ownerUserId);
         getOwnedAgent(ownerUserId, agentId);
-        return agentAuditPort.findByAgentId(agentId, agentPolicy.getAuditLogLimit());
+        return agentAuditPort.findByAgentId(agentId, agentPolicy.auditLogLimit());
     }
 
     @Transactional(readOnly = true)

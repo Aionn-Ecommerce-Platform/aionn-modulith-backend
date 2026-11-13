@@ -22,14 +22,14 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class StockAlertService {
 
-    private final StockAlertPersistencePort alertRepository;
-    private final ProductPersistencePort productRepository;
+    private final StockAlertPersistencePort stockAlertPersistencePort;
+    private final ProductPersistencePort productPersistencePort;
     private final IntegrationEventPublisher integrationEventPublisher;
     private final Clock clock;
 
     @Transactional
     public void subscribe(String userId, String productId, String skuId) {
-        Product product = productRepository.findById(productId)
+        Product product = productPersistencePort.findById(productId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.PRODUCT_NOT_FOUND));
         if (product.getStatus() != ProductStatus.PUBLISHED) {
             throw new CatalogException(CatalogErrorCode.PRODUCT_INVALID_TRANSITION,
@@ -40,17 +40,17 @@ public class StockAlertService {
         if (!ownsSku) {
             throw new CatalogException(CatalogErrorCode.PRODUCT_VARIANT_NOT_FOUND);
         }
-        alertRepository.subscribe(IdGenerator.ulid(), userId, productId, skuId, clock.instant());
+        stockAlertPersistencePort.subscribe(IdGenerator.ulid(), userId, productId, skuId, clock.instant());
     }
 
     @Transactional
     public void unsubscribe(String userId, String skuId) {
-        alertRepository.unsubscribe(userId, skuId);
+        stockAlertPersistencePort.unsubscribe(userId, skuId);
     }
 
     @Transactional(readOnly = true)
     public boolean isSubscribed(String userId, String skuId) {
-        return alertRepository.exists(userId, skuId);
+        return stockAlertPersistencePort.exists(userId, skuId);
     }
 
     /**
@@ -59,15 +59,15 @@ public class StockAlertService {
      */
     @Transactional
     public void notifyRestocked(String skuId, Instant occurredAt) {
-        var pending = alertRepository.findPendingBySku(skuId);
+        var pending = stockAlertPersistencePort.findPendingBySku(skuId);
         if (pending.isEmpty()) {
             return;
         }
         for (var alert : pending) {
-            String productName = productRepository.findById(alert.productId())
+            String productName = productPersistencePort.findById(alert.productId())
                     .map(Product::getName)
                     .orElse(null);
-            alertRepository.markNotified(alert.alertId(), clock.instant());
+            stockAlertPersistencePort.markNotified(alert.alertId(), clock.instant());
             integrationEventPublisher.publish(new ProductBackInStockIntegrationEvent(
                     IdGenerator.ulid(),
                     alert.userId(),

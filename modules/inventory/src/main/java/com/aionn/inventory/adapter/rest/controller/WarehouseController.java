@@ -8,8 +8,6 @@ import com.aionn.inventory.adapter.rest.dto.warehouse.response.WarehouseResponse
 import com.aionn.inventory.adapter.rest.mapper.warehouse.WarehouseDtoMapper;
 import com.aionn.inventory.adapter.rest.support.session.CurrentAdminId;
 import com.aionn.inventory.adapter.rest.support.session.CurrentMerchantId;
-import com.aionn.inventory.application.dto.warehouse.command.LiftSuspensionCommand;
-import com.aionn.inventory.application.dto.warehouse.query.ListWarehousesByOwnerQuery;
 import com.aionn.inventory.application.dto.warehouse.result.WarehouseResult;
 import com.aionn.inventory.application.port.in.warehouse.AdjustWarehousePriorityInputPort;
 import com.aionn.inventory.application.port.in.warehouse.ChangeWarehouseStatusInputPort;
@@ -105,7 +103,7 @@ public class WarehouseController {
             @CurrentAdminId String adminId,
             @PathVariable String warehouseId) {
         WarehouseResult result = liftWarehouseSuspensionInputPort.execute(
-                new LiftSuspensionCommand(warehouseId, adminId));
+                dtoMapper.toLiftSuspensionCommand(warehouseId, adminId));
         return ResponseEntity.ok(ApiResponse.success(dtoMapper.toResponse(result), "Warehouse suspension lifted"));
     }
 
@@ -125,7 +123,7 @@ public class WarehouseController {
     public ResponseEntity<ApiResponse<List<WarehouseResponse>>> listMine(
             @CurrentMerchantId String merchantId) {
         List<WarehouseResult> results = listWarehousesByOwnerInputPort.execute(
-                new ListWarehousesByOwnerQuery(merchantId));
+                dtoMapper.toListByOwnerQuery(merchantId));
         return ResponseEntity.ok(ApiResponse.success(dtoMapper.toResponses(results), "Warehouses fetched"));
     }
 }

@@ -1,10 +1,10 @@
 package com.aionn.promotion.adapter.rest.controller;
 
-import com.aionn.promotion.adapter.rest.dto.campaign.CancelCampaignRequest;
-import com.aionn.promotion.adapter.rest.dto.campaign.ConfigureConditionRequest;
-import com.aionn.promotion.adapter.rest.dto.campaign.CreateCampaignRequest;
+import com.aionn.promotion.adapter.rest.dto.campaign.request.CancelCampaignRequest;
+import com.aionn.promotion.adapter.rest.dto.campaign.request.ConfigureConditionRequest;
+import com.aionn.promotion.adapter.rest.dto.campaign.request.CreateCampaignRequest;
 import com.aionn.promotion.adapter.rest.dto.campaign.response.CampaignResponse;
-import com.aionn.promotion.adapter.rest.dto.voucher.IssueVoucherRequest;
+import com.aionn.promotion.adapter.rest.dto.voucher.request.IssueVoucherRequest;
 import com.aionn.promotion.adapter.rest.dto.voucher.response.VoucherResponse;
 import com.aionn.promotion.adapter.rest.mapper.campaign.PromotionCampaignDtoMapper;
 import com.aionn.promotion.adapter.rest.mapper.voucher.VoucherDtoMapper;

@@ -15,22 +15,22 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class InventoryWarehouseSelectorAdapter implements WarehouseSelectorPort {
 
-    private final WarehousePersistencePort warehouseRepository;
-    private final InventoryItemPersistencePort inventoryItemRepository;
+    private final WarehousePersistencePort warehousePersistencePort;
+    private final InventoryItemPersistencePort inventoryItemPersistencePort;
 
     @Override
     public Optional<String> selectWarehouseForSku(String merchantId, String skuId) {
         if (merchantId == null || merchantId.isBlank() || skuId == null || skuId.isBlank()) {
             return Optional.empty();
         }
-        List<Warehouse> warehouses = warehouseRepository.findByMerchantOrderByPriority(merchantId).stream()
+        List<Warehouse> warehouses = warehousePersistencePort.findByMerchantOrderByPriority(merchantId).stream()
                 .filter(w -> w.getStatus().canFulfill())
                 .toList();
         if (warehouses.isEmpty()) {
             return Optional.empty();
         }
         List<String> warehouseIds = warehouses.stream().map(Warehouse::getWarehouseId).toList();
-        List<InventoryItem> items = inventoryItemRepository.findBySkuAcrossWarehouses(skuId, warehouseIds);
+        List<InventoryItem> items = inventoryItemPersistencePort.findBySkuAcrossWarehouses(skuId, warehouseIds);
         for (Warehouse w : warehouses) {
             for (InventoryItem item : items) {
                 if (item.getKey().warehouseId().equals(w.getWarehouseId())

@@ -1,9 +1,9 @@
 package com.aionn.ucp.adapter.rest.controller;
 
 import com.aionn.ucp.adapter.rest.advice.UcpControllerAdvice;
-import com.aionn.ucp.adapter.rest.dto.cart.UcpItemResponse;
+import com.aionn.ucp.adapter.rest.dto.cart.response.UcpItemResponse;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpResponseMetadata;
-import com.aionn.ucp.adapter.rest.dto.cart.UcpTotalResponse;
+import com.aionn.ucp.adapter.rest.dto.cart.response.UcpTotalResponse;
 import com.aionn.ucp.adapter.rest.dto.order.UcpOrderModels.*;
 import com.aionn.ucp.application.order.UcpOrderApplicationService;
 import com.aionn.ucp.domain.exception.UcpProtocolException;

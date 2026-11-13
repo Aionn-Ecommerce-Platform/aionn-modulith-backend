@@ -65,8 +65,8 @@ import java.util.Set;
 @Transactional
 public class OrderService {
 
-    private final CartPersistencePort cartRepository;
-    private final OrderPersistencePort orderRepository;
+    private final CartPersistencePort cartPersistencePort;
+    private final OrderPersistencePort orderPersistencePort;
     private final EventPublisher eventPublisher;
     private final StockReservationGateway stockReservationGateway;
     private final PaymentGateway paymentGateway;
@@ -216,7 +216,7 @@ public class OrderService {
             throw new OrderingException(OrderingErrorCode.ORDER_PLACEMENT_IN_PROGRESS,
                     "An order with this idempotency key is already being placed");
         }
-        Order replay = orderRepository.findById(orderId).orElse(null);
+        Order replay = orderPersistencePort.findById(orderId).orElse(null);
         if (replay != null) {
             placementOperationPort.complete(userId, idempotencyKey, orderId);
             return replay;
@@ -314,12 +314,12 @@ public class OrderService {
                         clock.instant());
                 order.attachNote(note);
                 order.attachShippingService(shippingService);
-                Order saved = orderRepository.save(order);
+                Order saved = orderPersistencePort.save(order);
                 eventPublisher.publish(order.pullEvents());
                 integrationEventPublisher.publishOrderPlaced(saved);
                 if (paymentMethodId == null || "COD".equalsIgnoreCase(paymentMethodId)) {
                     saved.approve(null, clock.instant());
-                    saved = orderRepository.save(saved);
+                    saved = orderPersistencePort.save(saved);
                     eventPublisher.publish(saved.pullEvents());
                     integrationEventPublisher.publishOrderApproved(saved.getOrderId(), null);
                 }
@@ -341,7 +341,7 @@ public class OrderService {
     public Order approvePayment(String orderId, String paymentId, BigDecimal capturedAmount, String capturedCurrency) {
         // Pessimistic row lock so a concurrent cancelOnPaymentFailure can't race this approve.
         Order saved = transactionTemplate.execute(status -> {
-            Order order = orderRepository.findByIdForUpdate(orderId)
+            Order order = orderPersistencePort.findByIdForUpdate(orderId)
                     .orElseThrow(() -> new OrderingException(OrderingErrorCode.ORDER_NOT_FOUND));
             if (order.getStatus() == OrderStatus.APPROVED) {
                 if (java.util.Objects.equals(order.getPaymentId(), paymentId)) {
@@ -356,7 +356,7 @@ public class OrderService {
                 return order;
             }
             order.approve(paymentId, clock.instant());
-            Order persisted = orderRepository.save(order);
+            Order persisted = orderPersistencePort.save(order);
             eventPublisher.publish(persisted.pullEvents());
             integrationEventPublisher.publishOrderApproved(persisted.getOrderId(), paymentId);
             return persisted;
@@ -378,7 +378,7 @@ public class OrderService {
         } else if (freshCart.getVoucherCode() != null) {
             freshCart.removeVoucher(clock.instant());
         }
-        cartRepository.save(freshCart);
+        cartPersistencePort.save(freshCart);
         eventPublisher.publish(freshCart.pullEvents());
     }
 
@@ -388,7 +388,7 @@ public class OrderService {
             String merchantId = requireMerchantIdForOwner(command.ownerId());
             Order order = ownedByMerchant(command.orderId(), merchantId);
             order.confirmPreparation(clock.instant());
-            Order persisted = orderRepository.save(order);
+            Order persisted = orderPersistencePort.save(order);
             eventPublisher.publish(order.pullEvents());
             return persisted;
         });
@@ -416,7 +416,7 @@ public class OrderService {
                 throw new OrderingException(OrderingErrorCode.ORDER_ALREADY_PICKED_UP);
             }
             order.cancel("USER_CANCELLED", command.reason(), clock.instant());
-            Order persisted = orderRepository.save(order);
+            Order persisted = orderPersistencePort.save(order);
             eventPublisher.publish(order.pullEvents());
             integrationEventPublisher.publishOrderCancelled(persisted.getOrderId(), "USER_CANCELLED",
                     command.reason(), OrderingIntegrationEventPublisherPort.CancellationKind.USER_CANCELLED);
@@ -430,7 +430,7 @@ public class OrderService {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order cancelOnPaymentFailure(String orderId, String errorCode, String reason) {
         Order saved = transactionTemplate.execute(status -> {
-            Order order = orderRepository.findByIdForUpdate(orderId)
+            Order order = orderPersistencePort.findByIdForUpdate(orderId)
                     .orElseThrow(() -> new OrderingException(OrderingErrorCode.ORDER_NOT_FOUND));
             if (order.getStatus() != OrderStatus.PENDING) {
                 log.info("Skipping payment-failure cancel for order {}: status is {}",
@@ -438,7 +438,7 @@ public class OrderService {
                 return order;
             }
             order.autoCancel("PAYMENT_FAILED", clock.instant());
-            Order persisted = orderRepository.save(order);
+            Order persisted = orderPersistencePort.save(order);
             eventPublisher.publish(order.pullEvents());
             integrationEventPublisher.publishOrderCancelled(persisted.getOrderId(), "PAYMENT_FAILED",
                     reason == null ? errorCode : reason,
@@ -457,7 +457,7 @@ public class OrderService {
             String merchantId = requireMerchantIdForOwner(command.ownerId());
             Order order = ownedByMerchant(command.orderId(), merchantId);
             order.rejectByMerchant(merchantId, command.reason(), clock.instant());
-            Order persisted = orderRepository.save(order);
+            Order persisted = orderPersistencePort.save(order);
             eventPublisher.publish(order.pullEvents());
             integrationEventPublisher.publishOrderCancelled(persisted.getOrderId(), "MERCHANT_REJECTED",
                     command.reason(), OrderingIntegrationEventPublisherPort.CancellationKind.MERCHANT_REJECTED);
@@ -498,7 +498,7 @@ public class OrderService {
         return transactionTemplate.execute(status -> {
             Order order = ownedByUser(command.orderId(), command.userId());
             order.changeShippingInfo(command.newAddress(), newFee, clock.instant());
-            Order saved = orderRepository.save(order);
+            Order saved = orderPersistencePort.save(order);
             eventPublisher.publish(order.pullEvents());
             return saved;
         });
@@ -634,7 +634,7 @@ public class OrderService {
         Order snapshot = transactionTemplate.execute(status -> {
             Order order = required(command.orderId());
             order.markShipped(command.shipmentId(), clock.instant());
-            Order saved = orderRepository.save(order);
+            Order saved = orderPersistencePort.save(order);
             eventPublisher.publish(order.pullEvents());
             integrationEventPublisher.publishOrderShipped(saved.getOrderId(), command.shipmentId());
             return saved;
@@ -665,7 +665,7 @@ public class OrderService {
     public Order complete(ConfirmDeliveredCommand command) {
         Order order = required(command.orderId());
         order.complete(clock.instant());
-        Order saved = orderRepository.save(order);
+        Order saved = orderPersistencePort.save(order);
         eventPublisher.publish(order.pullEvents());
         integrationEventPublisher.publishOrderCompleted(saved.getOrderId());
         return saved;
@@ -686,7 +686,7 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public List<Order> listByUser(String userId, int limit) {
-        return orderRepository.findByUser(userId, limit);
+        return orderPersistencePort.findByUser(userId, limit);
     }
 
     @Transactional(readOnly = true)
@@ -695,7 +695,7 @@ public class OrderService {
         if (statuses.isEmpty()) {
             return listByUser(userId, limit);
         }
-        return orderRepository.findByUserAndStatuses(userId, statuses, limit);
+        return orderPersistencePort.findByUserAndStatuses(userId, statuses, limit);
     }
 
     @Transactional(readOnly = true)
@@ -703,9 +703,9 @@ public class OrderService {
         String merchantId = requireMerchantIdForOwner(ownerId);
         List<String> statuses = parseStatusFilter(statusFilter);
         if (statuses.isEmpty()) {
-            return orderRepository.findByMerchant(merchantId, limit);
+            return orderPersistencePort.findByMerchant(merchantId, limit);
         }
-        return orderRepository.findByMerchantAndStatuses(merchantId, statuses, limit);
+        return orderPersistencePort.findByMerchantAndStatuses(merchantId, statuses, limit);
     }
 
     @Transactional(readOnly = true)
@@ -722,7 +722,7 @@ public class OrderService {
 
         var start = safeFrom.atStartOfDay(zone).toInstant();
         var endExclusive = safeTo.plusDays(1).atStartOfDay(zone).toInstant();
-        List<OrderPersistencePort.OrderAnalyticsRow> rows = orderRepository.findMerchantAnalyticsRows(merchantId, start,
+        List<OrderPersistencePort.OrderAnalyticsRow> rows = orderPersistencePort.findMerchantAnalyticsRows(merchantId, start,
                 endExclusive);
         validateAnalyticsRange(safeFrom, safeTo);
         String currency = singleCurrency(rows.stream()
@@ -794,7 +794,7 @@ public class OrderService {
 
         var start = safeFrom.atStartOfDay(zone).toInstant();
         var endExclusive = safeTo.plusDays(1).atStartOfDay(zone).toInstant();
-        List<OrderPersistencePort.PlatformAnalyticsRow> rows = orderRepository.findPlatformAnalyticsRows(start,
+        List<OrderPersistencePort.PlatformAnalyticsRow> rows = orderPersistencePort.findPlatformAnalyticsRows(start,
                 endExclusive);
         validateAnalyticsRange(safeFrom, safeTo);
         String currency = singleCurrency(rows.stream()
@@ -877,7 +877,7 @@ public class OrderService {
 
         var start = safeFrom.atStartOfDay(zone).toInstant();
         var endExclusive = safeTo.plusDays(1).atStartOfDay(zone).toInstant();
-        List<OrderPersistencePort.TopProductRow> rows = orderRepository.findMerchantTopProductRows(merchantId, start,
+        List<OrderPersistencePort.TopProductRow> rows = orderPersistencePort.findMerchantTopProductRows(merchantId, start,
                 endExclusive);
 
         return rows.stream()
@@ -925,8 +925,8 @@ public class OrderService {
     }
 
     Order required(String orderId) {
-        return orderRepository.findById(orderId)
-                .or(() -> orderRepository.findByIdOrOrderSn(orderId))
+        return orderPersistencePort.findById(orderId)
+                .or(() -> orderPersistencePort.findByIdOrOrderSn(orderId))
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.ORDER_NOT_FOUND));
     }
 

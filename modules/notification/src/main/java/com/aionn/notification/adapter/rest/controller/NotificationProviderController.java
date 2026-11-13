@@ -1,7 +1,7 @@
 package com.aionn.notification.adapter.rest.controller;
 
-import com.aionn.notification.adapter.rest.dto.provider.ConfigureProviderRequest;
-import com.aionn.notification.adapter.rest.dto.provider.UpdateProviderRequest;
+import com.aionn.notification.adapter.rest.dto.provider.request.ConfigureProviderRequest;
+import com.aionn.notification.adapter.rest.dto.provider.request.UpdateProviderRequest;
 import com.aionn.notification.adapter.rest.dto.provider.response.ProviderResponse;
 import com.aionn.notification.adapter.rest.dto.provider.response.CampaignAnalyticsResponse;
 import com.aionn.notification.adapter.rest.mapper.provider.NotificationProviderDtoMapper;

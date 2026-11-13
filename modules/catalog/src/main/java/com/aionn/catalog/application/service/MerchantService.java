@@ -33,7 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MerchantService {
 
-    private final MerchantPersistencePort merchantRepository;
+    private final MerchantPersistencePort merchantPersistencePort;
     private final EventPublisher eventPublisher;
     private final OrderQueryPort orderQueryPort;
     private final AddressLookupPort addressLookupPort;
@@ -42,12 +42,12 @@ public class MerchantService {
     private final Clock clock;
 
     public Merchant register(RegisterMerchantCommand command) {
-        if (merchantRepository.existsByOwnerId(command.ownerId())) {
+        if (merchantPersistencePort.existsByOwnerId(command.ownerId())) {
             throw new CatalogException(CatalogErrorCode.MERCHANT_ALREADY_EXISTS);
         }
         BigDecimal rate = catalogSettingsPort.getDefaultCommissionRate();
         Merchant merchant = Merchant.register(IdGenerator.ulid(), command.ownerId(), command.name(), rate, clock);
-        Merchant saved = merchantRepository.save(merchant);
+        Merchant saved = merchantPersistencePort.save(merchant);
         eventPublisher.publish(merchant.pullEvents());
         metricsPort.merchantLifecycle("registered");
         return saved;
@@ -67,7 +67,7 @@ public class MerchantService {
         }
         merchant.updateProfile(command.name(), command.logoUrl(), command.description(),
                 provinceCode, provinceName, clock);
-        Merchant saved = merchantRepository.save(merchant);
+        Merchant saved = merchantPersistencePort.save(merchant);
         eventPublisher.publish(merchant.pullEvents());
         return saved;
     }
@@ -75,7 +75,7 @@ public class MerchantService {
     public Merchant suspend(SuspendMerchantCommand command) {
         Merchant merchant = required(command.merchantId());
         merchant.suspend(command.adminId(), command.reason(), clock);
-        Merchant saved = merchantRepository.save(merchant);
+        Merchant saved = merchantPersistencePort.save(merchant);
         eventPublisher.publish(merchant.pullEvents());
         metricsPort.merchantLifecycle("suspended");
         return saved;
@@ -84,7 +84,7 @@ public class MerchantService {
     public Merchant activate(ActivateMerchantCommand command) {
         Merchant merchant = required(command.merchantId());
         merchant.activate(command.adminId(), command.reason(), clock);
-        Merchant saved = merchantRepository.save(merchant);
+        Merchant saved = merchantPersistencePort.save(merchant);
         eventPublisher.publish(merchant.pullEvents());
         metricsPort.merchantLifecycle("activated");
         return saved;
@@ -96,7 +96,7 @@ public class MerchantService {
             throw new CatalogException(CatalogErrorCode.MERCHANT_HAS_OPEN_ORDERS);
         }
         merchant.close(command.reason(), clock);
-        Merchant saved = merchantRepository.save(merchant);
+        Merchant saved = merchantPersistencePort.save(merchant);
         eventPublisher.publish(merchant.pullEvents());
         metricsPort.merchantLifecycle("closed");
         return saved;
@@ -109,27 +109,27 @@ public class MerchantService {
 
     @Transactional(readOnly = true)
     public Merchant getByOwner(String ownerId) {
-        return merchantRepository.findByOwnerId(ownerId)
+        return merchantPersistencePort.findByOwnerId(ownerId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.MERCHANT_NOT_FOUND));
     }
 
     @Transactional(readOnly = true)
     public PageResult<Merchant> list(OffsetPagination pagination) {
-        List<Merchant> merchants = merchantRepository.list(pagination);
-        long total = merchantRepository.count();
+        List<Merchant> merchants = merchantPersistencePort.list(pagination);
+        long total = merchantPersistencePort.count();
         return new PageResult<>(merchants, pagination.page(), pagination.size(), total);
     }
 
     public Merchant updateCommissionRate(UpdateMerchantCommissionRateCommand command) {
         Merchant merchant = required(command.merchantId());
         merchant.updateCommissionRate(command.commissionRate(), clock);
-        Merchant saved = merchantRepository.save(merchant);
+        Merchant saved = merchantPersistencePort.save(merchant);
         eventPublisher.publish(merchant.pullEvents());
         return saved;
     }
 
     private Merchant required(String merchantId) {
-        return merchantRepository.findById(merchantId)
+        return merchantPersistencePort.findById(merchantId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.MERCHANT_NOT_FOUND));
     }
 

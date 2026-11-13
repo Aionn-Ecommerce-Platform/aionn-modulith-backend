@@ -36,7 +36,7 @@ public class ProfileRefreshScheduler {
     /** Growth applied to the scan window while it keeps coming back empty. */
     private static final int WINDOW_WIDENING_FACTOR = 8;
 
-    private final InteractionPersistencePort interactionRepository;
+    private final InteractionPersistencePort interactionPersistencePort;
     private final ProfileRefreshWorker worker;
     private final RecommendationSchedulingProperties properties;
     private final RecommendationJobProperties jobProperties;
@@ -88,7 +88,7 @@ public class ProfileRefreshScheduler {
 
         while (true) {
             List<String> userIds =
-                    interactionRepository.findUserIdsWithInteractionsSince(now.minus(window), batchSize);
+                    interactionPersistencePort.findUserIdsWithInteractionsSince(now.minus(window), batchSize);
             if (!userIds.isEmpty() || window.compareTo(widest) >= 0) {
                 return userIds;
             }

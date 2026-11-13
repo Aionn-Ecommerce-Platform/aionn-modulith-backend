@@ -1,5 +1,6 @@
 package com.aionn.catalog.adapter.rest.controller;
 
+import com.aionn.catalog.adapter.rest.dto.stockalert.response.StockAlertStatusResponse;
 import com.aionn.catalog.adapter.rest.support.session.CurrentOwnerId;
 import com.aionn.catalog.application.service.StockAlertService;
 import com.aionn.platform.web.response.ApiResponse;
@@ -53,8 +54,5 @@ public class StockAlertController {
         return ResponseEntity.ok(ApiResponse.success(
                 new StockAlertStatusResponse(stockAlertService.isSubscribed(userId, skuId)),
                 "Stock alert status fetched"));
-    }
-
-    public record StockAlertStatusResponse(boolean subscribed) {
     }
 }

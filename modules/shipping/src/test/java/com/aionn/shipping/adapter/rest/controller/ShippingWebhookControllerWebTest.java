@@ -1,7 +1,8 @@
 package com.aionn.shipping.adapter.rest.controller;
 
-import com.aionn.shipping.adapter.rest.dto.shipment.CarrierWebhookRequest;
+import com.aionn.shipping.adapter.rest.dto.shipment.request.CarrierWebhookRequest;
 import com.aionn.shipping.adapter.rest.exception.ShippingExceptionHandler;
+import com.aionn.shipping.adapter.rest.mapper.shipment.ShippingWebhookDtoMapper;
 import com.aionn.shipping.application.dto.shipment.command.CarrierWebhookCommand;
 import com.aionn.shipping.application.dto.shipment.result.ShipmentResult;
 import com.aionn.shipping.application.port.in.shipment.ApplyCarrierWebhookInputPort;
@@ -44,7 +45,7 @@ class ShippingWebhookControllerWebTest {
 
         private MockMvc buildMockMvc() {
                 ShippingWebhookController controller = new ShippingWebhookController(applyCarrierWebhookInputPort,
-                                objectMapper);
+                                new ShippingWebhookDtoMapper(), objectMapper);
                 return MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new ShippingExceptionHandler())
                                 .setMessageConverters(

@@ -30,9 +30,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class VoucherApplyAdapter implements VoucherApplyPort {
 
-    private final VoucherPersistencePort voucherRepository;
-    private final UserVoucherPersistencePort userVoucherRepository;
-    private final PromotionCampaignPersistencePort campaignRepository;
+    private final VoucherPersistencePort voucherPersistencePort;
+    private final UserVoucherPersistencePort userVoucherPersistencePort;
+    private final PromotionCampaignPersistencePort promotionCampaignPersistencePort;
     private final VoucherReservationPolicy reservationPolicy;
     private final Clock clock;
 
@@ -40,7 +40,7 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
     @Transactional
     public Discount apply(String userId, String merchantId, String voucherCode, String orderId,
             BigDecimal lineSubtotal, String currency, List<String> orderCategoryIds) {
-        Voucher voucher = voucherRepository.lockByCode(voucherCode).orElse(null);
+        Voucher voucher = voucherPersistencePort.lockByCode(voucherCode).orElse(null);
         if (voucher == null) {
             return new Discount(BigDecimal.ZERO, currency, false, "voucher-not-found");
         }
@@ -48,7 +48,7 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
             return new Discount(BigDecimal.ZERO, currency, false, "voucher-wrong-shop");
         }
 
-        UserVoucher uv = userVoucherRepository.findByUserAndCodeForUpdate(userId, voucherCode).orElse(null);
+        UserVoucher uv = userVoucherPersistencePort.findByUserAndCodeForUpdate(userId, voucherCode).orElse(null);
         if (uv != null && uv.getStatus() == UserVoucherStatus.APPLIED) {
             if (orderId.equals(uv.getReservedOrderId()) && uv.getAppliedAmount() != null) {
                 return new Discount(uv.getAppliedAmount().amount(), uv.getAppliedAmount().currency(), true, null,
@@ -60,7 +60,7 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
         // Validate campaign conditions if platform voucher
         PromotionCampaign campaign = null;
         if (voucher.getCampaignId() != null) {
-            campaign = campaignRepository.findByIdForUpdate(voucher.getCampaignId()).orElse(null);
+            campaign = promotionCampaignPersistencePort.findByIdForUpdate(voucher.getCampaignId()).orElse(null);
             if (campaign != null) {
                 try {
                     campaign.ensureRunning(clock);
@@ -87,13 +87,13 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
                 return new Discount(BigDecimal.ZERO, currency, false, "voucher-not-usable");
             }
             if (campaign != null && campaign.getCondition().maxClaimsPerUser() != null
-                    && userVoucherRepository.countByUserAndCampaign(userId, campaign.getCampaignId())
+                    && userVoucherPersistencePort.countByUserAndCampaign(userId, campaign.getCampaignId())
                             >= campaign.getCondition().maxClaimsPerUser()) {
                 return new Discount(BigDecimal.ZERO, currency, false, "claim-limit-reached");
             }
             voucher.claimSlot(clock);
             uv = UserVoucher.claim(IdGenerator.ulid(), voucherCode, userId, clock);
-            userVoucherRepository.save(uv);
+            userVoucherPersistencePort.save(uv);
         }
 
         if (uv.getStatus() == UserVoucherStatus.RESERVED) {
@@ -126,11 +126,11 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
         // budget would never be decremented at checkout.
         if (campaign != null) {
             campaign.consumeBudget(Money.of(discount, voucherCurrency), clock);
-            campaignRepository.save(campaign);
+            promotionCampaignPersistencePort.save(campaign);
         }
 
-        voucherRepository.save(voucher);
-        userVoucherRepository.save(uv);
+        voucherPersistencePort.save(voucher);
+        userVoucherPersistencePort.save(uv);
 
         return new Discount(discount, voucherCurrency, true, null, voucher.isFreeShipping());
     }
@@ -138,24 +138,24 @@ public class VoucherApplyAdapter implements VoucherApplyPort {
     @Override
     @Transactional
     public void release(String userId, String orderId, String reason) {
-        userVoucherRepository.findByReservedOrderIdForUpdate(orderId)
+        userVoucherPersistencePort.findByReservedOrderIdForUpdate(orderId)
                 .filter(uv -> uv.getUserId().equals(userId))
                 .ifPresent(uv -> {
                     if (uv.getStatus() != UserVoucherStatus.APPLIED
                             && uv.getStatus() != UserVoucherStatus.RESERVED) {
                         return;
                     }
-                    Voucher voucher = voucherRepository.lockByCode(uv.getVoucherCode()).orElse(null);
+                    Voucher voucher = voucherPersistencePort.lockByCode(uv.getVoucherCode()).orElse(null);
                     if (voucher != null) {
                         if (uv.getStatus() == UserVoucherStatus.APPLIED) {
                             voucher.releaseCommittedSlot(clock);
                         } else {
                             voucher.releaseSlot(clock);
                         }
-                        voucherRepository.save(voucher);
+                        voucherPersistencePort.save(voucher);
                     }
                     uv.release(reason, clock);
-                    userVoucherRepository.save(uv);
+                    userVoucherPersistencePort.save(uv);
                 });
     }
 }

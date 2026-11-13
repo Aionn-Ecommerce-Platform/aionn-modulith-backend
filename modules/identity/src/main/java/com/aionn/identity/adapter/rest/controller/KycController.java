@@ -6,9 +6,6 @@ import com.aionn.identity.adapter.rest.dto.kyc.response.KycDocumentResponse;
 import com.aionn.identity.adapter.rest.dto.kyc.response.KycResponse;
 import com.aionn.identity.adapter.rest.dto.kyc.response.KycVerificationSessionResponse;
 import com.aionn.identity.adapter.rest.mapper.kyc.KycDtoMapper;
-import com.aionn.identity.application.dto.kyc.command.GenerateKycVerificationSessionCommand;
-import com.aionn.identity.application.dto.kyc.command.SubmitKycCommand;
-import com.aionn.identity.application.dto.kyc.query.ListKycDocumentsQuery;
 import com.aionn.identity.application.port.in.kyc.AttachKycDocumentInputPort;
 import com.aionn.identity.application.port.in.kyc.CreateKycInputPort;
 import com.aionn.identity.application.port.in.kyc.GenerateKycVerificationSessionInputPort;
@@ -98,7 +95,7 @@ public class KycController {
 			Authentication authentication,
 			@PathVariable String kycId) {
 		var result = listKycDocumentsQueryPort.execute(
-				new ListKycDocumentsQuery(
+				kycDtoMapper.toListDocumentsQuery(
 						authentication.getName(), kycId));
 		var response = kycDtoMapper.toDocumentResponses(result);
 		return ResponseEntity.ok(ApiResponse.success(response, "KYC documents fetched"));
@@ -112,7 +109,7 @@ public class KycController {
 			Authentication authentication,
 			@PathVariable String kycId) {
 		var result = submitKycInputPort.execute(
-				new SubmitKycCommand(
+				kycDtoMapper.toSubmitKycCommand(
 						authentication.getName(), kycId));
 		var response = kycDtoMapper.toResponse(result);
 		return ResponseEntity.ok(ApiResponse.success(response, "KYC profile submitted"));
@@ -126,7 +123,7 @@ public class KycController {
 			Authentication authentication,
 			@PathVariable String kycId) {
 		var result = generateKycVerificationSessionInputPort.execute(
-				new GenerateKycVerificationSessionCommand(
+				kycDtoMapper.toGenerateVerificationSessionCommand(
 						authentication.getName(), kycId));
 		var response = kycDtoMapper.toVerificationSessionResponse(result);
 		return ResponseEntity.ok(ApiResponse.success(response, "KYC verification session generated"));

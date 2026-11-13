@@ -29,9 +29,9 @@ class CatalogSoldCounterListenerTest {
     @Mock
     private OrderSnapshotQueryPort orderSnapshotQueryPort;
     @Mock
-    private ProductPersistencePort productRepository;
+    private ProductPersistencePort productPersistencePort;
     @Mock
-    private ProductSoldCounterPersistencePort soldCounterRepository;
+    private ProductSoldCounterPersistencePort productSoldCounterPersistencePort;
     @Mock
     private ProductSearchIndexUpdater searchIndexUpdater;
 
@@ -48,11 +48,11 @@ class CatalogSoldCounterListenerTest {
                 new ProductVariant("SKU_A", Map.of(), null),
                 new ProductVariant("SKU_B", Map.of(), null)));
         when(orderSnapshotQueryPort.findOrderById("ord_1")).thenReturn(Optional.of(snapshot));
-        when(productRepository.findAllBySkuIds(any())).thenReturn(List.of(product));
+        when(productPersistencePort.findAllBySkuIds(any())).thenReturn(List.of(product));
 
         listener().onOrderCompleted(new OrderCompletedIntegrationEvent("evt_1", "ord_1", Instant.now()));
 
-        verify(soldCounterRepository).incrementSoldCount("P1", 5L);
+        verify(productSoldCounterPersistencePort).incrementSoldCount("P1", 5L);
         verify(searchIndexUpdater).reindexProduct("P1");
     }
 
@@ -62,11 +62,11 @@ class CatalogSoldCounterListenerTest {
 
         listener().onOrderCompleted(new OrderCompletedIntegrationEvent("evt_1", "ord_missing", Instant.now()));
 
-        verify(soldCounterRepository, never()).incrementSoldCount(any(), anyLong());
+        verify(productSoldCounterPersistencePort, never()).incrementSoldCount(any(), anyLong());
     }
 
     private CatalogSoldCounterListener listener() {
-        return new CatalogSoldCounterListener(orderSnapshotQueryPort, productRepository,
-                soldCounterRepository, searchIndexUpdater);
+        return new CatalogSoldCounterListener(orderSnapshotQueryPort, productPersistencePort,
+                productSoldCounterPersistencePort, searchIndexUpdater);
     }
 }

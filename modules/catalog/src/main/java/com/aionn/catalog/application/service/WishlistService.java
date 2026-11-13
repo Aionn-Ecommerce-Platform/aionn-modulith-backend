@@ -23,38 +23,38 @@ import java.util.stream.Collectors;
 @Transactional
 public class WishlistService {
 
-    private final WishlistPersistencePort wishlistRepository;
-    private final ProductPersistencePort productRepository;
+    private final WishlistPersistencePort wishlistPersistencePort;
+    private final ProductPersistencePort productPersistencePort;
     private final ProductResultMapper productResultMapper;
     private final Clock clock;
 
     public void add(String userId, String productId) {
-        Product product = productRepository.findById(productId)
+        Product product = productPersistencePort.findById(productId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.PRODUCT_NOT_FOUND));
         if (product.getStatus() != ProductStatus.PUBLISHED) {
             throw new CatalogException(CatalogErrorCode.PRODUCT_INVALID_TRANSITION,
                     "Only published products can be saved");
         }
-        wishlistRepository.add(userId, productId, clock.instant());
+        wishlistPersistencePort.add(userId, productId, clock.instant());
     }
 
     public void remove(String userId, String productId) {
-        wishlistRepository.remove(userId, productId);
+        wishlistPersistencePort.remove(userId, productId);
     }
 
     @Transactional(readOnly = true)
     public boolean isWishlisted(String userId, String productId) {
-        return wishlistRepository.exists(userId, productId);
+        return wishlistPersistencePort.exists(userId, productId);
     }
 
     @Transactional(readOnly = true)
     public WishlistPage list(String userId, int page, int size) {
-        long total = wishlistRepository.count(userId);
-        List<String> productIds = wishlistRepository.findProductIds(userId, page * size, size);
+        long total = wishlistPersistencePort.count(userId);
+        List<String> productIds = wishlistPersistencePort.findProductIds(userId, page * size, size);
         if (productIds.isEmpty()) {
             return new WishlistPage(List.of(), total);
         }
-        Map<String, Product> products = productRepository.findAllByIds(productIds).stream()
+        Map<String, Product> products = productPersistencePort.findAllByIds(productIds).stream()
                 .collect(Collectors.toMap(Product::getProductId, Function.identity()));
         List<Product> ordered = productIds.stream()
                 .map(products::get)

@@ -2,7 +2,7 @@ package com.aionn.catalog.application.mapper;
 
 import com.aionn.catalog.application.dto.common.PageResult;
 import com.aionn.catalog.application.dto.product.result.ProductResult;
-import com.aionn.catalog.application.policy.CatalogProductPolicy;
+import com.aionn.catalog.application.policy.BestSellerPolicy;
 import com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort;
 import com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort;
 import com.aionn.catalog.domain.model.Product;
@@ -20,27 +20,27 @@ import java.util.Map;
 @Component
 public class ProductResultMapper {
 
-    private final ProductSoldCounterPersistencePort soldCounterRepository;
-    private final CatalogProductPolicy productPolicy;
-    private final ProductReviewPersistencePort reviewRepository;
+    private final ProductSoldCounterPersistencePort productSoldCounterPersistencePort;
+    private final BestSellerPolicy bestSellerPolicy;
+    private final ProductReviewPersistencePort productReviewPersistencePort;
 
     public ProductResultMapper(
-            ProductSoldCounterPersistencePort soldCounterRepository,
-            CatalogProductPolicy productPolicy,
-            ProductReviewPersistencePort reviewRepository
+            ProductSoldCounterPersistencePort productSoldCounterPersistencePort,
+            BestSellerPolicy bestSellerPolicy,
+            ProductReviewPersistencePort productReviewPersistencePort
     ) {
-        this.soldCounterRepository = soldCounterRepository;
-        this.productPolicy = productPolicy;
-        this.reviewRepository = reviewRepository;
+        this.productSoldCounterPersistencePort = productSoldCounterPersistencePort;
+        this.bestSellerPolicy = bestSellerPolicy;
+        this.productReviewPersistencePort = productReviewPersistencePort;
     }
 
     public ProductResult toResult(Product product) {
         if (product == null) {
             return null;
         }
-        long soldCount = soldCounterRepository.getSoldCount(product.getProductId());
-        double rating = reviewRepository.getAverageRating(product.getProductId());
-        long reviewCount = reviewRepository.countByProductIdAndStatus(product.getProductId(), ReviewStatus.VISIBLE);
+        long soldCount = productSoldCounterPersistencePort.getSoldCount(product.getProductId());
+        double rating = productReviewPersistencePort.getAverageRating(product.getProductId());
+        long reviewCount = productReviewPersistencePort.countByProductIdAndStatus(product.getProductId(), ReviewStatus.VISIBLE);
         return toResult(product, soldCount, rating, reviewCount);
     }
 
@@ -69,7 +69,7 @@ public class ProductResultMapper {
                 .map(ProductResultMapper::toVariantResult)
                 .toList();
 
-        boolean isBestSeller = soldCount >= productPolicy.getBestSellerThreshold();
+        boolean isBestSeller = soldCount >= bestSellerPolicy.soldThreshold();
 
         return new ProductResult(
                 product.getProductId(),
@@ -97,8 +97,8 @@ public class ProductResultMapper {
             return List.of();
         }
         List<String> productIds = products.stream().map(Product::getProductId).toList();
-        Map<String, Long> soldCounts = soldCounterRepository.getSoldCountsByProductIds(productIds);
-        Map<String, ProductReviewPersistencePort.RatingStats> ratingStats = reviewRepository.getRatingStatsByProductIds(productIds);
+        Map<String, Long> soldCounts = productSoldCounterPersistencePort.getSoldCountsByProductIds(productIds);
+        Map<String, ProductReviewPersistencePort.RatingStats> ratingStats = productReviewPersistencePort.getRatingStatsByProductIds(productIds);
         return products.stream()
                 .map(product -> {
                     long sold = soldCounts.getOrDefault(product.getProductId(), 0L);

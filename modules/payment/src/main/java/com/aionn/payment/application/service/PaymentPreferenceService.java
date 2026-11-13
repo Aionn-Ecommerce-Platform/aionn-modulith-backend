@@ -19,17 +19,17 @@ public class PaymentPreferenceService {
     private static final String SAVED_CARD_TYPE = "SAVED_CARD";
     private static final String VNPAY_TYPE = "VNPAY";
 
-    private final PaymentPreferencePersistencePort preferenceRepository;
-    private final PaymentMethodPersistencePort paymentMethodRepository;
+    private final PaymentPreferencePersistencePort paymentPreferencePersistencePort;
+    private final PaymentMethodPersistencePort paymentMethodPersistencePort;
 
     public PaymentPreferenceResult get(String userId) {
-        Preference preference = preferenceRepository.findByUserId(userId).orElse(null);
+        Preference preference = paymentPreferencePersistencePort.findByUserId(userId).orElse(null);
         if (preference == null || "COD".equals(preference.paymentType())) {
             return cod();
         }
 
         if (!isUsableMethod(userId, preference.paymentMethodId())) {
-            preferenceRepository.save(new Preference(userId, "COD", null));
+            paymentPreferencePersistencePort.save(new Preference(userId, "COD", null));
             return cod();
         }
         return new PaymentPreferenceResult(SAVED_CARD_TYPE, preference.paymentMethodId());
@@ -37,11 +37,11 @@ public class PaymentPreferenceService {
 
     public PaymentPreferenceResult update(String userId, String paymentType, String paymentMethodId) {
         if ("COD".equalsIgnoreCase(paymentType)) {
-            preferenceRepository.save(new Preference(userId, "COD", null));
+            paymentPreferencePersistencePort.save(new Preference(userId, "COD", null));
             return cod();
         }
         if (VNPAY_TYPE.equalsIgnoreCase(paymentType)) {
-            preferenceRepository.save(new Preference(userId, VNPAY_TYPE, null));
+            paymentPreferencePersistencePort.save(new Preference(userId, VNPAY_TYPE, null));
             return new PaymentPreferenceResult(VNPAY_TYPE, null);
         }
         if (!SAVED_CARD_TYPE.equalsIgnoreCase(paymentType) || !isUsableMethod(userId, paymentMethodId)) {
@@ -49,7 +49,7 @@ public class PaymentPreferenceService {
                     "A verified saved card is required for this payment preference");
         }
 
-        preferenceRepository.save(new Preference(userId, SAVED_CARD_TYPE, paymentMethodId));
+        paymentPreferencePersistencePort.save(new Preference(userId, SAVED_CARD_TYPE, paymentMethodId));
         return new PaymentPreferenceResult(SAVED_CARD_TYPE, paymentMethodId);
     }
 
@@ -57,7 +57,7 @@ public class PaymentPreferenceService {
         if (methodId == null || methodId.isBlank()) {
             return false;
         }
-        return paymentMethodRepository.findById(methodId)
+        return paymentMethodPersistencePort.findById(methodId)
                 .filter(method -> userId.equals(method.getUserId()))
                 .map(method -> method.getStatus() == PaymentMethodStatus.VERIFIED)
                 .orElse(false);

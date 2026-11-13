@@ -166,8 +166,8 @@ class RegistrationServiceTest {
 
         @Test
         void completeCreatesUserSessionStoresRefreshTokenAndUnlocks() {
-                when(registrationPolicy.getSessionExpiresDays()).thenReturn(7L);
-                when(registrationPolicy.getLockTimeoutSeconds()).thenReturn(30);
+                when(registrationPolicy.sessionExpiresDays()).thenReturn(7L);
+                when(registrationPolicy.lockTimeoutSeconds()).thenReturn(30);
                 when(passwordHasher.hash("Password1!")).thenReturn("hashed-password");
                 when(registrationLockManager.tryLock("+84912345678", 30)).thenReturn(Optional.of("lock-1"));
                 when(userPersistencePort.existsByPhone("+84912345678")).thenReturn(false);
@@ -271,7 +271,7 @@ class RegistrationServiceTest {
                                 "expected-token",
                                 FIXED_NOW.minusSeconds(60));
                 when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
-                when(registrationPolicy.getLockTimeoutSeconds()).thenReturn(30);
+                when(registrationPolicy.lockTimeoutSeconds()).thenReturn(30);
                 when(registrationLockManager.tryLock("+84912345678", 30)).thenReturn(Optional.of("lock-1"));
 
                 IdentityException ex = assertThrows(IdentityException.class,
@@ -294,7 +294,7 @@ class RegistrationServiceTest {
         @Test
         void initiateRejectsWhenPhoneAlreadyExists() {
                 when(captchaTokenValidator.isValid("captcha-ok")).thenReturn(true);
-                when(registrationPolicy.getDefaultCountryCallingCode()).thenReturn("VN");
+                when(registrationPolicy.defaultCountryCallingCode()).thenReturn("VN");
                 when(userPersistencePort.existsByPhone("+84912345678")).thenReturn(true);
 
                 IdentityException ex = assertThrows(IdentityException.class,
@@ -321,12 +321,12 @@ class RegistrationServiceTest {
         @Test
         void initiateRejectsWhenRateLimitExceeded() {
                 when(captchaTokenValidator.isValid("captcha-ok")).thenReturn(true);
-                when(registrationPolicy.getDefaultCountryCallingCode()).thenReturn("VN");
+                when(registrationPolicy.defaultCountryCallingCode()).thenReturn("VN");
                 when(userPersistencePort.existsByPhone("+84912345678")).thenReturn(false);
-                when(registrationPolicy.getIpRateLimitMaxAttempts()).thenReturn(5);
-                when(registrationPolicy.getIpRateLimitWindowSeconds()).thenReturn(60);
-                when(registrationPolicy.getPhoneRateLimitMaxAttempts()).thenReturn(3);
-                when(registrationPolicy.getPhoneRateLimitWindowSeconds()).thenReturn(300);
+                when(registrationPolicy.ipRateLimitMaxAttempts()).thenReturn(5);
+                when(registrationPolicy.ipRateLimitWindowSeconds()).thenReturn(60);
+                when(registrationPolicy.phoneRateLimitMaxAttempts()).thenReturn(3);
+                when(registrationPolicy.phoneRateLimitWindowSeconds()).thenReturn(300);
                 when(registrationRateLimiter.check("IP", "203.0.113.10", 5, 60)).thenReturn(false);
 
                 IdentityException ex = assertThrows(IdentityException.class,
@@ -424,8 +424,8 @@ class RegistrationServiceTest {
 
         @Test
         void resendOtpGeneratesNewCodeAndNotifies() {
-                when(registrationPolicy.getResendCooldownSeconds()).thenReturn(60);
-                when(registrationPolicy.getOtpExpirySeconds()).thenReturn(300);
+                when(registrationPolicy.resendCooldownSeconds()).thenReturn(60);
+                when(registrationPolicy.otpExpirySeconds()).thenReturn(300);
                 when(registrationPolicy.isExposeOtpInResponse()).thenReturn(false);
                 RegistrationVerificationSession session = new RegistrationVerificationSession(
                                 "reg-1", "+84912345678", "123456", 0, 5,
@@ -463,7 +463,7 @@ class RegistrationServiceTest {
                                 FIXED_NOW.plusSeconds(600),
                                 true, "verify-token", FIXED_NOW.minusSeconds(60));
                 when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
-                when(registrationPolicy.getLockTimeoutSeconds()).thenReturn(30);
+                when(registrationPolicy.lockTimeoutSeconds()).thenReturn(30);
                 when(registrationLockManager.tryLock("+84912345678", 30)).thenReturn(Optional.empty());
 
                 IdentityException ex = assertThrows(IdentityException.class,
@@ -483,7 +483,7 @@ class RegistrationServiceTest {
                                 FIXED_NOW.minusSeconds(60),
                                 true, "verify-token", FIXED_NOW.minusSeconds(240));
                 when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
-                when(registrationPolicy.getLockTimeoutSeconds()).thenReturn(30);
+                when(registrationPolicy.lockTimeoutSeconds()).thenReturn(30);
                 when(registrationLockManager.tryLock("+84912345678", 30)).thenReturn(Optional.of("lock-1"));
 
                 IdentityException ex = assertThrows(IdentityException.class,
@@ -503,7 +503,7 @@ class RegistrationServiceTest {
                                 FIXED_NOW.plusSeconds(600),
                                 true, "verify-token", FIXED_NOW.minusSeconds(60));
                 when(registrationSessionStore.findByRegId("reg-1")).thenReturn(Optional.of(session));
-                when(registrationPolicy.getLockTimeoutSeconds()).thenReturn(30);
+                when(registrationPolicy.lockTimeoutSeconds()).thenReturn(30);
                 when(registrationLockManager.tryLock("+84912345678", 30)).thenReturn(Optional.of("lock-1"));
                 when(userPersistencePort.existsByPhone("+84912345678")).thenReturn(false);
                 when(userPersistencePort.existsByUsername("alice")).thenReturn(true);
@@ -518,14 +518,14 @@ class RegistrationServiceTest {
         }
 
         private void stubCommonRegistrationPolicy() {
-                when(registrationPolicy.getMaxVerifyAttempts()).thenReturn(5);
-                when(registrationPolicy.getResendCooldownSeconds()).thenReturn(60);
-                when(registrationPolicy.getOtpExpirySeconds()).thenReturn(300);
-                when(registrationPolicy.getDefaultCountryCallingCode()).thenReturn("VN");
+                when(registrationPolicy.maxVerifyAttempts()).thenReturn(5);
+                when(registrationPolicy.resendCooldownSeconds()).thenReturn(60);
+                when(registrationPolicy.otpExpirySeconds()).thenReturn(300);
+                when(registrationPolicy.defaultCountryCallingCode()).thenReturn("VN");
                 when(registrationPolicy.isExposeOtpInResponse()).thenReturn(true);
-                when(registrationPolicy.getIpRateLimitMaxAttempts()).thenReturn(5);
-                when(registrationPolicy.getIpRateLimitWindowSeconds()).thenReturn(60);
-                when(registrationPolicy.getPhoneRateLimitMaxAttempts()).thenReturn(3);
-                when(registrationPolicy.getPhoneRateLimitWindowSeconds()).thenReturn(300);
+                when(registrationPolicy.ipRateLimitMaxAttempts()).thenReturn(5);
+                when(registrationPolicy.ipRateLimitWindowSeconds()).thenReturn(60);
+                when(registrationPolicy.phoneRateLimitMaxAttempts()).thenReturn(3);
+                when(registrationPolicy.phoneRateLimitWindowSeconds()).thenReturn(300);
         }
 }

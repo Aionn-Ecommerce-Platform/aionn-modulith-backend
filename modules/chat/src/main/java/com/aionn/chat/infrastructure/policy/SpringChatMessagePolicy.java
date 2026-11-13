@@ -14,22 +14,22 @@ public class SpringChatMessagePolicy implements ChatMessagePolicy {
     private final ChatMessageProperties properties;
 
     @Override
-    public int getMaxTextLength() {
+    public int maxTextLength() {
         return properties.maxLength();
     }
 
     @Override
-    public Duration getRecallWindow() {
+    public Duration recallWindow() {
         return Duration.ofSeconds(properties.recallWindowSeconds());
     }
 
     @Override
-    public int getListDefaultLimit() {
+    public int listDefaultLimit() {
         return properties.listDefaultLimit();
     }
 
     @Override
-    public int getListMaxLimit() {
+    public int listMaxLimit() {
         return properties.listMaxLimit();
     }
 }

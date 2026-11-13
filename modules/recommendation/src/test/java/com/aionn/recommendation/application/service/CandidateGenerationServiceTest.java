@@ -40,19 +40,19 @@ class CandidateGenerationServiceTest {
     private static final Instant NOW = Instant.parse("2026-09-05T12:00:00Z");
 
     @Mock
-    private InteractionPersistencePort interactionRepository;
+    private InteractionPersistencePort interactionPersistencePort;
     @Mock
-    private ItemSimilarityPersistencePort similarityRepository;
+    private ItemSimilarityPersistencePort itemSimilarityPersistencePort;
     @Mock
-    private PopularityPersistencePort popularityRepository;
+    private PopularityPersistencePort popularityPersistencePort;
     @Mock
     private ProductAttributeQueryPort productAttributeQuery;
 
     private CandidateGenerationService service() {
         return new CandidateGenerationService(
-                interactionRepository,
-                similarityRepository,
-                popularityRepository,
+                interactionPersistencePort,
+                itemSimilarityPersistencePort,
+                popularityPersistencePort,
                 productAttributeQuery,
                 weights(),
                 servingPolicy(),
@@ -64,7 +64,7 @@ class CandidateGenerationServiceTest {
         // A product reached from several seeds is a stronger candidate than one reached
         // from a single
         // seed, however similar that one link is.
-        when(similarityRepository.findNeighbours(anyCollection(), anyInt())).thenReturn(List.of(
+        when(itemSimilarityPersistencePort.findNeighbours(anyCollection(), anyInt())).thenReturn(List.of(
                 similarity("p-seed-a", "p-shared", 0.4),
                 similarity("p-seed-b", "p-shared", 0.4),
                 similarity("p-seed-a", "p-single", 0.7)));
@@ -132,7 +132,7 @@ class CandidateGenerationServiceTest {
 
     @Test
     void popularityScoresArePassedThroughUnchanged() {
-        when(popularityRepository.findTop(anyInt())).thenReturn(List.of(
+        when(popularityPersistencePort.findTop(anyInt())).thenReturn(List.of(
                 popularity("p-1", 120.5), popularity("p-2", 3.0)));
 
         Map<String, BigDecimal> scores = service().popularityScores(50);
@@ -164,7 +164,7 @@ class CandidateGenerationServiceTest {
         // product five times
         // seeds it once - a repeated view is not five separate pieces of evidence for
         // the CF lookup.
-        when(interactionRepository.findByUser("user-1", NOW.minus(Duration.ofDays(30)), 20))
+        when(interactionPersistencePort.findByUser("user-1", NOW.minus(Duration.ofDays(30)), 20))
                 .thenReturn(List.of(
                         interaction("p-1"), interaction("p-1"), interaction("p-2")));
 
@@ -174,7 +174,7 @@ class CandidateGenerationServiceTest {
 
     @Test
     void purchasesArePassedStraightThroughForExclusion() {
-        when(interactionRepository.findPurchasedProductIds("user-1")).thenReturn(List.of("p-owned"));
+        when(interactionPersistencePort.findPurchasedProductIds("user-1")).thenReturn(List.of("p-owned"));
 
         assertThat(service().purchasedProductIds("user-1")).containsExactly("p-owned");
     }
@@ -184,7 +184,7 @@ class CandidateGenerationServiceTest {
         // Used on product surfaces, where popularity breaks ties between neighbours
         // instead of
         // introducing unrelated best-sellers.
-        when(popularityRepository.findByProductIds(anyCollection()))
+        when(popularityPersistencePort.findByProductIds(anyCollection()))
                 .thenReturn(List.of(popularity("p-1", 9.0)));
 
         assertThat(service().popularityScoresFor(List.of("p-1", "p-2")))
@@ -195,7 +195,7 @@ class CandidateGenerationServiceTest {
     void anEmptyProductSetSkipsTheQuery() {
         assertThat(service().popularityScoresFor(List.of())).isEmpty();
         assertThat(service().popularityScoresFor(null)).isEmpty();
-        verify(popularityRepository, never()).findByProductIds(anyCollection());
+        verify(popularityPersistencePort, never()).findByProductIds(anyCollection());
     }
 
     @Test

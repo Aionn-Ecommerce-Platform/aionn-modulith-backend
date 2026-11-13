@@ -1,10 +1,10 @@
 package com.aionn.promotion.adapter.rest.controller;
 
-import com.aionn.promotion.adapter.rest.dto.voucher.ApplyVoucherRequest;
-import com.aionn.promotion.adapter.rest.dto.voucher.GrantVoucherRequest;
+import com.aionn.promotion.adapter.rest.dto.voucher.request.ApplyVoucherRequest;
+import com.aionn.promotion.adapter.rest.dto.voucher.request.GrantVoucherRequest;
 import com.aionn.promotion.application.port.in.voucher.GrantVoucherInputPort;
-import com.aionn.promotion.adapter.rest.dto.voucher.ReleaseVoucherRequest;
-import com.aionn.promotion.adapter.rest.dto.voucher.ReserveVoucherRequest;
+import com.aionn.promotion.adapter.rest.dto.voucher.request.ReleaseVoucherRequest;
+import com.aionn.promotion.adapter.rest.dto.voucher.request.ReserveVoucherRequest;
 import com.aionn.promotion.adapter.rest.dto.voucher.response.UserVoucherResponse;
 import com.aionn.promotion.adapter.rest.mapper.voucher.VoucherDtoMapper;
 import com.aionn.promotion.adapter.rest.support.session.CurrentUserId;

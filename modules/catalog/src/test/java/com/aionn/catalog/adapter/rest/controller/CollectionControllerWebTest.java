@@ -1,8 +1,8 @@
 package com.aionn.catalog.adapter.rest.controller;
 
 import com.aionn.catalog.adapter.rest.exception.CatalogExceptionHandler;
-import com.aionn.catalog.adapter.rest.support.MockSecurityInterceptor;
-import com.aionn.catalog.adapter.rest.support.TestAuth;
+import com.aionn.catalog.adapter.rest.mapper.collection.CollectionDtoMapper;
+import com.aionn.catalog.adapter.rest.support.MockSecurityInterceptor;import com.aionn.catalog.adapter.rest.support.TestAuth;
 import com.aionn.catalog.application.port.out.merchant.CollectionPersistencePort.CollectionView;
 import com.aionn.catalog.application.service.CollectionService;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
@@ -11,6 +11,7 @@ import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mapstruct.factory.Mappers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
@@ -23,9 +24,8 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -49,7 +49,8 @@ class CollectionControllerWebTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new CollectionController(collectionService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new CollectionController(collectionService,
+                Mappers.getMapper(CollectionDtoMapper.class)))
                 .setControllerAdvice(new CatalogExceptionHandler())
                 .addInterceptors(new MockSecurityInterceptor())
                 .setMessageConverters(new JacksonJsonHttpMessageConverter(objectMapper))
@@ -80,12 +81,12 @@ class CollectionControllerWebTest {
                 .thenThrow(new CatalogException(CatalogErrorCode.COLLECTION_NOT_FOUND));
 
         mockMvc.perform(get("/api/v1/catalog/collections/missing"))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isUnprocessableContent());
     }
 
     @Test
-    void createDefaultsActiveAndDisplayOrder() throws Exception {
-        when(collectionService.create(eq("summer"), eq("Summer"), any(), any(), eq(true), eq(0)))
+    void createPassesNullDefaultsToTheService() throws Exception {
+        when(collectionService.create(eq("summer"), eq("Summer"), any(), any(), isNull(), isNull()))
                 .thenReturn(sample());
 
         mockMvc.perform(post("/api/v1/catalog/collections")
@@ -101,7 +102,7 @@ class CollectionControllerWebTest {
     @Test
     void updateUsesTheProvidedValues() throws Exception {
         when(collectionService.update(eq(COLLECTION_ID), eq("summer"), eq("Summer"), any(), any(),
-                anyBoolean(), anyInt())).thenReturn(sample());
+                eq(false), eq(3))).thenReturn(sample());
 
         mockMvc.perform(put("/api/v1/catalog/collections/" + COLLECTION_ID)
                 .with(TestAuth.authUser("admin-1", "SYSTEM_ADMIN"))

@@ -1,6 +1,6 @@
 package com.aionn.notification.adapter.rest.mapper.notification;
 
-import com.aionn.notification.adapter.rest.dto.notification.SendNotificationRequest;
+import com.aionn.notification.adapter.rest.dto.notification.request.SendNotificationRequest;
 import com.aionn.notification.adapter.rest.dto.notification.response.NotificationResponse;
 import com.aionn.notification.application.dto.notification.command.NotificationCommands;
 import com.aionn.notification.application.dto.notification.result.NotificationResult;

@@ -19,7 +19,7 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "inventory.reservation.auto-release", name = "enabled", havingValue = "true")
 public class ReservationAutoReleaseScheduler {
 
-    private final StockReservationPersistencePort reservationRepository;
+    private final StockReservationPersistencePort stockReservationPersistencePort;
     private final ReservationAutoReleaseWorker worker;
     private final InventoryProperties properties;
     private final Clock clock;
@@ -29,7 +29,7 @@ public class ReservationAutoReleaseScheduler {
     public void releaseExpired() {
         try {
             int batchSize = properties.reservation().autoRelease().batchSize();
-            List<StockReservation> expired = reservationRepository.findExpired(clock.instant(), batchSize);
+            List<StockReservation> expired = stockReservationPersistencePort.findExpired(clock.instant(), batchSize);
             int released = 0;
             for (StockReservation reservation : expired) {
                 try {

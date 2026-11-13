@@ -4,21 +4,12 @@ import com.aionn.payment.application.dto.payout.result.MerchantBalanceResult;
 import com.aionn.payment.application.dto.payout.result.MerchantPayoutResult;
 import com.aionn.payment.domain.model.MerchantBalance;
 import com.aionn.payment.domain.model.MerchantPayout;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
 
-@Component
-public class PayoutResultMapper {
+@Mapper(componentModel = "spring")
+public interface PayoutResultMapper {
 
-    public MerchantPayoutResult toResult(MerchantPayout p) {
-        return new MerchantPayoutResult(
-                p.getPayoutId(), p.getMerchantId(), p.getAmount(), p.getCurrency(),
-                p.getStatus().name(), p.getBankName(), p.getBankAccountNo(), p.getBankAccountName(),
-                p.getExternalRef(), p.getNote(),
-                p.getRequestedAt(), p.getCompletedAt(), p.getFailedAt(), p.getFailureReason());
-    }
+    MerchantPayoutResult toResult(MerchantPayout payout);
 
-    public MerchantBalanceResult toResult(MerchantBalance b) {
-        return new MerchantBalanceResult(
-                b.getMerchantId(), b.getCurrency(), b.getPending(), b.getAvailable(), b.getUpdatedAt());
-    }
+    MerchantBalanceResult toResult(MerchantBalance balance);
 }

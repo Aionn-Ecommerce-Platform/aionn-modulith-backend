@@ -21,7 +21,6 @@ identity:
     secret: ${IDENTITY_JWT_SECRET:}
     access-token-expiry-minutes: ${IDENTITY_JWT_ACCESS_TOKEN_EXPIRY_MINUTES:15}
   data-export:
-    # The worker polls for REQUESTED rows; exports are built off the request thread.
     delay-ms: ${IDENTITY_DATA_EXPORT_DELAY_MS:5000}
     batch-size: ${IDENTITY_DATA_EXPORT_BATCH_SIZE:10}
 

@@ -58,8 +58,8 @@ public class MfaService {
         securityAuditPort.saveAuditLog(userId, SecurityAuditEventType.MFA_SETUP_INITIATED, ipAddress);
         return new MfaSetupResult(
                 secret,
-                totpManager.buildOtpAuthUri(mfaPolicy.getMfaIssuer(), userId, secret),
-                mfaPolicy.getMfaIssuer(),
+                totpManager.buildOtpAuthUri(mfaPolicy.mfaIssuer(), userId, secret),
+                mfaPolicy.mfaIssuer(),
                 userId);
     }
 
@@ -148,8 +148,8 @@ public class MfaService {
 
     private List<String> replaceBackupCodes(String userId) {
         mfaPersistencePort.deleteBackupCodes(userId);
-        List<String> rawCodes = IntStream.range(0, mfaPolicy.getBackupCodeCount())
-                .mapToObj(i -> OtpGenerator.generateNumericOtp(mfaPolicy.getBackupCodeLength()))
+        List<String> rawCodes = IntStream.range(0, mfaPolicy.backupCodeCount())
+                .mapToObj(i -> OtpGenerator.generateNumericOtp(mfaPolicy.backupCodeLength()))
                 .toList();
         List<String> codeHashes = rawCodes.stream()
                 .map(passwordHasher::hash)

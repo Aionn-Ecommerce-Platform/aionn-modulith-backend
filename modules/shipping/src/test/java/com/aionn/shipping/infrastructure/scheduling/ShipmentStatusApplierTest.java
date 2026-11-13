@@ -36,7 +36,7 @@ import static org.mockito.Mockito.when;
 class ShipmentStatusApplierTest {
 
     @Mock
-    private ShipmentPersistencePort shipmentRepository;
+    private ShipmentPersistencePort shipmentPersistencePort;
 
     @Mock
     private EventPublisher eventPublisher;
@@ -60,43 +60,43 @@ class ShipmentStatusApplierTest {
 
     @Test
     void doesNothingWhenShipmentIsMissing() {
-        when(shipmentRepository.findById("S_1")).thenReturn(Optional.empty());
+        when(shipmentPersistencePort.findById("S_1")).thenReturn(Optional.empty());
 
         applier.apply("S_1", ShipmentStatus.PICKED_UP, detail());
 
-        verify(shipmentRepository, never()).save(any());
+        verify(shipmentPersistencePort, never()).save(any());
         verifyNoInteractions(eventPublisher, integrationEventPublisher);
     }
 
     @Test
     void doesNothingWhenCurrentStatusAlreadyMatchesTarget() {
-        when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
+        when(shipmentPersistencePort.findById("S_1")).thenReturn(Optional.of(shipment));
         when(shipment.getStatus()).thenReturn(ShipmentStatus.PICKED_UP);
 
         applier.apply("S_1", ShipmentStatus.PICKED_UP, detail());
 
-        verify(shipmentRepository, never()).save(any());
+        verify(shipmentPersistencePort, never()).save(any());
     }
 
     @Test
     void doesNothingWhenShipmentIsAlreadyTerminal() {
-        when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
+        when(shipmentPersistencePort.findById("S_1")).thenReturn(Optional.of(shipment));
         when(shipment.getStatus()).thenReturn(ShipmentStatus.DELIVERED);
 
         applier.apply("S_1", ShipmentStatus.RETURNED, detail());
 
-        verify(shipmentRepository, never()).save(any());
+        verify(shipmentPersistencePort, never()).save(any());
     }
 
     @ParameterizedTest
     @EnumSource(value = ShipmentStatus.class, names = { "REQUESTED", "REGISTERED" })
     void ignoresTargetStatusesThatHaveNoTransition(ShipmentStatus target) {
-        when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
+        when(shipmentPersistencePort.findById("S_1")).thenReturn(Optional.of(shipment));
         when(shipment.getStatus()).thenReturn(ShipmentStatus.IN_TRANSIT);
 
         applier.apply("S_1", target, detail());
 
-        verify(shipmentRepository, never()).save(any());
+        verify(shipmentPersistencePort, never()).save(any());
     }
 
     @Test
@@ -106,7 +106,7 @@ class ShipmentStatusApplierTest {
         applier.apply("S_1", ShipmentStatus.PICKED_UP, detail());
 
         verify(shipment).markPickedUp("WH_1", clock);
-        verify(shipmentRepository).save(shipment);
+        verify(shipmentPersistencePort).save(shipment);
         verify(eventPublisher).publish(anyCollection());
         verify(integrationEventPublisher).publishDispatched(any(), any(), any());
     }
@@ -173,8 +173,8 @@ class ShipmentStatusApplierTest {
     }
 
     private void stubTransitionFrom(ShipmentStatus current) {
-        when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
+        when(shipmentPersistencePort.findById("S_1")).thenReturn(Optional.of(shipment));
         when(shipment.getStatus()).thenReturn(current);
-        when(shipmentRepository.save(shipment)).thenReturn(shipment);
+        when(shipmentPersistencePort.save(shipment)).thenReturn(shipment);
     }
 }

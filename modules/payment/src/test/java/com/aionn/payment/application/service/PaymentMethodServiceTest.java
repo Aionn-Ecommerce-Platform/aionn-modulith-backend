@@ -37,7 +37,7 @@ import static org.mockito.Mockito.lenient;
 class PaymentMethodServiceTest {
 
     @Mock
-    private PaymentMethodPersistencePort repository;
+    private PaymentMethodPersistencePort paymentMethodPersistencePort;
     @Mock
     private EventPublisher eventPublisher;
     @Mock
@@ -54,28 +54,28 @@ class PaymentMethodServiceTest {
     void setUp() {
         lenient().when(transactionTemplate.execute(any()))
                 .thenAnswer(invocation -> ((TransactionCallback<?>) invocation.getArgument(0)).doInTransaction(null));
-        service = new PaymentMethodService(repository, eventPublisher, stripeSetupIntentPort, clock,
+        service = new PaymentMethodService(paymentMethodPersistencePort, eventPublisher, stripeSetupIntentPort, clock,
                 transactionTemplate);
     }
 
     @Test
     void verifyTransitionsToVerified() {
         PaymentMethod existing = PaymentMethod.link("m1", "u1", "stripe", "4242", "tok-abc", fixedInstant);
-        when(repository.findById("m1")).thenReturn(Optional.of(existing));
-        when(repository.save(any(PaymentMethod.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(paymentMethodPersistencePort.findById("m1")).thenReturn(Optional.of(existing));
+        when(paymentMethodPersistencePort.save(any(PaymentMethod.class))).thenAnswer(inv -> inv.getArgument(0));
 
         PaymentMethod result = service.verify(new VerifyMethodCommand("u1", "m1"));
 
         assertThat(result.getStatus()).isEqualTo(PaymentMethodStatus.VERIFIED);
         ArgumentCaptor<PaymentMethod> captor = ArgumentCaptor.forClass(PaymentMethod.class);
-        verify(repository).save(captor.capture());
+        verify(paymentMethodPersistencePort).save(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(PaymentMethodStatus.VERIFIED);
     }
 
     @Test
     void verifyOtherUserMethodForbidden() {
         PaymentMethod existing = PaymentMethod.link("m1", "u1", "stripe", "4242", "tok-abc", fixedInstant);
-        when(repository.findById("m1")).thenReturn(Optional.of(existing));
+        when(paymentMethodPersistencePort.findById("m1")).thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> service.verify(new VerifyMethodCommand("OTHER", "m1")))
                 .isInstanceOf(PaymentException.class)
@@ -85,7 +85,7 @@ class PaymentMethodServiceTest {
 
     @Test
     void verifyMissingMethodThrowsNotFound() {
-        when(repository.findById("m-missing")).thenReturn(Optional.empty());
+        when(paymentMethodPersistencePort.findById("m-missing")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.verify(new VerifyMethodCommand("u1", "m-missing")))
                 .isInstanceOf(PaymentException.class)
@@ -96,13 +96,13 @@ class PaymentMethodServiceTest {
     @Test
     void removeMarksMethodRemoved() {
         PaymentMethod existing = PaymentMethod.link("m1", "u1", "stripe", "4242", "tok-abc", fixedInstant);
-        when(repository.findById("m1")).thenReturn(Optional.of(existing));
-        when(repository.save(any(PaymentMethod.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(paymentMethodPersistencePort.findById("m1")).thenReturn(Optional.of(existing));
+        when(paymentMethodPersistencePort.save(any(PaymentMethod.class))).thenAnswer(inv -> inv.getArgument(0));
 
         service.remove(new RemoveMethodCommand("u1", "m1"));
 
         ArgumentCaptor<PaymentMethod> captor = ArgumentCaptor.forClass(PaymentMethod.class);
-        verify(repository).save(captor.capture());
+        verify(paymentMethodPersistencePort).save(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(PaymentMethodStatus.REMOVED);
     }
 
@@ -110,7 +110,7 @@ class PaymentMethodServiceTest {
     void listMineReturnsActiveMethods() {
         PaymentMethod m1 = PaymentMethod.link("m1", "u1", "stripe", "4242", "tok-1", fixedInstant);
         PaymentMethod m2 = PaymentMethod.link("m2", "u1", "stripe", "1111", "tok-2", fixedInstant);
-        when(repository.findActiveByUserId("u1")).thenReturn(List.of(m1, m2));
+        when(paymentMethodPersistencePort.findActiveByUserId("u1")).thenReturn(List.of(m1, m2));
 
         List<PaymentMethod> result = service.listMine("u1");
 
@@ -131,7 +131,7 @@ class PaymentMethodServiceTest {
     @Test
     void getMethodReturnsCorrectEntity() {
         PaymentMethod existing = PaymentMethod.link("m1", "u1", "stripe", "4242", "tok-abc", fixedInstant);
-        when(repository.findById("m1")).thenReturn(Optional.of(existing));
+        when(paymentMethodPersistencePort.findById("m1")).thenReturn(Optional.of(existing));
 
         PaymentMethod result = service.get("u1", "m1");
 
@@ -142,7 +142,7 @@ class PaymentMethodServiceTest {
     @Test
     void getMethodOtherUserThrowsForbidden() {
         PaymentMethod existing = PaymentMethod.link("m1", "u1", "stripe", "4242", "tok-abc", fixedInstant);
-        when(repository.findById("m1")).thenReturn(Optional.of(existing));
+        when(paymentMethodPersistencePort.findById("m1")).thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> service.get("OTHER", "m1"))
                 .isInstanceOf(PaymentException.class)
@@ -163,7 +163,7 @@ class PaymentMethodServiceTest {
     @Test
     void listForUserCallsListMine() {
         PaymentMethod m1 = PaymentMethod.link("m1", "u1", "stripe", "4242", "tok-1", fixedInstant);
-        when(repository.findActiveByUserId("u1")).thenReturn(List.of(m1));
+        when(paymentMethodPersistencePort.findActiveByUserId("u1")).thenReturn(List.of(m1));
 
         List<PaymentMethod> result = service.listMine("u1");
 
@@ -174,7 +174,7 @@ class PaymentMethodServiceTest {
     @Test
     void removeOtherUserMethodThrowsForbidden() {
         PaymentMethod existing = PaymentMethod.link("m1", "u1", "stripe", "4242", "tok-abc", fixedInstant);
-        when(repository.findById("m1")).thenReturn(Optional.of(existing));
+        when(paymentMethodPersistencePort.findById("m1")).thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> service.remove(new RemoveMethodCommand("OTHER", "m1")))
                 .isInstanceOf(PaymentException.class)
@@ -184,7 +184,7 @@ class PaymentMethodServiceTest {
 
     @Test
     void removeMissingMethodThrowsNotFound() {
-        when(repository.findById("m-missing")).thenReturn(Optional.empty());
+        when(paymentMethodPersistencePort.findById("m-missing")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.remove(new RemoveMethodCommand("u1", "m-missing")))
                 .isInstanceOf(PaymentException.class)
@@ -194,7 +194,7 @@ class PaymentMethodServiceTest {
 
     @Test
     void getMissingMethodThrowsNotFound() {
-        when(repository.findById("m-missing")).thenReturn(Optional.empty());
+        when(paymentMethodPersistencePort.findById("m-missing")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.get("u1", "m-missing"))
                 .isInstanceOf(PaymentException.class)
@@ -214,13 +214,13 @@ class PaymentMethodServiceTest {
     void completeStripeSetupIntentPersistsGatewayResultInTransaction() {
         when(stripeSetupIntentPort.complete("u1", "si_test"))
                 .thenReturn(new StripeSetupIntentPort.CompletedSetupIntent("VISA", "4242", "pm_1"));
-        when(repository.save(any(PaymentMethod.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(paymentMethodPersistencePort.save(any(PaymentMethod.class))).thenAnswer(inv -> inv.getArgument(0));
 
         PaymentMethod result = service.completeStripeSetupIntent("u1", "si_test");
 
         assertThat(result.getProvider()).isEqualTo("VISA");
         assertThat(result.getLast4Digits()).isEqualTo("4242");
         assertThat(result.getStatus()).isEqualTo(PaymentMethodStatus.VERIFIED);
-        verify(repository).save(any(PaymentMethod.class));
+        verify(paymentMethodPersistencePort).save(any(PaymentMethod.class));
     }
 }

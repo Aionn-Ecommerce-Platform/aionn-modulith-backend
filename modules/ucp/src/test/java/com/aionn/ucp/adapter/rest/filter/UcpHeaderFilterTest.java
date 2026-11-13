@@ -9,7 +9,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-import com.aionn.ucp.adapter.rest.dto.UcpErrorResponse;
+import com.aionn.ucp.adapter.rest.dto.response.UcpErrorResponse;
 import com.aionn.ucp.application.port.out.UcpMetricsPort;
 import com.aionn.ucp.infrastructure.config.UcpProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -2,8 +2,8 @@ package com.aionn.ucp.adapter.rest.controller;
 
 import com.aionn.platform.web.support.idempotency.IdempotentRequest;
 import com.aionn.ucp.application.UcpProtocolConstants;
-import com.aionn.ucp.adapter.rest.dto.cart.UcpCartRequest;
-import com.aionn.ucp.adapter.rest.dto.cart.UcpCartResponse;
+import com.aionn.ucp.adapter.rest.dto.cart.request.UcpCartRequest;
+import com.aionn.ucp.adapter.rest.dto.cart.response.UcpCartResponse;
 import com.aionn.ucp.application.cart.UcpCartApplicationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;

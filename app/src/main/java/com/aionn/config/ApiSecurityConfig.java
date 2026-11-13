@@ -17,7 +17,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -59,7 +60,8 @@ public class ApiSecurityConfig {
                                 .csrf(csrf -> csrf
                                                 .csrfTokenRepository(csrfTokenRepository)
                                                 .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-                                                .requireCsrfProtectionMatcher(ApiSecurityConfig::requiresCsrfProtection))
+                                                .requireCsrfProtectionMatcher(
+                                                                ApiSecurityConfig::requiresCsrfProtection))
                                 .headers(headers -> headers
                                                 .contentTypeOptions(opt -> {
                                                 })
@@ -156,11 +158,6 @@ public class ApiSecurityConfig {
                 return source;
         }
 
-        /**
-         * CSRF is required only when the request authenticates through the HttpOnly refresh cookie.
-         * Bearer-authenticated requests cannot be forged cross-site: a browser never attaches the
-         * {@code Authorization} header on its own, so they stay exempt.
-         */
         static boolean requiresCsrfProtection(HttpServletRequest request) {
                 String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
                 if (authorization != null && !authorization.isBlank()) {
@@ -174,7 +171,8 @@ public class ApiSecurityConfig {
                                 .anyMatch(cookie -> "refresh_token".equals(cookie.getName()));
         }
 
-        private List<String> resolveAllowedOrigins() {                return Arrays.stream(allowedOrigins.split(","))
+        private List<String> resolveAllowedOrigins() {
+                return Arrays.stream(allowedOrigins.split(","))
                                 .map(String::trim)
                                 .filter(value -> !value.isBlank())
                                 .toList();

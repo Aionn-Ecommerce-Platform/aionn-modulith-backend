@@ -1,6 +1,6 @@
 package com.aionn.identity.application.service;
 
-import com.aionn.identity.application.policy.IdentityValidationConstants;
+import com.aionn.identity.application.policy.TokenConstants;
 import java.util.stream.Collectors;
 
 import com.aionn.identity.application.dto.registration.command.CompleteRegistrationCommand;
@@ -86,15 +86,15 @@ public class RegistrationService {
 
         String regId = IdGenerator.ulid();
         RegistrationOtp otp = RegistrationOtp.generate(
-                registrationPolicy.getResendCooldownSeconds(),
-                registrationPolicy.getOtpExpirySeconds(), clock);
+                registrationPolicy.resendCooldownSeconds(),
+                registrationPolicy.otpExpirySeconds(), clock);
 
         var session = new RegistrationVerificationSession(
                 regId,
                 phoneNumber.value(),
                 otp.getCode(),
                 0,
-                registrationPolicy.getMaxVerifyAttempts(),
+                registrationPolicy.maxVerifyAttempts(),
                 otp.getResendAvailableAt(),
                 otp.getExpiredAt(),
                 false,
@@ -113,8 +113,8 @@ public class RegistrationService {
         enforceRegistrationActionRateLimit(
                 "OTP_VERIFY_IP",
                 command.ipAddress(),
-                registrationPolicy.getVerifyIpMaxAttempts(),
-                registrationPolicy.getVerifyIpWindowSeconds());
+                registrationPolicy.verifyIpMaxAttempts(),
+                registrationPolicy.verifyIpWindowSeconds());
 
         var session = registrationSessionStore.findByRegId(command.regId())
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.REGISTRATION_SESSION_NOT_FOUND));
@@ -124,7 +124,7 @@ public class RegistrationService {
         }
 
         if (!registrationSessionStore.tryAcquireVerifyAttempt(
-                command.regId(), session.getMaxVerifyAttempts(), session.getExpiredAt())) {
+                command.regId(), session.maxVerifyAttempts(), session.getExpiredAt())) {
             throw new IdentityException(IdentityErrorCode.OTP_ATTEMPTS_EXCEEDED);
         }
 
@@ -143,15 +143,15 @@ public class RegistrationService {
         enforceRegistrationActionRateLimit(
                 "OTP_RESEND_IP",
                 command.ipAddress(),
-                registrationPolicy.getResendIpMaxAttempts(),
-                registrationPolicy.getResendIpWindowSeconds());
+                registrationPolicy.resendIpMaxAttempts(),
+                registrationPolicy.resendIpWindowSeconds());
 
         var session = registrationSessionStore.findByRegId(command.regId())
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.REGISTRATION_SESSION_NOT_FOUND));
 
         RegistrationOtp newOtp = RegistrationOtp.generate(
-                registrationPolicy.getResendCooldownSeconds(),
-                registrationPolicy.getOtpExpirySeconds(), clock);
+                registrationPolicy.resendCooldownSeconds(),
+                registrationPolicy.otpExpirySeconds(), clock);
 
         session.resend(newOtp.getCode(), newOtp.getResendAvailableAt(), newOtp.getExpiredAt(), clock);
         registrationSessionStore.save(session);
@@ -169,7 +169,7 @@ public class RegistrationService {
         String phoneNumber = session.getPhoneNumber();
         String lockToken = registrationLockManager.tryLock(
                 phoneNumber,
-                registrationPolicy.getLockTimeoutSeconds())
+                registrationPolicy.lockTimeoutSeconds())
                 .orElseThrow(() -> new IdentityException(IdentityErrorCode.REGISTRATION_IN_PROGRESS));
         registrationLockManager.unlockAfterCompletion(phoneNumber, lockToken);
         if (session.isExpired(clock)) {
@@ -231,7 +231,7 @@ public class RegistrationService {
             PhoneNumber phoneNumber = PhoneNumber.of(identity);
             if (!phoneNumber.isE164()) {
                 phoneNumber = PhoneNumber.of(phoneNumber.toE164(
-                        registrationPolicy.getDefaultCountryCallingCode()));
+                        registrationPolicy.defaultCountryCallingCode()));
             }
             return phoneNumber;
         } catch (IllegalArgumentException e) {
@@ -241,11 +241,11 @@ public class RegistrationService {
 
     private void enforceRateLimits(String ipAddress, String phoneNumber) {
         boolean ipOk = registrationRateLimiter.check("IP", ipAddress,
-                registrationPolicy.getIpRateLimitMaxAttempts(),
-                registrationPolicy.getIpRateLimitWindowSeconds());
+                registrationPolicy.ipRateLimitMaxAttempts(),
+                registrationPolicy.ipRateLimitWindowSeconds());
         boolean phoneOk = registrationRateLimiter.check("PHONE", phoneNumber,
-                registrationPolicy.getPhoneRateLimitMaxAttempts(),
-                registrationPolicy.getPhoneRateLimitWindowSeconds());
+                registrationPolicy.phoneRateLimitMaxAttempts(),
+                registrationPolicy.phoneRateLimitWindowSeconds());
         if (!ipOk || !phoneOk) {
             throw new IdentityException(IdentityErrorCode.RATE_LIMIT_EXCEEDED);
         }
@@ -280,18 +280,18 @@ public class RegistrationService {
                 userId,
                 ipAddress,
                 userAgent,
-                nowUtc().plus(Duration.ofDays(registrationPolicy.getSessionExpiresDays())),
+                nowUtc().plus(Duration.ofDays(registrationPolicy.sessionExpiresDays())),
                 clock);
     }
 
     private String issueRefreshToken(AuthSession session) {
-        byte[] bytes = new byte[IdentityValidationConstants.REFRESH_TOKEN_BYTES];
+        byte[] bytes = new byte[TokenConstants.REFRESH_TOKEN_BYTES];
         SECURE_RANDOM.nextBytes(bytes);
         String tokenId = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 
         Duration ttl = Duration.between(nowUtc(), session.getExpiresAt());
         if (ttl.isNegative() || ttl.isZero()) {
-            ttl = Duration.ofDays(registrationPolicy.getSessionExpiresDays());
+            ttl = Duration.ofDays(registrationPolicy.sessionExpiresDays());
         }
         refreshTokenStore.store(tokenId, session.getSessionId(), ttl);
         return tokenId;

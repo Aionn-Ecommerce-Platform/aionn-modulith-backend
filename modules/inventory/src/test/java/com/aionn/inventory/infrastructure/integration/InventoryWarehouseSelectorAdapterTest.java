@@ -23,15 +23,15 @@ import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 class InventoryWarehouseSelectorAdapterTest {
 
     @Mock
-    private WarehousePersistencePort warehouseRepository;
+    private WarehousePersistencePort warehousePersistencePort;
     @Mock
-    private InventoryItemPersistencePort inventoryItemRepository;
+    private InventoryItemPersistencePort inventoryItemPersistencePort;
 
     private InventoryWarehouseSelectorAdapter adapter;
 
     @BeforeEach
     void setUp() {
-        adapter = new InventoryWarehouseSelectorAdapter(warehouseRepository, inventoryItemRepository);
+        adapter = new InventoryWarehouseSelectorAdapter(warehousePersistencePort, inventoryItemPersistencePort);
     }
 
     @Test
@@ -42,7 +42,7 @@ class InventoryWarehouseSelectorAdapterTest {
 
     @Test
     void selectWarehouseReturnsEmptyWhenNoWarehousesFound() {
-        when(warehouseRepository.findByMerchantOrderByPriority("M_1")).thenReturn(List.of());
+        when(warehousePersistencePort.findByMerchantOrderByPriority("M_1")).thenReturn(List.of());
         assertThat(adapter.selectWarehouseForSku("M_1", "SKU_1")).isEmpty();
     }
 
@@ -50,11 +50,11 @@ class InventoryWarehouseSelectorAdapterTest {
     void selectWarehouseReturnsHighestPriorityWithAvailableStock() {
         Warehouse w1 = Warehouse.create("WH_1", "M_1", "addr-1", 1, FIXED);
         Warehouse w2 = Warehouse.create("WH_2", "M_1", "addr-2", 2, FIXED);
-        when(warehouseRepository.findByMerchantOrderByPriority("M_1")).thenReturn(List.of(w1, w2));
+        when(warehousePersistencePort.findByMerchantOrderByPriority("M_1")).thenReturn(List.of(w1, w2));
 
         InventoryItem item1 = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 0, FIXED);
         InventoryItem item2 = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_2"), 5, FIXED);
-        when(inventoryItemRepository.findBySkuAcrossWarehouses("SKU_1", List.of("WH_1", "WH_2")))
+        when(inventoryItemPersistencePort.findBySkuAcrossWarehouses("SKU_1", List.of("WH_1", "WH_2")))
                 .thenReturn(List.of(item1, item2));
 
         Optional<String> result = adapter.selectWarehouseForSku("M_1", "SKU_1");
@@ -66,11 +66,11 @@ class InventoryWarehouseSelectorAdapterTest {
     void selectWarehouseReturnsEmptyWhenNoWarehouseHasStock() {
         Warehouse w1 = Warehouse.create("WH_1", "M_1", "addr-1", 1, FIXED);
         Warehouse w2 = Warehouse.create("WH_2", "M_1", "addr-2", 2, FIXED);
-        when(warehouseRepository.findByMerchantOrderByPriority("M_1")).thenReturn(List.of(w1, w2));
+        when(warehousePersistencePort.findByMerchantOrderByPriority("M_1")).thenReturn(List.of(w1, w2));
 
         InventoryItem item1 = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_1"), 0, FIXED);
         InventoryItem item2 = InventoryItem.initialize(new InventoryItemKey("SKU_1", "WH_2"), 0, FIXED);
-        when(inventoryItemRepository.findBySkuAcrossWarehouses("SKU_1", List.of("WH_1", "WH_2")))
+        when(inventoryItemPersistencePort.findBySkuAcrossWarehouses("SKU_1", List.of("WH_1", "WH_2")))
                 .thenReturn(List.of(item1, item2));
 
         // Out-of-stock is reported as empty so callers fail fast rather than

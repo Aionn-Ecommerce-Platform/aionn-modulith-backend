@@ -26,14 +26,14 @@ import java.util.List;
 @Transactional
 public class WarehouseService {
 
-    private final WarehousePersistencePort warehouseRepository;
+    private final WarehousePersistencePort warehousePersistencePort;
     private final EventPublisher eventPublisher;
     private final Clock clock;
 
     public Warehouse create(CreateWarehouseCommand command) {
         Warehouse warehouse = Warehouse.create(IdGenerator.ulid(),
                 command.merchantId(), command.address(), command.priorityLevel(), clock);
-        Warehouse saved = warehouseRepository.save(warehouse);
+        Warehouse saved = warehousePersistencePort.save(warehouse);
         eventPublisher.publish(warehouse.pullEvents());
         return saved;
     }
@@ -48,7 +48,7 @@ public class WarehouseService {
                     "Unknown status: " + command.status());
         }
         warehouse.changeStatus(next, clock);
-        Warehouse saved = warehouseRepository.save(warehouse);
+        Warehouse saved = warehousePersistencePort.save(warehouse);
         eventPublisher.publish(warehouse.pullEvents());
         return saved;
     }
@@ -56,7 +56,7 @@ public class WarehouseService {
     public Warehouse adjustPriority(AdjustPriorityCommand command) {
         Warehouse warehouse = ownedByOwner(command.warehouseId(), command.ownerId());
         warehouse.adjustPriority(command.priorityLevel(), clock);
-        Warehouse saved = warehouseRepository.save(warehouse);
+        Warehouse saved = warehousePersistencePort.save(warehouse);
         eventPublisher.publish(warehouse.pullEvents());
         return saved;
     }
@@ -64,7 +64,7 @@ public class WarehouseService {
     public Warehouse suspend(SuspendWarehouseCommand command) {
         Warehouse warehouse = required(command.warehouseId());
         warehouse.suspend(command.adminId(), command.reason(), clock);
-        Warehouse saved = warehouseRepository.save(warehouse);
+        Warehouse saved = warehousePersistencePort.save(warehouse);
         eventPublisher.publish(warehouse.pullEvents());
         return saved;
     }
@@ -72,7 +72,7 @@ public class WarehouseService {
     public Warehouse liftSuspension(LiftSuspensionCommand command) {
         Warehouse warehouse = required(command.warehouseId());
         warehouse.liftSuspension(clock);
-        Warehouse saved = warehouseRepository.save(warehouse);
+        Warehouse saved = warehousePersistencePort.save(warehouse);
         eventPublisher.publish(warehouse.pullEvents());
         return saved;
     }
@@ -91,11 +91,11 @@ public class WarehouseService {
 
     @Transactional(readOnly = true)
     public List<Warehouse> listByOwner(String ownerId) {
-        return warehouseRepository.findByMerchantOrderByPriority(ownerId);
+        return warehousePersistencePort.findByMerchantOrderByPriority(ownerId);
     }
 
     private Warehouse required(String warehouseId) {
-        return warehouseRepository.findById(warehouseId)
+        return warehousePersistencePort.findById(warehouseId)
                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.WAREHOUSE_NOT_FOUND));
     }
 

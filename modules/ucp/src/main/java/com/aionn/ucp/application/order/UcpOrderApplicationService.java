@@ -5,9 +5,9 @@ import java.util.HashMap;
 
 import com.aionn.contracts.port.catalog.CatalogQueryPort;
 import com.aionn.contracts.port.ordering.OrderSnapshotQueryPort;
-import com.aionn.ucp.adapter.rest.dto.cart.UcpItemResponse;
+import com.aionn.ucp.adapter.rest.dto.cart.response.UcpItemResponse;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpResponseMetadata;
-import com.aionn.ucp.adapter.rest.dto.cart.UcpTotalResponse;
+import com.aionn.ucp.adapter.rest.dto.cart.response.UcpTotalResponse;
 import com.aionn.ucp.adapter.rest.dto.order.UcpOrderModels.*;
 import com.aionn.ucp.application.UcpProtocolConstants;
 import com.aionn.ucp.application.policy.UcpProtocolPolicy;

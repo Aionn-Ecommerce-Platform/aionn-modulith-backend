@@ -9,14 +9,14 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class MerchantOwnershipVerifierPersistenceAdapter implements MerchantOwnershipVerifierPort {
 
-    private final MerchantPersistencePort merchantRepository;
+    private final MerchantPersistencePort merchantPersistencePort;
 
     @Override
     public boolean isOwnedBy(String merchantId, String ownerId) {
         if (merchantId == null || merchantId.isBlank() || ownerId == null || ownerId.isBlank()) {
             return false;
         }
-        return merchantRepository.findById(merchantId)
+        return merchantPersistencePort.findById(merchantId)
                 .map(merchant -> ownerId.equals(merchant.getOwnerId()))
                 .orElse(false);
     }

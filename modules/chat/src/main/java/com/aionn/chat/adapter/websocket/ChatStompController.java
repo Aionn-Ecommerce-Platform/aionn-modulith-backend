@@ -1,5 +1,6 @@
 package com.aionn.chat.adapter.websocket;
 
+import com.aionn.chat.adapter.websocket.dto.TypingPayload;
 import com.aionn.chat.application.dto.message.command.MessageCommands;
 import com.aionn.chat.application.port.in.message.MarkDeliveredInputPort;
 import com.aionn.chat.application.port.in.message.MarkReadInputPort;
@@ -44,8 +45,5 @@ public class ChatStompController {
             return;
         }
         markReadInputPort.execute(new MessageCommands.ReadMessage(principal.getName(), messageId));
-    }
-
-    public record TypingPayload(boolean typing) {
     }
 }

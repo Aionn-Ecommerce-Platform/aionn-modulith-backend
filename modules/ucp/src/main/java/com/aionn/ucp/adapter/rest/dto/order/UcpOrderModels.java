@@ -1,9 +1,9 @@
 package com.aionn.ucp.adapter.rest.dto.order;
 
 import com.aionn.ucp.adapter.rest.dto.UcpMessage;
-import com.aionn.ucp.adapter.rest.dto.cart.UcpItemResponse;
+import com.aionn.ucp.adapter.rest.dto.cart.response.UcpItemResponse;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpResponseMetadata;
-import com.aionn.ucp.adapter.rest.dto.cart.UcpTotalResponse;
+import com.aionn.ucp.adapter.rest.dto.cart.response.UcpTotalResponse;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
