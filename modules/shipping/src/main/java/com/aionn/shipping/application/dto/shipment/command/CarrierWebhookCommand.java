@@ -32,9 +32,10 @@ public record CarrierWebhookCommand(
         if (this == other) {
             return true;
         }
-        if (!(other instanceof CarrierWebhookCommand that)) {
+        if (other == null || getClass() != other.getClass()) {
             return false;
         }
+        CarrierWebhookCommand that = (CarrierWebhookCommand) other;
         return Objects.equals(trackingCode, that.trackingCode)
                 && Objects.equals(type, that.type)
                 && Objects.equals(currentLocation, that.currentLocation)

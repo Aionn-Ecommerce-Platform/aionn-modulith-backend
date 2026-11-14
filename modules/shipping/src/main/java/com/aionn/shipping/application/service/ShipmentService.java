@@ -216,6 +216,7 @@ public class ShipmentService {
             case "RETURNED" -> integrationEventPublisher.publishReturned(
                     saved.getShipmentId(), saved.getOrderId(), saved.getUserId(), saved.getMerchantId(),
                     webhook.reason());
+            default -> log.debug("No integration event for webhook type {}", webhook.type());
         }
     }
 
