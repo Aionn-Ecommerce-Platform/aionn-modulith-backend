@@ -31,7 +31,7 @@ class IdentityUserEntitySaveSupportTest {
     @Mock
     private UserRepository userRepository;
     @Mock
-    private IdentityUserDomainMapper IdentityUserDomainMapper;
+    private IdentityUserDomainMapper identityUserDomainMapper;
 
     @InjectMocks
     private IdentityUserEntitySaveSupport saveSupport;
@@ -54,7 +54,7 @@ class IdentityUserEntitySaveSupportTest {
         IdentityUser mapped = user;
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(existing));
         when(userRepository.save(existing)).thenReturn(existing);
-        when(IdentityUserDomainMapper.toDomain(existing)).thenReturn(mapped);
+        when(identityUserDomainMapper.toDomain(existing)).thenReturn(mapped);
 
         IdentityUser result = saveSupport.save(user);
 
@@ -70,7 +70,7 @@ class IdentityUserEntitySaveSupportTest {
         IdentityUser user = domainUser();
         when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
         when(userRepository.save(any(UserEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(IdentityUserDomainMapper.toDomain(any(UserEntity.class))).thenReturn(user);
+        when(identityUserDomainMapper.toDomain(any(UserEntity.class))).thenReturn(user);
 
         IdentityUser result = saveSupport.save(user);
 

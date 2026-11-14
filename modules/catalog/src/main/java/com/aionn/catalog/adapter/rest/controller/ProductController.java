@@ -90,6 +90,8 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Catalog - Product", description = "Product lifecycle, variants, pricing")
 public class ProductController {
 
+        private static final String PRODUCTS_FETCHED = "Products fetched";
+
         private final CreateProductInputPort createProductInputPort;
         private final CloneProductInputPort cloneProductInputPort;
         private final DefineVariantInputPort defineVariantInputPort;
@@ -316,7 +318,7 @@ public class ProductController {
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
                                 productDtoMapper.toResponses(results.content()),
                                 PageMetadata.of(results.page(), results.size(), results.totalElements()),
-                                "Products fetched"));
+                                PRODUCTS_FETCHED));
         }
 
         @GetMapping("/admin/reviews")
@@ -330,7 +332,7 @@ public class ProductController {
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
                                 productDtoMapper.toResponses(results.content()),
                                 PageMetadata.of(results.page(), results.size(), results.totalElements()),
-                                "Products fetched"));
+                                PRODUCTS_FETCHED));
         }
 
         @PostMapping("/{productId}/variants/{skuId}/remove")
@@ -407,7 +409,7 @@ public class ProductController {
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
                                 productDtoMapper.toResponses(results.content()),
                                 PageMetadata.of(results.page(), results.size(), results.totalElements()),
-                                "Products fetched"));
+                                PRODUCTS_FETCHED));
         }
 
         @GetMapping("/by-skus")
@@ -416,7 +418,7 @@ public class ProductController {
                 return ResponseEntity.ok(ApiResponse.success(
                                 productDtoMapper.toResponses(getProductsBySkuIdsInputPort
                                                 .execute(productDtoMapper.toBySkuIdsQuery(skuIds))),
-                                "Products fetched"));
+                                PRODUCTS_FETCHED));
         }
 
         @GetMapping("/{productId}/recommendations")
@@ -427,7 +429,7 @@ public class ProductController {
                 return ResponseEntity.ok(ApiResponse.success(
                                 productDtoMapper.toResponses(getRelatedProductsInputPort
                                                 .execute(productDtoMapper.toRelatedQuery(productId, limit))),
-                                "Products fetched"));
+                                PRODUCTS_FETCHED));
         }
 
         @GetMapping("/recommendations/popular")
@@ -437,7 +439,7 @@ public class ProductController {
                 return ResponseEntity.ok(ApiResponse.success(
                                 productDtoMapper.toResponses(getPopularProductsInputPort
                                                 .execute(productDtoMapper.toPopularQuery(limit))),
-                                "Products fetched"));
+                                PRODUCTS_FETCHED));
         }
 
         @GetMapping("/recommendations/personalized")
@@ -451,7 +453,7 @@ public class ProductController {
                                 productDtoMapper.toResponses(getPersonalizedProductsInputPort
                                                 .execute(productDtoMapper.toPersonalizedQuery(
                                                                 userId, categoryIds, brandIds, limit))),
-                                "Products fetched"));
+                                PRODUCTS_FETCHED));
         }
 
         @PostMapping("/{productId}/view")
@@ -496,6 +498,6 @@ public class ProductController {
                                                 ratingMin, onSale, collectionIds, sort, page, size, allParams)),
                                 userId);
                 return ResponseEntity.ok(
-                                ApiResponse.success(productDtoMapper.toSearchResponse(result), "Products fetched"));
+                                ApiResponse.success(productDtoMapper.toSearchResponse(result), PRODUCTS_FETCHED));
         }
 }

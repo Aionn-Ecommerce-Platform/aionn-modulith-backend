@@ -36,17 +36,21 @@ public class ShipmentRegistrationReconciliationScheduler {
             Instant cutoff = clock.instant().minus(STALE_AFTER);
             List<String> orderIds = orderPersistencePort.findPreparingOrderIdsUpdatedBefore(cutoff, BATCH_SIZE);
             for (String orderId : orderIds) {
-                try {
-                    if (!shippingGateway.hasActiveShipment(orderId)
-                            || shippingGateway.hasUnregisteredShipment(orderId)) {
-                        orderService.enqueueShipmentRegistration(orderId);
-                    }
-                } catch (RuntimeException ex) {
-                    log.warn("Shipment reconciliation failed for order {}: {}", orderId, ex.getMessage());
-                }
+                reconcile(orderId);
             }
         } catch (RuntimeException ex) {
             log.error("Shipment registration reconciliation sweep failed", ex);
+        }
+    }
+
+    private void reconcile(String orderId) {
+        try {
+            if (!shippingGateway.hasActiveShipment(orderId)
+                    || shippingGateway.hasUnregisteredShipment(orderId)) {
+                orderService.enqueueShipmentRegistration(orderId);
+            }
+        } catch (RuntimeException ex) {
+            log.warn("Shipment reconciliation failed for order {}: {}", orderId, ex.getMessage());
         }
     }
 }

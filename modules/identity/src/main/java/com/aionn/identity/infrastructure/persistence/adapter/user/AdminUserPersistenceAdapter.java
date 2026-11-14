@@ -22,13 +22,13 @@ import java.util.Optional;
 public class AdminUserPersistenceAdapter implements AdminUserPersistencePort {
 
     private final UserRepository userRepository;
-    private final IdentityUserDomainMapper IdentityUserDomainMapper;
+    private final IdentityUserDomainMapper identityUserDomainMapper;
     private final IdentityUserEntitySaveSupport identityUserEntitySaveSupport;
 
     @Override
     public Optional<IdentityUser> findById(String userId) {
         return userRepository.findById(userId)
-                .map(IdentityUserDomainMapper::toDomain);
+                .map(identityUserDomainMapper::toDomain);
     }
 
     @Override
@@ -41,7 +41,7 @@ public class AdminUserPersistenceAdapter implements AdminUserPersistencePort {
             OffsetPagination pagination) {
         Pageable pageable = PageRequest.of(pagination.page(), pagination.size());
         Page<IdentityUser> page = userRepository.findUsersWithFilters(status, role, pageable)
-                .map(IdentityUserDomainMapper::toDomain);
+                .map(identityUserDomainMapper::toDomain);
         List<IdentityUser> content = page.getContent();
         return new PageResult<>(content, pagination.page(), pagination.size(), page.getTotalElements());
     }

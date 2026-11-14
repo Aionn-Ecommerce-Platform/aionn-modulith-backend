@@ -25,6 +25,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -165,8 +167,8 @@ class ProductQuestionServiceTest {
     }
 
     private static Product product(ProductStatus status) {
-        Product product = org.mockito.Mockito.mock(Product.class);
-        org.mockito.Mockito.doReturn(status).when(product).getStatus();
+        Product product = mock(Product.class);
+        doReturn(status).when(product).getStatus();
         return product;
     }
 

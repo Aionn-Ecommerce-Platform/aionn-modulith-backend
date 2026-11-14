@@ -74,7 +74,7 @@ public class KycPersistenceAdapter implements KycPersistencePort {
 
     @Override
     public List<KycProfile> findByStatus(KycStatus status, int limit) {
-        int safeLimit = Math.max(1, Math.min(limit, AdminValidationConstants.ADMIN_KYC_LIST_MAX_LIMIT));
+        int safeLimit = Math.clamp(limit, 1, AdminValidationConstants.ADMIN_KYC_LIST_MAX_LIMIT);
         return kycRepository
                 .findByStatusOrderBySubmittedAtDesc(status.name(), PageRequest.of(0, safeLimit))
                 .stream()

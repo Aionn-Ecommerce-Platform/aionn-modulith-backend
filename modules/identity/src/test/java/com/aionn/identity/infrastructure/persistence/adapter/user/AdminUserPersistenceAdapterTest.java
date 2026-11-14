@@ -35,7 +35,7 @@ class AdminUserPersistenceAdapterTest {
     @Mock
     private UserRepository userRepository;
     @Mock
-    private IdentityUserDomainMapper IdentityUserDomainMapper;
+    private IdentityUserDomainMapper identityUserDomainMapper;
     @Mock
     private IdentityUserEntitySaveSupport identityUserEntitySaveSupport;
 
@@ -51,7 +51,7 @@ class AdminUserPersistenceAdapterTest {
         UserEntity entity = UserEntity.builder().userId(USER_ID).build();
         IdentityUser user = user();
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(entity));
-        when(IdentityUserDomainMapper.toDomain(entity)).thenReturn(user);
+        when(identityUserDomainMapper.toDomain(entity)).thenReturn(user);
 
         assertThat(adapter.findById(USER_ID)).contains(user);
     }
@@ -77,7 +77,7 @@ class AdminUserPersistenceAdapterTest {
         IdentityUser user = user();
         when(userRepository.findUsersWithFilters(eq(UserStatus.ACTIVE), eq(UserRole.BUYER), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(entity), PageRequest.of(0, 10), 1));
-        when(IdentityUserDomainMapper.toDomain(entity)).thenReturn(user);
+        when(identityUserDomainMapper.toDomain(entity)).thenReturn(user);
 
         PageResult<IdentityUser> result = adapter.findUsersWithFilters(
                 UserStatus.ACTIVE, UserRole.BUYER, OffsetPagination.of(0, 10));

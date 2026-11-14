@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 class IdentityUserEntitySaveSupport {
 
     private final UserRepository userRepository;
-    private final IdentityUserDomainMapper IdentityUserDomainMapper;
+    private final IdentityUserDomainMapper identityUserDomainMapper;
 
     IdentityUser save(IdentityUser user) {
         UserEntity entity = userRepository.findById(user.getUserId())
@@ -41,6 +41,6 @@ class IdentityUserEntitySaveSupport {
         }
 
         UserEntity savedEntity = userRepository.save(entity);
-        return IdentityUserDomainMapper.toDomain(savedEntity);
+        return identityUserDomainMapper.toDomain(savedEntity);
     }
 }

@@ -34,6 +34,8 @@ import java.util.List;
 @Tag(name = "Recommendations", description = "Personalised and related product recommendations")
 public class RecommendationController {
 
+    private static final String RECOMMENDATIONS_FETCHED = "Recommendations fetched";
+
     private final GetHomeFeedInputPort getHomeFeedInputPort;
     private final GetSimilarProductsInputPort getSimilarProductsInputPort;
     private final GetAlsoBoughtInputPort getAlsoBoughtInputPort;
@@ -50,7 +52,7 @@ public class RecommendationController {
         return ResponseEntity.ok(ApiResponse.success(
                 recommendationDtoMapper.toResponses(
                         getHomeFeedInputPort.execute(recommendationDtoMapper.toHomeFeedQuery(userId, limit))),
-                "Recommendations fetched"));
+                RECOMMENDATIONS_FETCHED));
     }
 
     @GetMapping("/products/{productId}/similar")
@@ -61,7 +63,7 @@ public class RecommendationController {
         return ResponseEntity.ok(ApiResponse.success(
                 recommendationDtoMapper.toResponses(getSimilarProductsInputPort
                         .execute(recommendationDtoMapper.toSimilarProductsQuery(productId, limit))),
-                "Recommendations fetched"));
+                RECOMMENDATIONS_FETCHED));
     }
 
     @GetMapping("/products/{productId}/also-bought")
@@ -72,7 +74,7 @@ public class RecommendationController {
         return ResponseEntity.ok(ApiResponse.success(
                 recommendationDtoMapper.toResponses(
                         getAlsoBoughtInputPort.execute(recommendationDtoMapper.toAlsoBoughtQuery(productId, limit))),
-                "Recommendations fetched"));
+                RECOMMENDATIONS_FETCHED));
     }
 
     @GetMapping("/cart/suggestions")
@@ -86,6 +88,6 @@ public class RecommendationController {
                 recommendationDtoMapper.toResponses(getCartSuggestionsInputPort
                         .execute(recommendationDtoMapper.toCartSuggestionsQuery(
                                 authentication.getName(), skuIds, limit))),
-                "Recommendations fetched"));
+                RECOMMENDATIONS_FETCHED));
     }
 }

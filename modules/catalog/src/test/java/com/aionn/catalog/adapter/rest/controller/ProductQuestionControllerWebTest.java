@@ -25,7 +25,6 @@ import tools.jackson.databind.json.JsonMapper;
 import java.time.Instant;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -119,7 +118,7 @@ class ProductQuestionControllerWebTest {
 
         @Test
         void listByMerchantReturnsTheMerchantsQuestions() throws Exception {
-                when(questionService.listByMerchant(eq(MERCHANT_ID), eq(true), eq(0), eq(20)))
+                when(questionService.listByMerchant(MERCHANT_ID, true, 0, 20))
                                 .thenReturn(new ProductQuestionService.QuestionPage(List.of(result()), 1L));
 
                 mockMvc.perform(get("/api/v1/catalog/merchant/questions")

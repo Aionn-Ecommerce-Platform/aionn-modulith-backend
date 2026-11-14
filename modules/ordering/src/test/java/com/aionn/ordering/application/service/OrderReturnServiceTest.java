@@ -166,8 +166,9 @@ class OrderReturnServiceTest {
     void requestReturnRejectsEmptyItemSelection() {
         when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
 
-        assertThrows(OrderingException.class, () -> service.requestReturn(
-                new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null, List.of())));
+        RequestReturnCommand command = new RequestReturnCommand(
+                ORDER_ID, USER_ID, "broken", null, List.of());
+        assertThrows(OrderingException.class, () -> service.requestReturn(command));
 
         verify(orderReturnPersistencePort, never()).save(any());
     }
@@ -181,8 +182,9 @@ class OrderReturnServiceTest {
                 new OrderReturnItemPersistencePort.Item("sku-1", 1,
                         BigDecimal.valueOf(50), BigDecimal.valueOf(50))));
 
-        assertThrows(OrderingException.class, () -> service.approve(
-                new ApproveReturnCommand(RETURN_ID, MERCHANT_ID, BigDecimal.valueOf(100), "VND", "wh-1")));
+        ApproveReturnCommand command = new ApproveReturnCommand(
+                RETURN_ID, MERCHANT_ID, BigDecimal.valueOf(100), "VND", "wh-1");
+        assertThrows(OrderingException.class, () -> service.approve(command));
     }
 
     @Test

@@ -25,7 +25,7 @@ class UserPersistenceAdapterTest {
     @Mock
     private UserRepository userRepository;
     @Mock
-    private IdentityUserDomainMapper IdentityUserDomainMapper;
+    private IdentityUserDomainMapper identityUserDomainMapper;
     @Mock
     private IdentityUserEntitySaveSupport identityUserEntitySaveSupport;
 
@@ -49,7 +49,7 @@ class UserPersistenceAdapterTest {
         UserEntity entity = UserEntity.builder().userId(USER_ID).build();
         IdentityUser user = user();
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(entity));
-        when(IdentityUserDomainMapper.toDomain(entity)).thenReturn(user);
+        when(identityUserDomainMapper.toDomain(entity)).thenReturn(user);
 
         assertThat(adapter.findById(USER_ID)).contains(user);
     }
@@ -66,7 +66,7 @@ class UserPersistenceAdapterTest {
         UserEntity entity = UserEntity.builder().userId(USER_ID).build();
         IdentityUser user = user();
         when(userRepository.findByEmailIgnoreCase("id")).thenReturn(Optional.of(entity));
-        when(IdentityUserDomainMapper.toDomain(entity)).thenReturn(user);
+        when(identityUserDomainMapper.toDomain(entity)).thenReturn(user);
 
         assertThat(adapter.findByIdentity("id")).contains(user);
     }
@@ -77,7 +77,7 @@ class UserPersistenceAdapterTest {
         IdentityUser user = user();
         when(userRepository.findByEmailIgnoreCase("id")).thenReturn(Optional.empty());
         when(userRepository.findByPhone("id")).thenReturn(Optional.of(entity));
-        when(IdentityUserDomainMapper.toDomain(entity)).thenReturn(user);
+        when(identityUserDomainMapper.toDomain(entity)).thenReturn(user);
 
         assertThat(adapter.findByIdentity("id")).contains(user);
     }
@@ -89,7 +89,7 @@ class UserPersistenceAdapterTest {
         when(userRepository.findByEmailIgnoreCase("id")).thenReturn(Optional.empty());
         when(userRepository.findByPhone("id")).thenReturn(Optional.empty());
         when(userRepository.findByUsernameIgnoreCase("id")).thenReturn(Optional.of(entity));
-        when(IdentityUserDomainMapper.toDomain(entity)).thenReturn(user);
+        when(identityUserDomainMapper.toDomain(entity)).thenReturn(user);
 
         assertThat(adapter.findByIdentity("id")).contains(user);
     }

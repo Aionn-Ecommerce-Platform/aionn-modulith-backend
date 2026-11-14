@@ -14,7 +14,7 @@ import java.util.Optional;
 public class UserPersistenceAdapter implements UserPersistencePort {
 
     private final UserRepository userRepository;
-    private final IdentityUserDomainMapper IdentityUserDomainMapper;
+    private final IdentityUserDomainMapper identityUserDomainMapper;
     private final IdentityUserEntitySaveSupport identityUserEntitySaveSupport;
 
     @Override
@@ -25,7 +25,7 @@ public class UserPersistenceAdapter implements UserPersistencePort {
     @Override
     public Optional<IdentityUser> findById(String userId) {
         return userRepository.findById(userId)
-                .map(IdentityUserDomainMapper::toDomain);
+                .map(identityUserDomainMapper::toDomain);
     }
 
     @Override
@@ -33,7 +33,7 @@ public class UserPersistenceAdapter implements UserPersistencePort {
         return userRepository.findByEmailIgnoreCase(identity)
                 .or(() -> userRepository.findByPhone(identity))
                 .or(() -> userRepository.findByUsernameIgnoreCase(identity))
-                .map(IdentityUserDomainMapper::toDomain);
+                .map(identityUserDomainMapper::toDomain);
     }
 
     @Override
