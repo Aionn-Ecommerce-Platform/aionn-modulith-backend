@@ -389,7 +389,7 @@ class ShipmentServiceTest {
                                 "customer unreachable", null, null));
 
                 verify(integrationEventPublisher).publishDeliveryFailed(
-                                eq("S_1"), eq("ORDER_1"), eq("customer unreachable"), anyInt());
+                                eq("S_1"), eq("ORDER_1"), eq("U_1"), eq("customer unreachable"), anyInt());
         }
 
         @Test
@@ -408,7 +408,7 @@ class ShipmentServiceTest {
         }
 
         @Test
-        void applyCarrierWebhookForReturnedDoesNotPublishIntegrationEvent() {
+        void applyCarrierWebhookForReturnedPublishesIntegrationEvent() {
                 Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
                                 ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
                 shipment.registerWithCarrier("TRACK_1", "CARRIER_1", null, FIXED);
@@ -420,7 +420,8 @@ class ShipmentServiceTest {
                 service.applyCarrierWebhook(new CarrierWebhookCommand(
                                 "TRACK_1", "RETURNED", null, null, null, null, null, "refused", null, null));
 
-                verifyNoInteractions(integrationEventPublisher);
+                verify(integrationEventPublisher).publishReturned(
+                                "S_1", "ORDER_1", "U_1", "M_1", "refused");
         }
 
         @Test

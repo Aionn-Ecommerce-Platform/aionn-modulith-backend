@@ -4,6 +4,7 @@ import org.mockito.Mockito;
 
 import com.aionn.shipping.application.port.out.CarrierClient;
 import com.aionn.shipping.application.port.out.ShipmentPersistencePort;
+import com.aionn.shipping.application.port.out.observability.ShippingMetricsPort;
 import com.aionn.shipping.domain.model.Shipment;
 import com.aionn.shipping.domain.valueobject.ShipmentStatus;
 import com.aionn.shipping.infrastructure.carrier.GhnStatusMapper;
@@ -36,6 +37,9 @@ class ShipmentStatusPollWorkerTest {
 
     @Mock
     private ShipmentStatusApplier shipmentStatusApplier;
+
+    @Mock
+    private ShippingMetricsPort metrics;
 
     @Mock
     private java.time.Clock clock;

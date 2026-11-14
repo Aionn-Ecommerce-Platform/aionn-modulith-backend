@@ -99,6 +99,14 @@ public interface OrderRepository extends JpaRepository<OrderEntity, String> {
       """)
   List<String> findPendingOrderIdsOlderThan(Instant cutoff, Pageable pageable);
 
+  @Query("""
+      SELECT o.orderId FROM OrderEntity o
+        WHERE o.status = 'PREPARING'
+          AND o.updatedAt <= :cutoff
+      ORDER BY o.updatedAt ASC
+      """)
+  List<String> findPreparingOrderIdsUpdatedBefore(Instant cutoff, Pageable pageable);
+
   boolean existsByMerchantIdAndStatusNotIn(String merchantId, Collection<String> terminalStatuses);
 
   boolean existsByUserIdAndStatusNotIn(String userId, Collection<String> terminalStatuses);

@@ -281,6 +281,86 @@ class OrderServiceTest {
     }
 
     @Test
+    void markShippedFromCarrierTransitionsPreparingOrder() {
+        Order order = reservedOrderInPreparation();
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
+
+        Order result = orderService.markShippedFromCarrier(ORDER_ID, "ship-1");
+
+        assertEquals(OrderStatus.SHIPPED, result.getStatus());
+        verify(integrationEventPublisher).publishOrderShipped(ORDER_ID, "ship-1");
+        verify(stockReservationGateway).commit("res-1");
+    }
+
+    @Test
+    void markShippedFromCarrierIgnoresAlreadyShippedOrder() {
+        Order order = reservedOrderInPreparation();
+        order.markShipped("ship-1", Instant.parse("2026-07-18T12:00:00Z"));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+
+        Order result = orderService.markShippedFromCarrier(ORDER_ID, "ship-1");
+
+        assertEquals(OrderStatus.SHIPPED, result.getStatus());
+        verify(integrationEventPublisher, never()).publishOrderShipped(ORDER_ID, "ship-1");
+        verify(stockReservationGateway, never()).commit("res-1");
+    }
+
+    @Test
+    void completeFromCarrierShippedPreparingOrderAndCompletesIt() {
+        Order order = reservedOrderInPreparation();
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
+        when(shippingGateway.allShipmentsDelivered(ORDER_ID)).thenReturn(true);
+
+        Order result = orderService.completeFromCarrier(ORDER_ID, "ship-1");
+
+        assertEquals(OrderStatus.COMPLETED, result.getStatus());
+        verify(integrationEventPublisher).publishOrderShipped(ORDER_ID, "ship-1");
+        verify(integrationEventPublisher).publishOrderCompleted(ORDER_ID);
+        verify(stockReservationGateway).commit("res-1");
+    }
+
+    @Test
+    void completeFromCarrierWaitsForOtherParcelsBeforeCompleting() {
+        Order order = reservedOrderInPreparation();
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
+        when(shippingGateway.allShipmentsDelivered(ORDER_ID)).thenReturn(false);
+
+        Order result = orderService.completeFromCarrier(ORDER_ID, "ship-1");
+
+        assertEquals(OrderStatus.SHIPPED, result.getStatus());
+        verify(integrationEventPublisher).publishOrderShipped(ORDER_ID, "ship-1");
+        verify(integrationEventPublisher, never()).publishOrderCompleted(anyString());
+        verify(stockReservationGateway).commit("res-1");
+    }
+
+    @Test
+    void completeFromCarrierCompletesShippedOrder() {
+        Order order = reservedOrderInPreparation();
+        order.markShipped("ship-1", Instant.parse("2026-07-18T12:00:00Z"));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(order)).thenReturn(order);
+        when(shippingGateway.allShipmentsDelivered(ORDER_ID)).thenReturn(true);
+
+        Order result = orderService.completeFromCarrier(ORDER_ID, "ship-1");
+
+        assertEquals(OrderStatus.COMPLETED, result.getStatus());
+        verify(integrationEventPublisher, never()).publishOrderShipped(anyString(), anyString());
+        verify(integrationEventPublisher).publishOrderCompleted(ORDER_ID);
+    }
+
+    @Test
+    void cancelRejectsWhenCarrierAlreadyPickedUpShipment() {
+        when(shippingGateway.hasPickedUpShipment(ORDER_ID)).thenReturn(true);
+
+        assertOrderingError(OrderingErrorCode.ORDER_ALREADY_PICKED_UP,
+                () -> orderService.cancel(
+                        new CancelOrderCommand(ORDER_ID, USER_ID, "too late")));
+    }
+
+    @Test
     void placeOrderHeadlessSucceedsWithValidParameters() {
         PlaceOrderHeadlessCommand command =
                 new PlaceOrderHeadlessCommand(

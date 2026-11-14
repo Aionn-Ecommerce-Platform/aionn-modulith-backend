@@ -35,6 +35,9 @@ public interface OrderPersistencePort {
     /** Sweep: order ids still PENDING past the deadline (used by auto-cancel). */
     List<String> findPendingOrderIdsOlderThan(Instant cutoff, int limit);
 
+    /** Sweep: PREPARING order ids whose last transition is older than the cutoff. */
+    List<String> findPreparingOrderIdsUpdatedBefore(Instant cutoff, int limit);
+
     record OrderAnalyticsRow(
             String status,
             BigDecimal totalAmount,

@@ -22,14 +22,10 @@ public class ShipmentCarrierOrchestrator {
     private final CarrierClient carrierClient;
     private final MerchantQueryPort merchantQueryPort;
 
-    // The row lock is held for the remote call on purpose: it serialises concurrent
-    // registration attempts so only one carrier order is ever created per shipment.
     @Transactional
     public Shipment registerWithCarrier(String shipmentId, String merchantId) {
         Shipment shipment = shipmentService.loadShipmentForUpdate(shipmentId);
-        // Same ownership gate as cancelShipment: only the merchant who owns the
-        // shipment may register it with the carrier. merchantId is null only on
-        // the internal auto-register path (order placement), which is trusted.
+
         if (merchantId != null) {
             shipment.ensureOwnedByMerchant(merchantId);
         }
@@ -77,7 +73,6 @@ public class ShipmentCarrierOrchestrator {
         return cancelWithCarrier(shipment, command.reason());
     }
 
-    /** Internal cancellation path used when the owning order is cancelled. */
     public Shipment cancelShipmentSystem(String shipmentId, String reason) {
         Shipment shipment = shipmentService.loadShipment(shipmentId);
         return cancelWithCarrier(shipment, reason);

@@ -148,33 +148,37 @@ class ShipmentStatusApplierTest {
         applier.apply("S_1", ShipmentStatus.DELIVERY_FAILED, detail());
 
         verify(shipment).recordDeliveryFailure("reason", clock);
-        verify(integrationEventPublisher).publishDeliveryFailed(any(), any(), any(),
+        verify(integrationEventPublisher).publishDeliveryFailed(any(), any(), any(), any(),
                 ArgumentMatchers.anyInt());
     }
 
     @Test
-    void appliesReturnedWithoutIntegrationEvent() {
+    void appliesReturnedAndPublishesIntegrationEvent() {
         stubTransitionFrom(ShipmentStatus.PICKED_UP);
 
         applier.apply("S_1", ShipmentStatus.RETURNED, detail());
 
         verify(shipment).markReturned("reason", clock);
-        verifyNoInteractions(integrationEventPublisher);
+        verify(integrationEventPublisher).publishReturned("S_1", "ORDER_1", "U_1", "M_1", "reason");
     }
 
     @Test
-    void appliesCancelledWithoutIntegrationEvent() {
+    void appliesCancelledAndPublishesIntegrationEvent() {
         stubTransitionFrom(ShipmentStatus.REGISTERED);
 
         applier.apply("S_1", ShipmentStatus.CANCELLED, detail());
 
         verify(shipment).cancel("reason", clock);
-        verifyNoInteractions(integrationEventPublisher);
+        verify(integrationEventPublisher).publishCancelled("S_1", "ORDER_1", "reason");
     }
 
     private void stubTransitionFrom(ShipmentStatus current) {
         when(shipmentPersistencePort.findById("S_1")).thenReturn(Optional.of(shipment));
         when(shipment.getStatus()).thenReturn(current);
+        when(shipment.getShipmentId()).thenReturn("S_1");
+        when(shipment.getOrderId()).thenReturn("ORDER_1");
+        when(shipment.getUserId()).thenReturn("U_1");
+        when(shipment.getMerchantId()).thenReturn("M_1");
         when(shipmentPersistencePort.save(shipment)).thenReturn(shipment);
     }
 }

@@ -41,10 +41,11 @@ class CompensationRetryServiceTest {
     private final FlashSaleQueryPort flashSaleQueryPort = mock(FlashSaleQueryPort.class);
     private final CompensationRetryPolicy retryPolicy = mock(CompensationRetryPolicy.class);
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+    private final OrderService orderService = mock(OrderService.class);
 
     private final CompensationRetryService service =
             new CompensationRetryService(taskPort, stockGateway, voucherGateway, paymentGateway,
-                    orderPersistencePort, flashSaleQueryPort, retryPolicy, clock);
+                    orderPersistencePort, flashSaleQueryPort, retryPolicy, clock, orderService);
 
     {
         when(retryPolicy.maxAttempts()).thenReturn(MAX_ATTEMPTS);
@@ -107,6 +108,18 @@ class CompensationRetryServiceTest {
 
         verify(stockGateway).commit("res-1");
         verify(taskPort).markCompleted("task-commit");
+    }
+
+    @Test
+    void retriesShipmentRegistrationAndCompletesTheTask() {
+        when(taskPort.findById("task-shipment")).thenReturn(Optional.of(new Task(
+                "task-shipment", Type.SHIPMENT_REGISTER, "order-1", null, "order-1",
+                "auto-register", 0)));
+
+        service.retry("task-shipment");
+
+        verify(orderService).retryShipmentRegistration("order-1");
+        verify(taskPort).markCompleted("task-shipment");
     }
 
     @Test

@@ -52,8 +52,7 @@ public class ShippingFulfillmentAdapter implements ShippingFulfillmentPort {
                 toCommandParcels(parcels),
                 codAmount, shippingFee, currency);
 
-        List<Shipment> created =
-                shipmentService.createShipmentsPerConsignment(command);
+        List<Shipment> created = shipmentService.createShipmentsPerConsignment(command);
         List<RegistrationResult> results = new ArrayList<>(created.size());
         for (Shipment shipment : created) {
             try {
@@ -70,10 +69,26 @@ public class ShippingFulfillmentAdapter implements ShippingFulfillmentPort {
         return List.copyOf(results);
     }
 
-    /**
-     * A multi-consignment order is all-or-nothing: when one parcel fails to register,
-     * cancel every parcel already handed to the carrier, not just the failing one.
-     */
+    @Override
+    public boolean hasPickedUpShipment(String orderId) {
+        return shipmentService.hasPickedUpShipment(orderId);
+    }
+
+    @Override
+    public boolean hasActiveShipment(String orderId) {
+        return shipmentService.hasActiveShipment(orderId);
+    }
+
+    @Override
+    public boolean hasUnregisteredShipment(String orderId) {
+        return shipmentService.hasUnregisteredShipment(orderId);
+    }
+
+    @Override
+    public boolean allShipmentsDelivered(String orderId) {
+        return shipmentService.allShipmentsDelivered(orderId);
+    }
+
     private void compensate(List<Shipment> created, RuntimeException cause) {
         for (Shipment orphan : created) {
             try {

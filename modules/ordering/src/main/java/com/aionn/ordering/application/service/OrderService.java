@@ -397,19 +397,50 @@ public class OrderService {
     }
 
     private void triggerShipmentRegistration(Order order) {
+        String taskId = shipmentRegistrationTaskId(order.getOrderId());
+        enqueueCompensation(new CompensationTaskPort.Task(
+                taskId, CompensationTaskPort.Type.SHIPMENT_REGISTER, order.getOrderId(),
+                order.getUserId(), order.getOrderId(), "auto-register", 0));
         try {
-            BigDecimal fee = order.getShippingFee() == null ? null : order.getShippingFee().amount();
-            shippingGateway.createAndRegister(order.getOrderId(), order.getMerchantId(),
-                    order.getUserId(), order.getShippingAddress(), null, fee, order.getCurrency(),
-                    toParcels(order));
-        } catch (Exception ex) {
-            log.warn("Auto-shipment registration failed for order {}: {}",
-                    order.getOrderId(), ex.getMessage());
+            createAndRegisterShipment(order);
+            completeCompensation(taskId);
+        } catch (RuntimeException ex) {
+            log.warn("Auto-shipment registration failed for order {}; retry task {} remains pending",
+                    order.getOrderId(), taskId, ex);
         }
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public void retryShipmentRegistration(String orderId) {
+        Order order = required(orderId);
+        if (order.getStatus() != OrderStatus.PREPARING) {
+            return;
+        }
+        createAndRegisterShipment(order);
+    }
+
+    public void enqueueShipmentRegistration(String orderId) {
+        enqueueCompensation(new CompensationTaskPort.Task(
+                shipmentRegistrationTaskId(orderId), CompensationTaskPort.Type.SHIPMENT_REGISTER, orderId,
+                null, orderId, "shipment-registration-reconcile", 0));
+    }
+
+    private void createAndRegisterShipment(Order order) {
+        BigDecimal fee = order.getShippingFee() == null ? null : order.getShippingFee().amount();
+        shippingGateway.createAndRegister(order.getOrderId(), order.getMerchantId(),
+                order.getUserId(), order.getShippingAddress(), null, fee, order.getCurrency(),
+                toParcels(order));
+    }
+
+    private static String shipmentRegistrationTaskId(String orderId) {
+        return "shipment-register:" + orderId;
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order cancel(CancelOrderCommand command) {
+        if (shippingGateway.hasPickedUpShipment(command.orderId())) {
+            throw new OrderingException(OrderingErrorCode.ORDER_ALREADY_PICKED_UP);
+        }
         Order saved = transactionTemplate.execute(status -> {
             Order order = ownedByUser(command.orderId(), command.userId());
             if (order.getStatus().isPickedUpByCarrier()) {
@@ -631,16 +662,86 @@ public class OrderService {
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Order markShipped(ConfirmShippedCommand command) {
-        Order snapshot = transactionTemplate.execute(status -> {
+        ShipmentTransition transition = transactionTemplate.execute(status -> {
             Order order = required(command.orderId());
+            if (order.getStatus() == OrderStatus.SHIPPED
+                    || order.getStatus() == OrderStatus.COMPLETED) {
+                return new ShipmentTransition(order, false);
+            }
             order.markShipped(command.shipmentId(), clock.instant());
+            return new ShipmentTransition(publishShipped(order, command.shipmentId()), true);
+        });
+        if (transition.shipped()) {
+            commitReservationsBestEffort(transition.order());
+        }
+        return transition.order();
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public Order markShippedFromCarrier(String orderId, String shipmentId) {
+        ShipmentTransition transition = transactionTemplate.execute(status -> {
+            Order order = required(orderId);
+            if (order.getStatus() == OrderStatus.SHIPPED
+                    || order.getStatus() == OrderStatus.COMPLETED) {
+                return new ShipmentTransition(order, false);
+            }
+            if (order.getStatus() != OrderStatus.PREPARING) {
+                log.warn("Ignoring carrier dispatch for order {} in status {}", orderId, order.getStatus());
+                return new ShipmentTransition(order, false);
+            }
+            order.markShipped(shipmentId, clock.instant());
+            return new ShipmentTransition(publishShipped(order, shipmentId), true);
+        });
+        if (transition.shipped()) {
+            commitReservationsBestEffort(transition.order());
+        }
+        return transition.order();
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public Order completeFromCarrier(String orderId, String shipmentId) {
+        boolean allDelivered = shippingGateway.allShipmentsDelivered(orderId);
+        ShipmentTransition transition = transactionTemplate.execute(status -> {
+            Order order = required(orderId);
+            if (order.getStatus() == OrderStatus.COMPLETED) {
+                return new ShipmentTransition(order, false);
+            }
+            boolean shippedNow = false;
+            if (order.getStatus() == OrderStatus.PREPARING) {
+                order.markShipped(shipmentId, clock.instant());
+                shippedNow = true;
+            } else if (order.getStatus() != OrderStatus.SHIPPED) {
+                log.warn("Ignoring carrier delivery for order {} in status {}", orderId, order.getStatus());
+                return new ShipmentTransition(order, false);
+            }
+            if (!allDelivered) {
+                Order saved = orderPersistencePort.save(order);
+                eventPublisher.publish(order.pullEvents());
+                if (shippedNow) {
+                    integrationEventPublisher.publishOrderShipped(saved.getOrderId(), shipmentId);
+                }
+                return new ShipmentTransition(saved, shippedNow);
+            }
+            order.complete(clock.instant());
             Order saved = orderPersistencePort.save(order);
             eventPublisher.publish(order.pullEvents());
-            integrationEventPublisher.publishOrderShipped(saved.getOrderId(), command.shipmentId());
-            return saved;
+            if (shippedNow) {
+                integrationEventPublisher.publishOrderShipped(saved.getOrderId(), shipmentId);
+            }
+            integrationEventPublisher.publishOrderCompleted(saved.getOrderId());
+            return new ShipmentTransition(saved, shippedNow);
         });
-        commitReservationsBestEffort(snapshot);
-        return snapshot;
+        if (transition.shipped()) {
+            commitReservationsBestEffort(transition.order());
+        }
+        return transition.order();
+    }
+
+    private Order publishShipped(Order order, String shipmentId) {
+        Order saved = orderPersistencePort.save(order);
+        eventPublisher.publish(order.pullEvents());
+        integrationEventPublisher.publishOrderShipped(saved.getOrderId(), shipmentId);
+        return saved;
     }
 
     private void commitReservationsBestEffort(Order order) {
@@ -1040,6 +1141,9 @@ public class OrderService {
 
     public OrderStatus statusOf(String orderId) {
         return required(orderId).getStatus();
+    }
+
+    private record ShipmentTransition(Order order, boolean shipped) {
     }
 
     private static final class DailyRevenueAccumulator {

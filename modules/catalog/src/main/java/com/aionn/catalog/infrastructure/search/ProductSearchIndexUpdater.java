@@ -5,13 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-/**
- * Translates product domain events into search-index work.
- *
- * <p>Nothing here touches OpenSearch: the {@link CatalogSearchIndexWriter} hands the write to the
- * single-threaded {@code searchIndexTaskExecutor}. Listeners run on the outbox dispatcher thread, and a
- * product publish should cost that thread one queue submission, not an HTTP round trip.
- */
 @Component
 @RequiredArgsConstructor
 public class ProductSearchIndexUpdater {

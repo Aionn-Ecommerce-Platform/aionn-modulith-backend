@@ -14,6 +14,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -66,5 +67,12 @@ class ShippingFulfillmentAdapterTest {
 
         assertNotNull(regs);
         assertEquals("ship-1", regs.get(0).shipmentId());
+    }
+
+    @Test
+    void hasPickedUpShipmentDelegatesToPort() {
+        when(shippingFulfillmentPort.hasPickedUpShipment("ord-1")).thenReturn(true);
+
+        assertTrue(adapter.hasPickedUpShipment("ord-1"));
     }
 }

@@ -10,7 +10,7 @@ public class ShippingWebhookDtoMapper {
     public CarrierWebhookCommand toCommand(
             CarrierWebhookRequest request,
             String legacySecret,
-            String rawPayload,
+            byte[] rawPayload,
             String signature,
             String timestamp,
             String eventId) {

@@ -106,7 +106,7 @@ class OrderReturnControllerWebTest {
 
         mockMvc.perform(post("/api/v1/ordering/returns/orders/order-1")
                         .contentType(APPLICATION_JSON)
-                        .content("{\"reason\":\"damaged\",\"evidenceUrl\":\"http://ev\"}"))
+                        .content("{\"reason\":\"damaged\",\"evidenceUrl\":\"http://ev\",\"items\":[{\"skuId\":\"sku-1\",\"qty\":1}]}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.statusCode").value("201"))
                 .andExpect(jsonPath("$.data.returnId").value("ret-1"));

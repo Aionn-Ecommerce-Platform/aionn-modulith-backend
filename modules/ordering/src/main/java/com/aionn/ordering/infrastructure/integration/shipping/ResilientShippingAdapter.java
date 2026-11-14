@@ -67,6 +67,26 @@ public class ResilientShippingAdapter implements ShippingGateway {
                 address, codAmount, shippingFee, currency, parcels));
     }
 
+    @Override
+    public boolean hasPickedUpShipment(String orderId) {
+        return execute("hasPickedUpShipment", () -> delegate.hasPickedUpShipment(orderId));
+    }
+
+    @Override
+    public boolean hasActiveShipment(String orderId) {
+        return execute("hasActiveShipment", () -> delegate.hasActiveShipment(orderId));
+    }
+
+    @Override
+    public boolean hasUnregisteredShipment(String orderId) {
+        return execute("hasUnregisteredShipment", () -> delegate.hasUnregisteredShipment(orderId));
+    }
+
+    @Override
+    public boolean allShipmentsDelivered(String orderId) {
+        return execute("allShipmentsDelivered", () -> delegate.allShipmentsDelivered(orderId));
+    }
+
     private <T> T execute(String operation, Supplier<T> action) {
         Supplier<T> decorated = Retry.decorateSupplier(retry,
                 CircuitBreaker.decorateSupplier(circuitBreaker, action));

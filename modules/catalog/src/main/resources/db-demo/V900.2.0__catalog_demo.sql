@@ -47,7 +47,19 @@ INSERT INTO brands (brand_id, name, logo_url, description, status, version, crea
 ('01M74HBRFM3CR5RBWG8WQZVAEX', 'Thiết bị thông minh Vina', 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=200&q=80', 'Các thiết bị IoT cao cấp sản xuất tại Việt Nam.', 'ACTIVE', 0, '2026-10-11 07:15:44.631276+00:00', '2026-10-11 07:15:44.631276+00:00'),
 ('01M74HBRFN9VFJ0HCEKVD3XS4W', 'Thiết bị gia dụng Zephyr', 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=200&q=80', 'Thiết bị gia dụng thông minh thế hệ mới.', 'ACTIVE', 0, '2026-10-11 07:15:44.631276+00:00', '2026-10-11 07:15:44.631276+00:00');
 
-INSERT INTO products (product_id, merchant_id, brand_id, name, category_ids, image_list, tags, collection_ids, attributes, ai_description, status, version, created_at, updated_at) VALUES
+INSERT INTO products (product_id, merchant_id, brand_id, name, category_ids, image_list, tags, collection_ids, attributes, ai_description, status, version, created_at, updated_at, slug)
+SELECT seed.product_id, seed.merchant_id, seed.brand_id, seed.name, seed.category_ids, seed.image_list, seed.tags,
+       CASE
+           WHEN seed.collection_ids <> '[]'::jsonb THEN seed.collection_ids
+           WHEN seed.category_ids ?| ARRAY['01M74HE3MQBQ0KZ9R3T2FV6DV0','01M74HE3MSF6NPJ5SQ5Q13S53B','01M74HE3MTWMV75K99ZEVDT3ZF','01M74HE3MVTZ79KB93T2ED660B'] THEN '["01M74HBRD7PZVEA5VR3H1SM3N4"]'::jsonb
+           WHEN seed.category_ids ?| ARRAY['01M74HE3MWRPZD13E3VVXXS295','01M74HE3MX1K93268VV48XMWS5','01M74HE3MYEC48790V223A7HHV','01M74HE3MZTQWD9M95JYT23FJH','01M74HE3N0BWRVH8X39M1J4SNF'] THEN '["01M74HBRD8EM0XZQ6RECK4VHAR"]'::jsonb
+           WHEN seed.category_ids ?| ARRAY['01M74HE3N1YMG5DHG6QA6MAH0W','01M74HE3N2C3VBKNEXH6AJGTFX','01M74HE3N3HMVFX4902GGEFF52','01M74HE3N4QS9ZJZD24JV21C72','01M74HE3N5PV0GTA9WGCR4EASP','01M74HE3N6JBESAW2BKYA16FN9'] THEN '["01M74HBRD94PS4JKKC7TJ8NG9N"]'::jsonb
+           WHEN seed.category_ids ?| ARRAY['01M74HE3N76WFH74WV4T5K8GGG','01M74HE3N83EMA729168PYZ198'] THEN '["01M74HBRDAWQ2NX5NAZQF5WVQZ"]'::jsonb
+           ELSE seed.collection_ids
+       END,
+       seed.attributes, seed.ai_description, seed.status, seed.version, seed.created_at::timestamptz, seed.updated_at::timestamptz,
+       left(trim(both '-' FROM regexp_replace(regexp_replace(unaccent(lower(replace(seed.name, 'đ', 'd'))), '[^a-z0-9]+', '-', 'g'), '-+', '-', 'g')), 250)
+FROM (VALUES
 ('01M74HBRFPWDXZ8WBWK0J1HGHN', '01M74HBREYHVRKRQRRFATMWBRG', '01M74HBRFDGAXVR5XTWW85SYAJ', 'Khung ảnh cây gia đình lưu giữ kỷ niệm', '["01M74HE3N5PV0GTA9WGCR4EASP", "01M74HE3N6JBESAW2BKYA16FN9"]'::jsonb, '["https://cdn.dummyjson.com/product-images/home-decoration/family-tree-photo-frame/1.webp", "https://cdn.dummyjson.com/product-images/home-decoration/family-tree-photo-frame/1.webp", "https://cdn.dummyjson.com/product-images/home-decoration/family-tree-photo-frame/1.webp"]'::jsonb, '["neural", "panel", "alpha"]'::jsonb, '[]'::jsonb, '{"brand": "Apex", "voltage": "220V", "material": "Tempered Glass", "connectivity": "Zigbee 3.0"}'::jsonb, 'MÔ TẢ SẢN PHẨM
 
 Bảng điều khiển thần kinh Alpha 1 là sản phẩm công nghệ được tuyển chọn cho nhu cầu sử dụng hằng ngày, tập trung vào độ ổn định, trải nghiệm thao tác nhanh và thiết kế dễ phối với không gian sống hiện đại. Sản phẩm phù hợp cho người dùng cần một thiết bị bền bỉ, gọn gàng và có thể sử dụng lâu dài trong gia đình, văn phòng hoặc khi di chuyển.
@@ -43967,9 +43979,13 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 
 - Vui lòng đọc hướng dẫn sử dụng trước khi dùng, đặc biệt với sản phẩm chăm sóc sức khỏe/làm đẹp.
 
-- Ngừng sử dụng và liên hệ bộ phận hỗ trợ nếu phát sinh dấu hiệu bất thường.', 'PUBLISHED', 0, '2026-10-11 07:15:44.631276+00:00', '2026-10-11 07:15:44.631276+00:00');
+- Ngừng sử dụng và liên hệ bộ phận hỗ trợ nếu phát sinh dấu hiệu bất thường.', 'PUBLISHED', 0, '2026-10-11 07:15:44.631276+00:00', '2026-10-11 07:15:44.631276+00:00'))
+AS seed(product_id, merchant_id, brand_id, name, category_ids, image_list, tags, collection_ids, attributes, ai_description, status, version, created_at, updated_at);
 
-INSERT INTO product_variants (sku_id, product_id, attribute_values, price, currency, original_price) VALUES
+INSERT INTO product_variants (sku_id, product_id, attribute_values, price, currency, original_price, weight_gram, length_cm, width_cm, height_cm)
+SELECT seed.sku_id, seed.product_id, seed.attribute_values, seed.price::numeric, seed.currency, seed.original_price::numeric,
+       COALESCE(pick.weight_gram, 600), COALESCE(pick.length_cm, 25), COALESCE(pick.width_cm, 20), COALESCE(pick.height_cm, 10)
+FROM (VALUES
 ('01M74HBSFBZ1SHN4X1RBX64QFN', '01M74HBRFVKGP2MNQY7QD7KZA3', '{"size": "M", "color": "Xanh biển"}'::jsonb, '620000.00', 'VND', '868000.00'),
 ('01M74HBSFCV5SGZTJC8Y42XJPB', '01M74HBRFWDKGHB8NS9X330Q2X', '{"size": "L", "color": "Xám"}'::jsonb, '620000.00', 'VND', '868000.00'),
 ('01M74HBSFDR0TG9T1RYRB4A5VG', '01M74HBRFX2F5S33AFRF50WG0G', '{"color": "Đen", "storage": "128GB"}'::jsonb, '5000000.00', 'VND', '7000000.00'),
@@ -45458,7 +45474,35 @@ INSERT INTO product_variants (sku_id, product_id, attribute_values, price, curre
 ('01M74HBTY7QJVN3NXHYPH49MH9', '01M74HBRFS1W08V1J9H30QK0KK', '{"size": "S", "color": "Xám (Grey)"}'::jsonb, '740000.00', 'VND', '890000.00'),
 ('01M74HBTY80EQB79ZF5YG03JNK', '01M74HBRFTGSNN4MAVHMTBE475', '{"color": "Đen (Black)", "storage": "256GB"}'::jsonb, '8000000.00', 'VND', '9500000.00'),
 ('01M74HBTY9GXJ7Z2H4ZD5A360Y', '01M74HBRFTGSNN4MAVHMTBE475', '{"color": "Xanh lá (Green)", "storage": "256GB"}'::jsonb, '8200000.00', 'VND', '9800000.00'),
-('01M74HBTYAXEW9R35W6AQPS1BK', '01M74HBRFTGSNN4MAVHMTBE475', '{"color": "Đen (Black)", "storage": "512GB"}'::jsonb, '9500000.00', 'VND', '11000000.00');
+('01M74HBTYAXEW9R35W6AQPS1BK', '01M74HBRFTGSNN4MAVHMTBE475', '{"color": "Đen (Black)", "storage": "512GB"}'::jsonb, '9500000.00', 'VND', '11000000.00'))
+AS seed(sku_id, product_id, attribute_values, price, currency, original_price)
+JOIN products p ON p.product_id = seed.product_id
+LEFT JOIN LATERAL (
+      SELECT cp.weight_gram, cp.length_cm, cp.width_cm, cp.height_cm
+        FROM (VALUES
+              ('01M74HE3N1YMG5DHG6QA6MAH0W', 8000, 100, 60, 40, 10),
+              ('01M74HE3MVTZ79KB93T2ED660B', 2500,  40, 30, 25, 10),
+              ('01M74HE3MSF6NPJ5SQ5Q13S53B', 2400,  40, 30,  8, 10),
+              ('01M74HE3N4QS9ZJZD24JV21C72', 3000,  45, 35, 30, 10),
+              ('01M74HE3MTWMV75K99ZEVDT3ZF',  500,  18, 12,  6, 10),
+              ('01M74HE3MZTQWD9M95JYT23FJH',  300,  18, 14,  8, 10),
+              ('01M74HE3N6JBESAW2BKYA16FN9',  600,  20, 20, 12, 10),
+              ('01M74HE3P88MM61GVQTCBCXKYY',  700,  20, 20, 12, 10),
+              ('01M74HE3N0BWRVH8X39M1J4SNF',  350,  15, 12,  8, 10),
+              ('01M74HE3N83EMA729168PYZ198',  300,  12,  8,  8, 10),
+              ('01M74HE3N2C3VBKNEXH6AJGTFX',  350,  15, 12,  8, 10),
+              ('01M74HE3MX1K93268VV48XMWS5',  900,  33, 22, 13, 10),
+              ('01M74HE3N76WFH74WV4T5K8GGG',  250,  25, 20,  5, 10),
+              ('01M74HE3MYEC48790V223A7HHV',  250,  25, 20,  5, 10),
+              ('01M74HE3MWRPZD13E3VVXXS295',  250,  25, 20,  5, 10),
+              ('01M74HE3N5PV0GTA9WGCR4EASP', 1200,  30, 25, 20, 10),
+              ('01M74HE3MQBQ0KZ9R3T2FV6DV0',  600,  25, 20, 10, 10),
+              ('01M74HE3N3HMVFX4902GGEFF52', 1000,  30, 25, 20, 10)
+        ) AS cp(category_id, weight_gram, length_cm, width_cm, height_cm, priority)
+       WHERE p.category_ids @> to_jsonb(cp.category_id)
+       ORDER BY cp.priority ASC, cp.weight_gram DESC
+       LIMIT 1
+) pick ON TRUE;
 
 INSERT INTO product_translations (product_id, locale, name, ai_description, created_at, updated_at) VALUES
 ('01M74HBRFPWDXZ8WBWK0J1HGHN', 'en', 'Alpha 1 Neural Control Panel', 'Khung ảnh cây gia đình lưu giữ kỷ niệm', '2026-10-11 07:15:44.631276+00:00', '2026-10-11 07:15:44.631276+00:00'),
@@ -49304,37 +49348,22 @@ INSERT INTO product_sold_counters (product_id, sold_count, updated_at) VALUES
 ('01M74HBSF9905FCBY7NR3Z1K7T', 5, NOW()),
 ('01M74HBSFACVX9S816XPX1WXJ5', 2, NOW());
 
-UPDATE product_variants v
-   SET weight_gram = COALESCE(pick.weight_gram, 600),
-       length_cm   = COALESCE(pick.length_cm,  25),
-       width_cm    = COALESCE(pick.width_cm,   20),
-       height_cm   = COALESCE(pick.height_cm,  10)
-  FROM products p
-  LEFT JOIN LATERAL (
-        SELECT cp.weight_gram, cp.length_cm, cp.width_cm, cp.height_cm
-          FROM (VALUES
-                ('01M74HE3N1YMG5DHG6QA6MAH0W', 8000, 100, 60, 40, 10),
-                ('01M74HE3MVTZ79KB93T2ED660B', 2500,  40, 30, 25, 10),
-                ('01M74HE3MSF6NPJ5SQ5Q13S53B', 2400,  40, 30,  8, 10),
-                ('01M74HE3N4QS9ZJZD24JV21C72', 3000,  45, 35, 30, 10),
-                ('01M74HE3MTWMV75K99ZEVDT3ZF',  500,  18, 12,  6, 10),
-                ('01M74HE3MZTQWD9M95JYT23FJH',  300,  18, 14,  8, 10),
-                ('01M74HE3N6JBESAW2BKYA16FN9',  600,  20, 20, 12, 10),
-                ('01M74HE3P88MM61GVQTCBCXKYY',  700,  20, 20, 12, 10),
-                ('01M74HE3N0BWRVH8X39M1J4SNF',  350,  15, 12,  8, 10),
-                ('01M74HE3N83EMA729168PYZ198',  300,  12,  8,  8, 10),
-                ('01M74HE3N2C3VBKNEXH6AJGTFX',  350,  15, 12,  8, 10),
-                ('01M74HE3MX1K93268VV48XMWS5',  900,  33, 22, 13, 10),
-                ('01M74HE3N76WFH74WV4T5K8GGG',  250,  25, 20,  5, 10),
-                ('01M74HE3MYEC48790V223A7HHV',  250,  25, 20,  5, 10),
-                ('01M74HE3MWRPZD13E3VVXXS295',  250,  25, 20,  5, 10),
-                ('01M74HE3N5PV0GTA9WGCR4EASP', 1200,  30, 25, 20, 10),
-                ('01M74HE3MQBQ0KZ9R3T2FV6DV0',  600,  25, 20, 10, 10),
-                ('01M74HE3N3HMVFX4902GGEFF52', 1000,  30, 25, 20, 10)
-          ) AS cp(category_id, weight_gram, length_cm, width_cm, height_cm, priority)
-         WHERE p.category_ids @> to_jsonb(cp.category_id)
-         ORDER BY cp.priority ASC, cp.weight_gram DESC
-         LIMIT 1
-  ) pick ON TRUE
- WHERE v.product_id = p.product_id
-   AND v.weight_gram IS NULL;
+INSERT INTO merchant_followers (merchant_id, user_id, followed_at)
+SELECT m.merchant_id,
+       u.user_id,
+       NOW() - (u.rn * INTERVAL '1 day')
+FROM merchants m
+JOIN (
+    SELECT user_id, ROW_NUMBER() OVER (ORDER BY user_id) AS rn
+    FROM users
+    ORDER BY user_id
+    LIMIT 50
+) u ON TRUE
+ON CONFLICT (merchant_id, user_id) DO NOTHING;
+INSERT INTO collections (collection_id, slug, name, description, image_url, active, display_order)
+VALUES
+('01M74HBRD7PZVEA5VR3H1SM3N4', 'cong-nghe', 'Công nghệ', 'Điện thoại, laptop và phụ kiện công nghệ.', NULL, TRUE, 1),
+('01M74HBRD8EM0XZQ6RECK4VHAR', 'thoi-trang', 'Thời trang', 'Quần áo, giày dép và phụ kiện thời trang.', NULL, TRUE, 2),
+('01M74HBRD94PS4JKKC7TJ8NG9N', 'do-gia-dung', 'Đồ gia dụng', 'Nội thất, nhà cửa và đồ dùng gia đình.', NULL, TRUE, 3),
+('01M74HBRDAWQ2NX5NAZQF5WVQZ', 'lam-dep', 'Làm đẹp', 'Mỹ phẩm, chăm sóc da và sức khỏe.', NULL, TRUE, 4)
+ON CONFLICT (collection_id) DO NOTHING;

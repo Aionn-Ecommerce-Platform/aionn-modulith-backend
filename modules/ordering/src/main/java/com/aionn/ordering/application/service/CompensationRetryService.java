@@ -26,6 +26,7 @@ public class CompensationRetryService {
     private final FlashSaleQueryPort flashSaleQueryPort;
     private final CompensationRetryPolicy retryPolicy;
     private final Clock clock;
+    private final OrderService orderService;
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void retry(String taskId) {
@@ -37,6 +38,7 @@ public class CompensationRetryService {
                 case VOUCHER_RELEASE -> voucherGateway.release(task.userId(), task.orderId(), task.reason());
                 case FLASH_SALE_RELEASE -> flashSaleQueryPort.release(task.resourceId());
                 case STOCK_COMMIT -> stockGateway.commit(task.resourceId());
+                case SHIPMENT_REGISTER -> orderService.retryShipmentRegistration(task.orderId());
                 case REFUND -> {
                     var order = orderPersistencePort.findById(task.orderId()).orElseThrow();
                     if (task.resourceId() != null) {

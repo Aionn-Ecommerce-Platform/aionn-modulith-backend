@@ -36,8 +36,6 @@ public class CartService {
         cart.addItem(command.skuId(), command.qty(), clock.instant());
         Cart saved = cartPersistencePort.save(cart);
         eventPublisher.publish(cart.pullEvents());
-        // Published as an integration event as well as a domain one: cross-module consumers receive
-        // integration events unwrapped, whereas domain events arrive inside an EventEnvelope.
         integrationEventPublisher.publishCartItemAdded(
                 saved.getCartId(), command.userId(), command.skuId(), command.qty(), clock.instant());
         return saved;

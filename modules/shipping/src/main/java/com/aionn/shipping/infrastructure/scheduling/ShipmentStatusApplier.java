@@ -69,7 +69,13 @@ public class ShipmentStatusApplier {
                         late);
             }
             case DELIVERY_FAILED -> integrationEventPublisher.publishDeliveryFailed(
-                    saved.getShipmentId(), saved.getOrderId(), detail.reason(), saved.getAttemptCount());
+                    saved.getShipmentId(), saved.getOrderId(), saved.getUserId(), detail.reason(),
+                    saved.getAttemptCount());
+            case RETURNED -> integrationEventPublisher.publishReturned(
+                    saved.getShipmentId(), saved.getOrderId(), saved.getUserId(), saved.getMerchantId(),
+                    detail.reason());
+            case CANCELLED -> integrationEventPublisher.publishCancelled(
+                    saved.getShipmentId(), saved.getOrderId(), detail.reason());
             default -> {
                 /* in-transit / out-for-delivery / returned do not surface to other contexts */
             }

@@ -1,5 +1,6 @@
 package com.aionn.ordering.infrastructure.scheduling;
 
+import com.aionn.ordering.application.port.out.CompensationTaskPort;
 import com.aionn.ordering.application.port.out.OrderPersistencePort;
 import com.aionn.ordering.application.port.out.StockReservationGateway;
 import com.aionn.ordering.application.port.out.integration.OrderingIntegrationEventPublisherPort;
@@ -40,6 +41,9 @@ class OrderAutoCancelWorkerTest {
 
     @Mock
     private OrderingIntegrationEventPublisherPort integrationEventPublisher;
+
+    @Mock
+    private CompensationTaskPort compensationTaskPort;
 
     @Mock
     private Clock clock;
@@ -136,6 +140,7 @@ class OrderAutoCancelWorkerTest {
 
         verify(stockReservationGateway).release("res-1", "auto-cancel");
         verify(stockReservationGateway).release("res-2", "auto-cancel");
+        verify(compensationTaskPort).enqueue(any(CompensationTaskPort.Task.class));
         verify(orderPersistencePort).save(order);
         verify(integrationEventPublisher).publishOrderCancelled(
                 anyString(), anyString(), anyString(), any(CancellationKind.class));

@@ -49,21 +49,36 @@ CREATE INDEX idx_shipments_active_tracking ON shipments(status, tracking_code)
 CREATE INDEX idx_shipments_last_polled     ON shipments(status, last_polled_at);
 
 CREATE TABLE shipping_rates (
-    rate_id    VARCHAR(50) PRIMARY KEY,
-    zone_code  VARCHAR(50) NOT NULL UNIQUE,
-    base_fee   NUMERIC(18,2) NOT NULL,
-    currency   VARCHAR(3)    NOT NULL,
-    condition  TEXT,
-    version    BIGINT        NOT NULL DEFAULT 0,
-    created_at TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    rate_id                  VARCHAR(50) PRIMARY KEY,
+    zone_code                VARCHAR(50) NOT NULL UNIQUE,
+    base_fee                 NUMERIC(18,2) NOT NULL,
+    currency                 VARCHAR(3)    NOT NULL,
+    condition                TEXT,
+    base_weight_gram         INTEGER       NOT NULL DEFAULT 1000,
+    step_weight_gram         INTEGER       NOT NULL DEFAULT 500,
+    step_fee                 NUMERIC(18,2) NOT NULL DEFAULT 0,
+    max_fee                  NUMERIC(18,2),
+    free_shipping_threshold  NUMERIC(18,2),
+    express_extra_fee        NUMERIC(18,2) NOT NULL DEFAULT 0,
+    express_eta_days         INT,
+    version                  BIGINT        NOT NULL DEFAULT 0,
+    created_at               TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    updated_at               TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_rate_base_weight_pos CHECK (base_weight_gram > 0),
+    CONSTRAINT chk_rate_step_weight_pos CHECK (step_weight_gram > 0),
+    CONSTRAINT chk_rate_step_fee_nonneg CHECK (step_fee >= 0),
+    CONSTRAINT chk_rate_max_fee_nonneg CHECK (max_fee IS NULL OR max_fee >= 0)
 );
 
 -- Baseline domestic fallback rates.
-INSERT INTO shipping_rates (rate_id, zone_code, base_fee, currency, condition, version, created_at, updated_at) VALUES
-('SR_VN_HN', '01', 30000.0, 'VND', 'Hanoi Delivery', 0, NOW(), NOW()),
-('SR_VN_SG', '79', 35000.0, 'VND', 'HCMC Delivery', 0, NOW(), NOW()),
-('SR_VN_DN', '48', 40000.0, 'VND', 'Da Nang Delivery', 0, NOW(), NOW());
+INSERT INTO shipping_rates (
+    rate_id, zone_code, base_fee, currency, condition, step_fee,
+    free_shipping_threshold, express_extra_fee, express_eta_days,
+    version, created_at, updated_at
+) VALUES
+('SR_VN_HN', '01', 30000.0, 'VND', 'Hanoi Delivery', 5000, 500000, 20000, 1, 0, NOW(), NOW()),
+('SR_VN_SG', '79', 35000.0, 'VND', 'HCMC Delivery', 5000, 500000, 20000, 1, 0, NOW(), NOW()),
+('SR_VN_DN', '48', 40000.0, 'VND', 'Da Nang Delivery', 5000, 500000, 20000, 1, 0, NOW(), NOW());
 
 CREATE TABLE processed_carrier_webhooks (
     event_id     VARCHAR(150) PRIMARY KEY,

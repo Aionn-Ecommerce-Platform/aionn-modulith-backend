@@ -13,7 +13,7 @@ public record CarrierWebhookCommand(
         String reason,
         String warehouseId,
         String webhookSecret,
-        String rawPayload,
+        byte[] rawPayload,
         String signature,
         String timestamp,
         String eventId) implements Command {

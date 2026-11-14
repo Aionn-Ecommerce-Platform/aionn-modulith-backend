@@ -1,9 +1,11 @@
 package com.aionn.shipping.infrastructure.integration;
 
 import com.aionn.shipping.application.port.out.integration.ShippingIntegrationEventPublisherPort;
+import com.aionn.contracts.event.shipping.ShipmentCancelledIntegrationEvent;
 import com.aionn.contracts.event.shipping.ShipmentDeliveredIntegrationEvent;
 import com.aionn.contracts.event.shipping.ShipmentDeliveryFailedIntegrationEvent;
 import com.aionn.contracts.event.shipping.ShipmentDispatchedIntegrationEvent;
+import com.aionn.contracts.event.shipping.ShipmentReturnedIntegrationEvent;
 import com.aionn.contracts.publisher.IntegrationEventPublisher;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
@@ -52,8 +54,22 @@ public class ShippingIntegrationEventPublisher implements ShippingIntegrationEve
     }
 
     @Override
-    public void publishDeliveryFailed(String shipmentId, String orderId, String reason, int attemptCount) {
+    public void publishDeliveryFailed(String shipmentId, String orderId, String userId, String reason,
+            int attemptCount) {
         integrationEventPublisher.publish(new ShipmentDeliveryFailedIntegrationEvent(
-                IdGenerator.ulid(), shipmentId, orderId, reason, attemptCount, clock.instant()));
+                IdGenerator.ulid(), shipmentId, orderId, userId, reason, attemptCount, clock.instant()));
+    }
+
+    @Override
+    public void publishCancelled(String shipmentId, String orderId, String reason) {
+        integrationEventPublisher.publish(new ShipmentCancelledIntegrationEvent(
+                IdGenerator.ulid(), shipmentId, orderId, reason, clock.instant()));
+    }
+
+    @Override
+    public void publishReturned(String shipmentId, String orderId, String userId, String merchantId,
+            String reason) {
+        integrationEventPublisher.publish(new ShipmentReturnedIntegrationEvent(
+                IdGenerator.ulid(), shipmentId, orderId, userId, merchantId, reason, clock.instant()));
     }
 }

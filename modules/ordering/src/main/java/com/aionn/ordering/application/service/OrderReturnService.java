@@ -84,6 +84,10 @@ public class OrderReturnService {
             throw new OrderingException(OrderingErrorCode.RETURN_INVALID_STATE,
                     "This order already has an active return request");
         }
+        if (command.items() == null || command.items().isEmpty()) {
+            throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
+                    "Select at least one item to return");
+        }
         OrderReturn r = OrderReturn.request(IdGenerator.ulid(), order.getOrderId(),
                 order.getUserId(), order.getMerchantId(), command.reason(), command.evidenceUrl(), now);
         OrderReturn saved = orderReturnPersistencePort.save(r);
@@ -139,18 +143,14 @@ public class OrderReturnService {
                 throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
                         "Refund currency must match the order currency");
             }
-            Money refundAmount = command.refundAmount() == null
-                    ? null
-                    : Money.of(command.refundAmount(), currency);
-            if (refundAmount != null
-                    && refundAmount.amount().compareTo(order.getTotalAmount().amount()) > 0) {
-                throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
-                        "Refund amount exceeds the order total");
-            }
             if (r.getStatus() == ReturnStatus.APPROVED) {
-                ensureSameApproval(r, refundAmount, command.returnWarehouseId());
+                Money requested = command.refundAmount() == null
+                        ? r.getRefundAmount()
+                        : Money.of(command.refundAmount(), currency);
+                ensureSameApproval(r, requested, command.returnWarehouseId());
                 return r;
             }
+            Money refundAmount = resolveRefundAmount(r, order, command.refundAmount(), currency);
             r.approve(refundAmount, command.returnWarehouseId(), clock.instant());
             OrderReturn persisted = orderReturnPersistencePort.save(r);
             eventPublisher.publish(r.pullEvents());
@@ -267,13 +267,30 @@ public class OrderReturnService {
         OrderReturn saved = transactionTemplate.execute(status -> {
             OrderReturn r = orderReturnPersistencePort.findById(returnId)
                     .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
-            Money refund = refundAmount == null
-                    ? null
-                    : Money.of(refundAmount,
-                            currency == null ? orderDefaultsPolicy.defaultCurrency() : currency);
+            Order order = orderPersistencePort.findById(r.getOrderId()).orElse(null);
+            String effectiveCurrency = currency != null ? currency
+                    : order != null ? order.getTotalAmount().currency()
+                            : orderDefaultsPolicy.defaultCurrency();
+            if (order != null && !effectiveCurrency.equalsIgnoreCase(order.getTotalAmount().currency())) {
+                throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
+                        "Refund currency must match the order currency");
+            }
             if (r.getStatus() == ReturnStatus.APPROVED) {
-                ensureSameApproval(r, refund, returnWarehouseId);
+                Money requested = refundAmount == null
+                        ? r.getRefundAmount()
+                        : Money.of(refundAmount, effectiveCurrency);
+                ensureSameApproval(r, requested, returnWarehouseId);
                 return r;
+            }
+            Money refund;
+            if (order != null) {
+                refund = resolveRefundAmount(r, order, refundAmount, effectiveCurrency);
+            } else {
+                if (refundAmount == null) {
+                    throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
+                            "refundAmount is required when the order is missing");
+                }
+                refund = Money.of(refundAmount, effectiveCurrency);
             }
             r.approve(refund, returnWarehouseId, clock.instant());
             OrderReturn persisted = orderReturnPersistencePort.save(r);
@@ -281,6 +298,31 @@ public class OrderReturnService {
             return persisted;
         });
         return attemptRefund(saved.getReturnId(), "return approved (admin)");
+    }
+
+    private Money resolveRefundAmount(OrderReturn r, Order order, BigDecimal requested, String currency) {
+        List<OrderReturnItemPersistencePort.Item> items =
+                orderReturnItemPersistencePort.findByReturnId(r.getReturnId());
+        BigDecimal selectedTotal = items == null ? BigDecimal.ZERO
+                : items.stream()
+                        .map(OrderReturnItemPersistencePort.Item::refundAmount)
+                        .filter(Objects::nonNull)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal amount = requested != null ? requested
+                : selectedTotal.signum() > 0 ? selectedTotal : order.getTotalAmount().amount();
+        if (amount.signum() < 0) {
+            throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
+                    "Refund amount must not be negative");
+        }
+        if (selectedTotal.signum() > 0 && amount.compareTo(selectedTotal) > 0) {
+            throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
+                    "Refund amount exceeds the selected return items");
+        }
+        if (amount.compareTo(order.getTotalAmount().amount()) > 0) {
+            throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
+                    "Refund amount exceeds the order total");
+        }
+        return Money.of(amount, currency);
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)

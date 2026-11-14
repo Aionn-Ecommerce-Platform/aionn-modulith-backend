@@ -7,10 +7,6 @@ import com.aionn.catalog.application.policy.SearchIndexBatchPolicy;
 import com.aionn.catalog.infrastructure.config.properties.CatalogProductProperties;
 import org.springframework.stereotype.Component;
 
-/**
- * One adapter over {@code CatalogProductProperties}; the application-facing contracts stay narrow so
- * each service depends only on the rule it uses.
- */
 @Component
 public class SpringCatalogProductPolicy
         implements BulkPriceUpdatePolicy, BestSellerPolicy, SearchIndexBatchPolicy, ProductClonePolicy {

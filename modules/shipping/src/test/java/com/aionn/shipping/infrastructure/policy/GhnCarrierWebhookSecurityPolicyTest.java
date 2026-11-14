@@ -30,7 +30,7 @@ class GhnCarrierWebhookSecurityPolicyTest {
 
         assertThat(policy.isAuthorized(null)).isFalse();
         assertThat(policy.isAuthorized("any-secret")).isFalse();
-        assertThat(policy.isAuthorized(PAYLOAD, hmac("any-secret"), TIMESTAMP, null)).isFalse();
+        assertThat(policy.isAuthorized(PAYLOAD.getBytes(StandardCharsets.UTF_8), hmac("any-secret"), TIMESTAMP, null)).isFalse();
     }
 
     @Test
@@ -46,8 +46,8 @@ class GhnCarrierWebhookSecurityPolicyTest {
     void acceptsValidHmacSignature() {
         when(properties.webhookSecret()).thenReturn("expected-secret");
 
-        assertThat(policy.isAuthorized(PAYLOAD, hmac("expected-secret"), TIMESTAMP, null)).isTrue();
-        assertThat(policy.isAuthorized(PAYLOAD, hmac("wrong-secret"), TIMESTAMP, null)).isFalse();
+        assertThat(policy.isAuthorized(PAYLOAD.getBytes(StandardCharsets.UTF_8), hmac("expected-secret"), TIMESTAMP, null)).isTrue();
+        assertThat(policy.isAuthorized(PAYLOAD.getBytes(StandardCharsets.UTF_8), hmac("wrong-secret"), TIMESTAMP, null)).isFalse();
     }
 
     @Test
@@ -55,7 +55,7 @@ class GhnCarrierWebhookSecurityPolicyTest {
         when(properties.webhookSecret()).thenReturn("expected-secret");
         String stale = String.valueOf(Long.parseLong(TIMESTAMP) - 600);
 
-        assertThat(policy.isAuthorized(PAYLOAD, hmacAt("expected-secret", stale), stale, null)).isFalse();
+        assertThat(policy.isAuthorized(PAYLOAD.getBytes(StandardCharsets.UTF_8), hmacAt("expected-secret", stale), stale, null)).isFalse();
     }
 
     private static String hmac(String secret) {

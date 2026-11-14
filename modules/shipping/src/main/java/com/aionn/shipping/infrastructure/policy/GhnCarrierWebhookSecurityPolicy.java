@@ -7,11 +7,12 @@ import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HexFormat;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 @Component
 @RequiredArgsConstructor
@@ -35,7 +36,7 @@ public class GhnCarrierWebhookSecurityPolicy implements CarrierWebhookSecurityPo
     }
 
     @Override
-    public boolean isAuthorized(String payload, String signature, String timestamp,
+    public boolean isAuthorized(byte[] payload, String signature, String timestamp,
             String legacySecret) {
         if (signature == null || signature.isBlank()
                 || timestamp == null || timestamp.isBlank()
@@ -54,21 +55,13 @@ public class GhnCarrierWebhookSecurityPolicy implements CarrierWebhookSecurityPo
             }
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-            byte[] expected = mac.doFinal((timestamp + "." + payload).getBytes(StandardCharsets.UTF_8));
-            byte[] actual = hexToBytes(signature);
+            mac.update(timestamp.getBytes(StandardCharsets.UTF_8));
+            mac.update((byte) '.');
+            byte[] expected = mac.doFinal(payload);
+            byte[] actual = HexFormat.of().parseHex(signature);
             return MessageDigest.isEqual(expected, actual);
         } catch (Exception ex) {
             return false;
         }
-    }
-
-    private static byte[] hexToBytes(String hex) {
-        int len = hex.length();
-        byte[] out = new byte[len / 2];
-        for (int i = 0; i < len; i += 2) {
-            out[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4)
-                    + Character.digit(hex.charAt(i + 1), 16));
-        }
-        return out;
     }
 }

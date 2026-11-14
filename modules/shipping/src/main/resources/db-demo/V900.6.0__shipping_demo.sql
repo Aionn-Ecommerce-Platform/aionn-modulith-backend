@@ -1,5 +1,3 @@
--- Shipping Demo Seed Data (Pure INSERTs)
-
 INSERT INTO shipments (
     shipment_id, order_id, merchant_id, user_id, tracking_code, carrier_order_id,
     weight_gram, to_full_name, to_phone, to_address_line, to_ward_code,

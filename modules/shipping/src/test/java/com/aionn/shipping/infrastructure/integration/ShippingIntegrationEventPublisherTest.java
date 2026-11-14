@@ -70,7 +70,7 @@ class ShippingIntegrationEventPublisherTest {
 
     @Test
     void publishDeliveryFailedPublishesEvent() {
-        publisher.publishDeliveryFailed("S_1", "O_1", "Failed", 2);
+        publisher.publishDeliveryFailed("S_1", "O_1", "U_1", "Failed", 2);
 
         ArgumentCaptor<ShipmentDeliveryFailedIntegrationEvent> captor =
                 ArgumentCaptor.forClass(ShipmentDeliveryFailedIntegrationEvent.class);

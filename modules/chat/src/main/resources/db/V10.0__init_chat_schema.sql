@@ -9,6 +9,7 @@ CREATE TABLE chat_conversations (
     last_message_sender_id VARCHAR(50),
     last_message_at        TIMESTAMPTZ,
     is_archived            BOOLEAN     NOT NULL DEFAULT FALSE,
+    archived_participants  JSONB       NOT NULL DEFAULT '[]'::jsonb,
     version                BIGINT      NOT NULL DEFAULT 0,
     created_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at             TIMESTAMPTZ NOT NULL DEFAULT NOW()

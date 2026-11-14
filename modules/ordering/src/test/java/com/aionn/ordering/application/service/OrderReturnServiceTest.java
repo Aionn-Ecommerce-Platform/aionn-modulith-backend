@@ -155,10 +155,50 @@ class OrderReturnServiceTest {
                 .thenAnswer(inv -> inv.getArgument(0));
 
         OrderReturn result = service.requestReturn(
-                new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null));
+                new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null,
+                        List.of(new RequestReturnCommand.Item("sku-1", 1))));
 
         assertEquals(ReturnStatus.REQUESTED, result.getStatus());
         verify(orderReturnPersistencePort).save(any(OrderReturn.class));
+    }
+
+    @Test
+    void requestReturnRejectsEmptyItemSelection() {
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+
+        assertThrows(OrderingException.class, () -> service.requestReturn(
+                new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null, List.of())));
+
+        verify(orderReturnPersistencePort, never()).save(any());
+    }
+
+    @Test
+    void approveRejectsRefundAboveSelectedItems() {
+        OrderReturn r = requestedReturn();
+        when(orderReturnPersistencePort.findById(RETURN_ID)).thenReturn(Optional.of(r));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+        when(orderReturnItemPersistencePort.findByReturnId(RETURN_ID)).thenReturn(List.of(
+                new OrderReturnItemPersistencePort.Item("sku-1", 1,
+                        BigDecimal.valueOf(50), BigDecimal.valueOf(50))));
+
+        assertThrows(OrderingException.class, () -> service.approve(
+                new ApproveReturnCommand(RETURN_ID, MERCHANT_ID, BigDecimal.valueOf(100), "VND", "wh-1")));
+    }
+
+    @Test
+    void approveUsesSelectedItemsTotalWhenAmountIsMissing() {
+        OrderReturn r = requestedReturn();
+        when(orderReturnPersistencePort.findById(RETURN_ID)).thenReturn(Optional.of(r));
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+        when(orderReturnPersistencePort.save(r)).thenReturn(r);
+        when(orderReturnItemPersistencePort.findByReturnId(RETURN_ID)).thenReturn(List.of(
+                new OrderReturnItemPersistencePort.Item("sku-1", 1,
+                        BigDecimal.valueOf(50), BigDecimal.valueOf(50))));
+
+        OrderReturn result = service.approve(
+                new ApproveReturnCommand(RETURN_ID, MERCHANT_ID, null, "VND", "wh-1"));
+
+        assertEquals(BigDecimal.valueOf(50), result.getRefundAmount().amount());
     }
 
     @Test
