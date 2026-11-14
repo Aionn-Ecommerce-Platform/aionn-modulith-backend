@@ -8,7 +8,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.aionn.ucp.adapter.rest.dto.UcpErrorResponse;
+import com.aionn.ucp.adapter.rest.dto.response.UcpErrorResponse;
 import com.aionn.ucp.domain.exception.UcpProtocolException;
 import com.aionn.ucp.infrastructure.config.UcpProperties;
 import java.util.Set;

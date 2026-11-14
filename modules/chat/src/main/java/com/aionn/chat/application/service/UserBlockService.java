@@ -20,33 +20,33 @@ import java.util.Optional;
 @Transactional
 public class UserBlockService {
 
-    private final UserBlockPersistencePort repository;
+    private final UserBlockPersistencePort userBlockPersistencePort;
     private final EventPublisher eventPublisher;
     private final Clock clock;
 
     public UserBlock block(BlockCommands.BlockUser command) {
-        Optional<UserBlock> existing = repository.findActive(command.blockerId(), command.blockedId());
+        Optional<UserBlock> existing = userBlockPersistencePort.findActive(command.blockerId(), command.blockedId());
         if (existing.isPresent()) {
             return existing.get();
         }
         UserBlock block = UserBlock.block(IdGenerator.ulid(),
                 command.blockerId(), command.blockedId(), command.reason(), clock);
-        UserBlock saved = repository.save(block);
+        UserBlock saved = userBlockPersistencePort.save(block);
         eventPublisher.publish(block.pullEvents());
         return saved;
     }
 
     public UserBlock unblock(BlockCommands.UnblockUser command) {
-        UserBlock block = repository.findActive(command.blockerId(), command.blockedId())
+        UserBlock block = userBlockPersistencePort.findActive(command.blockerId(), command.blockedId())
                 .orElseThrow(() -> new ChatException(ChatErrorCode.BLOCK_NOT_FOUND));
         block.unblock(clock);
-        UserBlock saved = repository.save(block);
+        UserBlock saved = userBlockPersistencePort.save(block);
         eventPublisher.publish(block.pullEvents());
         return saved;
     }
 
     @Transactional(readOnly = true)
     public List<UserBlock> listMyBlocks(String userId) {
-        return repository.findByBlocker(userId);
+        return userBlockPersistencePort.findByBlocker(userId);
     }
 }

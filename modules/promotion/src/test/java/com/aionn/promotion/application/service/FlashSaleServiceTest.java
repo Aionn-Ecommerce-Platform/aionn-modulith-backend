@@ -44,9 +44,9 @@ class FlashSaleServiceTest {
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
     @Mock
-    private FlashSaleRegistrationPersistencePort registrationRepository;
+    private FlashSaleRegistrationPersistencePort flashSaleRegistrationPersistencePort;
     @Mock
-    private PromotionCampaignPersistencePort campaignRepository;
+    private PromotionCampaignPersistencePort promotionCampaignPersistencePort;
     @Mock
     private MerchantQueryPort merchantQueryPort;
     @Mock
@@ -62,7 +62,7 @@ class FlashSaleServiceTest {
         org.mockito.Mockito.lenient().when(defaultsPolicy.defaultCurrency()).thenReturn("VND");
         org.mockito.Mockito.lenient().when(limitPolicy.maxRegistrationLimit()).thenReturn(200);
         org.mockito.Mockito.lenient().when(limitPolicy.maxActiveFlashSaleLimit()).thenReturn(50);
-        return new FlashSaleService(registrationRepository, campaignRepository,
+        return new FlashSaleService(flashSaleRegistrationPersistencePort, promotionCampaignPersistencePort,
                 merchantQueryPort, pricingQueryPort, CLOCK, eventPublisher, defaultsPolicy, limitPolicy);
     }
 
@@ -97,15 +97,15 @@ class FlashSaleServiceTest {
     }
 
     private void echoSave() {
-        when(registrationRepository.save(any(FlashSaleRegistration.class)))
+        when(flashSaleRegistrationPersistencePort.save(any(FlashSaleRegistration.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
     void registerCreatesPendingRegistration() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.of(campaign(CampaignType.FLASH_SALE)));
-        when(registrationRepository.findActiveBySkuAndCampaign("camp-1", "sku-1"))
+        when(promotionCampaignPersistencePort.findById("camp-1")).thenReturn(Optional.of(campaign(CampaignType.FLASH_SALE)));
+        when(flashSaleRegistrationPersistencePort.findActiveBySkuAndCampaign("camp-1", "sku-1"))
                 .thenReturn(Optional.empty());
         when(pricingQueryPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of("sku-1",
                 new PricingQueryPort.SkuPricing("sku-1", "mer-1", new BigDecimal("100000"), "VND", true)));
@@ -122,8 +122,8 @@ class FlashSaleServiceTest {
     @Test
     void registerFallsBackToCatalogCurrency() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.of(campaign(CampaignType.FLASH_SALE)));
-        when(registrationRepository.findActiveBySkuAndCampaign("camp-1", "sku-1"))
+        when(promotionCampaignPersistencePort.findById("camp-1")).thenReturn(Optional.of(campaign(CampaignType.FLASH_SALE)));
+        when(flashSaleRegistrationPersistencePort.findActiveBySkuAndCampaign("camp-1", "sku-1"))
                 .thenReturn(Optional.empty());
         when(pricingQueryPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of("sku-1",
                 new PricingQueryPort.SkuPricing("sku-1", "mer-1", new BigDecimal("100000"), "USD", true)));
@@ -149,7 +149,7 @@ class FlashSaleServiceTest {
     @Test
     void registerRejectsMissingCampaign() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.empty());
+        when(promotionCampaignPersistencePort.findById("camp-1")).thenReturn(Optional.empty());
 
         FlashSaleService service = service();
         FlashSaleCommands.RegisterFlashSale command = registerCommand();
@@ -163,7 +163,7 @@ class FlashSaleServiceTest {
     @Test
     void registerRejectsNonFlashSaleCampaign() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.of(campaign(CampaignType.DISCOUNT)));
+        when(promotionCampaignPersistencePort.findById("camp-1")).thenReturn(Optional.of(campaign(CampaignType.DISCOUNT)));
 
         FlashSaleService service = service();
         FlashSaleCommands.RegisterFlashSale command = registerCommand();
@@ -177,8 +177,8 @@ class FlashSaleServiceTest {
     @Test
     void registerRejectsDuplicateSku() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.of(campaign(CampaignType.FLASH_SALE)));
-        when(registrationRepository.findActiveBySkuAndCampaign("camp-1", "sku-1"))
+        when(promotionCampaignPersistencePort.findById("camp-1")).thenReturn(Optional.of(campaign(CampaignType.FLASH_SALE)));
+        when(flashSaleRegistrationPersistencePort.findActiveBySkuAndCampaign("camp-1", "sku-1"))
                 .thenReturn(Optional.of(pending()));
 
         FlashSaleService service = service();
@@ -193,8 +193,8 @@ class FlashSaleServiceTest {
     @Test
     void registerRejectsSkuOwnedByAnotherMerchant() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.of(campaign(CampaignType.FLASH_SALE)));
-        when(registrationRepository.findActiveBySkuAndCampaign("camp-1", "sku-1"))
+        when(promotionCampaignPersistencePort.findById("camp-1")).thenReturn(Optional.of(campaign(CampaignType.FLASH_SALE)));
+        when(flashSaleRegistrationPersistencePort.findActiveBySkuAndCampaign("camp-1", "sku-1"))
                 .thenReturn(Optional.empty());
         when(pricingQueryPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of("sku-1",
                 new PricingQueryPort.SkuPricing("sku-1", "other-mer", new BigDecimal("100000"), "VND", true)));
@@ -204,14 +204,14 @@ class FlashSaleServiceTest {
 
         assertThatThrownBy(() -> service.register(command))
                 .isInstanceOf(PromotionException.class);
-        verify(registrationRepository, never()).save(any());
+        verify(flashSaleRegistrationPersistencePort, never()).save(any());
     }
 
     @Test
     void registerRejectsUnknownSku() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.of(campaign(CampaignType.FLASH_SALE)));
-        when(registrationRepository.findActiveBySkuAndCampaign("camp-1", "sku-1"))
+        when(promotionCampaignPersistencePort.findById("camp-1")).thenReturn(Optional.of(campaign(CampaignType.FLASH_SALE)));
+        when(flashSaleRegistrationPersistencePort.findActiveBySkuAndCampaign("camp-1", "sku-1"))
                 .thenReturn(Optional.empty());
         when(pricingQueryPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of());
 
@@ -224,7 +224,7 @@ class FlashSaleServiceTest {
 
     @Test
     void approveEnforcesMinimumDiscountAgainstCatalogPrice() {
-        when(registrationRepository.findById("reg-1")).thenReturn(Optional.of(pending()));
+        when(flashSaleRegistrationPersistencePort.findById("reg-1")).thenReturn(Optional.of(pending()));
         when(pricingQueryPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of("sku-1",
                 new PricingQueryPort.SkuPricing("sku-1", "mer-1", new BigDecimal("100000"), "VND", true)));
         echoSave();
@@ -238,7 +238,7 @@ class FlashSaleServiceTest {
 
     @Test
     void approveSkipsDiscountCheckWhenPricingUnavailable() {
-        when(registrationRepository.findById("reg-1")).thenReturn(Optional.of(pending()));
+        when(flashSaleRegistrationPersistencePort.findById("reg-1")).thenReturn(Optional.of(pending()));
         when(pricingQueryPort.resolvePricing(List.of("sku-1"))).thenReturn(Map.of());
         echoSave();
 
@@ -250,7 +250,7 @@ class FlashSaleServiceTest {
 
     @Test
     void approveThrowsWhenRegistrationMissing() {
-        when(registrationRepository.findById("nope")).thenReturn(Optional.empty());
+        when(flashSaleRegistrationPersistencePort.findById("nope")).thenReturn(Optional.empty());
 
         FlashSaleService service = service();
         FlashSaleCommands.ApproveFlashSale command = new FlashSaleCommands.ApproveFlashSale("nope", "admin-1");
@@ -263,7 +263,7 @@ class FlashSaleServiceTest {
 
     @Test
     void rejectStoresReason() {
-        when(registrationRepository.findById("reg-1")).thenReturn(Optional.of(pending()));
+        when(flashSaleRegistrationPersistencePort.findById("reg-1")).thenReturn(Optional.of(pending()));
         echoSave();
 
         FlashSaleRegistration reg = service().reject(
@@ -276,7 +276,7 @@ class FlashSaleServiceTest {
     @Test
     void cancelResolvesMerchantBeforeCancelling() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(registrationRepository.findById("reg-1")).thenReturn(Optional.of(pending()));
+        when(flashSaleRegistrationPersistencePort.findById("reg-1")).thenReturn(Optional.of(pending()));
         echoSave();
 
         FlashSaleRegistration reg = service().cancel(
@@ -299,7 +299,7 @@ class FlashSaleServiceTest {
     @Test
     void listByMerchantCapsLimit() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(registrationRepository.findByMerchant("mer-1", FlashSaleRegistrationStatus.PENDING, 200))
+        when(flashSaleRegistrationPersistencePort.findByMerchant("mer-1", FlashSaleRegistrationStatus.PENDING, 200))
                 .thenReturn(List.of(pending()));
 
         assertThat(service().listByMerchant("owner-1", FlashSaleRegistrationStatus.PENDING, 9999))
@@ -318,7 +318,7 @@ class FlashSaleServiceTest {
 
     @Test
     void listByStatusRaisesLimitFloor() {
-        when(registrationRepository.findByStatus(FlashSaleRegistrationStatus.PENDING, 1))
+        when(flashSaleRegistrationPersistencePort.findByStatus(FlashSaleRegistrationStatus.PENDING, 1))
                 .thenReturn(List.of(pending()));
 
         assertThat(service().listByStatus(FlashSaleRegistrationStatus.PENDING, -5)).hasSize(1);
@@ -326,7 +326,7 @@ class FlashSaleServiceTest {
 
     @Test
     void getReturnsRegistration() {
-        when(registrationRepository.findById("reg-1")).thenReturn(Optional.of(pending()));
+        when(flashSaleRegistrationPersistencePort.findById("reg-1")).thenReturn(Optional.of(pending()));
 
         assertThat(service().get("reg-1").getRegistrationId()).isEqualTo("reg-1");
     }
@@ -334,7 +334,7 @@ class FlashSaleServiceTest {
     @Test
     void getOwnedReturnsRegistrationForOwningMerchant() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(registrationRepository.findById("reg-1")).thenReturn(Optional.of(pending()));
+        when(flashSaleRegistrationPersistencePort.findById("reg-1")).thenReturn(Optional.of(pending()));
 
         assertThat(service().getOwned("reg-1", "owner-1").getRegistrationId()).isEqualTo("reg-1");
     }
@@ -342,7 +342,7 @@ class FlashSaleServiceTest {
     @Test
     void getOwnedRejectsForeignMerchant() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-2")).thenReturn(Optional.of("mer-2"));
-        when(registrationRepository.findById("reg-1")).thenReturn(Optional.of(pending()));
+        when(flashSaleRegistrationPersistencePort.findById("reg-1")).thenReturn(Optional.of(pending()));
 
         assertThatThrownBy(() -> service().getOwned("reg-1", "owner-2"))
                 .isInstanceOf(PromotionException.class)
@@ -352,16 +352,16 @@ class FlashSaleServiceTest {
 
     @Test
     void listActiveReturnsEmptyWhenNoRunningCampaigns() {
-        when(campaignRepository.findRunning(NOW, 5)).thenReturn(List.of());
+        when(promotionCampaignPersistencePort.findRunning(NOW, 5)).thenReturn(List.of());
 
         assertThat(service().listActive(5)).isEmpty();
-        verify(registrationRepository, never()).findApprovedByCampaignIds(any());
+        verify(flashSaleRegistrationPersistencePort, never()).findApprovedByCampaignIds(any());
     }
 
     @Test
     void listActiveGroupsApprovedItemsForRunningCampaigns() {
-        when(campaignRepository.findRunning(NOW, 5)).thenReturn(List.of(runningFlashCampaign()));
-        when(registrationRepository.findApprovedByCampaignIds(List.of("camp-1")))
+        when(promotionCampaignPersistencePort.findRunning(NOW, 5)).thenReturn(List.of(runningFlashCampaign()));
+        when(flashSaleRegistrationPersistencePort.findApprovedByCampaignIds(List.of("camp-1")))
                 .thenReturn(List.of(approved()));
 
         List<ActiveFlashSaleResult> active = service().listActive(5);
@@ -374,8 +374,8 @@ class FlashSaleServiceTest {
 
     @Test
     void listActiveSkipsRunningCampaignWithoutApprovedItems() {
-        when(campaignRepository.findRunning(NOW, 5)).thenReturn(List.of(runningFlashCampaign()));
-        when(registrationRepository.findApprovedByCampaignIds(List.of("camp-1")))
+        when(promotionCampaignPersistencePort.findRunning(NOW, 5)).thenReturn(List.of(runningFlashCampaign()));
+        when(flashSaleRegistrationPersistencePort.findApprovedByCampaignIds(List.of("camp-1")))
                 .thenReturn(List.of());
 
         assertThat(service().listActive(5)).isEmpty();
@@ -383,7 +383,7 @@ class FlashSaleServiceTest {
 
     @Test
     void listActiveCapsCampaignLimitBeforeQueryingRegistrations() {
-        when(campaignRepository.findRunning(NOW, 50)).thenReturn(List.of());
+        when(promotionCampaignPersistencePort.findRunning(NOW, 50)).thenReturn(List.of());
 
         assertThat(service().listActive(999)).isEmpty();
     }

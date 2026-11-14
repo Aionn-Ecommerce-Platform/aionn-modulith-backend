@@ -9,13 +9,6 @@ import com.aionn.catalog.adapter.rest.mapper.review.ReviewDtoMapper;
 import com.aionn.catalog.adapter.rest.support.session.CurrentAdminId;
 import com.aionn.catalog.adapter.rest.support.session.CurrentOwnerId;
 import com.aionn.catalog.application.dto.common.PageResult;
-import com.aionn.catalog.application.dto.review.query.CheckReviewEligibilityQuery;
-import com.aionn.catalog.application.dto.review.query.GetMyReviewsQuery;
-import com.aionn.catalog.application.dto.review.query.GetMerchantReviewsQuery;
-import com.aionn.catalog.application.dto.review.query.GetAdminProductReviewsQuery;
-import com.aionn.catalog.application.dto.review.query.GetProductRatingSummaryQuery;
-import com.aionn.catalog.application.dto.review.query.GetReportedReviewsQuery;
-import com.aionn.catalog.application.dto.review.query.GetReviewsByProductQuery;
 import com.aionn.catalog.application.dto.review.result.RatingSummary;
 import com.aionn.catalog.application.dto.review.result.ReviewEligibilityResult;
 import com.aionn.catalog.adapter.rest.dto.review.response.ReviewEligibilityResponse;
@@ -37,8 +30,6 @@ import com.aionn.catalog.application.port.in.review.SubmitReviewInputPort;
 import com.aionn.catalog.application.port.in.review.UpdateReviewInputPort;
 import com.aionn.platform.web.response.ApiResponse;
 import com.aionn.platform.web.response.PageMetadata;
-import com.aionn.sharedkernel.domain.vo.OffsetPagination;
-import com.aionn.contracts.port.identity.UserProfileLookupPort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -58,9 +49,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/catalog")
@@ -84,7 +72,6 @@ public class ReviewController {
         private final GetProductRatingSummaryInputPort getProductRatingSummaryInputPort;
         private final CheckReviewEligibilityInputPort checkReviewEligibilityInputPort;
         private final ReviewDtoMapper reviewDtoMapper;
-        private final UserProfileLookupPort userProfileLookupPort;
 
         @PostMapping("/products/{productId}/reviews")
         @PreAuthorize("isAuthenticated()")
@@ -182,8 +169,8 @@ public class ReviewController {
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "20") int size) {
                 PageResult<ReviewResult> result = getReviewsByProductInputPort.execute(
-                                new GetReviewsByProductQuery(productId, OffsetPagination.of(page, size)));
-                List<ReviewResponse> responses = enrichWithProfiles(reviewDtoMapper.toResponses(result.content()));
+                                reviewDtoMapper.toReviewsByProductQuery(productId, page, size));
+                List<ReviewResponse> responses = reviewDtoMapper.toResponses(result.content());
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
                                 responses,
                                 PageMetadata.of(result.page(), result.size(), result.totalElements()),
@@ -194,7 +181,7 @@ public class ReviewController {
         @Operation(summary = "Rating summary for a product")
         public ResponseEntity<ApiResponse<RatingSummary>> ratingSummary(@PathVariable String productId) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                getProductRatingSummaryInputPort.execute(new GetProductRatingSummaryQuery(productId)),
+                                getProductRatingSummaryInputPort.execute(reviewDtoMapper.toRatingSummaryQuery(productId)),
                                 "Rating summary fetched"));
         }
 
@@ -206,8 +193,8 @@ public class ReviewController {
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "20") int size) {
                 PageResult<ReviewResult> result = getMyReviewsInputPort.execute(
-                                new GetMyReviewsQuery(userId, OffsetPagination.of(page, size)));
-                List<ReviewResponse> responses = enrichWithProfiles(reviewDtoMapper.toResponses(result.content()));
+                                reviewDtoMapper.toMyReviewsQuery(userId, page, size));
+                List<ReviewResponse> responses = reviewDtoMapper.toResponses(result.content());
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
                                 responses,
                                 PageMetadata.of(result.page(), result.size(), result.totalElements()),
@@ -223,8 +210,8 @@ public class ReviewController {
                         @RequestParam(defaultValue = "0") @Min(0) int page,
                         @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
                 PageResult<ReviewResult> result = getMerchantReviewsInputPort.execute(
-                                new GetMerchantReviewsQuery(ownerId, replied, OffsetPagination.of(page, size)));
-                List<ReviewResponse> responses = enrichWithProfiles(reviewDtoMapper.toResponses(result.content()));
+                                reviewDtoMapper.toMerchantReviewsQuery(ownerId, replied, page, size));
+                List<ReviewResponse> responses = reviewDtoMapper.toResponses(result.content());
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
                                 responses,
                                 PageMetadata.of(result.page(), result.size(), result.totalElements()),
@@ -238,8 +225,8 @@ public class ReviewController {
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "20") int size) {
                 PageResult<ReviewResult> result = getReportedReviewsInputPort.execute(
-                                new GetReportedReviewsQuery(OffsetPagination.of(page, size)));
-                List<ReviewResponse> responses = enrichWithProfiles(reviewDtoMapper.toResponses(result.content()));
+                                reviewDtoMapper.toReportedReviewsQuery(page, size));
+                List<ReviewResponse> responses = reviewDtoMapper.toResponses(result.content());
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
                                 responses,
                                 PageMetadata.of(result.page(), result.size(), result.totalElements()),
@@ -254,8 +241,8 @@ public class ReviewController {
                         @RequestParam(defaultValue = "0") @Min(0) int page,
                         @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
                 PageResult<ReviewResult> result = getAdminProductReviewsInputPort.execute(
-                                new GetAdminProductReviewsQuery(productId, OffsetPagination.of(page, size)));
-                List<ReviewResponse> responses = enrichWithProfiles(reviewDtoMapper.toResponses(result.content()));
+                                reviewDtoMapper.toAdminProductReviewsQuery(productId, page, size));
+                List<ReviewResponse> responses = reviewDtoMapper.toResponses(result.content());
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
                                 responses,
                                 PageMetadata.of(result.page(), result.size(), result.totalElements()),
@@ -269,48 +256,8 @@ public class ReviewController {
                         @CurrentOwnerId String userId,
                         @PathVariable String productId) {
                 ReviewEligibilityResult result = checkReviewEligibilityInputPort
-                                .execute(new CheckReviewEligibilityQuery(userId, productId));
+                                .execute(reviewDtoMapper.toEligibilityQuery(userId, productId));
                 return ResponseEntity.ok(ApiResponse.success(
                                 reviewDtoMapper.toResponse(result), "Eligibility checked"));
-        }
-
-        private List<ReviewResponse> enrichWithProfiles(List<ReviewResponse> responses) {
-                if (responses == null || responses.isEmpty() || userProfileLookupPort == null) {
-                        return responses;
-                }
-                Set<String> userIds = responses.stream()
-                                .map(ReviewResponse::userId)
-                                .filter(id -> id != null && !id.isBlank())
-                                .collect(Collectors.toSet());
-                if (userIds.isEmpty()) {
-                        return responses;
-                }
-                Map<String, UserProfileLookupPort.UserProfile> profiles = userProfileLookupPort.findProfiles(userIds);
-                return responses.stream().map(r -> {
-                        UserProfileLookupPort.UserProfile profile = profiles.get(r.userId());
-                        if (profile == null) {
-                                return r;
-                        }
-                        return new ReviewResponse(
-                                        r.reviewId(),
-                                        r.productId(),
-                                        r.userId(),
-                                        r.orderId(),
-                                        r.rating(),
-                                        r.title(),
-                                        r.content(),
-                                        r.imageUrls(),
-                                        r.status(),
-                                        r.merchantReply(),
-                                        r.merchantRepliedAt(),
-                                        r.reportedByMerchantId(),
-                                        r.reportReason(),
-                                        r.reportedAt(),
-                                        r.createdAt(),
-                                        r.updatedAt(),
-                                        profile.username(),
-                                        profile.displayName(),
-                                        profile.avatarUrl());
-                }).toList();
         }
 }

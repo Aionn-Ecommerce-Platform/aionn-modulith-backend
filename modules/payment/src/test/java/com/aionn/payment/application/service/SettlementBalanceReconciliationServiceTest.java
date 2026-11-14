@@ -18,7 +18,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class SettlementBalanceReconciliationServiceTest {
 
-    @Mock private MerchantBalancePersistencePort balanceRepository;
+    @Mock private MerchantBalancePersistencePort merchantBalancePersistencePort;
     @Mock private PaymentMetricsPort metrics;
 
     @Test
@@ -28,9 +28,9 @@ class SettlementBalanceReconciliationServiceTest {
                 BigDecimal.TEN, BigDecimal.ONE,
                 BigDecimal.ZERO, BigDecimal.ZERO,
                 BigDecimal.ZERO, BigDecimal.ZERO);
-        when(balanceRepository.countBalances()).thenReturn(3L);
-        when(balanceRepository.findReconciliationMismatches()).thenReturn(List.of(mismatch));
-        var service = new SettlementBalanceReconciliationService(balanceRepository, metrics);
+        when(merchantBalancePersistencePort.countBalances()).thenReturn(3L);
+        when(merchantBalancePersistencePort.findReconciliationMismatches()).thenReturn(List.of(mismatch));
+        var service = new SettlementBalanceReconciliationService(merchantBalancePersistencePort, metrics);
 
         var result = service.reconcile();
 

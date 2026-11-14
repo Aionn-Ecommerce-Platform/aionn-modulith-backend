@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class CartService {
 
-    private final CartPersistencePort cartRepository;
+    private final CartPersistencePort cartPersistencePort;
     private final EventPublisher eventPublisher;
     private final CartIntegrationEventPublisherPort integrationEventPublisher;
     private final Clock clock;
@@ -34,10 +34,8 @@ public class CartService {
     public Cart addItem(AddItemCommand command) {
         Cart cart = loadOrCreate(command.userId());
         cart.addItem(command.skuId(), command.qty(), clock.instant());
-        Cart saved = cartRepository.save(cart);
+        Cart saved = cartPersistencePort.save(cart);
         eventPublisher.publish(cart.pullEvents());
-        // Published as an integration event as well as a domain one: cross-module consumers receive
-        // integration events unwrapped, whereas domain events arrive inside an EventEnvelope.
         integrationEventPublisher.publishCartItemAdded(
                 saved.getCartId(), command.userId(), command.skuId(), command.qty(), clock.instant());
         return saved;
@@ -46,7 +44,7 @@ public class CartService {
     public Cart updateItemQty(UpdateItemQtyCommand command) {
         Cart cart = loadOwned(command.userId());
         cart.updateItemQty(command.skuId(), command.newQty(), clock.instant());
-        Cart saved = cartRepository.save(cart);
+        Cart saved = cartPersistencePort.save(cart);
         eventPublisher.publish(cart.pullEvents());
         return saved;
     }
@@ -54,7 +52,7 @@ public class CartService {
     public Cart removeItem(RemoveItemCommand command) {
         Cart cart = loadOwned(command.userId());
         cart.removeItem(command.skuId(), clock.instant());
-        Cart saved = cartRepository.save(cart);
+        Cart saved = cartPersistencePort.save(cart);
         eventPublisher.publish(cart.pullEvents());
         return saved;
     }
@@ -62,7 +60,7 @@ public class CartService {
     public Cart clearCart(ClearCartCommand command) {
         Cart cart = loadOwned(command.userId());
         cart.clear(command.reason(), clock.instant());
-        Cart saved = cartRepository.save(cart);
+        Cart saved = cartPersistencePort.save(cart);
         eventPublisher.publish(cart.pullEvents());
         return saved;
     }
@@ -70,7 +68,7 @@ public class CartService {
     public Cart applyVoucher(ApplyVoucherCommand command) {
         Cart cart = loadOwned(command.userId());
         cart.applyVoucher(command.voucherCode(), clock.instant());
-        Cart saved = cartRepository.save(cart);
+        Cart saved = cartPersistencePort.save(cart);
         eventPublisher.publish(cart.pullEvents());
         return saved;
     }
@@ -78,7 +76,7 @@ public class CartService {
     public Cart removeVoucher(RemoveVoucherCommand command) {
         Cart cart = loadOwned(command.userId());
         cart.removeVoucher(clock.instant());
-        Cart saved = cartRepository.save(cart);
+        Cart saved = cartPersistencePort.save(cart);
         eventPublisher.publish(cart.pullEvents());
         return saved;
     }
@@ -88,13 +86,13 @@ public class CartService {
     }
 
     Cart loadOwned(String userId) {
-        Cart cart = cartRepository.findByUserId(userId)
+        Cart cart = cartPersistencePort.findByUserId(userId)
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.CART_NOT_FOUND));
         cart.ensureOwnedBy(userId);
         return cart;
     }
 
     private Cart loadOrCreate(String userId) {
-        return cartRepository.findOrCreate(IdGenerator.ulid(), userId, clock.instant());
+        return cartPersistencePort.findOrCreate(IdGenerator.ulid(), userId, clock.instant());
     }
 }

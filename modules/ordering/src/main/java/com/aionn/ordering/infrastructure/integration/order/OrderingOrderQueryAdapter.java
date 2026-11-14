@@ -72,6 +72,7 @@ public class OrderingOrderQueryAdapter implements OrderQueryPort {
                         e.getUserId(),
                         e.getMerchantId(),
                         e.getTotalAmount(),
-                        e.getCurrency()));
+                        e.getCurrency(),
+                        e.getStatus()));
     }
 }

@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OrderLifecycleListener {
 
-    private final ShipmentPersistencePort shipmentRepository;
+    private final ShipmentPersistencePort shipmentPersistencePort;
     private final ShipmentCarrierOrchestrator shipmentCarrierOrchestrator;
 
     @EventListener
@@ -27,7 +27,7 @@ public class OrderLifecycleListener {
     }
 
     private void cancelOpenShipments(String orderId, String reason) {
-        for (Shipment shipment : shipmentRepository.findByOrderId(orderId)) {
+        for (Shipment shipment : shipmentPersistencePort.findByOrderId(orderId)) {
             if (!shipment.isCancellable()) {
                 continue;
             }

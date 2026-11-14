@@ -16,6 +16,12 @@ public interface OrderQueryPort {
 
     Optional<OrderSummary> findOrderSummary(String orderId);
 
-    record OrderSummary(String orderId, String userId, String merchantId, BigDecimal totalAmount, String currency) {
+    record OrderSummary(String orderId, String userId, String merchantId, BigDecimal totalAmount, String currency,
+            String status) {
+
+        public OrderSummary(String orderId, String userId, String merchantId, BigDecimal totalAmount,
+                String currency) {
+            this(orderId, userId, merchantId, totalAmount, currency, null);
+        }
     }
 }

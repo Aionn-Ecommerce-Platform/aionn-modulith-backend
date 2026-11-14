@@ -1,7 +1,7 @@
 package com.aionn.shipping.adapter.rest.controller;
 
-import com.aionn.shipping.adapter.rest.dto.rate.ConfigureRateRequest;
-import com.aionn.shipping.adapter.rest.dto.rate.UpdateRateRequest;
+import com.aionn.shipping.adapter.rest.dto.rate.request.ConfigureRateRequest;
+import com.aionn.shipping.adapter.rest.dto.rate.request.UpdateRateRequest;
 import com.aionn.shipping.adapter.rest.exception.ShippingExceptionHandler;
 import com.aionn.shipping.adapter.rest.mapper.rate.ShippingRateDtoMapper;
 import com.aionn.shipping.application.dto.rate.command.ConfigureRateCommand;

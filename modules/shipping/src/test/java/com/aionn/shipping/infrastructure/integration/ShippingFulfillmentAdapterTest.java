@@ -101,4 +101,11 @@ class ShippingFulfillmentAdapterTest {
                 assertThat(result.get(0).carrierOrderId()).isEqualTo("C_1");
                 assertThat(result.get(0).labelUrl()).isEqualTo("L_1");
         }
+
+        @Test
+        void hasPickedUpShipmentDelegatesToService() {
+                when(shipmentService.hasPickedUpShipment("O_1")).thenReturn(true);
+
+                assertThat(adapter.hasPickedUpShipment("O_1")).isTrue();
+        }
 }

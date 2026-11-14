@@ -17,14 +17,14 @@ import java.time.Clock;
 @RequiredArgsConstructor
 public class ShipmentStatusApplier {
 
-    private final ShipmentPersistencePort shipmentRepository;
+    private final ShipmentPersistencePort shipmentPersistencePort;
     private final EventPublisher eventPublisher;
     private final ShippingIntegrationEventPublisherPort integrationEventPublisher;
     private final Clock clock;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void apply(String shipmentId, ShipmentStatus target, CarrierClient.OrderDetail detail) {
-        Shipment shipment = shipmentRepository.findById(shipmentId).orElse(null);
+        Shipment shipment = shipmentPersistencePort.findById(shipmentId).orElse(null);
         if (shipment == null || shipment.getStatus().isTerminal() || shipment.getStatus() == target) {
             return;
         }
@@ -42,7 +42,7 @@ public class ShipmentStatusApplier {
                 return;
             }
         }
-        Shipment saved = shipmentRepository.save(shipment);
+        Shipment saved = shipmentPersistencePort.save(shipment);
         eventPublisher.publish(shipment.pullEvents());
         publishIntegration(saved, before, target, detail);
     }
@@ -69,7 +69,13 @@ public class ShipmentStatusApplier {
                         late);
             }
             case DELIVERY_FAILED -> integrationEventPublisher.publishDeliveryFailed(
-                    saved.getShipmentId(), saved.getOrderId(), detail.reason(), saved.getAttemptCount());
+                    saved.getShipmentId(), saved.getOrderId(), saved.getUserId(), detail.reason(),
+                    saved.getAttemptCount());
+            case RETURNED -> integrationEventPublisher.publishReturned(
+                    saved.getShipmentId(), saved.getOrderId(), saved.getUserId(), saved.getMerchantId(),
+                    detail.reason());
+            case CANCELLED -> integrationEventPublisher.publishCancelled(
+                    saved.getShipmentId(), saved.getOrderId(), detail.reason());
             default -> {
                 /* in-transit / out-for-delivery / returned do not surface to other contexts */
             }

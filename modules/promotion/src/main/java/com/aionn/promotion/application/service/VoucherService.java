@@ -33,35 +33,35 @@ import java.util.List;
 @Transactional
 public class VoucherService {
 
-    private final VoucherPersistencePort voucherRepository;
-    private final UserVoucherPersistencePort userVoucherRepository;
-    private final PromotionCampaignPersistencePort campaignRepository;
+    private final VoucherPersistencePort voucherPersistencePort;
+    private final UserVoucherPersistencePort userVoucherPersistencePort;
+    private final PromotionCampaignPersistencePort promotionCampaignPersistencePort;
     private final UserVoucherResultMapper mapper;
     private final EventPublisher eventPublisher;
     private final VoucherReservationPolicy reservationPolicy;
     private final Clock clock;
 
     public UserVoucherResult claim(VoucherCommands.ClaimVoucher command) {
-        Voucher voucher = voucherRepository.lockByCode(command.voucherCode())
+        Voucher voucher = voucherPersistencePort.lockByCode(command.voucherCode())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.VOUCHER_NOT_FOUND));
         PromotionCampaign campaign = runningCampaignOrNull(voucher);
         enforceClaimLimit(command.userId(), campaign);
 
-        userVoucherRepository.findByUserAndCode(command.userId(), command.voucherCode())
+        userVoucherPersistencePort.findByUserAndCode(command.userId(), command.voucherCode())
                 .ifPresent(existing -> {
                     throw new PromotionException(PromotionErrorCode.USER_VOUCHER_ALREADY_CLAIMED);
                 });
 
         voucher.claimSlot(clock);
         UserVoucher uv = UserVoucher.claim(IdGenerator.ulid(), command.voucherCode(), command.userId(), clock);
-        voucherRepository.save(voucher);
-        UserVoucher saved = userVoucherRepository.save(uv);
+        voucherPersistencePort.save(voucher);
+        UserVoucher saved = userVoucherPersistencePort.save(uv);
         eventPublisher.publish(uv.pullEvents());
         return toResult(saved);
     }
 
     public UserVoucherResult grant(VoucherCommands.GrantVoucher command) {
-        Voucher voucher = voucherRepository.lockByCode(command.voucherCode())
+        Voucher voucher = voucherPersistencePort.lockByCode(command.voucherCode())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.VOUCHER_NOT_FOUND));
         runningCampaignOrNull(voucher);
 
@@ -70,9 +70,9 @@ public class VoucherService {
         // order earns its own grant. A voucher already applied to a past order is
         // never reclaimed - a new grant mints a fresh UserVoucher instead.
         Optional<UserVoucher> existingOpt = command.entitlementKey() != null
-                ? userVoucherRepository.findByUserAndCodeAndEntitlement(
+                ? userVoucherPersistencePort.findByUserAndCodeAndEntitlement(
                         command.userId(), command.voucherCode(), command.entitlementKey())
-                : userVoucherRepository.findByUserAndCode(command.userId(), command.voucherCode());
+                : userVoucherPersistencePort.findByUserAndCode(command.userId(), command.voucherCode());
         if (existingOpt.isPresent()) {
             UserVoucher existing = existingOpt.get();
             log.info("Grant for user {} voucher {} entitlement {} already exists; returning existing.",
@@ -83,14 +83,14 @@ public class VoucherService {
         voucher.claimSlot(clock);
         UserVoucher uv = UserVoucher.claim(IdGenerator.ulid(), command.voucherCode(), command.userId(),
                 command.entitlementKey(), clock);
-        voucherRepository.save(voucher);
-        UserVoucher saved = userVoucherRepository.save(uv);
+        voucherPersistencePort.save(voucher);
+        UserVoucher saved = userVoucherPersistencePort.save(uv);
         eventPublisher.publish(uv.pullEvents());
         return toResult(saved);
     }
 
     public UserVoucherResult reserve(VoucherCommands.ReserveVoucher command) {
-        Voucher voucher = voucherRepository.lockByCode(command.voucherCode())
+        Voucher voucher = voucherPersistencePort.lockByCode(command.voucherCode())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.VOUCHER_NOT_FOUND));
         PromotionCampaign campaign = runningCampaignOrNull(voucher);
 
@@ -98,7 +98,7 @@ public class VoucherService {
             throw new PromotionException(PromotionErrorCode.CONDITION_NOT_MET);
         }
 
-        UserVoucher uv = userVoucherRepository.findByUserAndCodeForUpdate(command.userId(), command.voucherCode())
+        UserVoucher uv = userVoucherPersistencePort.findByUserAndCodeForUpdate(command.userId(), command.voucherCode())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.USER_VOUCHER_NOT_FOUND));
         if (uv.getStatus() == UserVoucherStatus.RESERVED) {
             if (command.orderId().equals(uv.getReservedOrderId())) {
@@ -111,16 +111,16 @@ public class VoucherService {
         voucher.reserveSlot(clock);
         uv.reserve(command.orderId(), expiresAt, clock);
 
-        voucherRepository.save(voucher);
-        UserVoucher saved = userVoucherRepository.save(uv);
+        voucherPersistencePort.save(voucher);
+        UserVoucher saved = userVoucherPersistencePort.save(uv);
         eventPublisher.publish(uv.pullEvents());
         return toResult(saved);
     }
 
     public UserVoucherResult apply(VoucherCommands.ApplyVoucher command) {
-        Voucher voucher = voucherRepository.lockByCode(command.voucherCode())
+        Voucher voucher = voucherPersistencePort.lockByCode(command.voucherCode())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.VOUCHER_NOT_FOUND));
-        UserVoucher uv = userVoucherRepository.findByUserAndCodeForUpdate(command.userId(), command.voucherCode())
+        UserVoucher uv = userVoucherPersistencePort.findByUserAndCodeForUpdate(command.userId(), command.voucherCode())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.USER_VOUCHER_NOT_FOUND));
         if (uv.getStatus() == UserVoucherStatus.APPLIED) {
             if (command.orderId().equals(uv.getReservedOrderId())) {
@@ -129,7 +129,7 @@ public class VoucherService {
             throw new PromotionException(PromotionErrorCode.USER_VOUCHER_RESERVED_BY_OTHER);
         }
         PromotionCampaign campaign = voucher.getCampaignId() == null ? null
-                : campaignRepository.findByIdForUpdate(voucher.getCampaignId())
+                : promotionCampaignPersistencePort.findByIdForUpdate(voucher.getCampaignId())
                         .orElseThrow(() -> new PromotionException(PromotionErrorCode.CAMPAIGN_NOT_FOUND));
         if (campaign != null) {
             campaign.ensureRunning(clock);
@@ -154,19 +154,19 @@ public class VoucherService {
         }
         uv.apply(applied, clock);
 
-        voucherRepository.save(voucher);
+        voucherPersistencePort.save(voucher);
         if (campaign != null) {
-            campaignRepository.save(campaign);
+            promotionCampaignPersistencePort.save(campaign);
         }
-        UserVoucher saved = userVoucherRepository.save(uv);
+        UserVoucher saved = userVoucherPersistencePort.save(uv);
         eventPublisher.publish(uv.pullEvents());
         return toResult(saved);
     }
 
     public UserVoucherResult release(VoucherCommands.ReleaseVoucher command) {
-        Voucher voucher = voucherRepository.lockByCode(command.voucherCode())
+        Voucher voucher = voucherPersistencePort.lockByCode(command.voucherCode())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.VOUCHER_NOT_FOUND));
-        UserVoucher uv = userVoucherRepository.findByUserAndCodeForUpdate(command.userId(), command.voucherCode())
+        UserVoucher uv = userVoucherPersistencePort.findByUserAndCodeForUpdate(command.userId(), command.voucherCode())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.USER_VOUCHER_NOT_FOUND));
         if (uv.getReservedOrderId() == null || !uv.getReservedOrderId().equals(command.orderId())) {
             throw new PromotionException(PromotionErrorCode.USER_VOUCHER_RESERVED_BY_OTHER);
@@ -181,8 +181,8 @@ public class VoucherService {
         }
         uv.release(command.reason(), clock);
 
-        voucherRepository.save(voucher);
-        UserVoucher saved = userVoucherRepository.save(uv);
+        voucherPersistencePort.save(voucher);
+        UserVoucher saved = userVoucherPersistencePort.save(uv);
         eventPublisher.publish(uv.pullEvents());
         return toResult(saved);
     }
@@ -193,21 +193,21 @@ public class VoucherService {
      * reservation was found.
      */
     public int releaseByOrder(String orderId, String reason) {
-        UserVoucher uv = userVoucherRepository.findByReservedOrderIdForUpdate(orderId).orElse(null);
+        UserVoucher uv = userVoucherPersistencePort.findByReservedOrderIdForUpdate(orderId).orElse(null);
         if (uv == null) {
             return 0;
         }
-        Voucher voucher = voucherRepository.lockByCode(uv.getVoucherCode()).orElse(null);
+        Voucher voucher = voucherPersistencePort.lockByCode(uv.getVoucherCode()).orElse(null);
         if (voucher != null) {
             if (uv.getStatus() == UserVoucherStatus.APPLIED) {
                 voucher.releaseCommittedSlot(clock);
             } else {
                 voucher.releaseSlot(clock);
             }
-            voucherRepository.save(voucher);
+            voucherPersistencePort.save(voucher);
         }
         uv.release(reason, clock);
-        userVoucherRepository.save(uv);
+        userVoucherPersistencePort.save(uv);
         eventPublisher.publish(uv.pullEvents());
         return 1;
     }
@@ -216,23 +216,23 @@ public class VoucherService {
         // Kept for backwards compatibility; the auto-release scheduler now drives
         // expiry directly through VoucherAutoReleaseWorker so each release runs
         // in its own transaction and a single failure doesn't poison the batch.
-        List<UserVoucher> expired = userVoucherRepository.findExpiredReservations(now, batchSize);
+        List<UserVoucher> expired = userVoucherPersistencePort.findExpiredReservations(now, batchSize);
         int released = 0;
         for (UserVoucher candidate : expired) {
             try {
-                UserVoucher uv = userVoucherRepository.findByIdForUpdate(candidate.getUserVoucherId())
+                UserVoucher uv = userVoucherPersistencePort.findByIdForUpdate(candidate.getUserVoucherId())
                         .orElse(null);
                 if (uv == null) {
                     continue;
                 }
-                Voucher voucher = voucherRepository.lockByCode(uv.getVoucherCode())
+                Voucher voucher = voucherPersistencePort.lockByCode(uv.getVoucherCode())
                         .orElse(null);
                 if (voucher != null) {
                     voucher.releaseSlot(clock);
-                    voucherRepository.save(voucher);
+                    voucherPersistencePort.save(voucher);
                 }
                 uv.release("expired", clock);
-                userVoucherRepository.save(uv);
+                userVoucherPersistencePort.save(uv);
                 eventPublisher.publish(uv.pullEvents());
                 released++;
             } catch (RuntimeException ex) {
@@ -244,25 +244,25 @@ public class VoucherService {
 
     @Transactional(readOnly = true)
     public UserVoucherResult getMine(String userId, String voucherCode) {
-        return toResult(userVoucherRepository.findByUserAndCode(userId, voucherCode)
+        return toResult(userVoucherPersistencePort.findByUserAndCode(userId, voucherCode)
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.USER_VOUCHER_NOT_FOUND)));
     }
 
     @Transactional(readOnly = true)
     public List<UserVoucherResult> listMine(String userId, int limit) {
-        return userVoucherRepository.findByUser(userId, limit).stream().map(this::toResult).toList();
+        return userVoucherPersistencePort.findByUser(userId, limit).stream().map(this::toResult).toList();
     }
 
     private UserVoucherResult toResult(UserVoucher userVoucher) {
         UserVoucherResult base = mapper.toResult(userVoucher);
-        Voucher voucher = voucherRepository.findByCode(userVoucher.getVoucherCode()).orElse(null);
+        Voucher voucher = voucherPersistencePort.findByCode(userVoucher.getVoucherCode()).orElse(null);
         if (voucher == null) {
             return base;
         }
 
         BigDecimal minOrderValue = null;
         if (voucher.getCampaignId() != null) {
-            minOrderValue = campaignRepository.findById(voucher.getCampaignId())
+            minOrderValue = promotionCampaignPersistencePort.findById(voucher.getCampaignId())
                     .map(campaign -> campaign.getCondition().minOrderValue())
                     .orElse(null);
         }
@@ -280,7 +280,7 @@ public class VoucherService {
         if (voucher.getCampaignId() == null) {
             return null;
         }
-        PromotionCampaign campaign = campaignRepository.findById(voucher.getCampaignId())
+        PromotionCampaign campaign = promotionCampaignPersistencePort.findById(voucher.getCampaignId())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.CAMPAIGN_NOT_FOUND));
         campaign.ensureRunning(clock);
         return campaign;
@@ -290,7 +290,7 @@ public class VoucherService {
         if (campaign == null || campaign.getCondition().maxClaimsPerUser() == null) {
             return;
         }
-        long claimed = userVoucherRepository.countByUserAndCampaign(userId, campaign.getCampaignId());
+        long claimed = userVoucherPersistencePort.countByUserAndCampaign(userId, campaign.getCampaignId());
         if (claimed >= campaign.getCondition().maxClaimsPerUser()) {
             throw new PromotionException(PromotionErrorCode.USER_VOUCHER_LIMIT_REACHED);
         }

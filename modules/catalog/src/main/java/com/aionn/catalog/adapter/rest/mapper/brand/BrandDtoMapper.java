@@ -8,6 +8,9 @@ import com.aionn.catalog.application.dto.brand.command.CreateBrandCommand;
 import com.aionn.catalog.application.dto.brand.command.DeleteBrandCommand;
 import com.aionn.catalog.application.dto.brand.command.UpdateBrandCommand;
 import com.aionn.catalog.application.dto.brand.result.BrandResult;
+import com.aionn.catalog.application.dto.brand.query.GetBrandQuery;
+import com.aionn.catalog.application.dto.brand.query.ListBrandsQuery;
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import org.mapstruct.Mapper;
 
 import java.util.List;
@@ -24,4 +27,12 @@ public interface BrandDtoMapper {
     BrandResponse toResponse(BrandResult result);
 
     List<BrandResponse> toResponses(List<BrandResult> results);
+
+    default ListBrandsQuery toListQuery(int page, int size) {
+        return new ListBrandsQuery(OffsetPagination.of(page, size));
+    }
+
+    default GetBrandQuery toGetQuery(String brandId) {
+        return new GetBrandQuery(brandId);
+    }
 }

@@ -6,7 +6,7 @@ import java.util.Optional;
 
 public interface CompensationTaskPort {
 
-    enum Type { VOUCHER_RELEASE, RESERVATION_RELEASE, FLASH_SALE_RELEASE, REFUND, STOCK_COMMIT }
+    enum Type { VOUCHER_RELEASE, RESERVATION_RELEASE, FLASH_SALE_RELEASE, REFUND, STOCK_COMMIT, SHIPMENT_REGISTER }
 
     record Task(String taskId, Type type, String resourceId, String userId, String orderId,
             String reason, int attempts) {}

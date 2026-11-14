@@ -30,13 +30,13 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class CatalogProductAttributeQueryAdapter implements CatalogProductAttributeQueryPort {
 
-    private final ProductPersistencePort productRepository;
+    private final ProductPersistencePort productPersistencePort;
     private final ProductResultMapper productResultMapper;
 
     @Override
     @Transactional(readOnly = true)
     public Optional<ProductAttributeView> findByProductId(String productId) {
-        return productRepository.findById(productId)
+        return productPersistencePort.findById(productId)
                 .filter(CatalogProductAttributeQueryAdapter::isPublished)
                 .map(productResultMapper::toResult)
                 .map(CatalogProductAttributeQueryAdapter::toView);
@@ -48,7 +48,7 @@ public class CatalogProductAttributeQueryAdapter implements CatalogProductAttrib
         if (productIds == null || productIds.isEmpty()) {
             return Map.of();
         }
-        List<Product> products = productRepository.findAllByIds(productIds).stream()
+        List<Product> products = productPersistencePort.findAllByIds(productIds).stream()
                 .filter(CatalogProductAttributeQueryAdapter::isPublished)
                 .toList();
         Map<String, ProductAttributeView> views = new LinkedHashMap<>();
@@ -64,7 +64,7 @@ public class CatalogProductAttributeQueryAdapter implements CatalogProductAttrib
         if (skuId == null || skuId.isBlank()) {
             return Optional.empty();
         }
-        return productRepository.findAllBySkuIds(List.of(skuId)).stream()
+        return productPersistencePort.findAllBySkuIds(List.of(skuId)).stream()
                 .filter(CatalogProductAttributeQueryAdapter::isPublished)
                 .map(Product::getProductId)
                 .findFirst();
@@ -77,7 +77,7 @@ public class CatalogProductAttributeQueryAdapter implements CatalogProductAttrib
             return Map.of();
         }
         Map<String, String> productIdBySku = new LinkedHashMap<>();
-        for (Product product : productRepository.findAllBySkuIds(skuIds)) {
+        for (Product product : productPersistencePort.findAllBySkuIds(skuIds)) {
             if (!isPublished(product)) {
                 continue;
             }
@@ -97,7 +97,7 @@ public class CatalogProductAttributeQueryAdapter implements CatalogProductAttrib
         if ((categoryIds == null || categoryIds.isEmpty()) && (brandIds == null || brandIds.isEmpty())) {
             return List.of();
         }
-        List<Product> products = productRepository.findPersonalizedProducts(
+        List<Product> products = productPersistencePort.findPersonalizedProducts(
                 categoryIds == null ? List.of() : List.copyOf(categoryIds),
                 brandIds == null ? List.of() : List.copyOf(brandIds),
                 Math.max(1, limit));
@@ -109,7 +109,7 @@ public class CatalogProductAttributeQueryAdapter implements CatalogProductAttrib
     @Override
     @Transactional(readOnly = true)
     public List<ProductAttributeView> findRecentlyPublished(int limit) {
-        return toViews(productResultMapper.toResults(productRepository.findPublished(Math.max(1, limit), 0).stream()
+        return toViews(productResultMapper.toResults(productPersistencePort.findPublished(Math.max(1, limit), 0).stream()
                 .filter(CatalogProductAttributeQueryAdapter::isPublished)
                 .toList()));
     }

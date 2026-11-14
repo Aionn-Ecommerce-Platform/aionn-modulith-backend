@@ -22,7 +22,7 @@ import java.time.Clock;
 @RequiredArgsConstructor
 public class MerchantLifecycleListener {
 
-    private final WarehousePersistencePort warehouseRepository;
+    private final WarehousePersistencePort warehousePersistencePort;
     private final EventPublisher eventPublisher;
     private final Clock clock;
 
@@ -46,11 +46,11 @@ public class MerchantLifecycleListener {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onActivated(MerchantActivatedIntegrationEvent event) {
         log.info("Merchant activated, lifting warehouse suspensions: merchantId={}", event.merchantId());
-        List<Warehouse> warehouses = warehouseRepository.findByMerchantOrderByPriority(event.merchantId());
+        List<Warehouse> warehouses = warehousePersistencePort.findByMerchantOrderByPriority(event.merchantId());
         for (Warehouse warehouse : warehouses) {
             if (warehouse.getStatus() == WarehouseStatus.SUSPENDED) {
                 warehouse.liftSuspension(clock);
-                warehouseRepository.save(warehouse);
+                warehousePersistencePort.save(warehouse);
                 eventPublisher.publish(warehouse.pullEvents());
             }
         }
@@ -58,13 +58,13 @@ public class MerchantLifecycleListener {
 
     private void applyToAllWarehouses(String merchantId, WarehouseStatus targetStatus,
             String adminId, String reason) {
-        List<Warehouse> warehouses = warehouseRepository.findByMerchantOrderByPriority(merchantId);
+        List<Warehouse> warehouses = warehousePersistencePort.findByMerchantOrderByPriority(merchantId);
         for (Warehouse warehouse : warehouses) {
             if (warehouse.getStatus() == targetStatus) {
                 continue;
             }
             warehouse.suspend(adminId, reason, clock);
-            warehouseRepository.save(warehouse);
+            warehousePersistencePort.save(warehouse);
             eventPublisher.publish(warehouse.pullEvents());
         }
     }

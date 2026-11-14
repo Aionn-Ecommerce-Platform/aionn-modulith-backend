@@ -1,6 +1,6 @@
 package com.aionn.notification.adapter.rest.controller;
 
-import com.aionn.notification.adapter.rest.dto.notification.SendNotificationRequest;
+import com.aionn.notification.adapter.rest.dto.notification.request.SendNotificationRequest;
 import com.aionn.notification.adapter.rest.dto.notification.response.NotificationResponse;
 import com.aionn.notification.adapter.rest.mapper.notification.NotificationDtoMapper;
 import com.aionn.notification.adapter.rest.support.session.CurrentUserId;

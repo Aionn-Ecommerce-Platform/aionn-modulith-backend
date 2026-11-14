@@ -34,8 +34,8 @@ import java.util.Map;
 @Transactional
 public class FlashSaleService {
 
-        private final FlashSaleRegistrationPersistencePort registrationRepository;
-        private final PromotionCampaignPersistencePort campaignRepository;
+        private final FlashSaleRegistrationPersistencePort flashSaleRegistrationPersistencePort;
+        private final PromotionCampaignPersistencePort promotionCampaignPersistencePort;
         private final MerchantQueryPort merchantQueryPort;
         private final PricingQueryPort pricingQueryPort;
         private final Clock clock;
@@ -48,7 +48,7 @@ public class FlashSaleService {
                                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
                                                 "No merchant registered for the authenticated user"));
 
-                PromotionCampaign campaign = campaignRepository.findById(command.campaignId())
+                PromotionCampaign campaign = promotionCampaignPersistencePort.findById(command.campaignId())
                                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.CAMPAIGN_NOT_FOUND));
                 if (campaign.getType() != CampaignType.FLASH_SALE) {
                         throw new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
@@ -59,7 +59,7 @@ public class FlashSaleService {
                                         "Flash-sale campaign has already ended");
                 }
 
-                registrationRepository.findActiveBySkuAndCampaign(command.campaignId(), command.skuId())
+                flashSaleRegistrationPersistencePort.findActiveBySkuAndCampaign(command.campaignId(), command.skuId())
                                 .ifPresent(existing -> {
                                         throw new PromotionException(PromotionErrorCode.FLASH_SALE_DUPLICATE);
                                 });
@@ -84,7 +84,7 @@ public class FlashSaleService {
                                 command.saleStock(), clock);
                 FlashSaleRegistration saved;
                 try {
-                        saved = registrationRepository.save(reg);
+                        saved = flashSaleRegistrationPersistencePort.save(reg);
                 } catch (DataIntegrityViolationException ex) {
                         throw new PromotionException(PromotionErrorCode.FLASH_SALE_DUPLICATE);
                 }
@@ -100,7 +100,7 @@ public class FlashSaleService {
                 Money variantPrice = pricing == null ? null
                                 : Money.of(pricing.price(), pricing.currency());
                 reg.approve(command.adminId(), variantPrice, clock);
-                FlashSaleRegistration saved = registrationRepository.save(reg);
+                FlashSaleRegistration saved = flashSaleRegistrationPersistencePort.save(reg);
                 eventPublisher.publish(reg.pullEvents());
                 return saved;
         }
@@ -108,7 +108,7 @@ public class FlashSaleService {
         public FlashSaleRegistration reject(FlashSaleCommands.RejectFlashSale command) {
                 FlashSaleRegistration reg = required(command.registrationId());
                 reg.reject(command.adminId(), command.reason(), clock);
-                FlashSaleRegistration saved = registrationRepository.save(reg);
+                FlashSaleRegistration saved = flashSaleRegistrationPersistencePort.save(reg);
                 eventPublisher.publish(reg.pullEvents());
                 return saved;
         }
@@ -119,7 +119,7 @@ public class FlashSaleService {
                                                 "No merchant registered for the authenticated user"));
                 FlashSaleRegistration reg = required(command.registrationId());
                 reg.cancel(merchantId, clock);
-                FlashSaleRegistration saved = registrationRepository.save(reg);
+                FlashSaleRegistration saved = flashSaleRegistrationPersistencePort.save(reg);
                 eventPublisher.publish(reg.pullEvents());
                 return saved;
         }
@@ -132,13 +132,13 @@ public class FlashSaleService {
                                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
                                                 "No merchant registered for the authenticated user"));
                 int safeLimit = Math.min(Math.max(limit, 1), limitPolicy.maxRegistrationLimit());
-                return registrationRepository.findByMerchant(merchantId, status, safeLimit);
+                return flashSaleRegistrationPersistencePort.findByMerchant(merchantId, status, safeLimit);
         }
 
         @Transactional(readOnly = true)
         public List<FlashSaleRegistration> listByStatus(FlashSaleRegistrationStatus status, int limit) {
                 int safeLimit = Math.min(Math.max(limit, 1), limitPolicy.maxRegistrationLimit());
-                return registrationRepository.findByStatus(status, safeLimit);
+                return flashSaleRegistrationPersistencePort.findByStatus(status, safeLimit);
         }
 
         @Transactional(readOnly = true)
@@ -164,7 +164,7 @@ public class FlashSaleService {
                 // approved items in one query. Filtering registrations before the
                 // limit returned fewer (or zero) campaigns and triggered an N+1
                 // campaign lookup per group.
-                List<PromotionCampaign> campaigns = campaignRepository.findRunning(clock.instant(), safeLimit);
+                List<PromotionCampaign> campaigns = promotionCampaignPersistencePort.findRunning(clock.instant(), safeLimit);
                 if (campaigns.isEmpty()) {
                         return List.of();
                 }
@@ -172,7 +172,7 @@ public class FlashSaleService {
                                 .map(PromotionCampaign::getCampaignId)
                                 .toList();
                 Map<String, List<FlashSaleRegistration>> byCampaign = new LinkedHashMap<>();
-                for (FlashSaleRegistration reg : registrationRepository.findApprovedByCampaignIds(campaignIds)) {
+                for (FlashSaleRegistration reg : flashSaleRegistrationPersistencePort.findApprovedByCampaignIds(campaignIds)) {
                         byCampaign.computeIfAbsent(reg.getCampaignId(), k -> new ArrayList<>()).add(reg);
                 }
                 List<ActiveFlashSaleResult> out = new ArrayList<>();
@@ -199,7 +199,7 @@ public class FlashSaleService {
         }
 
         private FlashSaleRegistration required(String registrationId) {
-                return registrationRepository.findById(registrationId)
+                return flashSaleRegistrationPersistencePort.findById(registrationId)
                                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.FLASH_SALE_NOT_FOUND));
         }
 }

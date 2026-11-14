@@ -12,7 +12,6 @@ import com.aionn.inventory.adapter.rest.dto.inventory.response.PublicInventoryIt
 import com.aionn.inventory.adapter.rest.mapper.inventory.InventoryItemDtoMapper;
 import com.aionn.inventory.adapter.rest.support.session.CurrentAdminId;
 import com.aionn.inventory.application.dto.common.PageResult;
-import com.aionn.inventory.application.dto.inventory.command.EmergencyUnlockCommand;
 import com.aionn.inventory.application.dto.inventory.result.InventoryItemResult;
 import com.aionn.inventory.application.port.in.inventory.*;
 import com.aionn.platform.web.response.ApiResponse;
@@ -145,7 +144,7 @@ public class InventoryItemController {
             @CurrentAdminId String adminId,
             @PathVariable String skuId,
             @PathVariable String warehouseId) {
-        InventoryItemResult result = emergencyUnlockInputPort.execute(new EmergencyUnlockCommand(
+        InventoryItemResult result = emergencyUnlockInputPort.execute(dtoMapper.toEmergencyUnlockCommand(
                 adminId, skuId, warehouseId));
         return ResponseEntity.ok(ApiResponse.success(dtoMapper.toResponse(result), "Inventory item unlocked"));
     }

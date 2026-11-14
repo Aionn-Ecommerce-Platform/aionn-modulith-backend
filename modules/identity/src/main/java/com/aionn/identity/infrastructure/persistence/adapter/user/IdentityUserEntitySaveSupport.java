@@ -4,7 +4,7 @@ import java.util.LinkedHashSet;
 
 import com.aionn.identity.domain.model.IdentityUser;
 import com.aionn.identity.infrastructure.persistence.entity.UserEntity;
-import com.aionn.identity.infrastructure.persistence.mapper.IdentityUserMapper;
+import com.aionn.identity.infrastructure.persistence.mapper.IdentityUserDomainMapper;
 import com.aionn.identity.infrastructure.persistence.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 class IdentityUserEntitySaveSupport {
 
     private final UserRepository userRepository;
-    private final IdentityUserMapper identityUserMapper;
+    private final IdentityUserDomainMapper identityUserDomainMapper;
 
     IdentityUser save(IdentityUser user) {
         UserEntity entity = userRepository.findById(user.getUserId())
@@ -41,6 +41,6 @@ class IdentityUserEntitySaveSupport {
         }
 
         UserEntity savedEntity = userRepository.save(entity);
-        return identityUserMapper.toDomain(savedEntity);
+        return identityUserDomainMapper.toDomain(savedEntity);
     }
 }

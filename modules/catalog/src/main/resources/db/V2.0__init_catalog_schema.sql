@@ -72,6 +72,7 @@ CREATE TABLE products (
     merchant_id    VARCHAR(50) NOT NULL,
     brand_id       VARCHAR(50),
     name           VARCHAR(255) NOT NULL,
+    slug           VARCHAR(300),
     category_ids   JSONB       NOT NULL DEFAULT '[]'::jsonb,
     image_list     JSONB       NOT NULL DEFAULT '[]'::jsonb,
     tags           JSONB       NOT NULL DEFAULT '[]'::jsonb,
@@ -201,3 +202,80 @@ CREATE TABLE user_browsing_history (
     recent_searches JSONB       NOT NULL DEFAULT '[]'::jsonb,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+
+CREATE TABLE merchant_followers (
+    merchant_id VARCHAR(50) NOT NULL,
+    user_id     VARCHAR(50) NOT NULL,
+    followed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (merchant_id, user_id),
+    CONSTRAINT fk_merchant_followers_merchant
+        FOREIGN KEY (merchant_id) REFERENCES merchants(merchant_id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_merchant_followers_user ON merchant_followers(user_id);
+
+
+CREATE TABLE wishlist_items (
+    user_id    VARCHAR(50) NOT NULL,
+    product_id VARCHAR(50) NOT NULL,
+    added_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, product_id),
+    CONSTRAINT fk_wishlist_product
+        FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_wishlist_user_added ON wishlist_items(user_id, added_at DESC);
+
+
+CREATE TABLE product_questions (
+    question_id  VARCHAR(50) PRIMARY KEY,
+    product_id   VARCHAR(50) NOT NULL,
+    user_id      VARCHAR(50) NOT NULL,
+    question     TEXT        NOT NULL,
+    answer       TEXT,
+    answered_by  VARCHAR(50),
+    answered_at  TIMESTAMPTZ,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_product_questions_product
+        FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_product_questions_product ON product_questions(product_id, created_at DESC);
+CREATE INDEX idx_product_questions_user ON product_questions(user_id);
+
+
+CREATE TABLE stock_alerts (
+    alert_id    VARCHAR(50) PRIMARY KEY,
+    user_id     VARCHAR(50) NOT NULL,
+    product_id  VARCHAR(50) NOT NULL,
+    sku_id      VARCHAR(50) NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    notified_at TIMESTAMPTZ,
+    CONSTRAINT uq_stock_alert_user_sku UNIQUE (user_id, sku_id),
+    CONSTRAINT fk_stock_alert_product
+        FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_stock_alerts_pending_sku ON stock_alerts(sku_id) WHERE notified_at IS NULL;
+
+
+CREATE TABLE collections (
+    collection_id VARCHAR(50) PRIMARY KEY,
+    slug          VARCHAR(100) NOT NULL UNIQUE,
+    name          VARCHAR(255) NOT NULL,
+    description   TEXT,
+    image_url     TEXT,
+    active        BOOLEAN NOT NULL DEFAULT TRUE,
+    display_order INT NOT NULL DEFAULT 0,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_collections_active_order ON collections(active, display_order);
+
+
+CREATE EXTENSION IF NOT EXISTS unaccent;
+
+CREATE INDEX idx_products_slug ON products(slug);

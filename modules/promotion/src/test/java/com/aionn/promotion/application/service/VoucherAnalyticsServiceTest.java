@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 class VoucherAnalyticsServiceTest {
 
     @Mock
-    private VoucherPersistencePort voucherRepository;
+    private VoucherPersistencePort voucherPersistencePort;
     @Mock
     private MerchantQueryPort merchantQueryPort;
     @Mock
@@ -50,7 +50,7 @@ class VoucherAnalyticsServiceTest {
     @Test
     void aggregatesIssuedRedeemedAndDiscount() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(voucherRepository.findMerchantVoucherRows("mer-1")).thenReturn(List.of(
+        when(voucherPersistencePort.findMerchantVoucherRows("mer-1")).thenReturn(List.of(
                 row("V-1", "camp-1", 100, 20, new BigDecimal("10000")),
                 row("V-2", "camp-1", 50, 5, new BigDecimal("20000"))));
 
@@ -68,7 +68,7 @@ class VoucherAnalyticsServiceTest {
     @Test
     void toleratesNullColumnsAndEmptyRows() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(voucherRepository.findMerchantVoucherRows("mer-1")).thenReturn(List.of(
+        when(voucherPersistencePort.findMerchantVoucherRows("mer-1")).thenReturn(List.of(
                 row("V-3", null, null, null, null)));
 
         MerchantVoucherAnalyticsResult result = service.getMerchantAnalytics("owner-1");

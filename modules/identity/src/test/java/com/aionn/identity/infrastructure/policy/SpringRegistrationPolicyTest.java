@@ -28,16 +28,16 @@ class SpringRegistrationPolicyTest {
     void mapsScalarAndNestedValues() {
         SpringRegistrationPolicy policy = new SpringRegistrationPolicy(properties(false));
 
-        assertThat(policy.getMaxVerifyAttempts()).isEqualTo(6);
-        assertThat(policy.getResendCooldownSeconds()).isEqualTo(90);
-        assertThat(policy.getOtpExpirySeconds()).isEqualTo(240);
-        assertThat(policy.getLockTimeoutSeconds()).isEqualTo(45);
-        assertThat(policy.getSessionExpiresDays()).isEqualTo(60L);
-        assertThat(policy.getDefaultCountryCallingCode()).isEqualTo("+1");
-        assertThat(policy.getIpRateLimitMaxAttempts()).isEqualTo(4);
-        assertThat(policy.getIpRateLimitWindowSeconds()).isEqualTo(400);
-        assertThat(policy.getPhoneRateLimitMaxAttempts()).isEqualTo(2);
-        assertThat(policy.getPhoneRateLimitWindowSeconds()).isEqualTo(120);
+        assertThat(policy.maxVerifyAttempts()).isEqualTo(6);
+        assertThat(policy.resendCooldownSeconds()).isEqualTo(90);
+        assertThat(policy.otpExpirySeconds()).isEqualTo(240);
+        assertThat(policy.lockTimeoutSeconds()).isEqualTo(45);
+        assertThat(policy.sessionExpiresDays()).isEqualTo(60L);
+        assertThat(policy.defaultCountryCallingCode()).isEqualTo("+1");
+        assertThat(policy.ipRateLimitMaxAttempts()).isEqualTo(4);
+        assertThat(policy.ipRateLimitWindowSeconds()).isEqualTo(400);
+        assertThat(policy.phoneRateLimitMaxAttempts()).isEqualTo(2);
+        assertThat(policy.phoneRateLimitWindowSeconds()).isEqualTo(120);
     }
 
     @Test

@@ -120,4 +120,9 @@ public class OrderPersistenceAdapter implements OrderPersistencePort {
     public List<String> findPendingOrderIdsOlderThan(Instant cutoff, int limit) {
         return jpa.findPendingOrderIdsOlderThan(cutoff, PageRequest.of(0, Math.max(1, limit)));
     }
+
+    @Override
+    public List<String> findPreparingOrderIdsUpdatedBefore(Instant cutoff, int limit) {
+        return jpa.findPreparingOrderIdsUpdatedBefore(cutoff, PageRequest.of(0, Math.max(1, limit)));
+    }
 }

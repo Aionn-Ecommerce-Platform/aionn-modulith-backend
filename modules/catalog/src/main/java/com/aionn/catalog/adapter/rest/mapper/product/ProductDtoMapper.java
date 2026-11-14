@@ -40,9 +40,19 @@ import com.aionn.catalog.application.dto.product.command.SubmitForReviewCommand;
 import com.aionn.catalog.application.dto.product.command.TrackProductViewCommand;
 import com.aionn.catalog.application.dto.product.command.UpdateAiMetadataCommand;
 import com.aionn.catalog.application.dto.product.command.UpdateMediaCommand;
+import com.aionn.catalog.application.dto.product.query.GetPersonalizedProductsQuery;
+import com.aionn.catalog.application.dto.product.query.GetPopularProductsQuery;
+import com.aionn.catalog.application.dto.product.query.GetProductQuery;
+import com.aionn.catalog.application.dto.product.query.GetProductsBySkuIdsQuery;
+import com.aionn.catalog.application.dto.product.query.GetRelatedProductsQuery;
+import com.aionn.catalog.application.dto.product.query.ListProductsByMerchantQuery;
+import com.aionn.catalog.application.dto.product.query.ListProductsByStatusQuery;
+import com.aionn.catalog.application.dto.product.query.SearchProductsQuery;
 import com.aionn.catalog.application.dto.product.result.BulkPriceUpdateResult;
 import com.aionn.catalog.application.dto.product.result.ProductResult;
 import com.aionn.catalog.application.dto.search.ProductSearchResult;
+import com.aionn.catalog.domain.valueobject.ProductStatus;
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import org.mapstruct.Mapper;
 
 import java.util.List;
@@ -146,5 +156,38 @@ public interface ProductDtoMapper {
                                         priceRange);
                 }
                 return new ProductSearchResponse(toResponsePage(result.page()), facets);
+        }
+
+        default GetProductQuery toGetQuery(String productId) {
+                return new GetProductQuery(productId);
+        }
+
+        default ListProductsByMerchantQuery toListByMerchantQuery(String merchantId, int page, int size) {
+                return new ListProductsByMerchantQuery(merchantId, OffsetPagination.of(page, size));
+        }
+
+        default ListProductsByStatusQuery toListByStatusQuery(ProductStatus status, int page, int size) {
+                return new ListProductsByStatusQuery(status, OffsetPagination.of(page, size));
+        }
+
+        default SearchProductsQuery toSearchQuery(String keyword, int page, int size) {
+                return new SearchProductsQuery(keyword, OffsetPagination.of(page, size));
+        }
+
+        default GetProductsBySkuIdsQuery toBySkuIdsQuery(List<String> skuIds) {
+                return new GetProductsBySkuIdsQuery(skuIds);
+        }
+
+        default GetRelatedProductsQuery toRelatedQuery(String productId, int limit) {
+                return new GetRelatedProductsQuery(productId, limit);
+        }
+
+        default GetPopularProductsQuery toPopularQuery(int limit) {
+                return new GetPopularProductsQuery(limit);
+        }
+
+        default GetPersonalizedProductsQuery toPersonalizedQuery(
+                        String userId, List<String> categoryIds, List<String> brandIds, int limit) {
+                return new GetPersonalizedProductsQuery(userId, categoryIds, brandIds, limit);
         }
 }

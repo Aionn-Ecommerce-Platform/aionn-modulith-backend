@@ -35,10 +35,13 @@ import com.aionn.catalog.application.dto.product.command.CreateProductCommand;
 import com.aionn.catalog.application.dto.product.command.DeactivateProductCommand;
 import com.aionn.catalog.application.dto.product.command.DefineVariantCommand;
 import com.aionn.catalog.application.dto.product.command.PublishProductCommand;
+import com.aionn.catalog.application.dto.product.command.RecordSearchIntentCommand;
 import com.aionn.catalog.application.dto.product.result.BulkPriceUpdateResult;
 import com.aionn.catalog.application.dto.product.result.ProductResult;
 import com.aionn.catalog.application.mapper.ProductResultMapper;
-import com.aionn.catalog.application.policy.CatalogProductPolicy;
+import com.aionn.catalog.application.policy.BulkPriceUpdatePolicy;
+import com.aionn.catalog.application.policy.ProductClonePolicy;
+import com.aionn.catalog.application.policy.SearchIndexBatchPolicy;
 import com.aionn.catalog.application.port.out.brand.BrandPersistencePort;
 import com.aionn.catalog.application.port.out.category.CategoryPersistencePort;
 import com.aionn.catalog.application.port.out.merchant.MerchantPersistencePort;
@@ -94,15 +97,15 @@ class ProductServiceTest {
         private static final String ADMIN_ID = "01HZADM0000000000000000001";
 
         @Mock
-        private ProductPersistencePort productRepository;
+        private ProductPersistencePort productPersistencePort;
         @Mock
-        private UserBrowsingHistoryPersistencePort userBrowsingHistoryRepository;
+        private UserBrowsingHistoryPersistencePort userBrowsingHistoryPersistencePort;
         @Mock
-        private MerchantPersistencePort merchantRepository;
+        private MerchantPersistencePort merchantPersistencePort;
         @Mock
-        private BrandPersistencePort brandRepository;
+        private BrandPersistencePort brandPersistencePort;
         @Mock
-        private CategoryPersistencePort categoryRepository;
+        private CategoryPersistencePort categoryPersistencePort;
         @Mock
         private TransactionTemplate transactionTemplate;
         @Mock
@@ -110,15 +113,19 @@ class ProductServiceTest {
         @Mock
         private ProductSearchDocumentMapper searchDocumentMapper;
         @Mock
-        private AttributeTemplatePersistencePort attributeTemplateRepository;
+        private AttributeTemplatePersistencePort attributeTemplatePersistencePort;
         @Mock
-        private ProductReviewPersistencePort reviewRepository;
+        private ProductReviewPersistencePort productReviewPersistencePort;
         @Mock
-        private ProductSoldCounterPersistencePort soldCounterRepository;
+        private ProductSoldCounterPersistencePort productSoldCounterPersistencePort;
         @Mock
         private ProductResultMapper productResultMapper;
         @Mock
-        private CatalogProductPolicy productPolicy;
+        private BulkPriceUpdatePolicy bulkPriceUpdatePolicy;
+        @Mock
+        private ProductClonePolicy productClonePolicy;
+        @Mock
+        private SearchIndexBatchPolicy searchIndexBatchPolicy;
         @Mock
         private EventPublisher eventPublisher;
         @Mock
@@ -139,9 +146,9 @@ class ProductServiceTest {
                 Merchant activeMerchant = Merchant.register(MERCHANT_ID, "owner-1", "Acme",
                                 new BigDecimal("0.05"), FIXED);
                 activeMerchant.activate(ADMIN_ID, "test", FIXED);
-                lenient().when(merchantRepository.findById(MERCHANT_ID))
+                lenient().when(merchantPersistencePort.findById(MERCHANT_ID))
                                 .thenReturn(Optional.of(activeMerchant));
-                lenient().when(productPolicy.getCloneNameSuffix()).thenReturn(" (Copy)");
+                lenient().when(productClonePolicy.nameSuffix()).thenReturn(" (Copy)");
                 sampleResult = new ProductResult(
                                 PRODUCT_ID, MERCHANT_ID, "Widget", null,
                                 List.of(), List.of(), List.of(), Map.of(),
@@ -164,22 +171,22 @@ class ProductServiceTest {
 
         @Test
         void createRequiresExistingMerchant() {
-                when(merchantRepository.findById("missing")).thenReturn(Optional.empty());
+                when(merchantPersistencePort.findById("missing")).thenReturn(Optional.empty());
 
                 assertThatThrownBy(() -> productService.create(new CreateProductCommand("missing", "Widget")))
                                 .isInstanceOf(CatalogException.class)
                                 .extracting("errorCode")
                                 .isEqualTo(CatalogErrorCode.MERCHANT_NOT_FOUND.getCode());
 
-                verify(productRepository, never()).save(any());
+                verify(productPersistencePort, never()).save(any());
         }
 
         @Test
         void createPersistsAndPublishes() {
                 Merchant merchant = Merchant.register(MERCHANT_ID, "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
                 merchant.activate(ADMIN_ID, "test", FIXED);
-                when(merchantRepository.findById(MERCHANT_ID)).thenReturn(Optional.of(merchant));
-                when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(merchantPersistencePort.findById(MERCHANT_ID)).thenReturn(Optional.of(merchant));
+                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 Product result = productService.create(new CreateProductCommand(MERCHANT_ID, "Widget"));
 
@@ -191,8 +198,8 @@ class ProductServiceTest {
         void defineVariantAddsSku() {
                 Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
                 product.pullEvents();
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.defineVariant(new DefineVariantCommand(PRODUCT_ID, MERCHANT_ID, "sku-1",
                                 Map.of("color", "red"), new BigDecimal("10.00"), "VND",
@@ -206,7 +213,7 @@ class ProductServiceTest {
         void defineVariantRejectsWhenNotOwner() {
                 Product product = Product.create(PRODUCT_ID, "other-merchant", "Widget", FIXED);
                 product.pullEvents();
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
 
                 assertThatThrownBy(() -> productService.defineVariant(new DefineVariantCommand(
                                 PRODUCT_ID, MERCHANT_ID, "sku-1", Map.of("color", "red"),
@@ -220,8 +227,8 @@ class ProductServiceTest {
         @Test
         void changeVariantPriceUpdatesSku() {
                 Product product = publishableProduct();
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.changeVariantPrice(new ChangeVariantPriceCommand(
                                 PRODUCT_ID, MERCHANT_ID, "sku-1", new BigDecimal("20.00"), "VND"));
@@ -232,7 +239,7 @@ class ProductServiceTest {
 
         @Test
         void bulkPriceUpdateRejectsOverBatchSize() {
-                when(productPolicy.getBulkPriceUpdateMaxSize()).thenReturn(2);
+                when(bulkPriceUpdatePolicy.maxUpdateSize()).thenReturn(2);
                 List<BulkPriceUpdateCommand.Item> items = List.of(
                                 new BulkPriceUpdateCommand.Item(PRODUCT_ID, "sku-1", new BigDecimal("1"), "VND"),
                                 new BulkPriceUpdateCommand.Item(PRODUCT_ID, "sku-2", new BigDecimal("1"), "VND"),
@@ -255,11 +262,11 @@ class ProductServiceTest {
 
         @Test
         void bulkPriceUpdateSkipsFailedItemsAndCountsSuccesses() {
-                when(productPolicy.getBulkPriceUpdateMaxSize()).thenReturn(10);
+                when(bulkPriceUpdatePolicy.maxUpdateSize()).thenReturn(10);
                 Product product = publishableProduct();
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(productRepository.findById("missing")).thenReturn(Optional.empty());
-                when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(productPersistencePort.findById("missing")).thenReturn(Optional.empty());
+                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 List<BulkPriceUpdateCommand.Item> items = List.of(
                                 new BulkPriceUpdateCommand.Item(PRODUCT_ID, "sku-1", new BigDecimal("20"), "VND"),
@@ -279,8 +286,8 @@ class ProductServiceTest {
                 product.pullEvents();
                 Brand brand = Brand.create(BRAND_ID, "Acme", null, null, FIXED);
                 brand.softDelete("gone", FIXED);
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(brandRepository.findById(BRAND_ID)).thenReturn(Optional.of(brand));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(brandPersistencePort.findById(BRAND_ID)).thenReturn(Optional.of(brand));
 
                 assertThatThrownBy(() -> productService.assignBrand(
                                 new AssignBrandCommand(PRODUCT_ID, MERCHANT_ID, BRAND_ID)))
@@ -294,9 +301,9 @@ class ProductServiceTest {
                 Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
                 product.pullEvents();
                 Brand brand = Brand.create(BRAND_ID, "Acme", null, null, FIXED);
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(brandRepository.findById(BRAND_ID)).thenReturn(Optional.of(brand));
-                when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(brandPersistencePort.findById(BRAND_ID)).thenReturn(Optional.of(brand));
+                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.assignBrand(new AssignBrandCommand(PRODUCT_ID, MERCHANT_ID, BRAND_ID));
 
@@ -307,8 +314,8 @@ class ProductServiceTest {
         void categorizeRequiresAllCategoriesToExist() {
                 Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
                 product.pullEvents();
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(categoryRepository.findById("missing")).thenReturn(Optional.empty());
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(categoryPersistencePort.findById("missing")).thenReturn(Optional.empty());
 
                 assertThatThrownBy(() -> productService.categorize(new AssignCategoriesCommand(
                                 PRODUCT_ID, MERCHANT_ID, List.of("missing"))))
@@ -321,7 +328,7 @@ class ProductServiceTest {
         void categorizeRejectsEmptyList() {
                 Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
                 product.pullEvents();
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
 
                 assertThatThrownBy(() -> productService.categorize(new AssignCategoriesCommand(
                                 PRODUCT_ID, MERCHANT_ID, List.of())))
@@ -335,9 +342,9 @@ class ProductServiceTest {
                 Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
                 product.pullEvents();
                 Category category = Category.create(CATEGORY_ID, null, "A", "a", FIXED);
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
-                when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(categoryPersistencePort.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.categorize(new AssignCategoriesCommand(
                                 PRODUCT_ID, MERCHANT_ID, List.of(CATEGORY_ID)));
@@ -348,8 +355,8 @@ class ProductServiceTest {
         @Test
         void publishTransitionsAndPublishesDomainEvent() {
                 Product product = publishableProduct();
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.publish(new PublishProductCommand(PRODUCT_ID, MERCHANT_ID));
 
@@ -362,8 +369,8 @@ class ProductServiceTest {
                 Product product = publishableProduct();
                 product.publish(ADMIN_ID, FIXED);
                 product.pullEvents();
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.deactivate(new DeactivateProductCommand(PRODUCT_ID, MERCHANT_ID, "policy"));
 
@@ -373,7 +380,7 @@ class ProductServiceTest {
 
         @Test
         void getThrowsWhenProductMissing() {
-                when(productRepository.findById("missing")).thenReturn(Optional.empty());
+                when(productPersistencePort.findById("missing")).thenReturn(Optional.empty());
 
                 assertThatThrownBy(() -> productService.get("missing"))
                                 .isInstanceOf(CatalogException.class)
@@ -384,9 +391,9 @@ class ProductServiceTest {
         @Test
         void listByMerchantReturnsPageResult() {
                 Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
-                when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 20)))
+                when(productPersistencePort.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 20)))
                                 .thenReturn(List.of(product));
-                when(productRepository.countByMerchant(MERCHANT_ID)).thenReturn(1L);
+                when(productPersistencePort.countByMerchant(MERCHANT_ID)).thenReturn(1L);
 
                 PageResult<Product> page = productService.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 20));
 
@@ -399,9 +406,9 @@ class ProductServiceTest {
         void listByStatusReturnsPageResult() {
                 Product product = publishableProduct();
                 product.publish(ADMIN_ID, FIXED);
-                when(productRepository.listByStatus(ProductStatus.PUBLISHED, OffsetPagination.of(0, 20)))
+                when(productPersistencePort.listByStatus(ProductStatus.PUBLISHED, OffsetPagination.of(0, 20)))
                                 .thenReturn(List.of(product));
-                when(productRepository.countByStatus(ProductStatus.PUBLISHED)).thenReturn(1L);
+                when(productPersistencePort.countByStatus(ProductStatus.PUBLISHED)).thenReturn(1L);
 
                 PageResult<Product> page = productService.listByStatus(ProductStatus.PUBLISHED,
                                 OffsetPagination.of(0, 20));
@@ -413,8 +420,8 @@ class ProductServiceTest {
         @Test
         void removeVariantDelegatesToDomain() {
                 Product product = publishableProduct();
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.removeVariant(new RemoveVariantCommand(
                                 PRODUCT_ID, MERCHANT_ID, "sku-1"));
@@ -425,8 +432,8 @@ class ProductServiceTest {
         @Test
         void updateMediaReplacesImages() {
                 Product product = publishableProduct();
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.updateMedia(new UpdateMediaCommand(
                                 PRODUCT_ID, MERCHANT_ID, List.of("img1", "img2")));
@@ -437,8 +444,8 @@ class ProductServiceTest {
         @Test
         void updateAiMetadataAppliesTagsAndDescription() {
                 Product product = publishableProduct();
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.updateAiMetadata(
                                 new UpdateAiMetadataCommand(
@@ -451,8 +458,8 @@ class ProductServiceTest {
         @Test
         void assignCollectionsReplacesList() {
                 Product product = publishableProduct();
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.assignCollections(
                                 new AssignCollectionsCommand(
@@ -466,8 +473,8 @@ class ProductServiceTest {
                 Product product = publishableProduct();
                 product.publish(ADMIN_ID, FIXED);
                 product.pullEvents();
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.emergencyTakedown(
                                 new EmergencyTakedownCommand(
@@ -484,7 +491,7 @@ class ProductServiceTest {
                                 List.of(PRODUCT_ID), 1L, Map.of(), Map.of(), Map.of(), null, null);
                 when(catalogSearchIndex.search(criteria)).thenReturn(Optional.of(hits));
                 Product product = publishableProduct();
-                when(productRepository.findByIdsPreserveOrder(List.of(PRODUCT_ID))).thenReturn(List.of(product));
+                when(productPersistencePort.findByIdsPreserveOrder(List.of(PRODUCT_ID))).thenReturn(List.of(product));
 
                 PageResult<Product> page = productService.search("keyword", OffsetPagination.of(0, 20));
 
@@ -497,8 +504,8 @@ class ProductServiceTest {
         void searchFallsBackToDatabaseWhenIndexUnavailable() {
                 var criteria = criteria("nothing", null, List.of(), List.of(), null, null);
                 when(catalogSearchIndex.search(criteria)).thenReturn(Optional.empty());
-                when(productRepository.searchPublished("nothing", 20, 0)).thenReturn(List.of());
-                when(productRepository.countSearchPublished("nothing")).thenReturn(0L);
+                when(productPersistencePort.searchPublished("nothing", 20, 0)).thenReturn(List.of());
+                when(productPersistencePort.countSearchPublished("nothing")).thenReturn(0L);
 
                 PageResult<Product> page = productService.search("nothing", OffsetPagination.of(0, 20));
 
@@ -509,9 +516,9 @@ class ProductServiceTest {
         void getRelatedProductsUsesProductBrandAndCategories() {
                 Product product = publishableProduct();
                 product.assignBrand(BRAND_ID, FIXED);
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
                 Product related = Product.create("01HZPRD0000000000000000002", MERCHANT_ID, "Other", FIXED);
-                when(productRepository.findRelatedProducts(PRODUCT_ID, BRAND_ID, List.of(CATEGORY_ID), 5))
+                when(productPersistencePort.findRelatedProducts(PRODUCT_ID, BRAND_ID, List.of(CATEGORY_ID), 5))
                                 .thenReturn(List.of(related));
 
                 List<Product> results = productService.getRelatedProducts(PRODUCT_ID, 5);
@@ -523,7 +530,7 @@ class ProductServiceTest {
         @Test
         void getPopularProductsDelegatesToRepository() {
                 Product product = publishableProduct();
-                when(productRepository.findPopularProducts(5)).thenReturn(List.of(product));
+                when(productPersistencePort.findPopularProducts(5)).thenReturn(List.of(product));
 
                 List<Product> results = productService.getPopularProducts(5);
 
@@ -534,14 +541,14 @@ class ProductServiceTest {
         @Test
         void getPersonalizedProductsFallsBackToPopularWhenNoSignal() {
                 Product popular = publishableProduct();
-                when(productRepository.findPopularProducts(5)).thenReturn(List.of(popular));
+                when(productPersistencePort.findPopularProducts(5)).thenReturn(List.of(popular));
 
                 List<Product> results = productService.getPersonalizedProducts(
                                 "anonymousUser", List.of(), List.of(), 5);
 
                 assertThat(results).hasSize(1);
                 assertThat(results.get(0).getName()).isEqualTo("Widget");
-                verify(productRepository, never()).findPersonalizedProducts(anyList(), anyList(),
+                verify(productPersistencePort, never()).findPersonalizedProducts(anyList(), anyList(),
                                 ArgumentMatchers.anyInt());
         }
 
@@ -549,9 +556,9 @@ class ProductServiceTest {
         void getPersonalizedProductsUsesBrowsingHistoryForRealUser() {
                 UserBrowsingHistory history = new UserBrowsingHistory(
                                 "user-1", List.of(CATEGORY_ID), List.of(BRAND_ID), List.of());
-                when(userBrowsingHistoryRepository.findByUserId("user-1")).thenReturn(Optional.of(history));
+                when(userBrowsingHistoryPersistencePort.findByUserId("user-1")).thenReturn(Optional.of(history));
                 Product product = publishableProduct();
-                when(productRepository.findPersonalizedProducts(List.of(CATEGORY_ID), List.of(BRAND_ID), 5))
+                when(productPersistencePort.findPersonalizedProducts(List.of(CATEGORY_ID), List.of(BRAND_ID), 5))
                                 .thenReturn(List.of(product));
 
                 List<Product> results = productService.getPersonalizedProducts("user-1", null, null, 5);
@@ -563,9 +570,9 @@ class ProductServiceTest {
         @Test
         void getPersonalizedProductsFallsBackToPopularWhenNoMatches() {
                 Product popular = publishableProduct();
-                when(productRepository.findPersonalizedProducts(List.of(CATEGORY_ID), List.of(), 5))
+                when(productPersistencePort.findPersonalizedProducts(List.of(CATEGORY_ID), List.of(), 5))
                                 .thenReturn(List.of());
-                when(productRepository.findPopularProducts(5)).thenReturn(List.of(popular));
+                when(productPersistencePort.findPopularProducts(5)).thenReturn(List.of(popular));
 
                 List<Product> results = productService.getPersonalizedProducts(
                                 null, List.of(CATEGORY_ID), List.of(), 5);
@@ -578,20 +585,20 @@ class ProductServiceTest {
         void trackProductViewIgnoresAnonymousUser() {
                 productService.trackProductView(PRODUCT_ID, "anonymousUser");
 
-                verify(productRepository, never()).findById(ArgumentMatchers.anyString());
-                verify(userBrowsingHistoryRepository, never()).save(any());
+                verify(productPersistencePort, never()).findById(ArgumentMatchers.anyString());
+                verify(userBrowsingHistoryPersistencePort, never()).save(any());
         }
 
         @Test
         void trackProductViewCreatesHistoryWhenAbsent() {
                 Product product = publishableProduct();
                 product.assignBrand(BRAND_ID, FIXED);
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(userBrowsingHistoryRepository.findByUserId("user-1")).thenReturn(Optional.empty());
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(userBrowsingHistoryPersistencePort.findByUserId("user-1")).thenReturn(Optional.empty());
 
                 productService.trackProductView(PRODUCT_ID, "user-1");
 
-                verify(userBrowsingHistoryRepository).save(any(
+                verify(userBrowsingHistoryPersistencePort).save(any(
                                 UserBrowsingHistory.class));
                 verify(integrationEventPublisher).publishProductViewed(
                                 PRODUCT_ID,
@@ -599,6 +606,45 @@ class ProductServiceTest {
                                 BRAND_ID,
                                 List.of(CATEGORY_ID),
                                 Instant.parse("2026-01-01T00:00:00Z"));
+        }
+
+        @Test
+        void recordSearchIntentPublishesTrimmedKeywordAndFirstBrand() {
+                productService.recordSearchIntent(new RecordSearchIntentCommand(
+                                "user-1", "  widget  ", null, List.of("brand-1", "brand-2")));
+
+                verify(integrationEventPublisher).publishSearchPerformed(
+                                "user-1",
+                                "widget",
+                                List.of(),
+                                "brand-1",
+                                Instant.parse("2026-01-01T00:00:00Z"));
+        }
+
+        @Test
+        void recordSearchIntentPublishesAFacetOnlyIntent() {
+                productService.recordSearchIntent(new RecordSearchIntentCommand(
+                                "user-1", " ", List.of(CATEGORY_ID), null));
+
+                verify(integrationEventPublisher).publishSearchPerformed(
+                                "user-1",
+                                null,
+                                List.of(CATEGORY_ID),
+                                null,
+                                Instant.parse("2026-01-01T00:00:00Z"));
+        }
+
+        @Test
+        void recordSearchIntentSkipsAnonymousAndEmptyIntents() {
+                productService.recordSearchIntent(new RecordSearchIntentCommand(
+                                "anonymousUser", "widget", null, null));
+                productService.recordSearchIntent(new RecordSearchIntentCommand(
+                                " ", "widget", null, null));
+                productService.recordSearchIntent(new RecordSearchIntentCommand(
+                                "user-1", " ", List.of(), List.of()));
+
+                verify(integrationEventPublisher, never()).publishSearchPerformed(
+                                any(), any(), any(), any(), any());
         }
 
         @Test
@@ -612,7 +658,7 @@ class ProductServiceTest {
                                 Map.of(), new BigDecimal("10"), new BigDecimal("20"));
                 when(catalogSearchIndex.search(criteria)).thenReturn(Optional.of(hits));
                 Product product = publishableProduct();
-                when(productRepository.findByIdsPreserveOrder(List.of(PRODUCT_ID))).thenReturn(List.of(product));
+                when(productPersistencePort.findByIdsPreserveOrder(List.of(PRODUCT_ID))).thenReturn(List.of(product));
                 when(productResultMapper.toResult(product)).thenReturn(sampleResult);
 
                 ProductSearchResult result = productService
@@ -633,7 +679,7 @@ class ProductServiceTest {
                 when(catalogSearchIndex.search(criteria)).thenReturn(Optional.empty());
                 Product product = publishableProduct();
                 product.publish(ADMIN_ID, FIXED);
-                when(productRepository.searchFallback(any(), eq(OffsetPagination.of(0, 20))))
+                when(productPersistencePort.searchFallback(any(), eq(OffsetPagination.of(0, 20))))
                                 .thenReturn(new ProductPersistencePort.FallbackPage(List.of(product), 1));
                 when(productResultMapper.toResult(product)).thenReturn(sampleResult);
 
@@ -661,7 +707,7 @@ class ProductServiceTest {
                 Product product = publishableProduct();
                 product.publish(ADMIN_ID, FIXED);
                 product.assignBrand(BRAND_ID, FIXED);
-                when(productRepository.searchFallback(any(), eq(OffsetPagination.of(0, 20))))
+                when(productPersistencePort.searchFallback(any(), eq(OffsetPagination.of(0, 20))))
                                 .thenReturn(new ProductPersistencePort.FallbackPage(List.of(product), 1));
                 when(productResultMapper.toResult(product)).thenReturn(sampleResult);
 
@@ -676,7 +722,7 @@ class ProductServiceTest {
                 when(catalogSearchIndex.search(c)).thenReturn(Optional.empty());
                 Product product = publishableProduct();
                 product.publish(ADMIN_ID, FIXED);
-                when(productRepository.searchFallback(any(), eq(OffsetPagination.of(0, 20))))
+                when(productPersistencePort.searchFallback(any(), eq(OffsetPagination.of(0, 20))))
                                 .thenReturn(new ProductPersistencePort.FallbackPage(List.of(product), 1));
                 when(productResultMapper.toResult(product)).thenReturn(sampleResult);
 
@@ -689,7 +735,7 @@ class ProductServiceTest {
         void searchCatalogFallbackFiltersOutByBrandCategoryPrice() {
                 var c = criteria(null, null, List.of("other-cat"), List.of("other-brand"), null, null);
                 when(catalogSearchIndex.search(c)).thenReturn(Optional.empty());
-                when(productRepository.searchFallback(any(), eq(OffsetPagination.of(0, 20))))
+                when(productPersistencePort.searchFallback(any(), eq(OffsetPagination.of(0, 20))))
                                 .thenReturn(new ProductPersistencePort.FallbackPage(List.of(), 0));
 
                 var result = productService.searchCatalog(c);
@@ -705,7 +751,7 @@ class ProductServiceTest {
                                 List.of(PRODUCT_ID), 1L, Map.of(), Map.of(), Map.of(), null, null);
                 when(catalogSearchIndex.search(c)).thenReturn(Optional.of(hits));
                 Product product = publishableProduct();
-                when(productRepository.findByIdsPreserveOrder(List.of(PRODUCT_ID))).thenReturn(List.of(product));
+                when(productPersistencePort.findByIdsPreserveOrder(List.of(PRODUCT_ID))).thenReturn(List.of(product));
                 when(productResultMapper.toResult(product)).thenReturn(sampleResult);
 
                 var result = productService.searchCatalog(c);
@@ -716,7 +762,7 @@ class ProductServiceTest {
         @Test
         void getPersonalizedProductsUsesProvidedFiltersForAnonymousWithSignal() {
                 Product product = publishableProduct();
-                when(productRepository.findPersonalizedProducts(List.of(CATEGORY_ID), List.of(), 5))
+                when(productPersistencePort.findPersonalizedProducts(List.of(CATEGORY_ID), List.of(), 5))
                                 .thenReturn(List.of(product));
 
                 List<Product> results = productService.getPersonalizedProducts(
@@ -736,10 +782,10 @@ class ProductServiceTest {
 
         @Test
         void bulkPriceUpdateAppliesAllItems() {
-                when(productPolicy.getBulkPriceUpdateMaxSize()).thenReturn(10);
+                when(bulkPriceUpdatePolicy.maxUpdateSize()).thenReturn(10);
                 Product product = publishableProduct();
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 List<BulkPriceUpdateCommand.Item> items = List.of(
                                 new BulkPriceUpdateCommand.Item(PRODUCT_ID, "sku-1", new BigDecimal("25"), "VND"));
@@ -755,8 +801,8 @@ class ProductServiceTest {
         @Test
         void cloneCreatesNewProductForOwner() {
                 Product source = publishableProduct();
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(source));
-                when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(source));
+                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.clone(new CloneProductCommand(
                                 PRODUCT_ID, MERCHANT_ID));
@@ -767,8 +813,8 @@ class ProductServiceTest {
         @Test
         void submitForReviewTransitionsProduct() {
                 Product product = publishableProduct();
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.submitForReview(
                                 new SubmitForReviewCommand(
@@ -780,8 +826,8 @@ class ProductServiceTest {
         @Test
         void rejectTransitionsProduct() {
                 Product product = publishableProduct();
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.reject(new RejectProductCommand(
                                 PRODUCT_ID, ADMIN_ID, "SPAM", "bad"));
@@ -795,8 +841,8 @@ class ProductServiceTest {
                 product.publish(ADMIN_ID, FIXED);
                 product.deactivate("policy", FIXED);
                 product.pullEvents();
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.restore(
                                 new RestoreProductCommand(
@@ -809,8 +855,8 @@ class ProductServiceTest {
         @Test
         void defineAttributesAppliesAttributes() {
                 Product product = publishableProduct();
-                when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 productService.defineAttributes(
                                 new DefineAttributesCommand(
@@ -822,7 +868,7 @@ class ProductServiceTest {
         @Test
         void getBySkuIdsMapsResults() {
                 Product product = publishableProduct();
-                when(productRepository.findAllBySkuIds(List.of("sku-1"))).thenReturn(List.of(product));
+                when(productPersistencePort.findAllBySkuIds(List.of("sku-1"))).thenReturn(List.of(product));
 
                 assertThat(productService.getBySkuIds(List.of("sku-1"))).containsExactly(product);
         }
@@ -831,9 +877,9 @@ class ProductServiceTest {
         void syncAllToSearchIndexPagesThroughPublishedProducts() {
                 Product product = publishableProduct();
                 product.publish(ADMIN_ID, FIXED);
-                when(productPolicy.getSearchIndexBatchSize()).thenReturn(100);
-                when(productRepository.findPublished(100, 0)).thenReturn(List.of(product));
-                when(productRepository.findPublished(100, 100)).thenReturn(List.of());
+                when(searchIndexBatchPolicy.batchSize()).thenReturn(100);
+                when(productPersistencePort.findPublished(100, 0)).thenReturn(List.of(product));
+                when(productPersistencePort.findPublished(100, 100)).thenReturn(List.of());
                 ProductSearchDocument doc = new ProductSearchDocument(
                                 PRODUCT_ID, MERCHANT_ID, "Widget", null, null, List.of(CATEGORY_ID),
                                 List.of(), List.of(), List.of(), Map.of(), null, null, null, null, "PUBLISHED",

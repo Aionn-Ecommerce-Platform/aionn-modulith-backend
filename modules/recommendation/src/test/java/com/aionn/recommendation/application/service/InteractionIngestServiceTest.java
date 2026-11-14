@@ -38,7 +38,7 @@ class InteractionIngestServiceTest {
     private static final String SKU_ID = "01HZSKU0000000000000000001";
 
     @Mock
-    private InteractionPersistencePort interactionRepository;
+    private InteractionPersistencePort interactionPersistencePort;
     @Mock
     private ProductAttributeQueryPort productAttributeQuery;
     @Mock
@@ -48,7 +48,7 @@ class InteractionIngestServiceTest {
 
     private InteractionIngestService service() {
         return new InteractionIngestService(
-                interactionRepository, productAttributeQuery, weightPolicy, clock);
+                interactionPersistencePort, productAttributeQuery, weightPolicy, clock);
     }
 
     @Test
@@ -86,7 +86,7 @@ class InteractionIngestServiceTest {
         service().ingestInteraction(RecordInteractionCommand.forSku(
                 "user-1", SKU_ID, InteractionType.CART_ADD, NOW, "evt-3"));
 
-        verify(interactionRepository, never()).append(any());
+        verify(interactionPersistencePort, never()).append(any());
     }
 
     @Test
@@ -97,7 +97,7 @@ class InteractionIngestServiceTest {
         service().ingestInteraction(RecordInteractionCommand.forProduct(
                 "anonymousUser", PRODUCT_ID, InteractionType.VIEW, NOW, "evt-4", List.of(), null));
 
-        verify(interactionRepository, never()).append(any());
+        verify(interactionPersistencePort, never()).append(any());
     }
 
     @Test
@@ -107,7 +107,7 @@ class InteractionIngestServiceTest {
         service().ingestInteraction(RecordInteractionCommand.forProduct(
                 "  ", PRODUCT_ID, InteractionType.VIEW, NOW, "evt-6", List.of(), null));
 
-        verify(interactionRepository, never()).append(any());
+        verify(interactionPersistencePort, never()).append(any());
     }
 
     @Test
@@ -152,13 +152,13 @@ class InteractionIngestServiceTest {
         // Outbox delivery is at-least-once, so a view or purchase event can arrive after the account
         // deletion that erased it. Recording it would restart the interaction log the erasure just
         // emptied.
-        when(interactionRepository.isUserErased("user-1")).thenReturn(true);
+        when(interactionPersistencePort.isUserErased("user-1")).thenReturn(true);
         stubWeight(InteractionType.VIEW, 1.0, 14);
 
         service().ingestInteraction(RecordInteractionCommand.forProduct(
                 "user-1", PRODUCT_ID, InteractionType.VIEW, NOW, "evt-late", List.of(), null));
 
-        verify(interactionRepository, never()).append(any());
+        verify(interactionPersistencePort, never()).append(any());
     }
 
     @Test
@@ -170,10 +170,10 @@ class InteractionIngestServiceTest {
         service().ingestInteraction(RecordInteractionCommand.forProduct(
                 "user-1", PRODUCT_ID, InteractionType.VIEW, NOW, "evt-10", List.of(), null));
 
-        InOrder order = inOrder(interactionRepository);
-        order.verify(interactionRepository).lockUser("user-1");
-        order.verify(interactionRepository).isUserErased("user-1");
-        order.verify(interactionRepository).append(any());
+        InOrder order = inOrder(interactionPersistencePort);
+        order.verify(interactionPersistencePort).lockUser("user-1");
+        order.verify(interactionPersistencePort).isUserErased("user-1");
+        order.verify(interactionPersistencePort).append(any());
     }
 
     @Test
@@ -195,13 +195,13 @@ class InteractionIngestServiceTest {
     @Test
     void searchForAnErasedAccountIsDropped() {
         stubWeight(InteractionType.SEARCH, 0.5, 7);
-        when(interactionRepository.isUserErased("user-1")).thenReturn(true);
+        when(interactionPersistencePort.isUserErased("user-1")).thenReturn(true);
 
         service().ingestInteraction(RecordInteractionCommand.forSearch(
                 "user-1", NOW, "evt-search", List.of(), null, null));
 
-        verify(interactionRepository).lockUser("user-1");
-        verify(interactionRepository, never()).append(any());
+        verify(interactionPersistencePort).lockUser("user-1");
+        verify(interactionPersistencePort, never()).append(any());
     }
 
     @Test
@@ -210,8 +210,8 @@ class InteractionIngestServiceTest {
                 "user-1", "  ", " ", InteractionType.VIEW, NOW, "evt-empty",
                 List.of(), null, null));
 
-        verify(interactionRepository, never()).lockUser(any());
-        verify(interactionRepository, never()).append(any());
+        verify(interactionPersistencePort, never()).lockUser(any());
+        verify(interactionPersistencePort, never()).append(any());
     }
 
     private void stubWeight(InteractionType type, double base, long halfLifeDays) {
@@ -221,7 +221,7 @@ class InteractionIngestServiceTest {
 
     private UserInteraction captureRecorded() {
         ArgumentCaptor<UserInteraction> captor = ArgumentCaptor.forClass(UserInteraction.class);
-        verify(interactionRepository).append(captor.capture());
+        verify(interactionPersistencePort).append(captor.capture());
         return captor.getValue();
     }
 }

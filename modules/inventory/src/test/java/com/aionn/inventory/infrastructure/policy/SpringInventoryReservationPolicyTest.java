@@ -12,7 +12,7 @@ class SpringInventoryReservationPolicyTest {
         var properties = properties(600, 100);
         var policy = new SpringInventoryReservationPolicy(properties);
 
-        assertThat(policy.getDefaultTtlSeconds()).isEqualTo(600);
+        assertThat(policy.defaultTtlSeconds()).isEqualTo(600);
     }
 
     @Test
@@ -20,7 +20,7 @@ class SpringInventoryReservationPolicyTest {
         var properties = properties(1800, 200);
         var policy = new SpringInventoryReservationPolicy(properties);
 
-        assertThat(policy.getDefaultTtlSeconds()).isEqualTo(1800);
+        assertThat(policy.defaultTtlSeconds()).isEqualTo(1800);
     }
 
     private static InventoryProperties properties(int defaultTtlSeconds, int batchSize) {

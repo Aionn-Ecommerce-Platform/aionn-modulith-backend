@@ -10,6 +10,8 @@ import com.aionn.catalog.application.dto.category.command.DeleteCategoryCommand;
 import com.aionn.catalog.application.dto.category.command.MoveCategoryCommand;
 import com.aionn.catalog.application.dto.category.command.UpdateCategoryCommand;
 import com.aionn.catalog.application.dto.category.result.CategoryResult;
+import com.aionn.catalog.application.dto.category.query.GetCategoryQuery;
+import com.aionn.catalog.application.dto.category.query.ListCategoryChildrenQuery;
 import com.aionn.catalog.application.dto.category.result.CategoryTreeNode;
 import org.mapstruct.Mapper;
 
@@ -35,4 +37,12 @@ public interface CategoryDtoMapper {
     CategoryTreeNodeResponse toTreeNodeResponse(CategoryTreeNode node);
 
     List<CategoryTreeNodeResponse> toTreeNodeResponses(List<CategoryTreeNode> nodes);
+
+    default ListCategoryChildrenQuery toListChildrenQuery(String parentId) {
+        return new ListCategoryChildrenQuery(parentId);
+    }
+
+    default GetCategoryQuery toGetQuery(String categoryId) {
+        return new GetCategoryQuery(categoryId);
+    }
 }

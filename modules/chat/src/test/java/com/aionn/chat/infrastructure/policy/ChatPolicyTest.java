@@ -20,10 +20,10 @@ class ChatPolicyTest {
         SpringChatMessagePolicy policy = new SpringChatMessagePolicy(
                 new ChatMessageProperties(4000, 120, 30, 100));
 
-        assertThat(policy.getMaxTextLength()).isEqualTo(4000);
-        assertThat(policy.getRecallWindow()).isEqualTo(Duration.ofSeconds(120));
-        assertThat(policy.getListDefaultLimit()).isEqualTo(30);
-        assertThat(policy.getListMaxLimit()).isEqualTo(100);
+        assertThat(policy.maxTextLength()).isEqualTo(4000);
+        assertThat(policy.recallWindow()).isEqualTo(Duration.ofSeconds(120));
+        assertThat(policy.listDefaultLimit()).isEqualTo(30);
+        assertThat(policy.listMaxLimit()).isEqualTo(100);
     }
 
     @Test
@@ -31,9 +31,9 @@ class ChatPolicyTest {
         SpringChatConversationPolicy policy = new SpringChatConversationPolicy(
                 new ChatConversationProperties(50, 100, 100));
 
-        assertThat(policy.getListDefaultLimit()).isEqualTo(50);
-        assertThat(policy.getListMaxLimit()).isEqualTo(100);
-        assertThat(policy.getUnreadScanLimit()).isEqualTo(100);
+        assertThat(policy.listDefaultLimit()).isEqualTo(50);
+        assertThat(policy.listMaxLimit()).isEqualTo(100);
+        assertThat(policy.unreadScanLimit()).isEqualTo(100);
     }
 
     @Test

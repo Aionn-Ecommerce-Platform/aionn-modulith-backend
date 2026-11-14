@@ -13,13 +13,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SettlementBalanceReconciliationService {
 
-    private final MerchantBalancePersistencePort balanceRepository;
+    private final MerchantBalancePersistencePort merchantBalancePersistencePort;
     private final PaymentMetricsPort metrics;
 
     @Transactional(readOnly = true)
     public Result reconcile() {
-        long total = balanceRepository.countBalances();
-        List<ReconciliationMismatch> mismatches = balanceRepository.findReconciliationMismatches();
+        long total = merchantBalancePersistencePort.countBalances();
+        List<ReconciliationMismatch> mismatches = merchantBalancePersistencePort.findReconciliationMismatches();
         long mismatched = mismatches.size();
         long matched = Math.max(0, total - mismatched);
         metrics.settlementReconciliation(matched, mismatched);

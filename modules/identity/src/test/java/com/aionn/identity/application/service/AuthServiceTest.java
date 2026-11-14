@@ -191,7 +191,7 @@ class AuthServiceTest {
         when(userPersistencePort.existsById(USER_ID)).thenReturn(true);
         when(authSessionPersistencePort.findById(SESSION_ID))
                 .thenReturn(Optional.of(activeSession()));
-        when(authPolicy.getAccessTokenExpiryMinutes()).thenReturn(15);
+        when(authPolicy.accessTokenExpiryMinutes()).thenReturn(15);
 
         authService.logout(new LogoutCommand(USER_ID, SESSION_ID, "jti-1"));
 
@@ -260,7 +260,7 @@ class AuthServiceTest {
         when(passwordHasher.matches("pw", "hash")).thenReturn(true);
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
         when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(security(false, null)));
-        when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
+        when(authPolicy.sessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
         when(authResultMapper.toLoginResult(any(AuthSession.class), eq("access-token"), anyString(),
                 any(Instant.class))).thenReturn(expected);
@@ -321,7 +321,7 @@ class AuthServiceTest {
     void loginWithWrongPasswordRecordsFailedAttempt() {
         when(userSecurityPort.findByIdentity("u@example.com")).thenReturn(Optional.of(security(false, null)));
         when(passwordHasher.matches("bad", "hash")).thenReturn(false);
-        when(authPolicy.getMaxFailedLoginAttempts()).thenReturn(5);
+        when(authPolicy.maxFailedLoginAttempts()).thenReturn(5);
 
         assertErrorCode(IdentityErrorCode.INVALID_CREDENTIALS,
                 () -> authService.login(new LoginCommand("u@example.com", "bad", null, "ip", "ua")));
@@ -336,7 +336,7 @@ class AuthServiceTest {
         when(userSecurityPort.findByIdentity("u@example.com")).thenReturn(Optional.of(
                 new UserSecurityPort.UserSecurityData(
                         USER_ID, null, UserStatus.ACTIVE, false, null, null, 0)));
-        when(authPolicy.getMaxFailedLoginAttempts()).thenReturn(5);
+        when(authPolicy.maxFailedLoginAttempts()).thenReturn(5);
 
         assertErrorCode(IdentityErrorCode.INVALID_CREDENTIALS,
                 () -> authService.login(new LoginCommand("u@example.com", "pw", null, "ip", "ua")));
@@ -351,8 +351,8 @@ class AuthServiceTest {
                 new UserSecurityPort.UserSecurityData(
                         USER_ID, "hash", UserStatus.ACTIVE, false, null, null, 4)));
         when(passwordHasher.matches("bad", "hash")).thenReturn(false);
-        when(authPolicy.getMaxFailedLoginAttempts()).thenReturn(5);
-        when(authPolicy.getLockoutMinutes()).thenReturn(15);
+        when(authPolicy.maxFailedLoginAttempts()).thenReturn(5);
+        when(authPolicy.lockoutMinutes()).thenReturn(15);
 
         assertErrorCode(IdentityErrorCode.INVALID_CREDENTIALS,
                 () -> authService.login(new LoginCommand("u@example.com", "bad", null, "ip", "ua")));
@@ -366,7 +366,7 @@ class AuthServiceTest {
         when(passwordHasher.matches("pw", "hash")).thenReturn(true);
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
         when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(security(true, "secret")));
-        when(authPolicy.getMaxFailedLoginAttempts()).thenReturn(5);
+        when(authPolicy.maxFailedLoginAttempts()).thenReturn(5);
 
         assertErrorCode(IdentityErrorCode.OTP_REQUIRED,
                 () -> authService.login(new LoginCommand("u@example.com", "pw", null, "ip", "ua")));
@@ -382,7 +382,7 @@ class AuthServiceTest {
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
         when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(security(true, "secret")));
         when(totpManager.verifyCode("secret", "000000")).thenReturn(false);
-        when(authPolicy.getMaxFailedLoginAttempts()).thenReturn(5);
+        when(authPolicy.maxFailedLoginAttempts()).thenReturn(5);
 
         assertErrorCode(IdentityErrorCode.OTP_INVALID,
                 () -> authService.login(new LoginCommand("u@example.com", "pw", "000000", "ip", "ua")));
@@ -396,7 +396,7 @@ class AuthServiceTest {
         when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(security(true, "secret")));
         when(totpManager.verifyCode("secret", "123456")).thenReturn(true);
         when(totpReplayGuard.claim(USER_ID, "123456")).thenReturn(false);
-        when(authPolicy.getMaxFailedLoginAttempts()).thenReturn(5);
+        when(authPolicy.maxFailedLoginAttempts()).thenReturn(5);
 
         assertErrorCode(IdentityErrorCode.OTP_INVALID,
                 () -> authService.login(new LoginCommand("u@example.com", "pw", "123456", "ip", "ua")));
@@ -414,7 +414,7 @@ class AuthServiceTest {
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
         when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(security(true, "secret")));
         when(totpManager.verifyCode("secret", "123456")).thenReturn(true);
-        when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
+        when(authPolicy.sessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
         when(authResultMapper.toLoginResult(any(AuthSession.class), eq("access-token"), anyString(),
                 any(Instant.class))).thenReturn(expected);
@@ -439,7 +439,7 @@ class AuthServiceTest {
                 List.of(new MfaPersistencePort.BackupCodeData("bc-1", "code-hash")));
         when(passwordHasher.matches("12345678", "code-hash")).thenReturn(true);
         when(mfaPersistencePort.markBackupCodeUsed(eq("bc-1"), any(Instant.class))).thenReturn(true);
-        when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
+        when(authPolicy.sessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
         when(authResultMapper.toLoginResult(any(AuthSession.class), eq("access-token"), anyString(),
                 any(Instant.class))).thenReturn(expected);
@@ -461,7 +461,7 @@ class AuthServiceTest {
         when(socialLinkPersistencePort.findByProviderAndProviderUserId(AuthProvider.GOOGLE, "puid"))
                 .thenReturn(Optional.of(SocialLink.createNew("sl-1", USER_ID, AuthProvider.GOOGLE, "puid", TEST_CLOCK)));
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
-        when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
+        when(authPolicy.sessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
         when(authResultMapper.toSocialLoginResult(any(AuthSession.class), eq("access-token"), anyString(),
                 any(Instant.class), eq(false))).thenReturn(expected);
@@ -490,7 +490,7 @@ class AuthServiceTest {
         });
         when(userPersistencePort.findById(anyString()))
                 .thenAnswer(inv -> Optional.ofNullable(savedUser.get()));
-        when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
+        when(authPolicy.sessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
         when(authResultMapper.toSocialLoginResult(any(AuthSession.class), eq("access-token"), anyString(),
                 any(Instant.class), eq(true))).thenReturn(expected);
@@ -680,7 +680,7 @@ class AuthServiceTest {
                 "refresh", Instant.now(), Instant.now().plus(Duration.ofDays(7)));
         when(refreshTokenStore.consumeSessionId("rt")).thenReturn(Optional.of(SESSION_ID));
         when(authSessionPersistencePort.findById(SESSION_ID)).thenReturn(Optional.of(activeSession()));
-        when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
+        when(authPolicy.sessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
         when(authResultMapper.toRefreshResult(any(AuthSession.class), eq("access-token"), anyString(),
@@ -699,7 +699,7 @@ class AuthServiceTest {
                 "refresh", Instant.now(), Instant.now().plus(Duration.ofDays(7)));
         when(refreshTokenStore.consumeSessionId("ct")).thenReturn(Optional.of(SESSION_ID));
         when(authSessionPersistencePort.findById(SESSION_ID)).thenReturn(Optional.of(activeSession()));
-        when(authPolicy.getSessionExpiresDays()).thenReturn(7L);
+        when(authPolicy.sessionExpiresDays()).thenReturn(7L);
         stubTokenIssuance();
         when(userPersistencePort.findById(USER_ID)).thenReturn(Optional.of(activeUser()));
         when(authResultMapper.toRefreshResult(any(AuthSession.class), eq("access-token"), anyString(),

@@ -5,10 +5,10 @@ import com.aionn.ordering.adapter.rest.dto.request.ConfirmItemReceivedRequest;
 import com.aionn.ordering.adapter.rest.dto.request.RejectReturnRequest;
 import com.aionn.ordering.adapter.rest.dto.request.RequestReturnRequest;
 import com.aionn.ordering.adapter.rest.dto.response.OrderReturnResponse;
+import com.aionn.ordering.adapter.rest.dto.response.ReturnItemResponse;
 import com.aionn.ordering.adapter.rest.mapper.OrderingDtoMapper;
 import com.aionn.ordering.adapter.rest.support.session.CurrentMerchantId;
 import com.aionn.ordering.adapter.rest.support.session.CurrentUserId;
-import com.aionn.ordering.application.dto.returns.command.ConfirmItemReceivedCommand;
 import com.aionn.ordering.application.port.in.returns.*;
 import com.aionn.ordering.application.service.OrderReturnService;
 import com.aionn.platform.web.response.ApiResponse;
@@ -90,7 +90,7 @@ public class OrderReturnController {
                         @PathVariable String returnId,
                         @Valid @RequestBody ConfirmItemReceivedRequest request) {
                 OrderReturnResponse response = dtoMapper.toResponse(confirmItemReceivedInputPort.execute(
-                                new ConfirmItemReceivedCommand(returnId, ownerId, request.itemCondition())));
+                                dtoMapper.toConfirmItemReceivedCommand(returnId, ownerId, request)));
                 return ResponseEntity.ok(ApiResponse.success(response, "Return item received"));
         }
 
@@ -134,17 +134,8 @@ public class OrderReturnController {
         public ResponseEntity<ApiResponse<List<ReturnItemResponse>>> items(
                         @CurrentUserId String userId,
                         @PathVariable String returnId) {
-                List<ReturnItemResponse> items = returnService.listSelectedItems(returnId, userId).stream()
-                                .map(item -> new ReturnItemResponse(item.skuId(), item.qty(),
-                                                item.unitPrice(), item.refundAmount()))
-                                .toList();
+                List<ReturnItemResponse> items = dtoMapper.toReturnItemResponses(
+                                returnService.listSelectedItems(returnId, userId));
                 return ResponseEntity.ok(ApiResponse.success(items, "Return items fetched"));
-        }
-
-        public record ReturnItemResponse(
-                        String skuId,
-                        int qty,
-                        java.math.BigDecimal unitPrice,
-                        java.math.BigDecimal refundAmount) {
         }
 }

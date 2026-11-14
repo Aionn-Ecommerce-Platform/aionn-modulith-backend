@@ -42,7 +42,7 @@ class BrandServiceTest {
     private static final String BRAND_ID = "01HZBRD0000000000000000001";
 
     @Mock
-    private BrandPersistencePort brandRepository;
+    private BrandPersistencePort brandPersistencePort;
     @Mock
     private EventPublisher eventPublisher;
 
@@ -54,38 +54,38 @@ class BrandServiceTest {
 
     @Test
     void createPersistsAndPublishesEvents() {
-        when(brandRepository.existsByName("Acme")).thenReturn(false);
-        when(brandRepository.save(any(Brand.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(brandPersistencePort.existsByName("Acme")).thenReturn(false);
+        when(brandPersistencePort.save(any(Brand.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Brand result = brandService.create(new CreateBrandCommand("Acme", null, "desc"));
 
         assertThat(result.getName()).isEqualTo("Acme");
         assertThat(result.getDescription()).isEqualTo("desc");
         ArgumentCaptor<Brand> captor = ArgumentCaptor.forClass(Brand.class);
-        verify(brandRepository).save(captor.capture());
+        verify(brandPersistencePort).save(captor.capture());
         assertThat(captor.getValue().getName()).isEqualTo("Acme");
         verify(eventPublisher).publish(anyCollection());
     }
 
     @Test
     void createThrowsWhenNameAlreadyExists() {
-        when(brandRepository.existsByName("Acme")).thenReturn(true);
+        when(brandPersistencePort.existsByName("Acme")).thenReturn(true);
 
         assertThatThrownBy(() -> brandService.create(new CreateBrandCommand("Acme", null, null)))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.BRAND_NAME_CONFLICT.getCode());
 
-        verify(brandRepository, never()).save(any());
+        verify(brandPersistencePort, never()).save(any());
     }
 
     @Test
     void updateAppliesChangesAndSaves() {
         Brand brand = Brand.create(BRAND_ID, "Acme", null, null, FIXED);
         brand.pullEvents();
-        when(brandRepository.findById(BRAND_ID)).thenReturn(Optional.of(brand));
-        when(brandRepository.existsByName("Acme New")).thenReturn(false);
-        when(brandRepository.save(any(Brand.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(brandPersistencePort.findById(BRAND_ID)).thenReturn(Optional.of(brand));
+        when(brandPersistencePort.existsByName("Acme New")).thenReturn(false);
+        when(brandPersistencePort.save(any(Brand.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Brand result = brandService.update(new UpdateBrandCommand(BRAND_ID, "Acme New", "logo", "new desc"));
 
@@ -98,32 +98,32 @@ class BrandServiceTest {
     void updateRejectsWhenNewNameCollides() {
         Brand brand = Brand.create(BRAND_ID, "Acme", null, null, FIXED);
         brand.pullEvents();
-        when(brandRepository.findById(BRAND_ID)).thenReturn(Optional.of(brand));
-        when(brandRepository.existsByName("Zenith")).thenReturn(true);
+        when(brandPersistencePort.findById(BRAND_ID)).thenReturn(Optional.of(brand));
+        when(brandPersistencePort.existsByName("Zenith")).thenReturn(true);
 
         assertThatThrownBy(() -> brandService.update(new UpdateBrandCommand(BRAND_ID, "Zenith", null, null)))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.BRAND_NAME_CONFLICT.getCode());
 
-        verify(brandRepository, never()).save(any());
+        verify(brandPersistencePort, never()).save(any());
     }
 
     @Test
     void updateAllowsSameNameCaseInsensitive() {
         Brand brand = Brand.create(BRAND_ID, "Acme", null, null, FIXED);
         brand.pullEvents();
-        when(brandRepository.findById(BRAND_ID)).thenReturn(Optional.of(brand));
-        when(brandRepository.save(any(Brand.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(brandPersistencePort.findById(BRAND_ID)).thenReturn(Optional.of(brand));
+        when(brandPersistencePort.save(any(Brand.class))).thenAnswer(inv -> inv.getArgument(0));
 
         brandService.update(new UpdateBrandCommand(BRAND_ID, "acme", null, null));
 
-        verify(brandRepository, never()).existsByName(anyString());
+        verify(brandPersistencePort, never()).existsByName(anyString());
     }
 
     @Test
     void updateThrowsWhenBrandNotFound() {
-        when(brandRepository.findById(anyString())).thenReturn(Optional.empty());
+        when(brandPersistencePort.findById(anyString())).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> brandService.update(new UpdateBrandCommand("missing", "X", null, null)))
                 .isInstanceOf(CatalogException.class)
@@ -135,18 +135,18 @@ class BrandServiceTest {
     void deleteSoftDeletesAndPublishesEvent() {
         Brand brand = Brand.create(BRAND_ID, "Acme", null, null, FIXED);
         brand.pullEvents();
-        when(brandRepository.findById(BRAND_ID)).thenReturn(Optional.of(brand));
+        when(brandPersistencePort.findById(BRAND_ID)).thenReturn(Optional.of(brand));
 
         brandService.delete(new DeleteBrandCommand(BRAND_ID, "policy"));
 
         assertThat(brand.getStatus()).isEqualTo(BrandStatus.DELETED);
-        verify(brandRepository).save(brand);
+        verify(brandPersistencePort).save(brand);
         verify(eventPublisher).publish(anyCollection());
     }
 
     @Test
     void deleteThrowsWhenBrandNotFound() {
-        when(brandRepository.findById(anyString())).thenReturn(Optional.empty());
+        when(brandPersistencePort.findById(anyString())).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> brandService.delete(new DeleteBrandCommand("missing", "reason")))
                 .isInstanceOf(CatalogException.class)
@@ -157,7 +157,7 @@ class BrandServiceTest {
     @Test
     void getReturnsResultWhenBrandFound() {
         Brand brand = Brand.create(BRAND_ID, "Acme", null, null, FIXED);
-        when(brandRepository.findById(BRAND_ID)).thenReturn(Optional.of(brand));
+        when(brandPersistencePort.findById(BRAND_ID)).thenReturn(Optional.of(brand));
 
         Brand result = brandService.get(BRAND_ID);
 
@@ -167,7 +167,7 @@ class BrandServiceTest {
 
     @Test
     void getThrowsWhenBrandMissing() {
-        when(brandRepository.findById("missing")).thenReturn(Optional.empty());
+        when(brandPersistencePort.findById("missing")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> brandService.get("missing"))
                 .isInstanceOf(CatalogException.class)
@@ -178,8 +178,8 @@ class BrandServiceTest {
     @Test
     void listReturnsPagedResults() {
         Brand brand = Brand.create(BRAND_ID, "Acme", null, null, FIXED);
-        when(brandRepository.list(any(OffsetPagination.class))).thenReturn(List.of(brand));
-        when(brandRepository.count()).thenReturn(1L);
+        when(brandPersistencePort.list(any(OffsetPagination.class))).thenReturn(List.of(brand));
+        when(brandPersistencePort.count()).thenReturn(1L);
 
         PageResult<Brand> page = brandService.list(OffsetPagination.of(0, 20));
 

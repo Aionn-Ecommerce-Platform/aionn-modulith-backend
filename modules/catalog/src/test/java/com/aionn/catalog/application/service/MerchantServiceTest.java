@@ -42,7 +42,7 @@ import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 class MerchantServiceTest {
 
         @Mock
-        private MerchantPersistencePort merchantRepository;
+        private MerchantPersistencePort merchantPersistencePort;
         @Mock
         private EventPublisher eventPublisher;
         @Mock
@@ -63,36 +63,36 @@ class MerchantServiceTest {
         @Test
         void registerPersistsAndPublishesEvent() {
                 when(catalogSettingsPort.getDefaultCommissionRate()).thenReturn(new BigDecimal("0.0500"));
-                when(merchantRepository.existsByOwnerId("owner-1")).thenReturn(false);
-                when(merchantRepository.save(any(Merchant.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(merchantPersistencePort.existsByOwnerId("owner-1")).thenReturn(false);
+                when(merchantPersistencePort.save(any(Merchant.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 Merchant result = merchantService.register(new RegisterMerchantCommand("owner-1", "Acme"));
 
                 assertThat(result.getName()).isEqualTo("Acme");
-                verify(merchantRepository).save(any(Merchant.class));
+                verify(merchantPersistencePort).save(any(Merchant.class));
                 verify(eventPublisher).publish(anyCollection());
         }
 
         @Test
         void registerThrowsWhenOwnerAlreadyHasMerchant() {
-                when(merchantRepository.existsByOwnerId("owner-1")).thenReturn(true);
+                when(merchantPersistencePort.existsByOwnerId("owner-1")).thenReturn(true);
 
                 assertThatThrownBy(() -> merchantService.register(new RegisterMerchantCommand("owner-1", "Acme")))
                                 .isInstanceOf(CatalogException.class)
                                 .extracting("errorCode")
                                 .isEqualTo(CatalogErrorCode.MERCHANT_ALREADY_EXISTS.getCode());
 
-                verify(merchantRepository, never()).save(any());
+                verify(merchantPersistencePort, never()).save(any());
         }
 
         @Test
         void updateProfileResolvesProvinceAndPersists() {
                 Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
                 merchant.pullEvents();
-                when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
+                when(merchantPersistencePort.findById("m-1")).thenReturn(Optional.of(merchant));
                 when(addressLookupPort.resolveProvince("01"))
                                 .thenReturn(Optional.of(new AddressLookupPort.ResolvedProvince("01", "Ha Noi")));
-                when(merchantRepository.save(merchant)).thenReturn(merchant);
+                when(merchantPersistencePort.save(merchant)).thenReturn(merchant);
 
                 Merchant result = merchantService.updateProfile(new UpdateMerchantProfileCommand(
                                 "m-1", "owner-1", "Acme Pro", null, null, "01"));
@@ -106,7 +106,7 @@ class MerchantServiceTest {
         @Test
         void updateProfileThrowsWhenNotOwner() {
                 Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
-                when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
+                when(merchantPersistencePort.findById("m-1")).thenReturn(Optional.of(merchant));
 
                 assertThatThrownBy(() -> merchantService.updateProfile(new UpdateMerchantProfileCommand(
                                 "m-1", "intruder", "Hack", null, null, null)))
@@ -120,7 +120,7 @@ class MerchantServiceTest {
                 Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
                 merchant.updateProfile("Acme", null, null, null, null, FIXED);
                 merchant.pullEvents();
-                when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
+                when(merchantPersistencePort.findById("m-1")).thenReturn(Optional.of(merchant));
                 when(orderQueryPort.hasOpenOrdersForMerchant("m-1")).thenReturn(true);
 
                 assertThatThrownBy(() -> merchantService.close(new CloseMerchantCommand("m-1", "owner-1", "stop")))
@@ -131,7 +131,7 @@ class MerchantServiceTest {
 
         @Test
         void getThrowsWhenMerchantMissing() {
-                when(merchantRepository.findById("missing")).thenReturn(Optional.empty());
+                when(merchantPersistencePort.findById("missing")).thenReturn(Optional.empty());
 
                 assertThatThrownBy(() -> merchantService.get("missing"))
                                 .isInstanceOf(CatalogException.class)
@@ -144,8 +144,8 @@ class MerchantServiceTest {
                 Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
                 merchant.updateProfile("Acme", "logo", "desc", null, null, FIXED);
                 merchant.pullEvents();
-                when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
-                when(merchantRepository.save(merchant)).thenReturn(merchant);
+                when(merchantPersistencePort.findById("m-1")).thenReturn(Optional.of(merchant));
+                when(merchantPersistencePort.save(merchant)).thenReturn(merchant);
 
                 Merchant result = merchantService.suspend(
                                 new SuspendMerchantCommand(
@@ -161,8 +161,8 @@ class MerchantServiceTest {
                 merchant.updateProfile("Acme", "logo", "desc", null, null, FIXED);
                 merchant.suspend("admin-1", "violation", FIXED);
                 merchant.pullEvents();
-                when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
-                when(merchantRepository.save(merchant)).thenReturn(merchant);
+                when(merchantPersistencePort.findById("m-1")).thenReturn(Optional.of(merchant));
+                when(merchantPersistencePort.save(merchant)).thenReturn(merchant);
 
                 Merchant result = merchantService.activate(
                                 new ActivateMerchantCommand(
@@ -177,9 +177,9 @@ class MerchantServiceTest {
                 Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
                 merchant.updateProfile("Acme", null, null, null, null, FIXED);
                 merchant.pullEvents();
-                when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
+                when(merchantPersistencePort.findById("m-1")).thenReturn(Optional.of(merchant));
                 when(orderQueryPort.hasOpenOrdersForMerchant("m-1")).thenReturn(false);
-                when(merchantRepository.save(merchant)).thenReturn(merchant);
+                when(merchantPersistencePort.save(merchant)).thenReturn(merchant);
 
                 Merchant result = merchantService.close(new CloseMerchantCommand("m-1", "owner-1", "stop"));
 
@@ -190,7 +190,7 @@ class MerchantServiceTest {
         @Test
         void getByOwnerReturnsResult() {
                 Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
-                when(merchantRepository.findByOwnerId("owner-1")).thenReturn(Optional.of(merchant));
+                when(merchantPersistencePort.findByOwnerId("owner-1")).thenReturn(Optional.of(merchant));
 
                 Merchant result = merchantService.getByOwner("owner-1");
 
@@ -200,7 +200,7 @@ class MerchantServiceTest {
 
         @Test
         void getByOwnerThrowsWhenMissing() {
-                when(merchantRepository.findByOwnerId("owner-missing")).thenReturn(Optional.empty());
+                when(merchantPersistencePort.findByOwnerId("owner-missing")).thenReturn(Optional.empty());
 
                 assertThatThrownBy(() -> merchantService.getByOwner("owner-missing"))
                                 .isInstanceOf(CatalogException.class)
@@ -212,8 +212,8 @@ class MerchantServiceTest {
         void updateCommissionRateAppliesRateAndPublishesEvent() {
                 Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
                 merchant.pullEvents();
-                when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
-                when(merchantRepository.save(merchant)).thenReturn(merchant);
+                when(merchantPersistencePort.findById("m-1")).thenReturn(Optional.of(merchant));
+                when(merchantPersistencePort.save(merchant)).thenReturn(merchant);
 
                 Merchant result = merchantService.updateCommissionRate(
                                 new UpdateMerchantCommissionRateCommand(

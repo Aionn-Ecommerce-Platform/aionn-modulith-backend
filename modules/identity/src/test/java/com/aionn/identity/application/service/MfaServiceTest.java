@@ -85,7 +85,7 @@ class MfaServiceTest {
                 when(passwordHasher.matches("pwd", "hash")).thenReturn(true);
                 when(totpManager.generateSecret()).thenReturn("SECRET");
                 when(totpManager.buildOtpAuthUri("Aionn", USER_ID, "SECRET")).thenReturn("otpauth://uri");
-                when(mfaPolicy.getMfaIssuer()).thenReturn("Aionn");
+                when(mfaPolicy.mfaIssuer()).thenReturn("Aionn");
 
                 MfaSetupResult result = mfaService.initiateSetup(USER_ID, "pwd", "1.1.1.1");
 
@@ -134,8 +134,8 @@ class MfaServiceTest {
                 when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(data));
                 when(passwordHasher.matches("pwd", "hash")).thenReturn(true);
                 when(totpManager.verifyCode("SECRET", "123456")).thenReturn(true);
-                when(mfaPolicy.getBackupCodeCount()).thenReturn(8);
-                when(mfaPolicy.getBackupCodeLength()).thenReturn(8);
+                when(mfaPolicy.backupCodeCount()).thenReturn(8);
+                when(mfaPolicy.backupCodeLength()).thenReturn(8);
                 when(passwordHasher.hash(anyString())).thenReturn("hashed");
 
                 MfaResult result = mfaService.enableMfa(USER_ID, "pwd", "123456", "1.1.1.1");
@@ -251,8 +251,8 @@ class MfaServiceTest {
                 when(userSecurityPort.findById(USER_ID)).thenReturn(Optional.of(data));
                 when(passwordHasher.matches("pwd", "hash")).thenReturn(true);
                 when(totpManager.verifyCode("SECRET", "123456")).thenReturn(true);
-                when(mfaPolicy.getBackupCodeCount()).thenReturn(8);
-                when(mfaPolicy.getBackupCodeLength()).thenReturn(8);
+                when(mfaPolicy.backupCodeCount()).thenReturn(8);
+                when(mfaPolicy.backupCodeLength()).thenReturn(8);
                 when(passwordHasher.hash(anyString())).thenReturn("hashed");
 
                 List<String> codes = mfaService.regenerateBackupCodes(USER_ID, "pwd", "123456", null);

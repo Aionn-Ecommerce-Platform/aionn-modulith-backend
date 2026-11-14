@@ -29,7 +29,7 @@ import static org.mockito.Mockito.when;
 class OrderingCartAdapterTest {
 
     @Mock
-    private CartPersistencePort cartRepository;
+    private CartPersistencePort cartPersistencePort;
 
     @Mock
     private EventPublisher eventPublisher;
@@ -41,14 +41,14 @@ class OrderingCartAdapterTest {
     @BeforeEach
     void setUp() {
         clock = Clock.fixed(now, ZoneId.of("UTC"));
-        adapter = new OrderingCartAdapter(cartRepository, eventPublisher, clock);
+        adapter = new OrderingCartAdapter(cartPersistencePort, eventPublisher, clock);
     }
 
     @Test
     void getOrCreateCartReturnsExistingCart() {
         Cart cart = Cart.create("cart-1", "user-1", now);
         cart.addItem("sku-1", 2, now);
-        when(cartRepository.findById("cart-1")).thenReturn(Optional.of(cart));
+        when(cartPersistencePort.findById("cart-1")).thenReturn(Optional.of(cart));
 
         CartOperationsPort.CartSnapshot snapshot = adapter.getOrCreateCart("cart-1", "user-1");
 
@@ -60,8 +60,8 @@ class OrderingCartAdapterTest {
     @Test
     void getOrCreateCartCreatesWhenAbsent() {
         Cart newCart = Cart.create("cart-2", "user-2", now);
-        when(cartRepository.findById("cart-2")).thenReturn(Optional.empty());
-        when(cartRepository.findOrCreate("cart-2", "user-2", now)).thenReturn(newCart);
+        when(cartPersistencePort.findById("cart-2")).thenReturn(Optional.empty());
+        when(cartPersistencePort.findOrCreate("cart-2", "user-2", now)).thenReturn(newCart);
 
         CartOperationsPort.CartSnapshot snapshot = adapter.getOrCreateCart("cart-2", "user-2");
 
@@ -73,7 +73,7 @@ class OrderingCartAdapterTest {
     @Test
     void findCartByIdReturnsPresentSnapshot() {
         Cart cart = Cart.create("cart-3", "user-3", now);
-        when(cartRepository.findById("cart-3")).thenReturn(Optional.of(cart));
+        when(cartPersistencePort.findById("cart-3")).thenReturn(Optional.of(cart));
 
         Optional<CartOperationsPort.CartSnapshot> result = adapter.findCartById("cart-3");
 
@@ -83,7 +83,7 @@ class OrderingCartAdapterTest {
 
     @Test
     void findCartByIdReturnsEmptyWhenNotFound() {
-        when(cartRepository.findById("cart-unknown")).thenReturn(Optional.empty());
+        when(cartPersistencePort.findById("cart-unknown")).thenReturn(Optional.empty());
 
         Optional<CartOperationsPort.CartSnapshot> result = adapter.findCartById("cart-unknown");
 
@@ -94,13 +94,13 @@ class OrderingCartAdapterTest {
     void saveCartItemsReplacesItemsAndSaves() {
         Cart cart = Cart.create("cart-4", "user-4", now);
         cart.addItem("old-sku", 1, now);
-        when(cartRepository.findByIdForUpdate("cart-4")).thenReturn(Optional.of(cart));
-        when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(cartPersistencePort.findByIdForUpdate("cart-4")).thenReturn(Optional.of(cart));
+        when(cartPersistencePort.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         CartOperationsPort.CartSnapshot snapshot = adapter.saveCartItems("cart-4", "user-4", Map.of("new-sku", 3));
 
         assertThat(snapshot.items()).containsOnly(Map.entry("new-sku", 3));
-        verify(cartRepository).save(cart);
+        verify(cartPersistencePort).save(cart);
         verify(eventPublisher).publish(
                 ArgumentMatchers.<Collection<EventEnvelope>>any());
     }
@@ -109,13 +109,13 @@ class OrderingCartAdapterTest {
     void clearCartRemovesAllItems() {
         Cart cart = Cart.create("cart-5", "user-5", now);
         cart.addItem("sku-1", 5, now);
-        when(cartRepository.findByIdForUpdate("cart-5")).thenReturn(Optional.of(cart));
-        when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(cartPersistencePort.findByIdForUpdate("cart-5")).thenReturn(Optional.of(cart));
+        when(cartPersistencePort.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         CartOperationsPort.CartSnapshot snapshot = adapter.clearCart("cart-5", "user-5");
 
         assertThat(snapshot.items()).isEmpty();
-        verify(cartRepository).save(cart);
+        verify(cartPersistencePort).save(cart);
         verify(eventPublisher).publish(
                 ArgumentMatchers.<Collection<EventEnvelope>>any());
     }

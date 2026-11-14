@@ -37,7 +37,7 @@ class ProfileRefreshSchedulerTest {
     private static final long DELAY_MS = Duration.ofMinutes(15).toMillis();
     private static final int BATCH_SIZE = 500;
 
-    @Mock private InteractionPersistencePort interactionRepository;
+    @Mock private InteractionPersistencePort interactionPersistencePort;
     @Mock private ProfileRefreshWorker worker;
     @Mock private RecommendationMetricsPort metrics;
 
@@ -45,7 +45,7 @@ class ProfileRefreshSchedulerTest {
 
     private ProfileRefreshScheduler scheduler(long lookbackDays) {
         return new ProfileRefreshScheduler(
-                interactionRepository,
+                interactionPersistencePort,
                 worker,
                 scheduling(),
                 new RecommendationJobProperties(
@@ -68,14 +68,14 @@ class ProfileRefreshSchedulerTest {
     void theSweepCoversAGapWiderThanOneInterval() {
         // A run that was delayed or skipped still has to account for the activity it missed, so the window
         // is several intervals rather than exactly one.
-        when(interactionRepository.findUserIdsWithInteractionsSince(any(), anyInt()))
+        when(interactionPersistencePort.findUserIdsWithInteractionsSince(any(), anyInt()))
                 .thenReturn(List.of("user-1"));
         when(worker.refreshOne(any())).thenReturn(true);
 
         scheduler(180).run();
 
         ArgumentCaptor<Instant> since = ArgumentCaptor.forClass(Instant.class);
-        verify(interactionRepository).findUserIdsWithInteractionsSince(since.capture(), eq(BATCH_SIZE));
+        verify(interactionPersistencePort).findUserIdsWithInteractionsSince(since.capture(), eq(BATCH_SIZE));
         assertThat(since.getValue()).isEqualTo(NOW.minus(Duration.ofMillis(DELAY_MS * 3)));
     }
 
@@ -84,7 +84,7 @@ class ProfileRefreshSchedulerTest {
         // A quiet period, a restart after downtime, or activity that predates the module would otherwise
         // leave those users on cold-start recommendations until they happen to interact again - which for
         // a seeded catalogue means never.
-        when(interactionRepository.findUserIdsWithInteractionsSince(any(), anyInt()))
+        when(interactionPersistencePort.findUserIdsWithInteractionsSince(any(), anyInt()))
                 .thenReturn(List.of())
                 .thenReturn(List.of())
                 .thenReturn(List.of("user-old"));
@@ -93,7 +93,7 @@ class ProfileRefreshSchedulerTest {
         scheduler(180).run();
 
         ArgumentCaptor<Instant> since = ArgumentCaptor.forClass(Instant.class);
-        verify(interactionRepository, times(3))
+        verify(interactionPersistencePort, times(3))
                 .findUserIdsWithInteractionsSince(since.capture(), eq(BATCH_SIZE));
         List<Instant> windows = since.getAllValues();
         assertThat(windows.get(0)).isEqualTo(NOW.minus(Duration.ofMinutes(45)));
@@ -106,13 +106,13 @@ class ProfileRefreshSchedulerTest {
     void wideningStopsAtTheProfileLookback() {
         // Interactions older than the lookback are pruned and could not change the recomputed profile, so
         // scanning further back would cost a wider aggregate to find the same answer.
-        when(interactionRepository.findUserIdsWithInteractionsSince(any(), anyInt()))
+        when(interactionPersistencePort.findUserIdsWithInteractionsSince(any(), anyInt()))
                 .thenReturn(List.of());
 
         scheduler(180).run();
 
         ArgumentCaptor<Instant> since = ArgumentCaptor.forClass(Instant.class);
-        verify(interactionRepository, Mockito.atLeastOnce())
+        verify(interactionPersistencePort, Mockito.atLeastOnce())
                 .findUserIdsWithInteractionsSince(since.capture(), eq(BATCH_SIZE));
         assertThat(since.getAllValues()).allSatisfy(window ->
                 assertThat(window).isAfterOrEqualTo(NOW.minus(Duration.ofDays(180))));
@@ -123,13 +123,13 @@ class ProfileRefreshSchedulerTest {
 
     @Test
     void aConfiguredDelayLongerThanTheLookbackDoesNotScanPastIt() {
-        lenient().when(interactionRepository.findUserIdsWithInteractionsSince(any(), anyInt()))
+        lenient().when(interactionPersistencePort.findUserIdsWithInteractionsSince(any(), anyInt()))
                 .thenReturn(List.of());
         RecommendationSchedulingProperties.Job job = new RecommendationSchedulingProperties.Job(
                 true, Duration.ofDays(400).toMillis(), BATCH_SIZE);
 
         new ProfileRefreshScheduler(
-                interactionRepository,
+                interactionPersistencePort,
                 worker,
                 new RecommendationSchedulingProperties(job, job, job, job),
                 new RecommendationJobProperties(
@@ -142,7 +142,7 @@ class ProfileRefreshSchedulerTest {
                 clock).run();
 
         ArgumentCaptor<Instant> since = ArgumentCaptor.forClass(Instant.class);
-        verify(interactionRepository).findUserIdsWithInteractionsSince(since.capture(), eq(BATCH_SIZE));
+        verify(interactionPersistencePort).findUserIdsWithInteractionsSince(since.capture(), eq(BATCH_SIZE));
         assertThat(since.getValue()).isEqualTo(NOW.minus(Duration.ofDays(180)));
     }
 
@@ -150,7 +150,7 @@ class ProfileRefreshSchedulerTest {
     void oneFailingUserMarksTheWholeRunFailed() {
         // Otherwise a user whose refresh throws on every sweep is invisible: the sweep returns normally
         // and the worker only logs a warning, so the profile silently stops tracking that person.
-        when(interactionRepository.findUserIdsWithInteractionsSince(any(), anyInt()))
+        when(interactionPersistencePort.findUserIdsWithInteractionsSince(any(), anyInt()))
                 .thenReturn(List.of("user-1", "user-2"));
         when(worker.refreshOne("user-1")).thenReturn(true);
         when(worker.refreshOne("user-2")).thenReturn(false);
@@ -162,7 +162,7 @@ class ProfileRefreshSchedulerTest {
 
     @Test
     void everyUserIsRefreshedEvenWhenAnEarlierOneFails() {
-        when(interactionRepository.findUserIdsWithInteractionsSince(any(), anyInt()))
+        when(interactionPersistencePort.findUserIdsWithInteractionsSince(any(), anyInt()))
                 .thenReturn(List.of("user-1", "user-2"));
         when(worker.refreshOne("user-1")).thenReturn(false);
         when(worker.refreshOne("user-2")).thenReturn(true);
@@ -175,7 +175,7 @@ class ProfileRefreshSchedulerTest {
 
     @Test
     void aSweepThatThrowsIsRecordedAsFailed() {
-        when(interactionRepository.findUserIdsWithInteractionsSince(any(), anyInt()))
+        when(interactionPersistencePort.findUserIdsWithInteractionsSince(any(), anyInt()))
                 .thenThrow(new IllegalStateException("boom"));
 
         scheduler(180).run();

@@ -1,5 +1,7 @@
 package com.aionn.identity.infrastructure.config;
 
+
+
 import com.aionn.identity.infrastructure.config.properties.JwtProperties;
 import com.aionn.identity.infrastructure.config.properties.MfaProperties;
 import lombok.RequiredArgsConstructor;
@@ -11,8 +13,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 
-import static com.aionn.identity.application.policy.IdentityValidationConstants.JWT_SECRET_MIN_LENGTH;
-import static com.aionn.identity.application.policy.IdentityValidationConstants.MFA_ENCRYPTION_KEY_MIN_LENGTH;
+import static com.aionn.identity.application.policy.TokenConstants.JWT_SECRET_MIN_LENGTH;
+import static com.aionn.identity.application.policy.MfaConstants.MFA_ENCRYPTION_KEY_MIN_LENGTH;
 
 @Slf4j
 @Component

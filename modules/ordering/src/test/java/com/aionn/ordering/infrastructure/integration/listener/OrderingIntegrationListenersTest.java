@@ -1,11 +1,10 @@
 package com.aionn.ordering.infrastructure.integration.listener;
 
-import com.aionn.ordering.application.dto.order.command.ConfirmDeliveredCommand;
 import com.aionn.ordering.application.service.OrderService;
-import com.aionn.ordering.domain.valueobject.OrderStatus;
 import com.aionn.contracts.event.payment.PaymentCapturedIntegrationEvent;
 import com.aionn.contracts.event.payment.PaymentFailedIntegrationEvent;
 import com.aionn.contracts.event.shipping.ShipmentDeliveredIntegrationEvent;
+import com.aionn.contracts.event.shipping.ShipmentDispatchedIntegrationEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -17,7 +16,6 @@ import java.time.Instant;
 
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,6 +32,9 @@ class OrderingIntegrationListenersTest {
 
     @InjectMocks
     private ShipmentDeliveredListener shipmentDeliveredListener;
+
+    @InjectMocks
+    private ShipmentDispatchedListener shipmentDispatchedListener;
 
     @Test
     void paymentCapturedListenerApprovesPayment() {
@@ -69,14 +70,21 @@ class OrderingIntegrationListenersTest {
 
     @Test
     void shipmentDeliveredListenerCompletesOrder() {
-        ConfirmDeliveredCommand command = new ConfirmDeliveredCommand("ord-1");
         ShipmentDeliveredIntegrationEvent event = new ShipmentDeliveredIntegrationEvent(
                 "ev-1", "ship-100", "ord-1", "http://sig", Instant.now(), Instant.now());
 
-        when(orderService.statusOf("ord-1")).thenReturn(OrderStatus.SHIPPED);
-
         shipmentDeliveredListener.on(event);
 
-        verify(orderService).complete(command);
+        verify(orderService).completeFromCarrier("ord-1", "ship-100");
+    }
+
+    @Test
+    void shipmentDispatchedListenerMarksOrderShipped() {
+        ShipmentDispatchedIntegrationEvent event = new ShipmentDispatchedIntegrationEvent(
+                "ev-1", "ship-100", "ord-1", "TRACK-1", Instant.now());
+
+        shipmentDispatchedListener.on(event);
+
+        verify(orderService).markShippedFromCarrier("ord-1", "ship-100");
     }
 }

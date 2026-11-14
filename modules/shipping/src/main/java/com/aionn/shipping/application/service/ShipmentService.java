@@ -42,8 +42,8 @@ import java.util.List;
 @Transactional
 public class ShipmentService {
 
-    private final ShipmentPersistencePort shipmentRepository;
-    private final ShippingRatePersistencePort rateRepository;
+    private final ShipmentPersistencePort shipmentPersistencePort;
+    private final ShippingRatePersistencePort shippingRatePersistencePort;
     private final EventPublisher eventPublisher;
     private final CarrierClient carrierClient;
     private final ShippingIntegrationEventPublisherPort integrationEventPublisher;
@@ -59,10 +59,6 @@ public class ShipmentService {
         return createShipmentsPerConsignment(command).getFirst();
     }
 
-    /**
-     * One shipment row per carrier consignment. The order keeps a single shipping fee,
-     * while each parcel carries its own tracking code/label.
-     */
     public List<Shipment> createShipmentsPerConsignment(CreateShipmentCommand command) {
         String merchantId = command.merchantId();
         if (merchantId == null || merchantId.isBlank()) {
@@ -88,11 +84,12 @@ public class ShipmentService {
             throw new ShippingException(ShippingErrorCode.INVALID_ARGUMENT,
                     "Cannot create shipment: no parcel dimensions provided");
         }
-        List<Shipment> existing = shipmentRepository.findByOrderId(command.orderId()).stream()
+        List<Shipment> existing = shipmentPersistencePort.findByOrderId(command.orderId()).stream()
                 .filter(shipment -> shipment.getStatus() != ShipmentStatus.CANCELLED)
                 .toList();
         if (!existing.isEmpty()) {
-            // Retries (for example after a failed carrier registration) must not clone parcels.
+            // Retries (for example after a failed carrier registration) must not clone
+            // parcels.
             if (existing.size() != consignments.size()) {
                 throw new ShippingException(ShippingErrorCode.SHIPMENT_INVALID_STATE,
                         "Order already has a different number of active consignments");
@@ -102,7 +99,8 @@ public class ShipmentService {
         List<Shipment> created = new ArrayList<>(consignments.size());
         String shipmentUserId = order != null ? order.userId() : command.userId();
         BigDecimal codAmount = order != null && order.totalAmount() != null
-                ? order.totalAmount() : command.codAmount();
+                ? order.totalAmount()
+                : command.codAmount();
         String currency = resolveCurrency(order != null ? order.currency() : command.currency());
         for (ParcelConsolidator.Consignment consignment : consignments) {
             ShipmentDimensions dimensions = new ShipmentDimensions(consignment.weightGram(),
@@ -112,7 +110,7 @@ public class ShipmentService {
                     // The quoted fee covers every consignment; keep it on the first row only.
                     created.isEmpty() ? command.shippingFee() : BigDecimal.ZERO,
                     currency, clock);
-            Shipment saved = shipmentRepository.save(shipment);
+            Shipment saved = shipmentPersistencePort.save(shipment);
             eventPublisher.publish(shipment.pullEvents());
             created.add(saved);
         }
@@ -125,7 +123,7 @@ public class ShipmentService {
             return shipment;
         }
         shipment.registerWithCarrier(reg.trackingCode(), reg.carrierOrderId(), reg.expectedDate(), clock);
-        Shipment saved = shipmentRepository.save(shipment);
+        Shipment saved = shipmentPersistencePort.save(shipment);
         eventPublisher.publish(shipment.pullEvents());
         return saved;
     }
@@ -133,7 +131,7 @@ public class ShipmentService {
     public Shipment applyLabel(String shipmentId, String labelUrl) {
         Shipment shipment = required(shipmentId);
         shipment.fetchLabel(labelUrl, clock);
-        Shipment saved = shipmentRepository.save(shipment);
+        Shipment saved = shipmentPersistencePort.save(shipment);
         eventPublisher.publish(shipment.pullEvents());
         return saved;
     }
@@ -141,15 +139,16 @@ public class ShipmentService {
     public Shipment applyCancel(String shipmentId, String reason) {
         Shipment shipment = required(shipmentId);
         shipment.cancel(reason, clock);
-        Shipment saved = shipmentRepository.save(shipment);
+        Shipment saved = shipmentPersistencePort.save(shipment);
         eventPublisher.publish(shipment.pullEvents());
+        integrationEventPublisher.publishCancelled(saved.getShipmentId(), saved.getOrderId(), reason);
         return saved;
     }
 
     public Shipment resolveIssue(ResolveIssueCommand command) {
         Shipment shipment = required(command.shipmentId());
         shipment.resolveIssue(command.issueType(), command.resolution(), clock);
-        Shipment saved = shipmentRepository.save(shipment);
+        Shipment saved = shipmentPersistencePort.save(shipment);
         eventPublisher.publish(shipment.pullEvents());
         return saved;
     }
@@ -157,10 +156,10 @@ public class ShipmentService {
     public Shipment applyCarrierWebhook(CarrierWebhookCommand webhook) {
         verifyWebhookSecret(webhook);
         if (!webhookIdempotencyPort.claim(webhook.eventId())) {
-            return shipmentRepository.findByTrackingCode(webhook.trackingCode())
+            return shipmentPersistencePort.findByTrackingCode(webhook.trackingCode())
                     .orElseThrow(() -> new ShippingException(ShippingErrorCode.SHIPMENT_NOT_FOUND));
         }
-        Shipment shipment = shipmentRepository.findByTrackingCode(webhook.trackingCode())
+        Shipment shipment = shipmentPersistencePort.findByTrackingCode(webhook.trackingCode())
                 .orElseThrow(() -> new ShippingException(ShippingErrorCode.SHIPMENT_NOT_FOUND));
         var previousStatus = shipment.getStatus();
         switch (webhook.type()) {
@@ -175,7 +174,7 @@ public class ShipmentService {
             default -> throw new ShippingException(ShippingErrorCode.INVALID_ARGUMENT,
                     "Unknown webhook type: " + webhook.type());
         }
-        Shipment saved = shipmentRepository.save(shipment);
+        Shipment saved = shipmentPersistencePort.save(shipment);
         eventPublisher.publish(shipment.pullEvents());
         if (saved.getStatus() != previousStatus) {
             publishIntegration(saved, webhook);
@@ -212,10 +211,12 @@ public class ShipmentService {
                         late);
             }
             case "DELIVERY_FAILED" -> integrationEventPublisher.publishDeliveryFailed(
-                    saved.getShipmentId(), saved.getOrderId(), webhook.reason(), saved.getAttemptCount());
-            default -> {
-                /* in-transit / out-for-delivery / returned do not surface to other contexts */
-            }
+                    saved.getShipmentId(), saved.getOrderId(), saved.getUserId(), webhook.reason(),
+                    saved.getAttemptCount());
+            case "RETURNED" -> integrationEventPublisher.publishReturned(
+                    saved.getShipmentId(), saved.getOrderId(), saved.getUserId(), saved.getMerchantId(),
+                    webhook.reason());
+            default -> log.debug("No integration event for webhook type {}", webhook.type());
         }
     }
 
@@ -227,13 +228,12 @@ public class ShipmentService {
                     "Cannot quote shipping: destination address is required");
         }
         String currency = resolveCurrency(command.currency());
-        // Heavy carts ship as several consignments; quote each and add the fees.
         List<ParcelConsolidator.Consignment> consignments = ParcelConsolidator.consolidate(command.parcels());
         if (consignments.isEmpty()) {
             throw new ShippingException(ShippingErrorCode.INVALID_ARGUMENT,
                     "Cannot quote shipping: no parcel dimensions provided");
         }
-        ShippingQuoteResult configuredRate = transactionTemplate.execute(status -> rateRepository
+        ShippingQuoteResult configuredRate = transactionTemplate.execute(status -> shippingRatePersistencePort
                 .findByZoneCode(command.address().provinceCode())
                 .map(rate -> {
                     if (!currency.equalsIgnoreCase(rate.getCurrency())) {
@@ -300,7 +300,7 @@ public class ShipmentService {
     public List<Shipment> findByOrderId(String orderId, String requesterUserId) {
         String requesterMerchantId = requesterUserId == null ? null
                 : merchantQueryPort.findMerchantIdByOwnerId(requesterUserId).orElse(null);
-        return shipmentRepository.findByOrderId(orderId).stream()
+        return shipmentPersistencePort.findByOrderId(orderId).stream()
                 .filter(s -> {
                     try {
                         s.ensureViewableBy(requesterUserId, requesterMerchantId);
@@ -319,8 +319,36 @@ public class ShipmentService {
 
     @Transactional(readOnly = true)
     public Shipment loadShipmentForUpdate(String shipmentId) {
-        return shipmentRepository.findByIdForUpdate(shipmentId)
+        return shipmentPersistencePort.findByIdForUpdate(shipmentId)
                 .orElseThrow(() -> new ShippingException(ShippingErrorCode.SHIPMENT_NOT_FOUND));
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasPickedUpShipment(String orderId) {
+        return shipmentPersistencePort.findByOrderId(orderId).stream()
+                .anyMatch(shipment -> shipment.getStatus().isPickedUp());
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasActiveShipment(String orderId) {
+        return shipmentPersistencePort.findByOrderId(orderId).stream()
+                .anyMatch(shipment -> shipment.getStatus() != ShipmentStatus.CANCELLED);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasUnregisteredShipment(String orderId) {
+        return shipmentPersistencePort.findByOrderId(orderId).stream()
+                .anyMatch(shipment -> shipment.getStatus() != ShipmentStatus.CANCELLED
+                        && shipment.getTrackingCode() == null);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean allShipmentsDelivered(String orderId) {
+        List<Shipment> active = shipmentPersistencePort.findByOrderId(orderId).stream()
+                .filter(shipment -> shipment.getStatus() != ShipmentStatus.CANCELLED)
+                .toList();
+        return !active.isEmpty()
+                && active.stream().allMatch(shipment -> shipment.getStatus() == ShipmentStatus.DELIVERED);
     }
 
     public void ensureViewable(Shipment shipment, String requesterUserId) {
@@ -330,7 +358,7 @@ public class ShipmentService {
     }
 
     private Shipment required(String shipmentId) {
-        return shipmentRepository.findById(shipmentId)
+        return shipmentPersistencePort.findById(shipmentId)
                 .orElseThrow(() -> new ShippingException(ShippingErrorCode.SHIPMENT_NOT_FOUND));
     }
 

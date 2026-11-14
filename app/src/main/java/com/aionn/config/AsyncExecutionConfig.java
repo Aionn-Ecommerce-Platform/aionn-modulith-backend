@@ -9,29 +9,13 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 
-/**
- * Explicit executors for work that must not run on the calling thread.
- *
- * <p>{@code @EnableAsync} is only meaningful with a well-defined executor: {@code ThreadPoolTaskScheduler}
- * also implements {@code TaskExecutor}, so without these beans the {@code @Async} fallback can silently
- * land on the scheduled-job pool and compete with the outbox dispatcher.
- *
- * <p>Every pool is bounded. Callers that must not block use the discard handlers: the work they submit
- * is durable elsewhere (notification rows stay {@code PENDING} for the retry sweep, the catalog index is
- * rebuilt on startup), so dropping the trigger is safe while dropping the request thread is not.
- */
 @Slf4j
 @Configuration(proxyBeanMethods = false)
 @EnableAsync
 public class AsyncExecutionConfig {
 
-    /** Default executor for plain {@code @Async} methods. */
     public static final String DEFAULT_EXECUTOR = "taskExecutor";
-
-    /** Provider I/O (SMTP, SMS, push). Bounded so an outage cannot exhaust the heap. */
     public static final String NOTIFICATION_EXECUTOR = "notificationTaskExecutor";
-
-    /** Single thread: OpenSearch writes for one product must not overtake each other. */
     public static final String SEARCH_INDEX_EXECUTOR = "searchIndexTaskExecutor";
 
     @Bean(name = DEFAULT_EXECUTOR)
@@ -68,10 +52,6 @@ public class AsyncExecutionConfig {
         return executor;
     }
 
-    /**
-     * A saturated queue means the durable record still exists, so the trigger is dropped with a warning
-     * instead of blocking the caller (which would be the outbox dispatcher thread).
-     */
     private static RejectedExecutionHandler discardWhenSaturated(String executorName) {
         return (task, executor) -> log.warn(
                 "{} is saturated (queue={}); dropping the async trigger, the durable record will be retried",

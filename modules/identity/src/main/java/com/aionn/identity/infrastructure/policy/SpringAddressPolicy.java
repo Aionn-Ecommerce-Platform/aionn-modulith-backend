@@ -12,7 +12,7 @@ public class SpringAddressPolicy implements AddressPolicy {
     private final AddressProperties addressProperties;
 
     @Override
-    public long getMaxAddressNumbers() {
+    public long maxAddressNumbers() {
         return addressProperties.maxAddressNumbers();
     }
 }

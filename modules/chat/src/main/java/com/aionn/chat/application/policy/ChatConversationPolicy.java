@@ -2,9 +2,9 @@ package com.aionn.chat.application.policy;
 
 public interface ChatConversationPolicy {
 
-    int getListDefaultLimit();
+    int listDefaultLimit();
 
-    int getListMaxLimit();
+    int listMaxLimit();
 
-    int getUnreadScanLimit();
+    int unreadScanLimit();
 }

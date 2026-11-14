@@ -25,16 +25,16 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BrandService {
 
-    private final BrandPersistencePort brandRepository;
+    private final BrandPersistencePort brandPersistencePort;
     private final EventPublisher eventPublisher;
     private final Clock clock;
 
     public Brand create(CreateBrandCommand command) {
-        if (brandRepository.existsByName(command.name())) {
+        if (brandPersistencePort.existsByName(command.name())) {
             throw new CatalogException(CatalogErrorCode.BRAND_NAME_CONFLICT);
         }
         Brand brand = Brand.create(IdGenerator.ulid(), command.name(), command.logoUrl(), command.description(), clock);
-        Brand saved = brandRepository.save(brand);
+        Brand saved = brandPersistencePort.save(brand);
         eventPublisher.publish(brand.pullEvents());
         return saved;
     }
@@ -43,29 +43,29 @@ public class BrandService {
         Brand brand = required(command.brandId());
         if (command.name() != null
                 && !command.name().equalsIgnoreCase(brand.getName())
-                && brandRepository.existsByName(command.name())) {
+                && brandPersistencePort.existsByName(command.name())) {
             throw new CatalogException(CatalogErrorCode.BRAND_NAME_CONFLICT);
         }
         brand.update(command.name(), command.logoUrl(), command.description(), clock);
-        Brand saved = brandRepository.save(brand);
+        Brand saved = brandPersistencePort.save(brand);
         eventPublisher.publish(brand.pullEvents());
         return saved;
     }
 
     public void delete(DeleteBrandCommand command) {
         Brand brand = required(command.brandId());
-        if (brandRepository.hasActiveProducts(command.brandId())) {
+        if (brandPersistencePort.hasActiveProducts(command.brandId())) {
             throw new CatalogException(CatalogErrorCode.BRAND_HAS_ACTIVE_PRODUCTS);
         }
         brand.softDelete(command.reason(), clock);
-        brandRepository.save(brand);
+        brandPersistencePort.save(brand);
         eventPublisher.publish(brand.pullEvents());
     }
 
     @Transactional(readOnly = true)
     public PageResult<Brand> list(OffsetPagination pagination) {
-        List<Brand> brands = brandRepository.list(pagination);
-        long total = brandRepository.count();
+        List<Brand> brands = brandPersistencePort.list(pagination);
+        long total = brandPersistencePort.count();
         return new PageResult<>(brands, pagination.page(), pagination.size(), total);
     }
 
@@ -75,7 +75,7 @@ public class BrandService {
     }
 
     private Brand required(String brandId) {
-        return brandRepository.findById(brandId)
+        return brandPersistencePort.findById(brandId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.BRAND_NOT_FOUND));
     }
 }

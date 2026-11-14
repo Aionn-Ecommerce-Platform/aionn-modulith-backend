@@ -96,12 +96,6 @@ INSERT INTO chat_merchant_auto_replies (
     version, created_at, updated_at
 ) VALUES
 ('01M74HBREX2WAZ0VSESYNK32WH', TRUE, 'Xin chào! Shop 01M74HBREX2WAZ0VSESYNK32WH đã nhận được tin nhắn của bạn.', 'Shop sẽ phản hồi vào giờ làm việc tiếp theo.', '08:00', '18:00', '["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"]'::jsonb, 'Asia/Ho_Chi_Minh', 0, NOW(), NOW()),
-('01M74HBREYHVRKRQRRFATMWBRG', TRUE, 'Xin chào! Shop 01M74HBREYHVRKRQRRFATMWBRG có thể hỗ trợ gì cho bạn?', 'Shop hiện ngoài giờ làm việc và sẽ phản hồi sớm.', '09:00', '19:00', '["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"]'::jsonb, 'Asia/Ho_Chi_Minh', 0, NOW(), NOW()),
+('01M74HBREYHVRKRQRRFATMWBRG', TRUE, 'Xin chào! Shop 01M74HBREYHVRKRQRRFATMWBRG có thể hỗ trợ gì cho bạn?', 'Shop hiện ngoài giờ làm việc và sẽ phản hồi sớm.', '00:00:00', '23:59:59', '["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"]'::jsonb, 'Asia/Ho_Chi_Minh', 0, NOW(), NOW()),
 ('01M74HBREZ61R0J1RKC89RKK9Z', TRUE, 'Cảm ơn bạn đã liên hệ shop 01M74HBREZ61R0J1RKC89RKK9Z.', 'Tin nhắn đã được ghi nhận. Shop sẽ phản hồi vào ngày mai.', '08:30', '17:30', '["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"]'::jsonb, 'Asia/Ho_Chi_Minh', 0, NOW(), NOW());
-UPDATE chat_merchant_auto_replies
-SET working_hour_start = '00:00:00',
-    working_hour_end = '23:59:59',
-    working_days = '["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"]'::jsonb,
-    updated_at = NOW()
-WHERE merchant_id = '01M74HBREYHVRKRQRRFATMWBRG';
 

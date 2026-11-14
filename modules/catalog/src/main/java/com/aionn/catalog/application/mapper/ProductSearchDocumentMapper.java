@@ -36,8 +36,6 @@ public class ProductSearchDocumentMapper {
                                 .map(Money::currency)
                                 .findFirst()
                                 .orElse(null);
-                // True when a variant's original price exceeds its sell price (standing
-                // discount).
                 boolean hasDiscount = product.variants().stream()
                                 .anyMatch(v -> {
                                         Money price = v.price();

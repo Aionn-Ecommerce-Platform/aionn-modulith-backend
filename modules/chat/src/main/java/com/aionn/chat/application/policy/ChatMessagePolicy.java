@@ -4,11 +4,11 @@ import java.time.Duration;
 
 public interface ChatMessagePolicy {
 
-    int getMaxTextLength();
+    int maxTextLength();
 
-    Duration getRecallWindow();
+    Duration recallWindow();
 
-    int getListDefaultLimit();
+    int listDefaultLimit();
 
-    int getListMaxLimit();
+    int listMaxLimit();
 }

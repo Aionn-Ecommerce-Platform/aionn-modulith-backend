@@ -1,10 +1,8 @@
 package com.aionn.identity.adapter.rest.controller;
 
-import com.aionn.identity.application.dto.kyc.command.SumsubWebhookCommand;
+import com.aionn.identity.adapter.rest.mapper.kyc.SumsubWebhookDtoMapper;
 import com.aionn.identity.application.port.in.kyc.HandleSumsubWebhookInputPort;
 import com.aionn.platform.web.response.ApiResponse;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Hidden;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class SumsubWebhookController {
 
-    private final ObjectMapper objectMapper;
+    private final SumsubWebhookDtoMapper webhookDtoMapper;
     private final HandleSumsubWebhookInputPort handleSumsubWebhookInputPort;
 
     @PostMapping("/sumsub")
@@ -28,25 +26,9 @@ public class SumsubWebhookController {
             @RequestHeader(name = "X-Payload-Digest", required = false) String payloadDigest,
             @RequestHeader(name = "X-Payload-Digest-Alg", required = false) String payloadDigestAlg,
             @RequestBody byte[] rawBody) throws Exception {
-        JsonNode payload = objectMapper.readTree(rawBody);
-        JsonNode reviewResult = payload.path("reviewResult");
-
-        handleSumsubWebhookInputPort.execute(new SumsubWebhookCommand(
-                rawBody,
-                payloadDigest,
-                payloadDigestAlg,
-                text(payload, "applicantId"),
-                text(payload, "reviewStatus"),
-                text(reviewResult, "reviewAnswer"),
-                text(reviewResult, "moderationComment"),
-                text(reviewResult, "clientComment"),
-                text(payload, "correlationId")));
+        handleSumsubWebhookInputPort.execute(
+                webhookDtoMapper.toCommand(rawBody, payloadDigest, payloadDigestAlg));
 
         return ResponseEntity.ok(ApiResponse.success("Sumsub webhook processed"));
-    }
-
-    private String text(JsonNode node, String fieldName) {
-        JsonNode value = node.path(fieldName);
-        return value.isMissingNode() || value.isNull() ? null : value.asText();
     }
 }

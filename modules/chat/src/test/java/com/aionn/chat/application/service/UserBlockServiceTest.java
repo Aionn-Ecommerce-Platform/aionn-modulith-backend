@@ -32,12 +32,12 @@ class UserBlockServiceTest {
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
     @Mock
-    private UserBlockPersistencePort repository;
+    private UserBlockPersistencePort userBlockPersistencePort;
     @Mock
     private EventPublisher eventPublisher;
 
     private UserBlockService service() {
-        return new UserBlockService(repository, eventPublisher, CLOCK);
+        return new UserBlockService(userBlockPersistencePort, eventPublisher, CLOCK);
     }
 
     private static UserBlock existing() {
@@ -48,8 +48,8 @@ class UserBlockServiceTest {
 
     @Test
     void blockCreatesActiveRecord() {
-        when(repository.findActive("blocker-1", "blocked-1")).thenReturn(Optional.empty());
-        when(repository.save(any(UserBlock.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userBlockPersistencePort.findActive("blocker-1", "blocked-1")).thenReturn(Optional.empty());
+        when(userBlockPersistencePort.save(any(UserBlock.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         UserBlock saved = service().block(new BlockCommands.BlockUser("blocker-1", "blocked-1", "spam"));
 
@@ -60,18 +60,18 @@ class UserBlockServiceTest {
 
     @Test
     void blockIsIdempotentWhenAlreadyActive() {
-        when(repository.findActive("blocker-1", "blocked-1")).thenReturn(Optional.of(existing()));
+        when(userBlockPersistencePort.findActive("blocker-1", "blocked-1")).thenReturn(Optional.of(existing()));
 
         UserBlock result = service().block(new BlockCommands.BlockUser("blocker-1", "blocked-1", "spam"));
 
         assertThat(result.getBlockId()).isEqualTo("blk-1");
-        verify(repository, never()).save(any());
+        verify(userBlockPersistencePort, never()).save(any());
         verify(eventPublisher, never()).publish(anyCollection());
     }
 
     @Test
     void blockRejectsSelfBlock() {
-        when(repository.findActive("blocker-1", "blocker-1")).thenReturn(Optional.empty());
+        when(userBlockPersistencePort.findActive("blocker-1", "blocker-1")).thenReturn(Optional.empty());
 
         UserBlockService service = service();
         BlockCommands.BlockUser command = new BlockCommands.BlockUser("blocker-1", "blocker-1", null);
@@ -83,8 +83,8 @@ class UserBlockServiceTest {
 
     @Test
     void unblockDeactivatesRecord() {
-        when(repository.findActive("blocker-1", "blocked-1")).thenReturn(Optional.of(existing()));
-        when(repository.save(any(UserBlock.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userBlockPersistencePort.findActive("blocker-1", "blocked-1")).thenReturn(Optional.of(existing()));
+        when(userBlockPersistencePort.save(any(UserBlock.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         UserBlock saved = service().unblock(new BlockCommands.UnblockUser("blocker-1", "blocked-1"));
 
@@ -95,7 +95,7 @@ class UserBlockServiceTest {
 
     @Test
     void unblockThrowsWhenNoActiveBlock() {
-        when(repository.findActive("blocker-1", "blocked-1")).thenReturn(Optional.empty());
+        when(userBlockPersistencePort.findActive("blocker-1", "blocked-1")).thenReturn(Optional.empty());
 
         UserBlockService service = service();
         BlockCommands.UnblockUser command = new BlockCommands.UnblockUser("blocker-1", "blocked-1");
@@ -107,7 +107,7 @@ class UserBlockServiceTest {
 
     @Test
     void listMyBlocksDelegatesToRepository() {
-        when(repository.findByBlocker("blocker-1")).thenReturn(List.of(existing()));
+        when(userBlockPersistencePort.findByBlocker("blocker-1")).thenReturn(List.of(existing()));
 
         assertThat(service().listMyBlocks("blocker-1")).hasSize(1);
     }

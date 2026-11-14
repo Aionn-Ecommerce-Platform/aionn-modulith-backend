@@ -15,7 +15,8 @@ CREATE TABLE users (
     locked_until TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ
+    deleted_at TIMESTAMPTZ,
+    version BIGINT NOT NULL DEFAULT 0
 );
 
 CREATE TABLE user_roles (
@@ -44,6 +45,7 @@ CREATE TABLE kyc_profiles (
     provider_level_name VARCHAR(128),
     provider_review_status VARCHAR(50),
     provider_correlation_id VARCHAR(128),
+    version BIGINT NOT NULL DEFAULT 0,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
@@ -87,6 +89,7 @@ CREATE TABLE auth_sessions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     last_active_at TIMESTAMPTZ,
     expires_at TIMESTAMPTZ NOT NULL,
+    version BIGINT NOT NULL DEFAULT 0,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
@@ -142,6 +145,7 @@ CREATE TABLE account_deletion_requests (
     requested_at TIMESTAMPTZ NOT NULL,
     scheduled_deletion_at TIMESTAMPTZ NOT NULL,
     canceled_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
@@ -376,29 +380,8 @@ INSERT INTO wards (code, name, name_en, district_code, active) VALUES
 ('VN-SG-GV-W1', 'Ward 1', 'Ward 1', 'VN-SG-GV', TRUE),
 ('VN-SG-BTA-W1', 'Ward 1', 'Ward 1', 'VN-SG-BTA', TRUE);
 
--- Add optimistic-lock counters required by JPA @Version on UserEntity,
--- AuthSessionEntity and KycProfileEntity. Without these columns Hibernate fails at
--- startup with SchemaManagementException because the entity declares a non-nullable
--- field that does not exist in the schema.
---
--- Default 0 is applied so existing rows remain valid; future updates will increment
--- the counter automatically and detect lost-update races.
-
-ALTER TABLE users
-    ADD COLUMN version BIGINT NOT NULL DEFAULT 0;
-
-ALTER TABLE auth_sessions
-    ADD COLUMN version BIGINT NOT NULL DEFAULT 0;
-
-ALTER TABLE kyc_profiles
-    ADD COLUMN version BIGINT NOT NULL DEFAULT 0;
-
 -- Full VN GSO geography reference data.
 -- Codes are zero-padded so they line up with GHN's GovernmentCode for cross-carrier mapping.
-
-DELETE FROM wards;
-DELETE FROM districts;
-DELETE FROM provinces WHERE country_code = 'VN';
 
 INSERT INTO provinces (code, name, name_en, country_code, active) VALUES
   ('01', 'Thành phố Hà Nội', 'thanh pho ha noi', 'VN', TRUE),
@@ -11229,14 +11212,12 @@ CREATE TABLE user_feedbacks (
     handled_by   VARCHAR(50),
     handled_at   TIMESTAMPTZ,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    admin_reply  TEXT
 );
 CREATE INDEX idx_user_feedbacks_user_id ON user_feedbacks(user_id);
 CREATE INDEX idx_user_feedbacks_status ON user_feedbacks(status);
 CREATE INDEX idx_user_feedbacks_created_at ON user_feedbacks(created_at DESC);
-
-ALTER TABLE user_feedbacks
-    ADD COLUMN admin_reply TEXT;
 
 -- Soft-deleted users keep no identifying contact fields and must not block
 -- re-registration, so uniqueness is enforced only on live accounts.

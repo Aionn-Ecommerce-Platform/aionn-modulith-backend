@@ -28,6 +28,7 @@ CREATE TABLE orders (
     currency              VARCHAR(3)  NOT NULL,
     total_amount          NUMERIC(18,2),
     shipping_fee          NUMERIC(18,2),
+    shipping_service      VARCHAR(20),
     address_id            VARCHAR(50),
     address_full_name     VARCHAR(255),
     address_phone         VARCHAR(30),
@@ -38,6 +39,7 @@ CREATE TABLE orders (
     address_country_code  VARCHAR(5),
     status                VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     reason_code           VARCHAR(50),
+    note                  VARCHAR(1000),
     order_sn              VARCHAR(32) NOT NULL DEFAULT (TO_CHAR(NOW() AT TIME ZONE 'UTC', 'YYMMDD') || UPPER(SUBSTRING(MD5(RANDOM()::text || CLOCK_TIMESTAMP()::text), 1, 16))),
     version               BIGINT      NOT NULL DEFAULT 0,
     created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -57,6 +59,9 @@ CREATE TABLE order_items (
     sku_id         VARCHAR(50) NOT NULL,
     qty            INT         NOT NULL,
     unit_price     NUMERIC(18,2) NOT NULL,
+    product_name   VARCHAR(500),
+    image_url      TEXT,
+    variant_label  VARCHAR(255),
     warehouse_id   VARCHAR(50),
     reservation_id VARCHAR(50),
     PRIMARY KEY (order_id, sku_id),
@@ -97,6 +102,18 @@ CREATE UNIQUE INDEX uq_order_returns_active
 CREATE INDEX idx_order_returns_refund_retry
     ON order_returns(refund_status, next_refund_attempt_at)
     WHERE refund_status IN ('PENDING', 'FAILED');
+
+CREATE TABLE order_return_items (
+    return_id     VARCHAR(50) NOT NULL,
+    sku_id        VARCHAR(50) NOT NULL,
+    qty           INT         NOT NULL,
+    unit_price    NUMERIC(18,2) NOT NULL,
+    refund_amount NUMERIC(18,2) NOT NULL,
+    PRIMARY KEY (return_id, sku_id),
+    CONSTRAINT fk_return_items_return FOREIGN KEY (return_id)
+        REFERENCES order_returns(return_id) ON DELETE CASCADE,
+    CONSTRAINT chk_return_items_qty CHECK (qty > 0)
+);
 
 CREATE TABLE ordering_compensation_tasks (
     task_id         VARCHAR(150) PRIMARY KEY,

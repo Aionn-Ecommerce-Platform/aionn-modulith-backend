@@ -258,3 +258,119 @@ VALUES
  '{{senderName}}',
  '{{messagePreview}}',
  '["senderName","messagePreview","conversationId"]'::jsonb, 1, TRUE);
+
+INSERT INTO notification_templates (
+    template_id, event_type, channel, category, locale, subject, content,
+    placeholders, version, is_active
+) VALUES
+('inv_safety_stock_in_vi',
+ 'inventory.safety-stock-breached', 'IN_APP', 'SYSTEM', 'vi-VN',
+ 'Cảnh báo tồn kho thấp',
+ 'SKU {{skuId}} tại kho {{warehouseId}} chỉ còn {{availableQty}} sản phẩm (ngưỡng an toàn {{safetyStockQty}}).',
+ '["skuId","warehouseId","availableQty","safetyStockQty"]'::jsonb, 1, TRUE),
+('inv_safety_stock_in_en',
+ 'inventory.safety-stock-breached', 'IN_APP', 'SYSTEM', 'en-US',
+ 'Low stock warning',
+ 'SKU {{skuId}} in warehouse {{warehouseId}} has only {{availableQty}} units left (safety stock {{safetyStockQty}}).',
+ '["skuId","warehouseId","availableQty","safetyStockQty"]'::jsonb, 1, TRUE)
+ON CONFLICT (event_type, channel, locale) DO NOTHING;
+
+INSERT INTO notification_templates (
+    template_id, event_type, channel, category, locale, subject, content,
+    placeholders, version, is_active
+) VALUES
+('merchant_follower_in_vi',
+ 'catalog.merchant-follower-update', 'IN_APP', 'PROMOTION', 'vi-VN',
+ '{{title}}', '{{message}}',
+ '["title","message","targetUrl","merchantId"]'::jsonb, 1, TRUE),
+('merchant_follower_push_vi',
+ 'catalog.merchant-follower-update', 'PUSH', 'PROMOTION', 'vi-VN',
+ '{{title}}', '{{message}}',
+ '["title","message","targetUrl","merchantId"]'::jsonb, 1, TRUE),
+('merchant_follower_in_en',
+ 'catalog.merchant-follower-update', 'IN_APP', 'PROMOTION', 'en-US',
+ '{{title}}', '{{message}}',
+ '["title","message","targetUrl","merchantId"]'::jsonb, 1, TRUE),
+('merchant_follower_push_en',
+ 'catalog.merchant-follower-update', 'PUSH', 'PROMOTION', 'en-US',
+ '{{title}}', '{{message}}',
+ '["title","message","targetUrl","merchantId"]'::jsonb, 1, TRUE)
+ON CONFLICT (event_type, channel, locale) DO NOTHING;
+
+INSERT INTO notification_templates (
+    template_id, event_type, channel, category, locale, subject, content,
+    placeholders, version, is_active
+) VALUES
+('product_back_in_stock_in_vi',
+ 'catalog.product-back-in-stock', 'IN_APP', 'PROMOTION', 'vi-VN',
+ 'Sản phẩm bạn quan tâm đã có hàng',
+ '{{productName}} đã có hàng trở lại. Mua ngay kẻo lỡ!',
+ '["productName","skuId","productId","targetUrl"]'::jsonb, 1, TRUE),
+('product_back_in_stock_push_vi',
+ 'catalog.product-back-in-stock', 'PUSH', 'PROMOTION', 'vi-VN',
+ 'Sản phẩm bạn quan tâm đã có hàng',
+ '{{productName}} đã có hàng trở lại. Mua ngay kẻo lỡ!',
+ '["productName","skuId","productId","targetUrl"]'::jsonb, 1, TRUE),
+('product_back_in_stock_in_en',
+ 'catalog.product-back-in-stock', 'IN_APP', 'PROMOTION', 'en-US',
+ 'A product you wanted is back in stock',
+ '{{productName}} is available again. Grab it before it sells out!',
+ '["productName","skuId","productId","targetUrl"]'::jsonb, 1, TRUE),
+('product_back_in_stock_push_en',
+ 'catalog.product-back-in-stock', 'PUSH', 'PROMOTION', 'en-US',
+ 'A product you wanted is back in stock',
+ '{{productName}} is available again. Grab it before it sells out!',
+ '["productName","skuId","productId","targetUrl"]'::jsonb, 1, TRUE)
+ON CONFLICT (event_type, channel, locale) DO NOTHING;
+
+INSERT INTO notification_templates (
+    template_id, event_type, channel, category, locale, subject, content,
+    placeholders, version, is_active
+) VALUES
+('shipping_delivery_failed_in_vi',
+ 'shipping.delivery-failed', 'IN_APP', 'SHIPPING', 'vi-VN',
+ 'Giao hàng chưa thành công',
+ 'Đơn hàng {{orderId}} giao thất bại lần {{attemptCount}}: {{reason}}. Chúng tôi sẽ thử giao lại hoặc liên hệ hỗ trợ nếu cần.',
+ '["orderId","reason","attemptCount"]'::jsonb, 1, TRUE),
+('shipping_delivery_failed_push_vi',
+ 'shipping.delivery-failed', 'PUSH', 'SHIPPING', 'vi-VN',
+ 'Giao hàng chưa thành công',
+ 'Đơn hàng {{orderId}} giao thất bại lần {{attemptCount}}: {{reason}}.',
+ '["orderId","reason","attemptCount"]'::jsonb, 1, TRUE),
+('shipping_delivery_failed_in_en',
+ 'shipping.delivery-failed', 'IN_APP', 'SHIPPING', 'en-US',
+ 'Delivery attempt failed',
+ 'Order {{orderId}} delivery attempt {{attemptCount}} failed: {{reason}}. We will retry delivery or contact you for support.',
+ '["orderId","reason","attemptCount"]'::jsonb, 1, TRUE),
+('shipping_delivery_failed_push_en',
+ 'shipping.delivery-failed', 'PUSH', 'SHIPPING', 'en-US',
+ 'Delivery attempt failed',
+ 'Order {{orderId}} delivery attempt {{attemptCount}} failed: {{reason}}.',
+ '["orderId","reason","attemptCount"]'::jsonb, 1, TRUE)
+ON CONFLICT (event_type, channel, locale) DO NOTHING;
+
+INSERT INTO notification_templates (
+    template_id, event_type, channel, category, locale, subject, content,
+    placeholders, version, is_active
+) VALUES
+('shipping_returned_in_vi',
+ 'shipping.returned', 'IN_APP', 'SHIPPING', 'vi-VN',
+ 'Đơn hàng đã được hoàn về',
+ 'Đơn hàng {{orderId}} đã được hoàn về: {{reason}}. Vui lòng kiểm tra và xử lý return/refund.',
+ '["orderId","shipmentId","reason"]'::jsonb, 1, TRUE),
+('shipping_returned_push_vi',
+ 'shipping.returned', 'PUSH', 'SHIPPING', 'vi-VN',
+ 'Đơn hàng đã được hoàn về',
+ 'Đơn hàng {{orderId}} đã được hoàn về: {{reason}}.',
+ '["orderId","shipmentId","reason"]'::jsonb, 1, TRUE),
+('shipping_returned_in_en',
+ 'shipping.returned', 'IN_APP', 'SHIPPING', 'en-US',
+ 'Order returned',
+ 'Order {{orderId}} was returned: {{reason}}. Please review and process the return/refund.',
+ '["orderId","shipmentId","reason"]'::jsonb, 1, TRUE),
+('shipping_returned_push_en',
+ 'shipping.returned', 'PUSH', 'SHIPPING', 'en-US',
+ 'Order returned',
+ 'Order {{orderId}} was returned: {{reason}}.',
+ '["orderId","shipmentId","reason"]'::jsonb, 1, TRUE)
+ON CONFLICT (event_type, channel, locale) DO NOTHING;

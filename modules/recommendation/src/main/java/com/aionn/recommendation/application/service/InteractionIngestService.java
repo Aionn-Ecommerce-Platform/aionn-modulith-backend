@@ -25,7 +25,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class InteractionIngestService {
 
-    private final InteractionPersistencePort interactionRepository;
+    private final InteractionPersistencePort interactionPersistencePort;
     private final ProductAttributeQueryPort productAttributeQuery;
     private final InteractionWeightPolicy weightPolicy;
     private final Clock clock;
@@ -51,8 +51,8 @@ public class InteractionIngestService {
 
         // Lock, then check erasure under it: outbox delivery is at-least-once, so a deletion event can
         // be replayed after the erasure it caused.
-        interactionRepository.lockUser(command.userId());
-        if (interactionRepository.isUserErased(command.userId())) {
+        interactionPersistencePort.lockUser(command.userId());
+        if (interactionPersistencePort.isUserErased(command.userId())) {
             log.debug("Skipping {} interaction for an erased account", type);
             return;
         }
@@ -66,13 +66,13 @@ public class InteractionIngestService {
                 command.occurredAt() != null ? command.occurredAt() : clock.instant(),
                 command.sourceEventId());
 
-        interactionRepository.append(interaction);
+        interactionPersistencePort.append(interaction);
     }
 
     /** A search has no product, so it carries the facets the profile builder scores directly. */
     private void ingestSearch(RecordInteractionCommand command) {
-        interactionRepository.lockUser(command.userId());
-        if (interactionRepository.isUserErased(command.userId())) {
+        interactionPersistencePort.lockUser(command.userId());
+        if (interactionPersistencePort.isUserErased(command.userId())) {
             log.debug("Skipping SEARCH interaction for an erased account");
             return;
         }
@@ -86,7 +86,7 @@ public class InteractionIngestService {
                 command.categoryIds(),
                 command.brandId(),
                 command.keyword());
-        interactionRepository.append(interaction);
+        interactionPersistencePort.append(interaction);
     }
 
     /** SKU-scoped events need an in-process catalog lookup (not external I/O). */

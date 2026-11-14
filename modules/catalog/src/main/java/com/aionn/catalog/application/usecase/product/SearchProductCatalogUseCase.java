@@ -1,5 +1,6 @@
 package com.aionn.catalog.application.usecase.product;
 
+import com.aionn.catalog.application.dto.product.command.RecordSearchIntentCommand;
 import com.aionn.catalog.application.dto.search.ProductSearchCriteria;
 import com.aionn.catalog.application.dto.search.ProductSearchResult;
 import com.aionn.catalog.application.port.in.product.SearchProductCatalogInputPort;
@@ -14,7 +15,10 @@ public class SearchProductCatalogUseCase implements SearchProductCatalogInputPor
     private final ProductService productService;
 
     @Override
-    public ProductSearchResult execute(ProductSearchCriteria criteria) {
-        return productService.searchCatalog(criteria);
+    public ProductSearchResult execute(ProductSearchCriteria criteria, String userId) {
+        ProductSearchResult result = productService.searchCatalog(criteria);
+        productService.recordSearchIntent(new RecordSearchIntentCommand(
+                userId, criteria.q(), criteria.categoryIds(), criteria.brandIds()));
+        return result;
     }
 }

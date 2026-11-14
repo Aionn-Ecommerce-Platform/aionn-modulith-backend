@@ -5,6 +5,7 @@ import com.aionn.contracts.port.catalog.MerchantOwnershipVerifierPort;
 import org.mockito.Mockito;
 
 import com.aionn.ordering.adapter.rest.dto.response.OrderReturnResponse;
+import com.aionn.ordering.adapter.rest.dto.response.ReturnItemResponse;
 import com.aionn.ordering.adapter.rest.exception.OrderingExceptionHandler;
 import com.aionn.ordering.adapter.rest.mapper.OrderingDtoMapper;
 import com.aionn.ordering.adapter.rest.support.session.CurrentUserIdArgumentResolver;
@@ -105,7 +106,7 @@ class OrderReturnControllerWebTest {
 
         mockMvc.perform(post("/api/v1/ordering/returns/orders/order-1")
                         .contentType(APPLICATION_JSON)
-                        .content("{\"reason\":\"damaged\",\"evidenceUrl\":\"http://ev\"}"))
+                        .content("{\"reason\":\"damaged\",\"evidenceUrl\":\"http://ev\",\"items\":[{\"skuId\":\"sku-1\",\"qty\":1}]}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.statusCode").value("201"))
                 .andExpect(jsonPath("$.data.returnId").value("ret-1"));
@@ -148,6 +149,8 @@ class OrderReturnControllerWebTest {
     @Test
     void confirmReceivedReturnsSuccess() throws Exception {
         ReturnResult result = sampleReturn();
+        when(dtoMapper.toConfirmItemReceivedCommand(any(), any(), any()))
+                .thenReturn(new ConfirmItemReceivedCommand("ret-1", "M_1", "GOOD"));
         when(confirmItemReceivedInputPort.execute(any(ConfirmItemReceivedCommand.class))).thenReturn(result);
         when(dtoMapper.toResponse(result)).thenReturn(sampleResponse());
 
@@ -189,5 +192,18 @@ class OrderReturnControllerWebTest {
         mockMvc.perform(get("/api/v1/ordering/returns/ret-1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.returnId").value("ret-1"));
+    }
+
+    @Test
+    void itemsReturnsSelectedReturnLines() throws Exception {
+        when(returnService.listSelectedItems("ret-1", "user-1")).thenReturn(List.of(
+                new com.aionn.ordering.application.port.out.OrderReturnItemPersistencePort.Item(
+                        "sku-1", 2, BigDecimal.TEN, BigDecimal.valueOf(20))));
+        when(dtoMapper.toReturnItemResponses(any())).thenReturn(List.of(
+                new ReturnItemResponse("sku-1", 2, BigDecimal.TEN, BigDecimal.valueOf(20))));
+
+        mockMvc.perform(get("/api/v1/ordering/returns/ret-1/items"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].skuId").value("sku-1"));
     }
 }

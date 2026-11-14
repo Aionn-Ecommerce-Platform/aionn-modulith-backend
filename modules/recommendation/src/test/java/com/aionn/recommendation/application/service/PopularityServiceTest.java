@@ -34,21 +34,21 @@ class PopularityServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-09-05T12:00:00Z");
 
-    @Mock private InteractionPersistencePort interactionRepository;
-    @Mock private PopularityPersistencePort popularityRepository;
+    @Mock private InteractionPersistencePort interactionPersistencePort;
+    @Mock private PopularityPersistencePort popularityPersistencePort;
     @Mock private InteractionWeightPolicy weightPolicy;
 
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
 
     private PopularityService service() {
         return new PopularityService(
-                interactionRepository, popularityRepository, weightPolicy, clock);
+                interactionPersistencePort, popularityPersistencePort, weightPolicy, clock);
     }
 
     @Test
     void aggregatedScoresAreWrittenForEveryActiveProduct() {
         stubHalfLives();
-        when(interactionRepository.aggregatePopularity(any(), eq(NOW), anyMap())).thenReturn(Map.of(
+        when(interactionPersistencePort.aggregatePopularity(any(), eq(NOW), anyMap())).thenReturn(Map.of(
                 "p-1", aggregate(120.5, 100, 20),
                 "p-2", aggregate(3.0, 3, 0)));
 
@@ -65,12 +65,12 @@ class PopularityServiceTest {
     @Test
     void theLookbackWindowStartsAtNowMinusTheGivenDuration() {
         stubHalfLives();
-        when(interactionRepository.aggregatePopularity(any(), any(), anyMap())).thenReturn(Map.of());
+        when(interactionPersistencePort.aggregatePopularity(any(), any(), anyMap())).thenReturn(Map.of());
 
         service().refresh(Duration.ofDays(30));
 
         ArgumentCaptor<Instant> since = ArgumentCaptor.forClass(Instant.class);
-        verify(interactionRepository).aggregatePopularity(since.capture(), eq(NOW), anyMap());
+        verify(interactionPersistencePort).aggregatePopularity(since.capture(), eq(NOW), anyMap());
         assertThat(since.getValue()).isEqualTo(NOW.minus(Duration.ofDays(30)));
     }
 
@@ -79,12 +79,12 @@ class PopularityServiceTest {
         // Momentum is genuinely zero for them; leaving a stale row would let them outrank products that
         // are actually selling now.
         stubHalfLives();
-        when(interactionRepository.aggregatePopularity(any(), eq(NOW), anyMap()))
+        when(interactionPersistencePort.aggregatePopularity(any(), eq(NOW), anyMap()))
                 .thenReturn(Map.of("p-1", aggregate(10.0, 10, 0)));
 
         service().refresh(Duration.ofDays(30));
 
-        verify(popularityRepository).deleteComputedBefore(NOW);
+        verify(popularityPersistencePort).deleteComputedBefore(NOW);
     }
 
     @Test
@@ -95,22 +95,22 @@ class PopularityServiceTest {
         // feed does not go empty as a result: trending tops itself up with new arrivals once popularity
         // is thin.
         stubHalfLives();
-        when(interactionRepository.aggregatePopularity(any(), eq(NOW), anyMap())).thenReturn(Map.of());
+        when(interactionPersistencePort.aggregatePopularity(any(), eq(NOW), anyMap())).thenReturn(Map.of());
 
         assertThat(service().refresh(Duration.ofDays(30))).isZero();
-        verify(popularityRepository, never()).upsertAll(any());
-        verify(popularityRepository).deleteComputedBefore(NOW);
+        verify(popularityPersistencePort, never()).upsertAll(any());
+        verify(popularityPersistencePort).deleteComputedBefore(NOW);
     }
 
     @Test
     void everyInteractionTypeContributesItsOwnHalfLife() {
         stubHalfLives();
-        when(interactionRepository.aggregatePopularity(any(), eq(NOW), anyMap())).thenReturn(Map.of());
+        when(interactionPersistencePort.aggregatePopularity(any(), eq(NOW), anyMap())).thenReturn(Map.of());
 
         service().refresh(Duration.ofDays(30));
 
         ArgumentCaptor<Map<InteractionType, Long>> halfLives = ArgumentCaptor.captor();
-        verify(interactionRepository).aggregatePopularity(any(), eq(NOW), halfLives.capture());
+        verify(interactionPersistencePort).aggregatePopularity(any(), eq(NOW), halfLives.capture());
         assertThat(halfLives.getValue()).containsOnlyKeys(InteractionType.values());
     }
 
@@ -127,7 +127,7 @@ class PopularityServiceTest {
 
     private List<ProductPopularity> capturePopularities() {
         ArgumentCaptor<List<ProductPopularity>> captor = ArgumentCaptor.captor();
-        verify(popularityRepository).upsertAll(captor.capture());
+        verify(popularityPersistencePort).upsertAll(captor.capture());
         return captor.getValue();
     }
 

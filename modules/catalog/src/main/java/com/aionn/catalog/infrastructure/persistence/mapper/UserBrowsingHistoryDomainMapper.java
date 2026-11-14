@@ -2,33 +2,24 @@ package com.aionn.catalog.infrastructure.persistence.mapper;
 
 import com.aionn.catalog.domain.model.UserBrowsingHistory;
 import com.aionn.catalog.infrastructure.persistence.entity.UserBrowsingHistoryEntity;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.ArrayList;
+import java.util.List;
 
-@Component
-public class UserBrowsingHistoryDomainMapper {
+@Mapper(componentModel = "spring")
+public interface UserBrowsingHistoryDomainMapper {
 
-    public UserBrowsingHistory toDomain(UserBrowsingHistoryEntity entity) {
-        if (entity == null) {
-            return null;
-        }
-        return new UserBrowsingHistory(
-                entity.getUserId(),
-                new ArrayList<>(entity.getCategoryIds()),
-                new ArrayList<>(entity.getBrandIds()),
-                new ArrayList<>(entity.getRecentSearches()));
-    }
+    @Mapping(target = "categoryIds", expression = "java(copyOf(entity.getCategoryIds()))")
+    @Mapping(target = "brandIds", expression = "java(copyOf(entity.getBrandIds()))")
+    @Mapping(target = "recentSearches", expression = "java(copyOf(entity.getRecentSearches()))")
+    UserBrowsingHistory toDomain(UserBrowsingHistoryEntity entity);
 
-    public UserBrowsingHistoryEntity toEntity(UserBrowsingHistory domain) {
-        if (domain == null) {
-            return null;
-        }
-        return UserBrowsingHistoryEntity.builder()
-                .userId(domain.getUserId())
-                .categoryIds(new ArrayList<>(domain.getCategoryIds()))
-                .brandIds(new ArrayList<>(domain.getBrandIds()))
-                .recentSearches(new ArrayList<>(domain.getRecentSearches()))
-                .build();
+    @Mapping(target = "updatedAt", ignore = true)
+    UserBrowsingHistoryEntity toEntity(UserBrowsingHistory domain);
+
+    default List<String> copyOf(List<String> values) {
+        return values == null ? new ArrayList<>() : new ArrayList<>(values);
     }
 }

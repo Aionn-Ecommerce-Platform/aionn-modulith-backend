@@ -1,6 +1,8 @@
 package com.aionn.identity.application.service;
 
-import com.aionn.identity.application.policy.IdentityValidationConstants;
+import com.aionn.identity.application.policy.TokenConstants;
+
+import com.aionn.identity.application.policy.UserValidationConstants;
 import java.text.Normalizer;
 
 import com.aionn.identity.application.dto.auth.command.LinkSocialCommand;
@@ -210,7 +212,7 @@ public class AuthService {
         if (command.accessTokenJti() != null && !command.accessTokenJti().isBlank()) {
             tokenBlacklist.blacklist(
                     command.accessTokenJti(),
-                    Duration.ofMinutes(authPolicy.getAccessTokenExpiryMinutes()));
+                    Duration.ofMinutes(authPolicy.accessTokenExpiryMinutes()));
         }
     }
 
@@ -265,7 +267,7 @@ public class AuthService {
             throw new IdentityException(IdentityErrorCode.USER_INACTIVE);
         }
 
-        session.extendExpiry(nowUtc().plus(Duration.ofDays(authPolicy.getSessionExpiresDays())), clock);
+        session.extendExpiry(nowUtc().plus(Duration.ofDays(authPolicy.sessionExpiresDays())), clock);
         AuthSession refreshed = authSessionPersistencePort.save(session);
 
         String accessToken = issueAccessToken(refreshed);
@@ -356,9 +358,9 @@ public class AuthService {
     }
 
     private void recordFailedLoginAttempt(UserSecurityPort.UserSecurityData user) {
-        Instant lockUntil = nowUtc().plus(Duration.ofMinutes(authPolicy.getLockoutMinutes()));
+        Instant lockUntil = nowUtc().plus(Duration.ofMinutes(authPolicy.lockoutMinutes()));
         userSecurityPort.recordFailedLoginAttempt(
-                user.userId(), authPolicy.getMaxFailedLoginAttempts(), lockUntil);
+                user.userId(), authPolicy.maxFailedLoginAttempts(), lockUntil);
     }
 
     private boolean isLocked(Instant lockedUntil) {
@@ -408,9 +410,9 @@ public class AuthService {
         }
         String generatedId = IdGenerator.ulid();
         String suffix = generatedId
-                .substring(generatedId.length() - IdentityValidationConstants.SOCIAL_USERNAME_SUFFIX_LENGTH)
+                .substring(generatedId.length() - UserValidationConstants.SOCIAL_USERNAME_SUFFIX_LENGTH)
                 .toLowerCase();
-        int maxBaseLength = IdentityValidationConstants.USERNAME_MAX_LENGTH - suffix.length() - 1;
+        int maxBaseLength = UserValidationConstants.USERNAME_MAX_LENGTH - suffix.length() - 1;
         String boundedBase = base.substring(0, Math.min(base.length(), maxBaseLength));
         return boundedBase + "_" + suffix;
     }
@@ -418,9 +420,9 @@ public class AuthService {
     private void enforceLoginRateLimit(LoginCommand command) {
         String identityKey = Sha256Hasher.hexDigest(command.identity().trim().toLowerCase(Locale.ROOT));
         boolean ipAllowed = abuseRateLimiter.check("LOGIN_IP", command.ipAddress(),
-                authPolicy.getLoginIpMaxAttempts(), authPolicy.getLoginRateLimitWindowSeconds());
+                authPolicy.loginIpMaxAttempts(), authPolicy.loginRateLimitWindowSeconds());
         boolean identityAllowed = abuseRateLimiter.check("LOGIN_IDENTITY", identityKey,
-                authPolicy.getLoginIdentityMaxAttempts(), authPolicy.getLoginRateLimitWindowSeconds());
+                authPolicy.loginIdentityMaxAttempts(), authPolicy.loginRateLimitWindowSeconds());
         if (!ipAllowed || !identityAllowed) {
             identityMetrics.loginAttempt("rate_limited");
             throw new IdentityException(IdentityErrorCode.RATE_LIMIT_EXCEEDED);
@@ -443,7 +445,7 @@ public class AuthService {
         if (email != null && email.contains("@")) {
             String local = email.substring(0, email.indexOf('@')).toLowerCase()
                     .replaceAll("[^a-z0-9._-]", "");
-            if (local.length() >= IdentityValidationConstants.USERNAME_MIN_LENGTH) {
+            if (local.length() >= UserValidationConstants.USERNAME_MIN_LENGTH) {
                 return local;
             }
         }
@@ -453,7 +455,7 @@ public class AuthService {
                     .toLowerCase()
                     .replaceAll("\\s+", "_")
                     .replaceAll("[^a-z0-9_]", "");
-            if (slug.length() >= IdentityValidationConstants.USERNAME_MIN_LENGTH) {
+            if (slug.length() >= UserValidationConstants.USERNAME_MIN_LENGTH) {
                 return slug;
             }
         }
@@ -466,7 +468,7 @@ public class AuthService {
                 userId,
                 ipAddress,
                 userAgent,
-                nowUtc().plus(Duration.ofDays(authPolicy.getSessionExpiresDays())),
+                nowUtc().plus(Duration.ofDays(authPolicy.sessionExpiresDays())),
                 clock);
     }
 
@@ -494,13 +496,13 @@ public class AuthService {
     }
 
     private String issueRefreshToken(AuthSession session) {
-        byte[] bytes = new byte[IdentityValidationConstants.REFRESH_TOKEN_BYTES];
+        byte[] bytes = new byte[TokenConstants.REFRESH_TOKEN_BYTES];
         SECURE_RANDOM.nextBytes(bytes);
         String tokenId = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 
         Duration ttl = Duration.between(nowUtc(), session.getExpiresAt());
         if (ttl.isNegative() || ttl.isZero()) {
-            ttl = Duration.ofDays(authPolicy.getSessionExpiresDays());
+            ttl = Duration.ofDays(authPolicy.sessionExpiresDays());
         }
         refreshTokenStore.store(tokenId, session.getSessionId(), ttl);
         return tokenId;

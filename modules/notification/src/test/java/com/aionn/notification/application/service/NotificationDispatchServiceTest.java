@@ -50,11 +50,11 @@ class NotificationDispatchServiceTest {
     private static final String EVENT = "identity.password-changed";
 
     @Mock
-    private NotificationPersistencePort notificationRepository;
+    private NotificationPersistencePort notificationPersistencePort;
     @Mock
-    private NotificationTemplatePersistencePort templateRepository;
+    private NotificationTemplatePersistencePort notificationTemplatePersistencePort;
     @Mock
-    private NotificationSubscriptionPersistencePort subscriptionRepository;
+    private NotificationSubscriptionPersistencePort notificationSubscriptionPersistencePort;
     @Mock
     private NotificationRealtimePort realtimePort;
     @Mock
@@ -70,8 +70,8 @@ class NotificationDispatchServiceTest {
         when(notificationPreferenceQueryPort.find(anyString()))
                 .thenReturn(com.aionn.contracts.port.notification.NotificationPreferenceQueryPort
                         .NotificationPreferenceSnapshot.defaults());
-        return new NotificationDispatchService(notificationRepository, templateRepository,
-                subscriptionRepository, realtimePort, eventPublisher, defaultsPolicy,
+        return new NotificationDispatchService(notificationPersistencePort, notificationTemplatePersistencePort,
+                notificationSubscriptionPersistencePort, realtimePort, eventPublisher, defaultsPolicy,
                 notificationPreferenceQueryPort, CLOCK);
     }
 
@@ -86,7 +86,7 @@ class NotificationDispatchServiceTest {
     }
 
     private void echoSave() {
-        when(notificationRepository.save(any(Notification.class)))
+        when(notificationPersistencePort.save(any(Notification.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
@@ -98,9 +98,9 @@ class NotificationDispatchServiceTest {
 
     @Test
     void prepareByEventCreatesOnePendingNotificationPerEnabledChannel() {
-        when(subscriptionRepository.findByUserId("user-1"))
+        when(notificationSubscriptionPersistencePort.findByUserId("user-1"))
                 .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
-        when(templateRepository.findByEventChannelLocale(eq(EVENT), any(), anyString()))
+        when(notificationTemplatePersistencePort.findByEventChannelLocale(eq(EVENT), any(), anyString()))
                 .thenAnswer(invocation -> Optional.of(template(invocation.getArgument(1))));
         echoSave();
 
@@ -115,9 +115,9 @@ class NotificationDispatchServiceTest {
 
     @Test
     void publishesOnlyInAppNotificationsToRealtime() {
-        when(subscriptionRepository.findByUserId("user-1"))
+        when(notificationSubscriptionPersistencePort.findByUserId("user-1"))
                 .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
-        when(templateRepository.findByEventChannelLocale(eq(EVENT), any(), anyString()))
+        when(notificationTemplatePersistencePort.findByEventChannelLocale(eq(EVENT), any(), anyString()))
                 .thenAnswer(invocation -> Optional.of(template(invocation.getArgument(1))));
         echoSave();
 
@@ -128,22 +128,22 @@ class NotificationDispatchServiceTest {
 
     @Test
     void prepareByEventCreatesDefaultSubscriptionWhenMissing() {
-        when(subscriptionRepository.findByUserId("user-1")).thenReturn(Optional.empty());
-        when(subscriptionRepository.save(any(NotificationSubscription.class)))
+        when(notificationSubscriptionPersistencePort.findByUserId("user-1")).thenReturn(Optional.empty());
+        when(notificationSubscriptionPersistencePort.save(any(NotificationSubscription.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
-        when(templateRepository.findByEventChannelLocale(eq(EVENT), any(), anyString()))
+        when(notificationTemplatePersistencePort.findByEventChannelLocale(eq(EVENT), any(), anyString()))
                 .thenAnswer(invocation -> Optional.of(template(invocation.getArgument(1))));
         echoSave();
 
         assertThat(service().prepareByEvent(byEvent(List.of(NotificationChannel.EMAIL)))).hasSize(1);
-        verify(subscriptionRepository).save(any(NotificationSubscription.class));
+        verify(notificationSubscriptionPersistencePort).save(any(NotificationSubscription.class));
     }
 
     @Test
     void prepareByEventFansOutToEveryChannelWhenNoneRequested() {
-        when(subscriptionRepository.findByUserId("user-1"))
+        when(notificationSubscriptionPersistencePort.findByUserId("user-1"))
                 .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
-        when(templateRepository.findByEventChannelLocale(eq(EVENT), any(), anyString()))
+        when(notificationTemplatePersistencePort.findByEventChannelLocale(eq(EVENT), any(), anyString()))
                 .thenAnswer(invocation -> Optional.of(template(invocation.getArgument(1))));
         echoSave();
 
@@ -153,20 +153,20 @@ class NotificationDispatchServiceTest {
 
     @Test
     void prepareByEventSkipsChannelsWithoutTemplate() {
-        when(subscriptionRepository.findByUserId("user-1"))
+        when(notificationSubscriptionPersistencePort.findByUserId("user-1"))
                 .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
-        when(templateRepository.findByEventChannelLocale(eq(EVENT), any(), anyString()))
+        when(notificationTemplatePersistencePort.findByEventChannelLocale(eq(EVENT), any(), anyString()))
                 .thenReturn(Optional.empty());
 
         assertThat(service().prepareByEvent(byEvent(List.of(NotificationChannel.EMAIL)))).isEmpty();
-        verify(notificationRepository, never()).save(any());
+        verify(notificationPersistencePort, never()).save(any());
     }
 
     @Test
     void prepareByEventSkipsChannelsDisabledBySubscription() {
         NotificationSubscription subscription = NotificationSubscription.createDefault("user-1", CLOCK);
         subscription.update(NotificationCategory.PROMOTION, NotificationChannel.EMAIL, false, CLOCK);
-        when(subscriptionRepository.findByUserId("user-1")).thenReturn(Optional.of(subscription));
+        when(notificationSubscriptionPersistencePort.findByUserId("user-1")).thenReturn(Optional.of(subscription));
 
         List<Notification> prepared = service().prepareByEvent(new NotificationCommands.SendByEvent(
                 "user-1", EVENT, NotificationCategory.PROMOTION,
@@ -177,11 +177,11 @@ class NotificationDispatchServiceTest {
 
     @Test
     void prepareByEventFallsBackToDefaultLocale() {
-        when(subscriptionRepository.findByUserId("user-1"))
+        when(notificationSubscriptionPersistencePort.findByUserId("user-1"))
                 .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
-        when(templateRepository.findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "fr-FR"))
+        when(notificationTemplatePersistencePort.findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "fr-FR"))
                 .thenReturn(Optional.empty());
-        when(templateRepository.findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN"))
+        when(notificationTemplatePersistencePort.findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN"))
                 .thenReturn(Optional.of(template(NotificationChannel.EMAIL)));
         echoSave();
 
@@ -196,9 +196,9 @@ class NotificationDispatchServiceTest {
     void resolvesTheEnglishLocaleFromTheRequestContextWhenNoneIsRequested() {
         LocaleContextHolder.setLocale(Locale.ENGLISH);
         try {
-            when(subscriptionRepository.findByUserId("user-1"))
+            when(notificationSubscriptionPersistencePort.findByUserId("user-1"))
                     .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
-            when(templateRepository.findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "en-US"))
+            when(notificationTemplatePersistencePort.findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "en-US"))
                     .thenReturn(Optional.of(template(NotificationChannel.EMAIL)));
             echoSave();
 
@@ -207,7 +207,7 @@ class NotificationDispatchServiceTest {
                     List.of(NotificationChannel.EMAIL), null, null, Map.of("name", "Tran")));
 
             assertThat(prepared).hasSize(1);
-            verify(templateRepository).findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "en-US");
+            verify(notificationTemplatePersistencePort).findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "en-US");
         } finally {
             LocaleContextHolder.resetLocaleContext();
         }
@@ -217,9 +217,9 @@ class NotificationDispatchServiceTest {
     void fallsBackToTheDefaultLocaleForANonEnglishRequestContext() {
         LocaleContextHolder.setLocale(Locale.forLanguageTag("vi"));
         try {
-            when(subscriptionRepository.findByUserId("user-1"))
+            when(notificationSubscriptionPersistencePort.findByUserId("user-1"))
                     .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
-            when(templateRepository.findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN"))
+            when(notificationTemplatePersistencePort.findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN"))
                     .thenReturn(Optional.of(template(NotificationChannel.EMAIL)));
             echoSave();
 
@@ -228,7 +228,7 @@ class NotificationDispatchServiceTest {
                     List.of(NotificationChannel.EMAIL), null, null, Map.of("name", "Tran")));
 
             assertThat(prepared).hasSize(1);
-            verify(templateRepository).findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN");
+            verify(notificationTemplatePersistencePort).findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN");
         } finally {
             LocaleContextHolder.resetLocaleContext();
         }
@@ -237,9 +237,9 @@ class NotificationDispatchServiceTest {
     @Test
     void usesVietnameseDefaultWhenThereIsNoRequestContext() {
         LocaleContextHolder.resetLocaleContext();
-        when(subscriptionRepository.findByUserId("user-1"))
+        when(notificationSubscriptionPersistencePort.findByUserId("user-1"))
                 .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
-        when(templateRepository.findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN"))
+        when(notificationTemplatePersistencePort.findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN"))
                 .thenReturn(Optional.of(template(NotificationChannel.EMAIL)));
         echoSave();
 
@@ -248,12 +248,12 @@ class NotificationDispatchServiceTest {
                 List.of(NotificationChannel.EMAIL), null, null, Map.of("name", "Tran")));
 
         assertThat(prepared).hasSize(1);
-        verify(templateRepository).findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN");
+        verify(notificationTemplatePersistencePort).findByEventChannelLocale(EVENT, NotificationChannel.EMAIL, "vi-VN");
     }
 
     @Test
     void prepareByEventSkipsCategoryDisabledInAccountSettings() {
-        when(subscriptionRepository.findByUserId("user-1"))
+        when(notificationSubscriptionPersistencePort.findByUserId("user-1"))
                 .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
         NotificationDispatchService svc = service();
         when(notificationPreferenceQueryPort.find("user-1"))
@@ -265,12 +265,12 @@ class NotificationDispatchServiceTest {
                 List.of(NotificationChannel.IN_APP), "vi-VN", null, Map.of("name", "Tran")));
 
         assertThat(prepared).isEmpty();
-        verify(notificationRepository, never()).save(any());
+        verify(notificationPersistencePort, never()).save(any());
     }
 
     @Test
     void prepareDirectUsesExplicitChannel() {
-        when(templateRepository.findByEventChannelLocale(EVENT, NotificationChannel.SMS, "vi-VN"))
+        when(notificationTemplatePersistencePort.findByEventChannelLocale(EVENT, NotificationChannel.SMS, "vi-VN"))
                 .thenReturn(Optional.of(template(NotificationChannel.SMS)));
         echoSave();
 
@@ -284,7 +284,7 @@ class NotificationDispatchServiceTest {
 
     @Test
     void prepareDirectThrowsWhenTemplateMissing() {
-        when(templateRepository.findByEventChannelLocale(anyString(), any(), anyString()))
+        when(notificationTemplatePersistencePort.findByEventChannelLocale(anyString(), any(), anyString()))
                 .thenReturn(Optional.empty());
 
         NotificationDispatchService service = service();
@@ -298,7 +298,7 @@ class NotificationDispatchServiceTest {
 
     @Test
     void recordSentMovesNotificationToSent() {
-        when(notificationRepository.findById("noti-1")).thenReturn(Optional.of(pending("noti-1")));
+        when(notificationPersistencePort.findById("noti-1")).thenReturn(Optional.of(pending("noti-1")));
         echoSave();
 
         Notification saved = service().recordSent(new NotificationCommands.RecordSent("noti-1"));
@@ -310,7 +310,7 @@ class NotificationDispatchServiceTest {
 
     @Test
     void recordFailedIncrementsRetryCount() {
-        when(notificationRepository.findById("noti-1")).thenReturn(Optional.of(pending("noti-1")));
+        when(notificationPersistencePort.findById("noti-1")).thenReturn(Optional.of(pending("noti-1")));
         echoSave();
 
         Notification saved = service().recordFailed(
@@ -324,7 +324,7 @@ class NotificationDispatchServiceTest {
     @Test
     void recordFailedMarksFailedAfterMaxRetries() {
         Notification notification = pending("noti-1");
-        when(notificationRepository.findById("noti-1")).thenReturn(Optional.of(notification));
+        when(notificationPersistencePort.findById("noti-1")).thenReturn(Optional.of(notification));
         echoSave();
 
         NotificationDispatchService service = service();
@@ -338,7 +338,7 @@ class NotificationDispatchServiceTest {
 
     @Test
     void recordDeliveryUnknownFailsTheNotificationWithoutRepublishing() {
-        when(notificationRepository.findById("noti-1")).thenReturn(Optional.of(pending("noti-1")));
+        when(notificationPersistencePort.findById("noti-1")).thenReturn(Optional.of(pending("noti-1")));
         echoSave();
 
         Notification saved = service().recordDeliveryUnknown("noti-1", "gateway timeout");
@@ -353,7 +353,7 @@ class NotificationDispatchServiceTest {
 
     @Test
     void recordDeliveryUnknownThrowsWhenNotificationMissing() {
-        when(notificationRepository.findById("nope")).thenReturn(Optional.empty());
+        when(notificationPersistencePort.findById("nope")).thenReturn(Optional.empty());
 
         NotificationDispatchService service = service();
 
@@ -363,7 +363,7 @@ class NotificationDispatchServiceTest {
 
     @Test
     void recordSentThrowsWhenNotificationMissing() {
-        when(notificationRepository.findById("nope")).thenReturn(Optional.empty());
+        when(notificationPersistencePort.findById("nope")).thenReturn(Optional.empty());
 
         NotificationDispatchService service = service();
         NotificationCommands.RecordSent command = new NotificationCommands.RecordSent("nope");
@@ -374,7 +374,7 @@ class NotificationDispatchServiceTest {
 
     @Test
     void markReadRequiresOwnership() {
-        when(notificationRepository.findById("noti-1")).thenReturn(Optional.of(pending("noti-1")));
+        when(notificationPersistencePort.findById("noti-1")).thenReturn(Optional.of(pending("noti-1")));
 
         NotificationDispatchService service = service();
         NotificationCommands.MarkRead command = new NotificationCommands.MarkRead("intruder", "noti-1");
@@ -387,7 +387,7 @@ class NotificationDispatchServiceTest {
     void markReadMovesNotificationToRead() {
         Notification notification = pending("noti-1");
         notification.markSent(CLOCK);
-        when(notificationRepository.findById("noti-1")).thenReturn(Optional.of(notification));
+        when(notificationPersistencePort.findById("noti-1")).thenReturn(Optional.of(notification));
         echoSave();
 
         Notification saved = service().markRead(new NotificationCommands.MarkRead("user-1", "noti-1"));
@@ -400,7 +400,7 @@ class NotificationDispatchServiceTest {
     void deleteSoftDeletesNotification() {
         Notification notification = pending("noti-1");
         notification.markSent(CLOCK);
-        when(notificationRepository.findById("noti-1")).thenReturn(Optional.of(notification));
+        when(notificationPersistencePort.findById("noti-1")).thenReturn(Optional.of(notification));
         echoSave();
 
         Notification saved = service().delete(new NotificationCommands.MarkDeleted("user-1", "noti-1"));
@@ -411,14 +411,14 @@ class NotificationDispatchServiceTest {
 
     @Test
     void getReturnsOwnedNotification() {
-        when(notificationRepository.findById("noti-1")).thenReturn(Optional.of(pending("noti-1")));
+        when(notificationPersistencePort.findById("noti-1")).thenReturn(Optional.of(pending("noti-1")));
 
         assertThat(service().get("user-1", "noti-1").getNotiId()).isEqualTo("noti-1");
     }
 
     @Test
     void listMineDelegatesToRepository() {
-        when(notificationRepository.findByUser("user-1", 20))
+        when(notificationPersistencePort.findByUser("user-1", 20))
                 .thenReturn(List.of(pending("noti-1"), pending("noti-2")));
 
         assertThat(service().listMine("user-1", 20)).hasSize(2);
@@ -426,16 +426,16 @@ class NotificationDispatchServiceTest {
 
     @Test
     void findRetryableDelegatesToRepository() {
-        when(notificationRepository.findRetryable(50)).thenReturn(List.of(pending("noti-1")));
+        when(notificationPersistencePort.findRetryable(50)).thenReturn(List.of(pending("noti-1")));
 
         assertThat(service().findRetryable(50)).hasSize(1);
     }
 
     @Test
     void prepareByEventRendersShippingNotificationsWithANullContext() {
-        when(subscriptionRepository.findByUserId("user-1"))
+        when(notificationSubscriptionPersistencePort.findByUserId("user-1"))
                 .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
-        when(templateRepository.findByEventChannelLocale(eq(EVENT), eq(NotificationChannel.EMAIL), anyString()))
+        when(notificationTemplatePersistencePort.findByEventChannelLocale(eq(EVENT), eq(NotificationChannel.EMAIL), anyString()))
                 .thenReturn(Optional.of(NotificationTemplate.create("tpl-email", EVENT,
                         NotificationChannel.EMAIL, NotificationCategory.SHIPPING, "vi-VN",
                         "Subject", "Hello", CLOCK)));
@@ -451,9 +451,9 @@ class NotificationDispatchServiceTest {
 
     @Test
     void prepareByEventHandlesChatAndSystemCategories() {
-        when(subscriptionRepository.findByUserId("user-1"))
+        when(notificationSubscriptionPersistencePort.findByUserId("user-1"))
                 .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
-        when(templateRepository.findByEventChannelLocale(eq(EVENT), eq(NotificationChannel.IN_APP), anyString()))
+        when(notificationTemplatePersistencePort.findByEventChannelLocale(eq(EVENT), eq(NotificationChannel.IN_APP), anyString()))
                 .thenReturn(Optional.of(template(NotificationChannel.IN_APP)));
         echoSave();
 

@@ -41,7 +41,7 @@ public class WebSocketStompConfig implements WebSocketMessageBrokerConfigurer {
     private static final String CONVERSATION_TOPIC_PREFIX = "/topic/conversations/";
 
     private final StompPrincipalResolver principalResolver;
-    private final ConversationPersistencePort conversationRepository;
+    private final ConversationPersistencePort conversationPersistencePort;
     private final ChatWebSocketProperties properties;
 
     @Override
@@ -107,7 +107,7 @@ public class WebSocketStompConfig implements WebSocketMessageBrokerConfigurer {
                 throw new ChatException(ChatErrorCode.CONVERSATION_FORBIDDEN);
             }
             String conversationId = destination.substring(CONVERSATION_TOPIC_PREFIX.length());
-            Optional<Conversation> conversation = conversationRepository.findById(conversationId);
+            Optional<Conversation> conversation = conversationPersistencePort.findById(conversationId);
             if (conversation.isEmpty()) {
                 throw new ChatException(ChatErrorCode.CONVERSATION_NOT_FOUND);
             }

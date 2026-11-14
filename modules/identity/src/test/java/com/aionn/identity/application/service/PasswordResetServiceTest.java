@@ -130,7 +130,7 @@ class PasswordResetServiceTest {
     void requestPasswordResetIssuesTokenAndSendsNotification() {
         when(userSecurityPort.findByIdentity("u@example.com"))
                 .thenReturn(Optional.of(userSecurity()));
-        when(authPolicy.getPasswordResetTokenTtlMinutes()).thenReturn(30);
+        when(authPolicy.passwordResetTokenTtlMinutes()).thenReturn(30);
 
         service.requestPasswordReset("u@example.com", IP);
 

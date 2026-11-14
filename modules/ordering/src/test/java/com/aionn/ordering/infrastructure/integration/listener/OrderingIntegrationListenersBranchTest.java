@@ -58,10 +58,11 @@ class OrderingIntegrationListenersBranchTest {
     void shipmentDeliveredListenerPropagatesFailureForOutboxRetry() {
         ShipmentDeliveredIntegrationEvent event = new ShipmentDeliveredIntegrationEvent(
                 "ev-1", "ship-100", "ord-1", "http://sig", Instant.now(), Instant.now());
-        doThrow(new RuntimeException("Error")).when(orderService).statusOf("ord-1");
+        doThrow(new RuntimeException("Error")).when(orderService)
+                .completeFromCarrier("ord-1", "ship-100");
 
         assertThrows(RuntimeException.class, () -> shipmentDeliveredListener.on(event));
 
-        verify(orderService).statusOf("ord-1");
+        verify(orderService).completeFromCarrier("ord-1", "ship-100");
     }
 }

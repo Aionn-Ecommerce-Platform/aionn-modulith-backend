@@ -24,8 +24,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PopularityService {
 
-    private final InteractionPersistencePort interactionRepository;
-    private final PopularityPersistencePort popularityRepository;
+    private final InteractionPersistencePort interactionPersistencePort;
+    private final PopularityPersistencePort popularityPersistencePort;
     private final InteractionWeightPolicy weightPolicy;
     private final Clock clock;
 
@@ -40,11 +40,11 @@ public class PopularityService {
         }
 
         Map<String, InteractionPersistencePort.PopularityAggregate> aggregates =
-                interactionRepository.aggregatePopularity(since, now, halfLives);
+                interactionPersistencePort.aggregatePopularity(since, now, halfLives);
         if (aggregates.isEmpty()) {
             log.debug("No interactions in the popularity window");
             // Still sweep: empty window means nothing has momentum, and stale rows must go.
-            int stale = popularityRepository.deleteComputedBefore(now);
+            int stale = popularityPersistencePort.deleteComputedBefore(now);
             if (stale > 0) {
                 log.info("Dropped {} stale popularity row(s)", stale);
             }
@@ -59,9 +59,9 @@ public class PopularityService {
                 aggregate.purchaseCount(),
                 now)));
 
-        popularityRepository.upsertAll(popularities);
+        popularityPersistencePort.upsertAll(popularities);
         // Products silent in the window keep no row: stale rows would outrank newly active ones.
-        int removed = popularityRepository.deleteComputedBefore(now);
+        int removed = popularityPersistencePort.deleteComputedBefore(now);
         log.info("Refreshed popularity for {} product(s); dropped {} stale row(s)",
                 popularities.size(), removed);
         return popularities.size();
@@ -69,6 +69,6 @@ public class PopularityService {
 
     @Transactional(readOnly = true)
     public List<ProductPopularity> top(int limit) {
-        return popularityRepository.findTop(limit);
+        return popularityPersistencePort.findTop(limit);
     }
 }

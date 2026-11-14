@@ -2,7 +2,7 @@ package com.aionn.identity.application.policy;
 
 public interface AgentPolicy {
 
-    int getKeyExpiryYears();
+    int keyExpiryYears();
 
-    int getAuditLogLimit();
+    int auditLogLimit();
 }

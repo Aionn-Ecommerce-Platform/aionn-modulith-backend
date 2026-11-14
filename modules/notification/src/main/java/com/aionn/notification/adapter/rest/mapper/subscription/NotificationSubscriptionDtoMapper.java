@@ -1,7 +1,7 @@
 package com.aionn.notification.adapter.rest.mapper.subscription;
 
-import com.aionn.notification.adapter.rest.dto.subscription.RegisterDeviceTokenRequest;
-import com.aionn.notification.adapter.rest.dto.subscription.UpdateSubscriptionRequest;
+import com.aionn.notification.adapter.rest.dto.subscription.request.RegisterDeviceTokenRequest;
+import com.aionn.notification.adapter.rest.dto.subscription.request.UpdateSubscriptionRequest;
 import com.aionn.notification.adapter.rest.dto.subscription.response.DeviceTokenResponse;
 import com.aionn.notification.adapter.rest.dto.subscription.response.SubscriptionResponse;
 import com.aionn.notification.application.dto.subscription.command.SubscriptionCommands;

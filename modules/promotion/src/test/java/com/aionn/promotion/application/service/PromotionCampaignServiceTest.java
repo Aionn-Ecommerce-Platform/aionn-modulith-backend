@@ -41,9 +41,9 @@ class PromotionCampaignServiceTest {
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
     @Mock
-    private PromotionCampaignPersistencePort campaignRepository;
+    private PromotionCampaignPersistencePort promotionCampaignPersistencePort;
     @Mock
-    private VoucherPersistencePort voucherRepository;
+    private VoucherPersistencePort voucherPersistencePort;
     @Mock
     private EventPublisher eventPublisher;
     @Mock
@@ -51,7 +51,7 @@ class PromotionCampaignServiceTest {
 
     private PromotionCampaignService service() {
         org.mockito.Mockito.lenient().when(defaultsPolicy.defaultCurrency()).thenReturn("VND");
-        return new PromotionCampaignService(campaignRepository, voucherRepository, eventPublisher,
+        return new PromotionCampaignService(promotionCampaignPersistencePort, voucherPersistencePort, eventPublisher,
                 defaultsPolicy, CLOCK);
     }
 
@@ -69,7 +69,7 @@ class PromotionCampaignServiceTest {
     }
 
     private void saveEchoes() {
-        when(campaignRepository.save(any(PromotionCampaign.class)))
+        when(promotionCampaignPersistencePort.save(any(PromotionCampaign.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
@@ -100,7 +100,7 @@ class PromotionCampaignServiceTest {
 
     @Test
     void activateMovesCampaignToRunning() {
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.of(draft()));
+        when(promotionCampaignPersistencePort.findById("camp-1")).thenReturn(Optional.of(draft()));
         saveEchoes();
 
         PromotionCampaign activated = service().activate(new CampaignCommands.ActivateCampaign("camp-1"));
@@ -110,7 +110,7 @@ class PromotionCampaignServiceTest {
 
     @Test
     void activateThrowsWhenCampaignMissing() {
-        when(campaignRepository.findById("nope")).thenReturn(Optional.empty());
+        when(promotionCampaignPersistencePort.findById("nope")).thenReturn(Optional.empty());
 
         PromotionCampaignService service = service();
         CampaignCommands.ActivateCampaign command = new CampaignCommands.ActivateCampaign("nope");
@@ -123,7 +123,7 @@ class PromotionCampaignServiceTest {
 
     @Test
     void endMovesCampaignToEnded() {
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.of(running()));
+        when(promotionCampaignPersistencePort.findById("camp-1")).thenReturn(Optional.of(running()));
         saveEchoes();
 
         PromotionCampaign ended = service().end(new CampaignCommands.EndCampaign("camp-1"));
@@ -133,7 +133,7 @@ class PromotionCampaignServiceTest {
 
     @Test
     void cancelStoresReason() {
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.of(draft()));
+        when(promotionCampaignPersistencePort.findById("camp-1")).thenReturn(Optional.of(draft()));
         saveEchoes();
 
         PromotionCampaign cancelled = service().cancel(
@@ -144,7 +144,7 @@ class PromotionCampaignServiceTest {
 
     @Test
     void configureConditionStoresCondition() {
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.of(draft()));
+        when(promotionCampaignPersistencePort.findById("camp-1")).thenReturn(Optional.of(draft()));
         saveEchoes();
 
         PromotionCampaign configured = service().configureCondition(
@@ -157,9 +157,9 @@ class PromotionCampaignServiceTest {
 
     @Test
     void issueVoucherUsesCampaignCurrencyWhenAbsent() {
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.of(draft()));
-        when(voucherRepository.findByCode("V-1")).thenReturn(Optional.empty());
-        when(voucherRepository.save(any(Voucher.class)))
+        when(promotionCampaignPersistencePort.findById("camp-1")).thenReturn(Optional.of(draft()));
+        when(voucherPersistencePort.findByCode("V-1")).thenReturn(Optional.empty());
+        when(voucherPersistencePort.save(any(Voucher.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         Voucher voucher = service().issueVoucher(new CampaignCommands.IssueVoucher(
@@ -171,8 +171,8 @@ class PromotionCampaignServiceTest {
 
     @Test
     void issueVoucherRejectsDuplicateCode() {
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.of(draft()));
-        when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(
+        when(promotionCampaignPersistencePort.findById("camp-1")).thenReturn(Optional.of(draft()));
+        when(voucherPersistencePort.findByCode("V-1")).thenReturn(Optional.of(
                 Voucher.issue("V-1", "camp-1", Money.of(new BigDecimal("1000"), "VND"),
                         5, null, null, CLOCK)));
 
@@ -184,13 +184,13 @@ class PromotionCampaignServiceTest {
                 .isInstanceOf(PromotionException.class)
                 .hasFieldOrPropertyWithValue("errorCode",
                         PromotionErrorCode.VOUCHER_DUPLICATE_CODE.getCode());
-        verify(voucherRepository, never()).save(any());
+        verify(voucherPersistencePort, never()).save(any());
     }
 
     @Test
     void processScheduledTransitionsCountsBothDirections() {
-        when(campaignRepository.findToActivate(eq(NOW), anyInt())).thenReturn(List.of(draft()));
-        when(campaignRepository.findToEnd(eq(NOW), anyInt())).thenReturn(List.of(running()));
+        when(promotionCampaignPersistencePort.findToActivate(eq(NOW), anyInt())).thenReturn(List.of(draft()));
+        when(promotionCampaignPersistencePort.findToEnd(eq(NOW), anyInt())).thenReturn(List.of(running()));
         saveEchoes();
 
         assertThat(service().processScheduledTransitions(NOW, 50)).isEqualTo(2);
@@ -198,30 +198,30 @@ class PromotionCampaignServiceTest {
 
     @Test
     void processScheduledTransitionsSkipsInvalidTransitions() {
-        when(campaignRepository.findToActivate(eq(NOW), anyInt())).thenReturn(List.of(running()));
-        when(campaignRepository.findToEnd(eq(NOW), anyInt())).thenReturn(List.of(draft()));
+        when(promotionCampaignPersistencePort.findToActivate(eq(NOW), anyInt())).thenReturn(List.of(running()));
+        when(promotionCampaignPersistencePort.findToEnd(eq(NOW), anyInt())).thenReturn(List.of(draft()));
 
         assertThat(service().processScheduledTransitions(NOW, 50)).isZero();
-        verify(campaignRepository, never()).save(any());
+        verify(promotionCampaignPersistencePort, never()).save(any());
     }
 
     @Test
     void getReturnsCampaign() {
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.of(draft()));
+        when(promotionCampaignPersistencePort.findById("camp-1")).thenReturn(Optional.of(draft()));
 
         assertThat(service().get("camp-1").getCampaignId()).isEqualTo("camp-1");
     }
 
     @Test
     void listByStatusDelegatesToRepository() {
-        when(campaignRepository.listByStatus("RUNNING", 50)).thenReturn(List.of(running()));
+        when(promotionCampaignPersistencePort.listByStatus("RUNNING", 50)).thenReturn(List.of(running()));
 
         assertThat(service().listByStatus("RUNNING", 50)).hasSize(1);
     }
 
     @Test
     void listVouchersByCampaignIdDelegatesToRepository() {
-        when(voucherRepository.findByCampaignId("camp-1", 50)).thenReturn(List.of(
+        when(voucherPersistencePort.findByCampaignId("camp-1", 50)).thenReturn(List.of(
                 Voucher.issue("V-1", "camp-1", Money.of(new BigDecimal("1000"), "VND"),
                         5, null, null, CLOCK)));
 

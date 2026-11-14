@@ -2,6 +2,7 @@ package com.aionn.catalog.adapter.rest.controller;
 
 import com.aionn.catalog.adapter.rest.dto.product.response.ProductResponse;
 import com.aionn.catalog.adapter.rest.mapper.product.ProductDtoMapper;
+import com.aionn.catalog.adapter.rest.dto.wishlist.response.WishlistStatusResponse;
 import com.aionn.catalog.adapter.rest.support.session.CurrentOwnerId;
 import com.aionn.catalog.application.service.WishlistService;
 import com.aionn.platform.web.response.ApiResponse;
@@ -72,8 +73,5 @@ public class WishlistController {
         return ResponseEntity.ok(ApiResponse.success(
                 new WishlistStatusResponse(wishlistService.isWishlisted(userId, productId)),
                 "Wishlist status fetched"));
-    }
-
-    public record WishlistStatusResponse(boolean wishlisted) {
     }
 }

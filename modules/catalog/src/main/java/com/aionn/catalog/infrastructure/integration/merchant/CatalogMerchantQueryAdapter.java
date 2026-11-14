@@ -19,7 +19,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class CatalogMerchantQueryAdapter implements MerchantQueryPort, MerchantCommandPort {
 
-    private final MerchantPersistencePort merchantRepository;
+    private final MerchantPersistencePort merchantPersistencePort;
     private final Clock clock;
 
     @Override
@@ -28,7 +28,7 @@ public class CatalogMerchantQueryAdapter implements MerchantQueryPort, MerchantC
         if (ownerId == null || ownerId.isBlank()) {
             return Optional.empty();
         }
-        return merchantRepository.findByOwnerId(ownerId).map(Merchant::getMerchantId);
+        return merchantPersistencePort.findByOwnerId(ownerId).map(Merchant::getMerchantId);
     }
 
     @Override
@@ -37,7 +37,7 @@ public class CatalogMerchantQueryAdapter implements MerchantQueryPort, MerchantC
         if (merchantId == null || merchantId.isBlank()) {
             return Optional.empty();
         }
-        return merchantRepository.findById(merchantId).map(Merchant::getOwnerId);
+        return merchantPersistencePort.findById(merchantId).map(Merchant::getOwnerId);
     }
 
     @Override
@@ -46,7 +46,7 @@ public class CatalogMerchantQueryAdapter implements MerchantQueryPort, MerchantC
         if (merchantId == null || merchantId.isBlank()) {
             return Optional.empty();
         }
-        return merchantRepository.findById(merchantId).map(Merchant::getCommissionRate);
+        return merchantPersistencePort.findById(merchantId).map(Merchant::getCommissionRate);
     }
 
     @Override
@@ -55,7 +55,7 @@ public class CatalogMerchantQueryAdapter implements MerchantQueryPort, MerchantC
         if (merchantId == null || merchantId.isBlank()) {
             return Optional.empty();
         }
-        return merchantRepository.findById(merchantId)
+        return merchantPersistencePort.findById(merchantId)
                 .filter(m -> m.getStripeAccountId() != null)
                 .map(m -> new StripeConnectInfo(
                         m.getStripeAccountId(),
@@ -66,18 +66,18 @@ public class CatalogMerchantQueryAdapter implements MerchantQueryPort, MerchantC
     @Override
     @Transactional
     public void saveStripeAccountId(String merchantId, String stripeAccountId) {
-        Merchant merchant = merchantRepository.findById(merchantId)
+        Merchant merchant = merchantPersistencePort.findById(merchantId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.MERCHANT_NOT_FOUND));
         merchant.linkStripeAccount(stripeAccountId, clock);
-        merchantRepository.save(merchant);
+        merchantPersistencePort.save(merchant);
     }
 
     @Override
     @Transactional
     public void updateStripeCapabilities(String merchantId, boolean chargesEnabled, boolean payoutsEnabled) {
-        Merchant merchant = merchantRepository.findById(merchantId)
+        Merchant merchant = merchantPersistencePort.findById(merchantId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.MERCHANT_NOT_FOUND));
         merchant.updateStripeCapabilities(chargesEnabled, payoutsEnabled, clock);
-        merchantRepository.save(merchant);
+        merchantPersistencePort.save(merchant);
     }
 }

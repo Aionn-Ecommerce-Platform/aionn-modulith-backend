@@ -40,7 +40,7 @@ class CategoryServiceTest {
         private static final String CATEGORY_ID = "01HZCAT0000000000000000001";
 
         @Mock
-        private CategoryPersistencePort categoryRepository;
+        private CategoryPersistencePort categoryPersistencePort;
         @Mock
         private EventPublisher eventPublisher;
 
@@ -52,49 +52,49 @@ class CategoryServiceTest {
 
         @Test
         void createPersistsCategoryWhenNameAndSlugAreFree() {
-                when(categoryRepository.existsByParentAndName(null, "Electronics")).thenReturn(false);
-                when(categoryRepository.existsBySlug("electronics")).thenReturn(false);
-                when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(categoryPersistencePort.existsByParentAndName(null, "Electronics")).thenReturn(false);
+                when(categoryPersistencePort.existsBySlug("electronics")).thenReturn(false);
+                when(categoryPersistencePort.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 Category result = categoryService.create(
                                 new CreateCategoryCommand(null, "Electronics", "electronics"));
 
                 assertThat(result.getName()).isEqualTo("Electronics");
                 ArgumentCaptor<Category> captor = ArgumentCaptor.forClass(Category.class);
-                verify(categoryRepository).save(captor.capture());
+                verify(categoryPersistencePort).save(captor.capture());
                 assertThat(captor.getValue().getName()).isEqualTo("Electronics");
                 verify(eventPublisher).publish(anyCollection());
         }
 
         @Test
         void createTrimsNameBeforeUniquenessCheck() {
-                when(categoryRepository.existsByParentAndName(null, "Electronics")).thenReturn(false);
-                when(categoryRepository.existsBySlug(anyString())).thenReturn(false);
-                when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(categoryPersistencePort.existsByParentAndName(null, "Electronics")).thenReturn(false);
+                when(categoryPersistencePort.existsBySlug(anyString())).thenReturn(false);
+                when(categoryPersistencePort.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 categoryService.create(new CreateCategoryCommand(null, "  Electronics  ", null));
 
                 ArgumentCaptor<Category> captor = ArgumentCaptor.forClass(Category.class);
-                verify(categoryRepository).save(captor.capture());
+                verify(categoryPersistencePort).save(captor.capture());
                 assertThat(captor.getValue().getName()).isEqualTo("Electronics");
         }
 
         @Test
         void createGeneratesSlugFromNameWhenSlugBlank() {
-                when(categoryRepository.existsByParentAndName(null, "Home Appliances")).thenReturn(false);
-                when(categoryRepository.existsBySlug(anyString())).thenReturn(false);
-                when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(categoryPersistencePort.existsByParentAndName(null, "Home Appliances")).thenReturn(false);
+                when(categoryPersistencePort.existsBySlug(anyString())).thenReturn(false);
+                when(categoryPersistencePort.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 categoryService.create(new CreateCategoryCommand(null, "Home Appliances", null));
 
                 ArgumentCaptor<Category> captor = ArgumentCaptor.forClass(Category.class);
-                verify(categoryRepository).save(captor.capture());
+                verify(categoryPersistencePort).save(captor.capture());
                 assertThat(captor.getValue().getSlug()).isNotBlank();
         }
 
         @Test
         void createThrowsWhenParentNotFound() {
-                when(categoryRepository.findById("missing")).thenReturn(Optional.empty());
+                when(categoryPersistencePort.findById("missing")).thenReturn(Optional.empty());
 
                 assertThatThrownBy(() -> categoryService.create(
                                 new CreateCategoryCommand("missing", "Electronics", "electronics")))
@@ -102,12 +102,12 @@ class CategoryServiceTest {
                                 .extracting("errorCode")
                                 .isEqualTo(CatalogErrorCode.CATEGORY_NOT_FOUND.getCode());
 
-                verify(categoryRepository, never()).save(any());
+                verify(categoryPersistencePort, never()).save(any());
         }
 
         @Test
         void createThrowsOnNameConflict() {
-                when(categoryRepository.existsByParentAndName(null, "Electronics")).thenReturn(true);
+                when(categoryPersistencePort.existsByParentAndName(null, "Electronics")).thenReturn(true);
 
                 assertThatThrownBy(() -> categoryService.create(
                                 new CreateCategoryCommand(null, "Electronics", "electronics")))
@@ -115,13 +115,13 @@ class CategoryServiceTest {
                                 .extracting("errorCode")
                                 .isEqualTo(CatalogErrorCode.CATEGORY_NAME_CONFLICT.getCode());
 
-                verify(categoryRepository, never()).save(any());
+                verify(categoryPersistencePort, never()).save(any());
         }
 
         @Test
         void createThrowsOnSlugConflict() {
-                when(categoryRepository.existsByParentAndName(null, "Electronics")).thenReturn(false);
-                when(categoryRepository.existsBySlug("electronics")).thenReturn(true);
+                when(categoryPersistencePort.existsByParentAndName(null, "Electronics")).thenReturn(false);
+                when(categoryPersistencePort.existsBySlug("electronics")).thenReturn(true);
 
                 assertThatThrownBy(() -> categoryService.create(
                                 new CreateCategoryCommand(null, "Electronics", "electronics")))
@@ -134,9 +134,9 @@ class CategoryServiceTest {
         void updateAppliesChangesAndPublishesEvent() {
                 Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", FIXED);
                 category.pullEvents();
-                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of()))
+                when(categoryPersistencePort.lockMutationSet(CATEGORY_ID, List.of()))
                                 .thenReturn(List.of(category));
-                when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(categoryPersistencePort.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 categoryService.update(
                                 new UpdateCategoryCommand(CATEGORY_ID, "Consumer Electronics", "https://icon", false));
@@ -151,9 +151,9 @@ class CategoryServiceTest {
         void updateTrimsNameBeforeUniquenessCheck() {
                 Category category = Category.create(CATEGORY_ID, null, "Old", "old", FIXED);
                 category.pullEvents();
-                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of()))
+                when(categoryPersistencePort.lockMutationSet(CATEGORY_ID, List.of()))
                                 .thenReturn(List.of(category));
-                when(categoryRepository.existsByParentAndName(null, "Zenith")).thenReturn(true);
+                when(categoryPersistencePort.existsByParentAndName(null, "Zenith")).thenReturn(true);
 
                 assertThatThrownBy(() -> categoryService.update(
                                 new UpdateCategoryCommand(CATEGORY_ID, "  Zenith  ", null, null)))
@@ -166,9 +166,9 @@ class CategoryServiceTest {
         void updateRejectsWhenNameCollides() {
                 Category category = Category.create(CATEGORY_ID, null, "Electronics", "electronics", FIXED);
                 category.pullEvents();
-                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of()))
+                when(categoryPersistencePort.lockMutationSet(CATEGORY_ID, List.of()))
                                 .thenReturn(List.of(category));
-                when(categoryRepository.existsByParentAndName(null, "Fashion")).thenReturn(true);
+                when(categoryPersistencePort.existsByParentAndName(null, "Fashion")).thenReturn(true);
 
                 assertThatThrownBy(() -> categoryService.update(
                                 new UpdateCategoryCommand(CATEGORY_ID, "Fashion", null, null)))
@@ -176,7 +176,7 @@ class CategoryServiceTest {
                                 .extracting("errorCode")
                                 .isEqualTo(CatalogErrorCode.CATEGORY_NAME_CONFLICT.getCode());
 
-                verify(categoryRepository, never()).save(any());
+                verify(categoryPersistencePort, never()).save(any());
         }
 
         @Test
@@ -187,14 +187,14 @@ class CategoryServiceTest {
                 child.pullEvents();
                 // One statement locks the target and its current parent together, so the
                 // parent check cannot read a row that another transaction is mutating.
-                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of()))
+                when(categoryPersistencePort.lockMutationSet(CATEGORY_ID, List.of()))
                                 .thenReturn(List.of(child, parent));
-                when(categoryRepository.save(child)).thenReturn(child);
+                when(categoryPersistencePort.save(child)).thenReturn(child);
 
                 categoryService.update(new UpdateCategoryCommand(CATEGORY_ID, null, null, true));
 
-                verify(categoryRepository).lockMutationSet(CATEGORY_ID, List.of());
-                verify(categoryRepository, never()).lockById(anyString());
+                verify(categoryPersistencePort).lockMutationSet(CATEGORY_ID, List.of());
+                verify(categoryPersistencePort, never()).lockById(anyString());
                 assertThat(child.isActive()).isTrue();
         }
 
@@ -203,7 +203,7 @@ class CategoryServiceTest {
                 Category child = Category.create(CATEGORY_ID, "current-parent", "Child", "child", FIXED);
                 child.update(null, null, false, clock);
                 child.pullEvents();
-                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of()))
+                when(categoryPersistencePort.lockMutationSet(CATEGORY_ID, List.of()))
                                 .thenReturn(List.of(child));
 
                 assertThatThrownBy(() -> categoryService.update(
@@ -212,12 +212,12 @@ class CategoryServiceTest {
                                 .extracting("errorCode")
                                 .isEqualTo(CatalogErrorCode.CATEGORY_NOT_FOUND.getCode());
 
-                verify(categoryRepository, never()).save(any());
+                verify(categoryPersistencePort, never()).save(any());
         }
 
         @Test
         void updateRejectsWhenTheTargetIsMissingFromTheLockedSet() {
-                when(categoryRepository.lockMutationSet("missing", List.of())).thenReturn(List.of());
+                when(categoryPersistencePort.lockMutationSet("missing", List.of())).thenReturn(List.of());
 
                 assertThatThrownBy(() -> categoryService.update(
                                 new UpdateCategoryCommand("missing", "Name", null, null)))
@@ -225,16 +225,16 @@ class CategoryServiceTest {
                                 .extracting("errorCode")
                                 .isEqualTo(CatalogErrorCode.CATEGORY_NOT_FOUND.getCode());
 
-                verify(categoryRepository, never()).save(any());
+                verify(categoryPersistencePort, never()).save(any());
         }
 
         @Test
         void moveRejectsCycleWhenTargetParentIsDescendant() {
                 Category root = Category.create("root", null, "A", "a", FIXED);
                 root.pullEvents();
-                when(categoryRepository.lockMutationSet("root", List.of("child")))
+                when(categoryPersistencePort.lockMutationSet("root", List.of("child")))
                                 .thenReturn(List.of(root, Category.create("child", "root", "B", "b", FIXED)));
-                when(categoryRepository.findDescendantIds("root")).thenReturn(List.of("child"));
+                when(categoryPersistencePort.findDescendantIds("root")).thenReturn(List.of("child"));
 
                 assertThatThrownBy(() -> categoryService.move(new MoveCategoryCommand("root", "child")))
                                 .isInstanceOf(CatalogException.class)
@@ -246,7 +246,7 @@ class CategoryServiceTest {
         void moveRejectsSelfParent() {
                 Category category = Category.create(CATEGORY_ID, null, "A", "a", FIXED);
                 category.pullEvents();
-                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of(CATEGORY_ID)))
+                when(categoryPersistencePort.lockMutationSet(CATEGORY_ID, List.of(CATEGORY_ID)))
                                 .thenReturn(List.of(category));
 
                 assertThatThrownBy(() -> categoryService.move(new MoveCategoryCommand(CATEGORY_ID, CATEGORY_ID)))
@@ -260,7 +260,7 @@ class CategoryServiceTest {
                 Category category = Category.create(CATEGORY_ID, null, "A", "a", FIXED);
                 category.pullEvents();
                 // The new parent is absent from the locked set, so it does not exist.
-                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of("missing")))
+                when(categoryPersistencePort.lockMutationSet(CATEGORY_ID, List.of("missing")))
                                 .thenReturn(List.of(category));
 
                 assertThatThrownBy(() -> categoryService.move(new MoveCategoryCommand(CATEGORY_ID, "missing")))
@@ -273,10 +273,10 @@ class CategoryServiceTest {
         void moveRejectsWhenSiblingWithSameNameExists() {
                 Category category = Category.create(CATEGORY_ID, null, "Duplicate", "duplicate", FIXED);
                 category.pullEvents();
-                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of("new-parent")))
+                when(categoryPersistencePort.lockMutationSet(CATEGORY_ID, List.of("new-parent")))
                                 .thenReturn(List.of(category, Category.create("new-parent", null, "P", "p", FIXED)));
-                when(categoryRepository.findDescendantIds(CATEGORY_ID)).thenReturn(List.of());
-                when(categoryRepository.existsByParentAndName("new-parent", "Duplicate")).thenReturn(true);
+                when(categoryPersistencePort.findDescendantIds(CATEGORY_ID)).thenReturn(List.of());
+                when(categoryPersistencePort.existsByParentAndName("new-parent", "Duplicate")).thenReturn(true);
 
                 assertThatThrownBy(() -> categoryService.move(new MoveCategoryCommand(CATEGORY_ID, "new-parent")))
                                 .isInstanceOf(CatalogException.class)
@@ -288,14 +288,14 @@ class CategoryServiceTest {
         void childCreationLocksParentBeforeCheckingIt() {
                 Category parent = Category.create(CATEGORY_ID, null, "Parent", "parent", FIXED);
                 parent.pullEvents();
-                when(categoryRepository.lockById(CATEGORY_ID)).thenReturn(Optional.of(parent));
-                when(categoryRepository.existsByParentAndName(CATEGORY_ID, "Child")).thenReturn(false);
-                when(categoryRepository.existsBySlug("child")).thenReturn(false);
-                when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(categoryPersistencePort.lockById(CATEGORY_ID)).thenReturn(Optional.of(parent));
+                when(categoryPersistencePort.existsByParentAndName(CATEGORY_ID, "Child")).thenReturn(false);
+                when(categoryPersistencePort.existsBySlug("child")).thenReturn(false);
+                when(categoryPersistencePort.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 categoryService.create(new CreateCategoryCommand(CATEGORY_ID, "Child", "child"));
 
-                verify(categoryRepository).lockById(CATEGORY_ID);
+                verify(categoryPersistencePort).lockById(CATEGORY_ID);
         }
 
         @Test
@@ -303,16 +303,16 @@ class CategoryServiceTest {
                 Category parent = Category.create(CATEGORY_ID, null, "Parent", "parent", FIXED);
                 parent.pullEvents();
                 Category child = Category.create("child", CATEGORY_ID, "Child", "child", FIXED);
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(parent));
-                when(categoryRepository.hasProducts(CATEGORY_ID)).thenReturn(false);
-                when(categoryRepository.findActiveChildren(CATEGORY_ID)).thenReturn(List.of(child));
+                when(categoryPersistencePort.findById(CATEGORY_ID)).thenReturn(Optional.of(parent));
+                when(categoryPersistencePort.hasProducts(CATEGORY_ID)).thenReturn(false);
+                when(categoryPersistencePort.findActiveChildren(CATEGORY_ID)).thenReturn(List.of(child));
 
                 assertThatThrownBy(() -> categoryService.delete(CATEGORY_ID))
                                 .isInstanceOf(CatalogException.class)
                                 .extracting("errorCode")
                                 .isEqualTo(CatalogErrorCode.CATEGORY_HAS_CHILDREN.getCode());
 
-                verify(categoryRepository, never()).save(any());
+                verify(categoryPersistencePort, never()).save(any());
                 verify(eventPublisher, never()).publish(anyCollection());
         }
 
@@ -320,11 +320,11 @@ class CategoryServiceTest {
         void moveAppliesReparent() {
                 Category category = Category.create(CATEGORY_ID, null, "A", "a", FIXED);
                 category.pullEvents();
-                when(categoryRepository.lockMutationSet(CATEGORY_ID, List.of("new-parent")))
+                when(categoryPersistencePort.lockMutationSet(CATEGORY_ID, List.of("new-parent")))
                                 .thenReturn(List.of(category, Category.create("new-parent", null, "P", "p", FIXED)));
-                when(categoryRepository.findDescendantIds(CATEGORY_ID)).thenReturn(List.of());
-                when(categoryRepository.existsByParentAndName("new-parent", "A")).thenReturn(false);
-                when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(categoryPersistencePort.findDescendantIds(CATEGORY_ID)).thenReturn(List.of());
+                when(categoryPersistencePort.existsByParentAndName("new-parent", "A")).thenReturn(false);
+                when(categoryPersistencePort.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 categoryService.move(new MoveCategoryCommand(CATEGORY_ID, "new-parent"));
 
@@ -337,19 +337,19 @@ class CategoryServiceTest {
                 Category category = Category.create(CATEGORY_ID, "current-parent", "A", "a", FIXED);
                 category.pullEvents();
                 // A null new parent contributes no extra identifier to the locked set.
-                when(categoryRepository.lockMutationSet(CATEGORY_ID, Collections.singletonList(null)))
+                when(categoryPersistencePort.lockMutationSet(CATEGORY_ID, Collections.singletonList(null)))
                                 .thenReturn(List.of(category, parent));
-                when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
+                when(categoryPersistencePort.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
 
                 categoryService.move(new MoveCategoryCommand(CATEGORY_ID, null));
 
                 assertThat(category.getParentId()).isNull();
-                verify(categoryRepository, never()).findDescendantIds(anyString());
+                verify(categoryPersistencePort, never()).findDescendantIds(anyString());
         }
 
         @Test
         void moveRejectsWhenTheTargetIsMissingFromTheLockedSet() {
-                when(categoryRepository.lockMutationSet("missing", List.of("new-parent")))
+                when(categoryPersistencePort.lockMutationSet("missing", List.of("new-parent")))
                                 .thenReturn(List.of(Category.create("new-parent", null, "P", "p", FIXED)));
 
                 assertThatThrownBy(() -> categoryService.move(new MoveCategoryCommand("missing", "new-parent")))
@@ -357,27 +357,27 @@ class CategoryServiceTest {
                                 .extracting("errorCode")
                                 .isEqualTo(CatalogErrorCode.CATEGORY_NOT_FOUND.getCode());
 
-                verify(categoryRepository, never()).save(any());
+                verify(categoryPersistencePort, never()).save(any());
         }
 
         @Test
         void deleteSoftDeletesAndPublishesEvent() {
                 Category category = Category.create(CATEGORY_ID, null, "A", "a", FIXED);
                 category.pullEvents();
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+                when(categoryPersistencePort.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
 
                 categoryService.delete(CATEGORY_ID);
 
                 assertThat(category.getDeletedAt()).isNotNull();
                 assertThat(category.isActive()).isFalse();
-                verify(categoryRepository).save(category);
+                verify(categoryPersistencePort).save(category);
                 verify(eventPublisher).publish(anyCollection());
-                verify(categoryRepository).lockById(CATEGORY_ID);
+                verify(categoryPersistencePort).lockById(CATEGORY_ID);
         }
 
         @Test
         void deleteThrowsWhenNotFound() {
-                when(categoryRepository.findById("missing")).thenReturn(Optional.empty());
+                when(categoryPersistencePort.findById("missing")).thenReturn(Optional.empty());
 
                 assertThatThrownBy(() -> categoryService.delete("missing"))
                                 .isInstanceOf(CatalogException.class)
@@ -388,7 +388,7 @@ class CategoryServiceTest {
         @Test
         void getReturnsResultWhenFound() {
                 Category category = Category.create(CATEGORY_ID, null, "A", "a", FIXED);
-                when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+                when(categoryPersistencePort.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
 
                 Category result = categoryService.get(CATEGORY_ID);
 
@@ -399,7 +399,7 @@ class CategoryServiceTest {
         @Test
         void listRootsMapsResults() {
                 Category category = Category.create(CATEGORY_ID, null, "A", "a", FIXED);
-                when(categoryRepository.findActiveRoots()).thenReturn(List.of(category));
+                when(categoryPersistencePort.findActiveRoots()).thenReturn(List.of(category));
 
                 List<Category> roots = categoryService.listRoots();
 
@@ -410,7 +410,7 @@ class CategoryServiceTest {
         @Test
         void listChildrenMapsResults() {
                 Category category = Category.create(CATEGORY_ID, "parent", "A", "a", FIXED);
-                when(categoryRepository.findActiveChildren("parent")).thenReturn(List.of(category));
+                when(categoryPersistencePort.findActiveChildren("parent")).thenReturn(List.of(category));
 
                 List<Category> children = categoryService.listChildren("parent");
 
@@ -422,7 +422,7 @@ class CategoryServiceTest {
         void getTreeBuildsHierarchyFromActiveCategories() {
                 Category root = Category.create("root", null, "Root", "root", FIXED);
                 Category child = Category.create("child", "root", "Child", "child", FIXED);
-                when(categoryRepository.findAllActive()).thenReturn(List.of(root, child));
+                when(categoryPersistencePort.findAllActive()).thenReturn(List.of(root, child));
 
                 List<Category> tree = categoryService.getTree();
 
@@ -433,7 +433,7 @@ class CategoryServiceTest {
 
         @Test
         void getTreeReturnsEmptyWhenNoActiveCategories() {
-                when(categoryRepository.findAllActive()).thenReturn(List.of());
+                when(categoryPersistencePort.findAllActive()).thenReturn(List.of());
 
                 assertThat(categoryService.getTree()).isEmpty();
         }

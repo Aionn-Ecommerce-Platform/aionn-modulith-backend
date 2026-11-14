@@ -17,31 +17,31 @@ import java.time.Clock;
 @Transactional
 public class MerchantFollowService {
 
-    private final MerchantPersistencePort merchantRepository;
-    private final MerchantFollowerPersistencePort followerRepository;
+    private final MerchantPersistencePort merchantPersistencePort;
+    private final MerchantFollowerPersistencePort merchantFollowerPersistencePort;
     private final Clock clock;
 
     public void follow(String merchantId, String userId) {
-        Merchant merchant = merchantRepository.findById(merchantId)
+        Merchant merchant = merchantPersistencePort.findById(merchantId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.MERCHANT_NOT_FOUND));
         if (merchant.getStatus() != MerchantStatus.ACTIVE) {
             throw new CatalogException(CatalogErrorCode.MERCHANT_INVALID_TRANSITION,
                     "Only active merchants can be followed");
         }
-        followerRepository.follow(merchantId, userId, clock.instant());
+        merchantFollowerPersistencePort.follow(merchantId, userId, clock.instant());
     }
 
     public void unfollow(String merchantId, String userId) {
-        followerRepository.unfollow(merchantId, userId);
+        merchantFollowerPersistencePort.unfollow(merchantId, userId);
     }
 
     @Transactional(readOnly = true)
     public long followerCount(String merchantId) {
-        return followerRepository.countByMerchantId(merchantId);
+        return merchantFollowerPersistencePort.countByMerchantId(merchantId);
     }
 
     @Transactional(readOnly = true)
     public boolean isFollowing(String merchantId, String userId) {
-        return userId != null && followerRepository.exists(merchantId, userId);
+        return userId != null && merchantFollowerPersistencePort.exists(merchantId, userId);
     }
 }

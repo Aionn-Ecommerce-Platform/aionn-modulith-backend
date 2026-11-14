@@ -6,9 +6,6 @@ import com.aionn.catalog.adapter.rest.dto.merchant.request.UpdateMerchantProfile
 import com.aionn.catalog.adapter.rest.dto.merchant.response.MerchantResponse;
 import com.aionn.catalog.adapter.rest.support.session.CurrentAdminId;
 import com.aionn.catalog.adapter.rest.support.session.CurrentOwnerId;
-import com.aionn.catalog.application.dto.merchant.query.GetMerchantByOwnerQuery;
-import com.aionn.catalog.application.dto.merchant.query.GetMerchantQuery;
-import com.aionn.catalog.application.dto.merchant.query.ListMerchantsQuery;
 import com.aionn.catalog.application.dto.merchant.result.MerchantResult;
 import com.aionn.catalog.application.port.in.merchant.ActivateMerchantInputPort;
 import com.aionn.catalog.application.port.in.merchant.CloseMerchantInputPort;
@@ -19,7 +16,6 @@ import com.aionn.catalog.application.port.in.merchant.RegisterMerchantInputPort;
 import com.aionn.catalog.application.port.in.merchant.SuspendMerchantInputPort;
 import com.aionn.catalog.application.port.in.merchant.UpdateMerchantProfileInputPort;
 import com.aionn.platform.web.response.ApiResponse;
-import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -124,7 +120,7 @@ public class MerchantController {
         @Operation(summary = "Get my merchant", description = "Resolve the merchant storefront owned by the authenticated user")
         public ResponseEntity<ApiResponse<MerchantResponse>> getMine(@CurrentOwnerId String ownerId) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                merchantDtoMapper.toResponse(getMerchantByOwnerInputPort.execute(new GetMerchantByOwnerQuery(ownerId))),
+                                merchantDtoMapper.toResponse(getMerchantByOwnerInputPort.execute(merchantDtoMapper.toGetByOwnerQuery(ownerId))),
                                 "Merchant fetched"));
         }
 
@@ -132,7 +128,7 @@ public class MerchantController {
         @Operation(summary = "Get merchant", description = "Public read of merchant storefront")
         public ResponseEntity<ApiResponse<MerchantResponse>> get(@PathVariable String merchantId) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                merchantDtoMapper.toResponse(getMerchantInputPort.execute(new GetMerchantQuery(merchantId))), "Merchant fetched"));
+                                merchantDtoMapper.toResponse(getMerchantInputPort.execute(merchantDtoMapper.toGetQuery(merchantId))), "Merchant fetched"));
         }
 
         @GetMapping
@@ -140,7 +136,7 @@ public class MerchantController {
         public ResponseEntity<ApiResponse<List<MerchantResponse>>> list(
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "20") int size) {
-                PageResult<MerchantResult> results = listMerchantsInputPort.execute(new ListMerchantsQuery(OffsetPagination.of(page, size)));
+                PageResult<MerchantResult> results = listMerchantsInputPort.execute(merchantDtoMapper.toListQuery(page, size));
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
                                 merchantDtoMapper.toResponses(results.content()),
                                 PageMetadata.of(results.page(), results.size(), results.totalElements()),

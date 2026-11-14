@@ -4,7 +4,6 @@ import com.aionn.inventory.adapter.rest.dto.reservation.request.ReleaseReservati
 import com.aionn.inventory.adapter.rest.dto.reservation.request.ReserveStockRequest;
 import com.aionn.inventory.adapter.rest.dto.reservation.response.ReservationResponse;
 import com.aionn.inventory.adapter.rest.mapper.reservation.StockReservationDtoMapper;
-import com.aionn.inventory.application.dto.reservation.command.CommitReservationCommand;
 import com.aionn.inventory.application.dto.reservation.result.ReservationResult;
 import com.aionn.inventory.application.port.in.reservation.CommitReservationInputPort;
 import com.aionn.inventory.application.port.in.reservation.GetReservationInputPort;
@@ -43,7 +42,7 @@ public class StockReservationController {
     @PostMapping("/{reservationId}/commit")
     @Operation(summary = "Commit reservation")
     public ResponseEntity<ApiResponse<ReservationResponse>> commit(@PathVariable String reservationId) {
-        ReservationResult result = commitReservationInputPort.execute(new CommitReservationCommand(reservationId));
+        ReservationResult result = commitReservationInputPort.execute(dtoMapper.toCommitCommand(reservationId));
         return ResponseEntity.ok(ApiResponse.success(dtoMapper.toResponse(result), "Reservation committed"));
     }
 

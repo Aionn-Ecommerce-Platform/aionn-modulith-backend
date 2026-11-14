@@ -30,12 +30,12 @@ class VoucherAutoReleaseWorkerTest {
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
     private static final Money DISCOUNT = Money.of(BigDecimal.valueOf(50_000), "VND");
 
-    private final VoucherPersistencePort voucherRepository = mock(VoucherPersistencePort.class);
-    private final UserVoucherPersistencePort userVoucherRepository = mock(UserVoucherPersistencePort.class);
+    private final VoucherPersistencePort voucherPersistencePort = mock(VoucherPersistencePort.class);
+    private final UserVoucherPersistencePort userVoucherPersistencePort = mock(UserVoucherPersistencePort.class);
     private final EventPublisher eventPublisher = mock(EventPublisher.class);
 
     private final VoucherAutoReleaseWorker worker = new VoucherAutoReleaseWorker(
-            voucherRepository, userVoucherRepository, eventPublisher, CLOCK);
+            voucherPersistencePort, userVoucherPersistencePort, eventPublisher, CLOCK);
 
     private static Voucher reservedVoucher() {
         Voucher voucher = Voucher.issue("V-1", "CAMP_1", DISCOUNT, 10, null, null, CLOCK);
@@ -54,8 +54,8 @@ class VoucherAutoReleaseWorkerTest {
     void releasesTheReservationAndReturnsTheVoucherSlot() {
         UserVoucher uv = reservedUserVoucher();
         Voucher voucher = reservedVoucher();
-        when(userVoucherRepository.findByIdForUpdate("UV-1")).thenReturn(Optional.of(uv));
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(userVoucherPersistencePort.findByIdForUpdate("UV-1")).thenReturn(Optional.of(uv));
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(voucher));
 
         boolean released = worker.releaseOne("UV-1");
 
@@ -67,42 +67,42 @@ class VoucherAutoReleaseWorkerTest {
         // The release timestamp comes from the injected clock, not the system clock,
         // so a fixed-clock test can assert it.
         assertThat(uv.getUpdatedAt()).isEqualTo(NOW);
-        verify(voucherRepository).save(voucher);
-        verify(userVoucherRepository).save(uv);
+        verify(voucherPersistencePort).save(voucher);
+        verify(userVoucherPersistencePort).save(uv);
         verify(eventPublisher).publish(anyCollection());
     }
 
     @Test
     void skipsAUserVoucherThatNoLongerExists() {
-        when(userVoucherRepository.findByIdForUpdate("missing")).thenReturn(Optional.empty());
+        when(userVoucherPersistencePort.findByIdForUpdate("missing")).thenReturn(Optional.empty());
 
         assertThat(worker.releaseOne("missing")).isFalse();
 
-        verifyNoInteractions(voucherRepository, eventPublisher);
-        verify(userVoucherRepository, never()).save(any());
+        verifyNoInteractions(voucherPersistencePort, eventPublisher);
+        verify(userVoucherPersistencePort, never()).save(any());
     }
 
     @Test
     void skipsAUserVoucherThatHoldsNoReservation() {
         UserVoucher claimedOnly = UserVoucher.claim("UV-2", "V-1", "user-1", CLOCK);
-        when(userVoucherRepository.findByIdForUpdate("UV-2")).thenReturn(Optional.of(claimedOnly));
+        when(userVoucherPersistencePort.findByIdForUpdate("UV-2")).thenReturn(Optional.of(claimedOnly));
 
         assertThat(worker.releaseOne("UV-2")).isFalse();
 
-        verifyNoInteractions(voucherRepository, eventPublisher);
-        verify(userVoucherRepository, never()).save(any());
+        verifyNoInteractions(voucherPersistencePort, eventPublisher);
+        verify(userVoucherPersistencePort, never()).save(any());
     }
 
     @Test
     void stillReleasesTheUserVoucherWhenTheVoucherRowIsGone() {
         UserVoucher uv = reservedUserVoucher();
-        when(userVoucherRepository.findByIdForUpdate("UV-1")).thenReturn(Optional.of(uv));
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.empty());
+        when(userVoucherPersistencePort.findByIdForUpdate("UV-1")).thenReturn(Optional.of(uv));
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.empty());
 
         assertThat(worker.releaseOne("UV-1")).isTrue();
 
         assertThat(uv.getStatus()).isEqualTo(UserVoucherStatus.RELEASED);
-        verify(voucherRepository, never()).save(any());
-        verify(userVoucherRepository).save(uv);
+        verify(voucherPersistencePort, never()).save(any());
+        verify(userVoucherPersistencePort).save(uv);
     }
 }

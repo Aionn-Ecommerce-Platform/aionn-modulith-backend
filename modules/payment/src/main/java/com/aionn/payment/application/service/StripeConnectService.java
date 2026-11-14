@@ -19,7 +19,7 @@ public class StripeConnectService {
     public String createOnboardingLink(String ownerId) {
         String merchantId = merchantQueryPort.findMerchantIdByOwnerId(ownerId)
                 .orElseThrow(() -> new PaymentException(PaymentErrorCode.METHOD_FORBIDDEN,
-                        PaymentMessages.NO_MERCHANT_FOR_USER));
+                        "No merchant for current user"));
 
         String stripeAccountId = merchantQueryPort.findStripeConnectInfo(merchantId)
                 .map(MerchantQueryPort.StripeConnectInfo::stripeAccountId)

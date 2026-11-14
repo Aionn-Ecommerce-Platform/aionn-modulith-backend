@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Assertions;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.aionn.ucp.adapter.rest.dto.UcpErrorResponse;
+import com.aionn.ucp.adapter.rest.dto.response.UcpErrorResponse;
 import com.aionn.ucp.adapter.rest.dto.UcpMessage;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

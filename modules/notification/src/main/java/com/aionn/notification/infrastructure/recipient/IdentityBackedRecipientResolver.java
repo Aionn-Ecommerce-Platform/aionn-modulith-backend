@@ -17,7 +17,7 @@ import java.util.List;
 public class IdentityBackedRecipientResolver implements RecipientResolver {
 
     private final RecipientResolverPort identityResolver;
-    private final DeviceTokenPersistencePort deviceTokenRepository;
+    private final DeviceTokenPersistencePort deviceTokenPersistencePort;
 
     @Override
     public String resolve(String userId, NotificationChannel channel) {
@@ -32,7 +32,7 @@ public class IdentityBackedRecipientResolver implements RecipientResolver {
         if (channel != NotificationChannel.PUSH) {
             return List.of(resolve(userId, channel));
         }
-        List<DeviceToken> tokens = deviceTokenRepository.findActiveByUserId(userId);
+        List<DeviceToken> tokens = deviceTokenPersistencePort.findActiveByUserId(userId);
         if (tokens.isEmpty()) {
             throw new NotificationException(NotificationErrorCode.DEVICE_TOKEN_NOT_FOUND,
                     "No active device token registered for user " + userId);
@@ -41,7 +41,7 @@ public class IdentityBackedRecipientResolver implements RecipientResolver {
     }
 
     private String firstActiveDeviceToken(String userId) {
-        List<DeviceToken> tokens = deviceTokenRepository.findActiveByUserId(userId);
+        List<DeviceToken> tokens = deviceTokenPersistencePort.findActiveByUserId(userId);
         if (tokens.isEmpty()) {
             throw new NotificationException(NotificationErrorCode.DEVICE_TOKEN_NOT_FOUND,
                     "No active device token registered for user " + userId);

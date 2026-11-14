@@ -27,8 +27,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ItemSimilarityService {
 
-    private final InteractionPersistencePort interactionRepository;
-    private final ItemSimilarityPersistencePort similarityRepository;
+    private final InteractionPersistencePort interactionPersistencePort;
+    private final ItemSimilarityPersistencePort itemSimilarityPersistencePort;
     private final Clock clock;
 
     /**
@@ -43,12 +43,12 @@ public class ItemSimilarityService {
                 .filter(InteractionType::isStrongSignal)
                 .toList();
 
-        List<InteractionPersistencePort.SimilarityRow> rows = interactionRepository
+        List<InteractionPersistencePort.SimilarityRow> rows = interactionPersistencePort
                 .computeItemSimilarity(since, strongTypes, minCoOccurrence, maxNeighboursPerProduct);
         if (rows.isEmpty()) {
             log.debug("No product pairs met the co-occurrence threshold of {}", minCoOccurrence);
             // Still sweep: pairs that fell below the threshold must disappear.
-            int stale = similarityRepository.deleteComputedBefore(now);
+            int stale = itemSimilarityPersistencePort.deleteComputedBefore(now);
             if (stale > 0) {
                 log.info("Dropped {} stale similarity pair(s)", stale);
             }
@@ -65,9 +65,9 @@ public class ItemSimilarityService {
                     row.similarProductId(), row.productId(), score, row.coOccurrence(), now));
         }
 
-        similarityRepository.upsertAll(similarities);
+        itemSimilarityPersistencePort.upsertAll(similarities);
         // Drop pairs that no longer co-occur within the window.
-        int removed = similarityRepository.deleteComputedBefore(now);
+        int removed = itemSimilarityPersistencePort.deleteComputedBefore(now);
         log.info("Refreshed {} similarity pair(s); dropped {} stale pair(s)", rows.size(), removed);
         return rows.size();
     }

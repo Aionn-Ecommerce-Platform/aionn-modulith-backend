@@ -1,6 +1,6 @@
 package com.aionn.promotion.adapter.rest.controller;
 
-import com.aionn.promotion.adapter.rest.dto.voucher.IssueVoucherRequest;
+import com.aionn.promotion.adapter.rest.dto.voucher.request.IssueVoucherRequest;
 import com.aionn.promotion.adapter.rest.dto.voucher.response.VoucherResponse;
 import com.aionn.promotion.adapter.rest.dto.voucher.response.MerchantVoucherAnalyticsResponse;
 import com.aionn.promotion.adapter.rest.mapper.voucher.VoucherDtoMapper;

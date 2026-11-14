@@ -2,9 +2,9 @@ package com.aionn.identity.application.policy;
 
 public interface MfaPolicy {
 
-    String getMfaIssuer();
+    String mfaIssuer();
 
-    int getBackupCodeCount();
+    int backupCodeCount();
 
-    int getBackupCodeLength();
+    int backupCodeLength();
 }

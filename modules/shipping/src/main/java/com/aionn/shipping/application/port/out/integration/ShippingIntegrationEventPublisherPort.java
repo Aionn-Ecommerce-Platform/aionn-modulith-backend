@@ -19,5 +19,9 @@ public interface ShippingIntegrationEventPublisherPort {
         publishDelivered(shipmentId, orderId, signatureUrl, deliveredAt);
     }
 
-    void publishDeliveryFailed(String shipmentId, String orderId, String reason, int attemptCount);
+    void publishDeliveryFailed(String shipmentId, String orderId, String userId, String reason, int attemptCount);
+
+    void publishCancelled(String shipmentId, String orderId, String reason);
+
+    void publishReturned(String shipmentId, String orderId, String userId, String merchantId, String reason);
 }

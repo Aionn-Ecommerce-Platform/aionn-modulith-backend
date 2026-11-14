@@ -18,7 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class VoucherAnalyticsService {
 
-    private final VoucherPersistencePort voucherRepository;
+    private final VoucherPersistencePort voucherPersistencePort;
     private final MerchantQueryPort merchantQueryPort;
     private final PromotionLimitPolicy limitPolicy;
 
@@ -26,7 +26,7 @@ public class VoucherAnalyticsService {
     public MerchantVoucherAnalyticsResult getMerchantAnalytics(String ownerId) {
         String merchantId = merchantQueryPort.findMerchantIdByOwnerId(ownerId)
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.MERCHANT_NOT_FOUND));
-        var rows = voucherRepository.findMerchantVoucherRows(merchantId);
+        var rows = voucherPersistencePort.findMerchantVoucherRows(merchantId);
 
         long totalIssued = 0;
         long totalRedeemed = 0;

@@ -12,12 +12,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Resolves real parcel characteristics for a set of SKUs from the catalog so
- * shipping fees are priced from actual item weights/dimensions rather than a
- * client-supplied (or guessed) parcel. Shared by the quote and create-shipment
- * paths.
- */
 @Component
 @RequiredArgsConstructor
 public class ParcelResolver {

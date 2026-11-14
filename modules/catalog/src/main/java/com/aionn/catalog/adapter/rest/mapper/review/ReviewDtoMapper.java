@@ -14,10 +14,17 @@ import com.aionn.catalog.application.dto.review.command.ReportReviewCommand;
 import com.aionn.catalog.application.dto.review.command.RestoreReviewCommand;
 import com.aionn.catalog.application.dto.review.command.SubmitReviewCommand;
 import com.aionn.catalog.application.dto.review.command.UpdateReviewCommand;
+import com.aionn.catalog.application.dto.review.query.CheckReviewEligibilityQuery;
+import com.aionn.catalog.application.dto.review.query.GetAdminProductReviewsQuery;
+import com.aionn.catalog.application.dto.review.query.GetMerchantReviewsQuery;
+import com.aionn.catalog.application.dto.review.query.GetMyReviewsQuery;
+import com.aionn.catalog.application.dto.review.query.GetProductRatingSummaryQuery;
+import com.aionn.catalog.application.dto.review.query.GetReportedReviewsQuery;
+import com.aionn.catalog.application.dto.review.query.GetReviewsByProductQuery;
 import com.aionn.catalog.application.dto.review.result.ReviewResult;
 import com.aionn.catalog.application.dto.review.result.ReviewEligibilityResult;
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 
 import java.util.List;
 
@@ -48,12 +55,37 @@ public interface ReviewDtoMapper {
         return new RestoreReviewCommand(adminId, reviewId);
     }
 
-    @Mapping(target = "userName", ignore = true)
-    @Mapping(target = "userDisplayName", ignore = true)
-    @Mapping(target = "userAvatarUrl", ignore = true)
     ReviewResponse toResponse(ReviewResult result);
 
     List<ReviewResponse> toResponses(List<ReviewResult> results);
 
     ReviewEligibilityResponse toResponse(ReviewEligibilityResult result);
+
+    default GetReviewsByProductQuery toReviewsByProductQuery(String productId, int page, int size) {
+        return new GetReviewsByProductQuery(productId, OffsetPagination.of(page, size));
+    }
+
+    default GetProductRatingSummaryQuery toRatingSummaryQuery(String productId) {
+        return new GetProductRatingSummaryQuery(productId);
+    }
+
+    default GetMyReviewsQuery toMyReviewsQuery(String userId, int page, int size) {
+        return new GetMyReviewsQuery(userId, OffsetPagination.of(page, size));
+    }
+
+    default GetMerchantReviewsQuery toMerchantReviewsQuery(String ownerId, Boolean replied, int page, int size) {
+        return new GetMerchantReviewsQuery(ownerId, replied, OffsetPagination.of(page, size));
+    }
+
+    default GetReportedReviewsQuery toReportedReviewsQuery(int page, int size) {
+        return new GetReportedReviewsQuery(OffsetPagination.of(page, size));
+    }
+
+    default GetAdminProductReviewsQuery toAdminProductReviewsQuery(String productId, int page, int size) {
+        return new GetAdminProductReviewsQuery(productId, OffsetPagination.of(page, size));
+    }
+
+    default CheckReviewEligibilityQuery toEligibilityQuery(String userId, String productId) {
+        return new CheckReviewEligibilityQuery(userId, productId);
+    }
 }

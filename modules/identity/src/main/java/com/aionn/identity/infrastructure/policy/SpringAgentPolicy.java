@@ -12,12 +12,12 @@ public class SpringAgentPolicy implements AgentPolicy {
     private final AgentProperties properties;
 
     @Override
-    public int getKeyExpiryYears() {
+    public int keyExpiryYears() {
         return properties.keyExpiryYears();
     }
 
     @Override
-    public int getAuditLogLimit() {
+    public int auditLogLimit() {
         return properties.auditLogLimit();
     }
 }

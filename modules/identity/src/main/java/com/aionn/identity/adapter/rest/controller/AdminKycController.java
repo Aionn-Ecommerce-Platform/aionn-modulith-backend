@@ -1,5 +1,7 @@
 package com.aionn.identity.adapter.rest.controller;
 
+import com.aionn.identity.application.policy.AdminValidationConstants;
+
 import com.aionn.identity.adapter.rest.dto.kyc.request.AdminApproveKycRequest;
 import com.aionn.identity.adapter.rest.dto.kyc.request.AdminMarkInReviewKycRequest;
 import com.aionn.identity.adapter.rest.dto.kyc.request.AdminRejectKycRequest;
@@ -7,7 +9,6 @@ import com.aionn.identity.adapter.rest.dto.kyc.response.KycAnalyticsResponse;
 import com.aionn.identity.adapter.rest.dto.kyc.response.KycResponse;
 import com.aionn.identity.adapter.rest.mapper.kyc.KycDtoMapper;
 import com.aionn.identity.application.dto.kyc.command.KycAdminCommands;
-import com.aionn.identity.application.policy.IdentityValidationConstants;
 import com.aionn.identity.application.port.in.kyc.ApproveKycInputPort;
 import com.aionn.identity.application.port.in.kyc.GetAdminKycQueryPort;
 import com.aionn.identity.application.port.in.kyc.GetKycAnalyticsQueryPort;
@@ -72,7 +73,7 @@ public class AdminKycController {
             description = "List KYC profiles in a given status, ordered by submitted date desc")
     public ResponseEntity<ApiResponse<List<KycResponse>>> listByStatus(
             @RequestParam(defaultValue = "SUBMITTED") KycStatus status,
-            @RequestParam(defaultValue = "50") @Min(1) @Max(IdentityValidationConstants.ADMIN_KYC_LIST_MAX_LIMIT) int limit) {
+            @RequestParam(defaultValue = "50") @Min(1) @Max(AdminValidationConstants.ADMIN_KYC_LIST_MAX_LIMIT) int limit) {
         var result = listAdminKycQueryPort.execute(status, limit);
         return ResponseEntity.ok(ApiResponse.success(
                 kycDtoMapper.toResponses(result), "KYC profiles fetched"));

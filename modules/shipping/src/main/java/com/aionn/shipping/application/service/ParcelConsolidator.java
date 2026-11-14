@@ -9,21 +9,14 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Groups order lines into consignments the carrier accepts. Domestic carriers cap a parcel by
- * weight and longest side, so oversized carts must be split and quoted per parcel.
- */
 public final class ParcelConsolidator {
 
-    /** Standard domestic per-parcel weight cap (GHN/GHTK: 30 kg). */
     public static final int MAX_PARCEL_WEIGHT_GRAM = 30_000;
-    /** Longest side a standard parcel accepts. */
     public static final BigDecimal MAX_PARCEL_SIDE_CM = BigDecimal.valueOf(150);
 
     private ParcelConsolidator() {
     }
 
-    /** Split into the fewest consignments respecting the caps; oversized lines are split further. */
     public static List<Consignment> consolidate(List<QuoteShippingCommand.Parcel> parcels) {
         List<Consignment> consignments = new ArrayList<>();
         if (parcels == null || parcels.isEmpty()) {
@@ -66,7 +59,6 @@ public final class ParcelConsolidator {
         return consignments;
     }
 
-    /** One parcel to hand the carrier: summed weight and the max-side envelope box. */
     public record Consignment(int weightGram, BigDecimal lengthCm, BigDecimal widthCm,
             BigDecimal heightCm, int totalQty) {
     }

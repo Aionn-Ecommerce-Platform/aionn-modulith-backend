@@ -25,13 +25,13 @@ import java.util.Map;
 @Transactional
 public class ReconciliationService {
 
-    private final TransactionLedgerPersistencePort ledgerRepository;
+    private final TransactionLedgerPersistencePort transactionLedgerPersistencePort;
     private final EventPublisher eventPublisher;
     private final Clock clock;
 
     public ReconciliationResult reconcile(
             String gateway, Instant from, Instant to, Map<String, BigDecimal> gatewayReport) {
-        List<TransactionLedger> entries = ledgerRepository.findByGatewayBetween(gateway, from, to);
+        List<TransactionLedger> entries = transactionLedgerPersistencePort.findByGatewayBetween(gateway, from, to);
         int matched = 0;
         List<String> mismatched = new ArrayList<>();
         for (TransactionLedger entry : entries) {

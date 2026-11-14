@@ -24,22 +24,22 @@ public class MerchantStorefrontStatsService {
 
     private static final Duration RESPONSE_WINDOW = Duration.ofDays(30);
 
-    private final MerchantPersistencePort merchantRepository;
-    private final ProductPersistencePort productRepository;
-    private final ProductReviewPersistencePort reviewRepository;
-    private final MerchantFollowerPersistencePort followerRepository;
+    private final MerchantPersistencePort merchantPersistencePort;
+    private final ProductPersistencePort productPersistencePort;
+    private final ProductReviewPersistencePort productReviewPersistencePort;
+    private final MerchantFollowerPersistencePort merchantFollowerPersistencePort;
     private final ObjectProvider<MerchantChatStatsPort> chatStatsProvider;
     private final Clock clock;
 
     @Transactional(readOnly = true)
     public MerchantStorefrontStatsResult stats(String merchantId, String userId) {
-        Merchant merchant = merchantRepository.findById(merchantId)
+        Merchant merchant = merchantPersistencePort.findById(merchantId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.MERCHANT_NOT_FOUND));
         ProductReviewPersistencePort.MerchantRatingStats rating =
-                reviewRepository.getMerchantRatingStats(merchantId);
-        long productCount = productRepository.countByMerchantAndStatus(
+                productReviewPersistencePort.getMerchantRatingStats(merchantId);
+        long productCount = productPersistencePort.countByMerchantAndStatus(
                 merchantId, ProductStatus.PUBLISHED);
-        long followerCount = followerRepository.countByMerchantId(merchantId);
+        long followerCount = merchantFollowerPersistencePort.countByMerchantId(merchantId);
 
         MerchantChatStatsPort.ResponseStats chatStats = null;
         MerchantChatStatsPort port = chatStatsProvider.getIfAvailable();
@@ -64,7 +64,7 @@ public class MerchantStorefrontStatsService {
                 medianSeconds,
                 responseRate,
                 responseBucket(medianSeconds),
-                userId != null && followerRepository.exists(merchantId, userId));
+                userId != null && merchantFollowerPersistencePort.exists(merchantId, userId));
     }
 
     private static String responseBucket(Long seconds) {

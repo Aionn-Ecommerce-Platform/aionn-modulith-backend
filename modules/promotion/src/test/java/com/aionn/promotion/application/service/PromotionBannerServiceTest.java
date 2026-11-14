@@ -27,7 +27,7 @@ import static org.mockito.Mockito.when;
 class PromotionBannerServiceTest {
 
     @Mock
-    private PromotionBannerPersistencePort bannerRepository;
+    private PromotionBannerPersistencePort promotionBannerPersistencePort;
 
     @InjectMocks
     private PromotionBannerService service;
@@ -40,7 +40,7 @@ class PromotionBannerServiceTest {
     @Test
     void listActiveDelegatesToRepository() {
         var pagination = OffsetPagination.of(0, 20);
-        when(bannerRepository.findAllActive(pagination))
+        when(promotionBannerPersistencePort.findAllActive(pagination))
                 .thenReturn(new PageResult<>(List.of(banner("BAN_1", true)), 0, 20, 1));
 
         assertThat(service.listActive(pagination).content()).hasSize(1);
@@ -49,7 +49,7 @@ class PromotionBannerServiceTest {
     @Test
     void listAllDelegatesToRepository() {
         var pagination = OffsetPagination.of(0, 20);
-        when(bannerRepository.findAll(pagination))
+        when(promotionBannerPersistencePort.findAll(pagination))
                 .thenReturn(new PageResult<>(List.of(banner("BAN_1", true), banner("BAN_2", false)), 0, 20, 2));
 
         assertThat(service.listAll(pagination).content()).hasSize(2);
@@ -57,30 +57,30 @@ class PromotionBannerServiceTest {
 
     @Test
     void getReturnsBanner() {
-        when(bannerRepository.findById("BAN_1")).thenReturn(Optional.of(banner("BAN_1", true)));
+        when(promotionBannerPersistencePort.findById("BAN_1")).thenReturn(Optional.of(banner("BAN_1", true)));
 
         assertThat(service.get("BAN_1").getBannerId()).isEqualTo("BAN_1");
     }
 
     @Test
     void getThrowsWhenMissing() {
-        when(bannerRepository.findById("nope")).thenReturn(Optional.empty());
+        when(promotionBannerPersistencePort.findById("nope")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.get("nope")).isInstanceOf(PromotionException.class);
     }
 
     @Test
     void createGeneratesIdAndSaves() {
-        when(bannerRepository.save(any(PromotionBanner.class)))
+        when(promotionBannerPersistencePort.save(any(PromotionBanner.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
-        when(bannerRepository.nextDisplayOrder()).thenReturn(3);
+        when(promotionBannerPersistencePort.nextDisplayOrder()).thenReturn(3);
 
         PromotionBanner saved = service.create(new BannerCommands.CreateBanner(
                 "Summer", "https://cdn/a.png", "aionn/promotion/banners/a",
                 "https://shop/sale"));
 
         ArgumentCaptor<PromotionBanner> captor = ArgumentCaptor.forClass(PromotionBanner.class);
-        verify(bannerRepository).save(captor.capture());
+        verify(promotionBannerPersistencePort).save(captor.capture());
         assertThat(captor.getValue().getBannerId()).startsWith("BAN_");
         assertThat(saved.getTitle()).isEqualTo("Summer");
         assertThat(saved.getDisplayOrder()).isEqualTo(3);
@@ -89,8 +89,8 @@ class PromotionBannerServiceTest {
 
     @Test
     void updateAppliesChangesAndSaves() {
-        when(bannerRepository.findById("BAN_1")).thenReturn(Optional.of(banner("BAN_1", true)));
-        when(bannerRepository.save(any(PromotionBanner.class)))
+        when(promotionBannerPersistencePort.findById("BAN_1")).thenReturn(Optional.of(banner("BAN_1", true)));
+        when(promotionBannerPersistencePort.save(any(PromotionBanner.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         PromotionBanner saved = service.update(new BannerCommands.UpdateBanner(
@@ -99,38 +99,38 @@ class PromotionBannerServiceTest {
         assertThat(saved.getTitle()).isEqualTo("Winter");
         assertThat(saved.getDisplayOrder()).isEqualTo(9);
         assertThat(saved.isActive()).isFalse();
-        verify(bannerRepository).syncDisplayOrderSequence(9);
+        verify(promotionBannerPersistencePort).syncDisplayOrderSequence(9);
     }
 
     @Test
     void updateThrowsWhenMissing() {
-        when(bannerRepository.findById("nope")).thenReturn(Optional.empty());
+        when(promotionBannerPersistencePort.findById("nope")).thenReturn(Optional.empty());
 
         BannerCommands.UpdateBanner command = new BannerCommands.UpdateBanner(
                 "nope", "x", null, null, null, null, null);
 
         assertThatThrownBy(() -> service.update(command))
                 .isInstanceOf(PromotionException.class);
-        verify(bannerRepository, never()).save(any());
+        verify(promotionBannerPersistencePort, never()).save(any());
     }
 
     @Test
     void deleteRemovesExistingBanner() {
-        when(bannerRepository.findById("BAN_1")).thenReturn(Optional.of(banner("BAN_1", true)));
+        when(promotionBannerPersistencePort.findById("BAN_1")).thenReturn(Optional.of(banner("BAN_1", true)));
 
         service.delete(new BannerCommands.DeleteBanner("BAN_1"));
 
-        verify(bannerRepository).deleteById("BAN_1");
+        verify(promotionBannerPersistencePort).deleteById("BAN_1");
     }
 
     @Test
     void deleteThrowsWhenMissing() {
-        when(bannerRepository.findById("nope")).thenReturn(Optional.empty());
+        when(promotionBannerPersistencePort.findById("nope")).thenReturn(Optional.empty());
 
         BannerCommands.DeleteBanner command = new BannerCommands.DeleteBanner("nope");
 
         assertThatThrownBy(() -> service.delete(command))
                 .isInstanceOf(PromotionException.class);
-        verify(bannerRepository, never()).deleteById(any());
+        verify(promotionBannerPersistencePort, never()).deleteById(any());
     }
 }

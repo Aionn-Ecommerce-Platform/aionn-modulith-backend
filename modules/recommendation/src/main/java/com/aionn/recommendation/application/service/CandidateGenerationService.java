@@ -30,9 +30,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class CandidateGenerationService {
 
-    private final InteractionPersistencePort interactionRepository;
-    private final ItemSimilarityPersistencePort similarityRepository;
-    private final PopularityPersistencePort popularityRepository;
+    private final InteractionPersistencePort interactionPersistencePort;
+    private final ItemSimilarityPersistencePort itemSimilarityPersistencePort;
+    private final PopularityPersistencePort popularityPersistencePort;
     private final ProductAttributeQueryPort productAttributeQuery;
     private final RankingWeightPolicy weights;
     private final RecommendationServingPolicy servingPolicy;
@@ -40,7 +40,7 @@ public class CandidateGenerationService {
 
     @Transactional(readOnly = true)
     public List<String> recentSeedProductIds(String userId, Duration lookback, int limit) {
-        return interactionRepository.findByUser(userId, clock.instant().minus(lookback), limit)
+        return interactionPersistencePort.findByUser(userId, clock.instant().minus(lookback), limit)
                 .stream()
                 .map(UserInteraction::getProductId)
                 .distinct()
@@ -49,7 +49,7 @@ public class CandidateGenerationService {
 
     @Transactional(readOnly = true)
     public List<String> purchasedProductIds(String userId) {
-        return interactionRepository.findPurchasedProductIds(userId);
+        return interactionPersistencePort.findPurchasedProductIds(userId);
     }
 
     @Transactional(readOnly = true)
@@ -68,7 +68,7 @@ public class CandidateGenerationService {
         if (seedProductIds == null || seedProductIds.isEmpty()) {
             return Map.of();
         }
-        List<ItemSimilarity> neighbours = similarityRepository.findNeighbours(seedProductIds, limit);
+        List<ItemSimilarity> neighbours = itemSimilarityPersistencePort.findNeighbours(seedProductIds, limit);
         Map<String, BigDecimal> scores = new LinkedHashMap<>();
         for (ItemSimilarity neighbour : neighbours) {
             scores.merge(neighbour.similarProductId(), neighbour.score().value(), BigDecimal::add);
@@ -79,7 +79,7 @@ public class CandidateGenerationService {
     @Transactional(readOnly = true)
     public Map<String, BigDecimal> popularityScores(int limit) {
         Map<String, BigDecimal> scores = new LinkedHashMap<>();
-        for (ProductPopularity popularity : popularityRepository.findTop(limit)) {
+        for (ProductPopularity popularity : popularityPersistencePort.findTop(limit)) {
             scores.put(popularity.productId(), popularity.score());
         }
         return scores;
@@ -91,7 +91,7 @@ public class CandidateGenerationService {
             return Map.of();
         }
         Map<String, BigDecimal> scores = new LinkedHashMap<>();
-        for (ProductPopularity popularity : popularityRepository.findByProductIds(productIds)) {
+        for (ProductPopularity popularity : popularityPersistencePort.findByProductIds(productIds)) {
             scores.put(popularity.productId(), popularity.score());
         }
         return scores;

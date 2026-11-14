@@ -19,7 +19,7 @@ import java.util.List;
 @Transactional
 public class NotificationProviderService {
 
-    private final NotificationProviderPersistencePort repository;
+    private final NotificationProviderPersistencePort notificationProviderPersistencePort;
     private final EventPublisher eventPublisher;
     private final Clock clock;
 
@@ -27,23 +27,23 @@ public class NotificationProviderService {
         NotificationProvider provider = NotificationProvider.configure(IdGenerator.ulid(),
                 command.channel(), command.providerType(), command.config(),
                 command.rateLimitPerMinute(), command.configuredBy(), clock);
-        NotificationProvider saved = repository.save(provider);
+        NotificationProvider saved = notificationProviderPersistencePort.save(provider);
         eventPublisher.publish(provider.pullEvents());
         return saved;
     }
 
     public NotificationProvider update(ProviderCommands.UpdateProvider command) {
-        NotificationProvider provider = repository.findById(command.providerId())
+        NotificationProvider provider = notificationProviderPersistencePort.findById(command.providerId())
                 .orElseThrow(() -> new NotificationException(NotificationErrorCode.PROVIDER_NOT_FOUND));
         provider.update(command.config(), command.rateLimitPerMinute(), command.active(),
                 command.configuredBy(), clock);
-        NotificationProvider saved = repository.save(provider);
+        NotificationProvider saved = notificationProviderPersistencePort.save(provider);
         eventPublisher.publish(provider.pullEvents());
         return saved;
     }
 
     @Transactional(readOnly = true)
     public List<NotificationProvider> listAll() {
-        return repository.findAll();
+        return notificationProviderPersistencePort.findAll();
     }
 }

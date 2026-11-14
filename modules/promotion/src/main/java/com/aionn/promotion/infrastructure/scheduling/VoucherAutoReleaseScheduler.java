@@ -19,7 +19,7 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "promotion.voucher.auto-release", name = "enabled", havingValue = "true")
 public class VoucherAutoReleaseScheduler {
 
-    private final UserVoucherPersistencePort userVoucherRepository;
+    private final UserVoucherPersistencePort userVoucherPersistencePort;
     private final VoucherAutoReleaseWorker worker;
     private final PromotionVoucherProperties voucherProperties;
     private final Clock clock;
@@ -28,7 +28,7 @@ public class VoucherAutoReleaseScheduler {
     @SchedulerLock(name = "promotion-voucher-auto-release", lockAtMostFor = "PT10M", lockAtLeastFor = "PT25S")
     public void run() {
         try {
-            List<UserVoucher> expired = userVoucherRepository.findExpiredReservations(
+            List<UserVoucher> expired = userVoucherPersistencePort.findExpiredReservations(
                     clock.instant(), voucherProperties.autoRelease().batchSize());
             int released = 0;
             for (UserVoucher uv : expired) {

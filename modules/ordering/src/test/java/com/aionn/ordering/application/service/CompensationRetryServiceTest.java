@@ -37,14 +37,15 @@ class CompensationRetryServiceTest {
     private final StockReservationGateway stockGateway = mock(StockReservationGateway.class);
     private final VoucherGateway voucherGateway = mock(VoucherGateway.class);
     private final PaymentGateway paymentGateway = mock(PaymentGateway.class);
-    private final OrderPersistencePort orderRepository = mock(OrderPersistencePort.class);
+    private final OrderPersistencePort orderPersistencePort = mock(OrderPersistencePort.class);
     private final FlashSaleQueryPort flashSaleQueryPort = mock(FlashSaleQueryPort.class);
     private final CompensationRetryPolicy retryPolicy = mock(CompensationRetryPolicy.class);
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+    private final OrderService orderService = mock(OrderService.class);
 
     private final CompensationRetryService service =
             new CompensationRetryService(taskPort, stockGateway, voucherGateway, paymentGateway,
-                    orderRepository, flashSaleQueryPort, retryPolicy, clock);
+                    orderPersistencePort, flashSaleQueryPort, retryPolicy, clock, orderService);
 
     {
         when(retryPolicy.maxAttempts()).thenReturn(MAX_ATTEMPTS);
@@ -110,12 +111,24 @@ class CompensationRetryServiceTest {
     }
 
     @Test
+    void retriesShipmentRegistrationAndCompletesTheTask() {
+        when(taskPort.findById("task-shipment")).thenReturn(Optional.of(new Task(
+                "task-shipment", Type.SHIPMENT_REGISTER, "order-1", null, "order-1",
+                "auto-register", 0)));
+
+        service.retry("task-shipment");
+
+        verify(orderService).retryShipmentRegistration("order-1");
+        verify(taskPort).markCompleted("task-shipment");
+    }
+
+    @Test
     void refundsTheCapturedPaymentAndCompletesTheTask() {
         Order order = mock(Order.class);
         when(order.getTotalAmount()).thenReturn(Money.of(120000, "VND"));
         when(order.getCurrency()).thenReturn("VND");
         when(order.getOrderId()).thenReturn("order-1");
-        when(orderRepository.findById("order-1")).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findById("order-1")).thenReturn(Optional.of(order));
         when(taskPort.findById("task-refund")).thenReturn(Optional.of(new Task(
                 "task-refund", Type.REFUND, "PAY_1", "user-1", "order-1", "user cancellation", 1)));
 

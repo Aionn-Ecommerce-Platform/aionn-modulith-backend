@@ -1,6 +1,6 @@
 package com.aionn.ucp.adapter.rest.advice;
 
-import com.aionn.ucp.adapter.rest.dto.UcpErrorResponse;
+import com.aionn.ucp.adapter.rest.dto.response.UcpErrorResponse;
 import com.aionn.ucp.adapter.rest.dto.UcpMessage;
 import com.aionn.ucp.application.UcpProtocolConstants;
 import com.aionn.ucp.domain.exception.UcpProtocolException;

@@ -40,9 +40,9 @@ public class NotificationDispatchService {
 
     private static final String ENGLISH_LANGUAGE = "en";
 
-    private final NotificationPersistencePort notificationRepository;
-    private final NotificationTemplatePersistencePort templateRepository;
-    private final NotificationSubscriptionPersistencePort subscriptionRepository;
+    private final NotificationPersistencePort notificationPersistencePort;
+    private final NotificationTemplatePersistencePort notificationTemplatePersistencePort;
+    private final NotificationSubscriptionPersistencePort notificationSubscriptionPersistencePort;
     private final NotificationRealtimePort realtimePort;
     private final EventPublisher eventPublisher;
     private final NotificationDefaultsPolicy defaultsPolicy;
@@ -50,8 +50,8 @@ public class NotificationDispatchService {
     private final Clock clock;
 
     public List<Notification> prepareByEvent(NotificationCommands.SendByEvent command) {
-        NotificationSubscription subscription = subscriptionRepository.findByUserId(command.userId())
-                .orElseGet(() -> subscriptionRepository.save(
+        NotificationSubscription subscription = notificationSubscriptionPersistencePort.findByUserId(command.userId())
+                .orElseGet(() -> notificationSubscriptionPersistencePort.save(
                         NotificationSubscription.createDefault(command.userId(), clock)));
 
         List<NotificationChannel> requested = command.channels() == null || command.channels().isEmpty()
@@ -98,7 +98,7 @@ public class NotificationDispatchService {
     public Notification recordSent(NotificationCommands.RecordSent command) {
         Notification notification = required(command.notiId());
         notification.markSent(clock);
-        Notification saved = notificationRepository.save(notification);
+        Notification saved = notificationPersistencePort.save(notification);
         eventPublisher.publish(notification.pullEvents());
         return saved;
     }
@@ -106,7 +106,7 @@ public class NotificationDispatchService {
     public Notification recordFailed(NotificationCommands.RecordFailed command) {
         Notification notification = required(command.notiId());
         notification.markFailed(command.reason(), clock);
-        Notification saved = notificationRepository.save(notification);
+        Notification saved = notificationPersistencePort.save(notification);
         eventPublisher.publish(notification.pullEvents());
         return saved;
     }
@@ -114,13 +114,13 @@ public class NotificationDispatchService {
     public Notification recordDeliveryUnknown(String notificationId, String reason) {
         Notification notification = required(notificationId);
         notification.markDeliveryUnknown(reason, clock);
-        return notificationRepository.save(notification);
+        return notificationPersistencePort.save(notification);
     }
 
     public Notification markRead(NotificationCommands.MarkRead command) {
         Notification notification = ownedBy(command.notiId(), command.userId());
         notification.markRead(clock);
-        Notification saved = notificationRepository.save(notification);
+        Notification saved = notificationPersistencePort.save(notification);
         eventPublisher.publish(notification.pullEvents());
         return saved;
     }
@@ -128,7 +128,7 @@ public class NotificationDispatchService {
     public Notification delete(NotificationCommands.MarkDeleted command) {
         Notification notification = ownedBy(command.notiId(), command.userId());
         notification.softDelete(clock);
-        Notification saved = notificationRepository.save(notification);
+        Notification saved = notificationPersistencePort.save(notification);
         eventPublisher.publish(notification.pullEvents());
         return saved;
     }
@@ -140,12 +140,12 @@ public class NotificationDispatchService {
 
     @Transactional(readOnly = true)
     public List<Notification> listMine(String userId, int limit) {
-        return notificationRepository.findByUser(userId, limit);
+        return notificationPersistencePort.findByUser(userId, limit);
     }
 
     @Transactional(readOnly = true)
     public List<Notification> findRetryable(int batchSize) {
-        return notificationRepository.findRetryable(batchSize);
+        return notificationPersistencePort.findRetryable(batchSize);
     }
 
     private Notification persistPending(NotificationTemplate template, String userId,
@@ -155,7 +155,7 @@ public class NotificationDispatchService {
         Notification notification = Notification.create(IdGenerator.ulid(), userId,
                 template.getTemplateId(), channel, category,
                 rendered.subject(), rendered.content(), campaignId, clock);
-        Notification saved = notificationRepository.save(notification);
+        Notification saved = notificationPersistencePort.save(notification);
         if (channel == NotificationChannel.IN_APP) {
             realtimePort.publishCreated(saved.getUserId(), saved.getNotiId(), saved.getCreatedAt());
         }
@@ -164,8 +164,8 @@ public class NotificationDispatchService {
 
     private Optional<NotificationTemplate> findTemplate(String eventType,
             NotificationChannel channel, String locale) {
-        return templateRepository.findByEventChannelLocale(eventType, channel, locale)
-                .or(() -> templateRepository.findByEventChannelLocale(
+        return notificationTemplatePersistencePort.findByEventChannelLocale(eventType, channel, locale)
+                .or(() -> notificationTemplatePersistencePort.findByEventChannelLocale(
                         eventType, channel, defaultsPolicy.defaultLocale()));
     }
 
@@ -205,7 +205,7 @@ public class NotificationDispatchService {
     }
 
     private Notification required(String notiId) {
-        return notificationRepository.findById(notiId)
+        return notificationPersistencePort.findById(notiId)
                 .orElseThrow(() -> new NotificationException(NotificationErrorCode.NOTIFICATION_NOT_FOUND));
     }
 }

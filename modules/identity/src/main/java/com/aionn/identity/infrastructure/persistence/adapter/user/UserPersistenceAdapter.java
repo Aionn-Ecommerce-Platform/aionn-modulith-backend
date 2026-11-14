@@ -2,7 +2,7 @@ package com.aionn.identity.infrastructure.persistence.adapter.user;
 
 import com.aionn.identity.application.port.out.user.UserPersistencePort;
 import com.aionn.identity.domain.model.IdentityUser;
-import com.aionn.identity.infrastructure.persistence.mapper.IdentityUserMapper;
+import com.aionn.identity.infrastructure.persistence.mapper.IdentityUserDomainMapper;
 import com.aionn.identity.infrastructure.persistence.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -14,7 +14,7 @@ import java.util.Optional;
 public class UserPersistenceAdapter implements UserPersistencePort {
 
     private final UserRepository userRepository;
-    private final IdentityUserMapper identityUserMapper;
+    private final IdentityUserDomainMapper identityUserDomainMapper;
     private final IdentityUserEntitySaveSupport identityUserEntitySaveSupport;
 
     @Override
@@ -25,7 +25,7 @@ public class UserPersistenceAdapter implements UserPersistencePort {
     @Override
     public Optional<IdentityUser> findById(String userId) {
         return userRepository.findById(userId)
-                .map(identityUserMapper::toDomain);
+                .map(identityUserDomainMapper::toDomain);
     }
 
     @Override
@@ -33,7 +33,7 @@ public class UserPersistenceAdapter implements UserPersistencePort {
         return userRepository.findByEmailIgnoreCase(identity)
                 .or(() -> userRepository.findByPhone(identity))
                 .or(() -> userRepository.findByUsernameIgnoreCase(identity))
-                .map(identityUserMapper::toDomain);
+                .map(identityUserDomainMapper::toDomain);
     }
 
     @Override

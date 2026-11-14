@@ -3,9 +3,9 @@ package com.aionn.shipping.adapter.rest.controller;
 import com.aionn.shipping.application.service.ParcelResolver;
 import org.mockito.ArgumentMatchers;
 
-import com.aionn.shipping.adapter.rest.dto.shipment.CancelShipmentRequest;
-import com.aionn.shipping.adapter.rest.dto.shipment.CreateShipmentRequest;
-import com.aionn.shipping.adapter.rest.dto.shipment.QuoteShippingRequest;
+import com.aionn.shipping.adapter.rest.dto.shipment.request.CancelShipmentRequest;
+import com.aionn.shipping.adapter.rest.dto.shipment.request.CreateShipmentRequest;
+import com.aionn.shipping.adapter.rest.dto.shipment.request.QuoteShippingRequest;
 import com.aionn.shipping.adapter.rest.exception.ShippingExceptionHandler;
 import com.aionn.shipping.adapter.rest.support.session.CurrentUserId;
 import com.aionn.shipping.adapter.rest.mapper.shipment.ShipmentDtoMapper;

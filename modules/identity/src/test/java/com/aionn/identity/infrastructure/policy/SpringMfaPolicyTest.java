@@ -11,7 +11,7 @@ class SpringMfaPolicyTest {
     void mapsIssuerAndBackupCodeCount() {
         SpringMfaPolicy policy = new SpringMfaPolicy(new MfaProperties("Aionn", "key", 10));
 
-        assertThat(policy.getMfaIssuer()).isEqualTo("Aionn");
-        assertThat(policy.getBackupCodeCount()).isEqualTo(10);
+        assertThat(policy.mfaIssuer()).isEqualTo("Aionn");
+        assertThat(policy.backupCodeCount()).isEqualTo(10);
     }
 }

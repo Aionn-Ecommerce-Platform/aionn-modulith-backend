@@ -2,10 +2,6 @@ package com.aionn.recommendation.adapter.rest.controller;
 
 import com.aionn.recommendation.adapter.rest.dto.recommendation.response.RecommendationResponse;
 import com.aionn.recommendation.adapter.rest.mapper.RecommendationDtoMapper;
-import com.aionn.recommendation.application.dto.query.GetAlsoBoughtQuery;
-import com.aionn.recommendation.application.dto.query.GetCartSuggestionsQuery;
-import com.aionn.recommendation.application.dto.query.GetHomeFeedQuery;
-import com.aionn.recommendation.application.dto.query.GetSimilarProductsQuery;
 import com.aionn.recommendation.application.port.in.GetAlsoBoughtInputPort;
 import com.aionn.recommendation.application.port.in.GetCartSuggestionsInputPort;
 import com.aionn.recommendation.application.port.in.GetHomeFeedInputPort;
@@ -38,7 +34,7 @@ import java.util.List;
 @Tag(name = "Recommendations", description = "Personalised and related product recommendations")
 public class RecommendationController {
 
-    private static final String MSG_FETCHED = "Recommendations fetched";
+    private static final String RECOMMENDATIONS_FETCHED = "Recommendations fetched";
 
     private final GetHomeFeedInputPort getHomeFeedInputPort;
     private final GetSimilarProductsInputPort getSimilarProductsInputPort;
@@ -55,8 +51,8 @@ public class RecommendationController {
         String userId = authentication != null ? authentication.getName() : null;
         return ResponseEntity.ok(ApiResponse.success(
                 recommendationDtoMapper.toResponses(
-                        getHomeFeedInputPort.execute(new GetHomeFeedQuery(userId, limit))),
-                MSG_FETCHED));
+                        getHomeFeedInputPort.execute(recommendationDtoMapper.toHomeFeedQuery(userId, limit))),
+                RECOMMENDATIONS_FETCHED));
     }
 
     @GetMapping("/products/{productId}/similar")
@@ -66,8 +62,8 @@ public class RecommendationController {
             @RequestParam(defaultValue = "10") @Min(1) @Max(50) int limit) {
         return ResponseEntity.ok(ApiResponse.success(
                 recommendationDtoMapper.toResponses(getSimilarProductsInputPort
-                        .execute(new GetSimilarProductsQuery(productId, limit))),
-                MSG_FETCHED));
+                        .execute(recommendationDtoMapper.toSimilarProductsQuery(productId, limit))),
+                RECOMMENDATIONS_FETCHED));
     }
 
     @GetMapping("/products/{productId}/also-bought")
@@ -77,8 +73,8 @@ public class RecommendationController {
             @RequestParam(defaultValue = "10") @Min(1) @Max(50) int limit) {
         return ResponseEntity.ok(ApiResponse.success(
                 recommendationDtoMapper.toResponses(
-                        getAlsoBoughtInputPort.execute(new GetAlsoBoughtQuery(productId, limit))),
-                MSG_FETCHED));
+                        getAlsoBoughtInputPort.execute(recommendationDtoMapper.toAlsoBoughtQuery(productId, limit))),
+                RECOMMENDATIONS_FETCHED));
     }
 
     @GetMapping("/cart/suggestions")
@@ -90,7 +86,8 @@ public class RecommendationController {
             @RequestParam(defaultValue = "10") @Min(1) @Max(50) int limit) {
         return ResponseEntity.ok(ApiResponse.success(
                 recommendationDtoMapper.toResponses(getCartSuggestionsInputPort
-                        .execute(new GetCartSuggestionsQuery(authentication.getName(), skuIds, limit))),
-                MSG_FETCHED));
+                        .execute(recommendationDtoMapper.toCartSuggestionsQuery(
+                                authentication.getName(), skuIds, limit))),
+                RECOMMENDATIONS_FETCHED));
     }
 }

@@ -8,6 +8,7 @@ public record ShipmentDeliveryFailedIntegrationEvent(
         String eventId,
         String shipmentId,
         String orderId,
+        String userId,
         String reason,
         int attemptCount,
         Instant occurredAt) implements IntegrationEvent.ShipmentScoped {
@@ -15,5 +16,15 @@ public record ShipmentDeliveryFailedIntegrationEvent(
     public ShipmentDeliveryFailedIntegrationEvent {
         eventId = IntegrationEvent.requireEventId(eventId);
         occurredAt = IntegrationEvent.defaultOccurredAt(occurredAt);
+    }
+
+    public ShipmentDeliveryFailedIntegrationEvent(
+            String eventId,
+            String shipmentId,
+            String orderId,
+            String reason,
+            int attemptCount,
+            Instant occurredAt) {
+        this(eventId, shipmentId, orderId, null, reason, attemptCount, occurredAt);
     }
 }

@@ -30,8 +30,7 @@ public enum ShipmentStatus {
             case OUT_FOR_DELIVERY -> this != OUT_FOR_DELIVERY;
             case DELIVERY_FAILED -> this == OUT_FOR_DELIVERY || this == IN_TRANSIT
                     || this == PICKED_UP;
-            case DELIVERED -> this == OUT_FOR_DELIVERY || this == IN_TRANSIT
-                    || this == PICKED_UP || this == DELIVERY_FAILED;
+            case DELIVERED -> true;
             case RETURNED -> true;
             case CANCELLED -> this == REQUESTED || this == REGISTERED;
         };

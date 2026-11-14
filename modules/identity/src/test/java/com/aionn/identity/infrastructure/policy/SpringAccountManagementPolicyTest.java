@@ -15,8 +15,8 @@ class SpringAccountManagementPolicyTest {
 
         SpringAccountManagementPolicy policy = new SpringAccountManagementPolicy(properties);
 
-        assertThat(policy.getOtpExpirySeconds()).isEqualTo(120);
-        assertThat(policy.getOtpMaxAttempts()).isEqualTo(4);
-        assertThat(policy.getDeletionGraceDays()).isEqualTo(15);
+        assertThat(policy.otpExpirySeconds()).isEqualTo(120);
+        assertThat(policy.otpMaxAttempts()).isEqualTo(4);
+        assertThat(policy.deletionGraceDays()).isEqualTo(15);
     }
 }

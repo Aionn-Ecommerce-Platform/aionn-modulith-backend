@@ -34,12 +34,12 @@ class NotificationProviderServiceTest {
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
     @Mock
-    private NotificationProviderPersistencePort repository;
+    private NotificationProviderPersistencePort notificationProviderPersistencePort;
     @Mock
     private EventPublisher eventPublisher;
 
     private NotificationProviderService service() {
-        return new NotificationProviderService(repository, eventPublisher, CLOCK);
+        return new NotificationProviderService(notificationProviderPersistencePort, eventPublisher, CLOCK);
     }
 
     private static NotificationProvider existing() {
@@ -49,7 +49,7 @@ class NotificationProviderServiceTest {
 
     @Test
     void configureStoresActiveProviderAndPublishesEvent() {
-        when(repository.save(any(NotificationProvider.class)))
+        when(notificationProviderPersistencePort.save(any(NotificationProvider.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         NotificationProvider saved = service().configure(new ProviderCommands.ConfigureProvider(
@@ -70,13 +70,13 @@ class NotificationProviderServiceTest {
 
         assertThatThrownBy(() -> service.configure(command))
                 .isInstanceOf(NotificationException.class);
-        verify(repository, never()).save(any());
+        verify(notificationProviderPersistencePort, never()).save(any());
     }
 
     @Test
     void updateAppliesOnlyProvidedFields() {
-        when(repository.findById("prov-1")).thenReturn(Optional.of(existing()));
-        when(repository.save(any(NotificationProvider.class)))
+        when(notificationProviderPersistencePort.findById("prov-1")).thenReturn(Optional.of(existing()));
+        when(notificationProviderPersistencePort.save(any(NotificationProvider.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         NotificationProvider saved = service().update(new ProviderCommands.UpdateProvider(
@@ -89,8 +89,8 @@ class NotificationProviderServiceTest {
 
     @Test
     void updateReplacesConfigWhenProvided() {
-        when(repository.findById("prov-1")).thenReturn(Optional.of(existing()));
-        when(repository.save(any(NotificationProvider.class)))
+        when(notificationProviderPersistencePort.findById("prov-1")).thenReturn(Optional.of(existing()));
+        when(notificationProviderPersistencePort.save(any(NotificationProvider.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         NotificationProvider saved = service().update(new ProviderCommands.UpdateProvider(
@@ -103,7 +103,7 @@ class NotificationProviderServiceTest {
 
     @Test
     void updateThrowsWhenProviderMissing() {
-        when(repository.findById("nope")).thenReturn(Optional.empty());
+        when(notificationProviderPersistencePort.findById("nope")).thenReturn(Optional.empty());
 
         NotificationProviderService service = service();
         ProviderCommands.UpdateProvider command = new ProviderCommands.UpdateProvider(
@@ -117,7 +117,7 @@ class NotificationProviderServiceTest {
 
     @Test
     void listAllDelegatesToRepository() {
-        when(repository.findAll()).thenReturn(List.of(existing()));
+        when(notificationProviderPersistencePort.findAll()).thenReturn(List.of(existing()));
 
         assertThat(service().listAll()).hasSize(1);
     }

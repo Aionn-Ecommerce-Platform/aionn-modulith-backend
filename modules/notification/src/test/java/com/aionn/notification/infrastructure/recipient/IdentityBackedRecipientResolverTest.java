@@ -29,7 +29,7 @@ class IdentityBackedRecipientResolverTest {
     @Mock
     private RecipientResolverPort identityResolver;
     @Mock
-    private DeviceTokenPersistencePort deviceTokenRepository;
+    private DeviceTokenPersistencePort deviceTokenPersistencePort;
 
     @InjectMocks
     private IdentityBackedRecipientResolver resolver;
@@ -61,7 +61,7 @@ class IdentityBackedRecipientResolverTest {
 
     @Test
     void pushUsesFirstActiveDeviceToken() {
-        when(deviceTokenRepository.findActiveByUserId("user-1"))
+        when(deviceTokenPersistencePort.findActiveByUserId("user-1"))
                 .thenReturn(List.of(token("tok-1", "fcm-1"), token("tok-2", "fcm-2")));
 
         assertThat(resolver.resolve("user-1", NotificationChannel.PUSH)).isEqualTo("fcm-1");
@@ -69,7 +69,7 @@ class IdentityBackedRecipientResolverTest {
 
     @Test
     void pushThrowsWhenNoActiveDeviceToken() {
-        when(deviceTokenRepository.findActiveByUserId("user-1")).thenReturn(List.of());
+        when(deviceTokenPersistencePort.findActiveByUserId("user-1")).thenReturn(List.of());
 
         assertThatThrownBy(() -> resolver.resolve("user-1", NotificationChannel.PUSH))
                 .isInstanceOf(NotificationException.class)
@@ -79,7 +79,7 @@ class IdentityBackedRecipientResolverTest {
 
     @Test
     void resolveAllReturnsEveryActivePushToken() {
-        when(deviceTokenRepository.findActiveByUserId("user-1"))
+        when(deviceTokenPersistencePort.findActiveByUserId("user-1"))
                 .thenReturn(List.of(token("tok-1", "fcm-1"), token("tok-2", "fcm-2")));
 
         assertThat(resolver.resolveAll("user-1", NotificationChannel.PUSH))

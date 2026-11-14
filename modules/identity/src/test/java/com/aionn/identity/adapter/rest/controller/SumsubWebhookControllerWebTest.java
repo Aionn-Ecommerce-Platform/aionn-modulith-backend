@@ -1,6 +1,7 @@
 package com.aionn.identity.adapter.rest.controller;
 
 import com.aionn.identity.adapter.rest.exception.IdentityExceptionHandler;
+import com.aionn.identity.adapter.rest.mapper.kyc.SumsubWebhookDtoMapper;
 import com.aionn.identity.application.dto.kyc.command.SumsubWebhookCommand;
 import com.aionn.identity.application.port.in.kyc.HandleSumsubWebhookInputPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,7 +32,7 @@ class SumsubWebhookControllerWebTest {
     @BeforeEach
     void setUp() {
         SumsubWebhookController controller = new SumsubWebhookController(
-                new ObjectMapper(), handleSumsubWebhookInputPort);
+                new SumsubWebhookDtoMapper(new ObjectMapper()), handleSumsubWebhookInputPort);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new IdentityExceptionHandler())
                 .build();

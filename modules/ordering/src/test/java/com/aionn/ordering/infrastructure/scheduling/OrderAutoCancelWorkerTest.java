@@ -1,5 +1,6 @@
 package com.aionn.ordering.infrastructure.scheduling;
 
+import com.aionn.ordering.application.port.out.CompensationTaskPort;
 import com.aionn.ordering.application.port.out.OrderPersistencePort;
 import com.aionn.ordering.application.port.out.StockReservationGateway;
 import com.aionn.ordering.application.port.out.integration.OrderingIntegrationEventPublisherPort;
@@ -30,7 +31,7 @@ import static org.mockito.Mockito.*;
 class OrderAutoCancelWorkerTest {
 
     @Mock
-    private OrderPersistencePort orderRepository;
+    private OrderPersistencePort orderPersistencePort;
 
     @Mock
     private StockReservationGateway stockReservationGateway;
@@ -40,6 +41,9 @@ class OrderAutoCancelWorkerTest {
 
     @Mock
     private OrderingIntegrationEventPublisherPort integrationEventPublisher;
+
+    @Mock
+    private CompensationTaskPort compensationTaskPort;
 
     @Mock
     private Clock clock;
@@ -56,13 +60,13 @@ class OrderAutoCancelWorkerTest {
         OrderItem item2 = mock(OrderItem.class);
         Order savedOrder = mock(Order.class);
 
-        when(orderRepository.findByIdForUpdate(orderId)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findByIdForUpdate(orderId)).thenReturn(Optional.of(order));
         when(clock.instant()).thenReturn(now);
         when(order.items()).thenReturn(List.of(item1, item2));
         when(item1.reservationId()).thenReturn("res-1");
         when(item2.reservationId()).thenReturn("res-2");
         when(order.pullEvents()).thenReturn(List.of());
-        when(orderRepository.save(order)).thenReturn(savedOrder);
+        when(orderPersistencePort.save(order)).thenReturn(savedOrder);
         when(savedOrder.getOrderId()).thenReturn(orderId);
 
         worker.cancelOneExpired(orderId);
@@ -70,7 +74,7 @@ class OrderAutoCancelWorkerTest {
         verify(order).autoCancel("PAYMENT_TIMEOUT", now);
         verify(stockReservationGateway).release("res-1", "auto-cancel");
         verify(stockReservationGateway).release("res-2", "auto-cancel");
-        verify(orderRepository).save(order);
+        verify(orderPersistencePort).save(order);
         verify(eventPublisher).publish(anyList());
         verify(integrationEventPublisher).publishOrderCancelled(
                 eq(orderId), eq("PAYMENT_TIMEOUT"), eq("Payment timeout"), eq(CancellationKind.AUTO_CANCELLED));
@@ -80,12 +84,12 @@ class OrderAutoCancelWorkerTest {
     void throwsExceptionWhenOrderNotFound() {
         String orderId = "non-existent";
 
-        when(orderRepository.findByIdForUpdate(orderId)).thenReturn(Optional.empty());
+        when(orderPersistencePort.findByIdForUpdate(orderId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> worker.cancelOneExpired(orderId))
                 .isInstanceOf(OrderingException.class);
 
-        verify(orderRepository, never()).save(any());
+        verify(orderPersistencePort, never()).save(any());
     }
 
     @Test
@@ -97,13 +101,13 @@ class OrderAutoCancelWorkerTest {
         OrderItem item2 = mock(OrderItem.class);
         Order savedOrder = mock(Order.class);
 
-        when(orderRepository.findByIdForUpdate(orderId)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findByIdForUpdate(orderId)).thenReturn(Optional.of(order));
         when(clock.instant()).thenReturn(now);
         when(order.items()).thenReturn(List.of(item1, item2));
         when(item1.reservationId()).thenReturn("res-1");
         when(item2.reservationId()).thenReturn(null); // No reservation
         when(order.pullEvents()).thenReturn(List.of());
-        when(orderRepository.save(order)).thenReturn(savedOrder);
+        when(orderPersistencePort.save(order)).thenReturn(savedOrder);
         when(savedOrder.getOrderId()).thenReturn(orderId);
 
         worker.cancelOneExpired(orderId);
@@ -121,13 +125,13 @@ class OrderAutoCancelWorkerTest {
         OrderItem item2 = mock(OrderItem.class);
         Order savedOrder = mock(Order.class);
 
-        when(orderRepository.findByIdForUpdate(orderId)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findByIdForUpdate(orderId)).thenReturn(Optional.of(order));
         when(clock.instant()).thenReturn(now);
         when(order.items()).thenReturn(List.of(item1, item2));
         when(item1.reservationId()).thenReturn("res-1");
         when(item2.reservationId()).thenReturn("res-2");
         when(order.pullEvents()).thenReturn(List.of());
-        when(orderRepository.save(order)).thenReturn(savedOrder);
+        when(orderPersistencePort.save(order)).thenReturn(savedOrder);
         when(savedOrder.getOrderId()).thenReturn(orderId);
         doThrow(new RuntimeException("Inventory service unavailable"))
                 .when(stockReservationGateway).release("res-1", "auto-cancel");
@@ -136,7 +140,8 @@ class OrderAutoCancelWorkerTest {
 
         verify(stockReservationGateway).release("res-1", "auto-cancel");
         verify(stockReservationGateway).release("res-2", "auto-cancel");
-        verify(orderRepository).save(order);
+        verify(compensationTaskPort).enqueue(any(CompensationTaskPort.Task.class));
+        verify(orderPersistencePort).save(order);
         verify(integrationEventPublisher).publishOrderCancelled(
                 anyString(), anyString(), anyString(), any(CancellationKind.class));
     }
@@ -148,11 +153,11 @@ class OrderAutoCancelWorkerTest {
         Order order = mock(Order.class);
         Order savedOrder = mock(Order.class);
 
-        when(orderRepository.findByIdForUpdate(orderId)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findByIdForUpdate(orderId)).thenReturn(Optional.of(order));
         when(clock.instant()).thenReturn(now);
         when(order.items()).thenReturn(List.of());
         when(order.pullEvents()).thenReturn(List.of());
-        when(orderRepository.save(order)).thenReturn(savedOrder);
+        when(orderPersistencePort.save(order)).thenReturn(savedOrder);
         when(savedOrder.getOrderId()).thenReturn(orderId);
 
         worker.cancelOneExpired(orderId);
@@ -167,11 +172,11 @@ class OrderAutoCancelWorkerTest {
         Order order = mock(Order.class);
         Order savedOrder = mock(Order.class);
 
-        when(orderRepository.findByIdForUpdate(orderId)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.findByIdForUpdate(orderId)).thenReturn(Optional.of(order));
         when(clock.instant()).thenReturn(now);
         when(order.items()).thenReturn(List.of());
         when(order.pullEvents()).thenReturn(List.of());
-        when(orderRepository.save(order)).thenReturn(savedOrder);
+        when(orderPersistencePort.save(order)).thenReturn(savedOrder);
         when(savedOrder.getOrderId()).thenReturn(orderId);
 
         worker.cancelOneExpired(orderId);

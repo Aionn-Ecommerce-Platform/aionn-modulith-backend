@@ -1,5 +1,6 @@
 package com.aionn.chat.adapter.websocket;
 
+import com.aionn.chat.adapter.websocket.dto.TypingPayload;
 import com.aionn.chat.application.dto.message.command.MessageCommands;
 import com.aionn.chat.application.port.in.message.MarkDeliveredInputPort;
 import com.aionn.chat.application.port.in.message.MarkReadInputPort;
@@ -32,14 +33,14 @@ class ChatStompControllerTest {
 
     @Test
     void typingForwardsToInputPort() {
-        controller.typing("conv-1", new ChatStompController.TypingPayload(true), USER);
+        controller.typing("conv-1", new TypingPayload(true), USER);
 
         verify(setTypingInputPort).execute(new MessageCommands.SetTyping("user-1", "conv-1", true));
     }
 
     @Test
     void typingWithoutPrincipalIsIgnored() {
-        controller.typing("conv-1", new ChatStompController.TypingPayload(true), null);
+        controller.typing("conv-1", new TypingPayload(true), null);
 
         verifyNoInteractions(setTypingInputPort);
     }

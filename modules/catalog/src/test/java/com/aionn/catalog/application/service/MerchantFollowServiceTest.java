@@ -26,25 +26,25 @@ class MerchantFollowServiceTest {
     private static final Instant NOW = Instant.parse("2026-11-11T00:00:00Z");
 
     @Mock
-    private MerchantPersistencePort merchantRepository;
+    private MerchantPersistencePort merchantPersistencePort;
     @Mock
-    private MerchantFollowerPersistencePort followerRepository;
+    private MerchantFollowerPersistencePort merchantFollowerPersistencePort;
     @Mock
     private Merchant merchant;
 
     @Test
     void followsActiveMerchantIdempotently() {
-        when(merchantRepository.findById("MER_1")).thenReturn(Optional.of(merchant));
+        when(merchantPersistencePort.findById("MER_1")).thenReturn(Optional.of(merchant));
         when(merchant.getStatus()).thenReturn(MerchantStatus.ACTIVE);
 
         service().follow("MER_1", "USER_1");
 
-        verify(followerRepository).follow("MER_1", "USER_1", NOW);
+        verify(merchantFollowerPersistencePort).follow("MER_1", "USER_1", NOW);
     }
 
     @Test
     void rejectsInactiveMerchant() {
-        when(merchantRepository.findById("MER_1")).thenReturn(Optional.of(merchant));
+        when(merchantPersistencePort.findById("MER_1")).thenReturn(Optional.of(merchant));
         when(merchant.getStatus()).thenReturn(MerchantStatus.SUSPENDED);
 
         assertThatThrownBy(() -> service().follow("MER_1", "USER_1"))
@@ -53,14 +53,14 @@ class MerchantFollowServiceTest {
 
     @Test
     void rejectsUnknownMerchant() {
-        when(merchantRepository.findById("MER_X")).thenReturn(Optional.empty());
+        when(merchantPersistencePort.findById("MER_X")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service().follow("MER_X", "USER_1"))
                 .isInstanceOf(CatalogException.class);
     }
 
     private MerchantFollowService service() {
-        return new MerchantFollowService(merchantRepository, followerRepository,
+        return new MerchantFollowService(merchantPersistencePort, merchantFollowerPersistencePort,
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -68,12 +68,12 @@ class MerchantFollowServiceTest {
     void unfollowDelegatesToTheRepository() {
         service().unfollow("MER_1", "USER_1");
 
-        verify(followerRepository).unfollow("MER_1", "USER_1");
+        verify(merchantFollowerPersistencePort).unfollow("MER_1", "USER_1");
     }
 
     @Test
     void followerCountDelegatesToTheRepository() {
-        when(followerRepository.countByMerchantId("MER_1")).thenReturn(7L);
+        when(merchantFollowerPersistencePort.countByMerchantId("MER_1")).thenReturn(7L);
 
         assertThat(service().followerCount("MER_1")).isEqualTo(7L);
     }
@@ -81,7 +81,7 @@ class MerchantFollowServiceTest {
     @Test
     void isFollowingRequiresAUser() {
         assertThat(service().isFollowing("MER_1", null)).isFalse();
-        when(followerRepository.exists("MER_1", "USER_1")).thenReturn(true);
+        when(merchantFollowerPersistencePort.exists("MER_1", "USER_1")).thenReturn(true);
         assertThat(service().isFollowing("MER_1", "USER_1")).isTrue();
     }
 }

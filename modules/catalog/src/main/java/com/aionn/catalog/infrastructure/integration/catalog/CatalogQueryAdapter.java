@@ -25,14 +25,14 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class CatalogQueryAdapter implements CatalogQueryPort {
 
-    private final ProductPersistencePort productRepository;
-    private final MerchantPersistencePort merchantRepository;
+    private final ProductPersistencePort productPersistencePort;
+    private final MerchantPersistencePort merchantPersistencePort;
 
     @Override
     @Transactional(readOnly = true)
     public List<ProductView> search(SearchCriteria criteria) {
         int fetchLimit = criteria.limit() + 1;
-        List<Product> products = productRepository.searchPublished(criteria.query(), criteria.minPrice(),
+        List<Product> products = productPersistencePort.searchPublished(criteria.query(), criteria.minPrice(),
                 criteria.maxPrice(), fetchLimit, criteria.offset());
         List<ProductView> mapped = new ArrayList<>(products.size());
         for (Product p : products) {
@@ -47,11 +47,11 @@ public class CatalogQueryAdapter implements CatalogQueryPort {
     @Override
     @Transactional(readOnly = true)
     public Optional<ProductView> findByProductOrSkuId(String id) {
-        Optional<Product> byId = productRepository.findById(id);
+        Optional<Product> byId = productPersistencePort.findById(id);
         if (byId.isPresent()) {
             return Optional.ofNullable(toView(byId.get()));
         }
-        List<Product> bySku = productRepository.findAllBySkuIds(List.of(id));
+        List<Product> bySku = productPersistencePort.findAllBySkuIds(List.of(id));
         if (!bySku.isEmpty()) {
             return Optional.ofNullable(toView(bySku.get(0)));
         }
@@ -61,7 +61,7 @@ public class CatalogQueryAdapter implements CatalogQueryPort {
     @Override
     @Transactional(readOnly = true)
     public LookupResult lookupByProductOrSkuIds(List<String> ids) {
-        List<Product> bySku = productRepository.findAllBySkuIds(ids);
+        List<Product> bySku = productPersistencePort.findAllBySkuIds(ids);
         Map<String, Product> productById = new LinkedHashMap<>();
         Set<String> resolvedInputIds = new HashSet<>();
         for (Product p : bySku) {
@@ -76,7 +76,7 @@ public class CatalogQueryAdapter implements CatalogQueryPort {
             if (resolvedInputIds.contains(id) || productById.containsKey(id)) {
                 continue;
             }
-            productRepository.findById(id).ifPresent(p -> {
+            productPersistencePort.findById(id).ifPresent(p -> {
                 productById.put(p.getProductId(), p);
                 resolvedInputIds.add(id);
             });
@@ -97,7 +97,7 @@ public class CatalogQueryAdapter implements CatalogQueryPort {
         if (p.getStatus() != ProductStatus.PUBLISHED) {
             return null;
         }
-        boolean merchantActive = merchantRepository.findById(p.getMerchantId())
+        boolean merchantActive = merchantPersistencePort.findById(p.getMerchantId())
                 .map(m -> m.getStatus() == MerchantStatus.ACTIVE)
                 .orElse(false);
         if (!merchantActive) {

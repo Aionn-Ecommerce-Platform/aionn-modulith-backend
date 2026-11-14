@@ -50,11 +50,11 @@ class VoucherServiceTest {
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
     @Mock
-    private VoucherPersistencePort voucherRepository;
+    private VoucherPersistencePort voucherPersistencePort;
     @Mock
-    private UserVoucherPersistencePort userVoucherRepository;
+    private UserVoucherPersistencePort userVoucherPersistencePort;
     @Mock
-    private PromotionCampaignPersistencePort campaignRepository;
+    private PromotionCampaignPersistencePort promotionCampaignPersistencePort;
     @Mock
     private UserVoucherResultMapper mapper;
     @Mock
@@ -64,7 +64,7 @@ class VoucherServiceTest {
 
     private VoucherService service() {
         when(reservationPolicy.expiresFrom(any())).thenReturn(NOW.plusSeconds(900));
-        return new VoucherService(voucherRepository, userVoucherRepository, campaignRepository,
+        return new VoucherService(voucherPersistencePort, userVoucherPersistencePort, promotionCampaignPersistencePort,
                 mapper, eventPublisher, reservationPolicy, CLOCK);
     }
 
@@ -125,12 +125,12 @@ class VoucherServiceTest {
     @Test
     void claimCreatesUserVoucherAndEnrichesResult() {
         mapperEchoes();
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher("camp-1")));
-        when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(platformVoucher("camp-1")));
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.of(
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher("camp-1")));
+        when(voucherPersistencePort.findByCode("V-1")).thenReturn(Optional.of(platformVoucher("camp-1")));
+        when(promotionCampaignPersistencePort.findById("camp-1")).thenReturn(Optional.of(
                 runningCampaign(new PromotionCondition(new BigDecimal("100000"), List.of(), null, null))));
-        when(userVoucherRepository.findByUserAndCode("user-1", "V-1")).thenReturn(Optional.empty());
-        when(userVoucherRepository.save(any(UserVoucher.class)))
+        when(userVoucherPersistencePort.findByUserAndCode("user-1", "V-1")).thenReturn(Optional.empty());
+        when(userVoucherPersistencePort.save(any(UserVoucher.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         UserVoucherResult result = service().claim(new VoucherCommands.ClaimVoucher("user-1", "V-1"));
@@ -140,12 +140,12 @@ class VoucherServiceTest {
         assertThat(result.voucherCurrency()).isEqualTo("VND");
         assertThat(result.voucherScope()).isEqualTo("PLATFORM");
         assertThat(result.minOrderValue()).isEqualByComparingTo("100000");
-        verify(voucherRepository).save(any(Voucher.class));
+        verify(voucherPersistencePort).save(any(Voucher.class));
     }
 
     @Test
     void claimRejectsUnknownVoucher() {
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.empty());
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.empty());
 
         VoucherService service = service();
         VoucherCommands.ClaimVoucher command = new VoucherCommands.ClaimVoucher("user-1", "V-1");
@@ -158,8 +158,8 @@ class VoucherServiceTest {
 
     @Test
     void claimRejectsSecondClaimBySameUser() {
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
-        when(userVoucherRepository.findByUserAndCode("user-1", "V-1"))
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
+        when(userVoucherPersistencePort.findByUserAndCode("user-1", "V-1"))
                 .thenReturn(Optional.of(claimed()));
 
         VoucherService service = service();
@@ -173,8 +173,8 @@ class VoucherServiceTest {
 
     @Test
     void claimRejectsMissingCampaign() {
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher("camp-1")));
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.empty());
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher("camp-1")));
+        when(promotionCampaignPersistencePort.findById("camp-1")).thenReturn(Optional.empty());
 
         VoucherService service = service();
         VoucherCommands.ClaimVoucher command = new VoucherCommands.ClaimVoucher("user-1", "V-1");
@@ -188,10 +188,10 @@ class VoucherServiceTest {
     @Test
     void reserveUsesDefaultTtlWhenNotProvided() {
         mapperEchoes();
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
-        when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
-        when(userVoucherRepository.findByUserAndCodeForUpdate("user-1", "V-1")).thenReturn(Optional.of(claimed()));
-        when(userVoucherRepository.save(any(UserVoucher.class)))
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
+        when(voucherPersistencePort.findByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
+        when(userVoucherPersistencePort.findByUserAndCodeForUpdate("user-1", "V-1")).thenReturn(Optional.of(claimed()));
+        when(userVoucherPersistencePort.save(any(UserVoucher.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         UserVoucherResult result = service().reserve(new VoucherCommands.ReserveVoucher(
@@ -205,8 +205,8 @@ class VoucherServiceTest {
     void reserveIsIdempotentForTheSameOrder() {
         mapperEchoes();
         Voucher voucher = reservedVoucher(null);
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(voucher));
-        when(userVoucherRepository.findByUserAndCodeForUpdate("user-1", "V-1"))
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(userVoucherPersistencePort.findByUserAndCodeForUpdate("user-1", "V-1"))
                 .thenReturn(Optional.of(reserved("order-1")));
 
         UserVoucherResult result = service().reserve(new VoucherCommands.ReserveVoucher(
@@ -214,13 +214,13 @@ class VoucherServiceTest {
 
         assertThat(result.status()).isEqualTo(UserVoucherStatus.RESERVED.name());
         assertThat(voucher.getReservedCount()).isEqualTo(1);
-        verify(voucherRepository, never()).save(any(Voucher.class));
+        verify(voucherPersistencePort, never()).save(any(Voucher.class));
     }
 
     @Test
     void reserveRejectsWhenCampaignConditionFails() {
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher("camp-1")));
-        when(campaignRepository.findById("camp-1")).thenReturn(Optional.of(
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher("camp-1")));
+        when(promotionCampaignPersistencePort.findById("camp-1")).thenReturn(Optional.of(
                 runningCampaign(new PromotionCondition(new BigDecimal("500000"), List.of(), null, null))));
 
         VoucherService service = service();
@@ -235,8 +235,8 @@ class VoucherServiceTest {
 
     @Test
     void reserveRejectsWhenUserHasNotClaimed() {
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
-        when(userVoucherRepository.findByUserAndCodeForUpdate("user-1", "V-1")).thenReturn(Optional.empty());
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
+        when(userVoucherPersistencePort.findByUserAndCodeForUpdate("user-1", "V-1")).thenReturn(Optional.empty());
 
         VoucherService service = service();
         VoucherCommands.ReserveVoucher command = new VoucherCommands.ReserveVoucher(
@@ -252,12 +252,12 @@ class VoucherServiceTest {
     void applyConsumesCampaignBudget() {
         mapperEchoes();
         PromotionCampaign campaign = runningCampaign(null);
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher("camp-1")));
-        when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(platformVoucher("camp-1")));
-        when(campaignRepository.findByIdForUpdate("camp-1")).thenReturn(Optional.of(campaign));
-        when(userVoucherRepository.findByUserAndCodeForUpdate("user-1", "V-1"))
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher("camp-1")));
+        when(voucherPersistencePort.findByCode("V-1")).thenReturn(Optional.of(platformVoucher("camp-1")));
+        when(promotionCampaignPersistencePort.findByIdForUpdate("camp-1")).thenReturn(Optional.of(campaign));
+        when(userVoucherPersistencePort.findByUserAndCodeForUpdate("user-1", "V-1"))
                 .thenReturn(Optional.of(reserved("order-1")));
-        when(userVoucherRepository.save(any(UserVoucher.class)))
+        when(userVoucherPersistencePort.save(any(UserVoucher.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         UserVoucherResult result = service().apply(new VoucherCommands.ApplyVoucher(
@@ -265,17 +265,17 @@ class VoucherServiceTest {
 
         assertThat(result.status()).isEqualTo(UserVoucherStatus.APPLIED.name());
         assertThat(campaign.getBudgetRemaining().amount()).isEqualByComparingTo("950000");
-        verify(campaignRepository).save(campaign);
+        verify(promotionCampaignPersistencePort).save(campaign);
     }
 
     @Test
     void applyFallsBackToVoucherCurrency() {
         mapperEchoes();
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher(null)));
-        when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
-        when(userVoucherRepository.findByUserAndCodeForUpdate("user-1", "V-1"))
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher(null)));
+        when(voucherPersistencePort.findByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
+        when(userVoucherPersistencePort.findByUserAndCodeForUpdate("user-1", "V-1"))
                 .thenReturn(Optional.of(reserved("order-1")));
-        when(userVoucherRepository.save(any(UserVoucher.class)))
+        when(userVoucherPersistencePort.save(any(UserVoucher.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         UserVoucherResult result = service().apply(new VoucherCommands.ApplyVoucher(
@@ -286,8 +286,8 @@ class VoucherServiceTest {
 
     @Test
     void applyRejectsWhenReservedByAnotherOrder() {
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher(null)));
-        when(userVoucherRepository.findByUserAndCodeForUpdate("user-1", "V-1"))
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher(null)));
+        when(userVoucherPersistencePort.findByUserAndCodeForUpdate("user-1", "V-1"))
                 .thenReturn(Optional.of(reserved("order-other")));
 
         VoucherService service = service();
@@ -303,11 +303,11 @@ class VoucherServiceTest {
     @Test
     void releaseClearsReservation() {
         mapperEchoes();
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher(null)));
-        when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
-        when(userVoucherRepository.findByUserAndCodeForUpdate("user-1", "V-1"))
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher(null)));
+        when(voucherPersistencePort.findByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
+        when(userVoucherPersistencePort.findByUserAndCodeForUpdate("user-1", "V-1"))
                 .thenReturn(Optional.of(reserved("order-1")));
-        when(userVoucherRepository.save(any(UserVoucher.class)))
+        when(userVoucherPersistencePort.save(any(UserVoucher.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         UserVoucherResult result = service().release(new VoucherCommands.ReleaseVoucher(
@@ -319,8 +319,8 @@ class VoucherServiceTest {
 
     @Test
     void releaseRejectsWhenOrderDoesNotMatch() {
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher(null)));
-        when(userVoucherRepository.findByUserAndCodeForUpdate("user-1", "V-1"))
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher(null)));
+        when(userVoucherPersistencePort.findByUserAndCodeForUpdate("user-1", "V-1"))
                 .thenReturn(Optional.of(claimed()));
 
         VoucherService service = service();
@@ -335,49 +335,49 @@ class VoucherServiceTest {
 
     @Test
     void releaseByOrderReturnsZeroWhenNoReservation() {
-        when(userVoucherRepository.findByReservedOrderIdForUpdate("order-1")).thenReturn(Optional.empty());
+        when(userVoucherPersistencePort.findByReservedOrderIdForUpdate("order-1")).thenReturn(Optional.empty());
 
         assertThat(service().releaseByOrder("order-1", "cancelled")).isZero();
-        verify(userVoucherRepository, never()).save(any());
+        verify(userVoucherPersistencePort, never()).save(any());
     }
 
     @Test
     void releaseByOrderReleasesReservation() {
-        when(userVoucherRepository.findByReservedOrderIdForUpdate("order-1"))
+        when(userVoucherPersistencePort.findByReservedOrderIdForUpdate("order-1"))
                 .thenReturn(Optional.of(reserved("order-1")));
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher(null)));
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher(null)));
 
         assertThat(service().releaseByOrder("order-1", "cancelled")).isEqualTo(1);
-        verify(voucherRepository).save(any(Voucher.class));
-        verify(userVoucherRepository).save(any(UserVoucher.class));
+        verify(voucherPersistencePort).save(any(Voucher.class));
+        verify(userVoucherPersistencePort).save(any(UserVoucher.class));
     }
 
     @Test
     void releaseByOrderToleratesMissingVoucher() {
-        when(userVoucherRepository.findByReservedOrderIdForUpdate("order-1"))
+        when(userVoucherPersistencePort.findByReservedOrderIdForUpdate("order-1"))
                 .thenReturn(Optional.of(reserved("order-1")));
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.empty());
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.empty());
 
         assertThat(service().releaseByOrder("order-1", "cancelled")).isEqualTo(1);
-        verify(voucherRepository, never()).save(any());
+        verify(voucherPersistencePort, never()).save(any());
     }
 
     @Test
     void releaseExpiredReservationsSkipsFailures() {
         UserVoucher releasable = reserved("order-1");
         UserVoucher failing = UserVoucher.claim("uv-2", "V-1", "user-1", CLOCK);
-        when(userVoucherRepository.findExpiredReservations(eq(NOW), anyInt()))
+        when(userVoucherPersistencePort.findExpiredReservations(eq(NOW), anyInt()))
                 .thenReturn(List.of(releasable, failing));
-        when(userVoucherRepository.findByIdForUpdate("uv-1")).thenReturn(Optional.of(releasable));
-        when(userVoucherRepository.findByIdForUpdate("uv-2")).thenReturn(Optional.of(failing));
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher(null)));
+        when(userVoucherPersistencePort.findByIdForUpdate("uv-1")).thenReturn(Optional.of(releasable));
+        when(userVoucherPersistencePort.findByIdForUpdate("uv-2")).thenReturn(Optional.of(failing));
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(reservedVoucher(null)));
 
         assertThat(service().releaseExpiredReservations(NOW, 10)).isEqualTo(1);
     }
 
     @Test
     void getMineThrowsWhenMissing() {
-        when(userVoucherRepository.findByUserAndCode("user-1", "V-9")).thenReturn(Optional.empty());
+        when(userVoucherPersistencePort.findByUserAndCode("user-1", "V-9")).thenReturn(Optional.empty());
 
         VoucherService service = service();
 
@@ -390,9 +390,9 @@ class VoucherServiceTest {
     @Test
     void getMineReturnsBaseResultWhenVoucherRowMissing() {
         mapperEchoes();
-        when(userVoucherRepository.findByUserAndCode("user-1", "V-1"))
+        when(userVoucherPersistencePort.findByUserAndCode("user-1", "V-1"))
                 .thenReturn(Optional.of(claimed()));
-        when(voucherRepository.findByCode("V-1")).thenReturn(Optional.empty());
+        when(voucherPersistencePort.findByCode("V-1")).thenReturn(Optional.empty());
 
         UserVoucherResult result = service().getMine("user-1", "V-1");
 
@@ -403,9 +403,9 @@ class VoucherServiceTest {
     @Test
     void listMineMapsEveryUserVoucher() {
         mapperEchoes();
-        when(userVoucherRepository.findByUser("user-1", 50))
+        when(userVoucherPersistencePort.findByUser("user-1", 50))
                 .thenReturn(List.of(claimed(), reserved("order-1")));
-        when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
+        when(voucherPersistencePort.findByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
 
         assertThat(service().listMine("user-1", 50)).hasSize(2);
     }
@@ -414,16 +414,16 @@ class VoucherServiceTest {
     void grantSuccessfullyClaimsNewUserVoucher() {
         mapperEchoes();
         Voucher voucher = platformVoucher(null);
-        when(voucherRepository.lockByCode("LATEDELIVERY15K")).thenReturn(Optional.of(voucher));
-        when(voucherRepository.findByCode("LATEDELIVERY15K")).thenReturn(Optional.of(voucher));
-        when(userVoucherRepository.findByUserAndCode("user-1", "LATEDELIVERY15K")).thenReturn(Optional.empty());
-        when(userVoucherRepository.save(any(UserVoucher.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(voucherPersistencePort.lockByCode("LATEDELIVERY15K")).thenReturn(Optional.of(voucher));
+        when(voucherPersistencePort.findByCode("LATEDELIVERY15K")).thenReturn(Optional.of(voucher));
+        when(userVoucherPersistencePort.findByUserAndCode("user-1", "LATEDELIVERY15K")).thenReturn(Optional.empty());
+        when(userVoucherPersistencePort.save(any(UserVoucher.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UserVoucherResult result = service().grant(new VoucherCommands.GrantVoucher("user-1", "LATEDELIVERY15K", "compensation"));
 
         assertThat(result.voucherCode()).isEqualTo("LATEDELIVERY15K");
         assertThat(result.userId()).isEqualTo("user-1");
-        verify(userVoucherRepository).save(any(UserVoucher.class));
+        verify(userVoucherPersistencePort).save(any(UserVoucher.class));
     }
 
     @Test
@@ -431,14 +431,14 @@ class VoucherServiceTest {
         mapperEchoes();
         Voucher voucher = platformVoucher(null);
         UserVoucher existing = claimed();
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(voucher));
-        when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(voucher));
-        when(userVoucherRepository.findByUserAndCode("user-1", "V-1")).thenReturn(Optional.of(existing));
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(voucherPersistencePort.findByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(userVoucherPersistencePort.findByUserAndCode("user-1", "V-1")).thenReturn(Optional.of(existing));
 
         UserVoucherResult result = service().grant(new VoucherCommands.GrantVoucher("user-1", "V-1", "compensation"));
 
         assertThat(result.voucherCode()).isEqualTo("V-1");
-        verify(userVoucherRepository, never()).save(any(UserVoucher.class));
+        verify(userVoucherPersistencePort, never()).save(any(UserVoucher.class));
     }
 
     @Test
@@ -448,14 +448,14 @@ class VoucherServiceTest {
         mapperEchoes();
         Voucher voucher = platformVoucher(null);
         UserVoucher applied = applied("order-1", Money.of(new BigDecimal("15000"), "VND"));
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(voucher));
-        when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(voucher));
-        when(userVoucherRepository.findByUserAndCode("user-1", "V-1")).thenReturn(Optional.of(applied));
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(voucherPersistencePort.findByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(userVoucherPersistencePort.findByUserAndCode("user-1", "V-1")).thenReturn(Optional.of(applied));
 
         UserVoucherResult result = service().grant(new VoucherCommands.GrantVoucher("user-1", "V-1", "new late delivery"));
 
         assertThat(result.status()).isEqualTo("APPLIED");
-        verify(userVoucherRepository, never()).save(any(UserVoucher.class));
+        verify(userVoucherPersistencePort, never()).save(any(UserVoucher.class));
     }
 
     @Test
@@ -463,18 +463,18 @@ class VoucherServiceTest {
         // Two different late orders grant two independent vouchers for the same code.
         mapperEchoes();
         Voucher voucher = platformVoucher(null);
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(voucher));
-        when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(voucher));
-        when(userVoucherRepository.findByUserAndCodeAndEntitlement("user-1", "V-1", "order-1"))
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(voucherPersistencePort.findByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(userVoucherPersistencePort.findByUserAndCodeAndEntitlement("user-1", "V-1", "order-1"))
                 .thenReturn(Optional.empty());
-        when(userVoucherRepository.findByUserAndCodeAndEntitlement("user-1", "V-1", "order-2"))
+        when(userVoucherPersistencePort.findByUserAndCodeAndEntitlement("user-1", "V-1", "order-2"))
                 .thenReturn(Optional.empty());
-        when(userVoucherRepository.save(any(UserVoucher.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userVoucherPersistencePort.save(any(UserVoucher.class))).thenAnswer(inv -> inv.getArgument(0));
 
         service().grant(new VoucherCommands.GrantVoucher("user-1", "V-1", "late 1", "order-1"));
         service().grant(new VoucherCommands.GrantVoucher("user-1", "V-1", "late 2", "order-2"));
 
-        verify(userVoucherRepository, Mockito.times(2)).save(any(UserVoucher.class));
+        verify(userVoucherPersistencePort, Mockito.times(2)).save(any(UserVoucher.class));
     }
 
     @Test
@@ -483,14 +483,14 @@ class VoucherServiceTest {
         mapperEchoes();
         Voucher voucher = platformVoucher(null);
         UserVoucher existing = claimed();
-        when(voucherRepository.lockByCode("V-1")).thenReturn(Optional.of(voucher));
-        when(voucherRepository.findByCode("V-1")).thenReturn(Optional.of(voucher));
-        when(userVoucherRepository.findByUserAndCodeAndEntitlement("user-1", "V-1", "order-1"))
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(voucherPersistencePort.findByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(userVoucherPersistencePort.findByUserAndCodeAndEntitlement("user-1", "V-1", "order-1"))
                 .thenReturn(Optional.of(existing));
 
         UserVoucherResult result = service().grant(new VoucherCommands.GrantVoucher("user-1", "V-1", "late", "order-1"));
 
         assertThat(result.voucherCode()).isEqualTo("V-1");
-        verify(userVoucherRepository, never()).save(any(UserVoucher.class));
+        verify(userVoucherPersistencePort, never()).save(any(UserVoucher.class));
     }
 }

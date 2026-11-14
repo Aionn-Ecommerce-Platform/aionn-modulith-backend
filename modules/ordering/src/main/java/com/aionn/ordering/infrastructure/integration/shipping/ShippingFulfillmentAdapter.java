@@ -46,6 +46,26 @@ public class ShippingFulfillmentAdapter implements ShippingGateway {
                 .toList();
     }
 
+    @Override
+    public boolean hasPickedUpShipment(String orderId) {
+        return shippingFulfillmentPort.hasPickedUpShipment(orderId);
+    }
+
+    @Override
+    public boolean hasActiveShipment(String orderId) {
+        return shippingFulfillmentPort.hasActiveShipment(orderId);
+    }
+
+    @Override
+    public boolean hasUnregisteredShipment(String orderId) {
+        return shippingFulfillmentPort.hasUnregisteredShipment(orderId);
+    }
+
+    @Override
+    public boolean allShipmentsDelivered(String orderId) {
+        return shippingFulfillmentPort.allShipmentsDelivered(orderId);
+    }
+
     private List<ShippingFulfillmentPort.Parcel> toPortParcels(List<Parcel> parcels) {
         if (parcels == null) {
             return List.of();

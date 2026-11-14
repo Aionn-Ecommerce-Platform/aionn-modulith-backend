@@ -54,7 +54,7 @@ class AgentServiceTest {
 
     @Test
     void createSavesAgentWithExpectedFieldsAndReturnsRawKeyOnce() {
-        when(agentPolicy.getKeyExpiryYears()).thenReturn(1);
+        when(agentPolicy.keyExpiryYears()).thenReturn(1);
         when(agentPersistencePort.save(any(AgentIdentity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -134,7 +134,7 @@ class AgentServiceTest {
     void getAgentAuditLogsUsesConfiguredLimit() {
         when(agentPersistencePort.findByIdAndOwnerId(AGENT_ID, OWNER_ID))
                 .thenReturn(Optional.of(baseAgent()));
-        when(agentPolicy.getAuditLogLimit()).thenReturn(50);
+        when(agentPolicy.auditLogLimit()).thenReturn(50);
         when(agentAuditPort.findByAgentId(AGENT_ID, 50)).thenReturn(List.of());
 
         agentService.getAgentAuditLogs(OWNER_ID, AGENT_ID);

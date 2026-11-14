@@ -1,9 +1,9 @@
 package com.aionn.shipping.adapter.rest.controller;
 
-import com.aionn.shipping.adapter.rest.dto.shipment.CancelShipmentRequest;
-import com.aionn.shipping.adapter.rest.dto.shipment.CreateShipmentRequest;
-import com.aionn.shipping.adapter.rest.dto.shipment.QuoteShippingRequest;
-import com.aionn.shipping.adapter.rest.dto.shipment.ResolveIssueRequest;
+import com.aionn.shipping.adapter.rest.dto.shipment.request.CancelShipmentRequest;
+import com.aionn.shipping.adapter.rest.dto.shipment.request.CreateShipmentRequest;
+import com.aionn.shipping.adapter.rest.dto.shipment.request.QuoteShippingRequest;
+import com.aionn.shipping.adapter.rest.dto.shipment.request.ResolveIssueRequest;
 import com.aionn.shipping.adapter.rest.dto.shipment.response.ShipmentResponse;
 import com.aionn.shipping.adapter.rest.dto.rate.response.ShippingQuoteResponse;
 import com.aionn.shipping.adapter.rest.mapper.shipment.ShipmentDtoMapper;
@@ -11,7 +11,6 @@ import com.aionn.shipping.adapter.rest.mapper.rate.ShippingRateDtoMapper;
 import com.aionn.shipping.adapter.rest.support.session.CurrentUserId;
 import com.aionn.shipping.application.dto.shipment.command.CancelShipmentCommand;
 import com.aionn.shipping.application.dto.shipment.command.CreateShipmentCommand;
-import com.aionn.shipping.application.dto.shipment.command.FetchLabelCommand;
 import com.aionn.shipping.application.dto.shipment.command.QuoteShippingCommand;
 import com.aionn.shipping.application.dto.shipment.command.ResolveIssueCommand;
 import com.aionn.shipping.application.dto.rate.result.ShippingQuoteResult;
@@ -67,9 +66,7 @@ public class ShipmentController {
                                 + "items carry skuId+qty, parcel dims are resolved from the catalog server-side")
         public ResponseEntity<ApiResponse<ShippingQuoteResponse>> quote(
                         @Valid @RequestBody QuoteShippingRequest request) {
-                List<QuoteShippingUseCase.ItemRequest> items = request.items().stream()
-                                .map(i -> new QuoteShippingUseCase.ItemRequest(i.skuId(), i.qty()))
-                                .toList();
+                List<QuoteShippingUseCase.ItemRequest> items = shipmentDtoMapper.toQuoteItems(request);
                 ShippingQuoteResult result = quoteShippingInputPort.executeForItems(
                                 request.orderId(), request.address(), items, request.goodsSubtotal(),
                                 request.currency());
@@ -84,13 +81,9 @@ public class ShipmentController {
         public ResponseEntity<ApiResponse<ShipmentResponse>> create(
                         @CurrentUserId String ownerId,
                         @Valid @RequestBody CreateShipmentRequest request) {
-                List<ParcelResolver.Item> items = request.items().stream()
-                                .map(i -> new ParcelResolver.Item(i.skuId(), i.qty()))
-                                .toList();
+                List<ParcelResolver.Item> items = shipmentDtoMapper.toParcelItems(request);
                 List<QuoteShippingCommand.Parcel> parcels = parcelResolver.resolveParcels(items);
-                CreateShipmentCommand command = new CreateShipmentCommand(
-                                request.orderId(), null, ownerId, request.userId(), request.address(), parcels,
-                                request.codAmount(), request.shippingFee(), request.currency());
+                CreateShipmentCommand command = shipmentDtoMapper.toCreateShipmentCommand(ownerId, request, parcels);
                 return ApiResponse.createdResponse("Shipment created",
                                 shipmentDtoMapper.toResponse(createShipmentInputPort.execute(command)));
         }
@@ -113,7 +106,7 @@ public class ShipmentController {
         public ResponseEntity<ApiResponse<ShipmentResponse>> fetchLabel(
                         @CurrentUserId String userId,
                         @PathVariable String shipmentId) {
-                ShipmentResult result = fetchLabelInputPort.execute(new FetchLabelCommand(shipmentId, userId));
+                ShipmentResult result = fetchLabelInputPort.execute(shipmentDtoMapper.toFetchLabelCommand(shipmentId, userId));
                 return ResponseEntity.ok(ApiResponse.success(
                                 shipmentDtoMapper.toResponse(result),
                                 "Label fetched"));

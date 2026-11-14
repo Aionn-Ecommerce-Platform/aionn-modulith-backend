@@ -1,11 +1,16 @@
--- Ordering Demo Seed Data (Pure INSERTs)
-
 INSERT INTO orders (
     order_id, user_id, merchant_id, currency, total_amount, shipping_fee, payment_id,
     address_full_name, address_phone, address_line, address_ward_code,
     address_district_code, address_province_code, address_country_code,
-    status, version, created_at, updated_at, completed_at
-) VALUES
+    status, version, created_at, updated_at, completed_at, payment_method_id
+)
+SELECT seed.order_id, seed.user_id, seed.merchant_id, seed.currency, seed.total_amount, seed.shipping_fee, seed.payment_id,
+       CASE WHEN seed.address_full_name LIKE 'Customer %' THEN u.display_name ELSE seed.address_full_name END,
+       seed.address_phone, seed.address_line, seed.address_ward_code,
+       seed.address_district_code, seed.address_province_code, seed.address_country_code,
+       seed.status, seed.version, seed.created_at, seed.updated_at, seed.completed_at,
+       'STRIPE'
+FROM (VALUES
 ('01M74HC1K71TQFEZWD8RPM3TS1', '01KV05RTDQF9DY4Z46RAP1775R', '01M74HBREYHVRKRQRRFATMWBRG', 'VND', 3280000.00, 30000.00, '01M74HC1K84CAYQT0C6C2AJ32S', 'Customer buyer_049', '+8490100049', '15 Trần Phú', 'VN-KH-NT-LP', 'VN-KH-NT', 'VN-KH', 'VN', 'COMPLETED', 0, NOW() - INTERVAL '86 days', NOW() - INTERVAL '86 days', NOW() - INTERVAL '83 days'),
 ('01M74HC1K9J0EZV6RP90FYE800', '01KV05RTFZKRM40PK3X532GXRB', '01M74HBREYHVRKRQRRFATMWBRG', 'VND', 2510000.00, 30000.00, '01M74HC1KA5VK7TV7F2XJFEG9Q', 'Customer cs_admin_05', '+849030005', '89 Đồng Khởi', 'VN-DN-BH-TB', 'VN-DN-BH', 'VN-DN', 'VN', 'COMPLETED', 0, NOW() - INTERVAL '46 days', NOW() - INTERVAL '46 days', NOW() - INTERVAL '43 days'),
 ('01M74HC1KBDNHV75T87W5AR93F', '01KV05RTG396VJVNRN276GRD7R', '01M74HBREYHVRKRQRRFATMWBRG', 'VND', 2630000.00, 30000.00, '01M74HC1KCQ6NQP5H18M9HW1NM', 'Customer sys_admin_04', '+849040004', '45 Lê Lợi', 'VN-SG-Q1-BT', 'VN-SG-Q1', 'VN-SG', 'VN', 'COMPLETED', 0, NOW() - INTERVAL '64 days', NOW() - INTERVAL '64 days', NOW() - INTERVAL '61 days'),
@@ -24250,7 +24255,9 @@ INSERT INTO orders (
 ('01M74HBWRE0P9PCV5VPY7J8QT5', '01KV05RTDGV45BCNP802KZV707', '01M74HBRF6TJ9HYR3WBQCAD9HV', 'VND', 1310000.00, 30000.00, '01M74HDEJXJ7ZQT45FP2ZZ530S', 'Customer buyer_042', '+8490100042', '78 Trần Hưng Đạo', 'VN-HN-HK-HT', 'VN-HN-HK', 'VN-HN', 'VN', 'COMPLETED', 0, NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days', NOW() - INTERVAL '5 days'),
 ('01M74HBXA3BNA56KZKS4KZ52YD', '01KV05RTDW24MVZDJ67AGQ0QER', '01M74HBRF6TJ9HYR3WBQCAD9HV', 'VND', 170000.00, 30000.00, '01M74HDEJYNCJQ3MN2BEQ359ZX', 'Customer buyer_054', '+8490100054', '67 Đại lộ Bình Dương', 'VN-BD-TDM-PM', 'VN-BD-TDM', 'VN-BD', 'VN', 'COMPLETED', 0, NOW() - INTERVAL '31 days', NOW() - INTERVAL '31 days', NOW() - INTERVAL '29 days'),
 ('01M74HBWP8ZM4ETM8Z5ZBFC3HV', '01KV05RTDE1WS0EK0VE0ER2SE7', '01M74HBRF7ZEBJ9H42NXPDZMRN', 'VND', 670000.00, 30000.00, '01M74HDEJZ153PDESHWCWTCPFB', 'Customer buyer_040', '+8490100040', '12 Hàng Bông', 'VN-HN-HK-HB', 'VN-HN-HK', 'VN-HN', 'VN', 'COMPLETED', 0, NOW() - INTERVAL '86 days', NOW() - INTERVAL '86 days', NOW() - INTERVAL '83 days'),
-('01M74HBZVW915BWF6S44SB32T3', '01KV05RTFPWNS3N0WXRWQSFQ4T', '01M74HBRF7ZEBJ9H42NXPDZMRN', 'VND', 670000.00, 30000.00, '01M74HDEK042B1PFBTK2FDWH9H', 'Customer merchant_011', '+8490200011', '67 Đại lộ Bình Dương', 'VN-BD-TDM-PM', 'VN-BD-TDM', 'VN-BD', 'VN', 'COMPLETED', 0, NOW() - INTERVAL '56 days', NOW() - INTERVAL '56 days', NOW() - INTERVAL '54 days');
+('01M74HBZVW915BWF6S44SB32T3', '01KV05RTFPWNS3N0WXRWQSFQ4T', '01M74HBRF7ZEBJ9H42NXPDZMRN', 'VND', 670000.00, 30000.00, '01M74HDEK042B1PFBTK2FDWH9H', 'Customer merchant_011', '+8490200011', '67 Đại lộ Bình Dương', 'VN-BD-TDM-PM', 'VN-BD-TDM', 'VN-BD', 'VN', 'COMPLETED', 0, NOW() - INTERVAL '56 days', NOW() - INTERVAL '56 days', NOW() - INTERVAL '54 days'))
+AS seed(order_id, user_id, merchant_id, currency, total_amount, shipping_fee, payment_id, address_full_name, address_phone, address_line, address_ward_code, address_district_code, address_province_code, address_country_code, status, version, created_at, updated_at, completed_at)
+LEFT JOIN users u ON u.user_id = seed.user_id;
 
 INSERT INTO order_items (order_id, sku_id, qty, unit_price, warehouse_id) VALUES
 ('01M74HC1K71TQFEZWD8RPM3TS1', '01M74HBTXVTD354RQC2QV1HYGX', 5, 650000.00, '01M74HC0VG0BJC8BAJAQGTC6H0'),

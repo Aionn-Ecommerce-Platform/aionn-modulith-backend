@@ -40,7 +40,7 @@ class ShopVoucherServiceTest {
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
     @Mock
-    private VoucherPersistencePort voucherRepository;
+    private VoucherPersistencePort voucherPersistencePort;
     @Mock
     private MerchantQueryPort merchantQueryPort;
     @Mock
@@ -53,7 +53,7 @@ class ShopVoucherServiceTest {
     private ShopVoucherService service() {
         org.mockito.Mockito.lenient().when(defaultsPolicy.defaultCurrency()).thenReturn("VND");
         org.mockito.Mockito.lenient().when(limitPolicy.maxListLimit()).thenReturn(100);
-        return new ShopVoucherService(voucherRepository, merchantQueryPort, eventPublisher,
+        return new ShopVoucherService(voucherPersistencePort, merchantQueryPort, eventPublisher,
                 defaultsPolicy, limitPolicy, CLOCK);
     }
 
@@ -72,8 +72,8 @@ class ShopVoucherServiceTest {
     @Test
     void issueNormalisesCodeAndReturnsVoucher() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(voucherRepository.findByCode("SHOP10")).thenReturn(Optional.empty());
-        when(voucherRepository.save(any(Voucher.class)))
+        when(voucherPersistencePort.findByCode("SHOP10")).thenReturn(Optional.empty());
+        when(voucherPersistencePort.save(any(Voucher.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         Voucher issued = service().issue(issueCommand("  shop10 "));
@@ -88,8 +88,8 @@ class ShopVoucherServiceTest {
     @Test
     void issueDefaultsCurrencyToVnd() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(voucherRepository.findByCode("SHOP11")).thenReturn(Optional.empty());
-        when(voucherRepository.save(any(Voucher.class)))
+        when(voucherPersistencePort.findByCode("SHOP11")).thenReturn(Optional.empty());
+        when(voucherPersistencePort.save(any(Voucher.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         Voucher issued = service().issue(new VoucherCommands.IssueShopVoucher("owner-1", "SHOP11",
@@ -101,7 +101,7 @@ class ShopVoucherServiceTest {
     @Test
     void issueRejectsDuplicateCode() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(voucherRepository.findByCode("SHOP10"))
+        when(voucherPersistencePort.findByCode("SHOP10"))
                 .thenReturn(Optional.of(shopVoucher("SHOP10", NOW.plusSeconds(86400))));
 
         ShopVoucherService service = service();
@@ -111,7 +111,7 @@ class ShopVoucherServiceTest {
                 .isInstanceOf(PromotionException.class)
                 .hasFieldOrPropertyWithValue("errorCode",
                         PromotionErrorCode.VOUCHER_DUPLICATE_CODE.getCode());
-        verify(voucherRepository, never()).save(any());
+        verify(voucherPersistencePort, never()).save(any());
     }
 
     @Test
@@ -130,26 +130,26 @@ class ShopVoucherServiceTest {
     @Test
     void listMineResolvesMerchantAndCapsLimit() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(voucherRepository.findByMerchantId("mer-1", 100))
+        when(voucherPersistencePort.findByMerchantId("mer-1", 100))
                 .thenReturn(List.of(shopVoucher("SHOP10", NOW.plusSeconds(86400))));
 
         assertThat(service().listMine("owner-1", 999)).hasSize(1);
-        verify(voucherRepository).findByMerchantId("mer-1", 100);
+        verify(voucherPersistencePort).findByMerchantId("mer-1", 100);
     }
 
     @Test
     void listMineRaisesLimitFloorToOne() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
-        when(voucherRepository.findByMerchantId(eq("mer-1"), anyInt())).thenReturn(List.of());
+        when(voucherPersistencePort.findByMerchantId(eq("mer-1"), anyInt())).thenReturn(List.of());
 
         service().listMine("owner-1", 0);
 
-        verify(voucherRepository).findByMerchantId("mer-1", 1);
+        verify(voucherPersistencePort).findByMerchantId("mer-1", 1);
     }
 
     @Test
     void listByMerchantFiltersExpiredVouchers() {
-        when(voucherRepository.findByMerchantId("mer-1", 20)).thenReturn(List.of(
+        when(voucherPersistencePort.findByMerchantId("mer-1", 20)).thenReturn(List.of(
                 shopVoucher("VALID", NOW.plusSeconds(86400)),
                 shopVoucher("EXPIRED", NOW.minusSeconds(1))));
 

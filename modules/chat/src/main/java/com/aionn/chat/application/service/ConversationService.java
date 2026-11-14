@@ -28,8 +28,8 @@ import java.util.Optional;
 @Transactional
 public class ConversationService {
 
-    private final ConversationPersistencePort conversationRepository;
-    private final MessagePersistencePort messageRepository;
+    private final ConversationPersistencePort conversationPersistencePort;
+    private final MessagePersistencePort messagePersistencePort;
     private final MerchantQueryPort merchantQueryPort;
     private final ChatResultMapper mapper;
     private final EventPublisher eventPublisher;
@@ -42,7 +42,7 @@ public class ConversationService {
     }
 
     public ConversationResult startOrGet(ConversationCommands.StartConversation command) {
-        Optional<Conversation> existing = conversationRepository
+        Optional<Conversation> existing = conversationPersistencePort
                 .findByBuyerAndMerchant(command.buyerId(), command.merchantId());
         if (existing.isPresent()) {
             return toResult(existing.get(), command.startedBy());
@@ -52,7 +52,7 @@ public class ConversationService {
                 command.buyerId(), command.buyerDisplayName(), command.buyerAvatarUrl(),
                 command.merchantId(), command.merchantDisplayName(), command.merchantAvatarUrl(),
                 command.startedBy(), clock);
-        Conversation saved = conversationRepository.save(conversation);
+        Conversation saved = conversationPersistencePort.save(conversation);
         eventPublisher.publish(conversation.pullEvents());
         return toResult(saved, command.startedBy());
     }
@@ -68,7 +68,7 @@ public class ConversationService {
         Conversation conversation = required(command.conversationId());
         String participantId = participantResolver.resolve(command.userId(), conversation);
         conversation.markRead(participantId, clock);
-        Conversation saved = conversationRepository.save(conversation);
+        Conversation saved = conversationPersistencePort.save(conversation);
         eventPublisher.publish(conversation.pullEvents());
         return new ReadReceipt(toResult(saved, participantId), conversation.getConversationId(),
                 participantId, clock.instant());
@@ -78,21 +78,21 @@ public class ConversationService {
         Conversation conversation = required(command.conversationId());
         String participantId = participantResolver.resolve(command.userId(), conversation);
         conversation.archive(participantId, clock);
-        return toResult(conversationRepository.save(conversation), participantId);
+        return toResult(conversationPersistencePort.save(conversation), participantId);
     }
 
     public ConversationResult unarchive(ConversationCommands.Unarchive command) {
         Conversation conversation = required(command.conversationId());
         String participantId = participantResolver.resolve(command.userId(), conversation);
         conversation.unarchive(participantId, clock);
-        return toResult(conversationRepository.save(conversation), participantId);
+        return toResult(conversationPersistencePort.save(conversation), participantId);
     }
 
     public ConversationResult joinSupport(ConversationCommands.JoinSupport command) {
         Conversation conversation = required(command.conversationId());
         conversation.joinSupport(command.supportUserId(), command.displayName(),
                 command.avatarUrl(), clock);
-        return toResult(conversationRepository.save(conversation), command.supportUserId());
+        return toResult(conversationPersistencePort.save(conversation), command.supportUserId());
     }
 
     @Transactional(readOnly = true)
@@ -109,7 +109,7 @@ public class ConversationService {
         Map<String, String> participantByConversation = new LinkedHashMap<>();
         Map<String, MessagePersistencePort.UnreadWindow> windows = unreadWindows(userId, conversations,
                 participantByConversation);
-        Map<String, Long> unread = messageRepository.countUnreadForConversations(windows);
+        Map<String, Long> unread = messagePersistencePort.countUnreadForConversations(windows);
         return conversations.stream()
                 .map(conversation -> mapper.toResult(
                         conversation,
@@ -121,11 +121,11 @@ public class ConversationService {
     @Transactional(readOnly = true)
     public Map<String, Long> getUnreadCounts(String userId) {
         List<Conversation> conversations = participantConversations(userId, false,
-                conversationPolicy.getUnreadScanLimit());
+                conversationPolicy.unreadScanLimit());
         Map<String, String> participantByConversation = new LinkedHashMap<>();
         Map<String, MessagePersistencePort.UnreadWindow> windows = unreadWindows(userId, conversations,
                 participantByConversation);
-        Map<String, Long> counts = messageRepository.countUnreadForConversations(windows);
+        Map<String, Long> counts = messagePersistencePort.countUnreadForConversations(windows);
         Map<String, Long> result = new LinkedHashMap<>();
         for (Conversation conversation : conversations) {
             String id = conversation.getConversationId();
@@ -150,11 +150,11 @@ public class ConversationService {
 
     private List<Conversation> participantConversations(String userId, boolean includeArchived, int limit) {
         String merchantId = participantResolver.merchantIdOrNull(userId);
-        return conversationRepository.findByParticipant(userId, merchantId, includeArchived, limit);
+        return conversationPersistencePort.findByParticipant(userId, merchantId, includeArchived, limit);
     }
 
     private Conversation required(String conversationId) {
-        return conversationRepository.findById(conversationId)
+        return conversationPersistencePort.findById(conversationId)
                 .orElseThrow(() -> new ChatException(ChatErrorCode.CONVERSATION_NOT_FOUND));
     }
 
@@ -166,6 +166,6 @@ public class ConversationService {
     private long unreadFor(Conversation conversation, String participantId) {
         Instant lastRead = conversation.participantLastReadMap().get(participantId);
         Instant since = lastRead == null ? conversation.getCreatedAt() : lastRead;
-        return messageRepository.countUnread(conversation.getConversationId(), participantId, since);
+        return messagePersistencePort.countUnread(conversation.getConversationId(), participantId, since);
     }
 }

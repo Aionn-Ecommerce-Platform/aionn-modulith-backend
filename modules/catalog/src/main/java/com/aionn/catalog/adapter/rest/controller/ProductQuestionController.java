@@ -1,10 +1,13 @@
 package com.aionn.catalog.adapter.rest.controller;
 
+import com.aionn.catalog.adapter.rest.dto.question.request.AnswerQuestionRequest;
+import com.aionn.catalog.adapter.rest.dto.question.request.AskQuestionRequest;
+import com.aionn.catalog.adapter.rest.dto.question.response.ProductQuestionResponse;
+import com.aionn.catalog.adapter.rest.mapper.question.ProductQuestionDtoMapper;
 import com.aionn.catalog.adapter.rest.support.session.CurrentMerchantId;
 import com.aionn.catalog.adapter.rest.support.session.CurrentOwnerId;
-import com.aionn.catalog.application.port.out.merchant.ProductQuestionPersistencePort;
+import com.aionn.catalog.application.dto.question.result.ProductQuestionResult;
 import com.aionn.catalog.application.service.ProductQuestionService;
-import com.aionn.contracts.port.identity.UserProfileLookupPort;
 import com.aionn.platform.web.response.ApiResponse;
 import com.aionn.platform.web.response.PageMetadata;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,8 +15,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,12 +27,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.Instant;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/catalog")
@@ -40,7 +36,7 @@ import java.util.stream.Collectors;
 public class ProductQuestionController {
 
     private final ProductQuestionService questionService;
-    private final UserProfileLookupPort userProfileLookupPort;
+    private final ProductQuestionDtoMapper questionDtoMapper;
 
     @GetMapping("/products/{productId}/questions")
     @Operation(summary = "List product questions")
@@ -50,7 +46,7 @@ public class ProductQuestionController {
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         ProductQuestionService.QuestionPage result = questionService.listByProduct(productId, page, size);
         return ResponseEntity.ok(ApiResponse.successWithPaging(
-                toResponses(result.content()),
+                questionDtoMapper.toResponses(result.content()),
                 PageMetadata.of(page, size, result.totalElements()),
                 "Questions fetched"));
     }
@@ -62,9 +58,9 @@ public class ProductQuestionController {
             @CurrentOwnerId String userId,
             @PathVariable String productId,
             @Valid @RequestBody AskQuestionRequest request) {
-        var question = questionService.ask(userId, productId, request.question());
+        ProductQuestionResult question = questionService.ask(userId, productId, request.question());
         return ResponseEntity.ok(ApiResponse.success(
-                toResponses(List.of(question)).get(0), "Question submitted"));
+                questionDtoMapper.toResponse(question), "Question submitted"));
     }
 
     @DeleteMapping("/questions/{questionId}")
@@ -84,9 +80,9 @@ public class ProductQuestionController {
             @CurrentMerchantId String merchantId,
             @PathVariable String questionId,
             @Valid @RequestBody AnswerQuestionRequest request) {
-        var question = questionService.answer(merchantId, questionId, request.answer());
+        ProductQuestionResult question = questionService.answer(merchantId, questionId, request.answer());
         return ResponseEntity.ok(ApiResponse.success(
-                toResponses(List.of(question)).get(0), "Answer submitted"));
+                questionDtoMapper.toResponse(question), "Answer submitted"));
     }
 
     @GetMapping("/merchant/questions")
@@ -100,57 +96,8 @@ public class ProductQuestionController {
         ProductQuestionService.QuestionPage result =
                 questionService.listByMerchant(merchantId, answered, page, size);
         return ResponseEntity.ok(ApiResponse.successWithPaging(
-                toResponses(result.content()),
+                questionDtoMapper.toResponses(result.content()),
                 PageMetadata.of(page, size, result.totalElements()),
                 "Questions fetched"));
-    }
-
-    private List<ProductQuestionResponse> toResponses(List<ProductQuestionPersistencePort.Question> questions) {
-        Set<String> userIds = questions.stream()
-                .map(ProductQuestionPersistencePort.Question::userId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-        Map<String, UserProfileLookupPort.UserProfile> profiles = userIds.isEmpty()
-                ? Map.of()
-                : userProfileLookupPort.findProfiles(userIds);
-        return questions.stream()
-                .map(question -> {
-                    var profile = profiles.get(question.userId());
-                    return new ProductQuestionResponse(
-                            question.questionId(),
-                            question.productId(),
-                            question.userId(),
-                            question.question(),
-                            question.answer(),
-                            question.answeredBy(),
-                            question.answeredAt(),
-                            question.createdAt(),
-                            profile == null ? null : profile.username(),
-                            profile == null ? null : profile.displayName(),
-                            profile == null ? null : profile.avatarUrl());
-                })
-                .toList();
-    }
-
-    public record AskQuestionRequest(
-            @NotBlank @Size(min = 5, max = 2000) String question) {
-    }
-
-    public record AnswerQuestionRequest(
-            @NotBlank @Size(min = 1, max = 2000) String answer) {
-    }
-
-    public record ProductQuestionResponse(
-            String questionId,
-            String productId,
-            String userId,
-            String question,
-            String answer,
-            String answeredBy,
-            Instant answeredAt,
-            Instant createdAt,
-            String userName,
-            String userDisplayName,
-            String userAvatarUrl) {
     }
 }

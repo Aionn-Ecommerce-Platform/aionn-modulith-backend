@@ -44,10 +44,10 @@ import java.util.function.Supplier;
 @Service
 public class PaymentService {
 
-    private final PaymentPersistencePort paymentRepository;
-    private final PaymentMethodPersistencePort paymentMethodRepository;
-    private final TransactionLedgerPersistencePort ledgerRepository;
-    private final RefundOperationPersistencePort refundOperationRepository;
+    private final PaymentPersistencePort paymentPersistencePort;
+    private final PaymentMethodPersistencePort paymentMethodPersistencePort;
+    private final TransactionLedgerPersistencePort transactionLedgerPersistencePort;
+    private final RefundOperationPersistencePort refundOperationPersistencePort;
     private final PaymentProviderRouter providerRouter;
     private final InvoiceStorage invoiceStorage;
     private final EventPublisher eventPublisher;
@@ -56,18 +56,18 @@ public class PaymentService {
     private final Clock clock;
     private final TransactionTemplate transactionTemplate;
 
-    public PaymentService(PaymentPersistencePort paymentRepository,
-            PaymentMethodPersistencePort paymentMethodRepository,
-            TransactionLedgerPersistencePort ledgerRepository, PaymentProviderRouter providerRouter,
-            RefundOperationPersistencePort refundOperationRepository,
+    public PaymentService(PaymentPersistencePort paymentPersistencePort,
+            PaymentMethodPersistencePort paymentMethodPersistencePort,
+            TransactionLedgerPersistencePort transactionLedgerPersistencePort, PaymentProviderRouter providerRouter,
+            RefundOperationPersistencePort refundOperationPersistencePort,
             InvoiceStorage invoiceStorage, EventPublisher eventPublisher,
             PaymentIntegrationEventPublisherPort integrationEventPublisher,
             OrderQueryPort orderQueryPort, Clock clock,
             TransactionTemplate transactionTemplate) {
-        this.paymentRepository = paymentRepository;
-        this.paymentMethodRepository = paymentMethodRepository;
-        this.ledgerRepository = ledgerRepository;
-        this.refundOperationRepository = refundOperationRepository;
+        this.paymentPersistencePort = paymentPersistencePort;
+        this.paymentMethodPersistencePort = paymentMethodPersistencePort;
+        this.transactionLedgerPersistencePort = transactionLedgerPersistencePort;
+        this.refundOperationPersistencePort = refundOperationPersistencePort;
         this.providerRouter = providerRouter;
         this.invoiceStorage = invoiceStorage;
         this.eventPublisher = eventPublisher;
@@ -79,7 +79,7 @@ public class PaymentService {
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public PaymentInitiation initiate(InitiatePaymentCommand command) {
-        var existing = inTransaction(() -> paymentRepository.findByIdempotencyKey(command.idempotencyKey()));
+        var existing = inTransaction(() -> paymentPersistencePort.findByIdempotencyKey(command.idempotencyKey()));
         if (existing.isPresent()) {
             return replayInitiation(existing.get(), command);
         }
@@ -90,7 +90,7 @@ public class PaymentService {
 
         // A new idempotency key must not create a second charge for an order that
         // is already paid; return the successful payment instead.
-        var alreadyPaid = paymentRepository.findByOrderId(command.orderId()).stream()
+        var alreadyPaid = paymentPersistencePort.findByOrderId(command.orderId()).stream()
                 .filter(p -> p.getStatus() == PaymentStatus.PAID)
                 .findFirst();
         if (alreadyPaid.isPresent()) {
@@ -98,7 +98,7 @@ public class PaymentService {
         }
 
         PaymentMethod method = command.paymentMethodId() == null ? null : inTransaction(() -> {
-            PaymentMethod selected = paymentMethodRepository.findById(command.paymentMethodId())
+            PaymentMethod selected = paymentMethodPersistencePort.findById(command.paymentMethodId())
                     .orElseThrow(() -> new PaymentException(PaymentErrorCode.METHOD_NOT_FOUND));
             selected.ensureOwnedBy(command.userId());
             if (selected.getStatus() != PaymentMethodStatus.VERIFIED) {
@@ -114,7 +114,7 @@ public class PaymentService {
         Payment saved;
         try {
             saved = inTransaction(() -> {
-                Payment persisted = paymentRepository.save(payment);
+                Payment persisted = paymentPersistencePort.save(payment);
                 eventPublisher.publish(payment.pullEvents());
                 return persisted;
             });
@@ -122,7 +122,7 @@ public class PaymentService {
             // Two requests with the same idempotency key raced past the initial
             // lookup. The unique payments.idempotency_key index lets exactly one
             // insert win; the loser must return the winner instead of failing.
-            Payment winner = inTransaction(() -> paymentRepository.findByIdempotencyKey(command.idempotencyKey()))
+            Payment winner = inTransaction(() -> paymentPersistencePort.findByIdempotencyKey(command.idempotencyKey()))
                     .orElseThrow(() -> duplicateKey);
             log.info("Idempotent payment initiation replayed after a concurrent insert key={} payment={}",
                     command.idempotencyKey(), winner.getPaymentId());
@@ -194,20 +194,20 @@ public class PaymentService {
         // Row lock serialises concurrent gateway webhooks for the same payment.
         // The PAID re-check happens under the lock, so only the first caller
         // writes a CREDIT entry; the rest observe PAID and become no-ops.
-        Payment payment = paymentRepository.lockById(command.paymentId())
+        Payment payment = paymentPersistencePort.lockById(command.paymentId())
                 .orElseThrow(() -> new PaymentException(PaymentErrorCode.PAYMENT_NOT_FOUND));
         if (payment.getStatus().name().equals("PAID")) {
             return new Confirmation(payment, false);
         }
         Instant now = clock.instant();
         payment.markPaid(command.transactionNo(), now);
-        Payment saved = paymentRepository.save(payment);
+        Payment saved = paymentPersistencePort.save(payment);
         eventPublisher.publish(payment.pullEvents());
 
         TransactionLedger entry = TransactionLedger.record(IdGenerator.ulid(),
                 saved.getPaymentId(), saved.getAmount(), LedgerEntryType.CREDIT,
                 saved.getGateway().name(), command.transactionNo(), now);
-        ledgerRepository.save(entry);
+        transactionLedgerPersistencePort.save(entry);
         eventPublisher.publish(entry.pullEvents());
 
         return new Confirmation(saved, true);
@@ -216,7 +216,7 @@ public class PaymentService {
     private Payment attachInvoice(String paymentId, String invoiceUrl) {
         Payment payment = required(paymentId);
         payment.attachInvoice(invoiceUrl, clock.instant());
-        Payment saved = paymentRepository.save(payment);
+        Payment saved = paymentPersistencePort.save(payment);
         eventPublisher.publish(payment.pullEvents());
         return saved;
     }
@@ -229,7 +229,7 @@ public class PaymentService {
     private Payment failInTransaction(FailPaymentCommand command) {
         // Lock the row for the same reason confirmInTransaction does: a failure
         // webhook racing a capture must not overwrite PAID with FAILED.
-        Payment payment = paymentRepository.lockById(command.paymentId())
+        Payment payment = paymentPersistencePort.lockById(command.paymentId())
                 .orElseThrow(() -> new PaymentException(PaymentErrorCode.PAYMENT_NOT_FOUND));
         if (payment.getStatus().name().equals("FAILED") || payment.getStatus().name().equals("PAID")
                 || payment.getStatus().name().equals("REFUNDED")) {
@@ -237,7 +237,7 @@ public class PaymentService {
         }
         Instant now = clock.instant();
         payment.markFailed(command.errorCode(), command.reason(), now);
-        Payment saved = paymentRepository.save(payment);
+        Payment saved = paymentPersistencePort.save(payment);
         eventPublisher.publish(payment.pullEvents());
         integrationEventPublisher.publishPaymentFailed(saved.getPaymentId(), saved.getOrderId(),
                 command.errorCode(), command.reason());
@@ -264,7 +264,7 @@ public class PaymentService {
                 command.reason(), command.idempotencyKey()));
         if (!providerRefund.accepted()) {
             inTransaction(() -> {
-                refundOperationRepository.save(preparation.operation().failed(
+                refundOperationPersistencePort.save(preparation.operation().failed(
                         providerRefund.declineReason(), clock.instant()));
                 return null;
             });
@@ -293,7 +293,7 @@ public class PaymentService {
     }
 
     public List<Payment> listByOrderId(String orderId) {
-        return inTransaction(() -> paymentRepository.findByOrderId(orderId));
+        return inTransaction(() -> paymentPersistencePort.findByOrderId(orderId));
     }
 
     private RefundPreparation prepareRefund(RefundPaymentCommand command, Money refund) {
@@ -301,9 +301,9 @@ public class PaymentService {
                 || command.idempotencyKey().length() > 100) {
             throw new PaymentException(PaymentErrorCode.INVALID_ARGUMENT, "A valid refund idempotency key is required");
         }
-        Payment payment = paymentRepository.lockById(command.paymentId())
+        Payment payment = paymentPersistencePort.lockById(command.paymentId())
                 .orElseThrow(() -> new PaymentException(PaymentErrorCode.PAYMENT_NOT_FOUND));
-        RefundOperation existing = refundOperationRepository.findByIdempotencyKey(command.idempotencyKey())
+        RefundOperation existing = refundOperationPersistencePort.findByIdempotencyKey(command.idempotencyKey())
                 .orElse(null);
         if (existing != null) {
             ensureSameRefund(existing, command);
@@ -324,7 +324,7 @@ public class PaymentService {
         }
         BigDecimal remaining = payment.getAmount().amount()
                 .subtract(payment.getRefundedAmount().amount())
-                .subtract(refundOperationRepository.sumReservedAmount(payment.getPaymentId()));
+                .subtract(refundOperationPersistencePort.sumReservedAmount(payment.getPaymentId()));
         if (refund.amount().compareTo(remaining) > 0) {
             throw new PaymentException(PaymentErrorCode.PAYMENT_AMOUNT_EXCEEDED,
                     "Requested " + refund.amount() + " but only " + remaining + " remains");
@@ -333,7 +333,7 @@ public class PaymentService {
         RefundOperation operation = new RefundOperation(command.idempotencyKey(), command.paymentId(),
                 refund.amount(), refund.currency(), command.reason(), RefundOperation.Status.PENDING,
                 null, null, now, now);
-        return new RefundPreparation(payment, refundOperationRepository.save(operation), null);
+        return new RefundPreparation(payment, refundOperationPersistencePort.save(operation), null);
     }
 
     private void ensureSameRefund(RefundOperation existing, RefundPaymentCommand command) {
@@ -348,12 +348,12 @@ public class PaymentService {
 
     private Payment persistRefund(RefundPaymentCommand command, Money refund, String refundId,
             RefundOperation operation) {
-        Payment payment = paymentRepository.lockById(command.paymentId())
+        Payment payment = paymentPersistencePort.lockById(command.paymentId())
                 .orElseThrow(() -> new PaymentException(PaymentErrorCode.PAYMENT_NOT_FOUND));
         // Another request with the same idempotency key may have completed while
         // this one was waiting on the gateway. Re-read under the payment lock so
         // the refund is applied to the ledger only once.
-        RefundOperation latest = refundOperationRepository
+        RefundOperation latest = refundOperationPersistencePort
                 .findByIdempotencyKey(command.idempotencyKey())
                 .orElse(operation);
         if (latest.status() == RefundOperation.Status.SUCCEEDED) {
@@ -361,17 +361,17 @@ public class PaymentService {
         }
         Instant now = clock.instant();
         payment.refund(refundId, refund, command.reason(), now);
-        Payment saved = paymentRepository.save(payment);
+        Payment saved = paymentPersistencePort.save(payment);
         eventPublisher.publish(payment.pullEvents());
 
         TransactionLedger entry = TransactionLedger.record(IdGenerator.ulid(),
                 saved.getPaymentId(), refund, LedgerEntryType.DEBIT,
                 saved.getGateway().name(), refundId, now);
-        ledgerRepository.save(entry);
+        transactionLedgerPersistencePort.save(entry);
         eventPublisher.publish(entry.pullEvents());
         integrationEventPublisher.publishPaymentRefunded(saved.getPaymentId(), saved.getOrderId(),
                 refundId, command.amount(), command.currency(), command.reason());
-        refundOperationRepository.save(operation.succeeded(refundId, now));
+        refundOperationPersistencePort.save(operation.succeeded(refundId, now));
         return saved;
     }
 
@@ -400,7 +400,7 @@ public class PaymentService {
     }
 
     Payment required(String paymentId) {
-        return paymentRepository.findById(paymentId)
+        return paymentPersistencePort.findById(paymentId)
                 .orElseThrow(() -> new PaymentException(PaymentErrorCode.PAYMENT_NOT_FOUND));
     }
 }

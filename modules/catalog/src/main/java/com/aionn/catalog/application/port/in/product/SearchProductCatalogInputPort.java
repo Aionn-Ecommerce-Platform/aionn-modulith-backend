@@ -5,5 +5,5 @@ import com.aionn.catalog.application.dto.search.ProductSearchResult;
 
 public interface SearchProductCatalogInputPort {
 
-    ProductSearchResult execute(ProductSearchCriteria criteria);
+    ProductSearchResult execute(ProductSearchCriteria criteria, String userId);
 }

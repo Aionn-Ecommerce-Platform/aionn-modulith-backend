@@ -1,7 +1,8 @@
 package com.aionn.identity.infrastructure.persistence.adapter.feedback;
 
+import com.aionn.identity.application.policy.AdminValidationConstants;
+
 import com.aionn.identity.application.dto.common.PageResult;
-import com.aionn.identity.application.policy.IdentityValidationConstants;
 import com.aionn.identity.application.port.out.feedback.FeedbackPersistencePort;
 import com.aionn.identity.domain.model.Feedback;
 import com.aionn.identity.domain.valueobject.FeedbackStatus;
@@ -40,7 +41,7 @@ public class FeedbackPersistenceAdapter implements FeedbackPersistencePort {
 
     @Override
     public PageResult<Feedback> findAdminPage(FeedbackStatus status, int page, int size) {
-        int safeSize = Math.max(1, Math.min(size, IdentityValidationConstants.ADMIN_PAGE_MAX_SIZE));
+        int safeSize = Math.clamp(size, 1, AdminValidationConstants.ADMIN_PAGE_MAX_SIZE);
         int safePage = Math.max(0, page);
         PageRequest pageRequest = PageRequest.of(safePage, safeSize);
         var result = status != null

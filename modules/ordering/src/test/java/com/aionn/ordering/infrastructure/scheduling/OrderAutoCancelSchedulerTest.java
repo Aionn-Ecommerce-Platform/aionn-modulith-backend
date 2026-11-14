@@ -24,7 +24,7 @@ import static org.mockito.Mockito.*;
 class OrderAutoCancelSchedulerTest {
 
         @Mock
-        private OrderPersistencePort orderRepository;
+        private OrderPersistencePort orderPersistencePort;
 
         @Mock
         private OrderAutoCancelWorker worker;
@@ -42,9 +42,9 @@ class OrderAutoCancelSchedulerTest {
         void cancelsExpiredOrdersSuccessfully() {
                 OrderingProperties properties = createPropertiesWithAutoCancel(30, 10);
                 OrderAutoCancelScheduler scheduler = new OrderAutoCancelScheduler(
-                                orderRepository, worker, properties, CLOCK);
+                                orderPersistencePort, worker, properties, CLOCK);
 
-                when(orderRepository.findPendingOrderIdsOlderThan(any(Instant.class), eq(10)))
+                when(orderPersistencePort.findPendingOrderIdsOlderThan(any(Instant.class), eq(10)))
                                 .thenReturn(List.of("order-1", "order-2", "order-3"));
 
                 scheduler.run();
@@ -58,15 +58,15 @@ class OrderAutoCancelSchedulerTest {
         void calculatesCutoffBasedOnTimeoutMinutes() {
                 OrderingProperties properties = createPropertiesWithAutoCancel(60, 50);
                 OrderAutoCancelScheduler scheduler = new OrderAutoCancelScheduler(
-                                orderRepository, worker, properties, CLOCK);
+                                orderPersistencePort, worker, properties, CLOCK);
 
-                when(orderRepository.findPendingOrderIdsOlderThan(any(Instant.class), anyInt()))
+                when(orderPersistencePort.findPendingOrderIdsOlderThan(any(Instant.class), anyInt()))
                                 .thenReturn(List.of());
 
                 scheduler.run();
 
                 ArgumentCaptor<Instant> cutoffCaptor = ArgumentCaptor.forClass(Instant.class);
-                verify(orderRepository).findPendingOrderIdsOlderThan(cutoffCaptor.capture(), eq(50));
+                verify(orderPersistencePort).findPendingOrderIdsOlderThan(cutoffCaptor.capture(), eq(50));
 
                 Instant actualCutoff = cutoffCaptor.getValue();
                 assertThat(actualCutoff).isEqualTo(NOW.minusSeconds(3600));
@@ -76,9 +76,9 @@ class OrderAutoCancelSchedulerTest {
         void handlesOptimisticLockingFailureGracefully() {
                 OrderingProperties properties = createPropertiesWithAutoCancel(30, 10);
                 OrderAutoCancelScheduler scheduler = new OrderAutoCancelScheduler(
-                                orderRepository, worker, properties, CLOCK);
+                                orderPersistencePort, worker, properties, CLOCK);
 
-                when(orderRepository.findPendingOrderIdsOlderThan(any(Instant.class), anyInt()))
+                when(orderPersistencePort.findPendingOrderIdsOlderThan(any(Instant.class), anyInt()))
                                 .thenReturn(List.of("order-1", "order-2"));
                 doThrow(new OptimisticLockingFailureException("Concurrent modification"))
                                 .when(worker).cancelOneExpired("order-1");
@@ -93,9 +93,9 @@ class OrderAutoCancelSchedulerTest {
         void handlesWorkerRuntimeExceptionGracefully() {
                 OrderingProperties properties = createPropertiesWithAutoCancel(30, 10);
                 OrderAutoCancelScheduler scheduler = new OrderAutoCancelScheduler(
-                                orderRepository, worker, properties, CLOCK);
+                                orderPersistencePort, worker, properties, CLOCK);
 
-                when(orderRepository.findPendingOrderIdsOlderThan(any(Instant.class), anyInt()))
+                when(orderPersistencePort.findPendingOrderIdsOlderThan(any(Instant.class), anyInt()))
                                 .thenReturn(List.of("order-1", "order-2", "order-3"));
                 doNothing().when(worker).cancelOneExpired("order-1");
                 doThrow(new RuntimeException("Unexpected error"))
@@ -113,9 +113,9 @@ class OrderAutoCancelSchedulerTest {
         void doesNothingWhenNoPendingOrdersFound() {
                 OrderingProperties properties = createPropertiesWithAutoCancel(30, 10);
                 OrderAutoCancelScheduler scheduler = new OrderAutoCancelScheduler(
-                                orderRepository, worker, properties, CLOCK);
+                                orderPersistencePort, worker, properties, CLOCK);
 
-                when(orderRepository.findPendingOrderIdsOlderThan(any(Instant.class), anyInt()))
+                when(orderPersistencePort.findPendingOrderIdsOlderThan(any(Instant.class), anyInt()))
                                 .thenReturn(List.of());
 
                 scheduler.run();
@@ -127,9 +127,9 @@ class OrderAutoCancelSchedulerTest {
         void handlesRepositoryExceptionGracefully() {
                 OrderingProperties properties = createPropertiesWithAutoCancel(30, 10);
                 OrderAutoCancelScheduler scheduler = new OrderAutoCancelScheduler(
-                                orderRepository, worker, properties, CLOCK);
+                                orderPersistencePort, worker, properties, CLOCK);
 
-                when(orderRepository.findPendingOrderIdsOlderThan(any(Instant.class), anyInt()))
+                when(orderPersistencePort.findPendingOrderIdsOlderThan(any(Instant.class), anyInt()))
                                 .thenThrow(new RuntimeException("Database error"));
 
                 // Should not throw exception
@@ -142,13 +142,13 @@ class OrderAutoCancelSchedulerTest {
         void usesBatchSizeFromProperties() {
                 OrderingProperties properties = createPropertiesWithAutoCancel(30, 25);
                 OrderAutoCancelScheduler scheduler = new OrderAutoCancelScheduler(
-                                orderRepository, worker, properties, CLOCK);
+                                orderPersistencePort, worker, properties, CLOCK);
 
-                when(orderRepository.findPendingOrderIdsOlderThan(any(Instant.class), eq(25)))
+                when(orderPersistencePort.findPendingOrderIdsOlderThan(any(Instant.class), eq(25)))
                                 .thenReturn(List.of());
 
                 scheduler.run();
 
-                verify(orderRepository).findPendingOrderIdsOlderThan(any(Instant.class), eq(25));
+                verify(orderPersistencePort).findPendingOrderIdsOlderThan(any(Instant.class), eq(25));
         }
 }

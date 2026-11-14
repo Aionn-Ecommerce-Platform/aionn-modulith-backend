@@ -22,7 +22,7 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "ordering.auto-cancel", name = "enabled", havingValue = "true")
 public class OrderAutoCancelScheduler {
 
-    private final OrderPersistencePort orderRepository;
+    private final OrderPersistencePort orderPersistencePort;
     private final OrderAutoCancelWorker worker;
     private final OrderingProperties properties;
     private final Clock clock;
@@ -34,7 +34,7 @@ public class OrderAutoCancelScheduler {
             int timeoutMinutes = properties.autoCancel().timeoutMinutes();
             int batchSize = properties.autoCancel().batchSize();
             Instant cutoff = clock.instant().minus(Duration.ofMinutes(timeoutMinutes));
-            List<String> pendingIds = orderRepository.findPendingOrderIdsOlderThan(cutoff, batchSize);
+            List<String> pendingIds = orderPersistencePort.findPendingOrderIdsOlderThan(cutoff, batchSize);
             int cancelled = 0;
             for (String orderId : pendingIds) {
                 try {

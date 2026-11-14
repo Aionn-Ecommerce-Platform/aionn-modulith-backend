@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ReturnRefundRetryScheduler {
 
-    private final OrderReturnPersistencePort returnRepository;
+    private final OrderReturnPersistencePort orderReturnPersistencePort;
     private final OrderReturnService returnService;
     private final RefundRetryPolicy refundRetryPolicy;
     private final Clock clock;
@@ -23,7 +23,7 @@ public class ReturnRefundRetryScheduler {
     @Scheduled(fixedDelayString = "${ordering.return-refund.delay-ms:30000}")
     @SchedulerLock(name = "ordering-return-refund", lockAtMostFor = "PT10M", lockAtLeastFor = "PT25S")
     public void run() {
-        for (String returnId : returnRepository.findRefundRetryIds(
+        for (String returnId : orderReturnPersistencePort.findRefundRetryIds(
                 clock.instant(), refundRetryPolicy.maxAttempts(), refundRetryPolicy.batchSize())) {
             try {
                 returnService.retryRefund(returnId);

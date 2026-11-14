@@ -1,4 +1,18 @@
-INSERT INTO users (user_id, email, phone, username, password_hash, display_name, status, email_verified_at, phone_verified_at, version, created_at, updated_at) VALUES
+INSERT INTO users (user_id, email, phone, username, password_hash, display_name, status, email_verified_at, phone_verified_at, version, created_at, updated_at, avatar_url)
+SELECT seed.*,
+       CASE (hashtext(seed.user_id) % 10 + 10) % 10
+         WHEN 0 THEN 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'
+         WHEN 1 THEN 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80'
+         WHEN 2 THEN 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80'
+         WHEN 3 THEN 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80'
+         WHEN 4 THEN 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80'
+         WHEN 5 THEN 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80'
+         WHEN 6 THEN 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80'
+         WHEN 7 THEN 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=150&q=80'
+         WHEN 8 THEN 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=150&q=80'
+         ELSE 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80'
+       END
+FROM (VALUES
 ('01KV05RTC7NA4KZMMP8KXX7461', 'buyer_001@example.test', '+8490100001', 'buyer_001', '$2a$10$WsgwuxAPXYM/5D8JB5XPe.ZUGdNIgBNjudsMlNzS1e7tbchI8erBq', 'Buyer 001', 'ACTIVE', NOW(), NOW(), 0, NOW(), NOW()),
 ('01KV05RTC836YVQ3DF9FZFT2A7', 'buyer_002@example.test', '+8490100002', 'buyer_002', '$2a$10$WsgwuxAPXYM/5D8JB5XPe.ZUGdNIgBNjudsMlNzS1e7tbchI8erBq', 'Buyer 002', 'ACTIVE', NOW(), NOW(), 0, NOW(), NOW()),
 ('01KV05RTC9AYX7XR183X8EQBF0', 'buyer_003@example.test', '+8490100003', 'buyer_003', '$2a$10$WsgwuxAPXYM/5D8JB5XPe.ZUGdNIgBNjudsMlNzS1e7tbchI8erBq', 'Buyer 003', 'ACTIVE', NOW(), NOW(), 0, NOW(), NOW()),
@@ -123,7 +137,8 @@ INSERT INTO users (user_id, email, phone, username, password_hash, display_name,
 ('01KV05RTG100DZPMWK7GBXS9NH', 'sys_admin_02@example.test', '+849040002', 'sys_admin_02', '$2a$10$WsgwuxAPXYM/5D8JB5XPe.ZUGdNIgBNjudsMlNzS1e7tbchI8erBq', 'Sys Admin 02', 'ACTIVE', NOW(), NOW(), 0, NOW(), NOW()),
 ('01KV05RTG2MG91QM6RT7JNQGY7', 'sys_admin_03@example.test', '+849040003', 'sys_admin_03', '$2a$10$WsgwuxAPXYM/5D8JB5XPe.ZUGdNIgBNjudsMlNzS1e7tbchI8erBq', 'Sys Admin 03', 'ACTIVE', NOW(), NOW(), 0, NOW(), NOW()),
 ('01KV05RTG396VJVNRN276GRD7R', 'sys_admin_04@example.test', '+849040004', 'sys_admin_04', '$2a$10$WsgwuxAPXYM/5D8JB5XPe.ZUGdNIgBNjudsMlNzS1e7tbchI8erBq', 'Sys Admin 04', 'ACTIVE', NOW(), NOW(), 0, NOW(), NOW()),
-('01KV05RTG4G7SZR4FF5M83ENDF', 'sys_admin_05@example.test', '+849040005', 'sys_admin_05', '$2a$10$WsgwuxAPXYM/5D8JB5XPe.ZUGdNIgBNjudsMlNzS1e7tbchI8erBq', 'Sys Admin 05', 'ACTIVE', NOW(), NOW(), 0, NOW(), NOW());
+('01KV05RTG4G7SZR4FF5M83ENDF', 'sys_admin_05@example.test', '+849040005', 'sys_admin_05', '$2a$10$WsgwuxAPXYM/5D8JB5XPe.ZUGdNIgBNjudsMlNzS1e7tbchI8erBq', 'Sys Admin 05', 'ACTIVE', NOW(), NOW(), 0, NOW(), NOW()))
+AS seed(user_id, email, phone, username, password_hash, display_name, status, email_verified_at, phone_verified_at, version, created_at, updated_at);
 
 
 INSERT INTO user_roles (user_id, role) VALUES
@@ -627,19 +642,3 @@ INSERT INTO user_preferences (
 ('01KV05RTG2MG91QM6RT7JNQGY7', 'vi', 'VND', 'Asia/Ho_Chi_Minh', 'light', '{"email": true, "push": true, "in_app": true}'::jsonb, '{"allow_ai_personalization": true}'::jsonb, NOW()),
 ('01KV05RTG396VJVNRN276GRD7R', 'vi', 'VND', 'Asia/Ho_Chi_Minh', 'light', '{"email": true, "push": true, "in_app": true}'::jsonb, '{"allow_ai_personalization": true}'::jsonb, NOW()),
 ('01KV05RTG4G7SZR4FF5M83ENDF', 'vi', 'VND', 'Asia/Ho_Chi_Minh', 'light', '{"email": true, "push": true, "in_app": true}'::jsonb, '{"allow_ai_personalization": true}'::jsonb, NOW());
-
--- Assign avatars to demo users that do not have one yet
-UPDATE users
-SET avatar_url = CASE (hashtext(user_id) % 10 + 10) % 10
-  WHEN 0 THEN 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'
-  WHEN 1 THEN 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80'
-  WHEN 2 THEN 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80'
-  WHEN 3 THEN 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80'
-  WHEN 4 THEN 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80'
-  WHEN 5 THEN 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80'
-  WHEN 6 THEN 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80'
-  WHEN 7 THEN 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=150&q=80'
-  WHEN 8 THEN 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=150&q=80'
-  ELSE 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80'
-END
-WHERE avatar_url IS NULL;

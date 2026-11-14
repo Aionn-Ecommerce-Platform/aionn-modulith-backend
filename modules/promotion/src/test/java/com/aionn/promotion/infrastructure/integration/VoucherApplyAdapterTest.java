@@ -34,12 +34,12 @@ class VoucherApplyAdapterTest {
 
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-08-01T00:00:00Z"), ZoneOffset.UTC);
 
-    private final VoucherPersistencePort voucherRepository = mock(VoucherPersistencePort.class);
-    private final UserVoucherPersistencePort userVoucherRepository = mock(UserVoucherPersistencePort.class);
-    private final PromotionCampaignPersistencePort campaignRepository = mock(PromotionCampaignPersistencePort.class);
+    private final VoucherPersistencePort voucherPersistencePort = mock(VoucherPersistencePort.class);
+    private final UserVoucherPersistencePort userVoucherPersistencePort = mock(UserVoucherPersistencePort.class);
+    private final PromotionCampaignPersistencePort promotionCampaignPersistencePort = mock(PromotionCampaignPersistencePort.class);
     private final VoucherReservationPolicy reservationPolicy = mock(VoucherReservationPolicy.class);
     private final VoucherApplyAdapter adapter = new VoucherApplyAdapter(
-            voucherRepository, userVoucherRepository, campaignRepository, reservationPolicy, CLOCK);
+            voucherPersistencePort, userVoucherPersistencePort, promotionCampaignPersistencePort, reservationPolicy, CLOCK);
 
     {
         when(reservationPolicy.expiresFrom(any()))
@@ -50,10 +50,10 @@ class VoucherApplyAdapterTest {
     void applyCommitsOneSlotAndReleaseRestoresCapacity() {
         Voucher voucher = Voucher.issueForShop("SAVE10", "merchant-1", Money.of(BigDecimal.TEN, "VND"),
                 1, CLOCK.instant().minusSeconds(60), CLOCK.instant().plusSeconds(3600), CLOCK);
-        when(voucherRepository.lockByCode("SAVE10")).thenReturn(Optional.of(voucher));
-        when(voucherRepository.findByCode("SAVE10")).thenReturn(Optional.of(voucher));
-        when(userVoucherRepository.findByUserAndCodeForUpdate("user-1", "SAVE10")).thenReturn(Optional.empty());
-        when(userVoucherRepository.save(any(UserVoucher.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(voucherPersistencePort.lockByCode("SAVE10")).thenReturn(Optional.of(voucher));
+        when(voucherPersistencePort.findByCode("SAVE10")).thenReturn(Optional.of(voucher));
+        when(userVoucherPersistencePort.findByUserAndCodeForUpdate("user-1", "SAVE10")).thenReturn(Optional.empty());
+        when(userVoucherPersistencePort.save(any(UserVoucher.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         var discount = adapter.apply("user-1", "merchant-1", "SAVE10", "order-1",
                 BigDecimal.valueOf(100), "VND", List.of());
@@ -62,11 +62,11 @@ class VoucherApplyAdapterTest {
         assertThat(voucher.getReservedCount()).isZero();
         assertThat(voucher.getUsedCount()).isEqualTo(1);
         var captor = ArgumentCaptor.forClass(UserVoucher.class);
-        verify(userVoucherRepository, Mockito.atLeastOnce()).save(captor.capture());
+        verify(userVoucherPersistencePort, Mockito.atLeastOnce()).save(captor.capture());
         UserVoucher applied = captor.getAllValues().get(captor.getAllValues().size() - 1);
         assertThat(applied.getStatus()).isEqualTo(UserVoucherStatus.APPLIED);
 
-        when(userVoucherRepository.findByReservedOrderIdForUpdate("order-1")).thenReturn(Optional.of(applied));
+        when(userVoucherPersistencePort.findByReservedOrderIdForUpdate("order-1")).thenReturn(Optional.of(applied));
         adapter.release("user-1", "order-1", "placement-failed");
 
         assertThat(voucher.getUsedCount()).isZero();
@@ -79,10 +79,10 @@ class VoucherApplyAdapterTest {
         Voucher voucher = Voucher.issue("CATEGORY10", "campaign-1", Money.of(BigDecimal.TEN, "VND"),
                 2, CLOCK.instant().minusSeconds(60), CLOCK.instant().plusSeconds(3600), CLOCK);
         PromotionCampaign campaign = runningCampaign(List.of("category-1"));
-        when(voucherRepository.lockByCode("CATEGORY10")).thenReturn(Optional.of(voucher));
-        when(campaignRepository.findByIdForUpdate("campaign-1")).thenReturn(Optional.of(campaign));
-        when(userVoucherRepository.findByUserAndCodeForUpdate("user-1", "CATEGORY10")).thenReturn(Optional.empty());
-        when(userVoucherRepository.save(any(UserVoucher.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(voucherPersistencePort.lockByCode("CATEGORY10")).thenReturn(Optional.of(voucher));
+        when(promotionCampaignPersistencePort.findByIdForUpdate("campaign-1")).thenReturn(Optional.of(campaign));
+        when(userVoucherPersistencePort.findByUserAndCodeForUpdate("user-1", "CATEGORY10")).thenReturn(Optional.empty());
+        when(userVoucherPersistencePort.save(any(UserVoucher.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         var discount = adapter.apply("user-1", "merchant-1", "CATEGORY10", "order-1",
                 BigDecimal.valueOf(100), "VND", List.of("category-1", "category-2"));
@@ -94,8 +94,8 @@ class VoucherApplyAdapterTest {
     void categoryRestrictedCampaignRejectsNonMatchingOrderCategories() {
         Voucher voucher = Voucher.issue("CATEGORY10", "campaign-1", Money.of(BigDecimal.TEN, "VND"),
                 2, CLOCK.instant().minusSeconds(60), CLOCK.instant().plusSeconds(3600), CLOCK);
-        when(voucherRepository.lockByCode("CATEGORY10")).thenReturn(Optional.of(voucher));
-        when(campaignRepository.findByIdForUpdate("campaign-1")).thenReturn(Optional.of(runningCampaign(List.of("category-1"))));
+        when(voucherPersistencePort.lockByCode("CATEGORY10")).thenReturn(Optional.of(voucher));
+        when(promotionCampaignPersistencePort.findByIdForUpdate("campaign-1")).thenReturn(Optional.of(runningCampaign(List.of("category-1"))));
 
         var discount = adapter.apply("user-1", "merchant-1", "CATEGORY10", "order-1",
                 BigDecimal.valueOf(100), "VND", List.of("other-category"));
@@ -111,15 +111,15 @@ class VoucherApplyAdapterTest {
         UserVoucher applied = UserVoucher.claim("uv-1", "CATEGORY10", "user-1", CLOCK);
         applied.reserve("order-1", CLOCK.instant().plusSeconds(900), CLOCK);
         applied.apply(Money.of(BigDecimal.TEN, "VND"), CLOCK);
-        when(voucherRepository.lockByCode("CATEGORY10")).thenReturn(Optional.of(voucher));
-        when(userVoucherRepository.findByUserAndCodeForUpdate("user-1", "CATEGORY10")).thenReturn(Optional.of(applied));
+        when(voucherPersistencePort.lockByCode("CATEGORY10")).thenReturn(Optional.of(voucher));
+        when(userVoucherPersistencePort.findByUserAndCodeForUpdate("user-1", "CATEGORY10")).thenReturn(Optional.of(applied));
 
         var discount = adapter.apply("user-1", "merchant-1", "CATEGORY10", "order-1",
                 BigDecimal.valueOf(100), "VND", List.of("category-1"));
 
         assertThat(discount.applied()).isTrue();
         assertThat(discount.amount()).isEqualByComparingTo(BigDecimal.TEN);
-        verify(campaignRepository, never()).findByIdForUpdate(any());
+        verify(promotionCampaignPersistencePort, never()).findByIdForUpdate(any());
     }
 
     private static PromotionCampaign runningCampaign(List<String> categoryIds) {

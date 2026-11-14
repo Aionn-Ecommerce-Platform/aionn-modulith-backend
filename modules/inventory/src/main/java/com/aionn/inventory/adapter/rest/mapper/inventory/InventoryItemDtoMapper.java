@@ -10,6 +10,7 @@ import com.aionn.inventory.adapter.rest.dto.inventory.response.InventoryItemResp
 import com.aionn.inventory.adapter.rest.dto.inventory.response.LowStockAlertResponse;
 import com.aionn.inventory.adapter.rest.dto.inventory.response.PublicInventoryItemResponse;
 import com.aionn.inventory.application.dto.analytics.result.LowStockAlertResult;
+import com.aionn.inventory.application.dto.inventory.command.EmergencyUnlockCommand;
 import com.aionn.inventory.application.dto.inventory.command.AuditInventoryCommand;
 import com.aionn.inventory.application.dto.inventory.command.ConfigureSafetyStockCommand;
 import com.aionn.inventory.application.dto.inventory.command.EmergencyLockCommand;
@@ -48,4 +49,7 @@ public interface InventoryItemDtoMapper {
 
     List<LowStockAlertResponse> toLowStockResponses(List<LowStockAlertResult> results);
 
+    default EmergencyUnlockCommand toEmergencyUnlockCommand(String adminId, String skuId, String warehouseId) {
+        return new EmergencyUnlockCommand(adminId, skuId, warehouseId);
+    }
 }

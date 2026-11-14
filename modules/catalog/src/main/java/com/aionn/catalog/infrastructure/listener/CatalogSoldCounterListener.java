@@ -22,8 +22,8 @@ import java.util.Map;
 public class CatalogSoldCounterListener {
 
     private final OrderSnapshotQueryPort orderSnapshotQueryPort;
-    private final ProductPersistencePort productRepository;
-    private final ProductSoldCounterPersistencePort soldCounterRepository;
+    private final ProductPersistencePort productPersistencePort;
+    private final ProductSoldCounterPersistencePort productSoldCounterPersistencePort;
     private final ProductSearchIndexUpdater searchIndexUpdater;
 
     @EventListener
@@ -37,7 +37,7 @@ public class CatalogSoldCounterListener {
                 quantityBySku.merge(line.skuId(), line.qty(), Integer::sum);
             }
 
-            List<Product> products = productRepository.findAllBySkuIds(quantityBySku.keySet());
+            List<Product> products = productPersistencePort.findAllBySkuIds(quantityBySku.keySet());
             Map<String, Long> quantityByProduct = new LinkedHashMap<>();
             for (Product product : products) {
                 for (ProductVariant variant : product.variants()) {
@@ -49,7 +49,7 @@ public class CatalogSoldCounterListener {
             }
 
             quantityByProduct.forEach((productId, qty) -> {
-                soldCounterRepository.incrementSoldCount(productId, qty);
+                productSoldCounterPersistencePort.incrementSoldCount(productId, qty);
                 searchIndexUpdater.reindexProduct(productId);
                 log.debug("Incremented sold counter for product {} by {}", productId, qty);
             });

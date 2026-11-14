@@ -47,17 +47,17 @@ class CatalogSearchIndexWriterTest {
             new ProductVariant.ParcelDimensions(500, BigDecimal.valueOf(15), BigDecimal.valueOf(10), BigDecimal.valueOf(5));
 
     @Mock
-    private ProductPersistencePort productRepository;
+    private ProductPersistencePort productPersistencePort;
     @Mock
     private ProductSearchIndex searchIndex;
     @Mock
     private ProductSearchDocumentMapper searchDocumentMapper;
     @Mock
-    private AttributeTemplatePersistencePort attributeTemplateRepository;
+    private AttributeTemplatePersistencePort attributeTemplatePersistencePort;
     @Mock
-    private ProductReviewPersistencePort reviewRepository;
+    private ProductReviewPersistencePort productReviewPersistencePort;
     @Mock
-    private ProductSoldCounterPersistencePort soldCounterRepository;
+    private ProductSoldCounterPersistencePort productSoldCounterPersistencePort;
     @Mock
     private TransactionTemplate transactionTemplate;
 
@@ -73,7 +73,7 @@ class CatalogSearchIndexWriterTest {
 
     @Test
     void reindexWritesTheDocument() {
-        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(publishedProduct()));
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(publishedProduct()));
         when(searchDocumentMapper.toSearchDocument(any(), any(), anyDouble(), anyLong())).thenReturn(doc());
 
         writer.reindexAsync(PRODUCT_ID);
@@ -84,7 +84,7 @@ class CatalogSearchIndexWriterTest {
     @Test
     void conditionalReindexSkipsProductsThatAreNotSearchable() {
         Product draft = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
-        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(draft));
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(draft));
 
         writer.reindexIfSearchableAsync(PRODUCT_ID);
 
@@ -100,7 +100,7 @@ class CatalogSearchIndexWriterTest {
 
     @Test
     void merchantReindexIndexesEveryPublishedProductPage() {
-        when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
+        when(productPersistencePort.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
                 .thenReturn(List.of(publishedProduct()));
         when(searchDocumentMapper.toSearchDocument(any(), any(), anyDouble(), anyLong())).thenReturn(doc());
 
@@ -111,7 +111,7 @@ class CatalogSearchIndexWriterTest {
 
     @Test
     void merchantRemovalCollectsProductIds() {
-        when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
+        when(productPersistencePort.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
                 .thenReturn(List.of(publishedProduct()));
 
         writer.removeMerchantAsync(MERCHANT_ID);
@@ -125,8 +125,8 @@ class CatalogSearchIndexWriterTest {
         product.defineAttributes(Map.of("color", "red"), FIXED);
         product.pullEvents();
         AttributeTemplate template = AttributeTemplate.create("t1", "c1", List.of("color"), FIXED);
-        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-        when(attributeTemplateRepository.findByCategoryId("c1")).thenReturn(Optional.of(template));
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+        when(attributeTemplatePersistencePort.findByCategoryId("c1")).thenReturn(Optional.of(template));
         when(searchDocumentMapper.toSearchDocument(any(), any(), anyDouble(), anyLong())).thenReturn(doc());
 
         writer.reindexAsync(PRODUCT_ID);
@@ -141,9 +141,9 @@ class CatalogSearchIndexWriterTest {
         for (int index = 0; index < 100; index++) {
             firstPage.add(publishedProduct("01HZPRD00000000000000" + String.format("%04d", index)));
         }
-        when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
+        when(productPersistencePort.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
                 .thenReturn(firstPage);
-        when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(1, 100)))
+        when(productPersistencePort.listByMerchant(MERCHANT_ID, OffsetPagination.of(1, 100)))
                 .thenReturn(java.util.List.of(
                         publishedProduct("01HZPRD000000000000009999")));
         when(searchDocumentMapper.toSearchDocument(any(), any(), anyDouble(), anyLong()))
@@ -161,9 +161,9 @@ class CatalogSearchIndexWriterTest {
             firstPage.add(Product.create("01HZPRD00000000000000" + String.format("%04d", index),
                     MERCHANT_ID, "Widget", FIXED));
         }
-        when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
+        when(productPersistencePort.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
                 .thenReturn(firstPage);
-        when(productRepository.listByMerchant(MERCHANT_ID, OffsetPagination.of(1, 100)))
+        when(productPersistencePort.listByMerchant(MERCHANT_ID, OffsetPagination.of(1, 100)))
                 .thenReturn(java.util.List.of(Product.create("01HZPRD000000000000009999",
                         MERCHANT_ID, "Widget", FIXED)));
 

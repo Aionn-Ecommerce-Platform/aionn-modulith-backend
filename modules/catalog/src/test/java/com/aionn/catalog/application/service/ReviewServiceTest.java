@@ -62,11 +62,11 @@ class ReviewServiceTest {
     private static final String ORDER_ID = "order-1";
 
     @Mock
-    private ProductReviewPersistencePort reviewRepository;
+    private ProductReviewPersistencePort productReviewPersistencePort;
     @Mock
-    private ProductPersistencePort productRepository;
+    private ProductPersistencePort productPersistencePort;
     @Mock
-    private MerchantPersistencePort merchantRepository;
+    private MerchantPersistencePort merchantPersistencePort;
     @Mock
     private OrderQueryPort orderQueryPort;
     @Mock
@@ -95,7 +95,7 @@ class ReviewServiceTest {
 
     @Test
     void submitRejectsWhenUserAlreadyReviewed() {
-        when(reviewRepository.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(true);
+        when(productReviewPersistencePort.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(true);
 
         assertThatThrownBy(() -> reviewService.submit(new SubmitReviewCommand(
                 USER_ID, PRODUCT_ID, 5, "t", "c", List.of())))
@@ -106,8 +106,8 @@ class ReviewServiceTest {
 
     @Test
     void submitRejectsWhenProductNotFound() {
-        when(reviewRepository.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(false);
-        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.empty());
+        when(productReviewPersistencePort.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(false);
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> reviewService.submit(new SubmitReviewCommand(
                 USER_ID, PRODUCT_ID, 5, "t", "c", List.of())))
@@ -118,8 +118,8 @@ class ReviewServiceTest {
 
     @Test
     void submitRejectsWhenUserNotPurchased() {
-        when(reviewRepository.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(false);
-        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
+        when(productReviewPersistencePort.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(false);
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
         when(orderQueryPort.findCompletedOrderIdForSkus(USER_ID, List.of("sku-1"))).thenReturn(null);
 
         assertThatThrownBy(() -> reviewService.submit(new SubmitReviewCommand(
@@ -131,21 +131,21 @@ class ReviewServiceTest {
 
     @Test
     void submitPersistsWhenEligible() {
-        when(reviewRepository.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(false);
-        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
+        when(productReviewPersistencePort.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(false);
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
         when(orderQueryPort.findCompletedOrderIdForSkus(USER_ID, List.of("sku-1"))).thenReturn(ORDER_ID);
-        when(reviewRepository.save(any(ProductReview.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(productReviewPersistencePort.save(any(ProductReview.class))).thenAnswer(inv -> inv.getArgument(0));
 
         reviewService.submit(new SubmitReviewCommand(USER_ID, PRODUCT_ID, 5, "t", "c", List.of()));
 
-        verify(reviewRepository).save(any(ProductReview.class));
+        verify(productReviewPersistencePort).save(any(ProductReview.class));
         verify(eventPublisher).publish(anyCollection());
     }
 
     @Test
     void updateRejectsWhenNotOwner() {
         ProductReview review = makeReview();
-        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(review));
+        when(productReviewPersistencePort.findById(REVIEW_ID)).thenReturn(Optional.of(review));
 
         assertThatThrownBy(() -> reviewService.update(new UpdateReviewCommand(
                 "other-user", REVIEW_ID, 4, "t2", "c2", List.of())))
@@ -157,21 +157,21 @@ class ReviewServiceTest {
     @Test
     void deleteMarksDeletedWhenOwner() {
         ProductReview review = makeReview();
-        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(review));
+        when(productReviewPersistencePort.findById(REVIEW_ID)).thenReturn(Optional.of(review));
 
         reviewService.delete(new DeleteReviewCommand(USER_ID, REVIEW_ID));
 
         assertThat(review.getStatus()).isEqualTo(ReviewStatus.DELETED);
-        verify(reviewRepository).save(review);
+        verify(productReviewPersistencePort).save(review);
     }
 
     @Test
     void merchantReplyRequiresOwnership() {
         ProductReview review = makeReview();
-        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(review));
+        when(productReviewPersistencePort.findById(REVIEW_ID)).thenReturn(Optional.of(review));
         Product product = productWithSku("sku-1");
-        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-        when(merchantRepository.findByOwnerId("stranger")).thenReturn(Optional.of(
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+        when(merchantPersistencePort.findByOwnerId("stranger")).thenReturn(Optional.of(
                 Merchant.register("other-mer", "stranger", "X", new BigDecimal("0.05"), FIXED)));
 
         assertThatThrownBy(() -> reviewService.merchantReply(
@@ -184,12 +184,12 @@ class ReviewServiceTest {
     @Test
     void reportSetsReviewStatusReported() {
         ProductReview review = makeReview();
-        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(review));
+        when(productReviewPersistencePort.findById(REVIEW_ID)).thenReturn(Optional.of(review));
         Product product = productWithSku("sku-1");
-        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
         Merchant merchant = Merchant.register(MERCHANT_ID, OWNER_ID, "Acme", new BigDecimal("0.05"), FIXED);
-        when(merchantRepository.findByOwnerId(OWNER_ID)).thenReturn(Optional.of(merchant));
-        when(reviewRepository.save(review)).thenReturn(review);
+        when(merchantPersistencePort.findByOwnerId(OWNER_ID)).thenReturn(Optional.of(merchant));
+        when(productReviewPersistencePort.save(review)).thenReturn(review);
 
         reviewService.report(new ReportReviewCommand(OWNER_ID, REVIEW_ID, "abuse"));
 
@@ -199,8 +199,8 @@ class ReviewServiceTest {
     @Test
     void hideChangesStatusToHidden() {
         ProductReview review = makeReview();
-        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(review));
-        when(reviewRepository.save(review)).thenReturn(review);
+        when(productReviewPersistencePort.findById(REVIEW_ID)).thenReturn(Optional.of(review));
+        when(productReviewPersistencePort.save(review)).thenReturn(review);
 
         reviewService.hide(new HideReviewCommand(ADMIN_ID, REVIEW_ID));
 
@@ -210,18 +210,18 @@ class ReviewServiceTest {
     @Test
     void adminDeleteSoftDeletes() {
         ProductReview review = makeReview();
-        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(review));
+        when(productReviewPersistencePort.findById(REVIEW_ID)).thenReturn(Optional.of(review));
 
         reviewService.adminDelete(new AdminDeleteReviewCommand(ADMIN_ID, REVIEW_ID));
 
         assertThat(review.getStatus()).isEqualTo(ReviewStatus.DELETED);
-        verify(reviewRepository).save(review);
+        verify(productReviewPersistencePort).save(review);
     }
 
     @Test
     void restoreRequiresReviewInReportedStatus() {
         ProductReview review = makeReview();
-        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(review));
+        when(productReviewPersistencePort.findById(REVIEW_ID)).thenReturn(Optional.of(review));
 
         assertThatThrownBy(() -> reviewService.restore(new RestoreReviewCommand(ADMIN_ID, REVIEW_ID)))
                 .isInstanceOf(CatalogException.class)
@@ -234,8 +234,8 @@ class ReviewServiceTest {
         ProductReview review = makeReview();
         review.report(MERCHANT_ID, "abuse", FIXED);
         review.pullEvents();
-        when(reviewRepository.findById(REVIEW_ID)).thenReturn(Optional.of(review));
-        when(reviewRepository.save(review)).thenReturn(review);
+        when(productReviewPersistencePort.findById(REVIEW_ID)).thenReturn(Optional.of(review));
+        when(productReviewPersistencePort.save(review)).thenReturn(review);
 
         reviewService.restore(new RestoreReviewCommand(ADMIN_ID, REVIEW_ID));
 
@@ -245,9 +245,9 @@ class ReviewServiceTest {
     @Test
     void getByProductReturnsPage() {
         ProductReview review = makeReview();
-        when(reviewRepository.findByProductIdAndStatus(PRODUCT_ID, ReviewStatus.VISIBLE, OffsetPagination.of(0, 20)))
+        when(productReviewPersistencePort.findByProductIdAndStatus(PRODUCT_ID, ReviewStatus.VISIBLE, OffsetPagination.of(0, 20)))
                 .thenReturn(List.of(review));
-        when(reviewRepository.countByProductIdAndStatus(PRODUCT_ID, ReviewStatus.VISIBLE)).thenReturn(1L);
+        when(productReviewPersistencePort.countByProductIdAndStatus(PRODUCT_ID, ReviewStatus.VISIBLE)).thenReturn(1L);
 
         PageResult<ProductReview> page = reviewService.getByProduct(PRODUCT_ID, OffsetPagination.of(0, 20));
 
@@ -259,9 +259,9 @@ class ReviewServiceTest {
     @Test
     void getMyReviewsReturnsPage() {
         ProductReview review = makeReview();
-        when(reviewRepository.findByUserId(USER_ID, OffsetPagination.of(0, 20)))
+        when(productReviewPersistencePort.findByUserId(USER_ID, OffsetPagination.of(0, 20)))
                 .thenReturn(List.of(review));
-        when(reviewRepository.countByUserId(USER_ID)).thenReturn(1L);
+        when(productReviewPersistencePort.countByUserId(USER_ID)).thenReturn(1L);
 
         PageResult<ProductReview> page = reviewService.getMyReviews(USER_ID, OffsetPagination.of(0, 20));
 
@@ -273,10 +273,10 @@ class ReviewServiceTest {
     void getMerchantReviewsUsesAuthenticatedOwnersMerchantAndReplyFilter() {
         ProductReview review = makeReview();
         Merchant merchant = Merchant.register(MERCHANT_ID, OWNER_ID, "Acme", new BigDecimal("0.05"), clock);
-        when(merchantRepository.findByOwnerId(OWNER_ID)).thenReturn(Optional.of(merchant));
-        when(reviewRepository.findByMerchantId(MERCHANT_ID, false, OffsetPagination.of(1, 10)))
+        when(merchantPersistencePort.findByOwnerId(OWNER_ID)).thenReturn(Optional.of(merchant));
+        when(productReviewPersistencePort.findByMerchantId(MERCHANT_ID, false, OffsetPagination.of(1, 10)))
                 .thenReturn(List.of(review));
-        when(reviewRepository.countByMerchantId(MERCHANT_ID, false)).thenReturn(11L);
+        when(productReviewPersistencePort.countByMerchantId(MERCHANT_ID, false)).thenReturn(11L);
 
         PageResult<ProductReview> page = reviewService.getMerchantReviews(
                 OWNER_ID, false, OffsetPagination.of(1, 10));
@@ -288,7 +288,7 @@ class ReviewServiceTest {
 
     @Test
     void getMerchantReviewsRejectsOwnerWithoutMerchant() {
-        when(merchantRepository.findByOwnerId(OWNER_ID)).thenReturn(Optional.empty());
+        when(merchantPersistencePort.findByOwnerId(OWNER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> reviewService.getMerchantReviews(
                 OWNER_ID, null, OffsetPagination.of(0, 20)))
@@ -300,10 +300,10 @@ class ReviewServiceTest {
     @Test
     void getAdminProductReviewsReturnsEveryStatus() {
         ProductReview review = makeReview();
-        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
-        when(reviewRepository.findByProductId(PRODUCT_ID, OffsetPagination.of(0, 20)))
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
+        when(productReviewPersistencePort.findByProductId(PRODUCT_ID, OffsetPagination.of(0, 20)))
                 .thenReturn(List.of(review));
-        when(reviewRepository.countByProductId(PRODUCT_ID)).thenReturn(1L);
+        when(productReviewPersistencePort.countByProductId(PRODUCT_ID)).thenReturn(1L);
 
         PageResult<ProductReview> page = reviewService.getAdminProductReviews(
                 PRODUCT_ID, OffsetPagination.of(0, 20));
@@ -314,7 +314,7 @@ class ReviewServiceTest {
 
     @Test
     void getAdminProductReviewsRejectsUnknownProduct() {
-        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.empty());
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> reviewService.getAdminProductReviews(
                 PRODUCT_ID, OffsetPagination.of(0, 20)))
@@ -328,9 +328,9 @@ class ReviewServiceTest {
         ProductReview review = makeReview();
         review.report(MERCHANT_ID, "abuse", FIXED);
         review.pullEvents();
-        when(reviewRepository.findByStatus(ReviewStatus.REPORTED, OffsetPagination.of(0, 20)))
+        when(productReviewPersistencePort.findByStatus(ReviewStatus.REPORTED, OffsetPagination.of(0, 20)))
                 .thenReturn(List.of(review));
-        when(reviewRepository.countByStatus(ReviewStatus.REPORTED)).thenReturn(1L);
+        when(productReviewPersistencePort.countByStatus(ReviewStatus.REPORTED)).thenReturn(1L);
 
         PageResult<ProductReview> page = reviewService.getReportedReviews(OffsetPagination.of(0, 20));
 
@@ -340,10 +340,10 @@ class ReviewServiceTest {
 
     @Test
     void ratingSummaryReturnsAggregates() {
-        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
-        when(reviewRepository.getAverageRating(PRODUCT_ID)).thenReturn(4.5);
-        when(reviewRepository.countByProductIdAndStatus(PRODUCT_ID, ReviewStatus.VISIBLE)).thenReturn(2L);
-        when(reviewRepository.getRatingDistribution(PRODUCT_ID))
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
+        when(productReviewPersistencePort.getAverageRating(PRODUCT_ID)).thenReturn(4.5);
+        when(productReviewPersistencePort.countByProductIdAndStatus(PRODUCT_ID, ReviewStatus.VISIBLE)).thenReturn(2L);
+        when(productReviewPersistencePort.getRatingDistribution(PRODUCT_ID))
                 .thenReturn(Map.of(5, 1L, 4, 1L, 3, 0L, 2, 0L, 1, 0L));
 
         RatingSummary summary = reviewService.getProductRatingSummary(PRODUCT_ID);
@@ -355,7 +355,7 @@ class ReviewServiceTest {
 
     @Test
     void checkEligibilityReturnsAlreadyReviewed() {
-        when(reviewRepository.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(true);
+        when(productReviewPersistencePort.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(true);
 
         ReviewEligibilityResult r = reviewService.checkEligibility(USER_ID, PRODUCT_ID);
 
@@ -365,8 +365,8 @@ class ReviewServiceTest {
 
     @Test
     void checkEligibilityReturnsNotPurchased() {
-        when(reviewRepository.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(false);
-        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
+        when(productReviewPersistencePort.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(false);
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
         when(orderQueryPort.findCompletedOrderIdForSkus(USER_ID, List.of("sku-1"))).thenReturn(null);
 
         ReviewEligibilityResult r = reviewService.checkEligibility(USER_ID, PRODUCT_ID);
@@ -377,8 +377,8 @@ class ReviewServiceTest {
 
     @Test
     void checkEligibilityReturnsTrueWhenPurchased() {
-        when(reviewRepository.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(false);
-        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
+        when(productReviewPersistencePort.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(false);
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
         when(orderQueryPort.findCompletedOrderIdForSkus(USER_ID, List.of("sku-1"))).thenReturn(ORDER_ID);
 
         ReviewEligibilityResult r = reviewService.checkEligibility(USER_ID, PRODUCT_ID);
@@ -389,7 +389,7 @@ class ReviewServiceTest {
 
     @Test
     void reviewNotFoundThrowsCorrectError() {
-        when(reviewRepository.findById("missing")).thenReturn(Optional.empty());
+        when(productReviewPersistencePort.findById("missing")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> reviewService.hide(new HideReviewCommand(ADMIN_ID, "missing")))
                 .isInstanceOf(CatalogException.class)

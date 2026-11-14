@@ -4,6 +4,7 @@ import org.mockito.Mockito;
 
 import com.aionn.shipping.application.port.out.CarrierClient;
 import com.aionn.shipping.application.port.out.ShipmentPersistencePort;
+import com.aionn.shipping.application.port.out.observability.ShippingMetricsPort;
 import com.aionn.shipping.domain.model.Shipment;
 import com.aionn.shipping.domain.valueobject.ShipmentStatus;
 import com.aionn.shipping.infrastructure.carrier.GhnStatusMapper;
@@ -26,7 +27,7 @@ import static org.mockito.Mockito.when;
 class ShipmentStatusPollWorkerTest {
 
     @Mock
-    private ShipmentPersistencePort shipmentRepository;
+    private ShipmentPersistencePort shipmentPersistencePort;
 
     @Mock
     private CarrierClient carrierClient;
@@ -36,6 +37,9 @@ class ShipmentStatusPollWorkerTest {
 
     @Mock
     private ShipmentStatusApplier shipmentStatusApplier;
+
+    @Mock
+    private ShippingMetricsPort metrics;
 
     @Mock
     private java.time.Clock clock;
@@ -53,7 +57,7 @@ class ShipmentStatusPollWorkerTest {
 
     @Test
     void syncOneDoesNothingIfShipmentNotFound() {
-        when(shipmentRepository.findById("S_1")).thenReturn(Optional.empty());
+        when(shipmentPersistencePort.findById("S_1")).thenReturn(Optional.empty());
 
         worker.syncOne("S_1");
 
@@ -62,7 +66,7 @@ class ShipmentStatusPollWorkerTest {
 
     @Test
     void syncOneDoesNothingIfTrackingCodeNull() {
-        when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
+        when(shipmentPersistencePort.findById("S_1")).thenReturn(Optional.of(shipment));
         when(shipment.getTrackingCode()).thenReturn(null);
 
         worker.syncOne("S_1");
@@ -72,7 +76,7 @@ class ShipmentStatusPollWorkerTest {
 
     @Test
     void syncOneDoesNothingIfTerminalStatus() {
-        when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
+        when(shipmentPersistencePort.findById("S_1")).thenReturn(Optional.of(shipment));
         when(shipment.getTrackingCode()).thenReturn("TR_1");
         when(shipment.getStatus()).thenReturn(ShipmentStatus.DELIVERED);
 
@@ -83,7 +87,7 @@ class ShipmentStatusPollWorkerTest {
 
     @Test
     void syncOneHandlesCarrierExceptionGracefully() {
-        when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
+        when(shipmentPersistencePort.findById("S_1")).thenReturn(Optional.of(shipment));
         when(shipment.getTrackingCode()).thenReturn("TR_1");
         when(shipment.getStatus()).thenReturn(ShipmentStatus.REGISTERED);
         when(carrierClient.fetchOrderDetail("TR_1")).thenThrow(new RuntimeException("Carrier Error"));
@@ -96,7 +100,7 @@ class ShipmentStatusPollWorkerTest {
 
     @Test
     void syncOneSkipsWhenCarrierStatusIsUnmappable() {
-        when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
+        when(shipmentPersistencePort.findById("S_1")).thenReturn(Optional.of(shipment));
         when(shipment.getTrackingCode()).thenReturn("TR_1");
         when(shipment.getStatus()).thenReturn(ShipmentStatus.REGISTERED);
         when(carrierClient.fetchOrderDetail("TR_1")).thenReturn(detail("teleported"));
@@ -109,7 +113,7 @@ class ShipmentStatusPollWorkerTest {
 
     @Test
     void syncOneDelegatesMappedStatusToTheApplier() {
-        when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
+        when(shipmentPersistencePort.findById("S_1")).thenReturn(Optional.of(shipment));
         when(shipment.getTrackingCode()).thenReturn("TR_1");
         when(shipment.getStatus()).thenReturn(ShipmentStatus.REGISTERED);
         CarrierClient.OrderDetail detail = detail("PICKED_UP");
@@ -123,7 +127,7 @@ class ShipmentStatusPollWorkerTest {
 
     @Test
     void syncOneSwallowsApplierFailure() {
-        when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
+        when(shipmentPersistencePort.findById("S_1")).thenReturn(Optional.of(shipment));
         when(shipment.getTrackingCode()).thenReturn("TR_1");
         when(shipment.getStatus()).thenReturn(ShipmentStatus.REGISTERED);
         when(carrierClient.fetchOrderDetail("TR_1")).thenReturn(detail("PICKED_UP"));

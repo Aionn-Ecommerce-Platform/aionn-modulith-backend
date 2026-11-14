@@ -31,19 +31,19 @@ import java.time.Clock;
 @Transactional
 public class StockTransferService {
 
-        private final WarehousePersistencePort warehouseRepository;
-        private final InventoryItemPersistencePort itemRepository;
-        private final StockTransferPersistencePort transferRepository;
-        private final StockAdjustmentPersistencePort adjustmentRepository;
+        private final WarehousePersistencePort warehousePersistencePort;
+        private final InventoryItemPersistencePort inventoryItemPersistencePort;
+        private final StockTransferPersistencePort stockTransferPersistencePort;
+        private final StockAdjustmentPersistencePort stockAdjustmentPersistencePort;
         private final EventPublisher eventPublisher;
         private final MerchantQueryPort merchantQueryPort;
         private final Clock clock;
 
         public StockTransfer initiate(InitiateTransferCommand command) {
                 String merchantId = requireMerchantIdForOwner(command.ownerId());
-                Warehouse from = warehouseRepository.findById(command.fromWarehouseId())
+                Warehouse from = warehousePersistencePort.findById(command.fromWarehouseId())
                                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.WAREHOUSE_NOT_FOUND));
-                Warehouse to = warehouseRepository.findById(command.toWarehouseId())
+                Warehouse to = warehousePersistencePort.findById(command.toWarehouseId())
                                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.WAREHOUSE_NOT_FOUND));
                 if (!from.getMerchantId().equals(merchantId) || !to.getMerchantId().equals(merchantId)) {
                         throw new InventoryException(InventoryErrorCode.STOCK_TRANSFER_DIFFERENT_MERCHANT);
@@ -53,22 +53,22 @@ public class StockTransferService {
                                         "Source warehouse must be ACTIVE to initiate a transfer");
                 }
 
-                InventoryItem source = itemRepository.lockByKey(
+                InventoryItem source = inventoryItemPersistencePort.lockByKey(
                                 new InventoryItemKey(command.skuId(), command.fromWarehouseId()))
                                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND));
                 source.adjust(-command.qty(), AdjustmentType.TRANSFER_OUT, "transfer-out", clock);
-                itemRepository.save(source);
+                inventoryItemPersistencePort.save(source);
                 eventPublisher.publish(source.pullEvents());
 
                 StockTransfer transfer = StockTransfer.initiate(IdGenerator.ulid(),
                                 merchantId, command.fromWarehouseId(), command.toWarehouseId(),
                                 command.skuId(), command.qty(), clock);
-                StockTransfer saved = transferRepository.save(transfer);
+                StockTransfer saved = stockTransferPersistencePort.save(transfer);
 
                 StockAdjustment outAdj = StockAdjustment.manual(IdGenerator.ulid(),
                                 command.skuId(), command.fromWarehouseId(), command.qty(),
                                 AdjustmentType.TRANSFER_OUT, "transfer " + saved.getTransferId(), clock);
-                adjustmentRepository.save(outAdj);
+                stockAdjustmentPersistencePort.save(outAdj);
 
                 eventPublisher.publish(transfer.pullEvents());
                 eventPublisher.publish(outAdj.pullEvents());
@@ -80,17 +80,17 @@ public class StockTransferService {
                 transfer.complete(command.receivedQty(), clock);
 
                 InventoryItemKey destKey = new InventoryItemKey(transfer.getSkuId(), transfer.getToWarehouseId());
-                InventoryItem dest = itemRepository.createIfAbsentAndLock(destKey, clock.instant());
+                InventoryItem dest = inventoryItemPersistencePort.createIfAbsentAndLock(destKey, clock.instant());
                 dest.adjust(command.receivedQty(), AdjustmentType.TRANSFER_IN, "transfer-in", clock);
-                itemRepository.save(dest);
+                inventoryItemPersistencePort.save(dest);
                 eventPublisher.publish(dest.pullEvents());
 
-                StockTransfer saved = transferRepository.save(transfer);
+                StockTransfer saved = stockTransferPersistencePort.save(transfer);
 
                 StockAdjustment inAdj = StockAdjustment.manual(IdGenerator.ulid(),
                                 transfer.getSkuId(), transfer.getToWarehouseId(), command.receivedQty(),
                                 AdjustmentType.TRANSFER_IN, "transfer " + transfer.getTransferId(), clock);
-                adjustmentRepository.save(inAdj);
+                stockAdjustmentPersistencePort.save(inAdj);
 
                 int shortage = transfer.getQty() - command.receivedQty();
                 if (shortage > 0) {
@@ -98,7 +98,7 @@ public class StockTransferService {
                                         transfer.getSkuId(), transfer.getFromWarehouseId(), shortage,
                                         AdjustmentType.DAMAGED,
                                         "transfer shortage " + transfer.getTransferId(), clock);
-                        adjustmentRepository.save(shortageAdj);
+                        stockAdjustmentPersistencePort.save(shortageAdj);
                         eventPublisher.publish(shortageAdj.pullEvents());
                 }
 
@@ -111,17 +111,17 @@ public class StockTransferService {
                 StockTransfer transfer = ownedByOwner(command.transferId(), command.ownerId());
                 transfer.cancel(command.reason(), clock);
 
-                InventoryItem source = itemRepository.lockByKey(
+                InventoryItem source = inventoryItemPersistencePort.lockByKey(
                                 new InventoryItemKey(transfer.getSkuId(), transfer.getFromWarehouseId()))
                                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND));
                 source.adjust(transfer.getQty(), AdjustmentType.TRANSFER_IN, "transfer-cancelled", clock);
-                itemRepository.save(source);
+                inventoryItemPersistencePort.save(source);
 
-                StockTransfer saved = transferRepository.save(transfer);
+                StockTransfer saved = stockTransferPersistencePort.save(transfer);
                 StockAdjustment refundAdj = StockAdjustment.manual(IdGenerator.ulid(),
                                 transfer.getSkuId(), transfer.getFromWarehouseId(), transfer.getQty(),
                                 AdjustmentType.TRANSFER_IN, "transfer cancelled " + transfer.getTransferId(), clock);
-                adjustmentRepository.save(refundAdj);
+                stockAdjustmentPersistencePort.save(refundAdj);
                 eventPublisher.publish(transfer.pullEvents());
                 eventPublisher.publish(source.pullEvents());
                 eventPublisher.publish(refundAdj.pullEvents());
@@ -135,7 +135,7 @@ public class StockTransferService {
 
         private StockTransfer ownedByOwner(String transferId, String ownerId) {
                 String merchantId = requireMerchantIdForOwner(ownerId);
-                StockTransfer transfer = transferRepository.findById(transferId)
+                StockTransfer transfer = stockTransferPersistencePort.findById(transferId)
                                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.STOCK_TRANSFER_NOT_FOUND));
                 if (!transfer.getMerchantId().equals(merchantId)) {
                         throw new InventoryException(InventoryErrorCode.STOCK_TRANSFER_DIFFERENT_MERCHANT);

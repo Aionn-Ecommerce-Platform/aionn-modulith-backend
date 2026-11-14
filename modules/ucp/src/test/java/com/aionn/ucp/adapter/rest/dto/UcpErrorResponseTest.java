@@ -1,5 +1,7 @@
 package com.aionn.ucp.adapter.rest.dto;
 
+import com.aionn.ucp.adapter.rest.dto.response.UcpErrorResponse;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;

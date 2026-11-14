@@ -34,9 +34,9 @@ class PricingQueryAdapterTest {
     private static final ProductVariant.ParcelDimensions TEST_PARCEL = new ProductVariant.ParcelDimensions(500, BigDecimal.valueOf(15), BigDecimal.valueOf(10), BigDecimal.valueOf(5));
 
     @Mock
-    private ProductPersistencePort productRepository;
+    private ProductPersistencePort productPersistencePort;
     @Mock
-    private MerchantPersistencePort merchantRepository;
+    private MerchantPersistencePort merchantPersistencePort;
     @Mock
     private CatalogProductProperties productProperties;
 
@@ -61,8 +61,8 @@ class PricingQueryAdapterTest {
     void resolvePricingMapsRequestedSkus() {
         Merchant merchant = Merchant.register(MERCHANT_ID, "owner-1", "Acme", BigDecimal.valueOf(0.05), FIXED);
         merchant.activate(ADMIN_ID, "test", FIXED);
-        when(merchantRepository.findById(MERCHANT_ID)).thenReturn(java.util.Optional.of(merchant));
-        when(productRepository.findAllBySkuIds(List.of("sku-1"))).thenReturn(List.of(publishedProduct()));
+        when(merchantPersistencePort.findById(MERCHANT_ID)).thenReturn(java.util.Optional.of(merchant));
+        when(productPersistencePort.findAllBySkuIds(List.of("sku-1"))).thenReturn(List.of(publishedProduct()));
 
         Map<String, PricingQueryPort.SkuPricing> result = adapter.resolvePricing(List.of("sku-1"));
 

@@ -36,9 +36,9 @@ import java.util.List;
 @Transactional
 public class InventoryItemService {
 
-    private final InventoryItemPersistencePort itemRepository;
-    private final WarehousePersistencePort warehouseRepository;
-    private final StockAdjustmentPersistencePort adjustmentRepository;
+    private final InventoryItemPersistencePort inventoryItemPersistencePort;
+    private final WarehousePersistencePort warehousePersistencePort;
+    private final StockAdjustmentPersistencePort stockAdjustmentPersistencePort;
     private final EventPublisher eventPublisher;
     private final MerchantQueryPort merchantQueryPort;
     private final Clock clock;
@@ -50,13 +50,13 @@ public class InventoryItemService {
                     "Cannot initialize stock for a non-active warehouse");
         }
         InventoryItemKey key = new InventoryItemKey(command.skuId(), command.warehouseId());
-        if (itemRepository.findByKey(key).isPresent()) {
+        if (inventoryItemPersistencePort.findByKey(key).isPresent()) {
             throw new InventoryException(InventoryErrorCode.INVENTORY_ALREADY_INITIALIZED);
         }
         InventoryItem item = InventoryItem.initialize(key, command.initialQty(), clock);
         InventoryItem saved;
         try {
-            saved = itemRepository.save(item);
+            saved = inventoryItemPersistencePort.save(item);
         } catch (DataIntegrityViolationException ex) {
             throw new InventoryException(InventoryErrorCode.INVENTORY_ALREADY_INITIALIZED);
         }
@@ -68,7 +68,7 @@ public class InventoryItemService {
         ownerContext(command.ownerId(), command.warehouseId());
         InventoryItem item = lockedItem(command.skuId(), command.warehouseId());
         item.configureSafetyStock(command.safetyStockQty(), clock);
-        InventoryItem saved = itemRepository.save(item);
+        InventoryItem saved = inventoryItemPersistencePort.save(item);
         eventPublisher.publish(item.pullEvents());
         return saved;
     }
@@ -77,7 +77,7 @@ public class InventoryItemService {
         ownerContext(command.ownerId(), command.warehouseId());
         InventoryItem item = lockedItem(command.skuId(), command.warehouseId());
         item.trackBatchAndExpiry(command.batchNo(), command.expiryDate(), clock);
-        InventoryItem saved = itemRepository.save(item);
+        InventoryItem saved = inventoryItemPersistencePort.save(item);
         eventPublisher.publish(item.pullEvents());
         return saved;
     }
@@ -94,11 +94,11 @@ public class InventoryItemService {
         };
         item.adjust(signedDelta, command.type(), command.reason(), clock);
         item.emitBreachIfApplicable(clock);
-        InventoryItem saved = itemRepository.save(item);
+        InventoryItem saved = inventoryItemPersistencePort.save(item);
 
         StockAdjustment adjustment = StockAdjustment.manual(IdGenerator.ulid(),
                 command.skuId(), command.warehouseId(), Math.abs(signedDelta), command.type(), command.reason(), clock);
-        adjustmentRepository.save(adjustment);
+        stockAdjustmentPersistencePort.save(adjustment);
         eventPublisher.publish(adjustment.pullEvents());
 
         eventPublisher.publish(item.pullEvents());
@@ -108,7 +108,7 @@ public class InventoryItemService {
     public InventoryItem emergencyLock(EmergencyLockCommand command) {
         InventoryItem item = lockedItem(command.skuId(), command.warehouseId());
         item.emergencyLock(command.adminId(), command.reason(), clock);
-        InventoryItem saved = itemRepository.save(item);
+        InventoryItem saved = inventoryItemPersistencePort.save(item);
         eventPublisher.publish(item.pullEvents());
         return saved;
     }
@@ -116,7 +116,7 @@ public class InventoryItemService {
     public InventoryItem emergencyUnlock(EmergencyUnlockCommand command) {
         InventoryItem item = lockedItem(command.skuId(), command.warehouseId());
         item.emergencyUnlock(command.adminId(), clock);
-        InventoryItem saved = itemRepository.save(item);
+        InventoryItem saved = inventoryItemPersistencePort.save(item);
         eventPublisher.publish(item.pullEvents());
         return saved;
     }
@@ -126,53 +126,53 @@ public class InventoryItemService {
         InventoryItem item = lockedItem(command.skuId(), command.warehouseId());
         item.recordAudit(IdGenerator.ulid(), command.actualQty(), clock);
         item.emitBreachIfApplicable(clock);
-        InventoryItem saved = itemRepository.save(item);
+        InventoryItem saved = inventoryItemPersistencePort.save(item);
         eventPublisher.publish(item.pullEvents());
         return saved;
     }
 
     @Transactional(readOnly = true)
     public InventoryItem get(String skuId, String warehouseId) {
-        return itemRepository.findByKey(new InventoryItemKey(skuId, warehouseId))
+        return inventoryItemPersistencePort.findByKey(new InventoryItemKey(skuId, warehouseId))
                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND));
     }
 
     @Transactional(readOnly = true)
     public InventoryItem getForOwner(String ownerId, String skuId, String warehouseId) {
         ownerContext(ownerId, warehouseId);
-        return itemRepository.findByKey(new InventoryItemKey(skuId, warehouseId))
+        return inventoryItemPersistencePort.findByKey(new InventoryItemKey(skuId, warehouseId))
                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND));
     }
 
     @Transactional(readOnly = true)
     public List<InventoryItem> listBySku(String skuId) {
-        return itemRepository.findBySku(skuId);
+        return inventoryItemPersistencePort.findBySku(skuId);
     }
 
     @Transactional(readOnly = true)
     public PageResult<InventoryItem> listByWarehouse(
             String ownerId, String warehouseId, OffsetPagination pagination) {
-        Warehouse warehouse = warehouseRepository.findById(warehouseId)
+        Warehouse warehouse = warehousePersistencePort.findById(warehouseId)
                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.WAREHOUSE_NOT_FOUND));
         String merchantId = merchantQueryPort.findMerchantIdByOwnerId(ownerId)
                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.WAREHOUSE_FORBIDDEN,
                         "No merchant registered for the authenticated user"));
         warehouse.ensureOwnedBy(merchantId);
-        return itemRepository.findByWarehouse(warehouseId, pagination);
+        return inventoryItemPersistencePort.findByWarehouse(warehouseId, pagination);
     }
 
     private OwnerContext ownerContext(String ownerId, String warehouseId) {
         String merchantId = merchantQueryPort.findMerchantIdByOwnerId(ownerId)
                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.WAREHOUSE_FORBIDDEN,
                         "No merchant registered for the authenticated user"));
-        Warehouse warehouse = warehouseRepository.findById(warehouseId)
+        Warehouse warehouse = warehousePersistencePort.findById(warehouseId)
                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.WAREHOUSE_NOT_FOUND));
         warehouse.ensureOwnedBy(merchantId);
         return new OwnerContext(merchantId, warehouse);
     }
 
     private InventoryItem lockedItem(String skuId, String warehouseId) {
-        return itemRepository.lockByKey(new InventoryItemKey(skuId, warehouseId))
+        return inventoryItemPersistencePort.lockByKey(new InventoryItemKey(skuId, warehouseId))
                 .orElseThrow(() -> new InventoryException(InventoryErrorCode.INVENTORY_ITEM_NOT_FOUND));
     }
 

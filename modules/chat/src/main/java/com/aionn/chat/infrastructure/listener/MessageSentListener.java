@@ -26,7 +26,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class MessageSentListener {
 
-    private final ConversationPersistencePort conversationRepository;
+    private final ConversationPersistencePort conversationPersistencePort;
     private final PresenceTracker presenceTracker;
     private final IntegrationEventPublisher integrationEventPublisher;
     private final ChatMetricsPort chatMetrics;
@@ -40,7 +40,7 @@ public class MessageSentListener {
             return;
         }
 
-        Conversation conversation = conversationRepository.findById(event.conversationId()).orElse(null);
+        Conversation conversation = conversationPersistencePort.findById(event.conversationId()).orElse(null);
         if (conversation == null) {
             return;
         }

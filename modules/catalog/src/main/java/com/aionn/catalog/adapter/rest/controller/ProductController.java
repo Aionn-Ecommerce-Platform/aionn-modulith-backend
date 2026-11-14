@@ -5,10 +5,7 @@ import com.aionn.catalog.adapter.rest.dto.product.request.EmergencyTakedownReque
 import com.aionn.catalog.adapter.rest.dto.product.request.UpdateAiMetadataRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.UpdateMediaRequest;
 import java.math.BigDecimal;
-import java.time.Clock;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Locale;
+import java.util.List;
 import java.util.Map;
 
 import com.aionn.catalog.adapter.rest.dto.product.request.AssignBrandRequest;
@@ -21,19 +18,16 @@ import com.aionn.catalog.adapter.rest.dto.product.request.DeactivateProductReque
 import com.aionn.catalog.adapter.rest.dto.product.request.DefineAttributesRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.DefineVariantRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.RejectProductRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.SearchCatalogRequest;
 import com.aionn.catalog.adapter.rest.dto.product.response.BulkPriceUpdateResponse;
 import com.aionn.catalog.adapter.rest.dto.product.response.ProductAnalyticsResponse;
 import com.aionn.catalog.adapter.rest.dto.product.response.ProductResponse;
 import com.aionn.catalog.adapter.rest.dto.product.response.ProductSearchResponse;
 import com.aionn.catalog.adapter.rest.mapper.product.ProductDtoMapper;
+import com.aionn.catalog.adapter.rest.mapper.product.ProductSearchCriteriaAssembler;
 import com.aionn.catalog.adapter.rest.support.session.CurrentAdminId;
 import com.aionn.catalog.adapter.rest.support.session.CurrentMerchantId;
 import com.aionn.catalog.application.dto.common.PageResult;
-import com.aionn.catalog.application.dto.product.query.GetProductQuery;
-import com.aionn.catalog.application.dto.product.query.GetProductsBySkuIdsQuery;
-import com.aionn.catalog.application.dto.product.query.ListProductsByMerchantQuery;
-import com.aionn.catalog.application.dto.product.query.ListProductsByStatusQuery;
-import com.aionn.catalog.application.dto.product.query.SearchProductsQuery;
 import com.aionn.catalog.application.dto.product.result.BulkPriceUpdateResult;
 import com.aionn.catalog.application.dto.product.result.ProductResult;
 import com.aionn.catalog.application.port.in.product.AssignBrandInputPort;
@@ -49,13 +43,9 @@ import com.aionn.catalog.application.port.in.product.DefineAttributesInputPort;
 import com.aionn.catalog.application.port.in.product.DefineVariantInputPort;
 import com.aionn.catalog.application.port.in.product.EmergencyTakedownInputPort;
 import com.aionn.catalog.application.dto.analytics.result.ProductAnalyticsResult;
-import com.aionn.catalog.application.dto.search.ProductSearchCriteria;
 import com.aionn.catalog.application.dto.search.ProductSearchResult;
 import com.aionn.catalog.application.port.in.product.GetProductAnalyticsInputPort;
 import com.aionn.catalog.application.port.in.product.SearchProductCatalogInputPort;
-import com.aionn.catalog.application.dto.product.query.GetPersonalizedProductsQuery;
-import com.aionn.catalog.application.dto.product.query.GetPopularProductsQuery;
-import com.aionn.catalog.application.dto.product.query.GetRelatedProductsQuery;
 import com.aionn.catalog.application.port.in.product.GetPersonalizedProductsInputPort;
 import com.aionn.catalog.application.port.in.product.GetPopularProductsInputPort;
 import com.aionn.catalog.application.port.in.product.GetProductInputPort;
@@ -63,7 +53,7 @@ import com.aionn.catalog.application.port.in.product.GetProductsBySkuIdsInputPor
 import com.aionn.catalog.application.port.in.product.GetRelatedProductsInputPort;
 import com.aionn.catalog.application.port.in.product.TrackProductViewInputPort;
 import com.aionn.catalog.adapter.rest.support.session.CurrentOwnerId;
-import org.springframework.security.core.Authentication;
+import com.aionn.catalog.adapter.rest.support.session.OptionalOwnerId;
 import com.aionn.catalog.application.port.in.product.ListProductsByMerchantInputPort;
 import com.aionn.catalog.application.port.in.product.ListProductsByStatusInputPort;
 import com.aionn.catalog.application.port.in.product.PublishProductInputPort;
@@ -76,11 +66,7 @@ import com.aionn.catalog.application.port.in.product.UpdateAiMetadataInputPort;
 import com.aionn.catalog.application.port.in.product.UpdateMediaInputPort;
 import com.aionn.catalog.domain.valueobject.ProductStatus;
 import com.aionn.platform.web.response.ApiResponse;
-import com.aionn.contracts.event.catalog.SearchPerformedIntegrationEvent;
-import com.aionn.contracts.publisher.IntegrationEventPublisher;
-import com.aionn.sharedkernel.util.IdGenerator;
 import com.aionn.platform.web.response.PageMetadata;
-import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -98,15 +84,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/v1/catalog/products")
 @RequiredArgsConstructor
 @Tag(name = "Catalog - Product", description = "Product lifecycle, variants, pricing")
 public class ProductController {
 
-        private static final String MSG_PRODUCTS_FETCHED = "Products fetched";
+        private static final String PRODUCTS_FETCHED = "Products fetched";
 
         private final CreateProductInputPort createProductInputPort;
         private final CloneProductInputPort cloneProductInputPort;
@@ -138,9 +122,8 @@ public class ProductController {
         private final TrackProductViewInputPort trackProductViewInputPort;
         private final GetProductAnalyticsInputPort getProductAnalyticsInputPort;
         private final SearchProductCatalogInputPort searchProductCatalogInputPort;
+        private final ProductSearchCriteriaAssembler productSearchCriteriaAssembler;
         private final ProductDtoMapper productDtoMapper;
-        private final IntegrationEventPublisher integrationEventPublisher;
-        private final Clock clock;
 
         @PostMapping
         @PreAuthorize("isAuthenticated()")
@@ -319,7 +302,7 @@ public class ProductController {
         public ResponseEntity<ApiResponse<ProductResponse>> get(@PathVariable String productId) {
                 return ResponseEntity.ok(ApiResponse.success(
                                 productDtoMapper.toResponse(
-                                                getProductInputPort.execute(new GetProductQuery(productId))),
+                                                getProductInputPort.execute(productDtoMapper.toGetQuery(productId))),
                                 "Product fetched"));
         }
 
@@ -331,11 +314,11 @@ public class ProductController {
                         @RequestParam(defaultValue = "0") @Min(0) int page,
                         @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
                 PageResult<ProductResult> results = listProductsByMerchantInputPort.execute(
-                                new ListProductsByMerchantQuery(merchantId, OffsetPagination.of(page, size)));
+                                productDtoMapper.toListByMerchantQuery(merchantId, page, size));
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
                                 productDtoMapper.toResponses(results.content()),
                                 PageMetadata.of(results.page(), results.size(), results.totalElements()),
-                                MSG_PRODUCTS_FETCHED));
+                                PRODUCTS_FETCHED));
         }
 
         @GetMapping("/admin/reviews")
@@ -345,12 +328,11 @@ public class ProductController {
                         @RequestParam(defaultValue = "0") @Min(0) int page,
                         @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
                 PageResult<ProductResult> results = listProductsByStatusInputPort.execute(
-                                new ListProductsByStatusQuery(ProductStatus.PENDING_REVIEW,
-                                                OffsetPagination.of(page, size)));
+                                productDtoMapper.toListByStatusQuery(ProductStatus.PENDING_REVIEW, page, size));
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
                                 productDtoMapper.toResponses(results.content()),
                                 PageMetadata.of(results.page(), results.size(), results.totalElements()),
-                                MSG_PRODUCTS_FETCHED));
+                                PRODUCTS_FETCHED));
         }
 
         @PostMapping("/{productId}/variants/{skuId}/remove")
@@ -423,12 +405,11 @@ public class ProductController {
                         @RequestParam(defaultValue = "0") @Min(0) int page,
                         @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
                 PageResult<ProductResult> results = searchProductsInputPort.execute(
-                                new SearchProductsQuery(keyword,
-                                                OffsetPagination.of(page, size)));
+                                productDtoMapper.toSearchQuery(keyword, page, size));
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
                                 productDtoMapper.toResponses(results.content()),
                                 PageMetadata.of(results.page(), results.size(), results.totalElements()),
-                                MSG_PRODUCTS_FETCHED));
+                                PRODUCTS_FETCHED));
         }
 
         @GetMapping("/by-skus")
@@ -436,8 +417,8 @@ public class ProductController {
         public ResponseEntity<ApiResponse<List<ProductResponse>>> getBySkuIds(@RequestParam List<String> skuIds) {
                 return ResponseEntity.ok(ApiResponse.success(
                                 productDtoMapper.toResponses(getProductsBySkuIdsInputPort
-                                                .execute(new GetProductsBySkuIdsQuery(skuIds))),
-                                MSG_PRODUCTS_FETCHED));
+                                                .execute(productDtoMapper.toBySkuIdsQuery(skuIds))),
+                                PRODUCTS_FETCHED));
         }
 
         @GetMapping("/{productId}/recommendations")
@@ -447,8 +428,8 @@ public class ProductController {
                         @RequestParam(defaultValue = "5") int limit) {
                 return ResponseEntity.ok(ApiResponse.success(
                                 productDtoMapper.toResponses(getRelatedProductsInputPort
-                                                .execute(new GetRelatedProductsQuery(productId, limit))),
-                                MSG_PRODUCTS_FETCHED));
+                                                .execute(productDtoMapper.toRelatedQuery(productId, limit))),
+                                PRODUCTS_FETCHED));
         }
 
         @GetMapping("/recommendations/popular")
@@ -457,23 +438,22 @@ public class ProductController {
                         @RequestParam(defaultValue = "5") int limit) {
                 return ResponseEntity.ok(ApiResponse.success(
                                 productDtoMapper.toResponses(getPopularProductsInputPort
-                                                .execute(new GetPopularProductsQuery(limit))),
-                                MSG_PRODUCTS_FETCHED));
+                                                .execute(productDtoMapper.toPopularQuery(limit))),
+                                PRODUCTS_FETCHED));
         }
 
         @GetMapping("/recommendations/personalized")
         @Operation(summary = "Get personalized products", deprecated = true, description = "Deprecated - use GET /api/v1/recommendations/home, which serves authenticated callers personalized recommendations based on their own behaviour, and serves unauthenticated callers anonymous/trending recommendations.")
         public ResponseEntity<ApiResponse<List<ProductResponse>>> getPersonalized(
-                        Authentication authentication,
+                        @OptionalOwnerId String userId,
                         @RequestParam(required = false) List<String> categoryIds,
                         @RequestParam(required = false) List<String> brandIds,
                         @RequestParam(defaultValue = "5") int limit) {
-                String userId = authentication != null ? authentication.getName() : null;
                 return ResponseEntity.ok(ApiResponse.success(
                                 productDtoMapper.toResponses(getPersonalizedProductsInputPort
-                                                .execute(new GetPersonalizedProductsQuery(userId, categoryIds, brandIds,
-                                                                limit))),
-                                MSG_PRODUCTS_FETCHED));
+                                                .execute(productDtoMapper.toPersonalizedQuery(
+                                                                userId, categoryIds, brandIds, limit))),
+                                PRODUCTS_FETCHED));
         }
 
         @PostMapping("/{productId}/view")
@@ -498,7 +478,7 @@ public class ProductController {
         @GetMapping("/search/catalog")
         @Operation(summary = "Search product catalog with facets")
         public ResponseEntity<ApiResponse<ProductSearchResponse>> searchProductCatalog(
-                        Authentication authentication,
+                        @OptionalOwnerId String userId,
                         @RequestParam(required = false) String q,
                         @RequestParam(required = false) String merchantId,
                         @RequestParam(required = false) List<String> categoryIds,
@@ -512,61 +492,12 @@ public class ProductController {
                         @RequestParam(defaultValue = "0") @Min(0) int page,
                         @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
                         @RequestParam(required = false) Map<String, String> allParams) {
-                ProductSearchCriteria.Sort sortEnum;
-                try {
-                        sortEnum = ProductSearchCriteria.Sort.valueOf(sort.toUpperCase(Locale.ROOT));
-                } catch (IllegalArgumentException ex) {
-                        sortEnum = ProductSearchCriteria.Sort.RELEVANCE;
-                }
-                Map<String, List<String>> attributes = new LinkedHashMap<>();
-                if (allParams != null) {
-                        for (Map.Entry<String, String> e : allParams.entrySet()) {
-                                if (e.getKey().startsWith("attr.") && e.getValue() != null && !e.getValue().isBlank()) {
-                                        attributes.put(e.getKey().substring(5),
-                                                        Arrays.stream(e.getValue().split(","))
-                                                                        .map(String::trim)
-                                                                        .filter(s -> !s.isEmpty())
-                                                                        .toList());
-                                }
-                        }
-                }
-                ProductSearchCriteria criteria = new ProductSearchCriteria(
-                                q, merchantId, ProductStatus.PUBLISHED,
-                                categoryIds == null ? List.of() : categoryIds,
-                                brandIds == null ? List.of() : brandIds,
-                                priceMin, priceMax, attributes, sortEnum, page, size, ratingMin, onSale,
-                                collectionIds == null ? List.of() : collectionIds);
-                ProductSearchResult result = searchProductCatalogInputPort.execute(criteria);
-                recordSearchIntent(
-                                authentication != null && authentication.isAuthenticated() ? authentication.getName() : null,
-                                q, categoryIds, brandIds);
+                ProductSearchResult result = searchProductCatalogInputPort.execute(
+                                productSearchCriteriaAssembler.toCriteria(new SearchCatalogRequest(
+                                                q, merchantId, categoryIds, brandIds, priceMin, priceMax,
+                                                ratingMin, onSale, collectionIds, sort, page, size, allParams)),
+                                userId);
                 return ResponseEntity.ok(
-                                ApiResponse.success(productDtoMapper.toSearchResponse(result), MSG_PRODUCTS_FETCHED));
-        }
-
-        /**
-         * Records a user's explicit search intent as a behavioural signal for the
-         * recommendation module. Only published when there is something to learn
-         * from - a keyword or a chosen facet - and only for real users; anonymous
-         * browsing is not personalised.
-         */
-        private void recordSearchIntent(String userId, String keyword,
-                        List<String> categoryIds, List<String> brandIds) {
-                if (userId == null || userId.isBlank() || "anonymousUser".equals(userId)) {
-                        return;
-                }
-                boolean hasKeyword = keyword != null && !keyword.isBlank();
-                boolean hasFacets = (categoryIds != null && !categoryIds.isEmpty())
-                                || (brandIds != null && !brandIds.isEmpty());
-                if (!hasKeyword && !hasFacets) {
-                        return;
-                }
-                integrationEventPublisher.publish(new SearchPerformedIntegrationEvent(
-                                IdGenerator.ulid(),
-                                userId,
-                                hasKeyword ? keyword.trim() : null,
-                                categoryIds == null ? List.of() : categoryIds,
-                                brandIds == null || brandIds.isEmpty() ? null : brandIds.get(0),
-                                clock.instant()));
+                                ApiResponse.success(productDtoMapper.toSearchResponse(result), PRODUCTS_FETCHED));
         }
 }

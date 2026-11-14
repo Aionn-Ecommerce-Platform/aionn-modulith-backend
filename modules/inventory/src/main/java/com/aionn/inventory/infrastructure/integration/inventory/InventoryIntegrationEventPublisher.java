@@ -22,7 +22,7 @@ public class InventoryIntegrationEventPublisher {
 
     private final IntegrationEventPublisher integrationEventPublisher;
     private final InventoryIntegrationEventMapper mapper;
-    private final WarehousePersistencePort warehouseRepository;
+    private final WarehousePersistencePort warehousePersistencePort;
 
     @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -67,7 +67,7 @@ public class InventoryIntegrationEventPublisher {
 
     @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
-    public void onSafetyStockBreached(InventoryItemEvents.SafetyStockBreached event) {        String merchantId = warehouseRepository.findById(event.warehouseId())
+    public void onSafetyStockBreached(InventoryItemEvents.SafetyStockBreached event) {        String merchantId = warehousePersistencePort.findById(event.warehouseId())
                 .map(w -> w.getMerchantId())
                 .orElse(null);
         if (merchantId == null) {

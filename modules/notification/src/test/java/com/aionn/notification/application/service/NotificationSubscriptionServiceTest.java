@@ -36,14 +36,14 @@ class NotificationSubscriptionServiceTest {
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
     @Mock
-    private NotificationSubscriptionPersistencePort subscriptionRepository;
+    private NotificationSubscriptionPersistencePort notificationSubscriptionPersistencePort;
     @Mock
-    private DeviceTokenPersistencePort deviceTokenRepository;
+    private DeviceTokenPersistencePort deviceTokenPersistencePort;
     @Mock
     private EventPublisher eventPublisher;
 
     private NotificationSubscriptionService service() {
-        return new NotificationSubscriptionService(subscriptionRepository, deviceTokenRepository,
+        return new NotificationSubscriptionService(notificationSubscriptionPersistencePort, deviceTokenPersistencePort,
                 eventPublisher, CLOCK);
     }
 
@@ -53,9 +53,9 @@ class NotificationSubscriptionServiceTest {
 
     @Test
     void updateChannelPersistsOptOut() {
-        when(subscriptionRepository.findByUserId("user-1"))
+        when(notificationSubscriptionPersistencePort.findByUserId("user-1"))
                 .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
-        when(subscriptionRepository.save(any(NotificationSubscription.class)))
+        when(notificationSubscriptionPersistencePort.save(any(NotificationSubscription.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         NotificationSubscription saved = service().updateChannel(new SubscriptionCommands.UpdateChannel(
@@ -68,8 +68,8 @@ class NotificationSubscriptionServiceTest {
 
     @Test
     void updateChannelCreatesDefaultSubscriptionWhenMissing() {
-        when(subscriptionRepository.findByUserId("user-1")).thenReturn(Optional.empty());
-        when(subscriptionRepository.save(any(NotificationSubscription.class)))
+        when(notificationSubscriptionPersistencePort.findByUserId("user-1")).thenReturn(Optional.empty());
+        when(notificationSubscriptionPersistencePort.save(any(NotificationSubscription.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         NotificationSubscription saved = service().updateChannel(new SubscriptionCommands.UpdateChannel(
@@ -80,7 +80,7 @@ class NotificationSubscriptionServiceTest {
 
     @Test
     void updateChannelRejectsDisablingMandatoryCategory() {
-        when(subscriptionRepository.findByUserId("user-1"))
+        when(notificationSubscriptionPersistencePort.findByUserId("user-1"))
                 .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
 
         NotificationSubscriptionService service = service();
@@ -95,15 +95,15 @@ class NotificationSubscriptionServiceTest {
 
     @Test
     void getReturnsDefaultsWithoutPersistingWhenMissing() {
-        when(subscriptionRepository.findByUserId("user-1")).thenReturn(Optional.empty());
+        when(notificationSubscriptionPersistencePort.findByUserId("user-1")).thenReturn(Optional.empty());
 
         assertThat(service().get("user-1").getUserId()).isEqualTo("user-1");
-        verify(subscriptionRepository, never()).save(any());
+        verify(notificationSubscriptionPersistencePort, never()).save(any());
     }
 
     @Test
     void getReturnsStoredSubscription() {
-        when(subscriptionRepository.findByUserId("user-1"))
+        when(notificationSubscriptionPersistencePort.findByUserId("user-1"))
                 .thenReturn(Optional.of(NotificationSubscription.createDefault("user-1", CLOCK)));
 
         assertThat(service().get("user-1").getCreatedAt()).isEqualTo(NOW);
@@ -111,22 +111,22 @@ class NotificationSubscriptionServiceTest {
 
     @Test
     void registerDeviceTokenIsIdempotent() {
-        when(deviceTokenRepository.findByUserAndToken("user-1", "fcm-token"))
+        when(deviceTokenPersistencePort.findByUserAndToken("user-1", "fcm-token"))
                 .thenReturn(Optional.of(token("tok-existing")));
 
         DeviceToken result = service().registerDeviceToken(
                 new SubscriptionCommands.RegisterDeviceToken("user-1", "fcm-token", "android"));
 
         assertThat(result.getTokenId()).isEqualTo("tok-existing");
-        verify(deviceTokenRepository, never()).save(any());
+        verify(deviceTokenPersistencePort, never()).save(any());
         verify(eventPublisher, never()).publish(anyCollection());
     }
 
     @Test
     void registerDeviceTokenStoresNewToken() {
-        when(deviceTokenRepository.findByUserAndToken("user-1", "fcm-token"))
+        when(deviceTokenPersistencePort.findByUserAndToken("user-1", "fcm-token"))
                 .thenReturn(Optional.empty());
-        when(deviceTokenRepository.save(any(DeviceToken.class)))
+        when(deviceTokenPersistencePort.save(any(DeviceToken.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         DeviceToken result = service().registerDeviceToken(
@@ -139,16 +139,16 @@ class NotificationSubscriptionServiceTest {
 
     @Test
     void removeDeviceTokenDeactivatesOwnedToken() {
-        when(deviceTokenRepository.findById("tok-1")).thenReturn(Optional.of(token("tok-1")));
+        when(deviceTokenPersistencePort.findById("tok-1")).thenReturn(Optional.of(token("tok-1")));
 
         service().removeDeviceToken(new SubscriptionCommands.RemoveDeviceToken("user-1", "tok-1"));
 
-        verify(deviceTokenRepository).save(any(DeviceToken.class));
+        verify(deviceTokenPersistencePort).save(any(DeviceToken.class));
     }
 
     @Test
     void removeDeviceTokenRejectsForeignToken() {
-        when(deviceTokenRepository.findById("tok-1")).thenReturn(Optional.of(token("tok-1")));
+        when(deviceTokenPersistencePort.findById("tok-1")).thenReturn(Optional.of(token("tok-1")));
 
         NotificationSubscriptionService service = service();
         SubscriptionCommands.RemoveDeviceToken command = new SubscriptionCommands.RemoveDeviceToken("intruder",
@@ -158,12 +158,12 @@ class NotificationSubscriptionServiceTest {
                 .isInstanceOf(NotificationException.class)
                 .hasFieldOrPropertyWithValue("errorCode",
                         NotificationErrorCode.NOTIFICATION_FORBIDDEN.getCode());
-        verify(deviceTokenRepository, never()).save(any());
+        verify(deviceTokenPersistencePort, never()).save(any());
     }
 
     @Test
     void removeDeviceTokenThrowsWhenMissing() {
-        when(deviceTokenRepository.findById("nope")).thenReturn(Optional.empty());
+        when(deviceTokenPersistencePort.findById("nope")).thenReturn(Optional.empty());
 
         NotificationSubscriptionService service = service();
         SubscriptionCommands.RemoveDeviceToken command = new SubscriptionCommands.RemoveDeviceToken("user-1", "nope");
@@ -176,7 +176,7 @@ class NotificationSubscriptionServiceTest {
 
     @Test
     void listDeviceTokensDelegatesToRepository() {
-        when(deviceTokenRepository.findActiveByUserId("user-1"))
+        when(deviceTokenPersistencePort.findActiveByUserId("user-1"))
                 .thenReturn(List.of(token("tok-1"), token("tok-2")));
 
         assertThat(service().listDeviceTokens("user-1")).hasSize(2);

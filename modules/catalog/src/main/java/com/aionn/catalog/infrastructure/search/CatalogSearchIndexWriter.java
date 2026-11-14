@@ -48,12 +48,12 @@ public class CatalogSearchIndexWriter {
     private static final String SEARCH_INDEX_EXECUTOR = "searchIndexTaskExecutor";
     private static final int PAGE_SIZE = 100;
 
-    private final ProductPersistencePort productRepository;
+    private final ProductPersistencePort productPersistencePort;
     private final ProductSearchIndex searchIndex;
     private final ProductSearchDocumentMapper searchDocumentMapper;
-    private final AttributeTemplatePersistencePort attributeTemplateRepository;
-    private final ProductReviewPersistencePort reviewRepository;
-    private final ProductSoldCounterPersistencePort soldCounterRepository;
+    private final AttributeTemplatePersistencePort attributeTemplatePersistencePort;
+    private final ProductReviewPersistencePort productReviewPersistencePort;
+    private final ProductSoldCounterPersistencePort productSoldCounterPersistencePort;
     private final TransactionTemplate transactionTemplate;
 
     /** Indexes a product regardless of status, used after publish or restore. */
@@ -93,7 +93,7 @@ public class CatalogSearchIndexWriter {
     }
 
     private void reindex(String productId, boolean searchableOnly) {
-        ProductSearchDocument document = transactionTemplate.execute(status -> productRepository
+        ProductSearchDocument document = transactionTemplate.execute(status -> productPersistencePort
                 .findById(productId)
                 .filter(product -> !searchableOnly || product.getStatus().isSearchable())
                 .map(this::buildSearchDocument)
@@ -106,7 +106,7 @@ public class CatalogSearchIndexWriter {
     private void forEachPage(String merchantId, Consumer<List<Product>> handler) {
         int page = 0;
         while (true) {
-            List<Product> batch = productRepository.listByMerchant(
+            List<Product> batch = productPersistencePort.listByMerchant(
                     merchantId, OffsetPagination.of(page, PAGE_SIZE));
             if (batch.isEmpty()) {
                 return;
@@ -120,8 +120,8 @@ public class CatalogSearchIndexWriter {
     }
 
     private ProductSearchDocument buildSearchDocument(Product product) {
-        double rating = reviewRepository.getAverageRating(product.getProductId());
-        long soldCount = soldCounterRepository.getSoldCount(product.getProductId());
+        double rating = productReviewPersistencePort.getAverageRating(product.getProductId());
+        long soldCount = productSoldCounterPersistencePort.getSoldCount(product.getProductId());
         return searchDocumentMapper.toSearchDocument(
                 product, collectFilterableAttributes(product), rating, soldCount);
     }
@@ -132,7 +132,7 @@ public class CatalogSearchIndexWriter {
             return filterable;
         }
         for (String categoryId : product.categoryIds()) {
-            attributeTemplateRepository.findByCategoryId(categoryId)
+            attributeTemplatePersistencePort.findByCategoryId(categoryId)
                     .ifPresent(template -> addFilterable(template, product, filterable));
         }
         return filterable;

@@ -2,10 +2,10 @@ package com.aionn.ucp.adapter.rest.controller;
 
 import com.aionn.ucp.adapter.rest.advice.UcpControllerAdvice;
 import com.aionn.ucp.adapter.rest.dto.cart.UcpResponseMetadata;
-import com.aionn.ucp.adapter.rest.dto.catalog.UcpCatalogLookupResponse;
+import com.aionn.ucp.adapter.rest.dto.catalog.response.UcpCatalogLookupResponse;
 import com.aionn.ucp.adapter.rest.dto.catalog.UcpCatalogModels.*;
-import com.aionn.ucp.adapter.rest.dto.catalog.UcpCatalogSearchResponse;
-import com.aionn.ucp.adapter.rest.dto.catalog.UcpProductDetailResponse;
+import com.aionn.ucp.adapter.rest.dto.catalog.response.UcpCatalogSearchResponse;
+import com.aionn.ucp.adapter.rest.dto.catalog.response.UcpProductDetailResponse;
 import com.aionn.ucp.application.catalog.UcpCatalogApplicationService;
 import com.aionn.ucp.domain.exception.UcpProtocolException;
 import org.junit.jupiter.api.BeforeEach;

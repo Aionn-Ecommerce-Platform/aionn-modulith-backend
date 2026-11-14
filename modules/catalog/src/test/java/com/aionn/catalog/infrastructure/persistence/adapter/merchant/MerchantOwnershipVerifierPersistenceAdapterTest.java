@@ -19,7 +19,7 @@ import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
 class MerchantOwnershipVerifierPersistenceAdapterTest {
 
     @Mock
-    private MerchantPersistencePort merchantRepository;
+    private MerchantPersistencePort merchantPersistencePort;
 
     @InjectMocks
     private MerchantOwnershipVerifierPersistenceAdapter adapter;
@@ -27,7 +27,7 @@ class MerchantOwnershipVerifierPersistenceAdapterTest {
     @Test
     void returnsTrueWhenOwnerMatches() {
         Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.0500"), FIXED);
-        when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
+        when(merchantPersistencePort.findById("m-1")).thenReturn(Optional.of(merchant));
 
         assertThat(adapter.isOwnedBy("m-1", "owner-1")).isTrue();
     }
@@ -35,14 +35,14 @@ class MerchantOwnershipVerifierPersistenceAdapterTest {
     @Test
     void returnsFalseWhenOwnerDoesNotMatch() {
         Merchant merchant = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.0500"), FIXED);
-        when(merchantRepository.findById("m-1")).thenReturn(Optional.of(merchant));
+        when(merchantPersistencePort.findById("m-1")).thenReturn(Optional.of(merchant));
 
         assertThat(adapter.isOwnedBy("m-1", "other-owner")).isFalse();
     }
 
     @Test
     void returnsFalseWhenMerchantMissing() {
-        when(merchantRepository.findById("missing")).thenReturn(Optional.empty());
+        when(merchantPersistencePort.findById("missing")).thenReturn(Optional.empty());
 
         assertThat(adapter.isOwnedBy("missing", "owner-1")).isFalse();
     }

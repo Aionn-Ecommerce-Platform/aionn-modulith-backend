@@ -28,6 +28,8 @@ import java.util.List;
 @Transactional
 public class PayoutService {
 
+        private static final String NO_MERCHANT_FOR_USER = "No merchant for current user";
+
         private final MerchantBalancePersistencePort balanceRepo;
         private final MerchantPayoutPersistencePort payoutRepo;
         private final SettlementLedgerPersistencePort ledgerRepo;
@@ -46,7 +48,7 @@ public class PayoutService {
                 }
                 String merchantId = merchantQueryPort.findMerchantIdByOwnerId(ownerId)
                                 .orElseThrow(() -> new PaymentException(PaymentErrorCode.METHOD_FORBIDDEN,
-                                                PaymentMessages.NO_MERCHANT_FOR_USER));
+                                                NO_MERCHANT_FOR_USER));
 
                 Instant now = clock.instant();
                 MerchantBalance balance = balanceRepo.lockForUpdate(merchantId, currency)
@@ -106,7 +108,7 @@ public class PayoutService {
         public MerchantBalance getBalanceForOwner(String ownerId, String currency) {
                 String merchantId = merchantQueryPort.findMerchantIdByOwnerId(ownerId)
                                 .orElseThrow(() -> new PaymentException(PaymentErrorCode.METHOD_FORBIDDEN,
-                                                PaymentMessages.NO_MERCHANT_FOR_USER));
+                                                NO_MERCHANT_FOR_USER));
                 return balanceRepo.find(merchantId, currency)
                                 .orElseGet(() -> MerchantBalance.empty(merchantId, currency, clock.instant()));
         }
@@ -115,7 +117,7 @@ public class PayoutService {
         public List<MerchantPayout> listForOwner(String ownerId, int limit) {
                 String merchantId = merchantQueryPort.findMerchantIdByOwnerId(ownerId)
                                 .orElseThrow(() -> new PaymentException(PaymentErrorCode.METHOD_FORBIDDEN,
-                                                PaymentMessages.NO_MERCHANT_FOR_USER));
+                                                NO_MERCHANT_FOR_USER));
                 return payoutRepo.findByMerchant(merchantId, limit);
         }
 

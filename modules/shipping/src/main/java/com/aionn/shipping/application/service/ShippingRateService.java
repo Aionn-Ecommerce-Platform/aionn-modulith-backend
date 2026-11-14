@@ -24,13 +24,13 @@ import java.time.Clock;
 @Transactional
 public class ShippingRateService {
 
-    private final ShippingRatePersistencePort repository;
+    private final ShippingRatePersistencePort shippingRatePersistencePort;
     private final EventPublisher eventPublisher;
     private final ShippingDefaultsPolicy defaultsPolicy;
     private final Clock clock;
 
     public ShippingRate configure(ConfigureRateCommand command) {
-        if (repository.findByZoneCode(command.zoneCode()).isPresent()) {
+        if (shippingRatePersistencePort.findByZoneCode(command.zoneCode()).isPresent()) {
             throw new ShippingException(ShippingErrorCode.RATE_DUPLICATE);
         }
         ShippingRate rate = ShippingRate.configure(IdGenerator.ulid(),
@@ -45,7 +45,7 @@ public class ShippingRateService {
                 command.expressEtaDays(), clock);
         ShippingRate saved;
         try {
-            saved = repository.save(rate);
+            saved = shippingRatePersistencePort.save(rate);
         } catch (org.springframework.dao.DataIntegrityViolationException ex) {
             throw new ShippingException(ShippingErrorCode.RATE_DUPLICATE);
         }
@@ -54,7 +54,7 @@ public class ShippingRateService {
     }
 
     public ShippingRate update(UpdateRateCommand command) {
-        ShippingRate rate = repository.findById(command.rateId())
+        ShippingRate rate = shippingRatePersistencePort.findById(command.rateId())
                 .orElseThrow(() -> new ShippingException(ShippingErrorCode.RATE_NOT_FOUND));
         rate.update(command.baseFee(), command.condition(), clock);
         rate.updateExpress(command.expressExtraFee(), command.expressEtaDays(), clock);
@@ -70,14 +70,14 @@ public class ShippingRateService {
                             ? rate.getFreeShippingThreshold() : command.freeShippingThreshold(),
                     clock);
         }
-        ShippingRate saved = repository.save(rate);
+        ShippingRate saved = shippingRatePersistencePort.save(rate);
         eventPublisher.publish(rate.pullEvents());
         return saved;
     }
 
     @Transactional(readOnly = true)
     public ShippingRate get(String rateId) {
-        return repository.findById(rateId)
+        return shippingRatePersistencePort.findById(rateId)
                 .orElseThrow(() -> new ShippingException(ShippingErrorCode.RATE_NOT_FOUND));
     }
 

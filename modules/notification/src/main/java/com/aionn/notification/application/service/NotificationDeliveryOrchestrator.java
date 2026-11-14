@@ -32,19 +32,19 @@ public class NotificationDeliveryOrchestrator {
     private final RecipientResolver recipientResolver;
     private final NotificationMetricsPort metrics;
     private final DeliveryAttemptPort deliveryAttemptPort;
-    private final NotificationProviderPersistencePort providerRepository;
+    private final NotificationProviderPersistencePort notificationProviderPersistencePort;
     private final RateLimiterPort rateLimiter;
     private final Map<NotificationChannel, ChannelSender> senderIndex;
 
     public NotificationDeliveryOrchestrator(NotificationDispatchService dispatchService,
             RecipientResolver recipientResolver, NotificationMetricsPort metrics,
-            DeliveryAttemptPort deliveryAttemptPort, NotificationProviderPersistencePort providerRepository,
+            DeliveryAttemptPort deliveryAttemptPort, NotificationProviderPersistencePort notificationProviderPersistencePort,
             RateLimiterPort rateLimiter, List<ChannelSender> channelSenders) {
         this.dispatchService = dispatchService;
         this.recipientResolver = recipientResolver;
         this.metrics = metrics;
         this.deliveryAttemptPort = deliveryAttemptPort;
-        this.providerRepository = providerRepository;
+        this.notificationProviderPersistencePort = notificationProviderPersistencePort;
         this.rateLimiter = rateLimiter;
         EnumMap<NotificationChannel, ChannelSender> index = new EnumMap<>(NotificationChannel.class);
         for (ChannelSender candidate : channelSenders) {
@@ -191,7 +191,7 @@ public class NotificationDeliveryOrchestrator {
     }
 
     private boolean rateLimited(Notification notification) {
-        return providerRepository.findActiveByChannel(notification.getChannel())
+        return notificationProviderPersistencePort.findActiveByChannel(notification.getChannel())
                 .map(provider -> provider.getRateLimitPerMinute() > 0
                         && !rateLimiter.allow("notification:rate-limit",
                                 notification.getChannel().name(),

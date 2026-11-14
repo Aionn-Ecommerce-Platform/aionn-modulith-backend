@@ -17,8 +17,8 @@ import java.time.Clock;
 @RequiredArgsConstructor
 public class VoucherAutoReleaseWorker {
 
-    private final VoucherPersistencePort voucherRepository;
-    private final UserVoucherPersistencePort userVoucherRepository;
+    private final VoucherPersistencePort voucherPersistencePort;
+    private final UserVoucherPersistencePort userVoucherPersistencePort;
     private final EventPublisher eventPublisher;
     private final Clock clock;
 
@@ -28,18 +28,18 @@ public class VoucherAutoReleaseWorker {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean releaseOne(String userVoucherId) {
-        UserVoucher uv = userVoucherRepository.findByIdForUpdate(userVoucherId).orElse(null);
+        UserVoucher uv = userVoucherPersistencePort.findByIdForUpdate(userVoucherId).orElse(null);
         if (uv == null || uv.getReservedOrderId() == null
                 || uv.getStatus() != UserVoucherStatus.RESERVED) {
             return false;
         }
-        Voucher voucher = voucherRepository.lockByCode(uv.getVoucherCode()).orElse(null);
+        Voucher voucher = voucherPersistencePort.lockByCode(uv.getVoucherCode()).orElse(null);
         if (voucher != null) {
             voucher.releaseSlot(clock);
-            voucherRepository.save(voucher);
+            voucherPersistencePort.save(voucher);
         }
         uv.release("expired", clock);
-        userVoucherRepository.save(uv);
+        userVoucherPersistencePort.save(uv);
         eventPublisher.publish(uv.pullEvents());
         return true;
     }

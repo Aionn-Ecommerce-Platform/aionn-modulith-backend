@@ -18,17 +18,17 @@ public class MerchantFollowerProductListener {
 
     private static final String TYPE_PRODUCT_PUBLISHED = "PRODUCT_PUBLISHED";
 
-    private final ProductPersistencePort productRepository;
-    private final MerchantPersistencePort merchantRepository;
+    private final ProductPersistencePort productPersistencePort;
+    private final MerchantPersistencePort merchantPersistencePort;
     private final IntegrationEventPublisher integrationEventPublisher;
 
     @EventListener
     public void onProductPublished(ProductEvents.ProductPublished event) {
-        Product product = productRepository.findById(event.productId()).orElse(null);
+        Product product = productPersistencePort.findById(event.productId()).orElse(null);
         if (product == null) {
             return;
         }
-        Merchant merchant = merchantRepository.findById(product.getMerchantId()).orElse(null);
+        Merchant merchant = merchantPersistencePort.findById(product.getMerchantId()).orElse(null);
         if (merchant == null) {
             return;
         }

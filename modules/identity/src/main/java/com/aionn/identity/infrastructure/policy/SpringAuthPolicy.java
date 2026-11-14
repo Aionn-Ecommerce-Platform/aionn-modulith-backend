@@ -18,57 +18,57 @@ public class SpringAuthPolicy implements AuthPolicy {
 
 
     @Override
-    public long getSessionExpiresDays() {
+    public long sessionExpiresDays() {
         return properties.expiresDays();
     }
 
     @Override
-    public int getAccessTokenExpiryMinutes() {
+    public int accessTokenExpiryMinutes() {
         return jwtProperties.accessTokenExpiryMinutes();
     }
 
     @Override
-    public int getMaxFailedLoginAttempts() {
+    public int maxFailedLoginAttempts() {
         return authProperties.maxFailedLoginAttempts();
     }
 
     @Override
-    public int getLockoutMinutes() {
+    public int lockoutMinutes() {
         return authProperties.lockoutMinutes();
     }
 
     @Override
-    public int getPasswordResetTokenTtlMinutes() {
+    public int passwordResetTokenTtlMinutes() {
         return authProperties.passwordResetTokenTtlMinutes();
     }
 
     @Override
-    public int getLoginIpMaxAttempts() {
+    public int loginIpMaxAttempts() {
         return authProperties.loginIpMaxAttempts();
     }
 
     @Override
-    public int getLoginIdentityMaxAttempts() {
+    public int loginIdentityMaxAttempts() {
         return authProperties.loginIdentityMaxAttempts();
     }
 
     @Override
-    public int getLoginRateLimitWindowSeconds() {
+    public int loginRateLimitWindowSeconds() {
         return authProperties.loginRateLimitWindowSeconds();
     }
 
     @Override
-    public int getPasswordResetIpMaxAttempts() {
+    public int passwordResetIpMaxAttempts() {
         return authProperties.passwordResetIpMaxAttempts();
     }
 
     @Override
-    public int getPasswordResetIdentityMaxAttempts() {
+    public int passwordResetIdentityMaxAttempts() {
         return authProperties.passwordResetIdentityMaxAttempts();
     }
 
     @Override
-    public int getPasswordResetRateLimitWindowSeconds() {
+    public int passwordResetRateLimitWindowSeconds() {
         return authProperties.passwordResetRateLimitWindowSeconds();
     }
 

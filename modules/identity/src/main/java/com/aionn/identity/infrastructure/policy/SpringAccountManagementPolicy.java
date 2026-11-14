@@ -12,17 +12,17 @@ public class SpringAccountManagementPolicy implements AccountManagementPolicy {
     private final AccountManagementProperties properties;
 
     @Override
-    public int getOtpExpirySeconds() {
+    public int otpExpirySeconds() {
         return properties.otp().expirySeconds();
     }
 
     @Override
-    public int getOtpMaxAttempts() {
+    public int otpMaxAttempts() {
         return properties.otp().maxAttempts();
     }
 
     @Override
-    public int getDeletionGraceDays() {
+    public int deletionGraceDays() {
         return properties.deletion().graceDays();
     }
 }

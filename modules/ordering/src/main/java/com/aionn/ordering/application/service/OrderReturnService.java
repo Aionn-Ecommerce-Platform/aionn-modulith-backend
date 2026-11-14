@@ -51,9 +51,9 @@ import java.util.Objects;
 @Transactional
 public class OrderReturnService {
 
-    private final OrderPersistencePort orderRepository;
-    private final OrderReturnPersistencePort returnRepository;
-    private final OrderReturnItemPersistencePort returnItemRepository;
+    private final OrderPersistencePort orderPersistencePort;
+    private final OrderReturnPersistencePort orderReturnPersistencePort;
+    private final OrderReturnItemPersistencePort orderReturnItemPersistencePort;
     private final EventPublisher eventPublisher;
     private final MerchantQueryPort merchantQueryPort;
     private final ReturnWindowPolicy returnWindowPolicy;
@@ -65,7 +65,7 @@ public class OrderReturnService {
     private final TransactionTemplate transactionTemplate;
 
     public OrderReturn requestReturn(RequestReturnCommand command) {
-        Order order = orderRepository.findById(command.orderId())
+        Order order = orderPersistencePort.findById(command.orderId())
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.ORDER_NOT_FOUND));
         if (!order.getUserId().equals(command.userId())) {
             throw new OrderingException(OrderingErrorCode.ORDER_FORBIDDEN);
@@ -80,13 +80,17 @@ public class OrderReturnService {
         if (!returnWindowPolicy.isWithinWindow(completedAt, now)) {
             throw new OrderingException(OrderingErrorCode.ORDER_RETURN_WINDOW_EXPIRED);
         }
-        if (returnRepository.hasActiveReturn(order.getOrderId())) {
+        if (orderReturnPersistencePort.hasActiveReturn(order.getOrderId())) {
             throw new OrderingException(OrderingErrorCode.RETURN_INVALID_STATE,
                     "This order already has an active return request");
         }
+        if (command.items() == null || command.items().isEmpty()) {
+            throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
+                    "Select at least one item to return");
+        }
         OrderReturn r = OrderReturn.request(IdGenerator.ulid(), order.getOrderId(),
                 order.getUserId(), order.getMerchantId(), command.reason(), command.evidenceUrl(), now);
-        OrderReturn saved = returnRepository.save(r);
+        OrderReturn saved = orderReturnPersistencePort.save(r);
         saveSelectedItems(saved.getReturnId(), order, command.items());
         eventPublisher.publish(r.pullEvents());
         return saved;
@@ -124,14 +128,14 @@ public class OrderReturnService {
                     line.skuId(), line.qty(), unit,
                     unit.multiply(java.math.BigDecimal.valueOf(line.qty()))));
         }
-        returnItemRepository.saveAll(returnId, items);
+        orderReturnItemPersistencePort.saveAll(returnId, items);
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public OrderReturn approve(ApproveReturnCommand command) {
         OrderReturn saved = transactionTemplate.execute(status -> {
             OrderReturn r = ownedByOwner(command.returnId(), command.ownerId());
-            Order order = orderRepository.findById(r.getOrderId())
+            Order order = orderPersistencePort.findById(r.getOrderId())
                     .orElseThrow(() -> new OrderingException(OrderingErrorCode.ORDER_NOT_FOUND));
             String currency = command.currency() == null
                     ? order.getTotalAmount().currency() : command.currency();
@@ -139,20 +143,16 @@ public class OrderReturnService {
                 throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
                         "Refund currency must match the order currency");
             }
-            Money refundAmount = command.refundAmount() == null
-                    ? null
-                    : Money.of(command.refundAmount(), currency);
-            if (refundAmount != null
-                    && refundAmount.amount().compareTo(order.getTotalAmount().amount()) > 0) {
-                throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
-                        "Refund amount exceeds the order total");
-            }
             if (r.getStatus() == ReturnStatus.APPROVED) {
-                ensureSameApproval(r, refundAmount, command.returnWarehouseId());
+                Money requested = command.refundAmount() == null
+                        ? r.getRefundAmount()
+                        : Money.of(command.refundAmount(), currency);
+                ensureSameApproval(r, requested, command.returnWarehouseId());
                 return r;
             }
+            Money refundAmount = resolveRefundAmount(r, order, command.refundAmount(), currency);
             r.approve(refundAmount, command.returnWarehouseId(), clock.instant());
-            OrderReturn persisted = returnRepository.save(r);
+            OrderReturn persisted = orderReturnPersistencePort.save(r);
             eventPublisher.publish(r.pullEvents());
             return persisted;
         });
@@ -162,7 +162,7 @@ public class OrderReturnService {
     public OrderReturn reject(RejectReturnCommand command) {
         OrderReturn r = ownedByOwner(command.returnId(), command.ownerId());
         r.reject(command.reason(), clock.instant());
-        OrderReturn saved = returnRepository.save(r);
+        OrderReturn saved = orderReturnPersistencePort.save(r);
         eventPublisher.publish(r.pullEvents());
         return saved;
     }
@@ -170,14 +170,14 @@ public class OrderReturnService {
     public OrderReturn confirmItemReceived(ConfirmItemReceivedCommand command) {
         OrderReturn r = ownedByOwner(command.returnId(), command.ownerId());
         r.confirmReceived(command.itemCondition(), clock.instant());
-        OrderReturn saved = returnRepository.save(r);
+        OrderReturn saved = orderReturnPersistencePort.save(r);
         eventPublisher.publish(r.pullEvents());
         return saved;
     }
 
     @Transactional(readOnly = true)
     public OrderReturn getForRequester(String returnId, String requesterUserId) {
-        OrderReturn r = returnRepository.findById(returnId)
+        OrderReturn r = orderReturnPersistencePort.findById(returnId)
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
         if (r.getUserId().equals(requesterUserId)) {
             return r;
@@ -193,28 +193,28 @@ public class OrderReturnService {
     public List<OrderReturnItemPersistencePort.Item> listSelectedItems(String returnId,
             String requesterUserId) {
         getForRequester(returnId, requesterUserId);
-        return returnItemRepository.findByReturnId(returnId);
+        return orderReturnItemPersistencePort.findByReturnId(returnId);
     }
 
     @Transactional(readOnly = true)
     public List<OrderReturn> listMine(String userId, int limit) {
-        return returnRepository.findByUserId(userId, limit);
+        return orderReturnPersistencePort.findByUserId(userId, limit);
     }
 
     @Transactional(readOnly = true)
     public List<OrderReturn> listMerchant(String merchantId, int limit) {
-        return returnRepository.findByMerchantId(merchantId, limit);
+        return orderReturnPersistencePort.findByMerchantId(merchantId, limit);
     }
 
     @Transactional(readOnly = true)
     public List<OrderReturn> adminListByStatus(
             ReturnStatus status, int limit) {
-        return returnRepository.findByStatus(status, limit);
+        return orderReturnPersistencePort.findByStatus(status, limit);
     }
 
     @Transactional(readOnly = true)
     public OrderReturn adminGet(String returnId) {
-        return returnRepository.findById(returnId)
+        return orderReturnPersistencePort.findById(returnId)
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
     }
 
@@ -231,8 +231,8 @@ public class OrderReturnService {
         Instant start = safeFrom.atStartOfDay(zone).toInstant();
         Instant end = safeTo.plusDays(1).atStartOfDay(zone).toInstant();
 
-        var rows = returnRepository.findReturnAnalyticsRows(start, end);
-        long completedOrders = returnRepository.countCompletedOrdersBetween(start, end);
+        var rows = orderReturnPersistencePort.findReturnAnalyticsRows(start, end);
+        long completedOrders = orderReturnPersistencePort.countCompletedOrdersBetween(start, end);
 
         Map<String, Long> byStatus = new LinkedHashMap<>();
         Map<String, Long> byReason = new LinkedHashMap<>();
@@ -264,23 +264,82 @@ public class OrderReturnService {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public OrderReturn adminApprove(String returnId, BigDecimal refundAmount,
             String currency, String returnWarehouseId) {
-        OrderReturn saved = transactionTemplate.execute(status -> {
-            OrderReturn r = returnRepository.findById(returnId)
-                    .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
-            Money refund = refundAmount == null
-                    ? null
-                    : Money.of(refundAmount,
-                            currency == null ? orderDefaultsPolicy.defaultCurrency() : currency);
-            if (r.getStatus() == ReturnStatus.APPROVED) {
-                ensureSameApproval(r, refund, returnWarehouseId);
-                return r;
-            }
-            r.approve(refund, returnWarehouseId, clock.instant());
-            OrderReturn persisted = returnRepository.save(r);
-            eventPublisher.publish(r.pullEvents());
-            return persisted;
-        });
+        OrderReturn saved = transactionTemplate.execute(
+                status -> approveReturn(returnId, refundAmount, currency, returnWarehouseId));
         return attemptRefund(saved.getReturnId(), "return approved (admin)");
+    }
+
+    private OrderReturn approveReturn(String returnId, BigDecimal refundAmount,
+            String currency, String returnWarehouseId) {
+        OrderReturn r = orderReturnPersistencePort.findById(returnId)
+                .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
+        Order order = orderPersistencePort.findById(r.getOrderId()).orElse(null);
+        String effectiveCurrency = resolveCurrency(order, currency);
+        if (order != null && !effectiveCurrency.equalsIgnoreCase(order.getTotalAmount().currency())) {
+            throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
+                    "Refund currency must match the order currency");
+        }
+        if (r.getStatus() == ReturnStatus.APPROVED) {
+            Money requested = refundAmount == null
+                    ? r.getRefundAmount()
+                    : Money.of(refundAmount, effectiveCurrency);
+            ensureSameApproval(r, requested, returnWarehouseId);
+            return r;
+        }
+        Money refund = resolveApprovedRefund(r, order, refundAmount, effectiveCurrency);
+        r.approve(refund, returnWarehouseId, clock.instant());
+        OrderReturn persisted = orderReturnPersistencePort.save(r);
+        eventPublisher.publish(r.pullEvents());
+        return persisted;
+    }
+
+    private String resolveCurrency(Order order, String currency) {
+        if (currency != null) {
+            return currency;
+        }
+        if (order != null) {
+            return order.getTotalAmount().currency();
+        }
+        return orderDefaultsPolicy.defaultCurrency();
+    }
+
+    private Money resolveApprovedRefund(OrderReturn r, Order order, BigDecimal refundAmount,
+            String effectiveCurrency) {
+        if (order != null) {
+            return resolveRefundAmount(r, order, refundAmount, effectiveCurrency);
+        }
+        if (refundAmount == null) {
+            throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
+                    "refundAmount is required when the order is missing");
+        }
+        return Money.of(refundAmount, effectiveCurrency);
+    }
+
+    private Money resolveRefundAmount(OrderReturn r, Order order, BigDecimal requested, String currency) {
+        List<OrderReturnItemPersistencePort.Item> items =
+                orderReturnItemPersistencePort.findByReturnId(r.getReturnId());
+        BigDecimal selectedTotal = items == null ? BigDecimal.ZERO
+                : items.stream()
+                        .map(OrderReturnItemPersistencePort.Item::refundAmount)
+                        .filter(Objects::nonNull)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal amount = requested;
+        if (amount == null) {
+            amount = selectedTotal.signum() > 0 ? selectedTotal : order.getTotalAmount().amount();
+        }
+        if (amount.signum() < 0) {
+            throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
+                    "Refund amount must not be negative");
+        }
+        if (selectedTotal.signum() > 0 && amount.compareTo(selectedTotal) > 0) {
+            throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
+                    "Refund amount exceeds the selected return items");
+        }
+        if (amount.compareTo(order.getTotalAmount().amount()) > 0) {
+            throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
+                    "Refund amount exceeds the order total");
+        }
+        return Money.of(amount, currency);
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -289,7 +348,7 @@ public class OrderReturnService {
     }
 
     private OrderReturn attemptRefund(String returnId, String reason) {
-        OrderReturn r = transactionTemplate.execute(status -> returnRepository.findById(returnId)
+        OrderReturn r = transactionTemplate.execute(status -> orderReturnPersistencePort.findById(returnId)
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND)));
         if (!r.refundCanBeAttempted(clock.instant(), refundRetryPolicy.maxAttempts())) {
             return r;
@@ -297,7 +356,7 @@ public class OrderReturnService {
         if (r.getRefundAmount() == null) {
             return r;
         }
-        RefundRequest refund = transactionTemplate.execute(status -> orderRepository.findById(r.getOrderId())
+        RefundRequest refund = transactionTemplate.execute(status -> orderPersistencePort.findById(r.getOrderId())
                 .filter(order -> order.getPaymentId() != null)
                 .map(order -> new RefundRequest(order.getPaymentId(), r.getRefundAmount().amount(),
                         r.getRefundAmount().currency(), reason))
@@ -317,23 +376,23 @@ public class OrderReturnService {
 
     private OrderReturn markRefunded(String returnId) {
         return transactionTemplate.execute(status -> {
-            OrderReturn current = returnRepository.findById(returnId)
+            OrderReturn current = orderReturnPersistencePort.findById(returnId)
                     .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
             if (current.getRefundStatus() == ReturnRefundStatus.REFUNDED) {
                 return current;
             }
             current.markRefunded(clock.instant());
-            return returnRepository.save(current);
+            return orderReturnPersistencePort.save(current);
         });
     }
 
     private OrderReturn markRefundFailed(String returnId, RuntimeException failure) {
         return transactionTemplate.execute(status -> {
-            OrderReturn current = returnRepository.findById(returnId)
+            OrderReturn current = orderReturnPersistencePort.findById(returnId)
                     .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
             long delaySeconds = RetryBackoff.seconds(current.getRefundAttempts());
             current.markRefundFailed(failure.getMessage(), clock.instant().plusSeconds(delaySeconds));
-            return returnRepository.save(current);
+            return orderReturnPersistencePort.save(current);
         });
     }
 
@@ -350,25 +409,25 @@ public class OrderReturnService {
     }
 
     public OrderReturn adminReject(String returnId, String reason) {
-        OrderReturn r = returnRepository.findById(returnId)
+        OrderReturn r = orderReturnPersistencePort.findById(returnId)
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
         r.reject(reason, clock.instant());
-        OrderReturn saved = returnRepository.save(r);
+        OrderReturn saved = orderReturnPersistencePort.save(r);
         eventPublisher.publish(r.pullEvents());
         return saved;
     }
 
     public OrderReturn adminConfirmItemReceived(String returnId, String itemCondition) {
-        OrderReturn r = returnRepository.findById(returnId)
+        OrderReturn r = orderReturnPersistencePort.findById(returnId)
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
         r.confirmReceived(itemCondition, clock.instant());
-        OrderReturn saved = returnRepository.save(r);
+        OrderReturn saved = orderReturnPersistencePort.save(r);
         eventPublisher.publish(r.pullEvents());
         return saved;
     }
 
     private OrderReturn ownedByOwner(String returnId, String merchantId) {
-        OrderReturn r = returnRepository.findById(returnId)
+        OrderReturn r = orderReturnPersistencePort.findById(returnId)
                 .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
         if (!r.getMerchantId().equals(merchantId)) {
             throw new OrderingException(OrderingErrorCode.ORDER_NOT_OWNED_BY_MERCHANT);

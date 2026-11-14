@@ -2,8 +2,8 @@ package com.aionn.ucp.adapter.rest.controller;
 
 import com.aionn.platform.web.support.idempotency.IdempotentRequest;
 import com.aionn.ucp.application.UcpProtocolConstants;
-import com.aionn.ucp.adapter.rest.dto.checkout.UcpCheckoutRequest;
-import com.aionn.ucp.adapter.rest.dto.checkout.UcpCheckoutResponse;
+import com.aionn.ucp.adapter.rest.dto.checkout.request.UcpCheckoutRequest;
+import com.aionn.ucp.adapter.rest.dto.checkout.response.UcpCheckoutResponse;
 import com.aionn.ucp.application.checkout.UcpCheckoutApplicationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

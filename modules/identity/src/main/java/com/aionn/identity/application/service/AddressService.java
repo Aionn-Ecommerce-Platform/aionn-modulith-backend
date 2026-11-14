@@ -71,7 +71,7 @@ public class AddressService {
 
 		return addressPersistencePort.createAtomically(
 				address,
-				addressPolicy.getMaxAddressNumbers(),
+				addressPolicy.maxAddressNumbers(),
 				true);
 	}
 

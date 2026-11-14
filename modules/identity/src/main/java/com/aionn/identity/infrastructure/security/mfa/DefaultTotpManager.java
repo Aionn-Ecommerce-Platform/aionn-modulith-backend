@@ -1,7 +1,8 @@
 package com.aionn.identity.infrastructure.security.mfa;
 
+import com.aionn.identity.application.policy.MfaConstants;
+
 import com.aionn.identity.application.port.out.security.TotpManagerPort;
-import com.aionn.identity.application.policy.IdentityValidationConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -20,7 +21,7 @@ public class DefaultTotpManager implements TotpManagerPort {
     private static final String BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
     private static final String HMAC_ALGORITHM = "HmacSHA1";
     private static final int SECRET_BYTES = 20;
-    private static final int CODE_DIGITS = IdentityValidationConstants.TOTP_CODE_LENGTH;
+    private static final int CODE_DIGITS = MfaConstants.TOTP_CODE_LENGTH;
     private static final int PERIOD_SECONDS = 30;
     private static final int WINDOW_STEPS = 1;
 

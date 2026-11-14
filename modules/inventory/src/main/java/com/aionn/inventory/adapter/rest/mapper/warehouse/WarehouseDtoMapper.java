@@ -8,7 +8,9 @@ import com.aionn.inventory.adapter.rest.dto.warehouse.response.WarehouseResponse
 import com.aionn.inventory.application.dto.warehouse.command.AdjustPriorityCommand;
 import com.aionn.inventory.application.dto.warehouse.command.ChangeStatusCommand;
 import com.aionn.inventory.application.dto.warehouse.command.CreateWarehouseCommand;
+import com.aionn.inventory.application.dto.warehouse.command.LiftSuspensionCommand;
 import com.aionn.inventory.application.dto.warehouse.command.SuspendWarehouseCommand;
+import com.aionn.inventory.application.dto.warehouse.query.ListWarehousesByOwnerQuery;
 import com.aionn.inventory.application.dto.warehouse.result.WarehouseResult;
 import org.mapstruct.Mapper;
 
@@ -28,4 +30,12 @@ public interface WarehouseDtoMapper {
     WarehouseResponse toResponse(WarehouseResult result);
 
     List<WarehouseResponse> toResponses(List<WarehouseResult> results);
+
+    default LiftSuspensionCommand toLiftSuspensionCommand(String warehouseId, String adminId) {
+        return new LiftSuspensionCommand(warehouseId, adminId);
+    }
+
+    default ListWarehousesByOwnerQuery toListByOwnerQuery(String merchantId) {
+        return new ListWarehousesByOwnerQuery(merchantId);
+    }
 }
