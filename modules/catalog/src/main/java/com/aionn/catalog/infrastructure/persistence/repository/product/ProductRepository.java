@@ -101,7 +101,7 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String> 
   @Query(value = """
       SELECT * FROM products
       WHERE status = 'PUBLISHED'
-      ORDER BY updated_at DESC
+      ORDER BY updated_at DESC, product_id ASC
       LIMIT :limit OFFSET :offset
       """, nativeQuery = true)
   List<ProductEntity> findPublishedRaw(

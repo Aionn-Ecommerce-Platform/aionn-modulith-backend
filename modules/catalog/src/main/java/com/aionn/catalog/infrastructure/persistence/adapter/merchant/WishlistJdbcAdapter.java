@@ -16,12 +16,12 @@ public class WishlistJdbcAdapter implements WishlistPersistencePort {
     private final JdbcTemplate jdbcTemplate;
 
     @Override
-    public void add(String userId, String productId, Instant addedAt) {
-        jdbcTemplate.update("""
+    public boolean add(String userId, String productId, Instant addedAt) {
+        return jdbcTemplate.update("""
                 INSERT INTO wishlist_items (user_id, product_id, added_at)
                 VALUES (?, ?, ?)
                 ON CONFLICT (user_id, product_id) DO NOTHING
-                """, userId, productId, Timestamp.from(addedAt));
+                """, userId, productId, Timestamp.from(addedAt)) == 1;
     }
 
     @Override

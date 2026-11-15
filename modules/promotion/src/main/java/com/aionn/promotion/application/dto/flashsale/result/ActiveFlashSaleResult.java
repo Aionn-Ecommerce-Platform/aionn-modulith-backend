@@ -9,7 +9,14 @@ public record ActiveFlashSaleResult(
                 String name,
                 Instant startDate,
                 Instant endDate,
-                List<Item> items) {
+                List<Item> items,
+                int page,
+                int size,
+                long totalItems,
+                long totalSold,
+                long totalStock,
+                BigDecimal minSalePrice,
+                BigDecimal maxSalePrice) {
 
         public record Item(
                         String registrationId,

@@ -6,7 +6,7 @@ import java.util.List;
 /** Persistence for the buyer's saved products. */
 public interface WishlistPersistencePort {
 
-    void add(String userId, String productId, Instant addedAt);
+    boolean add(String userId, String productId, Instant addedAt);
 
     void remove(String userId, String productId);
 

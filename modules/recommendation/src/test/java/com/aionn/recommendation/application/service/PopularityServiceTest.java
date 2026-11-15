@@ -119,10 +119,14 @@ class PopularityServiceTest {
                 .thenReturn(InteractionWeight.of(BigDecimal.ONE, Duration.ofDays(14)));
         lenient().when(weightPolicy.weightFor(InteractionType.SEARCH))
                 .thenReturn(InteractionWeight.of(BigDecimal.valueOf(0.5), Duration.ofDays(7)));
+        lenient().when(weightPolicy.weightFor(InteractionType.WISHLIST_ADD))
+                .thenReturn(InteractionWeight.of(BigDecimal.valueOf(2.5), Duration.ofDays(30)));
         lenient().when(weightPolicy.weightFor(InteractionType.CART_ADD))
                 .thenReturn(InteractionWeight.of(BigDecimal.valueOf(4), Duration.ofDays(30)));
+        lenient().when(weightPolicy.weightFor(InteractionType.ORDER_PLACED))
+                .thenReturn(InteractionWeight.of(BigDecimal.valueOf(4), Duration.ofDays(60)));
         lenient().when(weightPolicy.weightFor(InteractionType.PURCHASE))
-                .thenReturn(InteractionWeight.of(BigDecimal.valueOf(5), Duration.ofDays(180)));
+                .thenReturn(InteractionWeight.of(BigDecimal.valueOf(6), Duration.ofDays(180)));
     }
 
     private List<ProductPopularity> capturePopularities() {

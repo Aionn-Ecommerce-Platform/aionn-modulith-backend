@@ -44,6 +44,7 @@ public class OpenSearchIndexInitializer {
         private final OpenSearchClient client;
         private final CatalogSearchProperties searchProperties;
 
+        @Order(0)
         @EventListener(ApplicationReadyEvent.class)
         public void ensureIndexExists() {
                 String indexName = searchProperties.opensearch().indexName();

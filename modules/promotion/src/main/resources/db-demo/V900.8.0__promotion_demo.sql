@@ -1,22 +1,15 @@
--- Seed Campaigns and Vouchers
-
 INSERT INTO promotion_campaigns (campaign_id, name, type, budget, budget_remaining, currency, start_date, end_date, created_by, status, min_order_value, max_claims_per_user, max_uses_per_voucher, version, created_at, updated_at) VALUES ('01M74HC0WJJ18697Q14HJMVT5A', 'Summer Mega Sale', 'DISCOUNT', 500000000.00, 500000000.00, 'VND', '2026-06-13 16:42:22', '2026-09-11 16:42:22', 'sys_admin_01', 'RUNNING', 200000.00, NULL, 1000, 0, NOW(), NOW());
 
-INSERT INTO vouchers (voucher_code, campaign_id, discount_amount, currency, usage_limit, used_count, reserved_count, valid_from, valid_until, version, created_at, updated_at) VALUES
-('SUMMER50', '01M74HC0WJJ18697Q14HJMVT5A', 500000.0, 'VND', 500, 0, 0, '2026-06-13 16:42:22', '2026-09-11 16:42:22', 0, NOW(), NOW()),
-('SUMMER10', '01M74HC0WJJ18697Q14HJMVT5A', 100000.0, 'VND', 1000, 0, 0, '2026-06-13 16:42:22', '2026-09-11 16:42:22', 0, NOW(), NOW()),
-('FREESHIP', '01M74HC0WJJ18697Q14HJMVT5A', 30000.0, 'VND', 1000, 0, 0, '2026-06-13 16:42:22', '2026-09-11 16:42:22', 0, NOW(), NOW());
+INSERT INTO vouchers (voucher_code, campaign_id, discount_amount, currency, usage_limit, used_count, reserved_count, valid_from, valid_until, version, created_at, updated_at, scope, type, merchant_id) VALUES
+('SUMMER50', '01M74HC0WJJ18697Q14HJMVT5A', 500000.0, 'VND', 500, 0, 0, '2026-06-13 16:42:22', '2026-09-11 16:42:22', 0, NOW(), NOW(), 'PLATFORM', 'ORDER_DISCOUNT', NULL),
+('SUMMER10', '01M74HC0WJJ18697Q14HJMVT5A', 100000.0, 'VND', 1000, 0, 0, '2026-06-13 16:42:22', '2026-09-11 16:42:22', 0, NOW(), NOW(), 'PLATFORM', 'ORDER_DISCOUNT', NULL),
+('FREESHIP', '01M74HC0WJJ18697Q14HJMVT5A', 30000.0, 'VND', 1000, 0, 0, '2026-06-13 16:42:22', '2026-09-11 16:42:22', 0, NOW(), NOW(), 'PLATFORM', 'FREE_SHIPPING', NULL);
 
--- Seed Initial Banners
 INSERT INTO promotion_banners (banner_id, title, image_url, link_url, image_public_id, display_order, active, version, created_at, updated_at) VALUES
 ('01M74HDESQ5AQ3YMTKR3FHTGZ0', 'Aionn Siêu Sale Công Nghệ', 'https://res.cloudinary.com/dkb9l6kfy/image/upload/v1790350793/aionn/promotion/banners/in5okxd74ez0q9cjpnla.png', '/products?categoryId=01M74HE3MQBQ0KZ9R3T2FV6DV0', 'aionn/promotion/banners/in5okxd74ez0q9cjpnla', 1, TRUE, 0, NOW(), NOW()),
 ('01M74HDESRBNMJ0D7AA7QW4JP7', 'Aionn Siêu Sale Thời Trang', 'https://res.cloudinary.com/dkb9l6kfy/image/upload/v1790350810/aionn/promotion/banners/xpkvdodwroahizwrvcgh.png', '/products?categoryId=01M74HE3MWRPZD13E3VVXXS295', 'aionn/promotion/banners/xpkvdodwroahizwrvcgh', 2, TRUE, 0, NOW(), NOW()),
 ('01M74HDESSB8WJMTAJVH4B0M7A', 'Aionn Trang Trí Nhà Cửa', 'https://res.cloudinary.com/dkb9l6kfy/image/upload/v1790350824/aionn/promotion/banners/bqyahpgpy97vf3lrqxa6.png', '/products?categoryId=01M74HE3N3HMVFX4902GGEFF52', 'aionn/promotion/banners/bqyahpgpy97vf3lrqxa6', 3, TRUE, 0, NOW(), NOW()),
 ('01M74HDEST1ZFF1BJRCSFDRCFR', 'Chào mừng bạn đến với Aionn', 'https://res.cloudinary.com/dkb9l6kfy/image/upload/v1790350745/aionn/promotion/banners/fhs8kcthqy1eaj0nahzs.png', '/products', 'aionn/promotion/banners/fhs8kcthqy1eaj0nahzs', 4, TRUE, 0, NOW(), NOW());
-
--- Demo data so the storefront has a live flash-sale to render. Campaign
--- runs for 365 days starting now; SKUs registered at varied discount rates
--- (-25% → -50%) so the storefront doesn't look like a flat 50% banner.
 
 INSERT INTO promotion_campaigns
     (campaign_id, name, type, budget, budget_remaining, currency,
@@ -26,6 +19,17 @@ VALUES
      100000000.00, 100000000.00, 'VND',
      NOW() - INTERVAL '1 hour', NOW() + INTERVAL '365 days',
      'sys_admin_01', 'RUNNING', 0, NOW(), NOW());
+
+INSERT INTO promotion_campaigns
+    (campaign_id, name, type, budget, budget_remaining, currency,
+     start_date, end_date, created_by, status, min_order_value,
+     max_claims_per_user, max_uses_per_voucher, version, created_at, updated_at)
+VALUES
+    ('FREESHIP_DEMO_CAMPAIGN', 'Miễn phí vận chuyển', 'FREESHIP',
+     100000000.00, 100000000.00, 'VND',
+     NOW() - INTERVAL '1 hour', NOW() + INTERVAL '90 days',
+     'sys_admin_01', 'RUNNING', 0.00, NULL, 1000, 0, NOW(), NOW())
+ON CONFLICT (campaign_id) DO NOTHING;
 
 INSERT INTO flash_sale_registrations
     (registration_id, campaign_id, merchant_id, product_id, sku_id,
@@ -238,23 +242,56 @@ ON CONFLICT (voucher_code) DO NOTHING;
 INSERT INTO vouchers
     (voucher_code, campaign_id, discount_amount, currency,
      usage_limit, used_count, reserved_count,
-     valid_from, valid_until, version, created_at, updated_at, scope, merchant_id)
+     valid_from, valid_until, version, created_at, updated_at, scope, type, merchant_id)
 VALUES
     ('MEGA100', '01M74HC0WJJ18697Q14HJMVT5A', 100000.00, 'VND',
      800, 40, 0, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '30 days',
-     0, NOW(), NOW(), 'PLATFORM', NULL),
+     0, NOW(), NOW(), 'PLATFORM', 'ORDER_DISCOUNT', NULL),
 
     ('MEGA300', '01M74HC0WJJ18697Q14HJMVT5A', 300000.00, 'VND',
      200, 0, 0, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '30 days',
-     0, NOW(), NOW(), 'PLATFORM', NULL),
+     0, NOW(), NOW(), 'PLATFORM', 'ORDER_DISCOUNT', NULL),
 
     ('AIONNNEW', '01M74HC0WJJ18697Q14HJMVT5A', 50000.00, 'VND',
      1000, 0, 0, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '30 days',
-     0, NOW(), NOW(), 'PLATFORM', NULL),
+     0, NOW(), NOW(), 'PLATFORM', 'ORDER_DISCOUNT', NULL),
 
     ('FREESHIP50', '01M74HC0WJJ18697Q14HJMVT5A', 50000.00, 'VND',
      1500, 0, 0, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '30 days',
-     0, NOW(), NOW(), 'PLATFORM', NULL)
+     0, NOW(), NOW(), 'PLATFORM', 'FREE_SHIPPING', NULL)
+ON CONFLICT (voucher_code) DO NOTHING;
+
+INSERT INTO vouchers
+    (voucher_code, campaign_id, discount_amount, currency,
+     usage_limit, used_count, reserved_count,
+     valid_from, valid_until, version, created_at, updated_at,
+     scope, type, merchant_id)
+VALUES
+    ('FREESHIP15K', 'FREESHIP_DEMO_CAMPAIGN', 15000.00, 'VND',
+     1500, 0, 0, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '90 days',
+     0, NOW(), NOW(), 'PLATFORM', 'FREE_SHIPPING', NULL),
+    ('FREESHIP30K', 'FREESHIP_DEMO_CAMPAIGN', 30000.00, 'VND',
+     1000, 0, 0, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '90 days',
+     0, NOW(), NOW(), 'PLATFORM', 'FREE_SHIPPING', NULL),
+    ('FREESHIP50K', 'FREESHIP_DEMO_CAMPAIGN', 50000.00, 'VND',
+     800, 120, 0, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '90 days',
+     0, NOW(), NOW(), 'PLATFORM', 'FREE_SHIPPING', NULL),
+    ('FREESHIP100K', 'FREESHIP_DEMO_CAMPAIGN', 100000.00, 'VND',
+     300, 18, 0, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '90 days',
+     0, NOW(), NOW(), 'PLATFORM', 'FREE_SHIPPING', NULL),
+
+    ('AIONN25K', '01M74HC0WB53JNDNF03G2Z7274', 25000.00, 'VND',
+     1200, 75, 0, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '45 days',
+     0, NOW(), NOW(), 'PLATFORM', 'ORDER_DISCOUNT', NULL),
+    ('AIONN75K', '01M74HC0WB53JNDNF03G2Z7274', 75000.00, 'VND',
+     400, 30, 0, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '45 days',
+     0, NOW(), NOW(), 'PLATFORM', 'ORDER_DISCOUNT', NULL),
+    ('MEMBER150K', '01M74HC0WB53JNDNF03G2Z7274', 150000.00, 'VND',
+     500, 80, 0, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '60 days',
+     0, NOW(), NOW(), 'PLATFORM', 'ORDER_DISCOUNT', NULL),
+    ('VIP300K', '01M74HC0WB53JNDNF03G2Z7274', 300000.00, 'VND',
+     150, 12, 0, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '30 days',
+     0, NOW(), NOW(), 'PLATFORM', 'ORDER_DISCOUNT', NULL)
 ON CONFLICT (voucher_code) DO NOTHING;
 
 
@@ -636,5 +673,8 @@ INSERT INTO user_vouchers (
 ('01M74HDF6VXFE75SQNQGSWCF55', 'FLASH50K', '01KV05RTFNH4AW0JQG3MGZAGRK', 'APPLIED', '01M74HBZRQ64PYK6TWCWR10CFA', 50000.00, 'VND', NOW() - INTERVAL '60 days', NOW() - INTERVAL '16 days', 0, NOW() - INTERVAL '16 days'),
 ('01M74HDF6WAQ2P7SCF9TMP3RQP', 'FLASH30K', '01KV05RTFNH4AW0JQG3MGZAGRK', 'APPLIED', '01M74HBZRSS83WK5DV7DRFCAE3', 30000.00, 'VND', NOW() - INTERVAL '60 days', NOW() - INTERVAL '12 days', 0, NOW() - INTERVAL '12 days'),
 ('01M74HDF6XNJEY2G6Y55JJEH6R', 'MEGA100', '01KV05RTFNH4AW0JQG3MGZAGRK', 'APPLIED', '01M74HD789JK0WN1RT902Q3R76', 100000.00, 'VND', NOW() - INTERVAL '60 days', NOW() - INTERVAL '31 days', 0, NOW() - INTERVAL '31 days'),
-('01M74HDF6Y4CVHN47BXXSFRJWG', 'FLASH30K', '01KV05RTEATDZQSGZBG6FEB3SN', 'APPLIED', '01M74HD7DSS1ES903H2RD0K7RP', 30000.00, 'VND', NOW() - INTERVAL '60 days', NOW() - INTERVAL '7 days', 0, NOW() - INTERVAL '7 days')
+('01M74HDF6Y4CVHN47BXXSFRJWG', 'FLASH30K', '01KV05RTEATDZQSGZBG6FEB3SN', 'APPLIED', '01M74HD7DSS1ES903H2RD0K7RP', 30000.00, 'VND', NOW() - INTERVAL '60 days', NOW() - INTERVAL '7 days', 0, NOW() - INTERVAL '7 days'),
+('FREESHIP_DEMO_USER_VOUCHER', 'FREESHIP30K', '01KV05RTC7NA4KZMMP8KXX7461', 'CLAIMED', NULL, NULL, NULL, NOW() - INTERVAL '2 hours', NULL, 0, NOW() - INTERVAL '2 hours'),
+('AIONN25K_DEMO_USER_VOUCHER', 'AIONN25K', '01KV05RTC7NA4KZMMP8KXX7461', 'CLAIMED', NULL, NULL, NULL, NOW() - INTERVAL '3 hours', NULL, 0, NOW() - INTERVAL '3 hours'),
+('MEMBER150K_DEMO_USER_VOUCHER', 'MEMBER150K', '01KV05RTC7NA4KZMMP8KXX7461', 'CLAIMED', NULL, NULL, NULL, NOW() - INTERVAL '4 hours', NULL, 0, NOW() - INTERVAL '4 hours')
 ON CONFLICT (user_voucher_id) DO NOTHING;

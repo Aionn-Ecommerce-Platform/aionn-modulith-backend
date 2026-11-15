@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,7 +18,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -34,6 +36,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableConfigurationProperties(SecurityIpProperties.class)
 public class ApiSecurityConfig {
 
+        private static final Set<String> CSRF_PROTECTED_PATHS = Set.of("/api/v1/auth/refresh");
+
         private final String allowedOrigins;
         private final BearerAuthenticationFilter bearerAuthenticationFilter;
         private final ObjectProvider<UcpAgentAuthenticationFilter> ucpAgentAuthenticationFilter;
@@ -48,6 +52,7 @@ public class ApiSecurityConfig {
         }
 
         @Bean
+        @SuppressWarnings("java:S4502")
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
                 CookieCsrfTokenRepository csrfTokenRepository = new CookieCsrfTokenRepository();
                 csrfTokenRepository.setCookieCustomizer(cookie -> cookie
@@ -59,7 +64,8 @@ public class ApiSecurityConfig {
                                 .csrf(csrf -> csrf
                                                 .csrfTokenRepository(csrfTokenRepository)
                                                 .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-                                                .requireCsrfProtectionMatcher(ApiSecurityConfig::requiresCsrfProtection))
+                                                .requireCsrfProtectionMatcher(
+                                                                ApiSecurityConfig::requiresCsrfProtection))
                                 .headers(headers -> headers
                                                 .contentTypeOptions(opt -> {
                                                 })
@@ -156,12 +162,10 @@ public class ApiSecurityConfig {
                 return source;
         }
 
-        /**
-         * CSRF is required only when the request authenticates through the HttpOnly refresh cookie.
-         * Bearer-authenticated requests cannot be forged cross-site: a browser never attaches the
-         * {@code Authorization} header on its own, so they stay exempt.
-         */
         static boolean requiresCsrfProtection(HttpServletRequest request) {
+                if (!CSRF_PROTECTED_PATHS.contains(request.getServletPath())) {
+                        return false;
+                }
                 String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
                 if (authorization != null && !authorization.isBlank()) {
                         return false;
@@ -174,7 +178,8 @@ public class ApiSecurityConfig {
                                 .anyMatch(cookie -> "refresh_token".equals(cookie.getName()));
         }
 
-        private List<String> resolveAllowedOrigins() {                return Arrays.stream(allowedOrigins.split(","))
+        private List<String> resolveAllowedOrigins() {
+                return Arrays.stream(allowedOrigins.split(","))
                                 .map(String::trim)
                                 .filter(value -> !value.isBlank())
                                 .toList();

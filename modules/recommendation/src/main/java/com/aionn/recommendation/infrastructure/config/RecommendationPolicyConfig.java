@@ -15,11 +15,6 @@ import org.springframework.context.annotation.Configuration;
 import java.math.BigDecimal;
 import java.time.Duration;
 
-/**
- * Adapts configuration properties into the application-facing policies.
- * Application code must not
- * import properties classes, so the translation happens here.
- */
 @Configuration
 public class RecommendationPolicyConfig {
 
@@ -28,7 +23,9 @@ public class RecommendationPolicyConfig {
         return type -> switch (type) {
             case VIEW -> toWeight(properties.view());
             case SEARCH -> toWeight(properties.search());
+            case WISHLIST_ADD -> toWeight(properties.wishlistAdd());
             case CART_ADD -> toWeight(properties.cartAdd());
+            case ORDER_PLACED -> toWeight(properties.orderPlaced());
             case PURCHASE -> toWeight(properties.purchase());
         };
     }
@@ -38,9 +35,7 @@ public class RecommendationPolicyConfig {
         BigDecimal weightSum = properties.collaborativeWeight()
                 .add(properties.contentWeight())
                 .add(properties.popularityWeight());
-        // Fail at startup rather than at the first request. A non-positive sum makes
-        // HybridRankingPolicy return an empty slate for every surface, which reads as "the catalog is
-        // empty" rather than as a configuration error.
+
         if (weightSum.signum() <= 0) {
             throw new IllegalStateException(
                     "recommendation.ranking collaborative/content/popularity weights must sum to a "

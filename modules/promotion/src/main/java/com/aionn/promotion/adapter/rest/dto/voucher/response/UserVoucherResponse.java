@@ -20,6 +20,7 @@ public record UserVoucherResponse(
         BigDecimal voucherDiscountAmount,
         String voucherCurrency,
         String voucherScope,
+        String voucherType,
         Instant voucherValidUntil,
         BigDecimal minOrderValue,
         int voucherUsageLimit,

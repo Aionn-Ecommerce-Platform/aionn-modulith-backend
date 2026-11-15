@@ -146,9 +146,12 @@ public class FlashSaleController {
         @GetMapping("/active")
         @Operation(summary = "Public — active flash sales for the storefront")
         public ResponseEntity<ApiResponse<List<ActiveFlashSaleResponse>>> active(
-                        @RequestParam(defaultValue = "5") @Min(1) @Max(100) int limit) {
+                        @RequestParam(defaultValue = "5") @Min(1) @Max(100) int limit,
+                        @RequestParam(required = false) @Min(0) Integer page,
+                        @RequestParam(required = false) @Min(1) @Max(100) Integer size) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                dtoMapper.toActiveResponses(listActiveFlashSalesInputPort.execute(limit)),
+                                dtoMapper.toActiveResponses(
+                                                listActiveFlashSalesInputPort.execute(limit, page, size)),
                                 "Active flash sales fetched"));
         }
 }

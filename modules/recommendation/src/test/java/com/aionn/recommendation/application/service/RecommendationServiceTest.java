@@ -292,6 +292,10 @@ class RecommendationServiceTest {
         assertThat(service().trending(LIMIT))
                 .extracting(RecommendationItemResult::productId)
                 .contains("p-new");
+        assertThat(service().trending(LIMIT))
+                .filteredOn(item -> item.productId().equals("p-new"))
+                .extracting(RecommendationItemResult::reason)
+                .containsExactly(RecommendationReason.NEW_ARRIVAL);
     }
 
     @Test
@@ -446,12 +450,11 @@ class RecommendationServiceTest {
 
         assertThat(results).extracting(RecommendationItemResult::productId)
                 .containsExactly("p-cat-1", "p-cat-2");
-        // Category-only matches can no longer be labelled as bought together; the
-        // dominant signal wins the reason, so the content match takes
-        // MATCHES_YOUR_INTERESTS while the popularity tiebreaker takes TRENDING.
+        // Category-only matches are still a similarity answer on the similar surface, not a
+        // personal-interest match.
         assertThat(results)
-                .noneMatch(r -> r.reason() == RecommendationReason.SIMILAR_TO_VIEWED
-                        || r.reason() == RecommendationReason.FREQUENTLY_BOUGHT_TOGETHER);
+                .extracting(RecommendationItemResult::reason)
+                .containsOnly(RecommendationReason.SIMILAR_TO_VIEWED);
     }
 
     private void establishedProfile() {

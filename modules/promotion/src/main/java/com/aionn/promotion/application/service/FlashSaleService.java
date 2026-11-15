@@ -158,8 +158,10 @@ public class FlashSaleService {
         }
 
         @Transactional(readOnly = true)
-        public List<ActiveFlashSaleResult> listActive(int limit) {
-                int safeLimit = Math.min(Math.max(limit, 1), limitPolicy.maxActiveFlashSaleLimit());
+        public List<ActiveFlashSaleResult> listActive(int limit, Integer page, Integer size) {
+                int safeLimit = Math.clamp((long) limit, 1, limitPolicy.maxActiveFlashSaleLimit());
+                int safePage = page == null ? 0 : Math.max(0, page);
+                int safeSize = size == null ? 0 : Math.clamp((long) size, 1, 100);
                 // Limit RUNNING campaigns in the database first; then load their
                 // approved items in one query. Filtering registrations before the
                 // limit returned fewer (or zero) campaigns and triggered an N+1
@@ -177,25 +179,80 @@ public class FlashSaleService {
                 }
                 List<ActiveFlashSaleResult> out = new ArrayList<>();
                 for (PromotionCampaign campaign : campaigns) {
-                        List<FlashSaleRegistration> registrations = byCampaign.get(campaign.getCampaignId());
-                        if (registrations == null || registrations.isEmpty()) {
-                                continue;
+                        ActiveFlashSaleResult result = activeCampaign(
+                                        campaign, byCampaign.get(campaign.getCampaignId()), safePage, safeSize);
+                        if (result != null) {
+                                out.add(result);
                         }
-                        List<ActiveFlashSaleResult.Item> items = registrations.stream()
-                                        .map(reg -> new ActiveFlashSaleResult.Item(
-                                                        reg.getRegistrationId(), reg.getProductId(), reg.getSkuId(),
-                                                        reg.getMerchantId(),
-                                                        reg.getSalePrice() == null ? BigDecimal.ZERO
-                                                                        : reg.getSalePrice().amount(),
-                                                        reg.getSalePrice() == null ? defaultsPolicy.defaultCurrency()
-                                                                        : reg.getSalePrice().currency(),
-                                                        reg.getSaleStock(), reg.getSoldCount()))
-                                        .toList();
-                        out.add(new ActiveFlashSaleResult(
-                                        campaign.getCampaignId(), campaign.getName(),
-                                        campaign.getStartDate(), campaign.getEndDate(), items));
                 }
                 return out;
+        }
+
+        private ActiveFlashSaleResult activeCampaign(
+                        PromotionCampaign campaign,
+                        List<FlashSaleRegistration> registrations,
+                        int page,
+                        int size) {
+                if (registrations == null || registrations.isEmpty()) {
+                        return null;
+                }
+                List<FlashSaleRegistration> pageRegistrations = pageOf(registrations, page, size);
+                if (size > 0 && pageRegistrations.isEmpty()) {
+                        return null;
+                }
+                List<ActiveFlashSaleResult.Item> items = pageRegistrations.stream()
+                                .map(registration -> toItem(registration, defaultsPolicy.defaultCurrency()))
+                                .toList();
+                List<BigDecimal> prices = registrations.stream()
+                                .filter(registration -> registration.getSalePrice() != null)
+                                .filter(registration -> registration.getSalePrice().currency()
+                                                .equalsIgnoreCase(campaign.getBudget().currency()))
+                                .map(FlashSaleService::salePrice)
+                                .toList();
+                BigDecimal minSalePrice = prices.stream().min(BigDecimal::compareTo).orElse(null);
+                BigDecimal maxSalePrice = prices.stream().max(BigDecimal::compareTo).orElse(null);
+                long totalSold = registrations.stream()
+                                .mapToLong(FlashSaleRegistration::getSoldCount)
+                                .sum();
+                long totalStock = registrations.stream()
+                                .mapToLong(FlashSaleRegistration::getSaleStock)
+                                .sum();
+                return new ActiveFlashSaleResult(
+                                campaign.getCampaignId(), campaign.getName(),
+                                campaign.getStartDate(), campaign.getEndDate(), items,
+                                page,
+                                size > 0 ? size : registrations.size(),
+                                registrations.size(),
+                                totalSold,
+                                totalStock,
+                                minSalePrice,
+                                maxSalePrice);
+        }
+
+        private ActiveFlashSaleResult.Item toItem(
+                        FlashSaleRegistration registration, String defaultCurrency) {
+                return new ActiveFlashSaleResult.Item(
+                                registration.getRegistrationId(), registration.getProductId(),
+                                registration.getSkuId(), registration.getMerchantId(),
+                                registration.getSalePrice() == null ? BigDecimal.ZERO
+                                                : registration.getSalePrice().amount(),
+                                registration.getSalePrice() == null ? defaultCurrency
+                                                : registration.getSalePrice().currency(),
+                                registration.getSaleStock(), registration.getSoldCount());
+        }
+
+        private static List<FlashSaleRegistration> pageOf(
+                        List<FlashSaleRegistration> registrations, int page, int size) {
+                if (size <= 0) {
+                        return registrations;
+                }
+                int from = (int) Math.min((long) page * size, registrations.size());
+                int to = Math.min(from + size, registrations.size());
+                return registrations.subList(from, to);
+        }
+
+        private static BigDecimal salePrice(FlashSaleRegistration registration) {
+                return registration.getSalePrice().amount();
         }
 
         private FlashSaleRegistration required(String registrationId) {

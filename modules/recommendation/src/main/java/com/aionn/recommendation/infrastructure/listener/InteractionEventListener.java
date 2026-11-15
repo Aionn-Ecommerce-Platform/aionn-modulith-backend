@@ -5,8 +5,11 @@ import com.aionn.recommendation.application.port.in.RecordInteractionInputPort;
 import com.aionn.recommendation.domain.valueobject.InteractionType;
 import com.aionn.contracts.event.catalog.ProductViewedIntegrationEvent;
 import com.aionn.contracts.event.catalog.SearchPerformedIntegrationEvent;
+import com.aionn.contracts.event.catalog.WishlistItemAddedIntegrationEvent;
 import com.aionn.contracts.event.ordering.CartItemAddedIntegrationEvent;
 import com.aionn.contracts.event.ordering.OrderPlacedIntegrationEvent;
+import com.aionn.contracts.event.payment.PaymentPaidIntegrationEvent;
+import com.aionn.contracts.port.ordering.OrderQueryPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -14,18 +17,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Ingests behavioural signals from other modules. Handlers must declare integration event types, never
- * domain types: only {@code IntegrationEvent}/{@code EventEnvelope} carry an event ID for
- * {@code OutboxConsumerInboxAspect}, so a domain-typed handler would re-apply on every redelivery.
- * {@code REQUIRES_NEW} keeps a failed ingest from rolling back the dispatch that triggered it.
- */
+import java.util.List;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class InteractionEventListener {
 
     private final RecordInteractionInputPort recordInteractionInputPort;
+    private final OrderQueryPort orderQueryPort;
 
     @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -40,7 +40,19 @@ public class InteractionEventListener {
                 event.brandId()));
     }
 
-    /** Searches carry their facets; a weak signal, so low weight and never used for co-occurrence. */
+    @EventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void onWishlistItemAdded(WishlistItemAddedIntegrationEvent event) {
+        recordInteractionInputPort.execute(RecordInteractionCommand.forProduct(
+                event.userId(),
+                event.productId(),
+                InteractionType.WISHLIST_ADD,
+                event.occurredAt(),
+                event.eventId(),
+                List.of(),
+                null));
+    }
+
     @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onSearchPerformed(SearchPerformedIntegrationEvent event) {
@@ -64,7 +76,6 @@ public class InteractionEventListener {
                 event.eventId()));
     }
 
-    /** Quantity is ignored: buying five says they needed five, not that they like it five times more. */
     @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onOrderPlaced(OrderPlacedIntegrationEvent event) {
@@ -72,9 +83,24 @@ public class InteractionEventListener {
             recordInteractionInputPort.execute(RecordInteractionCommand.forSku(
                     event.userId(),
                     item.skuId(),
-                    InteractionType.PURCHASE,
+                    InteractionType.ORDER_PLACED,
                     event.occurredAt(),
                     event.eventId()));
         }
+    }
+
+    @EventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void onPaymentPaid(PaymentPaidIntegrationEvent event) {
+        orderQueryPort.findOrderPurchase(event.orderId()).ifPresent(purchase -> {
+            for (String skuId : purchase.skuIds()) {
+                recordInteractionInputPort.execute(RecordInteractionCommand.forSku(
+                        purchase.userId(),
+                        skuId,
+                        InteractionType.PURCHASE,
+                        event.occurredAt(),
+                        event.eventId()));
+            }
+        });
     }
 }

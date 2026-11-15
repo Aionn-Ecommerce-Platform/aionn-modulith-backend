@@ -6,6 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.ObjectProvider;
 
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -15,6 +16,9 @@ class CatalogIndexStartupInitializerTest {
 
     @Mock
     private ProductService productService;
+
+    @Mock
+    private ObjectProvider<OpenSearchIndexInitializer> indexInitializer;
 
     @InjectMocks
     private CatalogIndexStartupInitializer initializer;
