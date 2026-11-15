@@ -220,8 +220,9 @@ public class RecommendationService {
                 ? RecommendationReason.SIMILAR_TO_VIEWED
                 : RecommendationReason.FREQUENTLY_BOUGHT_TOGETHER;
         List<RecommendationItemResult> labelled = new ArrayList<>();
+        boolean hasRelatedCandidates = !collaborative.isEmpty() || !contentCandidates.isEmpty();
         for (RecommendationItemResult item : results) {
-                if (surface == RecommendationSurface.SIMILAR) {
+                if (surface == RecommendationSurface.SIMILAR && hasRelatedCandidates) {
                         labelled.add(item.withReason(RecommendationReason.SIMILAR_TO_VIEWED));
                         continue;
                 }
