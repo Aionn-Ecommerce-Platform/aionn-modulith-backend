@@ -221,7 +221,7 @@ public class OpenSearchProductSearchIndex implements ProductSearchIndex {
                 }
             }
         }
-        reqBuilder.sort(s -> s.field(f -> f.field("productId").order(SortOrder.Asc)));
+        reqBuilder.sort(s -> s.field(f -> f.field("productId.keyword").order(SortOrder.Asc)));
     }
 
     private static SearchHits toSearchHits(SearchResponse<ProductSearchDocument> response,

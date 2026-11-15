@@ -5,5 +5,5 @@ import com.aionn.promotion.application.dto.flashsale.result.ActiveFlashSaleResul
 import java.util.List;
 
 public interface ListActiveFlashSalesInputPort {
-    List<ActiveFlashSaleResult> execute(int limit);
+    List<ActiveFlashSaleResult> execute(int limit, Integer page, Integer size);
 }

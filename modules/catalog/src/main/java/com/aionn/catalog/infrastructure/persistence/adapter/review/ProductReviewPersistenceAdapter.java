@@ -170,8 +170,12 @@ public class ProductReviewPersistenceAdapter implements ProductReviewPersistence
 
     @Override
     public MerchantRatingStats getMerchantRatingStats(String merchantId) {
-        Object[] row = jpa.getMerchantRatingStats(merchantId);
-        if (row == null || row.length < 2) {
+        List<Object[]> rows = jpa.getMerchantRatingStats(merchantId);
+        if (rows == null || rows.isEmpty()) {
+            return new MerchantRatingStats(0.0, 0L);
+        }
+        Object[] row = rows.get(0);
+        if (row.length < 2) {
             return new MerchantRatingStats(0.0, 0L);
         }
         return new MerchantRatingStats(((Number) row[0]).doubleValue(), ((Number) row[1]).longValue());

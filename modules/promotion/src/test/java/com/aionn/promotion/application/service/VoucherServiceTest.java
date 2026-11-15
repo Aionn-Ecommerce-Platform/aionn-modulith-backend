@@ -118,7 +118,7 @@ class VoucherServiceTest {
                     uv.getAppliedAmount() == null ? null : uv.getAppliedAmount().currency(),
                     uv.getClaimedAt(), uv.getReservedAt(), uv.getReservedExpiresAt(),
                     uv.getAppliedAt(), uv.getReleasedAt(), uv.getUpdatedAt(),
-                    null, null, null, null, null, 0, 0);
+                    null, null, null, null, null, null, 0, 0);
         });
     }
 
@@ -139,6 +139,7 @@ class VoucherServiceTest {
         assertThat(result.voucherDiscountAmount()).isEqualByComparingTo("50000");
         assertThat(result.voucherCurrency()).isEqualTo("VND");
         assertThat(result.voucherScope()).isEqualTo("PLATFORM");
+        assertThat(result.voucherType()).isEqualTo("ORDER_DISCOUNT");
         assertThat(result.minOrderValue()).isEqualByComparingTo("100000");
         verify(voucherPersistencePort).save(any(Voucher.class));
     }

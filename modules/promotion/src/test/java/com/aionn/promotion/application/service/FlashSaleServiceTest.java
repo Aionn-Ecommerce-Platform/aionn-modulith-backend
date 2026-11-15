@@ -91,6 +91,15 @@ class FlashSaleServiceTest {
         return reg;
     }
 
+    private static FlashSaleRegistration approved(String registrationId, String skuId, String price, int stock) {
+        BigDecimal salePrice = new BigDecimal(price);
+        FlashSaleRegistration reg = FlashSaleRegistration.submit(registrationId, "camp-1", "mer-1",
+                "prod-" + registrationId, skuId, Money.of(salePrice, "VND"), stock, CLOCK);
+        reg.approve("admin-1", Money.of(salePrice.multiply(BigDecimal.valueOf(2)), "VND"), CLOCK);
+        reg.pullEvents();
+        return reg;
+    }
+
     private static FlashSaleCommands.RegisterFlashSale registerCommand() {
         return new FlashSaleCommands.RegisterFlashSale("camp-1", "owner-1",
                 "prod-1", "sku-1", new BigDecimal("80000"), "VND", 10);
@@ -354,7 +363,7 @@ class FlashSaleServiceTest {
     void listActiveReturnsEmptyWhenNoRunningCampaigns() {
         when(promotionCampaignPersistencePort.findRunning(NOW, 5)).thenReturn(List.of());
 
-        assertThat(service().listActive(5)).isEmpty();
+        assertThat(service().listActive(5, null, null)).isEmpty();
         verify(flashSaleRegistrationPersistencePort, never()).findApprovedByCampaignIds(any());
     }
 
@@ -364,12 +373,35 @@ class FlashSaleServiceTest {
         when(flashSaleRegistrationPersistencePort.findApprovedByCampaignIds(List.of("camp-1")))
                 .thenReturn(List.of(approved()));
 
-        List<ActiveFlashSaleResult> active = service().listActive(5);
+        List<ActiveFlashSaleResult> active = service().listActive(5, null, null);
 
         assertThat(active).hasSize(1);
         assertThat(active.get(0).campaignId()).isEqualTo("camp-1");
         assertThat(active.get(0).items()).hasSize(1);
         assertThat(active.get(0).items().get(0).salePrice()).isEqualByComparingTo("80000");
+        assertThat(active.get(0).totalItems()).isEqualTo(1);
+        assertThat(active.get(0).minSalePrice()).isEqualByComparingTo("80000");
+        assertThat(active.get(0).maxSalePrice()).isEqualByComparingTo("80000");
+    }
+
+    @Test
+    void listActivePagesCampaignItems() {
+        FlashSaleRegistration first = approved("reg-1", "sku-1", "80000", 10);
+        FlashSaleRegistration second = approved("reg-2", "sku-2", "120000", 20);
+        when(promotionCampaignPersistencePort.findRunning(NOW, 5)).thenReturn(List.of(runningFlashCampaign()));
+        when(flashSaleRegistrationPersistencePort.findApprovedByCampaignIds(List.of("camp-1")))
+                .thenReturn(List.of(first, second));
+
+        List<ActiveFlashSaleResult> active = service().listActive(5, 1, 1);
+
+        assertThat(active).hasSize(1);
+        assertThat(active.get(0).page()).isEqualTo(1);
+        assertThat(active.get(0).size()).isEqualTo(1);
+        assertThat(active.get(0).totalItems()).isEqualTo(2);
+        assertThat(active.get(0).items()).hasSize(1);
+        assertThat(active.get(0).items().get(0).skuId()).isEqualTo("sku-2");
+        assertThat(active.get(0).minSalePrice()).isEqualByComparingTo("80000");
+        assertThat(active.get(0).maxSalePrice()).isEqualByComparingTo("120000");
     }
 
     @Test
@@ -378,13 +410,13 @@ class FlashSaleServiceTest {
         when(flashSaleRegistrationPersistencePort.findApprovedByCampaignIds(List.of("camp-1")))
                 .thenReturn(List.of());
 
-        assertThat(service().listActive(5)).isEmpty();
+        assertThat(service().listActive(5, null, null)).isEmpty();
     }
 
     @Test
     void listActiveCapsCampaignLimitBeforeQueryingRegistrations() {
         when(promotionCampaignPersistencePort.findRunning(NOW, 50)).thenReturn(List.of());
 
-        assertThat(service().listActive(999)).isEmpty();
+        assertThat(service().listActive(999, null, null)).isEmpty();
     }
 }

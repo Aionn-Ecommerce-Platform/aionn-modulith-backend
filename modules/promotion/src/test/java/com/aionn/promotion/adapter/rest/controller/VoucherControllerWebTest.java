@@ -95,7 +95,7 @@ class VoucherControllerWebTest {
                                 "uv-1", code, "user-1", status, null,
                                 null, "VND",
                                 now, null, null, null, null, now,
-                                new BigDecimal("50000"), "VND", "PLATFORM",
+                                new BigDecimal("50000"), "VND", "PLATFORM", "ORDER_DISCOUNT",
                                 now.plusSeconds(86400), null, 100, 0);
         }
 
@@ -107,7 +107,8 @@ class VoucherControllerWebTest {
                 mockMvc.perform(post("/api/v1/promotions/vouchers/V-1/claim"))
                                 .andExpect(status().isCreated())
                                 .andExpect(jsonPath("$.data.voucherCode").value("V-1"))
-                                .andExpect(jsonPath("$.data.status").value("CLAIMED"));
+                                .andExpect(jsonPath("$.data.status").value("CLAIMED"))
+                                .andExpect(jsonPath("$.data.voucherType").value("ORDER_DISCOUNT"));
 
                 verify(claimVoucherInputPort).execute(any(VoucherCommands.ClaimVoucher.class));
         }

@@ -52,22 +52,36 @@ class ApiSecurityConfigTest {
     }
 
     @Test
-    void csrfAppliesOnlyToCookieAuthenticatedRequests() {
-        MockHttpServletRequest anonymous = new MockHttpServletRequest();
+    void csrfAppliesOnlyToCookieAuthenticatedRefreshRequests() {
+        MockHttpServletRequest anonymous = refreshRequest();
         assertFalse(ApiSecurityConfig.requiresCsrfProtection(anonymous));
 
-        MockHttpServletRequest refreshCookie = new MockHttpServletRequest();
+        MockHttpServletRequest refreshCookie = refreshRequest();
         refreshCookie.setCookies(new Cookie("refresh_token", "token"));
         assertTrue(ApiSecurityConfig.requiresCsrfProtection(refreshCookie));
 
-        MockHttpServletRequest bearer = new MockHttpServletRequest();
+        MockHttpServletRequest bearer = refreshRequest();
         bearer.setCookies(new Cookie("refresh_token", "token"));
         bearer.addHeader("Authorization", "Bearer access-token");
         assertFalse(ApiSecurityConfig.requiresCsrfProtection(bearer));
 
-        MockHttpServletRequest unrelatedCookie = new MockHttpServletRequest();
+        MockHttpServletRequest loginWithStaleCookie = request("/api/v1/auth/login");
+        loginWithStaleCookie.setCookies(new Cookie("refresh_token", "stale-token"));
+        assertFalse(ApiSecurityConfig.requiresCsrfProtection(loginWithStaleCookie));
+
+        MockHttpServletRequest unrelatedCookie = refreshRequest();
         unrelatedCookie.setCookies(new Cookie("XSRF-TOKEN", "value"));
         assertFalse(ApiSecurityConfig.requiresCsrfProtection(unrelatedCookie));
+    }
+
+    private static MockHttpServletRequest request(String uri) {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI(uri);
+        return request;
+    }
+
+    private static MockHttpServletRequest refreshRequest() {
+        return request("/api/v1/auth/refresh");
     }
 
     @Test

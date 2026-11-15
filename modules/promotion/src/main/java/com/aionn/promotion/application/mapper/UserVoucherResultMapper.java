@@ -16,6 +16,7 @@ public interface UserVoucherResultMapper {
     @Mapping(target = "voucherDiscountAmount", ignore = true)
     @Mapping(target = "voucherCurrency", ignore = true)
     @Mapping(target = "voucherScope", ignore = true)
+    @Mapping(target = "voucherType", ignore = true)
     @Mapping(target = "voucherValidUntil", ignore = true)
     @Mapping(target = "minOrderValue", ignore = true)
     @Mapping(target = "voucherUsageLimit", ignore = true)

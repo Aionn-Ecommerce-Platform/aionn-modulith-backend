@@ -63,5 +63,5 @@ public interface ProductReviewRepository extends JpaRepository<ProductReviewEnti
              WHERE r.status = 'VISIBLE'
                AND r.productId IN (SELECT p.productId FROM ProductEntity p WHERE p.merchantId = :merchantId)
             """)
-    Object[] getMerchantRatingStats(@Param("merchantId") String merchantId);
+    List<Object[]> getMerchantRatingStats(@Param("merchantId") String merchantId);
 }

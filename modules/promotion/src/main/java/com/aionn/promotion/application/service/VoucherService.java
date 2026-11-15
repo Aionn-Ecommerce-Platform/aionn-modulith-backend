@@ -213,9 +213,6 @@ public class VoucherService {
     }
 
     public int releaseExpiredReservations(Instant now, int batchSize) {
-        // Kept for backwards compatibility; the auto-release scheduler now drives
-        // expiry directly through VoucherAutoReleaseWorker so each release runs
-        // in its own transaction and a single failure doesn't poison the batch.
         List<UserVoucher> expired = userVoucherPersistencePort.findExpiredReservations(now, batchSize);
         int released = 0;
         for (UserVoucher candidate : expired) {
@@ -272,7 +269,7 @@ public class VoucherService {
                 base.reservedOrderId(), base.appliedAmount(), base.currency(), base.claimedAt(),
                 base.reservedAt(), base.reservedExpiresAt(), base.appliedAt(), base.releasedAt(),
                 base.updatedAt(), voucher.getDiscountAmount().amount(), voucher.getDiscountAmount().currency(),
-                voucher.getScope().name(), voucher.getValidUntil(), minOrderValue,
+                voucher.getScope().name(), voucher.getType().name(), voucher.getValidUntil(), minOrderValue,
                 voucher.getUsageLimit(), voucher.getUsedCount());
     }
 
