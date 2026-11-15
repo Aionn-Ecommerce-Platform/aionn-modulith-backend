@@ -77,6 +77,7 @@ class ApiSecurityConfigTest {
     private static MockHttpServletRequest request(String uri) {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRequestURI(uri);
+        request.setServletPath(uri);
         return request;
     }
 

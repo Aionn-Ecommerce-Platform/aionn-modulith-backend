@@ -136,8 +136,9 @@ public class RecommendationService {
         Set<String> newArrivalIds = newArrivals.keySet();
         return results.stream()
                 .map(item -> item.withReason(newArrivalIds.contains(item.productId())
-                        ? RecommendationReason.NEW_ARRIVAL
-                        : RecommendationReason.TRENDING))
+                        && !popularity.containsKey(item.productId())
+                                ? RecommendationReason.NEW_ARRIVAL
+                                : RecommendationReason.TRENDING))
                 .toList();
     }
 
@@ -218,11 +219,20 @@ public class RecommendationService {
         RecommendationReason fallbackReason = surface == RecommendationSurface.SIMILAR
                 ? RecommendationReason.SIMILAR_TO_VIEWED
                 : RecommendationReason.FREQUENTLY_BOUGHT_TOGETHER;
-        List<RecommendationItemResult> labelled = results.stream()
-                .map(item -> item.reason() == RecommendationReason.MATCHES_YOUR_INTERESTS
-                        ? item.withReason(fallbackReason)
-                        : item)
-                .toList();
+        List<RecommendationItemResult> labelled = new ArrayList<>();
+        for (RecommendationItemResult item : results) {
+                if (surface == RecommendationSurface.SIMILAR) {
+                        labelled.add(item.withReason(RecommendationReason.SIMILAR_TO_VIEWED));
+                        continue;
+                }
+                if (item.reason() != RecommendationReason.MATCHES_YOUR_INTERESTS) {
+                        labelled.add(item);
+                        continue;
+                }
+                boolean categoryOnly = contentCandidates.containsKey(item.productId())
+                                && !collaborative.containsKey(item.productId());
+                labelled.add(categoryOnly ? item : item.withReason(fallbackReason));
+        }
         return labelled.isEmpty() ? fallbackToTrending(surface, limit, Set.of(productId)) : labelled;
     }
 

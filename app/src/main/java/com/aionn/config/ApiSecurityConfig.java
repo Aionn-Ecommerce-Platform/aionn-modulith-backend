@@ -52,6 +52,7 @@ public class ApiSecurityConfig {
         }
 
         @Bean
+        @SuppressWarnings("java:S4502")
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
                 CookieCsrfTokenRepository csrfTokenRepository = new CookieCsrfTokenRepository();
                 csrfTokenRepository.setCookieCustomizer(cookie -> cookie
@@ -162,7 +163,7 @@ public class ApiSecurityConfig {
         }
 
         static boolean requiresCsrfProtection(HttpServletRequest request) {
-                if (!CSRF_PROTECTED_PATHS.contains(request.getRequestURI())) {
+                if (!CSRF_PROTECTED_PATHS.contains(request.getServletPath())) {
                         return false;
                 }
                 String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);

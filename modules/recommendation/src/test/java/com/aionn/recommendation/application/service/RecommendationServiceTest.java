@@ -454,7 +454,7 @@ class RecommendationServiceTest {
         // personal-interest match.
         assertThat(results)
                 .extracting(RecommendationItemResult::reason)
-                .doesNotContain(RecommendationReason.MATCHES_YOUR_INTERESTS);
+                .containsOnly(RecommendationReason.SIMILAR_TO_VIEWED);
     }
 
     private void establishedProfile() {

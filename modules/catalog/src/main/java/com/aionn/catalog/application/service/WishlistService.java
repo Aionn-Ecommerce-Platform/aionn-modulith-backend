@@ -37,9 +37,8 @@ public class WishlistService {
             throw new CatalogException(CatalogErrorCode.PRODUCT_INVALID_TRANSITION,
                     "Only published products can be saved");
         }
-        boolean alreadySaved = wishlistPersistencePort.exists(userId, productId);
-        wishlistPersistencePort.add(userId, productId, clock.instant());
-        if (!alreadySaved) {
+        boolean inserted = wishlistPersistencePort.add(userId, productId, clock.instant());
+        if (inserted) {
             integrationEventPublisher.publishWishlistItemAdded(userId, productId, clock.instant());
         }
     }
