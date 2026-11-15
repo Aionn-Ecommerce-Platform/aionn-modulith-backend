@@ -9,6 +9,7 @@ import com.aionn.recommendation.application.port.out.ProductAttributeQueryPort;
 import com.aionn.recommendation.application.port.out.observability.RecommendationMetricsPort;
 import com.aionn.recommendation.domain.model.RecommendationSlate;
 import com.aionn.recommendation.domain.model.UserAffinityProfile;
+import com.aionn.recommendation.domain.valueobject.RecommendationReason;
 import com.aionn.recommendation.domain.valueobject.RecommendationSurface;
 import com.aionn.contracts.port.promotion.FlashSaleQueryPort;
 import lombok.RequiredArgsConstructor;
@@ -26,8 +27,10 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Produces a ranked, over-fetched slate per surface; availability filtering happens downstream.
- * {@code NOT_SUPPORTED} because each collaborator opens its own short read-only transaction.
+ * Produces a ranked, over-fetched slate per surface; availability filtering
+ * happens downstream.
+ * {@code NOT_SUPPORTED} because each collaborator opens its own short read-only
+ * transaction.
  */
 @Slf4j
 @Service
@@ -113,7 +116,6 @@ public class RecommendationService {
                 : results;
     }
 
-    /** Cold start: recent momentum, topped up with new arrivals. */
     public List<RecommendationItemResult> trending(int limit) {
         return trending(limit, Set.of());
     }
@@ -125,16 +127,23 @@ public class RecommendationService {
                 ? Map.of()
                 : candidateGeneration.newArrivalScores(candidateLimit);
 
-        return rankAndHydrate(
+        List<RecommendationItemResult> results = rankAndHydrate(
                 RecommendationSurface.HOME,
                 new HybridRankingPolicy.SignalScores(Map.of(), newArrivals, popularity),
                 ColdStartPolicy.SignalWeights.trendingWithNewArrivals(),
                 excluded == null ? Set.of() : excluded,
                 candidateLimit);
+        Set<String> newArrivalIds = newArrivals.keySet();
+        return results.stream()
+                .map(item -> item.withReason(newArrivalIds.contains(item.productId())
+                        ? RecommendationReason.NEW_ARRIVAL
+                        : RecommendationReason.TRENDING))
+                .toList();
     }
 
     /**
-     * Applies the flash-sale cap to the ranked result so every candidate source respects it.
+     * Applies the flash-sale cap to the ranked result so every candidate source
+     * respects it.
      * Over-cap sale items are dropped, not re-scored.
      */
     private List<RecommendationItemResult> capFlashSaleShare(
@@ -180,7 +189,8 @@ public class RecommendationService {
         Map<String, BigDecimal> popularity;
 
         if (collaborative.isEmpty()) {
-            Map<String, BigDecimal> categoryCandidates = candidateGeneration.categoryCandidates(productId, candidateLimit);
+            Map<String, BigDecimal> categoryCandidates = candidateGeneration.categoryCandidates(productId,
+                    candidateLimit);
             if (categoryCandidates != null && !categoryCandidates.isEmpty()) {
                 contentCandidates = categoryCandidates;
                 popularity = candidateGeneration.popularityScoresFor(contentCandidates.keySet());
@@ -205,17 +215,31 @@ public class RecommendationService {
                 signalWeights,
                 Set.of(productId),
                 candidateLimit);
-        return results.isEmpty() ? fallbackToTrending(surface, limit, Set.of(productId)) : results;
+        RecommendationReason fallbackReason = surface == RecommendationSurface.SIMILAR
+                ? RecommendationReason.SIMILAR_TO_VIEWED
+                : RecommendationReason.FREQUENTLY_BOUGHT_TOGETHER;
+        List<RecommendationItemResult> labelled = results.stream()
+                .map(item -> item.reason() == RecommendationReason.MATCHES_YOUR_INTERESTS
+                        ? item.withReason(fallbackReason)
+                        : item)
+                .toList();
+        return labelled.isEmpty() ? fallbackToTrending(surface, limit, Set.of(productId)) : labelled;
     }
 
-    /** Falls back to trending and records the fallback so cold starts are distinguishable from breakage. */
+    /**
+     * Falls back to trending and records the fallback so cold starts are
+     * distinguishable from breakage.
+     */
     private List<RecommendationItemResult> fallbackToTrending(
             RecommendationSurface surface, int limit, Set<String> excluded) {
         metrics.recordTrendingFallback(surface);
         return trending(limit, excluded);
     }
 
-    /** Drops products catalog has retired, since the interaction log keeps stale IDs. */
+    /**
+     * Drops products catalog has retired, since the interaction log keeps stale
+     * IDs.
+     */
     private List<RecommendationItemResult> rankAndHydrate(
             RecommendationSurface surface,
             HybridRankingPolicy.SignalScores signals,
@@ -250,6 +274,8 @@ public class RecommendationService {
                     scored.score().value(),
                     scored.reason(),
                     product.skuIds(),
+                    product.categoryIds(),
+                    product.brandId(),
                     product.rating(),
                     product.reviewCount(),
                     product.soldCount()));
@@ -257,7 +283,10 @@ public class RecommendationService {
         return capFlashSaleShare(results, candidateLimit);
     }
 
-    /** Over-fetch so downstream availability filtering still leaves a full page; clamp to avoid int overflow. */
+    /**
+     * Over-fetch so downstream availability filtering still leaves a full page;
+     * clamp to avoid int overflow.
+     */
     private int candidateLimit(int limit) {
         int page = Math.clamp(limit, 1, servingPolicy.maxPageSize());
         return (int) Math.min((long) page * weights.candidateOverFetchFactor(), weights.maxCandidates());

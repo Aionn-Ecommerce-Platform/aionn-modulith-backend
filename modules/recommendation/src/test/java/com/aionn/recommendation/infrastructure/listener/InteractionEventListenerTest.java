@@ -5,8 +5,11 @@ import com.aionn.recommendation.application.port.in.RecordInteractionInputPort;
 import com.aionn.recommendation.domain.valueobject.InteractionType;
 import com.aionn.contracts.event.IntegrationEvent;
 import com.aionn.contracts.event.catalog.ProductViewedIntegrationEvent;
+import com.aionn.contracts.event.catalog.WishlistItemAddedIntegrationEvent;
 import com.aionn.contracts.event.ordering.CartItemAddedIntegrationEvent;
 import com.aionn.contracts.event.ordering.OrderPlacedIntegrationEvent;
+import com.aionn.contracts.event.payment.PaymentPaidIntegrationEvent;
+import com.aionn.contracts.port.ordering.OrderQueryPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -19,10 +22,12 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class InteractionEventListenerTest {
@@ -31,9 +36,11 @@ class InteractionEventListenerTest {
 
     @Mock
     private RecordInteractionInputPort recordInteraction;
+    @Mock
+    private OrderQueryPort orderQueryPort;
 
     private InteractionEventListener listener() {
-        return new InteractionEventListener(recordInteraction);
+        return new InteractionEventListener(recordInteraction, orderQueryPort);
     }
 
     @Test
@@ -50,6 +57,17 @@ class InteractionEventListenerTest {
     }
 
     @Test
+    void aWishlistSaveIsAnExplicitProductSignal() {
+        listener().onWishlistItemAdded(new WishlistItemAddedIntegrationEvent(
+                "evt-wishlist", "user-1", "p-1", OCCURRED_AT));
+
+        RecordInteractionCommand command = captureOne();
+        assertThat(command.productId()).isEqualTo("p-1");
+        assertThat(command.skuId()).isNull();
+        assertThat(command.type()).isEqualTo(InteractionType.WISHLIST_ADD);
+    }
+
+    @Test
     void aCartAddArrivesSkuScopedAndIsLeftForTheServiceToResolve() {
         listener().onCartItemAdded(new CartItemAddedIntegrationEvent(
                 "evt-cart", "user-1", "cart-1", "sku-1", 2, OCCURRED_AT));
@@ -61,7 +79,7 @@ class InteractionEventListenerTest {
     }
 
     @Test
-    void everyOrderLineBecomesOnePurchaseRegardlessOfQuantity() {
+    void everyOrderLineBecomesOneOrderPlacedSignalRegardlessOfQuantity() {
         // Buying five of something says the user needed five, not that they like it
         // five times more.
         listener().onOrderPlaced(orderWith(orderLine("sku-1", 5), orderLine("sku-2", 1)));
@@ -71,7 +89,28 @@ class InteractionEventListenerTest {
         assertThat(captor.getAllValues()).extracting(RecordInteractionCommand::skuId)
                 .containsExactly("sku-1", "sku-2");
         assertThat(captor.getAllValues())
-                .allSatisfy(command -> assertThat(command.type()).isEqualTo(InteractionType.PURCHASE));
+                .allSatisfy(command -> assertThat(command.type()).isEqualTo(InteractionType.ORDER_PLACED));
+    }
+
+    @Test
+    void paymentSuccessTurnsEveryOrderLineIntoAPurchase() {
+        when(orderQueryPort.findOrderPurchase("order-1"))
+                .thenReturn(Optional.of(new OrderQueryPort.OrderPurchase(
+                        "user-1", List.of("sku-1", "sku-2"))));
+
+        listener().onPaymentPaid(new PaymentPaidIntegrationEvent(
+                "evt-payment", "pay-1", "order-1", BigDecimal.valueOf(1_000_000), "VND",
+                "STRIPE", "txn-1", OCCURRED_AT));
+
+        ArgumentCaptor<RecordInteractionCommand> captor = ArgumentCaptor.forClass(RecordInteractionCommand.class);
+        verify(recordInteraction, times(2)).execute(captor.capture());
+        assertThat(captor.getAllValues()).extracting(RecordInteractionCommand::skuId)
+                .containsExactly("sku-1", "sku-2");
+        assertThat(captor.getAllValues())
+                .allSatisfy(command -> {
+                    assertThat(command.userId()).isEqualTo("user-1");
+                    assertThat(command.type()).isEqualTo(InteractionType.PURCHASE);
+                });
     }
 
     @Test
@@ -109,7 +148,7 @@ class InteractionEventListenerTest {
                 .toList();
 
         assertThat(handlers)
-                .hasSize(4)
+                .hasSize(6)
                 .allSatisfy(method -> {
                     assertThat(method.getParameterCount()).isEqualTo(1);
                     assertThat(IntegrationEvent.class).isAssignableFrom(method.getParameterTypes()[0]);

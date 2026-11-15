@@ -22,6 +22,8 @@ public record RecommendationItemResult(
         BigDecimal score,
         RecommendationReason reason,
         List<String> skuIds,
+        List<String> categoryIds,
+        String brandId,
         Double rating,
         Long reviewCount,
         Long soldCount) {
@@ -37,10 +39,17 @@ public record RecommendationItemResult(
             RecommendationReason reason,
             List<String> skuIds) {
         this(productId, name, imageUrl, priceFrom, originalPriceFrom, currency, score, reason, skuIds,
-                null, null, 0L);
+                List.of(), null, null, null, 0L);
     }
 
     public RecommendationItemResult {
         skuIds = skuIds == null ? List.of() : List.copyOf(skuIds);
+        categoryIds = categoryIds == null ? List.of() : List.copyOf(categoryIds);
+    }
+
+    public RecommendationItemResult withReason(RecommendationReason newReason) {
+        return new RecommendationItemResult(
+                productId, name, imageUrl, priceFrom, originalPriceFrom, currency, score,
+                newReason, skuIds, categoryIds, brandId, rating, reviewCount, soldCount);
     }
 }

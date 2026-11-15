@@ -75,4 +75,19 @@ public class OrderingOrderQueryAdapter implements OrderQueryPort {
                         e.getCurrency(),
                         e.getStatus()));
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<OrderPurchase> findOrderPurchase(String orderId) {
+        if (orderId == null || orderId.isBlank()) {
+            return Optional.empty();
+        }
+        return orderJpaRepository.findById(orderId)
+                .map(e -> new OrderPurchase(
+                        e.getUserId(),
+                        e.getItems().stream()
+                                .map(item -> item.getId().getSkuId())
+                                .distinct()
+                                .toList()));
+    }
 }

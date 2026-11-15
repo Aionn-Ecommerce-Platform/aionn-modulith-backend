@@ -2,6 +2,7 @@ package com.aionn.contracts.port.ordering;
 
 import java.math.BigDecimal;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface OrderQueryPort {
@@ -16,6 +17,8 @@ public interface OrderQueryPort {
 
     Optional<OrderSummary> findOrderSummary(String orderId);
 
+    Optional<OrderPurchase> findOrderPurchase(String orderId);
+
     record OrderSummary(String orderId, String userId, String merchantId, BigDecimal totalAmount, String currency,
             String status) {
 
@@ -23,5 +26,8 @@ public interface OrderQueryPort {
                 String currency) {
             this(orderId, userId, merchantId, totalAmount, currency, null);
         }
+    }
+
+    record OrderPurchase(String userId, List<String> skuIds) {
     }
 }

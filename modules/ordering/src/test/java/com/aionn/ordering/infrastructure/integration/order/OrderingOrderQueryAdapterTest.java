@@ -1,6 +1,7 @@
 package com.aionn.ordering.infrastructure.integration.order;
 
 import com.aionn.ordering.infrastructure.persistence.entity.OrderEntity;
+import com.aionn.ordering.infrastructure.persistence.entity.OrderItemEntity;
 import com.aionn.ordering.infrastructure.persistence.repository.OrderRepository;
 import com.aionn.contracts.port.ordering.OrderQueryPort;
 import org.junit.jupiter.api.Test;
@@ -93,5 +94,32 @@ class OrderingOrderQueryAdapterTest {
         assertEquals("m-1", summary.get().merchantId());
         assertEquals(BigDecimal.valueOf(200), summary.get().totalAmount());
         assertEquals("VND", summary.get().currency());
+    }
+
+    @Test
+    void findOrderPurchaseReturnsTheBuyerAndDistinctSkuIds() {
+        assertTrue(adapter.findOrderPurchase(null).isEmpty());
+
+        OrderEntity entity = new OrderEntity();
+        entity.setOrderId("ord-1");
+        entity.setUserId("u-1");
+        entity.setItems(List.of(
+                orderItem("ord-1", "sku-1"),
+                orderItem("ord-1", "sku-2"),
+                orderItem("ord-1", "sku-1")));
+
+        when(orderJpaRepository.findById("ord-1")).thenReturn(Optional.of(entity));
+
+        Optional<OrderQueryPort.OrderPurchase> purchase = adapter.findOrderPurchase("ord-1");
+
+        assertTrue(purchase.isPresent());
+        assertEquals("u-1", purchase.get().userId());
+        assertEquals(List.of("sku-1", "sku-2"), purchase.get().skuIds());
+    }
+
+    private static OrderItemEntity orderItem(String orderId, String skuId) {
+        OrderItemEntity entity = new OrderItemEntity();
+        entity.setId(new OrderItemEntity.OrderItemId(orderId, skuId));
+        return entity;
     }
 }

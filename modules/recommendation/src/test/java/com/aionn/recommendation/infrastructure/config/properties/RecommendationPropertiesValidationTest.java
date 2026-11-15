@@ -53,7 +53,11 @@ class RecommendationPropertiesValidationTest {
             assertThat(weights.view().halfLifeDays()).isEqualTo(14);
             assertThat(weights.cartAdd().base()).isEqualByComparingTo("4.0");
             assertThat(weights.cartAdd().halfLifeDays()).isEqualTo(30);
-            assertThat(weights.purchase().base()).isEqualByComparingTo("5.0");
+            assertThat(weights.wishlistAdd().base()).isEqualByComparingTo("2.5");
+            assertThat(weights.wishlistAdd().halfLifeDays()).isEqualTo(30);
+            assertThat(weights.orderPlaced().base()).isEqualByComparingTo("4.0");
+            assertThat(weights.orderPlaced().halfLifeDays()).isEqualTo(60);
+            assertThat(weights.purchase().base()).isEqualByComparingTo("6.0");
             assertThat(weights.purchase().halfLifeDays()).isEqualTo(180);
 
             RecommendationRankingProperties ranking = context.getBean(RecommendationRankingProperties.class);

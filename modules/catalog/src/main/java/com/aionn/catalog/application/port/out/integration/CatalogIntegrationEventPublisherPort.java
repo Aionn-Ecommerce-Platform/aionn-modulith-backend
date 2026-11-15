@@ -18,4 +18,6 @@ public interface CatalogIntegrationEventPublisherPort {
                         List<String> categoryIds,
                         String brandId,
                         Instant occurredAt);
+
+        void publishWishlistItemAdded(String userId, String productId, Instant occurredAt);
 }

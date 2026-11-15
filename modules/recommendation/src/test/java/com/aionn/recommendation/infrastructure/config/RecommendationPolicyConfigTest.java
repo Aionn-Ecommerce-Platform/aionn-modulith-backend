@@ -73,8 +73,10 @@ class RecommendationPolicyConfigTest {
             InteractionWeightPolicy policy = context.getBean(InteractionWeightPolicy.class);
 
             assertDecays(policy, InteractionType.VIEW, "1.0", Duration.ofDays(14));
+            assertDecays(policy, InteractionType.WISHLIST_ADD, "2.5", Duration.ofDays(30));
             assertDecays(policy, InteractionType.CART_ADD, "4.0", Duration.ofDays(30));
-            assertDecays(policy, InteractionType.PURCHASE, "5.0", Duration.ofDays(180));
+            assertDecays(policy, InteractionType.ORDER_PLACED, "4.0", Duration.ofDays(60));
+            assertDecays(policy, InteractionType.PURCHASE, "6.0", Duration.ofDays(180));
         });
     }
 

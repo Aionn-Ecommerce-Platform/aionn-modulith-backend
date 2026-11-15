@@ -476,7 +476,9 @@ class InteractionPersistenceAdapterIntegrationTest {
     private static Map<InteractionType, Long> halfLives() {
         Map<InteractionType, Long> halfLives = new EnumMap<>(InteractionType.class);
         halfLives.put(InteractionType.VIEW, Duration.ofDays(14).getSeconds());
+        halfLives.put(InteractionType.WISHLIST_ADD, Duration.ofDays(30).getSeconds());
         halfLives.put(InteractionType.CART_ADD, Duration.ofDays(30).getSeconds());
+        halfLives.put(InteractionType.ORDER_PLACED, Duration.ofDays(60).getSeconds());
         halfLives.put(InteractionType.PURCHASE, Duration.ofDays(180).getSeconds());
         return halfLives;
     }

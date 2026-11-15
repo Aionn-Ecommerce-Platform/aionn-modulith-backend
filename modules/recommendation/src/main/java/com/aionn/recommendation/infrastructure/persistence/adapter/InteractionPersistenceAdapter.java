@@ -28,7 +28,6 @@ import java.util.Map;
 @Component
 public class InteractionPersistenceAdapter implements InteractionPersistencePort {
 
-    /** Postgres caps bind parameters at 65535; this is well under it. */
     private static final int MAX_USER_INTERACTIONS = 10_000;
 
     private final InteractionRepository jpa;
@@ -37,11 +36,6 @@ public class InteractionPersistenceAdapter implements InteractionPersistencePort
     private final NamedParameterJdbcTemplate namedJdbc;
     private final Clock clock;
 
-    /**
-     * Read-only template for the offline rebuilds, built here rather than as a bean so Boot still
-     * supplies the unqualified {@code TransactionTemplate} other modules inject. The timeout is
-     * longer than the request default because both rebuilds scan the interaction log.
-     */
     private final TransactionTemplate computeReads;
 
     public InteractionPersistenceAdapter(
@@ -97,13 +91,14 @@ public class InteractionPersistenceAdapter implements InteractionPersistencePort
     public Map<String, PopularityAggregate> aggregatePopularity(
             Instant since, Instant now, Map<InteractionType, Long> halfLifeSeconds) {
 
-        List<InteractionRepository.PopularityProjection> rows = computeReads.execute(status ->
-                jpa.aggregatePopularity(
-                        since,
-                        now,
-                        halfLifeSeconds.get(InteractionType.VIEW),
-                        halfLifeSeconds.get(InteractionType.CART_ADD),
-                        halfLifeSeconds.get(InteractionType.PURCHASE)));
+        List<InteractionRepository.PopularityProjection> rows = computeReads.execute(status -> jpa.aggregatePopularity(
+                since,
+                now,
+                halfLifeSeconds.get(InteractionType.VIEW),
+                halfLifeSeconds.get(InteractionType.WISHLIST_ADD),
+                halfLifeSeconds.get(InteractionType.CART_ADD),
+                halfLifeSeconds.get(InteractionType.ORDER_PLACED),
+                halfLifeSeconds.get(InteractionType.PURCHASE)));
 
         Map<String, PopularityAggregate> aggregates = LinkedHashMap.newLinkedHashMap(rows.size());
         for (InteractionRepository.PopularityProjection row : rows) {
@@ -124,8 +119,8 @@ public class InteractionPersistenceAdapter implements InteractionPersistencePort
             return List.of();
         }
         List<String> typeNames = strongTypes.stream().map(InteractionType::name).toList();
-        List<InteractionRepository.SimilarityProjection> rows = computeReads.execute(status ->
-                jpa.computeItemSimilarity(
+        List<InteractionRepository.SimilarityProjection> rows = computeReads
+                .execute(status -> jpa.computeItemSimilarity(
                         since, typeNames, Math.max(1, minCoOccurrence),
                         Math.max(1, maxNeighboursPerProduct)));
 
@@ -152,12 +147,12 @@ public class InteractionPersistenceAdapter implements InteractionPersistencePort
                  ORDER BY occurred_at
                  LIMIT ?
                 """, (rs, rowNum) -> {
-                    Map<String, Object> row = new LinkedHashMap<>();
-                    row.put("id", rs.getString("interaction_id"));
-                    row.put("user", rs.getString("user_id"));
-                    row.put("product", rs.getString("product_id"));
-                    return row;
-                }, Timestamp.from(cutoff), safeBatch);
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("id", rs.getString("interaction_id"));
+            row.put("user", rs.getString("user_id"));
+            row.put("product", rs.getString("product_id"));
+            return row;
+        }, Timestamp.from(cutoff), safeBatch);
         if (rows.isEmpty()) {
             return new PrunedInteractions(0, List.of(), List.of());
         }

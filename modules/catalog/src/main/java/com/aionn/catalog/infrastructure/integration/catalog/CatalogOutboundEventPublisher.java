@@ -3,6 +3,7 @@ package com.aionn.catalog.infrastructure.integration.catalog;
 import com.aionn.catalog.application.port.out.integration.CatalogIntegrationEventPublisherPort;
 import com.aionn.contracts.event.catalog.ProductViewedIntegrationEvent;
 import com.aionn.contracts.event.catalog.SearchPerformedIntegrationEvent;
+import com.aionn.contracts.event.catalog.WishlistItemAddedIntegrationEvent;
 import com.aionn.contracts.publisher.IntegrationEventPublisher;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
@@ -37,5 +38,11 @@ public class CatalogOutboundEventPublisher implements CatalogIntegrationEventPub
             Instant occurredAt) {
         integrationEventPublisher.publish(new SearchPerformedIntegrationEvent(
                 IdGenerator.ulid(), userId, keyword, categoryIds, brandId, occurredAt));
+    }
+
+    @Override
+    public void publishWishlistItemAdded(String userId, String productId, Instant occurredAt) {
+        integrationEventPublisher.publish(new WishlistItemAddedIntegrationEvent(
+                IdGenerator.ulid(), userId, productId, occurredAt));
     }
 }

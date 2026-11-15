@@ -2,6 +2,7 @@ package com.aionn.catalog.application.service;
 
 import com.aionn.catalog.application.dto.product.result.ProductResult;
 import com.aionn.catalog.application.mapper.ProductResultMapper;
+import com.aionn.catalog.application.port.out.integration.CatalogIntegrationEventPublisherPort;
 import com.aionn.catalog.application.port.out.merchant.WishlistPersistencePort;
 import com.aionn.catalog.application.port.out.product.ProductPersistencePort;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
@@ -26,6 +27,7 @@ public class WishlistService {
     private final WishlistPersistencePort wishlistPersistencePort;
     private final ProductPersistencePort productPersistencePort;
     private final ProductResultMapper productResultMapper;
+    private final CatalogIntegrationEventPublisherPort integrationEventPublisher;
     private final Clock clock;
 
     public void add(String userId, String productId) {
@@ -35,7 +37,11 @@ public class WishlistService {
             throw new CatalogException(CatalogErrorCode.PRODUCT_INVALID_TRANSITION,
                     "Only published products can be saved");
         }
+        boolean alreadySaved = wishlistPersistencePort.exists(userId, productId);
         wishlistPersistencePort.add(userId, productId, clock.instant());
+        if (!alreadySaved) {
+            integrationEventPublisher.publishWishlistItemAdded(userId, productId, clock.instant());
+        }
     }
 
     public void remove(String userId, String productId) {

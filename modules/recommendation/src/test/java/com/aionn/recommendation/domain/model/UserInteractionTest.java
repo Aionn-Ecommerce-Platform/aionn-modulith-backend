@@ -31,6 +31,9 @@ class UserInteractionTest {
         // without meaning to
         // buy, so treating views as intent would relate everything to everything.
         assertThat(interactionOf(InteractionType.VIEW).isStrongSignal()).isFalse();
+        assertThat(interactionOf(InteractionType.SEARCH).isStrongSignal()).isFalse();
+        assertThat(interactionOf(InteractionType.WISHLIST_ADD).isStrongSignal()).isFalse();
+        assertThat(interactionOf(InteractionType.ORDER_PLACED).isStrongSignal()).isFalse();
         assertThat(interactionOf(InteractionType.CART_ADD).isStrongSignal()).isTrue();
         assertThat(interactionOf(InteractionType.PURCHASE).isStrongSignal()).isTrue();
     }
