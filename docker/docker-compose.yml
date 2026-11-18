@@ -12,6 +12,14 @@ services:
       - "127.0.0.1:${POSTGRES_LOCAL_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    command: >
+      postgres
+      -c shared_buffers=128MB
+      -c work_mem=4MB
+      -c maintenance_work_mem=64MB
+      -c max_connections=50
+      -c effective_cache_size=512MB
+    mem_limit: 512m
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -26,7 +34,8 @@ services:
     container_name: aionn-modulith-redis
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD} --maxmemory 128mb --maxmemory-policy allkeys-lru
+    mem_limit: 256m
     ports:
       - "127.0.0.1:${REDIS_LOCAL_PORT:-6379}:6379"
     volumes:
@@ -47,10 +56,11 @@ services:
       cluster.name: aionn-modulith
       node.name: opensearch-node1
       discovery.type: single-node
-      bootstrap.memory_lock: "true"
+      bootstrap.memory_lock: "false"
       plugins.security.disabled: "true"
       OPENSEARCH_JAVA_OPTS: ${OPENSEARCH_JAVA_OPTS:--Xms512m -Xmx512m}
       OPENSEARCH_INITIAL_ADMIN_PASSWORD: ${OPENSEARCH_INITIAL_ADMIN_PASSWORD}
+    mem_limit: 1g
     ulimits:
       memlock:
         soft: -1
