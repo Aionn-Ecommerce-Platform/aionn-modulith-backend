@@ -38,3 +38,7 @@ dependencies {
     testImplementation 'net.javacrumbs.shedlock:shedlock-provider-jdbc-template:7.7.0'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
+
+tasks.named('bootRun') {
+    jvmArgs = ['-Xms256m', '-Xmx768m', '-XX:MaxMetaspaceSize=256m', '-XX:+UseSerialGC']
+}

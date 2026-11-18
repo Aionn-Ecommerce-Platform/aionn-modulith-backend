@@ -71,9 +71,14 @@ class FlywayMigrationIntegrationTest {
         assertThat(queryLong("""
                 SELECT COUNT(*)
                   FROM shipments s
-                  JOIN order_items oi ON oi.order_id = s.order_id
-                  JOIN product_variants pv ON pv.sku_id = oi.sku_id
-                 WHERE s.weight_gram <> LEAST(50000, GREATEST(oi.qty * COALESCE(pv.weight_gram, 0), 0))
+                  JOIN (
+                      SELECT oi.order_id,
+                             LEAST(50000, GREATEST(SUM(oi.qty * COALESCE(pv.weight_gram, 0)), 0)) AS weight
+                        FROM order_items oi
+                        JOIN product_variants pv ON pv.sku_id = oi.sku_id
+                       GROUP BY oi.order_id
+                  ) w ON w.order_id = s.order_id
+                 WHERE s.weight_gram <> w.weight
                 """)).isZero();
         assertThat(queryLong("""
                 SELECT COUNT(*)

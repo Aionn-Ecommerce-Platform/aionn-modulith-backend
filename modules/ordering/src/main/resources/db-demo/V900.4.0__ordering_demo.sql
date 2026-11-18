@@ -48505,3 +48505,24 @@ INSERT INTO order_items (order_id, sku_id, qty, unit_price, warehouse_id) VALUES
 ('01M74HBXA3BNA56KZKS4KZ52YD', '01M74HBTXRKTMD3M4BAWMF959Q', 1, 140000.00, '01M74HC0VRZY4TA3MW10RAPVJ4'),
 ('01M74HBWP8ZM4ETM8Z5ZBFC3HV', '01M74HBTXS85E0AE29AZPMQY9P', 1, 640000.00, '01M74HC0VSJNAEX3K97DTA1YQQ'),
 ('01M74HBZVW915BWF6S44SB32T3', '01M74HBTXS85E0AE29AZPMQY9P', 1, 640000.00, '01M74HC0VSJNAEX3K97DTA1YQQ');
+
+UPDATE order_items AS oi
+SET product_name = p.name,
+    image_url = p.image_list->>0,
+    variant_label = (
+      SELECT string_agg(value, ' / ' ORDER BY
+        CASE key
+          WHEN 'color' THEN 1
+          WHEN 'size' THEN 2
+          WHEN 'storage' THEN 3
+          WHEN 'ram' THEN 4
+          WHEN 'cpu' THEN 5
+          WHEN 'type' THEN 6
+          ELSE 99
+        END)
+      FROM jsonb_each_text(pv.attribute_values)
+    )
+FROM product_variants pv
+JOIN products p ON p.product_id = pv.product_id
+WHERE oi.sku_id = pv.sku_id
+  AND pv.product_id NOT LIKE '01M9PR%';

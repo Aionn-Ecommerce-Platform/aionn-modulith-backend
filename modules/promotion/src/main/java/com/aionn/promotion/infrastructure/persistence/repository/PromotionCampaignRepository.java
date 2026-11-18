@@ -38,6 +38,10 @@ public interface PromotionCampaignRepository extends JpaRepository<PromotionCamp
               WHERE c.status = 'RUNNING'
                 AND c.startDate <= :now
                 AND c.endDate > :now
+                AND EXISTS (
+                    SELECT r.registrationId FROM FlashSaleRegistrationEntity r
+                     WHERE r.campaignId = c.campaignId
+                       AND r.status = 'APPROVED')
               ORDER BY c.endDate ASC
             """)
     List<PromotionCampaignEntity> findRunning(@Param("now") Instant now, Pageable pageable);
