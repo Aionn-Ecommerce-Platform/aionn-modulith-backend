@@ -905,4 +905,8 @@ INSERT INTO user_vouchers (user_voucher_id, voucher_code, user_id, entitlement_k
 ('01M9UV0000000000000000031e', 'FREESHIP', '01M9BU000000000000000001f3', NULL, 'CLAIMED', NULL, NULL, NULL, NOW() - INTERVAL '5 days', NULL, NULL, NULL, NULL, 0, NOW() - INTERVAL '5 days'),
 ('01M9UV0000000000000000031f', 'AIONNNEW', '01M9BU000000000000000001f4', NULL, 'CLAIMED', NULL, NULL, NULL, NOW() - INTERVAL '5 days', NULL, NULL, NULL, NULL, 0, NOW() - INTERVAL '5 days'),
 ('01M9UV00000000000000000320', 'FREESHIP', '01M9BU000000000000000001f4', NULL, 'CLAIMED', NULL, NULL, NULL, NOW() - INTERVAL '5 days', NULL, NULL, NULL, NULL, 0, NOW() - INTERVAL '5 days');
-
+-- Keep the demo FREESHIP voucher usable: V900.8.0 seeds a window that has expired.
+UPDATE vouchers
+   SET valid_until = NOW() + INTERVAL '1 year',
+       updated_at = NOW()
+ WHERE voucher_code = 'FREESHIP';
