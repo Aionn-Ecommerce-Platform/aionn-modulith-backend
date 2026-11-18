@@ -154,4 +154,14 @@ public class FlashSaleController {
                                                 listActiveFlashSalesInputPort.execute(limit, page, size)),
                                 "Active flash sales fetched"));
         }
+
+        @GetMapping("/slots")
+        @Operation(summary = "Public - running and upcoming flash sale slots for the storefront")
+        public ResponseEntity<ApiResponse<List<ActiveFlashSaleResponse>>> slots(
+                        @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit) {
+                return ResponseEntity.ok(ApiResponse.success(
+                                dtoMapper.toActiveResponses(
+                                                listActiveFlashSalesInputPort.executeSlots(limit)),
+                                "Flash sale slots fetched"));
+        }
 }
