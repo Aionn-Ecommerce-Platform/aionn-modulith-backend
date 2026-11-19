@@ -414,6 +414,20 @@ class FlashSaleServiceTest {
     }
 
     @Test
+    void listSlotsUsesStorefrontQuery() {
+        when(promotionCampaignPersistencePort.findStorefrontSlots(NOW, 5))
+                .thenReturn(List.of(runningFlashCampaign()));
+        when(flashSaleRegistrationPersistencePort.findApprovedByCampaignIds(List.of("camp-1")))
+                .thenReturn(List.of(approved()));
+
+        List<ActiveFlashSaleResult> slots = service().listSlots(5);
+
+        assertThat(slots).hasSize(1);
+        assertThat(slots.get(0).campaignId()).isEqualTo("camp-1");
+        verify(promotionCampaignPersistencePort).findStorefrontSlots(NOW, 5);
+    }
+
+    @Test
     void listActiveCapsCampaignLimitBeforeQueryingRegistrations() {
         when(promotionCampaignPersistencePort.findRunning(NOW, 50)).thenReturn(List.of());
 

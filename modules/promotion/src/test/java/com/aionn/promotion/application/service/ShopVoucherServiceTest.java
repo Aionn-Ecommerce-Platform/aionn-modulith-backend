@@ -99,6 +99,21 @@ class ShopVoucherServiceTest {
     }
 
     @Test
+    void issueKeepsMinimumOrderValue() {
+        when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
+        when(voucherPersistencePort.findByCode("SHOP12")).thenReturn(Optional.empty());
+        when(voucherPersistencePort.save(any(Voucher.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Voucher issued = service().issue(new VoucherCommands.IssueShopVoucher(
+                "owner-1", "SHOP12", new BigDecimal("50000"), "VND",
+                new BigDecimal("199000"), 20,
+                NOW.minusSeconds(60), NOW.plusSeconds(86400), null));
+
+        assertThat(issued.getMinOrderValue()).isEqualByComparingTo("199000");
+    }
+
+    @Test
     void issueRejectsDuplicateCode() {
         when(merchantQueryPort.findMerchantIdByOwnerId("owner-1")).thenReturn(Optional.of("mer-1"));
         when(voucherPersistencePort.findByCode("SHOP10"))

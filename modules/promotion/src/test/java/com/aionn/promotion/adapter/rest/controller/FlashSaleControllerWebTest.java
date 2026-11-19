@@ -277,4 +277,18 @@ class FlashSaleControllerWebTest {
                 .andExpect(jsonPath("$.data[0].items[0].soldCount").value(2))
                 .andExpect(jsonPath("$.data[0].totalItems").value(1));
     }
+
+    @Test
+    void slotsReturnsStorefrontPayload() throws Exception {
+        when(listActiveFlashSalesInputPort.executeSlots(10)).thenReturn(List.of(
+                new ActiveFlashSaleResult("camp-1", "Flash Friday", NOW, NOW.plusSeconds(3600),
+                        List.of(new ActiveFlashSaleResult.Item("reg-1", "prod-1", "sku-1", "mer-1",
+                                new BigDecimal("80000"), "VND", 10, 2)),
+                        0, 10, 1, 2, 10, new BigDecimal("80000"), new BigDecimal("80000"))));
+
+        mockMvc.perform(get("/api/v1/promotions/flash-sales/slots"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].campaignId").value("camp-1"))
+                .andExpect(jsonPath("$.data[0].items[0].skuId").value("sku-1"));
+    }
 }

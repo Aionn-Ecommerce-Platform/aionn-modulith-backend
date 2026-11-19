@@ -13,6 +13,7 @@ import org.springframework.data.redis.core.ValueOperations;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -145,6 +146,24 @@ class PresenceTrackerTest {
         tracker.markOffline("user-1", "s1");
 
         verify(valueOps, never()).set(anyString(), anyString(), any(Duration.class));
+    }
+
+    @Test
+    void redisReadsPersistedLastSeen() {
+        RedisPresenceTracker tracker = redisTracker();
+        when(valueOps.get("chat:last-seen:user-1"))
+                .thenReturn("2026-11-19T10:15:00Z");
+
+        assertThat(tracker.lastSeenAt("user-1"))
+                .contains(Instant.parse("2026-11-19T10:15:00Z"));
+    }
+
+    @Test
+    void redisIgnoresMalformedLastSeen() {
+        RedisPresenceTracker tracker = redisTracker();
+        when(valueOps.get("chat:last-seen:user-1")).thenReturn("not-an-instant");
+
+        assertThat(tracker.lastSeenAt("user-1")).isEmpty();
     }
 
     @Test
