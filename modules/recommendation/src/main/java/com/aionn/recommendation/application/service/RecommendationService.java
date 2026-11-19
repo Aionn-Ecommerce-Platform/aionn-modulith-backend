@@ -26,12 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Produces a ranked, over-fetched slate per surface; availability filtering
- * happens downstream.
- * {@code NOT_SUPPORTED} because each collaborator opens its own short read-only
- * transaction.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -142,11 +136,6 @@ public class RecommendationService {
                 .toList();
     }
 
-    /**
-     * Applies the flash-sale cap to the ranked result so every candidate source
-     * respects it.
-     * Over-cap sale items are dropped, not re-scored.
-     */
     private List<RecommendationItemResult> capFlashSaleShare(
             List<RecommendationItemResult> results, int candidateLimit) {
         if (results == null || results.isEmpty() || flashSaleQuery == null) {
@@ -168,7 +157,6 @@ public class RecommendationService {
                 nonSale.add(item);
             }
         }
-        // Non-sale first so the visible head can't be all flash-sale items.
         nonSale.addAll(sale.subList(0, Math.min(saleBudget, sale.size())));
         return nonSale;
     }
@@ -222,35 +210,27 @@ public class RecommendationService {
         List<RecommendationItemResult> labelled = new ArrayList<>();
         boolean hasRelatedCandidates = !collaborative.isEmpty() || !contentCandidates.isEmpty();
         for (RecommendationItemResult item : results) {
-                if (surface == RecommendationSurface.SIMILAR && hasRelatedCandidates) {
-                        labelled.add(item.withReason(RecommendationReason.SIMILAR_TO_VIEWED));
-                        continue;
-                }
-                if (item.reason() != RecommendationReason.MATCHES_YOUR_INTERESTS) {
-                        labelled.add(item);
-                        continue;
-                }
-                boolean categoryOnly = contentCandidates.containsKey(item.productId())
-                                && !collaborative.containsKey(item.productId());
-                labelled.add(categoryOnly ? item : item.withReason(fallbackReason));
+            if (surface == RecommendationSurface.SIMILAR && hasRelatedCandidates) {
+                labelled.add(item.withReason(RecommendationReason.SIMILAR_TO_VIEWED));
+                continue;
+            }
+            if (item.reason() != RecommendationReason.MATCHES_YOUR_INTERESTS) {
+                labelled.add(item);
+                continue;
+            }
+            boolean categoryOnly = contentCandidates.containsKey(item.productId())
+                    && !collaborative.containsKey(item.productId());
+            labelled.add(categoryOnly ? item : item.withReason(fallbackReason));
         }
         return labelled.isEmpty() ? fallbackToTrending(surface, limit, Set.of(productId)) : labelled;
     }
 
-    /**
-     * Falls back to trending and records the fallback so cold starts are
-     * distinguishable from breakage.
-     */
     private List<RecommendationItemResult> fallbackToTrending(
             RecommendationSurface surface, int limit, Set<String> excluded) {
         metrics.recordTrendingFallback(surface);
         return trending(limit, excluded);
     }
 
-    /**
-     * Drops products catalog has retired, since the interaction log keeps stale
-     * IDs.
-     */
     private List<RecommendationItemResult> rankAndHydrate(
             RecommendationSurface surface,
             HybridRankingPolicy.SignalScores signals,
@@ -289,15 +269,13 @@ public class RecommendationService {
                     product.brandId(),
                     product.rating(),
                     product.reviewCount(),
-                    product.soldCount()));
+                    product.soldCount(),
+                    product.provinceCode(),
+                    product.provinceName()));
         }
         return capFlashSaleShare(results, candidateLimit);
     }
 
-    /**
-     * Over-fetch so downstream availability filtering still leaves a full page;
-     * clamp to avoid int overflow.
-     */
     private int candidateLimit(int limit) {
         int page = Math.clamp(limit, 1, servingPolicy.maxPageSize());
         return (int) Math.min((long) page * weights.candidateOverFetchFactor(), weights.maxCandidates());

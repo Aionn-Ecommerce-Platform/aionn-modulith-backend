@@ -83,6 +83,8 @@ public class CatalogProductAttributeAdapter implements ProductAttributeQueryPort
                 view.currency(),
                 view.rating(),
                 view.reviewCount(),
-                view.soldCount());
+                view.soldCount(),
+                view.provinceCode(),
+                view.provinceName());
     }
 }

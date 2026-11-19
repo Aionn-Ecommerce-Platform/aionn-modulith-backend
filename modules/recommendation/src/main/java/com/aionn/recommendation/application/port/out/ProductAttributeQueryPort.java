@@ -6,28 +6,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Product facts the module needs from catalog: attributes for content scoring, and display fields for
- * hydrating a slate. Wraps the shared catalog query port so application code depends on a
- * recommendation-shaped contract rather than on another module's view type.
- */
 public interface ProductAttributeQueryPort {
 
     Optional<ProductAttributes> findByProductId(String productId);
 
-    /** Bulk lookup; products that no longer exist or are taken down are simply absent. */
     Map<String, ProductAttributes> findByProductIds(Collection<String> productIds);
 
-    /** Resolves a SKU to its owning product, for signals that arrive SKU-scoped. */
     Optional<String> findProductIdBySkuId(String skuId);
 
-    /** Bulk SKU resolution, keyed by the input SKU ID. Unmatched SKUs are absent. */
     Map<String, String> findProductIdsBySkuIds(Collection<String> skuIds);
 
-    /**
-     * Candidate pool for content-based matching. Catalog owns the filtering, so recommendation never
-     * queries another module's tables.
-     */
     List<ProductAttributes> findCandidatesByCategoriesOrBrands(
             Collection<String> categoryIds, Collection<String> brandIds, int limit);
 
@@ -45,7 +33,9 @@ public interface ProductAttributeQueryPort {
             String currency,
             Double rating,
             Long reviewCount,
-            Long soldCount) {
+            Long soldCount,
+            String provinceCode,
+            String provinceName) {
 
         public ProductAttributes(
                 String productId,
@@ -58,7 +48,24 @@ public interface ProductAttributeQueryPort {
                 BigDecimal originalPriceFrom,
                 String currency) {
             this(productId, name, brandId, categoryIds, skuIds, imageUrl, priceFrom,
-                    originalPriceFrom, currency, null, null, 0L);
+                    originalPriceFrom, currency, null, null, 0L, null, null);
+        }
+
+        public ProductAttributes(
+                String productId,
+                String name,
+                String brandId,
+                List<String> categoryIds,
+                List<String> skuIds,
+                String imageUrl,
+                BigDecimal priceFrom,
+                BigDecimal originalPriceFrom,
+                String currency,
+                Double rating,
+                Long reviewCount,
+                Long soldCount) {
+            this(productId, name, brandId, categoryIds, skuIds, imageUrl, priceFrom,
+                    originalPriceFrom, currency, rating, reviewCount, soldCount, null, null);
         }
 
         public ProductAttributes {

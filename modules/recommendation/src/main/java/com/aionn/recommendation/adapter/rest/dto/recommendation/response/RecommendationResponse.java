@@ -18,5 +18,7 @@ public record RecommendationResponse(
                 String brandId,
                 Double rating,
                 Long reviewCount,
-                Long soldCount) {
+                Long soldCount,
+                String provinceCode,
+                String provinceName) {
 }

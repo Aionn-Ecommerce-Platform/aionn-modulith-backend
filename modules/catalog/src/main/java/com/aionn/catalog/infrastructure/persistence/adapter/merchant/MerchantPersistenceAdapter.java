@@ -10,7 +10,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Component
@@ -31,6 +34,17 @@ public class MerchantPersistenceAdapter implements MerchantPersistencePort {
     @Override
     public Optional<Merchant> findById(String merchantId) {
         return jpa.findById(merchantId).map(mapper::toDomain);
+    }
+
+    @Override
+    public Map<String, Merchant> findByIds(Collection<String> merchantIds) {
+        if (merchantIds == null || merchantIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, Merchant> merchants = new LinkedHashMap<>();
+        jpa.findAllById(merchantIds).forEach(entity ->
+                merchants.put(entity.getMerchantId(), mapper.toDomain(entity)));
+        return merchants;
     }
 
     @Override
