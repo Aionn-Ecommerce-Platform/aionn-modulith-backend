@@ -1,5 +1,6 @@
 package com.aionn.ordering.infrastructure.scheduling;
 
+import com.aionn.contracts.port.promotion.FlashSaleQueryPort;
 import com.aionn.ordering.application.port.out.CompensationTaskPort;
 import com.aionn.ordering.application.port.out.OrderPersistencePort;
 import com.aionn.ordering.application.port.out.StockReservationGateway;
@@ -37,6 +38,9 @@ class OrderAutoCancelWorkerTest {
     private StockReservationGateway stockReservationGateway;
 
     @Mock
+    private FlashSaleQueryPort flashSaleQueryPort;
+
+    @Mock
     private EventPublisher eventPublisher;
 
     @Mock
@@ -66,6 +70,7 @@ class OrderAutoCancelWorkerTest {
         when(item1.reservationId()).thenReturn("res-1");
         when(item2.reservationId()).thenReturn("res-2");
         when(order.pullEvents()).thenReturn(List.of());
+        when(order.getOrderId()).thenReturn(orderId);
         when(orderPersistencePort.save(order)).thenReturn(savedOrder);
         when(savedOrder.getOrderId()).thenReturn(orderId);
 
@@ -74,6 +79,7 @@ class OrderAutoCancelWorkerTest {
         verify(order).autoCancel("PAYMENT_TIMEOUT", now);
         verify(stockReservationGateway).release("res-1", "auto-cancel");
         verify(stockReservationGateway).release("res-2", "auto-cancel");
+        verify(flashSaleQueryPort).release(orderId);
         verify(orderPersistencePort).save(order);
         verify(eventPublisher).publish(anyList());
         verify(integrationEventPublisher).publishOrderCancelled(
@@ -107,6 +113,7 @@ class OrderAutoCancelWorkerTest {
         when(item1.reservationId()).thenReturn("res-1");
         when(item2.reservationId()).thenReturn(null); // No reservation
         when(order.pullEvents()).thenReturn(List.of());
+        when(order.getOrderId()).thenReturn(orderId);
         when(orderPersistencePort.save(order)).thenReturn(savedOrder);
         when(savedOrder.getOrderId()).thenReturn(orderId);
 
@@ -131,6 +138,7 @@ class OrderAutoCancelWorkerTest {
         when(item1.reservationId()).thenReturn("res-1");
         when(item2.reservationId()).thenReturn("res-2");
         when(order.pullEvents()).thenReturn(List.of());
+        when(order.getOrderId()).thenReturn(orderId);
         when(orderPersistencePort.save(order)).thenReturn(savedOrder);
         when(savedOrder.getOrderId()).thenReturn(orderId);
         doThrow(new RuntimeException("Inventory service unavailable"))
@@ -157,12 +165,36 @@ class OrderAutoCancelWorkerTest {
         when(clock.instant()).thenReturn(now);
         when(order.items()).thenReturn(List.of());
         when(order.pullEvents()).thenReturn(List.of());
+        when(order.getOrderId()).thenReturn(orderId);
         when(orderPersistencePort.save(order)).thenReturn(savedOrder);
         when(savedOrder.getOrderId()).thenReturn(orderId);
 
         worker.cancelOneExpired(orderId);
 
         verify(eventPublisher).publish(anyList());
+    }
+
+    @Test
+    void enqueuesCompensationWhenFlashSaleReleaseFails() {
+        String orderId = "order-1";
+        Instant now = Instant.parse("2026-01-01T12:00:00Z");
+        Order order = mock(Order.class);
+        Order savedOrder = mock(Order.class);
+
+        when(orderPersistencePort.findByIdForUpdate(orderId)).thenReturn(Optional.of(order));
+        when(clock.instant()).thenReturn(now);
+        when(order.items()).thenReturn(List.of());
+        when(order.pullEvents()).thenReturn(List.of());
+        when(order.getOrderId()).thenReturn(orderId);
+        when(orderPersistencePort.save(order)).thenReturn(savedOrder);
+        when(savedOrder.getOrderId()).thenReturn(orderId);
+        doThrow(new RuntimeException("promotion unavailable"))
+                .when(flashSaleQueryPort).release(orderId);
+
+        worker.cancelOneExpired(orderId);
+
+        verify(flashSaleQueryPort).release(orderId);
+        verify(compensationTaskPort).enqueue(any(CompensationTaskPort.Task.class));
     }
 
     @Test
@@ -176,6 +208,7 @@ class OrderAutoCancelWorkerTest {
         when(clock.instant()).thenReturn(now);
         when(order.items()).thenReturn(List.of());
         when(order.pullEvents()).thenReturn(List.of());
+        when(order.getOrderId()).thenReturn(orderId);
         when(orderPersistencePort.save(order)).thenReturn(savedOrder);
         when(savedOrder.getOrderId()).thenReturn(orderId);
 

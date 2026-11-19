@@ -1,5 +1,6 @@
 package com.aionn.ordering.infrastructure.scheduling;
 
+import com.aionn.contracts.port.promotion.FlashSaleQueryPort;
 import com.aionn.ordering.application.port.out.CompensationTaskPort;
 import com.aionn.ordering.application.port.out.OrderPersistencePort;
 import com.aionn.ordering.application.port.out.StockReservationGateway;
@@ -26,6 +27,7 @@ public class OrderAutoCancelWorker {
 
     private final OrderPersistencePort orderPersistencePort;
     private final StockReservationGateway stockReservationGateway;
+    private final FlashSaleQueryPort flashSaleQueryPort;
     private final EventPublisher eventPublisher;
     private final OrderingIntegrationEventPublisherPort integrationEventPublisher;
     private final CompensationTaskPort compensationTaskPort;
@@ -43,19 +45,20 @@ public class OrderAutoCancelWorker {
 
         List<OrderItem> items = List.copyOf(order.items());
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            releaseReservations(items);
+            releaseReservations(order, items);
             return;
         }
         TransactionSynchronizationManager.registerSynchronization(
                 new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
-                        releaseReservations(items);
+                        releaseReservations(order, items);
                     }
                 });
     }
 
-    private void releaseReservations(List<OrderItem> items) {
+    private void releaseReservations(Order order, List<OrderItem> items) {
+        releaseFlashSaleAllocation(order.getOrderId());
         for (OrderItem item : items) {
             if (item.reservationId() == null) {
                 continue;
@@ -66,6 +69,26 @@ public class OrderAutoCancelWorker {
                 log.error("Auto-cancel: reservation {} release failed after commit",
                         item.reservationId(), ex);
                 enqueueRelease(item.reservationId());
+            }
+        }
+    }
+
+    private void releaseFlashSaleAllocation(String orderId) {
+        if (orderId == null || orderId.isBlank()) {
+            return;
+        }
+        try {
+            flashSaleQueryPort.release(orderId);
+        } catch (RuntimeException ex) {
+            log.error("Auto-cancel: flash-sale allocation release failed for order {}", orderId, ex);
+            try {
+                compensationTaskPort.enqueue(new CompensationTaskPort.Task(
+                        "flash-sale-release:" + orderId,
+                        CompensationTaskPort.Type.FLASH_SALE_RELEASE,
+                        orderId, null, orderId, "auto-cancel", 0));
+            } catch (RuntimeException persistenceFailure) {
+                log.error("Unable to persist flash-sale release task for order {}",
+                        orderId, persistenceFailure);
             }
         }
     }
