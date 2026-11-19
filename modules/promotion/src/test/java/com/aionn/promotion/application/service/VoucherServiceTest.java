@@ -152,6 +152,25 @@ class VoucherServiceTest {
     }
 
     @Test
+    void claimReportsHigherOfVoucherAndCampaignMinimums() {
+        mapperEchoes();
+        Voucher voucher = Voucher.issue("V-1", "camp-1", VoucherType.ORDER_DISCOUNT,
+                Money.of(new BigDecimal("50000"), "VND"), new BigDecimal("100000"), 100,
+                NOW.minusSeconds(60), NOW.plusSeconds(86400), CLOCK);
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(voucherPersistencePort.findByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(promotionCampaignPersistencePort.findById("camp-1")).thenReturn(Optional.of(
+                runningCampaign(new PromotionCondition(new BigDecimal("200000"), List.of(), null, null))));
+        when(userVoucherPersistencePort.findByUserAndCode("user-1", "V-1")).thenReturn(Optional.empty());
+        when(userVoucherPersistencePort.save(any(UserVoucher.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserVoucherResult result = service().claim(new VoucherCommands.ClaimVoucher("user-1", "V-1"));
+
+        assertThat(result.minOrderValue()).isEqualByComparingTo("200000");
+    }
+
+    @Test
     void claimRejectsUnknownVoucher() {
         when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.empty());
 

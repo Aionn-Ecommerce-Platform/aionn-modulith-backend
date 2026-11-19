@@ -8,6 +8,7 @@ import com.aionn.promotion.adapter.rest.exception.PromotionExceptionHandler;
 import com.aionn.promotion.adapter.rest.support.session.CurrentUserIdArgumentResolver;
 import com.aionn.promotion.application.dto.voucher.command.VoucherCommands;
 import com.aionn.promotion.application.dto.voucher.result.UserVoucherResult;
+import com.aionn.promotion.application.dto.voucher.result.VoucherSummaryResult;
 import com.aionn.promotion.application.port.in.voucher.ApplyVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.ClaimVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.GetMyVoucherInputPort;
@@ -210,6 +211,19 @@ class VoucherControllerWebTest {
                 mockMvc.perform(get("/api/v1/promotions/vouchers/me/V-9"))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.data.voucherCode").value("V-9"));
+        }
+
+        @Test
+        void summaryReturnsAvailableCounts() throws Exception {
+                when(getVoucherSummaryInputPort.execute())
+                                .thenReturn(new VoucherSummaryResult(10, 4, 5, 1));
+
+                mockMvc.perform(get("/api/v1/promotions/vouchers/summary"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.all").value(10))
+                                .andExpect(jsonPath("$.data.platform").value(4))
+                                .andExpect(jsonPath("$.data.shop").value(5))
+                                .andExpect(jsonPath("$.data.shipping").value(1));
         }
 
         @Test

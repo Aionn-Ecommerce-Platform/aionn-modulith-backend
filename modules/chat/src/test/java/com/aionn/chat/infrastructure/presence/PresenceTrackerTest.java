@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -131,6 +132,19 @@ class PresenceTrackerTest {
                 anyString(),
                 eq(Duration.ofDays(30)));
         verify(redis, times(2)).expire(eq("chat:presence:user-1"), eq(Duration.ofSeconds(300)));
+    }
+
+    @Test
+    void redisDuplicateDisconnectKeepsOriginalLastSeen() {
+        RedisPresenceTracker tracker = redisTracker();
+
+        tracker.markOnline("user-1", "s1");
+        tracker.markOffline("user-1", "s1");
+        clearInvocations(valueOps);
+
+        tracker.markOffline("user-1", "s1");
+
+        verify(valueOps, never()).set(anyString(), anyString(), any(Duration.class));
     }
 
     @Test
