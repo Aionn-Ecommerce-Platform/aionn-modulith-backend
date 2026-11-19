@@ -13,7 +13,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -102,7 +101,8 @@ class MerchantPersistenceAdapterTest {
     void listReturnsMappedPage() {
         MerchantEntity entity = new MerchantEntity();
         Merchant domain = Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED);
-        when(jpa.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of(entity)));
+        when(jpa.findAllForStorefront(any(PageRequest.class)))
+                .thenReturn(new PageImpl<>(List.of(entity)));
         when(mapper.toDomain(entity)).thenReturn(domain);
 
         List<Merchant> merchants = adapter.list(OffsetPagination.of(0, 10));
@@ -111,21 +111,19 @@ class MerchantPersistenceAdapterTest {
     }
 
     @Test
-    void listAppliesStableSortByCreatedAtThenMerchantId() {
+    void listUsesStorefrontOrderingQuery() {
         MerchantEntity entity = new MerchantEntity();
-        when(jpa.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of(entity)));
+        when(jpa.findAllForStorefront(any(PageRequest.class)))
+                .thenReturn(new PageImpl<>(List.of(entity)));
         when(mapper.toDomain(entity)).thenReturn(
                 Merchant.register("m-1", "owner-1", "Acme", new BigDecimal("0.05"), FIXED));
 
         adapter.list(OffsetPagination.of(0, 10));
 
         ArgumentCaptor<PageRequest> captor = ArgumentCaptor.forClass(PageRequest.class);
-        verify(jpa).findAll(captor.capture());
-        Sort sort = captor.getValue().getSort();
-        assertThat(sort.getOrderFor("createdAt")).isNotNull();
-        assertThat(sort.getOrderFor("createdAt").isDescending()).isTrue();
-        assertThat(sort.getOrderFor("merchantId")).isNotNull();
-        assertThat(sort.getOrderFor("merchantId").isAscending()).isTrue();
+        verify(jpa).findAllForStorefront(captor.capture());
+        assertThat(captor.getValue().getPageNumber()).isZero();
+        assertThat(captor.getValue().getPageSize()).isEqualTo(10);
     }
 
     @Test

@@ -45,5 +45,18 @@ public interface PromotionCampaignRepository extends JpaRepository<PromotionCamp
               ORDER BY c.endDate ASC
             """)
     List<PromotionCampaignEntity> findRunning(@Param("now") Instant now, Pageable pageable);
+
+    @Query("""
+            SELECT c FROM PromotionCampaignEntity c
+              WHERE c.type = 'FLASH_SALE'
+                AND c.status IN ('RUNNING', 'SCHEDULED')
+                AND c.endDate > :now
+                AND EXISTS (
+                    SELECT r.registrationId FROM FlashSaleRegistrationEntity r
+                     WHERE r.campaignId = c.campaignId
+                       AND r.status = 'APPROVED')
+              ORDER BY c.startDate ASC
+            """)
+    List<PromotionCampaignEntity> findStorefrontSlots(@Param("now") Instant now, Pageable pageable);
 }
 

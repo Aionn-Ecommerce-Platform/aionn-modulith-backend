@@ -21,7 +21,7 @@ import java.util.Set;
 @ConditionalOnProperty(prefix = "inventory.reservation.auto-release", name = "enabled", havingValue = "true")
 public class ReservationAutoReleaseScheduler {
 
-    private static final Set<String> ACTIVE_ORDER_STATUSES = Set.of("APPROVED", "PREPARING", "SHIPPED");
+    private static final Set<String> ACTIVE_ORDER_STATUSES = Set.of("PENDING", "APPROVED", "PREPARING", "SHIPPED");
 
     private final StockReservationPersistencePort stockReservationPersistencePort;
     private final ReservationAutoReleaseWorker worker;

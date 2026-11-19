@@ -176,7 +176,7 @@ public class NotificationDispatchService {
     private static boolean isCategoryEnabled(NotificationCategory category,
             NotificationPreferenceSnapshot preferences) {
         return switch (category) {
-            case SECURITY, TRANSACTION -> true;
+            case ORDER, SECURITY, TRANSACTION -> true;
             case SHIPPING -> preferences.orderUpdatesEnabled();
             case PROMOTION -> preferences.promotionsEnabled();
             case CHAT -> preferences.chatEnabled();

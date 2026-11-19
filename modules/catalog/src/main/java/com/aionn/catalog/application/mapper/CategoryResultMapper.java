@@ -16,17 +16,26 @@ public class CategoryResultMapper {
         }
 
         Locale locale = LocaleContextHolder.getLocale();
-        String fullTag = locale.toLanguageTag();
-        String language = locale.getLanguage();
+        String fullTag = normalize(locale.toLanguageTag());
+        String language = normalize(locale.getLanguage());
         String name = category.getName();
 
         Category.Translation trans = category.translations().stream()
-                .filter(t -> t.locale().equalsIgnoreCase(fullTag))
+                .filter(t -> t.locale() != null && normalize(t.locale()).equals(fullTag))
                 .findFirst()
-                .or(() -> category.translations().stream()
-                        .filter(t -> t.locale().equalsIgnoreCase(language))
-                        .findFirst())
                 .orElse(null);
+        if (trans == null) {
+            Category.Translation languageMatch = category.translations().stream()
+                    .filter(t -> t.locale() != null && normalize(t.locale()).equals(language))
+                    .findFirst()
+                    .orElse(null);
+            Category.Translation regionalMatch = category.translations().stream()
+                    .filter(t -> t.locale() != null
+                            && normalize(t.locale()).startsWith(language + "-"))
+                    .findFirst()
+                    .orElse(null);
+            trans = languageMatch != null ? languageMatch : regionalMatch;
+        }
         if (trans != null) {
             name = trans.name();
         }
@@ -49,5 +58,9 @@ public class CategoryResultMapper {
         return categories.stream()
                 .map(this::toResult)
                 .toList();
+    }
+
+    private static String normalize(String locale) {
+        return locale.replace('_', '-').toLowerCase(Locale.ROOT);
     }
 }

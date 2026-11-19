@@ -4,6 +4,7 @@ import com.aionn.promotion.application.dto.voucher.result.VoucherResult;
 import com.aionn.promotion.application.mapper.VoucherResultMapper;
 import com.aionn.promotion.application.port.in.voucher.ListShopVouchersByMerchantInputPort;
 import com.aionn.promotion.application.service.ShopVoucherService;
+import com.aionn.promotion.domain.valueobject.VoucherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,5 +22,22 @@ public class ListShopVouchersByMerchantUseCase implements ListShopVouchersByMerc
     @Transactional(readOnly = true)
     public List<VoucherResult> execute(String merchantId, int limit) {
         return voucherResultMapper.toResults(shopVoucherService.listByMerchant(merchantId, limit));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<VoucherResult> execute(String merchantId, int limit, VoucherType type) {
+        return voucherResultMapper.toResults(
+                shopVoucherService.listByMerchant(merchantId, type, limit));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<VoucherResult> execute(String merchantId, int limit, VoucherType type, boolean availableOnly) {
+        if (!availableOnly) {
+            return execute(merchantId, limit, type);
+        }
+        return voucherResultMapper.toResults(
+                shopVoucherService.listAvailableByMerchant(merchantId, type, limit));
     }
 }

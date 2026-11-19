@@ -8,9 +8,11 @@ import com.aionn.promotion.adapter.rest.exception.PromotionExceptionHandler;
 import com.aionn.promotion.adapter.rest.support.session.CurrentUserIdArgumentResolver;
 import com.aionn.promotion.application.dto.voucher.command.VoucherCommands;
 import com.aionn.promotion.application.dto.voucher.result.UserVoucherResult;
+import com.aionn.promotion.application.dto.voucher.result.VoucherSummaryResult;
 import com.aionn.promotion.application.port.in.voucher.ApplyVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.ClaimVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.GetMyVoucherInputPort;
+import com.aionn.promotion.application.port.in.voucher.GetVoucherSummaryInputPort;
 import com.aionn.promotion.application.port.in.voucher.GrantVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.ListMyVouchersInputPort;
 import com.aionn.promotion.application.port.in.voucher.ReleaseVoucherInputPort;
@@ -60,6 +62,8 @@ class VoucherControllerWebTest {
         private GetMyVoucherInputPort getMyVoucherInputPort;
         @Mock
         private GrantVoucherInputPort grantVoucherInputPort;
+        @Mock
+        private GetVoucherSummaryInputPort getVoucherSummaryInputPort;
 
         private MockMvc mockMvc;
 
@@ -68,7 +72,7 @@ class VoucherControllerWebTest {
                 VoucherController controller = new VoucherController(
                                 claimVoucherInputPort, reserveVoucherInputPort, applyVoucherInputPort,
                                 releaseVoucherInputPort, listMyVouchersInputPort, getMyVoucherInputPort,
-                                grantVoucherInputPort,
+                                grantVoucherInputPort, getVoucherSummaryInputPort,
                                 Mappers.getMapper(VoucherDtoMapper.class));
 
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
@@ -207,6 +211,19 @@ class VoucherControllerWebTest {
                 mockMvc.perform(get("/api/v1/promotions/vouchers/me/V-9"))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.data.voucherCode").value("V-9"));
+        }
+
+        @Test
+        void summaryReturnsAvailableCounts() throws Exception {
+                when(getVoucherSummaryInputPort.execute())
+                                .thenReturn(new VoucherSummaryResult(10, 4, 5, 1));
+
+                mockMvc.perform(get("/api/v1/promotions/vouchers/summary"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.all").value(10))
+                                .andExpect(jsonPath("$.data.platform").value(4))
+                                .andExpect(jsonPath("$.data.shop").value(5))
+                                .andExpect(jsonPath("$.data.shipping").value(1));
         }
 
         @Test

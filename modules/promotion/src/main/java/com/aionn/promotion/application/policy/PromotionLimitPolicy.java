@@ -9,4 +9,8 @@ public interface PromotionLimitPolicy {
     int maxActiveFlashSaleLimit();
 
     int topVouchersLimit();
+
+    int voucherClaimsPerUserPerDay();
+
+    int activeVouchersPerUser();
 }

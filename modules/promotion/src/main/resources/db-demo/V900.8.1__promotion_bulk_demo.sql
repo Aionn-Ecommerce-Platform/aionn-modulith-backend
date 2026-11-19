@@ -910,3 +910,10 @@ UPDATE vouchers
    SET valid_until = NOW() + INTERVAL '1 year',
        updated_at = NOW()
  WHERE voucher_code = 'FREESHIP';
+
+-- Keep flash sale registrations aligned with the normalized product ownership.
+UPDATE flash_sale_registrations r
+   SET merchant_id = p.merchant_id
+  FROM products p
+ WHERE p.product_id = r.product_id
+   AND r.merchant_id <> p.merchant_id;

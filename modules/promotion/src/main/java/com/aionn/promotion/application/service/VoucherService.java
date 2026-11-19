@@ -4,6 +4,7 @@ import com.aionn.promotion.application.dto.voucher.command.VoucherCommands;
 import com.aionn.promotion.application.dto.voucher.result.UserVoucherResult;
 import com.aionn.promotion.application.mapper.UserVoucherResultMapper;
 import com.aionn.promotion.application.policy.VoucherReservationPolicy;
+import com.aionn.promotion.application.policy.PromotionLimitPolicy;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.promotion.application.port.out.PromotionCampaignPersistencePort;
 import com.aionn.promotion.application.port.out.UserVoucherPersistencePort;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 
 @Slf4j
@@ -39,12 +41,19 @@ public class VoucherService {
     private final UserVoucherResultMapper mapper;
     private final EventPublisher eventPublisher;
     private final VoucherReservationPolicy reservationPolicy;
+    private final PromotionLimitPolicy limitPolicy;
     private final Clock clock;
+
+    @Transactional(readOnly = true)
+    public VoucherPersistencePort.VoucherSummary countAvailable() {
+        return voucherPersistencePort.countAvailable(clock.instant());
+    }
 
     public UserVoucherResult claim(VoucherCommands.ClaimVoucher command) {
         Voucher voucher = voucherPersistencePort.lockByCode(command.voucherCode())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.VOUCHER_NOT_FOUND));
         PromotionCampaign campaign = runningCampaignOrNull(voucher);
+        userVoucherPersistencePort.lockUserClaim(command.userId());
         enforceClaimLimit(command.userId(), campaign);
 
         userVoucherPersistencePort.findByUserAndCode(command.userId(), command.voucherCode())
@@ -65,10 +74,6 @@ public class VoucherService {
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.VOUCHER_NOT_FOUND));
         runningCampaignOrNull(voucher);
 
-        // Deduplicate on the per-delivery entitlement when one is supplied so a
-        // repeated delivery webhook stays idempotent, while each distinct late
-        // order earns its own grant. A voucher already applied to a past order is
-        // never reclaimed - a new grant mints a fresh UserVoucher instead.
         Optional<UserVoucher> existingOpt = command.entitlementKey() != null
                 ? userVoucherPersistencePort.findByUserAndCodeAndEntitlement(
                         command.userId(), command.voucherCode(), command.entitlementKey())
@@ -95,6 +100,9 @@ public class VoucherService {
         PromotionCampaign campaign = runningCampaignOrNull(voucher);
 
         if (campaign != null && !campaign.getCondition().matches(command.orderValue(), command.orderCategoryIds())) {
+            throw new PromotionException(PromotionErrorCode.CONDITION_NOT_MET);
+        }
+        if (!voucher.meetsMinimum(command.orderValue())) {
             throw new PromotionException(PromotionErrorCode.CONDITION_NOT_MET);
         }
 
@@ -257,11 +265,15 @@ public class VoucherService {
             return base;
         }
 
-        BigDecimal minOrderValue = null;
+        BigDecimal minOrderValue = voucher.getMinOrderValue();
         if (voucher.getCampaignId() != null) {
-            minOrderValue = promotionCampaignPersistencePort.findById(voucher.getCampaignId())
+            BigDecimal campaignMin = promotionCampaignPersistencePort.findById(voucher.getCampaignId())
                     .map(campaign -> campaign.getCondition().minOrderValue())
                     .orElse(null);
+            if (campaignMin != null
+                    && (minOrderValue == null || campaignMin.compareTo(minOrderValue) > 0)) {
+                minOrderValue = campaignMin;
+            }
         }
 
         return new UserVoucherResult(
@@ -284,6 +296,19 @@ public class VoucherService {
     }
 
     private void enforceClaimLimit(String userId, PromotionCampaign campaign) {
+        Instant dayStart = clock.instant()
+                .atZone(ZoneId.of("Asia/Ho_Chi_Minh"))
+                .toLocalDate()
+                .atStartOfDay(ZoneId.of("Asia/Ho_Chi_Minh"))
+                .toInstant();
+        if (userVoucherPersistencePort.countByUserClaimedSince(userId, dayStart)
+                >= limitPolicy.voucherClaimsPerUserPerDay()) {
+            throw new PromotionException(PromotionErrorCode.USER_VOUCHER_DAILY_LIMIT_REACHED);
+        }
+        if (userVoucherPersistencePort.countActiveByUser(userId, clock.instant())
+                >= limitPolicy.activeVouchersPerUser()) {
+            throw new PromotionException(PromotionErrorCode.USER_VOUCHER_WALLET_LIMIT_REACHED);
+        }
         if (campaign == null || campaign.getCondition().maxClaimsPerUser() == null) {
             return;
         }

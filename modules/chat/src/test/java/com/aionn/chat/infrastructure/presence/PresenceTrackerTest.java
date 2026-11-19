@@ -9,14 +9,20 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -28,15 +34,19 @@ class PresenceTrackerTest {
     private StringRedisTemplate redis;
     @Mock
     private SetOperations<String, String> setOps;
+    @Mock
+    private ValueOperations<String, String> valueOps;
 
     private RedisPresenceTracker redisTracker() {
         when(redis.opsForSet()).thenReturn(setOps);
-        return new RedisPresenceTracker(redis, new ChatPresenceProperties("redis", 300, 60000));
+        when(redis.opsForValue()).thenReturn(valueOps);
+        return new RedisPresenceTracker(redis, new ChatPresenceProperties("redis", 300, 60000),
+                Clock.systemUTC());
     }
 
     @Test
     void inMemoryTracksMultipleSessionsPerUser() {
-        InMemoryPresenceTracker tracker = new InMemoryPresenceTracker();
+        InMemoryPresenceTracker tracker = new InMemoryPresenceTracker(Clock.systemUTC());
 
         tracker.markOnline("user-1", "s1");
         tracker.markOnline("user-1", "s2");
@@ -52,7 +62,7 @@ class PresenceTrackerTest {
 
     @Test
     void inMemoryOfflineForUnknownUserIsNoOp() {
-        InMemoryPresenceTracker tracker = new InMemoryPresenceTracker();
+        InMemoryPresenceTracker tracker = new InMemoryPresenceTracker(Clock.systemUTC());
 
         tracker.markOffline("ghost", "s1");
 
@@ -61,7 +71,7 @@ class PresenceTrackerTest {
 
     @Test
     void inMemoryFilterOnlineKeepsOnlyConnectedUsers() {
-        InMemoryPresenceTracker tracker = new InMemoryPresenceTracker();
+        InMemoryPresenceTracker tracker = new InMemoryPresenceTracker(Clock.systemUTC());
         tracker.markOnline("user-1", "s1");
 
         Set<String> online = tracker.filterOnline(Set.of("user-1", "user-2"));
@@ -109,6 +119,51 @@ class PresenceTrackerTest {
 
         tracker.markOffline("user-1", "s1");
         verify(redis).delete("chat:presence:user-1");
+    }
+
+    @Test
+    void redisRefreshKeepsLastSeenFreshForOnlineUsers() {
+        RedisPresenceTracker tracker = redisTracker();
+
+        tracker.markOnline("user-1", "s1");
+        tracker.refreshLocalPresence();
+
+        verify(valueOps, times(2)).set(
+                eq("chat:last-seen:user-1"),
+                anyString(),
+                eq(Duration.ofDays(30)));
+        verify(redis, times(2)).expire(eq("chat:presence:user-1"), eq(Duration.ofSeconds(300)));
+    }
+
+    @Test
+    void redisDuplicateDisconnectKeepsOriginalLastSeen() {
+        RedisPresenceTracker tracker = redisTracker();
+
+        tracker.markOnline("user-1", "s1");
+        tracker.markOffline("user-1", "s1");
+        clearInvocations(valueOps);
+
+        tracker.markOffline("user-1", "s1");
+
+        verify(valueOps, never()).set(anyString(), anyString(), any(Duration.class));
+    }
+
+    @Test
+    void redisReadsPersistedLastSeen() {
+        RedisPresenceTracker tracker = redisTracker();
+        when(valueOps.get("chat:last-seen:user-1"))
+                .thenReturn("2026-11-19T10:15:00Z");
+
+        assertThat(tracker.lastSeenAt("user-1"))
+                .contains(Instant.parse("2026-11-19T10:15:00Z"));
+    }
+
+    @Test
+    void redisIgnoresMalformedLastSeen() {
+        RedisPresenceTracker tracker = redisTracker();
+        when(valueOps.get("chat:last-seen:user-1")).thenReturn("not-an-instant");
+
+        assertThat(tracker.lastSeenAt("user-1")).isEmpty();
     }
 
     @Test

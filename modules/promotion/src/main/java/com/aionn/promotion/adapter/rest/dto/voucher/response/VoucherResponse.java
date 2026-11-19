@@ -11,6 +11,7 @@ public record VoucherResponse(
         String type,
         BigDecimal discountAmount,
         String currency,
+        BigDecimal minOrderValue,
         int usageLimit,
         int usedCount,
         int reservedCount,

@@ -2,12 +2,15 @@ package com.aionn.promotion.infrastructure.persistence.adapter.voucher;
 
 import com.aionn.promotion.application.port.out.VoucherPersistencePort;
 import com.aionn.promotion.domain.model.Voucher;
+import com.aionn.promotion.domain.valueobject.VoucherScope;
+import com.aionn.promotion.domain.valueobject.VoucherType;
 import com.aionn.promotion.infrastructure.persistence.entity.VoucherEntity;
 import com.aionn.promotion.infrastructure.persistence.mapper.VoucherDomainMapper;
 import com.aionn.promotion.infrastructure.persistence.repository.VoucherRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.PageRequest;
@@ -43,10 +46,58 @@ public class VoucherPersistenceAdapter implements VoucherPersistencePort {
     }
 
     @Override
+    public List<Voucher> findByCampaignId(String campaignId, VoucherType type, int limit) {
+        return jpa.findByCampaignIdAndType(campaignId, type, PageRequest.of(0, Math.max(1, limit))).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
     public List<Voucher> findByMerchantId(String merchantId, int limit) {
         return jpa.findByMerchantIdOrderByCreatedAtDesc(merchantId, PageRequest.of(0, Math.max(1, limit))).stream()
                 .map(mapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    public List<Voucher> findByMerchantId(String merchantId, VoucherType type, int limit) {
+        return jpa.findByMerchantIdAndType(merchantId, type, PageRequest.of(0, Math.max(1, limit))).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<Voucher> findAvailableByCampaignId(String campaignId, VoucherType type, Instant now, int limit) {
+        return jpa.findAvailableByCampaignId(campaignId, type, now, PageRequest.of(0, Math.max(1, limit))).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<Voucher> findAvailableByMerchantId(String merchantId, VoucherType type, Instant now, int limit) {
+        return jpa.findAvailableByMerchantId(merchantId, type, now, PageRequest.of(0, Math.max(1, limit))).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public VoucherSummary countAvailable(Instant now) {
+        long platform = 0;
+        long shop = 0;
+        long shipping = 0;
+        for (Object[] row : jpa.countAvailable(now)) {
+            VoucherType type = (VoucherType) row[0];
+            VoucherScope scope = (VoucherScope) row[1];
+            long count = ((Number) row[2]).longValue();
+            if (type == VoucherType.FREE_SHIPPING) {
+                shipping += count;
+            } else if (scope == VoucherScope.SHOP) {
+                shop += count;
+            } else {
+                platform += count;
+            }
+        }
+        return new VoucherSummary(platform, shop, shipping);
     }
 
     @Override

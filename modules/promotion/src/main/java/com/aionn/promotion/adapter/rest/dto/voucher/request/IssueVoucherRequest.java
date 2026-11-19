@@ -15,6 +15,7 @@ public record IssueVoucherRequest(
         @NotBlank @Size(max = 50) String voucherCode,
         @NotNull @DecimalMin("0.0") BigDecimal discountAmount,
         @Size(min = 3, max = 3) String currency,
+        @DecimalMin("0.0") BigDecimal minOrderValue,
         @Positive int usageLimit,
         Instant validFrom,
         Instant validUntil,

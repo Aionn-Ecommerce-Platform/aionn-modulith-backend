@@ -166,7 +166,25 @@ public class FlashSaleService {
                 // approved items in one query. Filtering registrations before the
                 // limit returned fewer (or zero) campaigns and triggered an N+1
                 // campaign lookup per group.
-                List<PromotionCampaign> campaigns = promotionCampaignPersistencePort.findRunning(clock.instant(), safeLimit);
+                return resultsFor(
+                                promotionCampaignPersistencePort.findRunning(clock.instant(), safeLimit),
+                                safePage,
+                                safeSize);
+        }
+
+        @Transactional(readOnly = true)
+        public List<ActiveFlashSaleResult> listSlots(int limit) {
+                int safeLimit = Math.clamp((long) limit, 1, limitPolicy.maxActiveFlashSaleLimit());
+                return resultsFor(
+                                promotionCampaignPersistencePort.findStorefrontSlots(clock.instant(), safeLimit),
+                                0,
+                                0);
+        }
+
+        private List<ActiveFlashSaleResult> resultsFor(
+                        List<PromotionCampaign> campaigns,
+                        int page,
+                        int size) {
                 if (campaigns.isEmpty()) {
                         return List.of();
                 }
@@ -180,7 +198,7 @@ public class FlashSaleService {
                 List<ActiveFlashSaleResult> out = new ArrayList<>();
                 for (PromotionCampaign campaign : campaigns) {
                         ActiveFlashSaleResult result = activeCampaign(
-                                        campaign, byCampaign.get(campaign.getCampaignId()), safePage, safeSize);
+                                        campaign, byCampaign.get(campaign.getCampaignId()), page, size);
                         if (result != null) {
                                 out.add(result);
                         }

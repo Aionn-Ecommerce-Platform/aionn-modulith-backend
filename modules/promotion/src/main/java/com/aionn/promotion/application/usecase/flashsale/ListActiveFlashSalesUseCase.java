@@ -20,4 +20,10 @@ public class ListActiveFlashSalesUseCase implements ListActiveFlashSalesInputPor
     public List<ActiveFlashSaleResult> execute(int limit, Integer page, Integer size) {
         return flashSaleService.listActive(limit, page, size);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ActiveFlashSaleResult> executeSlots(int limit) {
+        return flashSaleService.listSlots(limit);
+    }
 }

@@ -92,4 +92,18 @@ class ReservationAutoReleaseSchedulerTest {
 
         verify(worker, never()).releaseOne("RES_1");
     }
+
+    @Test
+    void keepsExpiredReservationWhenOrderIsStillPendingPayment() {
+        StockReservation r1 = mock(StockReservation.class);
+        when(r1.getReservationId()).thenReturn("RES_1");
+        when(r1.getOrderId()).thenReturn("ORD_1");
+        when(stockReservationPersistencePort.findExpired(fixedInstant, 100)).thenReturn(List.of(r1));
+        when(orderQueryPort.findOrderSummary("ORD_1")).thenReturn(Optional.of(
+                new OrderQueryPort.OrderSummary("ORD_1", "U_1", "M_1", null, "VND", "PENDING")));
+
+        scheduler.releaseExpired();
+
+        verify(worker, never()).releaseOne("RES_1");
+    }
 }

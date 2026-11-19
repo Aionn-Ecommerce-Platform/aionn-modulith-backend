@@ -1,5 +1,6 @@
 package com.aionn.recommendation.application.service;
 
+import com.aionn.recommendation.application.dto.product.ProductAttributes;
 import java.util.Optional;
 
 import com.aionn.recommendation.application.policy.InteractionWeightPolicy;
@@ -220,7 +221,7 @@ class ProfileRefreshServiceTest {
 				.thenReturn(InteractionWeight.of(BigDecimal.valueOf(5), Duration.ofDays(180)));
 	}
 
-	private void stubAttributes(Map<String, ProductAttributeQueryPort.ProductAttributes> attributes) {
+	private void stubAttributes(Map<String, ProductAttributes> attributes) {
 		when(productAttributeQuery.findByProductIds(anyCollection()))
 				.thenReturn(new LinkedHashMap<>(attributes));
 	}
@@ -237,9 +238,9 @@ class ProfileRefreshServiceTest {
 				"int-" + productId, USER_ID, productId, type, BigDecimal.ONE, occurredAt);
 	}
 
-	private static ProductAttributeQueryPort.ProductAttributes attributes(
+	private static ProductAttributes attributes(
 			String productId, String brandId, Collection<String> categoryIds, long price) {
-		return new ProductAttributeQueryPort.ProductAttributes(
+		return new ProductAttributes(
 				productId,
 				"Product " + productId,
 				brandId,

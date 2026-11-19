@@ -23,6 +23,8 @@ public enum PromotionErrorCode {
     USER_VOUCHER_NOT_FOUND("PRM_203", "User voucher claim not found"),
     USER_VOUCHER_INVALID_STATE("PRM_204", "User voucher is not in a state that allows this action"),
     USER_VOUCHER_RESERVED_BY_OTHER("PRM_205", "Voucher is currently reserved for a different order"),
+    USER_VOUCHER_DAILY_LIMIT_REACHED("PRM_206", "User daily voucher claim limit reached"),
+    USER_VOUCHER_WALLET_LIMIT_REACHED("PRM_207", "User active voucher wallet limit reached"),
 
     CONDITION_NOT_MET("PRM_301", "Promotion conditions are not met"),
     CONDITION_INVALID("PRM_302", "Invalid promotion condition"),

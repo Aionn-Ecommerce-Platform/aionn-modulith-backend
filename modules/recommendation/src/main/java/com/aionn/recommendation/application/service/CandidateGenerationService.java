@@ -1,5 +1,6 @@
 package com.aionn.recommendation.application.service;
 
+import com.aionn.recommendation.application.dto.product.ProductAttributes;
 import com.aionn.recommendation.application.policy.RankingWeightPolicy;
 import com.aionn.recommendation.application.policy.RecommendationServingPolicy;
 import com.aionn.recommendation.application.port.out.InteractionPersistencePort;
@@ -102,14 +103,14 @@ public class CandidateGenerationService {
         if (profile == null || profile.hasNoSignal()) {
             return Map.of();
         }
-        List<ProductAttributeQueryPort.ProductAttributes> candidates = productAttributeQuery
+        List<ProductAttributes> candidates = productAttributeQuery
                 .findCandidatesByCategoriesOrBrands(
                         profile.getCategoryAffinities().keySet(),
                         profile.getBrandAffinities().keySet(),
                         limit);
 
         Map<String, BigDecimal> scores = HashMap.newHashMap(candidates.size());
-        for (ProductAttributeQueryPort.ProductAttributes candidate : candidates) {
+        for (ProductAttributes candidate : candidates) {
             AffinityScore category = profile.bestCategoryAffinity(candidate.categoryIds());
             AffinityScore brand = profile.brandAffinity(candidate.brandId());
             AffinityScore priceFit = profile.priceFit(candidate.priceFrom());
@@ -127,11 +128,11 @@ public class CandidateGenerationService {
     /** Fallback pool for users and products with no behavioural history at all. */
     @Transactional(readOnly = true)
     public Map<String, BigDecimal> newArrivalScores(int limit) {
-        List<ProductAttributeQueryPort.ProductAttributes> recent = productAttributeQuery.findRecentlyPublished(limit);
+        List<ProductAttributes> recent = productAttributeQuery.findRecentlyPublished(limit);
         Map<String, BigDecimal> scores = LinkedHashMap.newLinkedHashMap(recent.size());
         // Port returns newest first, so a descending positional score preserves recency.
         int rank = recent.size();
-        for (ProductAttributeQueryPort.ProductAttributes product : recent) {
+        for (ProductAttributes product : recent) {
             scores.put(product.productId(), BigDecimal.valueOf(rank--));
         }
         return scores;
@@ -140,24 +141,24 @@ public class CandidateGenerationService {
     /** Fallback pool for product surfaces with no behavioural co-occurrence. */
     @Transactional(readOnly = true)
     public Map<String, BigDecimal> categoryCandidates(String productId, int limit) {
-        Optional<ProductAttributeQueryPort.ProductAttributes> targetOpt = productAttributeQuery.findByProductId(productId);
+        Optional<ProductAttributes> targetOpt = productAttributeQuery.findByProductId(productId);
         if (targetOpt.isEmpty()) {
             return Map.of();
         }
-        ProductAttributeQueryPort.ProductAttributes target = targetOpt.get();
+        ProductAttributes target = targetOpt.get();
         List<String> categories = target.categoryIds();
         if (categories == null || categories.isEmpty()) {
             return Map.of();
         }
 
         // Match any category: catalog does not guarantee ordering, so don't infer specificity.
-        List<ProductAttributeQueryPort.ProductAttributes> candidates = productAttributeQuery
+        List<ProductAttributes> candidates = productAttributeQuery
                 .findCandidatesByCategoriesOrBrands(categories, List.of(),
                         limit + servingPolicy.categoryCandidateOvershoot());
 
         Map<String, BigDecimal> scores = new LinkedHashMap<>();
         int rank = candidates.size();
-        for (ProductAttributeQueryPort.ProductAttributes candidate : candidates) {
+        for (ProductAttributes candidate : candidates) {
             if (!candidate.productId().equals(productId)) {
                 scores.put(candidate.productId(), BigDecimal.valueOf(rank--));
             }
@@ -166,7 +167,7 @@ public class CandidateGenerationService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, ProductAttributeQueryPort.ProductAttributes> hydrate(
+    public Map<String, ProductAttributes> hydrate(
             Collection<String> productIds) {
         return productAttributeQuery.findByProductIds(productIds);
     }

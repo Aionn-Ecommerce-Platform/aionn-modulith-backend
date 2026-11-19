@@ -53,6 +53,9 @@ public class VoucherEntity {
     @Column(name = "discount_amount", precision = 18, scale = 2, nullable = false)
     private BigDecimal discountAmount;
 
+    @Column(name = "min_order_value", precision = 18, scale = 2)
+    private BigDecimal minOrderValue;
+
     @Column(name = "currency", length = 3, nullable = false)
     private String currency;
 

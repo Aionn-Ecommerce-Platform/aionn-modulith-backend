@@ -45,6 +45,7 @@ public class ShopVoucherService {
                         ? VoucherType.ORDER_DISCOUNT
                         : command.type(),
                 Money.of(command.discountAmount(), resolveCurrency(command.currency())),
+                command.minOrderValue(),
                 command.usageLimit(), command.validFrom(), command.validUntil(), clock);
         Voucher saved;
         try {
@@ -66,6 +67,19 @@ public class ShopVoucherService {
         return voucherPersistencePort.findByMerchantId(merchantId, safeLimit(limit)).stream()
                 .filter(voucher -> voucher.isValidNow(clock.instant()))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Voucher> listByMerchant(String merchantId, VoucherType type, int limit) {
+        return voucherPersistencePort.findByMerchantId(merchantId, type, safeLimit(limit)).stream()
+                .filter(voucher -> voucher.isValidNow(clock.instant()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Voucher> listAvailableByMerchant(String merchantId, VoucherType type, int limit) {
+        return voucherPersistencePort.findAvailableByMerchantId(
+                merchantId, type, clock.instant(), safeLimit(limit));
     }
 
     private int safeLimit(int limit) {

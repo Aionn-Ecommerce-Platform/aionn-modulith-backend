@@ -41,6 +41,23 @@ public interface UserVoucherRepository extends JpaRepository<UserVoucherEntity, 
             """)
     long countByUserAndCampaign(String userId, String campaignId);
 
+    @Query("""
+            SELECT COUNT(uv) FROM UserVoucherEntity uv
+              WHERE uv.userId = :userId
+                AND uv.claimedAt >= :since
+            """)
+    long countByUserIdAndClaimedAtGreaterThanEqual(
+            @Param("userId") String userId, @Param("since") Instant since);
+
+    @Query("""
+            SELECT COUNT(uv) FROM UserVoucherEntity uv, VoucherEntity v
+              WHERE uv.voucherCode = v.voucherCode
+                AND uv.userId = :userId
+                AND uv.status IN ('CLAIMED', 'RESERVED', 'RELEASED')
+                AND (v.validUntil IS NULL OR v.validUntil > :now)
+            """)
+    long countActiveByUserId(@Param("userId") String userId, @Param("now") Instant now);
+
     List<UserVoucherEntity> findByUserIdOrderByClaimedAtDesc(String userId, Pageable pageable);
 
     @Query("""

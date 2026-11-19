@@ -89,7 +89,7 @@ class ShopVoucherControllerWebTest {
     private static VoucherResult sample(String code) {
         return new VoucherResult(code, null, VoucherScope.SHOP, "mer-1",
                 VoucherType.ORDER_DISCOUNT,
-                new BigDecimal("30000"), "VND", 20, 0, 0,
+                new BigDecimal("30000"), "VND", new BigDecimal("99000"), 20, 0, 0,
                 NOW, NOW.plusSeconds(86400), NOW, NOW);
     }
 
@@ -157,7 +157,7 @@ class ShopVoucherControllerWebTest {
 
     @Test
     void listByMerchantUsesDefaultLimit() throws Exception {
-        when(listShopVouchersByMerchantInputPort.execute("mer-1", 20))
+        when(listShopVouchersByMerchantInputPort.execute("mer-1", 20, null, false))
                 .thenReturn(List.of(sample("SHOP10"), sample("SHOP20")));
 
         mockMvc.perform(get("/api/v1/promotions/shop-vouchers/merchant/mer-1"))

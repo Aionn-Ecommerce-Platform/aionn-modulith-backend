@@ -32,6 +32,7 @@ public class CatalogProductAttributeQueryAdapter implements CatalogProductAttrib
 
     private final ProductPersistencePort productPersistencePort;
     private final ProductResultMapper productResultMapper;
+    private final com.aionn.catalog.application.port.out.merchant.MerchantPersistencePort merchantPersistencePort;
 
     @Override
     @Transactional(readOnly = true)
@@ -39,7 +40,7 @@ public class CatalogProductAttributeQueryAdapter implements CatalogProductAttrib
         return productPersistencePort.findById(productId)
                 .filter(CatalogProductAttributeQueryAdapter::isPublished)
                 .map(productResultMapper::toResult)
-                .map(CatalogProductAttributeQueryAdapter::toView);
+                .map(result -> toView(result, merchantFor(result.merchantId())));
     }
 
     @Override
@@ -114,19 +115,41 @@ public class CatalogProductAttributeQueryAdapter implements CatalogProductAttrib
                 .toList()));
     }
 
-    private static List<ProductAttributeView> toViews(List<ProductResult> results) {
+    private List<ProductAttributeView> toViews(List<ProductResult> results) {
+        Map<String, com.aionn.catalog.domain.model.Merchant> merchants = merchantsByIds(results);
         List<ProductAttributeView> views = new ArrayList<>(results.size());
         for (ProductResult result : results) {
-            views.add(toView(result));
+            views.add(toView(result, merchants.get(result.merchantId())));
         }
         return views;
+    }
+
+    private com.aionn.catalog.domain.model.Merchant merchantFor(String merchantId) {
+        return merchantId == null ? null
+                : merchantPersistencePort.findById(merchantId).orElse(null);
+    }
+
+    private Map<String, com.aionn.catalog.domain.model.Merchant> merchantsByIds(List<ProductResult> results) {
+        java.util.Set<String> merchantIds = new java.util.HashSet<>();
+        for (ProductResult result : results) {
+            if (result.merchantId() != null) {
+                merchantIds.add(result.merchantId());
+            }
+        }
+        if (merchantIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, com.aionn.catalog.domain.model.Merchant> merchants =
+                merchantPersistencePort.findByIds(merchantIds);
+        return merchants == null ? Map.of() : merchants;
     }
 
     private static boolean isPublished(Product product) {
         return product != null && product.getStatus() == ProductStatus.PUBLISHED;
     }
 
-    private static ProductAttributeView toView(ProductResult result) {
+    private static ProductAttributeView toView(ProductResult result,
+            com.aionn.catalog.domain.model.Merchant merchant) {
         List<ProductResult.Variant> variants = result.variants();
         List<String> skuIds = new ArrayList<>(variants.size());
         BigDecimal cheapest = null;
@@ -160,6 +183,8 @@ public class CatalogProductAttributeQueryAdapter implements CatalogProductAttrib
                 currency,
                 result.rating(),
                 result.reviewCount(),
-                result.soldCount());
+                result.soldCount(),
+                merchant == null ? null : merchant.getProvinceCode(),
+                merchant == null ? null : merchant.getProvinceName());
     }
 }

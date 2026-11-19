@@ -5,13 +5,6 @@ import com.aionn.recommendation.domain.valueobject.RecommendationReason;
 import java.math.BigDecimal;
 import java.util.List;
 
-/**
- * A ranked, hydrated recommendation.
- *
- * @param skuIds every variant of the product. Carried so availability filtering can run after the
- *               cache without a second catalog round trip; the REST mapper does not expose it, since
- *               clients recommend products, not SKUs.
- */
 public record RecommendationItemResult(
         String productId,
         String name,
@@ -26,7 +19,9 @@ public record RecommendationItemResult(
         String brandId,
         Double rating,
         Long reviewCount,
-        Long soldCount) {
+        Long soldCount,
+        String provinceCode,
+        String provinceName) {
 
     public RecommendationItemResult(
             String productId,
@@ -39,7 +34,7 @@ public record RecommendationItemResult(
             RecommendationReason reason,
             List<String> skuIds) {
         this(productId, name, imageUrl, priceFrom, originalPriceFrom, currency, score, reason, skuIds,
-                List.of(), null, null, null, 0L);
+                List.of(), null, null, null, 0L, null, null);
     }
 
     public RecommendationItemResult {
@@ -50,6 +45,7 @@ public record RecommendationItemResult(
     public RecommendationItemResult withReason(RecommendationReason newReason) {
         return new RecommendationItemResult(
                 productId, name, imageUrl, priceFrom, originalPriceFrom, currency, score,
-                newReason, skuIds, categoryIds, brandId, rating, reviewCount, soldCount);
+                newReason, skuIds, categoryIds, brandId, rating, reviewCount, soldCount,
+                provinceCode, provinceName);
     }
 }

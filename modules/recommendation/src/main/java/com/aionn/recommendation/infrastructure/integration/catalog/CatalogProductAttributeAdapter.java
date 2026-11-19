@@ -1,5 +1,6 @@
 package com.aionn.recommendation.infrastructure.integration.catalog;
 
+import com.aionn.recommendation.application.dto.product.ProductAttributes;
 import com.aionn.recommendation.application.port.out.ProductAttributeQueryPort;
 import com.aionn.contracts.port.catalog.CatalogProductAttributeQueryPort;
 import lombok.RequiredArgsConstructor;
@@ -83,6 +84,8 @@ public class CatalogProductAttributeAdapter implements ProductAttributeQueryPort
                 view.currency(),
                 view.rating(),
                 view.reviewCount(),
-                view.soldCount());
+                view.soldCount(),
+                view.provinceCode(),
+                view.provinceName());
     }
 }

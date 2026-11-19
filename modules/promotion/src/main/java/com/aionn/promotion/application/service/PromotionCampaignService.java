@@ -11,6 +11,7 @@ import com.aionn.promotion.domain.model.PromotionCampaign;
 import com.aionn.promotion.domain.model.Voucher;
 import com.aionn.sharedkernel.domain.vo.Money;
 import com.aionn.promotion.domain.valueobject.PromotionCondition;
+import com.aionn.promotion.domain.valueobject.VoucherType;
 import com.aionn.sharedkernel.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -143,6 +144,17 @@ public class PromotionCampaignService {
     @Transactional(readOnly = true)
     public List<Voucher> listVouchersByCampaignId(String campaignId, int limit) {
         return voucherPersistencePort.findByCampaignId(campaignId, limit);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Voucher> listVouchersByCampaignId(String campaignId, VoucherType type, int limit) {
+        return voucherPersistencePort.findByCampaignId(campaignId, type, limit);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Voucher> listAvailableVouchersByCampaignId(String campaignId, VoucherType type, int limit) {
+        return voucherPersistencePort.findAvailableByCampaignId(
+                campaignId, type, clock.instant(), limit);
     }
 
     private PromotionCampaign required(String campaignId) {

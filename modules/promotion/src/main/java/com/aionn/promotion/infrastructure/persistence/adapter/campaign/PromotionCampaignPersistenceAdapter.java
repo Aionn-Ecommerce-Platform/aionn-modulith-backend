@@ -63,5 +63,12 @@ public class PromotionCampaignPersistenceAdapter implements PromotionCampaignPer
                 .map(mapper::toDomain)
                 .toList();
     }
+
+    @Override
+    public List<PromotionCampaign> findStorefrontSlots(Instant now, int limit) {
+        return jpa.findStorefrontSlots(now, PageRequest.of(0, Math.max(1, limit))).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
 }
 

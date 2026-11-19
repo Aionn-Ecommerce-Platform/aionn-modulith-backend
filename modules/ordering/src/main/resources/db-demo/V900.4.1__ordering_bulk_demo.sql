@@ -120480,3 +120480,36 @@ INSERT INTO product_sold_counters (product_id, sold_count, updated_at) VALUES
 ('01M9PR00000000000000002327', 16, NOW()),
 ('01M9PR00000000000000002328', 5, NOW());
 
+
+
+-- Align each demo order with the merchant that owns its items after catalog normalization.
+
+
+WITH order_merchants AS (
+  SELECT oi.order_id,
+         p.merchant_id,
+         COUNT(*) AS item_count,
+         ROW_NUMBER() OVER (PARTITION BY oi.order_id ORDER BY COUNT(*) DESC, p.merchant_id) AS rn
+  FROM order_items oi
+  JOIN product_variants pv ON pv.sku_id = oi.sku_id
+  JOIN products p ON p.product_id = pv.product_id
+  GROUP BY oi.order_id, p.merchant_id
+)
+UPDATE orders o
+   SET merchant_id = om.merchant_id
+  FROM order_merchants om
+ WHERE om.order_id = o.order_id
+   AND om.rn = 1
+   AND o.merchant_id <> om.merchant_id;
+
+SELECT COUNT(*) AS mismatched_orders
+  FROM orders o
+  JOIN (
+    SELECT oi.order_id, p.merchant_id,
+           ROW_NUMBER() OVER (PARTITION BY oi.order_id ORDER BY COUNT(*) DESC, p.merchant_id) rn
+      FROM order_items oi
+      JOIN product_variants pv ON pv.sku_id = oi.sku_id
+      JOIN products p ON p.product_id = pv.product_id
+     GROUP BY 1, 2
+  ) om ON om.order_id = o.order_id AND om.rn = 1
+ WHERE o.merchant_id <> om.merchant_id;

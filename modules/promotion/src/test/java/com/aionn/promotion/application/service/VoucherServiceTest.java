@@ -5,6 +5,7 @@ import org.mockito.Mockito;
 import com.aionn.promotion.application.dto.voucher.command.VoucherCommands;
 import com.aionn.promotion.application.dto.voucher.result.UserVoucherResult;
 import com.aionn.promotion.application.mapper.UserVoucherResultMapper;
+import com.aionn.promotion.application.policy.PromotionLimitPolicy;
 import com.aionn.promotion.application.policy.VoucherReservationPolicy;
 import com.aionn.promotion.application.port.out.PromotionCampaignPersistencePort;
 import com.aionn.promotion.application.port.out.UserVoucherPersistencePort;
@@ -17,6 +18,7 @@ import com.aionn.promotion.domain.model.Voucher;
 import com.aionn.promotion.domain.valueobject.CampaignType;
 import com.aionn.promotion.domain.valueobject.PromotionCondition;
 import com.aionn.promotion.domain.valueobject.UserVoucherStatus;
+import com.aionn.promotion.domain.valueobject.VoucherType;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.sharedkernel.domain.vo.Money;
 import org.junit.jupiter.api.Test;
@@ -61,11 +63,15 @@ class VoucherServiceTest {
     private EventPublisher eventPublisher;
     @Mock
     private VoucherReservationPolicy reservationPolicy;
+    @Mock
+    private PromotionLimitPolicy limitPolicy;
 
     private VoucherService service() {
         when(reservationPolicy.expiresFrom(any())).thenReturn(NOW.plusSeconds(900));
+        when(limitPolicy.voucherClaimsPerUserPerDay()).thenReturn(20);
+        when(limitPolicy.activeVouchersPerUser()).thenReturn(50);
         return new VoucherService(voucherPersistencePort, userVoucherPersistencePort, promotionCampaignPersistencePort,
-                mapper, eventPublisher, reservationPolicy, CLOCK);
+                mapper, eventPublisher, reservationPolicy, limitPolicy, CLOCK);
     }
 
     private static Voucher platformVoucher(String campaignId) {
@@ -142,6 +148,26 @@ class VoucherServiceTest {
         assertThat(result.voucherType()).isEqualTo("ORDER_DISCOUNT");
         assertThat(result.minOrderValue()).isEqualByComparingTo("100000");
         verify(voucherPersistencePort).save(any(Voucher.class));
+        verify(userVoucherPersistencePort).lockUserClaim("user-1");
+    }
+
+    @Test
+    void claimReportsHigherOfVoucherAndCampaignMinimums() {
+        mapperEchoes();
+        Voucher voucher = Voucher.issue("V-1", "camp-1", VoucherType.ORDER_DISCOUNT,
+                Money.of(new BigDecimal("50000"), "VND"), new BigDecimal("100000"), 100,
+                NOW.minusSeconds(60), NOW.plusSeconds(86400), CLOCK);
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(voucherPersistencePort.findByCode("V-1")).thenReturn(Optional.of(voucher));
+        when(promotionCampaignPersistencePort.findById("camp-1")).thenReturn(Optional.of(
+                runningCampaign(new PromotionCondition(new BigDecimal("200000"), List.of(), null, null))));
+        when(userVoucherPersistencePort.findByUserAndCode("user-1", "V-1")).thenReturn(Optional.empty());
+        when(userVoucherPersistencePort.save(any(UserVoucher.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserVoucherResult result = service().claim(new VoucherCommands.ClaimVoucher("user-1", "V-1"));
+
+        assertThat(result.minOrderValue()).isEqualByComparingTo("200000");
     }
 
     @Test
@@ -155,6 +181,35 @@ class VoucherServiceTest {
                 .isInstanceOf(PromotionException.class)
                 .hasFieldOrPropertyWithValue("errorCode",
                         PromotionErrorCode.VOUCHER_NOT_FOUND.getCode());
+    }
+
+    @Test
+    void claimRejectsWhenDailyClaimLimitReached() {
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
+        when(userVoucherPersistencePort.countByUserClaimedSince(eq("user-1"), any())).thenReturn(20L);
+
+        VoucherService service = service();
+        VoucherCommands.ClaimVoucher command = new VoucherCommands.ClaimVoucher("user-1", "V-1");
+
+        assertThatThrownBy(() -> service.claim(command))
+                .isInstanceOf(PromotionException.class)
+                .hasFieldOrPropertyWithValue("errorCode",
+                        PromotionErrorCode.USER_VOUCHER_DAILY_LIMIT_REACHED.getCode());
+    }
+
+    @Test
+    void claimRejectsWhenActiveVoucherWalletIsFull() {
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
+        when(userVoucherPersistencePort.countByUserClaimedSince(eq("user-1"), any())).thenReturn(0L);
+        when(userVoucherPersistencePort.countActiveByUser(eq("user-1"), any())).thenReturn(50L);
+
+        VoucherService service = service();
+        VoucherCommands.ClaimVoucher command = new VoucherCommands.ClaimVoucher("user-1", "V-1");
+
+        assertThatThrownBy(() -> service.claim(command))
+                .isInstanceOf(PromotionException.class)
+                .hasFieldOrPropertyWithValue("errorCode",
+                        PromotionErrorCode.USER_VOUCHER_WALLET_LIMIT_REACHED.getCode());
     }
 
     @Test
@@ -227,6 +282,25 @@ class VoucherServiceTest {
         VoucherService service = service();
         VoucherCommands.ReserveVoucher command = new VoucherCommands.ReserveVoucher(
                 "user-1", "V-1", "order-1", new BigDecimal("1000"), "VND", null, null);
+
+        assertThatThrownBy(() -> service.reserve(command))
+                .isInstanceOf(PromotionException.class)
+                .hasFieldOrPropertyWithValue("errorCode",
+                        PromotionErrorCode.CONDITION_NOT_MET.getCode());
+    }
+
+    @Test
+    void reserveRejectsWhenOrderIsBelowShopVoucherMinimum() {
+        when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(
+                Voucher.issueForShop("V-1", "mer-1", VoucherType.ORDER_DISCOUNT,
+                        Money.of(new BigDecimal("30000"), "VND"), new BigDecimal("199000"), 100,
+                        NOW.minusSeconds(60), NOW.plusSeconds(86400), CLOCK)));
+        when(userVoucherPersistencePort.findByUserAndCodeForUpdate("user-1", "V-1"))
+                .thenReturn(Optional.of(claimed()));
+
+        VoucherService service = service();
+        VoucherCommands.ReserveVoucher command = new VoucherCommands.ReserveVoucher(
+                "user-1", "V-1", "order-1", new BigDecimal("150000"), "VND", null, null);
 
         assertThatThrownBy(() -> service.reserve(command))
                 .isInstanceOf(PromotionException.class)
