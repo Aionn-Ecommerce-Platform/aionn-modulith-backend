@@ -10,7 +10,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -22,6 +24,7 @@ import java.util.concurrent.ConcurrentMap;
 public class RedisPresenceTracker implements PresenceTracker {
 
     private static final String KEY_PREFIX = "chat:presence:";
+    private static final String LAST_SEEN_PREFIX = "chat:presence:last-seen:";
 
     private final StringRedisTemplate redis;
     private final ChatPresenceProperties properties;
@@ -33,6 +36,7 @@ public class RedisPresenceTracker implements PresenceTracker {
         String key = key(userId);
         redis.opsForSet().add(key, sessionId);
         redis.expire(key, Duration.ofSeconds(properties.ttlSeconds()));
+        touchLastSeen(userId);
     }
 
     @Override
@@ -50,6 +54,24 @@ public class RedisPresenceTracker implements PresenceTracker {
         if (size == null || size == 0) {
             redis.delete(key);
         }
+        touchLastSeen(userId);
+    }
+
+    @Override
+    public Optional<Instant> lastSeenAt(String userId) {
+        String value = redis.opsForValue().get(lastSeenKey(userId));
+        if (value == null || value.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(Instant.parse(value));
+        } catch (RuntimeException exception) {
+            return Optional.empty();
+        }
+    }
+
+    private void touchLastSeen(String userId) {
+        redis.opsForValue().set(lastSeenKey(userId), Instant.now().toString(), Duration.ofDays(30));
     }
 
     @Override
@@ -79,10 +101,16 @@ public class RedisPresenceTracker implements PresenceTracker {
             // Re-add the ids as well: this repairs a lost Redis key without waiting for reconnect.
             redis.opsForSet().add(key(userId), sessionIds.toArray(String[]::new));
             redis.expire(key(userId), Duration.ofSeconds(properties.ttlSeconds()));
+            // Keep last-seen within one refresh interval of the last known activity.
+            touchLastSeen(userId);
         });
     }
 
     private static String key(String userId) {
         return KEY_PREFIX + userId;
+    }
+
+    private static String lastSeenKey(String userId) {
+        return LAST_SEEN_PREFIX + userId;
     }
 }

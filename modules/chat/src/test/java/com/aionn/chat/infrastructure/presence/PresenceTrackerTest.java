@@ -9,14 +9,17 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
 import java.time.Duration;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -28,9 +31,12 @@ class PresenceTrackerTest {
     private StringRedisTemplate redis;
     @Mock
     private SetOperations<String, String> setOps;
+    @Mock
+    private ValueOperations<String, String> valueOps;
 
     private RedisPresenceTracker redisTracker() {
         when(redis.opsForSet()).thenReturn(setOps);
+        when(redis.opsForValue()).thenReturn(valueOps);
         return new RedisPresenceTracker(redis, new ChatPresenceProperties("redis", 300, 60000));
     }
 
@@ -109,6 +115,20 @@ class PresenceTrackerTest {
 
         tracker.markOffline("user-1", "s1");
         verify(redis).delete("chat:presence:user-1");
+    }
+
+    @Test
+    void redisRefreshKeepsLastSeenFreshForOnlineUsers() {
+        RedisPresenceTracker tracker = redisTracker();
+
+        tracker.markOnline("user-1", "s1");
+        tracker.refreshLocalPresence();
+
+        verify(valueOps, times(2)).set(
+                eq("chat:presence:last-seen:user-1"),
+                anyString(),
+                eq(Duration.ofDays(30)));
+        verify(redis, times(2)).expire(eq("chat:presence:user-1"), eq(Duration.ofSeconds(300)));
     }
 
     @Test
