@@ -13,7 +13,7 @@ public enum NotificationPriority {
     public static NotificationPriority forCategory(NotificationCategory category) {
         return switch (category) {
             case SECURITY -> CRITICAL;
-            case TRANSACTION, SHIPPING -> HIGH;
+            case ORDER, TRANSACTION, SHIPPING -> HIGH;
             case CHAT, SYSTEM -> NORMAL;
             case PROMOTION -> LOW;
         };

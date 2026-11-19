@@ -1,6 +1,7 @@
 package com.aionn.notification.domain.valueobject;
 
 public enum NotificationCategory {
+    ORDER,
     SECURITY,
     TRANSACTION,
     SHIPPING,
@@ -9,6 +10,6 @@ public enum NotificationCategory {
     SYSTEM;
 
     public boolean isMandatory() {
-        return this == SECURITY || this == TRANSACTION;
+        return this == ORDER || this == SECURITY || this == TRANSACTION;
     }
 }
