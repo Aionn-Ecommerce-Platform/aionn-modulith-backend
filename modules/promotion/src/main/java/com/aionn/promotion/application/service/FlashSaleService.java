@@ -162,6 +162,10 @@ public class FlashSaleService {
                 int safeLimit = Math.clamp((long) limit, 1, limitPolicy.maxActiveFlashSaleLimit());
                 int safePage = page == null ? 0 : Math.max(0, page);
                 int safeSize = size == null ? 0 : Math.clamp((long) size, 1, 100);
+                // Limit RUNNING campaigns in the database first; then load their
+                // approved items in one query. Filtering registrations before the
+                // limit returned fewer (or zero) campaigns and triggered an N+1
+                // campaign lookup per group.
                 return resultsFor(
                                 promotionCampaignPersistencePort.findRunning(clock.instant(), safeLimit),
                                 safePage,
@@ -188,8 +192,7 @@ public class FlashSaleService {
                                 .map(PromotionCampaign::getCampaignId)
                                 .toList();
                 Map<String, List<FlashSaleRegistration>> byCampaign = new LinkedHashMap<>();
-                for (FlashSaleRegistration reg : flashSaleRegistrationPersistencePort
-                                .findApprovedByCampaignIds(campaignIds)) {
+                for (FlashSaleRegistration reg : flashSaleRegistrationPersistencePort.findApprovedByCampaignIds(campaignIds)) {
                         byCampaign.computeIfAbsent(reg.getCampaignId(), k -> new ArrayList<>()).add(reg);
                 }
                 List<ActiveFlashSaleResult> out = new ArrayList<>();

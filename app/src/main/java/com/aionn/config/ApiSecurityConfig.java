@@ -99,7 +99,6 @@ public class ApiSecurityConfig {
                                                                 "/api/v1/recommendations/products/*/also-bought",
                                                                 "/api/v1/presence/users/*",
                                                                 "/api/v1/promotions/flash-sales/active",
-                                                                "/api/v1/promotions/flash-sales/slots",
                                                                 "/api/v1/promotions/vouchers/summary",
                                                                 "/api/v1/promotions/banners",
                                                                 "/api/v1/promotions/campaigns",
