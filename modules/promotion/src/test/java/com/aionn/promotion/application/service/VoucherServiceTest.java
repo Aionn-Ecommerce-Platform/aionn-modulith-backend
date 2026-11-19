@@ -148,6 +148,7 @@ class VoucherServiceTest {
         assertThat(result.voucherType()).isEqualTo("ORDER_DISCOUNT");
         assertThat(result.minOrderValue()).isEqualByComparingTo("100000");
         verify(voucherPersistencePort).save(any(Voucher.class));
+        verify(userVoucherPersistencePort).lockUserClaim("user-1");
     }
 
     @Test
@@ -181,7 +182,7 @@ class VoucherServiceTest {
     void claimRejectsWhenActiveVoucherWalletIsFull() {
         when(voucherPersistencePort.lockByCode("V-1")).thenReturn(Optional.of(platformVoucher(null)));
         when(userVoucherPersistencePort.countByUserClaimedSince(eq("user-1"), any())).thenReturn(0L);
-        when(userVoucherPersistencePort.countActiveByUser("user-1")).thenReturn(50L);
+        when(userVoucherPersistencePort.countActiveByUser(eq("user-1"), any())).thenReturn(50L);
 
         VoucherService service = service();
         VoucherCommands.ClaimVoucher command = new VoucherCommands.ClaimVoucher("user-1", "V-1");

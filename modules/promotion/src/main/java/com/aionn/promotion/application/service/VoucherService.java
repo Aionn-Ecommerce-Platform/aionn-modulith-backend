@@ -53,6 +53,7 @@ public class VoucherService {
         Voucher voucher = voucherPersistencePort.lockByCode(command.voucherCode())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.VOUCHER_NOT_FOUND));
         PromotionCampaign campaign = runningCampaignOrNull(voucher);
+        userVoucherPersistencePort.lockUserClaim(command.userId());
         enforceClaimLimit(command.userId(), campaign);
 
         userVoucherPersistencePort.findByUserAndCode(command.userId(), command.voucherCode())
@@ -265,10 +266,14 @@ public class VoucherService {
         }
 
         BigDecimal minOrderValue = voucher.getMinOrderValue();
-        if (minOrderValue == null && voucher.getCampaignId() != null) {
-            minOrderValue = promotionCampaignPersistencePort.findById(voucher.getCampaignId())
+        if (voucher.getCampaignId() != null) {
+            BigDecimal campaignMin = promotionCampaignPersistencePort.findById(voucher.getCampaignId())
                     .map(campaign -> campaign.getCondition().minOrderValue())
                     .orElse(null);
+            if (campaignMin != null
+                    && (minOrderValue == null || campaignMin.compareTo(minOrderValue) > 0)) {
+                minOrderValue = campaignMin;
+            }
         }
 
         return new UserVoucherResult(
@@ -300,7 +305,7 @@ public class VoucherService {
                 >= limitPolicy.voucherClaimsPerUserPerDay()) {
             throw new PromotionException(PromotionErrorCode.USER_VOUCHER_DAILY_LIMIT_REACHED);
         }
-        if (userVoucherPersistencePort.countActiveByUser(userId)
+        if (userVoucherPersistencePort.countActiveByUser(userId, clock.instant())
                 >= limitPolicy.activeVouchersPerUser()) {
             throw new PromotionException(PromotionErrorCode.USER_VOUCHER_WALLET_LIMIT_REACHED);
         }

@@ -9,6 +9,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
@@ -24,10 +25,11 @@ import java.util.concurrent.ConcurrentMap;
 public class RedisPresenceTracker implements PresenceTracker {
 
     private static final String KEY_PREFIX = "chat:presence:";
-    private static final String LAST_SEEN_PREFIX = "chat:presence:last-seen:";
+    private static final String LAST_SEEN_PREFIX = "chat:last-seen:";
 
     private final StringRedisTemplate redis;
     private final ChatPresenceProperties properties;
+    private final Clock clock;
     private final ConcurrentMap<String, Set<String>> localSessions = new ConcurrentHashMap<>();
 
     @Override
@@ -41,20 +43,25 @@ public class RedisPresenceTracker implements PresenceTracker {
 
     @Override
     public void markOffline(String userId, String sessionId) {
+        boolean removedLocal = false;
         Set<String> sessions = localSessions.get(userId);
         if (sessions != null) {
-            sessions.remove(sessionId);
+            removedLocal = sessions.remove(sessionId);
             if (sessions.isEmpty()) {
                 localSessions.remove(userId, sessions);
             }
         }
         String key = key(userId);
-        redis.opsForSet().remove(key, sessionId);
+        Long removedRemote = redis.opsForSet().remove(key, sessionId);
         Long size = redis.opsForSet().size(key);
         if (size == null || size == 0) {
             redis.delete(key);
         }
-        touchLastSeen(userId);
+        // Duplicate disconnect events remove nothing; keep the original
+        // last-seen timestamp instead of moving the user's activity forward.
+        if (removedLocal || (removedRemote != null && removedRemote > 0)) {
+            touchLastSeen(userId);
+        }
     }
 
     @Override
@@ -71,7 +78,7 @@ public class RedisPresenceTracker implements PresenceTracker {
     }
 
     private void touchLastSeen(String userId) {
-        redis.opsForValue().set(lastSeenKey(userId), Instant.now().toString(), Duration.ofDays(30));
+        redis.opsForValue().set(lastSeenKey(userId), Instant.now(clock).toString(), Duration.ofDays(30));
     }
 
     @Override

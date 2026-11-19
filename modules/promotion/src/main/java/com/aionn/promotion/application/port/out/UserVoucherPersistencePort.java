@@ -28,7 +28,10 @@ public interface UserVoucherPersistencePort {
 
     long countByUserClaimedSince(String userId, Instant since);
 
-    long countActiveByUser(String userId);
+    long countActiveByUser(String userId, java.time.Instant now);
+
+    /** Serializes limit checks for one user across concurrent claims. */
+    void lockUserClaim(String userId);
 
     List<UserVoucher> findByUser(String userId, int limit);
 

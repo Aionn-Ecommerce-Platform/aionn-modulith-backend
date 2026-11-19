@@ -11,6 +11,7 @@ import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Set;
 
@@ -37,12 +38,13 @@ class PresenceTrackerTest {
     private RedisPresenceTracker redisTracker() {
         when(redis.opsForSet()).thenReturn(setOps);
         when(redis.opsForValue()).thenReturn(valueOps);
-        return new RedisPresenceTracker(redis, new ChatPresenceProperties("redis", 300, 60000));
+        return new RedisPresenceTracker(redis, new ChatPresenceProperties("redis", 300, 60000),
+                Clock.systemUTC());
     }
 
     @Test
     void inMemoryTracksMultipleSessionsPerUser() {
-        InMemoryPresenceTracker tracker = new InMemoryPresenceTracker();
+        InMemoryPresenceTracker tracker = new InMemoryPresenceTracker(Clock.systemUTC());
 
         tracker.markOnline("user-1", "s1");
         tracker.markOnline("user-1", "s2");
@@ -58,7 +60,7 @@ class PresenceTrackerTest {
 
     @Test
     void inMemoryOfflineForUnknownUserIsNoOp() {
-        InMemoryPresenceTracker tracker = new InMemoryPresenceTracker();
+        InMemoryPresenceTracker tracker = new InMemoryPresenceTracker(Clock.systemUTC());
 
         tracker.markOffline("ghost", "s1");
 
@@ -67,7 +69,7 @@ class PresenceTrackerTest {
 
     @Test
     void inMemoryFilterOnlineKeepsOnlyConnectedUsers() {
-        InMemoryPresenceTracker tracker = new InMemoryPresenceTracker();
+        InMemoryPresenceTracker tracker = new InMemoryPresenceTracker(Clock.systemUTC());
         tracker.markOnline("user-1", "s1");
 
         Set<String> online = tracker.filterOnline(Set.of("user-1", "user-2"));
@@ -125,7 +127,7 @@ class PresenceTrackerTest {
         tracker.refreshLocalPresence();
 
         verify(valueOps, times(2)).set(
-                eq("chat:presence:last-seen:user-1"),
+                eq("chat:last-seen:user-1"),
                 anyString(),
                 eq(Duration.ofDays(30)));
         verify(redis, times(2)).expire(eq("chat:presence:user-1"), eq(Duration.ofSeconds(300)));

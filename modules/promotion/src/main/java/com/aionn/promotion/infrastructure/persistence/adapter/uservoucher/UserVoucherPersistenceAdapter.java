@@ -5,6 +5,7 @@ import com.aionn.promotion.domain.model.UserVoucher;
 import com.aionn.promotion.infrastructure.persistence.entity.UserVoucherEntity;
 import com.aionn.promotion.infrastructure.persistence.mapper.UserVoucherDomainMapper;
 import com.aionn.promotion.infrastructure.persistence.repository.UserVoucherRepository;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
@@ -19,6 +20,15 @@ public class UserVoucherPersistenceAdapter implements UserVoucherPersistencePort
 
     private final UserVoucherRepository jpa;
     private final UserVoucherDomainMapper mapper;
+    private final EntityManager entityManager;
+
+    @Override
+    public void lockUserClaim(String userId) {
+        entityManager.createNativeQuery(
+                "SELECT pg_advisory_xact_lock(hashtextextended(CAST(:userId AS text), 0))")
+                .setParameter("userId", userId)
+                .getSingleResult();
+    }
 
     @Override
     public UserVoucher save(UserVoucher userVoucher) {
@@ -74,8 +84,8 @@ public class UserVoucherPersistenceAdapter implements UserVoucherPersistencePort
     }
 
     @Override
-    public long countActiveByUser(String userId) {
-        return jpa.countActiveByUserId(userId);
+    public long countActiveByUser(String userId, java.time.Instant now) {
+        return jpa.countActiveByUserId(userId, now);
     }
 
     @Override
