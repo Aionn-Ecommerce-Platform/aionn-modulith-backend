@@ -55523,3 +55523,13 @@ UPDATE products p
  WHERE b.brand_id = p.brand_id
    AND p.attributes ? 'brand'
    AND p.attributes->>'brand' IS DISTINCT FROM b.name;
+
+-- Only a subset of products carries a markdown so the storefront does not
+-- show every item as "on sale". ~35% keep their original price above the
+-- selling price; the rest are regular-priced.
+UPDATE product_variants v
+   SET original_price = v.price
+  FROM products p
+ WHERE p.product_id = v.product_id
+   AND (abs(hashtext(p.product_id)::bigint) % 100) >= 35
+   AND v.original_price IS DISTINCT FROM v.price;
