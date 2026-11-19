@@ -10,11 +10,13 @@ import com.aionn.ordering.domain.exception.OrderingException;
 import com.aionn.ordering.domain.model.Order;
 import com.aionn.ordering.domain.model.OrderItem;
 import com.aionn.sharedkernel.application.port.EventPublisher;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -52,8 +54,17 @@ class OrderAutoCancelWorkerTest {
     @Mock
     private Clock clock;
 
+    @Mock
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
+
     @InjectMocks
     private OrderAutoCancelWorker worker;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(transactionManager.getTransaction(any()))
+                .thenReturn(new SimpleTransactionStatus());
+    }
 
     @Test
     void cancelsOrderAndReleasesReservations() {

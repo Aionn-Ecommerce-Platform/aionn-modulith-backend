@@ -15,10 +15,13 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Slf4j
 @Component
@@ -32,6 +35,7 @@ public class OrderAutoCancelWorker {
     private final OrderingIntegrationEventPublisherPort integrationEventPublisher;
     private final CompensationTaskPort compensationTaskPort;
     private final Clock clock;
+    private final PlatformTransactionManager transactionManager;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void cancelOneExpired(String orderId) {
@@ -58,19 +62,23 @@ public class OrderAutoCancelWorker {
     }
 
     private void releaseReservations(Order order, List<OrderItem> items) {
-        releaseFlashSaleAllocation(order.getOrderId());
-        for (OrderItem item : items) {
-            if (item.reservationId() == null) {
-                continue;
+        TransactionTemplate releaseTemplate = new TransactionTemplate(transactionManager);
+        releaseTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        releaseTemplate.executeWithoutResult(status -> {
+            releaseFlashSaleAllocation(order.getOrderId());
+            for (OrderItem item : items) {
+                if (item.reservationId() == null) {
+                    continue;
+                }
+                try {
+                    stockReservationGateway.release(item.reservationId(), "auto-cancel");
+                } catch (RuntimeException ex) {
+                    log.error("Auto-cancel: reservation {} release failed after commit",
+                            item.reservationId(), ex);
+                    enqueueRelease(item.reservationId());
+                }
             }
-            try {
-                stockReservationGateway.release(item.reservationId(), "auto-cancel");
-            } catch (RuntimeException ex) {
-                log.error("Auto-cancel: reservation {} release failed after commit",
-                        item.reservationId(), ex);
-                enqueueRelease(item.reservationId());
-            }
-        }
+        });
     }
 
     private void releaseFlashSaleAllocation(String orderId) {

@@ -51,6 +51,13 @@ public interface VoucherRepository extends JpaRepository<VoucherEntity, String> 
                AND (v.validFrom IS NULL OR v.validFrom <= :now)
                AND (v.validUntil IS NULL OR v.validUntil > :now)
                AND (v.usedCount + v.reservedCount) < v.usageLimit
+               AND EXISTS (
+                     SELECT 1 FROM PromotionCampaignEntity c
+                      WHERE c.campaignId = v.campaignId
+                        AND c.status = 'RUNNING'
+                        AND c.startDate <= :now
+                        AND c.endDate > :now
+               )
              ORDER BY v.createdAt DESC
             """)
     List<VoucherEntity> findAvailableByCampaignId(@Param("campaignId") String campaignId,
