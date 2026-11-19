@@ -45,6 +45,7 @@ public class ShopVoucherService {
                         ? VoucherType.ORDER_DISCOUNT
                         : command.type(),
                 Money.of(command.discountAmount(), resolveCurrency(command.currency())),
+                command.minOrderValue(),
                 command.usageLimit(), command.validFrom(), command.validUntil(), clock);
         Voucher saved;
         try {

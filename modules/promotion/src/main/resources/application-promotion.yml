@@ -7,6 +7,8 @@ promotion:
     max-registration-limit: ${PROMOTION_LIMITS_MAX_REGISTRATION_LIMIT:200}
     max-active-flash-sale-limit: ${PROMOTION_LIMITS_MAX_ACTIVE_FLASH_SALE_LIMIT:50}
     top-vouchers-limit: ${PROMOTION_LIMITS_TOP_VOUCHERS_LIMIT:10}
+    voucher-claims-per-user-per-day: ${PROMOTION_LIMITS_VOUCHER_CLAIMS_PER_USER_PER_DAY:20}
+    active-vouchers-per-user: ${PROMOTION_LIMITS_ACTIVE_VOUCHERS_PER_USER:50}
 
   flash-sale:
     enabled: ${PROMOTION_FLASH_SALE_ENABLED:true}

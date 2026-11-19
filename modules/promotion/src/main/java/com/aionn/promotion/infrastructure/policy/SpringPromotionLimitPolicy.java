@@ -30,4 +30,14 @@ public class SpringPromotionLimitPolicy implements PromotionLimitPolicy {
     public int topVouchersLimit() {
         return properties.topVouchersLimit();
     }
+
+    @Override
+    public int voucherClaimsPerUserPerDay() {
+        return properties.voucherClaimsPerUserPerDay();
+    }
+
+    @Override
+    public int activeVouchersPerUser() {
+        return properties.activeVouchersPerUser();
+    }
 }

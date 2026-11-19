@@ -12,5 +12,7 @@ public record PromotionLimitProperties(
         @Min(1) @Max(1000) @DefaultValue("100") int maxListLimit,
         @Min(1) @Max(1000) @DefaultValue("200") int maxRegistrationLimit,
         @Min(1) @Max(1000) @DefaultValue("50") int maxActiveFlashSaleLimit,
-        @Min(1) @Max(100) @DefaultValue("10") int topVouchersLimit) {
+        @Min(1) @Max(100) @DefaultValue("10") int topVouchersLimit,
+        @Min(1) @Max(1000) @DefaultValue("20") int voucherClaimsPerUserPerDay,
+        @Min(1) @Max(10000) @DefaultValue("50") int activeVouchersPerUser) {
 }

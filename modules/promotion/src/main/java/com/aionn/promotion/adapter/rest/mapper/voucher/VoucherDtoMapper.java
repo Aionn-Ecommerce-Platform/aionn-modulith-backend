@@ -35,8 +35,8 @@ public interface VoucherDtoMapper {
     default VoucherCommands.IssueShopVoucher toIssueShopVoucherCommand(String ownerId,
             IssueVoucherRequest request) {
         return new VoucherCommands.IssueShopVoucher(ownerId, request.voucherCode(),
-                request.discountAmount(), request.currency(), request.usageLimit(),
-                request.validFrom(), request.validUntil(), request.type());
+                request.discountAmount(), request.currency(), request.minOrderValue(),
+                request.usageLimit(), request.validFrom(), request.validUntil(), request.type());
     }
 
     default VoucherCommands.ClaimVoucher toClaimCommand(String userId, String voucherCode) {

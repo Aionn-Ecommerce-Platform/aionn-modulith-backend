@@ -16,6 +16,7 @@ public class VoucherDomainMapper {
                 e.getMerchantId(),
                 e.getType(),
                 Money.of(e.getDiscountAmount(), e.getCurrency()),
+                e.getMinOrderValue(),
                 e.getUsageLimit(),
                 e.getUsedCount(),
                 e.getReservedCount(),
@@ -34,6 +35,7 @@ public class VoucherDomainMapper {
                         .merchantId(v.getMerchantId())
                         .type(v.getType())
                         .discountAmount(v.getDiscountAmount().amount())
+                        .minOrderValue(v.getMinOrderValue())
                         .currency(v.getDiscountAmount().currency())
                         .usageLimit(v.getUsageLimit())
                         .validFrom(v.getValidFrom())

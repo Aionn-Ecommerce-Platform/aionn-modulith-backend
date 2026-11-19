@@ -30,14 +30,22 @@ public final class VoucherCommands {
                         String voucherCode,
                         BigDecimal discountAmount,
                         String currency,
+                        BigDecimal minOrderValue,
                         int usageLimit,
                         Instant validFrom,
                         Instant validUntil,
                         VoucherType type) implements Command {
                         public IssueShopVoucher(String ownerId, String voucherCode, BigDecimal discountAmount,
                                         String currency, int usageLimit, Instant validFrom, Instant validUntil) {
-                                this(ownerId, voucherCode, discountAmount, currency, usageLimit, validFrom,
+                                this(ownerId, voucherCode, discountAmount, currency, null, usageLimit, validFrom,
                                                 validUntil, VoucherType.ORDER_DISCOUNT);
+                        }
+
+                        public IssueShopVoucher(String ownerId, String voucherCode, BigDecimal discountAmount,
+                                        String currency, int usageLimit, Instant validFrom, Instant validUntil,
+                                        VoucherType type) {
+                                this(ownerId, voucherCode, discountAmount, currency, null, usageLimit, validFrom,
+                                                validUntil, type);
                         }
         }
 

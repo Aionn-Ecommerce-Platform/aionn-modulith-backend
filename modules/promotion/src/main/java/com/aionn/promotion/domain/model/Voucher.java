@@ -22,6 +22,7 @@ public class Voucher extends AggregateRoot {
     private final String merchantId;
     private final VoucherType type;
     private final Money discountAmount;
+    private final java.math.BigDecimal minOrderValue;
     private final int usageLimit;
     private int usedCount;
     private int reservedCount;
@@ -33,12 +34,19 @@ public class Voucher extends AggregateRoot {
     public Voucher(String voucherCode, String campaignId, VoucherScope scope, String merchantId, Money discountAmount,
             int usageLimit, int usedCount, int reservedCount,
             Instant validFrom, Instant validUntil, Instant createdAt, Instant updatedAt) {
-        this(voucherCode, campaignId, scope, merchantId, VoucherType.ORDER_DISCOUNT, discountAmount, usageLimit,
-                usedCount, reservedCount, validFrom, validUntil, createdAt, updatedAt);
+        this(voucherCode, campaignId, scope, merchantId, VoucherType.ORDER_DISCOUNT, discountAmount,
+                null, usageLimit, usedCount, reservedCount, validFrom, validUntil, createdAt, updatedAt);
     }
 
     public Voucher(String voucherCode, String campaignId, VoucherScope scope, String merchantId, VoucherType type,
             Money discountAmount, int usageLimit, int usedCount, int reservedCount,
+            Instant validFrom, Instant validUntil, Instant createdAt, Instant updatedAt) {
+        this(voucherCode, campaignId, scope, merchantId, type, discountAmount, null,
+                usageLimit, usedCount, reservedCount, validFrom, validUntil, createdAt, updatedAt);
+    }
+
+    public Voucher(String voucherCode, String campaignId, VoucherScope scope, String merchantId, VoucherType type,
+            Money discountAmount, java.math.BigDecimal minOrderValue, int usageLimit, int usedCount, int reservedCount,
             Instant validFrom, Instant validUntil, Instant createdAt, Instant updatedAt) {
         this.type = type == null ? VoucherType.ORDER_DISCOUNT : type;
         this.voucherCode = voucherCode;
@@ -46,6 +54,7 @@ public class Voucher extends AggregateRoot {
         this.scope = scope;
         this.merchantId = merchantId;
         this.discountAmount = discountAmount;
+        this.minOrderValue = minOrderValue;
         this.usageLimit = usageLimit;
         this.usedCount = usedCount;
         this.reservedCount = reservedCount;
@@ -63,6 +72,11 @@ public class Voucher extends AggregateRoot {
 
     public static Voucher issue(String voucherCode, String campaignId, VoucherType type, Money discountAmount,
             int usageLimit, Instant validFrom, Instant validUntil, Clock clock) {
+        return issue(voucherCode, campaignId, type, discountAmount, null, usageLimit, validFrom, validUntil, clock);
+    }
+
+    public static Voucher issue(String voucherCode, String campaignId, VoucherType type, Money discountAmount,
+            java.math.BigDecimal minOrderValue, int usageLimit, Instant validFrom, Instant validUntil, Clock clock) {
         Guard.notBlank(voucherCode, () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
                 "voucherCode must not be blank"));
         Guard.require(discountAmount != null && discountAmount.isPositive(),
@@ -75,7 +89,7 @@ public class Voucher extends AggregateRoot {
                         "validFrom must be before validUntil"));
         Instant now = clock.instant();
         Voucher v = new Voucher(voucherCode, campaignId, VoucherScope.PLATFORM, null,
-                type == null ? VoucherType.ORDER_DISCOUNT : type, discountAmount, usageLimit, 0, 0,
+                type == null ? VoucherType.ORDER_DISCOUNT : type, discountAmount, minOrderValue, usageLimit, 0, 0,
                 validFrom, validUntil, now, now);
         v.registerEvent(new PromotionEvents.VoucherIssued(voucherCode, campaignId, null,
                 discountAmount.amount(), discountAmount.currency(),
@@ -91,6 +105,12 @@ public class Voucher extends AggregateRoot {
 
     public static Voucher issueForShop(String voucherCode, String merchantId, VoucherType type, Money discountAmount,
             int usageLimit, Instant validFrom, Instant validUntil, Clock clock) {
+        return issueForShop(voucherCode, merchantId, type, discountAmount, null, usageLimit, validFrom, validUntil,
+                clock);
+    }
+
+    public static Voucher issueForShop(String voucherCode, String merchantId, VoucherType type, Money discountAmount,
+            java.math.BigDecimal minOrderValue, int usageLimit, Instant validFrom, Instant validUntil, Clock clock) {
         Guard.notBlank(voucherCode, () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
                 "voucherCode must not be blank"));
         Guard.notBlank(merchantId, () -> new PromotionException(PromotionErrorCode.INVALID_ARGUMENT,
@@ -105,11 +125,19 @@ public class Voucher extends AggregateRoot {
                         "validFrom must be before validUntil"));
         Instant now = clock.instant();
         Voucher voucher = new Voucher(voucherCode, null, VoucherScope.SHOP, merchantId,
-                type == null ? VoucherType.ORDER_DISCOUNT : type, discountAmount,
+                type == null ? VoucherType.ORDER_DISCOUNT : type, discountAmount, minOrderValue,
                 usageLimit, 0, 0, validFrom, validUntil, now, now);
         voucher.registerEvent(new PromotionEvents.VoucherIssued(voucherCode, null, merchantId,
                 discountAmount.amount(), discountAmount.currency(), usageLimit, validUntil, now));
         return voucher;
+    }
+
+    /** True when the given order value satisfies this voucher's minimum spend. */
+    public boolean meetsMinimum(java.math.BigDecimal orderValue) {
+        if (minOrderValue == null || minOrderValue.signum() <= 0) {
+            return true;
+        }
+        return orderValue != null && orderValue.compareTo(minOrderValue) >= 0;
     }
 
     /** True when this voucher reduces the shipping fee rather than the goods. */

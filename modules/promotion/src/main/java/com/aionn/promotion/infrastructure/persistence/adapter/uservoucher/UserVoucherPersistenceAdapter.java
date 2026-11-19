@@ -69,6 +69,16 @@ public class UserVoucherPersistenceAdapter implements UserVoucherPersistencePort
     }
 
     @Override
+    public long countByUserClaimedSince(String userId, Instant since) {
+        return jpa.countByUserIdAndClaimedAtGreaterThanEqual(userId, since);
+    }
+
+    @Override
+    public long countActiveByUser(String userId) {
+        return jpa.countActiveByUserId(userId);
+    }
+
+    @Override
     public List<UserVoucher> findByUser(String userId, int limit) {
         return jpa.findByUserIdOrderByClaimedAtDesc(userId, PageRequest.of(0, Math.max(1, limit))).stream()
                 .map(mapper::toDomain)

@@ -26,6 +26,10 @@ public interface UserVoucherPersistencePort {
 
     long countByUserAndCampaign(String userId, String campaignId);
 
+    long countByUserClaimedSince(String userId, Instant since);
+
+    long countActiveByUser(String userId);
+
     List<UserVoucher> findByUser(String userId, int limit);
 
     List<UserVoucher> findExpiredReservations(Instant now, int limit);
