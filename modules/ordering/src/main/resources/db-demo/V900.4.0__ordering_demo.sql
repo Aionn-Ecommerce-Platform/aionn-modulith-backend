@@ -48524,5 +48524,4 @@ SET product_name = p.name,
     )
 FROM product_variants pv
 JOIN products p ON p.product_id = pv.product_id
-WHERE oi.sku_id = pv.sku_id
-  AND pv.product_id NOT LIKE '01M9PR%';
+WHERE oi.sku_id = pv.sku_id;

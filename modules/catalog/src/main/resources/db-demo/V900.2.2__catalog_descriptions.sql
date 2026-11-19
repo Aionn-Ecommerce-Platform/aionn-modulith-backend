@@ -4576,7 +4576,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBSD5CD154ANZ52EA5819', 'MÔ TẢ SẢN PHẨM
 
-Ốp lưng Silicone màu mận tím Pro Reserve đến từ Lõi công nghệ Nexus là sản phẩm công nghệ được tuyển chọn cho nhu cầu sử dụng hằng ngày, tập trung vào độ ổn định, trải nghiệm thao tác nhanh và thiết kế dễ phối với không gian sống hiện đại.
+Ốp lưng Silicone Pro Reserve đến từ Lõi công nghệ Nexus là sản phẩm công nghệ được tuyển chọn cho nhu cầu sử dụng hằng ngày, tập trung vào độ ổn định, trải nghiệm thao tác nhanh và thiết kế dễ phối với không gian sống hiện đại.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -5152,7 +5152,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBSEY4CJ4VVWNM06SNVN1', 'MÔ TẢ SẢN PHẨM
 
-Ốp lưng Silicone màu mận tím Pro Legacy đến từ Lõi công nghệ Nexus là sản phẩm công nghệ được tuyển chọn cho nhu cầu sử dụng hằng ngày, tập trung vào độ ổn định, trải nghiệm thao tác nhanh và thiết kế dễ phối với không gian sống hiện đại.
+Ốp lưng Silicone Pro Legacy đến từ Lõi công nghệ Nexus là sản phẩm công nghệ được tuyển chọn cho nhu cầu sử dụng hằng ngày, tập trung vào độ ổn định, trải nghiệm thao tác nhanh và thiết kế dễ phối với không gian sống hiện đại.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -12800,7 +12800,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRGH1R6Y58XXCH7120G2', 'MÔ TẢ SẢN PHẨM
 
-Đầm nữ thanh lịch ôm dáng màu xám công sở Pro Original đến từ Thời trang Elegance có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Đầm nữ thanh lịch ôm dáng công sở Pro Original đến từ Thời trang Elegance có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -15061,7 +15061,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBS7CNDMYSBE2NE88HNYT', 'MÔ TẢ SẢN PHẨM
 
-Áo thun nam Gaming Gaming thể thao Pro Anniversary đến từ Thời trang Elegance có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Áo thun nam Gaming thể thao Pro Anniversary đến từ Thời trang Elegance có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -25640,7 +25640,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRMTGBXSSS8ECKBCZ9NT', 'MÔ TẢ SẢN PHẨM
 
-Ốp lưng Silicone màu mận tím Pro Original đến từ Thiết bị thông minh Vina là sản phẩm công nghệ được tuyển chọn cho nhu cầu sử dụng hằng ngày, tập trung vào độ ổn định, trải nghiệm thao tác nhanh và thiết kế dễ phối với không gian sống hiện đại.
+Ốp lưng Silicone Pro Original đến từ Thiết bị thông minh Vina là sản phẩm công nghệ được tuyển chọn cho nhu cầu sử dụng hằng ngày, tập trung vào độ ổn định, trải nghiệm thao tác nhanh và thiết kế dễ phối với không gian sống hiện đại.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -27292,7 +27292,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBSC1BG3PQWYQH9XG4BT8', 'MÔ TẢ SẢN PHẨM
 
-Đầm nữ thanh lịch ôm dáng màu xám công sở Pro Reserve đến từ Thời trang Elegance có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Đầm nữ thanh lịch ôm dáng công sở Pro Reserve đến từ Thời trang Elegance có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -28088,7 +28088,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBS81F5R1XBJQ2ARKYW7B', 'MÔ TẢ SẢN PHẨM
 
-Áo thun nam Gaming Gaming thể thao Pro Reserve đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Áo thun nam Gaming thể thao Pro Reserve đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -28268,7 +28268,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBS0QY7AYTW2GTEA7R7A4', 'MÔ TẢ SẢN PHẨM
 
-Áo thun nam Gaming Gaming thể thao Pro Archive đến từ Thời trang Elegance có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Áo thun nam Gaming thể thao Pro Archive đến từ Thời trang Elegance có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -30978,7 +30978,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000758', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Pro Modern đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Pro Modern đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -32855,7 +32855,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBSCNV08Z0D2Y0QD6MS7R', 'MÔ TẢ SẢN PHẨM
 
-Đầm nữ thanh lịch ôm dáng màu xám công sở Pro Exclusive đến từ Thời trang Elegance có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Đầm nữ thanh lịch ôm dáng công sở Pro Exclusive đến từ Thời trang Elegance có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -35632,7 +35632,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRW4JPPQER13B13DVJ59', 'MÔ TẢ SẢN PHẨM
 
-Đầm váy xòe nữ màu xanh pastel dễ thương Pro Original đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Đầm váy xòe nữ dễ thương Pro Original đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -39145,7 +39145,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBS4GSA6FGV4M7AMNH4TK', 'MÔ TẢ SẢN PHẨM
 
-Áo thun nam Gaming Gaming thể thao Pro Collector đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Áo thun nam Gaming thể thao Pro Collector đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -40307,7 +40307,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRRVHPEAA6MYT3G19RBS', 'MÔ TẢ SẢN PHẨM
 
-Áo thun nam Gaming Gaming thể thao Pro Original đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Áo thun nam Gaming thể thao Pro Original đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -40774,7 +40774,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRFWDKGHB8NS9X330Q2X', 'MÔ TẢ SẢN PHẨM
 
-Đầm nữ thanh lịch ôm dáng màu xám công sở đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Đầm nữ thanh lịch ôm dáng công sở đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -41524,7 +41524,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRGBX40168TDE29AX0CD', 'MÔ TẢ SẢN PHẨM
 
-Áo thun nam Gaming Gaming thể thao đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Áo thun nam Gaming thể thao đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -42098,7 +42098,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRGV497RQ4TT0Z8TH3VZ', 'MÔ TẢ SẢN PHẨM
 
-Đầm nữ thanh lịch ôm dáng màu xám công sở Pro Vintage đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Đầm nữ thanh lịch ôm dáng công sở Pro Vintage đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -42350,7 +42350,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRH3XWEK30MMJ1W107W8', 'MÔ TẢ SẢN PHẨM
 
-Dép quai ngang nữ phối màu đen nâu êm chân đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Dép quai ngang nữ êm chân đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -42813,7 +42813,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRJQ0WNZ1KJFTM3EQG9M', 'MÔ TẢ SẢN PHẨM
 
-Đầm nữ thanh lịch ôm dáng màu xám công sở Pro Archive đến từ Thời trang Elegance có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Đầm nữ thanh lịch ôm dáng công sở Pro Archive đến từ Thời trang Elegance có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -44533,7 +44533,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRJKERFE5ZBPG895G5NM', 'MÔ TẢ SẢN PHẨM
 
-Ốp lưng Silicone màu mận tím đến từ Lõi công nghệ Nexus là sản phẩm công nghệ được tuyển chọn cho nhu cầu sử dụng hằng ngày, tập trung vào độ ổn định, trải nghiệm thao tác nhanh và thiết kế dễ phối với không gian sống hiện đại.
+Ốp lưng Silicone đến từ Lõi công nghệ Nexus là sản phẩm công nghệ được tuyển chọn cho nhu cầu sử dụng hằng ngày, tập trung vào độ ổn định, trải nghiệm thao tác nhanh và thiết kế dễ phối với không gian sống hiện đại.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -44641,7 +44641,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRJNK0N1N1M33SGMDXPN', 'MÔ TẢ SẢN PHẨM
 
-Đầm váy xòe nữ màu xanh pastel dễ thương đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Đầm váy xòe nữ dễ thương đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -45105,7 +45105,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRK3231VC8E6Z2VRBQPD', 'MÔ TẢ SẢN PHẨM
 
-Túi xách tay công sở nữ màu đen da mềm đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
+Túi xách tay công sở nữ da mềm đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -45715,7 +45715,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRKRJWJFHXW5CY748QJ2', 'MÔ TẢ SẢN PHẨM
 
-Túi xách tay công sở nữ màu đen da mềm Pro Original đến từ Tập đoàn Aionn có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
+Túi xách tay công sở nữ da mềm Pro Original đến từ Tập đoàn Aionn có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -46681,7 +46681,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRMJJGCKPF0WW40EB1XB', 'MÔ TẢ SẢN PHẨM
 
-Túi xách tay nữ da mềm quai chéo màu xanh đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
+Túi xách tay nữ da mềm quai chéo đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -50689,7 +50689,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRQSNHVJ6YJAHPDGNCFD', 'MÔ TẢ SẢN PHẨM
 
-Đầm nữ thanh lịch ôm dáng màu xám công sở Pro Collector đến từ Thời trang Elegance có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Đầm nữ thanh lịch ôm dáng công sở Pro Collector đến từ Thời trang Elegance có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -52516,7 +52516,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRWEJZTB8C7NSQEHC1G1', 'MÔ TẢ SẢN PHẨM
 
-Đầm váy xòe nữ màu xanh pastel dễ thương Pro Vintage đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Đầm váy xòe nữ dễ thương Pro Vintage đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -53375,7 +53375,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRWAZBVR9PRPKJK9388D', 'MÔ TẢ SẢN PHẨM
 
-Áo thun nam Gaming Gaming thể thao Pro Vintage đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Áo thun nam Gaming thể thao Pro Vintage đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -54663,7 +54663,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRV5DQ04QBQ0AT34YR97', 'MÔ TẢ SẢN PHẨM
 
-Túi xách tay nữ da mềm quai chéo màu xanh Pro Original đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
+Túi xách tay nữ da mềm quai chéo Pro Original đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -56064,7 +56064,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBS93W6XTB5C8A2EY7BG4', 'MÔ TẢ SẢN PHẨM
 
-Đầm váy xòe nữ màu xanh pastel dễ thương Pro Anniversary đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Đầm váy xòe nữ dễ thương Pro Anniversary đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -56671,7 +56671,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRWRNF4C1EGBC5AKJ73B', 'MÔ TẢ SẢN PHẨM
 
-Ốp lưng Silicone màu mận tím Pro Vintage đến từ Thiết bị thông minh Vina là sản phẩm công nghệ được tuyển chọn cho nhu cầu sử dụng hằng ngày, tập trung vào độ ổn định, trải nghiệm thao tác nhanh và thiết kế dễ phối với không gian sống hiện đại.
+Ốp lưng Silicone Pro Vintage đến từ Thiết bị thông minh Vina là sản phẩm công nghệ được tuyển chọn cho nhu cầu sử dụng hằng ngày, tập trung vào độ ổn định, trải nghiệm thao tác nhanh và thiết kế dễ phối với không gian sống hiện đại.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -58401,7 +58401,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRXP1QS2031WCF9SVG90', 'MÔ TẢ SẢN PHẨM
 
-Đầm váy xòe nữ màu xanh pastel dễ thương Pro Archive đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Đầm váy xòe nữ dễ thương Pro Archive đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -58473,7 +58473,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBS1F2110B3PBJETZ8EER', 'MÔ TẢ SẢN PHẨM
 
-Đầm váy xòe nữ màu xanh pastel dễ thương Pro Collector đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Đầm váy xòe nữ dễ thương Pro Collector đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -59302,7 +59302,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBRYMWRT5W5T6NV7FER0N', 'MÔ TẢ SẢN PHẨM
 
-Túi xách tay nữ da mềm quai chéo màu xanh Pro Vintage đến từ Tập đoàn Aionn có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
+Túi xách tay nữ da mềm quai chéo Pro Vintage đến từ Tập đoàn Aionn có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -62278,7 +62278,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBS0BY3TV8PT4RVAARSTH', 'MÔ TẢ SẢN PHẨM
 
-Túi xách tay công sở nữ màu đen da mềm Pro Vintage đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
+Túi xách tay công sở nữ da mềm Pro Vintage đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -64284,7 +64284,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBS1SZ2JW2R0H5ZA9Q5SM', 'MÔ TẢ SẢN PHẨM
 
-Túi xách tay nữ da mềm quai chéo màu xanh Pro Archive đến từ Tập đoàn Aionn có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
+Túi xách tay nữ da mềm quai chéo Pro Archive đến từ Tập đoàn Aionn có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -65147,7 +65147,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBS2D2KV69CXEQSFSTG44', 'MÔ TẢ SẢN PHẨM
 
-Túi xách tay nữ da mềm quai chéo màu xanh Pro Collector đến từ Tập đoàn Aionn có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
+Túi xách tay nữ da mềm quai chéo Pro Collector đến từ Tập đoàn Aionn có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -66297,7 +66297,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBS3BD6MTS7KZ99MCHKTZ', 'MÔ TẢ SẢN PHẨM
 
-Ốp lưng Silicone màu mận tím Pro Archive đến từ Lõi công nghệ Nexus là sản phẩm công nghệ được tuyển chọn cho nhu cầu sử dụng hằng ngày, tập trung vào độ ổn định, trải nghiệm thao tác nhanh và thiết kế dễ phối với không gian sống hiện đại.
+Ốp lưng Silicone Pro Archive đến từ Lõi công nghệ Nexus là sản phẩm công nghệ được tuyển chọn cho nhu cầu sử dụng hằng ngày, tập trung vào độ ổn định, trải nghiệm thao tác nhanh và thiết kế dễ phối với không gian sống hiện đại.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -67698,7 +67698,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBSACAJV6P7KRTA3PX3AS', 'MÔ TẢ SẢN PHẨM
 
-Đầm váy xòe nữ màu xanh pastel dễ thương Pro Reserve đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Đầm váy xòe nữ dễ thương Pro Reserve đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -67734,7 +67734,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBS4RYYKC3B9GXEW2HXSN', 'MÔ TẢ SẢN PHẨM
 
-Túi xách tay công sở nữ màu đen da mềm Pro Archive đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
+Túi xách tay công sở nữ da mềm Pro Archive đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -68987,7 +68987,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBS61DSKY7A3VNBMB73D1', 'MÔ TẢ SẢN PHẨM
 
-Túi xách tay công sở nữ màu đen da mềm Pro Collector đến từ Tập đoàn Aionn có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
+Túi xách tay công sở nữ da mềm Pro Collector đến từ Tập đoàn Aionn có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -69455,7 +69455,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBS6B4YQB9VK7F6E2FDF2', 'MÔ TẢ SẢN PHẨM
 
-Túi xách tay công sở nữ màu đen da mềm Pro Anniversary đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
+Túi xách tay công sở nữ da mềm Pro Anniversary đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -71931,7 +71931,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBS8FV0VP6ATZ966NC3RD', 'MÔ TẢ SẢN PHẨM
 
-Dép quai ngang nữ phối màu đen nâu êm chân Pro Original đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Dép quai ngang nữ êm chân Pro Original đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -72970,7 +72970,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBS96473ANF6MDGTCBDCW', 'MÔ TẢ SẢN PHẨM
 
-Ốp lưng Silicone màu mận tím Pro Collector đến từ Thiết bị thông minh Vina là sản phẩm công nghệ được tuyển chọn cho nhu cầu sử dụng hằng ngày, tập trung vào độ ổn định, trải nghiệm thao tác nhanh và thiết kế dễ phối với không gian sống hiện đại.
+Ốp lưng Silicone Pro Collector đến từ Thiết bị thông minh Vina là sản phẩm công nghệ được tuyển chọn cho nhu cầu sử dụng hằng ngày, tập trung vào độ ổn định, trải nghiệm thao tác nhanh và thiết kế dễ phối với không gian sống hiện đại.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -74115,7 +74115,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBSA2Q3B1X5VDKTK5H057', 'MÔ TẢ SẢN PHẨM
 
-Túi xách tay nữ da mềm quai chéo màu xanh Pro Anniversary đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
+Túi xách tay nữ da mềm quai chéo Pro Anniversary đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -74436,7 +74436,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBSAGC6Q5HQ483S36K3E9', 'MÔ TẢ SẢN PHẨM
 
-Ốp lưng Silicone màu mận tím Pro Anniversary đến từ Tập đoàn Aionn là sản phẩm công nghệ được tuyển chọn cho nhu cầu sử dụng hằng ngày, tập trung vào độ ổn định, trải nghiệm thao tác nhanh và thiết kế dễ phối với không gian sống hiện đại.
+Ốp lưng Silicone Pro Anniversary đến từ Tập đoàn Aionn là sản phẩm công nghệ được tuyển chọn cho nhu cầu sử dụng hằng ngày, tập trung vào độ ổn định, trải nghiệm thao tác nhanh và thiết kế dễ phối với không gian sống hiện đại.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -75508,7 +75508,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBSB3RQXPHQMADBDRHNAT', 'MÔ TẢ SẢN PHẨM
 
-Đầm nữ thanh lịch ôm dáng màu xám công sở Pro Anniversary đến từ Thời trang Elegance có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Đầm nữ thanh lịch ôm dáng công sở Pro Anniversary đến từ Thời trang Elegance có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -76117,7 +76117,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBSBNWW68WAKZXY1FG8M7', 'MÔ TẢ SẢN PHẨM
 
-Túi xách tay nữ da mềm quai chéo màu xanh Pro Reserve đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
+Túi xách tay nữ da mềm quai chéo Pro Reserve đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -76686,7 +76686,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBSBZNJM6CQ62QSY5H733', 'MÔ TẢ SẢN PHẨM
 
-Túi xách tay nữ da mềm quai chéo màu xanh Pro Exclusive đến từ Tập đoàn Aionn có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
+Túi xách tay nữ da mềm quai chéo Pro Exclusive đến từ Tập đoàn Aionn có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -77794,7 +77794,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBSD7J946TWSQY4BKTBAS', 'MÔ TẢ SẢN PHẨM
 
-Túi xách tay nữ da mềm quai chéo màu xanh Pro Legacy đến từ Tập đoàn Aionn có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
+Túi xách tay nữ da mềm quai chéo Pro Legacy đến từ Tập đoàn Aionn có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -78007,7 +78007,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBSDC05D4N7PK72DBD31Q', 'MÔ TẢ SẢN PHẨM
 
-Túi xách tay công sở nữ màu đen da mềm Pro Reserve đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
+Túi xách tay công sở nữ da mềm Pro Reserve đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -78684,7 +78684,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBSEANR83JJK2JTGTZD31', 'MÔ TẢ SẢN PHẨM
 
-Túi xách tay công sở nữ màu đen da mềm Pro Exclusive đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
+Túi xách tay công sở nữ da mềm Pro Exclusive đến từ Thời trang Elegance có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -78861,7 +78861,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBSEGVKTRWG60WHRGAVC6', 'MÔ TẢ SẢN PHẨM
 
-Ốp lưng Silicone màu mận tím Pro Exclusive đến từ Tập đoàn Aionn là sản phẩm công nghệ được tuyển chọn cho nhu cầu sử dụng hằng ngày, tập trung vào độ ổn định, trải nghiệm thao tác nhanh và thiết kế dễ phối với không gian sống hiện đại.
+Ốp lưng Silicone Pro Exclusive đến từ Tập đoàn Aionn là sản phẩm công nghệ được tuyển chọn cho nhu cầu sử dụng hằng ngày, tập trung vào độ ổn định, trải nghiệm thao tác nhanh và thiết kế dễ phối với không gian sống hiện đại.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -79190,7 +79190,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBSEPTB4FNX7NQ344NAS0', 'MÔ TẢ SẢN PHẨM
 
-Áo thun nam Gaming Gaming thể thao Pro Exclusive đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
+Áo thun nam Gaming thể thao Pro Exclusive đến từ Tập đoàn Aionn có thiết kế thời trang, chất liệu mềm mại và đường may tỉ mỉ. Sản phẩm phù hợp để đi làm, đi chơi hoặc sử dụng hằng ngày.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -79692,7 +79692,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M74HBSF43NY5EHA3GPTXD40A', 'MÔ TẢ SẢN PHẨM
 
-Túi xách tay nữ da mềm quai chéo màu xanh Plus Original đến từ Tập đoàn Aionn có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
+Túi xách tay nữ da mềm quai chéo Plus Original đến từ Tập đoàn Aionn có thiết kế thanh lịch, nhiều ngăn tiện dụng và chất liệu bền đẹp. Sản phẩm phù hợp để đi làm, dạo phố hoặc làm quà tặng.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -112882,7 +112882,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000748', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Pro Signature đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Pro Signature đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -112990,7 +112990,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000740', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Pro Edition đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Pro Edition đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -113494,7 +113494,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000750', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Pro Classic đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Pro Classic đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -113854,7 +113854,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR000000000000000007b8', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Plus Advanced đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Plus Advanced đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -114107,7 +114107,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000760', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Pro Essential đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Pro Essential đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -114323,7 +114323,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR000000000000000007d0', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Plus Running đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Plus Running đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -114467,7 +114467,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000768', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Pro Advanced đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Pro Advanced đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -114791,7 +114791,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000770', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Pro Select đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Pro Select đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -114899,7 +114899,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR000000000000000007f0', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Max Classic đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Max Classic đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -115193,7 +115193,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000778', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Pro Premium đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Pro Premium đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -115265,7 +115265,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000790', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Plus Edition đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Plus Edition đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -115589,7 +115589,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000780', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Pro Running đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Pro Running đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -115625,7 +115625,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000800', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Max Essential đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Max Essential đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -115877,7 +115877,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000788', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Pro Court đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Pro Court đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -116273,7 +116273,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000880', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Lite Edition đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Lite Edition đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -116490,7 +116490,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR000000000000000007a8', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Plus Modern đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Plus Modern đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -116526,7 +116526,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000798', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Plus Signature đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Plus Signature đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -116562,7 +116562,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000898', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Lite Modern đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Lite Modern đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -116814,7 +116814,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR000000000000000007a0', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Plus Classic đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Plus Classic đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -117465,7 +117465,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR000000000000000007b0', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Plus Essential đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Plus Essential đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -118077,7 +118077,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR000000000000000007c0', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Plus Select đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Plus Select đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -118257,7 +118257,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR000000000000000007c8', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Plus Premium đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Plus Premium đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -118617,7 +118617,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR000000000000000007d8', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Plus Court đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Plus Court đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -118797,7 +118797,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR000000000000000007e0', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Max Edition đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Max Edition đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -119196,7 +119196,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR000000000000000007e8', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Max Signature đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Max Signature đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -119667,7 +119667,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000868', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Air Premium đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Air Premium đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -119955,7 +119955,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR000000000000000007f8', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Max Modern đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Max Modern đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -120424,7 +120424,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000808', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Max Advanced đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Max Advanced đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -120859,7 +120859,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000810', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Max Select đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Max Select đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -121075,7 +121075,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000818', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Max Premium đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Max Premium đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -121291,7 +121291,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000820', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Max Running đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Max Running đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -121327,7 +121327,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000850', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Air Essential đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Air Essential đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -121653,7 +121653,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000828', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Max Court đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Max Court đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -121941,7 +121941,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000830', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Air Edition đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Air Edition đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -122381,7 +122381,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000838', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Air Signature đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Air Signature đến từ Dụng cụ thể thao FitLife có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -122562,7 +122562,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000840', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Air Classic đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Air Classic đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -122924,7 +122924,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000848', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Air Modern đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Air Modern đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -123542,7 +123542,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000860', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Air Select đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Air Select đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -123578,7 +123578,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000858', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Air Advanced đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Air Advanced đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -124375,7 +124375,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000870', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Air Running đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Air Running đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -124591,7 +124591,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000878', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Air Court đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Air Court đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -125205,7 +125205,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000890', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Lite Classic đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Lite Classic đến từ Thời trang Elegance có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -125277,7 +125277,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000000888', 'MÔ TẢ SẢN PHẨM
 
-Giày nữ màu vàng Lite Signature đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
+Giày nữ Lite Signature đến từ StyleCraft có thiết kế thời trang, đế êm và chất liệu bền bỉ, phù hợp để đi làm, đi chơi hoặc vận động.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -292519,7 +292519,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000001af8', 'MÔ TẢ SẢN PHẨM
 
-Sữa tươi Tươi sạch Nguyên chất đến từ Tập đoàn Aionn mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
+Sữa tươi sạch Nguyên chất đến từ Tập đoàn Aionn mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -292694,7 +292694,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000001afd', 'MÔ TẢ SẢN PHẨM
 
-Sữa tươi Tươi sạch Bổ dưỡng đến từ FreshFarm mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
+Sữa tươi sạch Bổ dưỡng đến từ FreshFarm mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -292869,7 +292869,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000001b02', 'MÔ TẢ SẢN PHẨM
 
-Sữa tươi Tươi sạch Thơm ngon đến từ GreenHarvest mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
+Sữa tươi sạch Thơm ngon đến từ GreenHarvest mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -292939,7 +292939,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000001b04', 'MÔ TẢ SẢN PHẨM
 
-Nước ép Tươi sạch Sạch đến từ Tập đoàn Aionn mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
+Nước ép Tươi sạch đến từ Tập đoàn Aionn mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -292974,7 +292974,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000001b05', 'MÔ TẢ SẢN PHẨM
 
-Nước ngọt Tươi sạch Sạch đến từ GreenHarvest mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
+Nước ngọt Tươi sạch đến từ GreenHarvest mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -293009,7 +293009,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000001b06', 'MÔ TẢ SẢN PHẨM
 
-Nước suối Tươi sạch Sạch đến từ FreshFarm mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
+Nước suối Tươi sạch đến từ FreshFarm mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -293044,7 +293044,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000001b07', 'MÔ TẢ SẢN PHẨM
 
-Sữa tươi Tươi sạch Sạch đến từ Tập đoàn Aionn mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
+Sữa tươi sạch đến từ Tập đoàn Aionn mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -293079,7 +293079,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000001b08', 'MÔ TẢ SẢN PHẨM
 
-Cà phê rang xay Tươi sạch Sạch đến từ GreenHarvest mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
+Cà phê rang xay Tươi sạch đến từ GreenHarvest mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -293219,7 +293219,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000001b0c', 'MÔ TẢ SẢN PHẨM
 
-Sữa tươi Tươi sạch An toàn đến từ FreshFarm mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
+Sữa tươi sạch An toàn đến từ FreshFarm mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -293394,7 +293394,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000001b11', 'MÔ TẢ SẢN PHẨM
 
-Sữa tươi Tươi sạch Gia đình đến từ GreenHarvest mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
+Sữa tươi sạch Gia đình đến từ GreenHarvest mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -293569,7 +293569,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000001b16', 'MÔ TẢ SẢN PHẨM
 
-Sữa tươi Tươi sạch Tiêu chuẩn đến từ Tập đoàn Aionn mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
+Sữa tươi sạch Tiêu chuẩn đến từ Tập đoàn Aionn mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -293744,7 +293744,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000001b1b', 'MÔ TẢ SẢN PHẨM
 
-Sữa tươi Tươi sạch Premium đến từ FreshFarm mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
+Sữa tươi sạch Premium đến từ FreshFarm mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -293919,7 +293919,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000001b20', 'MÔ TẢ SẢN PHẨM
 
-Sữa tươi Tươi sạch Organic đến từ GreenHarvest mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
+Sữa tươi sạch Organic đến từ GreenHarvest mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -294094,7 +294094,7 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 - Với sản phẩm đã bóc seal hoặc đã kích hoạt bảo hành điện tử, việc đổi trả sẽ áp dụng theo tình trạng thực tế và quy định của sàn.'),
 ('01M9PR00000000000000001b25', 'MÔ TẢ SẢN PHẨM
 
-Sữa tươi Tươi sạch Fresh đến từ Tập đoàn Aionn mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
+Sữa tươi sạch Fresh đến từ Tập đoàn Aionn mang lại cảm giác sảng khoái, hương vị tự nhiên và tiện lợi khi sử dụng. Sản phẩm phù hợp cho gia đình, văn phòng và các buổi tụ họp.
 
 VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN
 
@@ -359849,3 +359849,121 @@ LƯU Ý TRƯỚC KHI NHẬN HÀNG
 ) AS v(product_id, description)
 WHERE p.product_id = v.product_id;
 
+
+
+-- Rebuild descriptions and reviews from the normalized merchant, brand and category.
+-- 5) Rebuild every description from the resolved merchant, brand and category.
+WITH prod_root AS (
+  SELECT p.product_id,
+         (SELECT c.name
+            FROM jsonb_array_elements_text(p.category_ids) AS cid
+            JOIN categories c ON c.category_id = cid AND c.parent_id IS NULL
+           LIMIT 1) AS root_name
+  FROM products p
+),
+descs AS (
+  SELECT p.product_id,
+    'MÔ TẢ SẢN PHẨM' || E'\n\n' ||
+    p.name || ' được phân phối bởi ' || m.name || ' trên Aionn. ' ||
+    CASE r.root_name
+      WHEN 'Điện tử' THEN 'Sản phẩm được kiểm tra trước khi giao, phù hợp cho công việc, học tập và giải trí hằng ngày.'
+      WHEN 'Thời trang' THEN 'Thiết kế dễ mặc, dễ phối đồ và phù hợp với nhiều hoàn cảnh sử dụng.'
+      WHEN 'Sức khỏe & Làm đẹp' THEN 'Sản phẩm chăm sóc sức khỏe và sắc đẹp, phù hợp sử dụng hằng ngày.'
+      WHEN 'Nhà cửa & Bếp' THEN 'Sản phẩm tiện dụng cho không gian sống và căn bếp gia đình.'
+      WHEN 'Nhà thông minh' THEN 'Thiết bị thông minh giúp việc điều khiển và giám sát ngôi nhà thuận tiện hơn.'
+      WHEN 'Thể thao & Dã ngoại' THEN 'Sản phẩm hỗ trợ luyện tập và các hoạt động ngoài trời.'
+      WHEN 'Ô tô & Xe máy' THEN 'Phụ kiện phù hợp cho xe và các chuyến đi hằng ngày.'
+      ELSE 'Sản phẩm phù hợp cho nhu cầu sử dụng hằng ngày.'
+    END || E'\n\n' ||
+    'VÌ SAO BẠN AN TÂM KHI MUA TẠI AIONN' || E'\n' ||
+    '- Gian hàng ' || m.name || ' cam kết hàng mới, đóng gói cẩn thận và có tem kiểm tra.' || E'\n' ||
+    '- Hỗ trợ xuất hóa đơn theo yêu cầu và lưu lịch sử đơn hàng trên tài khoản Aionn.' || E'\n' ||
+    '- Chính sách bảo hành và đổi trả áp dụng theo quy định của sàn và nhà bán.' || E'\n\n' ||
+    'ĐIỂM NỔI BẬT' || E'\n' ||
+    CASE r.root_name
+      WHEN 'Điện tử' THEN E'- Trang bị tính năng phù hợp cho nhu cầu hằng ngày.\n- Thiết kế gọn gàng, dễ sử dụng.\n'
+      WHEN 'Thời trang' THEN E'- Form dáng dễ mặc, dễ phối với nhiều trang phục.\n- Chất liệu thoải mái khi sử dụng.\n'
+      WHEN 'Sức khỏe & Làm đẹp' THEN E'- Thành phần và công dụng phù hợp để dùng hằng ngày.\n- Đóng gói kín, bảo quản thuận tiện.\n'
+      WHEN 'Nhà cửa & Bếp' THEN E'- Thiết kế tiện dụng cho sinh hoạt hằng ngày.\n- Dễ vệ sinh và bảo quản.\n'
+      WHEN 'Nhà thông minh' THEN E'- Kết nối và điều khiển thuận tiện.\n- Tiết kiệm thời gian cho sinh hoạt hằng ngày.\n'
+      WHEN 'Thể thao & Dã ngoại' THEN E'- Hỗ trợ luyện tập và vận động hiệu quả.\n- Chất liệu bền bỉ, dễ sử dụng.\n'
+      WHEN 'Ô tô & Xe máy' THEN E'- Phù hợp lắp đặt và sử dụng cho xe.\n- Thiết kế chắc chắn, dễ vệ sinh.\n'
+      ELSE ''
+    END ||
+    '- Đóng gói chắc chắn, giao hàng toàn quốc.' || E'\n' ||
+    '- Hỗ trợ đổi trả theo chính sách của sàn.' || E'\n\n' ||
+    'PHIÊN BẢN / PHÂN LOẠI' || E'\n' ||
+    COALESCE((
+      SELECT string_agg('- ' || CASE k
+                                   WHEN 'color' THEN 'Màu sắc'
+                                   WHEN 'size' THEN 'Kích thước'
+                                   WHEN 'storage' THEN 'Dung lượng'
+                                   WHEN 'ram' THEN 'RAM'
+                                   WHEN 'cpu' THEN 'CPU'
+                                   WHEN 'type' THEN 'Loại'
+                                   ELSE k
+                                 END || ': ' || vals, E'\n' ORDER BY k)
+        FROM (
+          SELECT key AS k, string_agg(DISTINCT value, ', ') AS vals
+            FROM product_variants pv, jsonb_each_text(pv.attribute_values)
+           WHERE pv.product_id = p.product_id
+           GROUP BY key
+        ) v
+    ), '- Phiên bản: Tiêu chuẩn') || E'\n\n' ||
+    'THÔNG SỐ THAM KHẢO' || E'\n' ||
+    '- Thương hiệu: ' || COALESCE(b.name, m.name) || E'\n' ||
+    '- Nguồn gốc: Việt Nam' || E'\n' ||
+    '- Bảo hành: 12 tháng' || E'\n\n' ||
+    'LƯU Ý TRƯỚC KHI NHẬN HÀNG' || E'\n' ||
+    '- Vui lòng quay video khi mở kiện hàng để được hỗ trợ nếu có vấn đề.' || E'\n' ||
+    '- Kiểm tra đúng phiên bản, màu sắc và phụ kiện trước khi xác nhận đã nhận hàng.'
+    AS description
+  FROM products p
+  JOIN merchants m ON m.merchant_id = p.merchant_id
+  LEFT JOIN brands b ON b.brand_id = p.brand_id
+  JOIN prod_root r ON r.product_id = p.product_id
+)
+UPDATE products p SET ai_description = d.description
+  FROM descs d WHERE p.product_id = d.product_id;
+
+-- 6) Rebuild review titles, content and seller replies from the current product and merchant.
+WITH tpl AS (
+  SELECT r.review_id,
+    CASE r.rating
+      WHEN 5 THEN 'Rất hài lòng'
+      WHEN 4 THEN 'Đáng tiền'
+      WHEN 3 THEN 'Tạm ổn'
+      WHEN 2 THEN 'Chưa như mong đợi'
+      ELSE 'Không hài lòng'
+    END AS title,
+    CASE r.rating
+      WHEN 5 THEN p.name || ' đúng mô tả, đóng gói chắc chắn và giao hàng nhanh. Gian hàng ' || m.name || ' hỗ trợ nhiệt tình, mình sẽ ủng hộ tiếp.'
+      WHEN 4 THEN p.name || ' dùng ổn trong tầm giá, hàng mới và được đóng gói cẩn thận. Giao hàng đúng hẹn.'
+      WHEN 3 THEN p.name || ' tạm ổn, đóng gói ổn nhưng thời gian giao hàng hơi lâu.'
+      WHEN 2 THEN p.name || ' chưa đúng kỳ vọng ở một vài chi tiết, cần cải thiện khâu đóng gói.'
+      ELSE p.name || ' không giống mô tả, mình đã liên hệ gian hàng để được hỗ trợ đổi trả.'
+    END AS content,
+    CASE WHEN r.merchant_reply IS NOT NULL
+         THEN 'Cảm ơn bạn đã tin tưởng ' || m.name || '. Gian hàng đã ghi nhận phản hồi và sẵn sàng hỗ trợ đổi trả theo chính sách.'
+         ELSE NULL
+    END AS reply
+  FROM product_reviews r
+  JOIN products p ON p.product_id = r.product_id
+  JOIN merchants m ON m.merchant_id = p.merchant_id
+)
+UPDATE product_reviews r
+   SET title = t.title,
+       content = t.content,
+       merchant_reply = t.reply
+  FROM tpl t
+ WHERE r.review_id = t.review_id;
+
+-- Remove demo translations that do not describe their product.
+DELETE FROM product_translations
+ WHERE name IN (
+   'Alpha 1 Neural Control Panel',
+   'Alpha 2 Classic Sweater',
+   'Prime 3 Hydrating Loafer',
+   'Max 4 Hydrating Tee',
+   'Alpha 5 Eco Foldable Phone'
+ );
