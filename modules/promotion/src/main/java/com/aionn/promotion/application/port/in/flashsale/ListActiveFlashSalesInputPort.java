@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface ListActiveFlashSalesInputPort {
     List<ActiveFlashSaleResult> execute(int limit, Integer page, Integer size);
+
+    List<ActiveFlashSaleResult> executeSlots(int limit);
 }

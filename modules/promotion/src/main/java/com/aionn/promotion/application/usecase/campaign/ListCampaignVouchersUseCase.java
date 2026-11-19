@@ -4,6 +4,7 @@ import com.aionn.promotion.application.dto.voucher.result.VoucherResult;
 import com.aionn.promotion.application.mapper.VoucherResultMapper;
 import com.aionn.promotion.application.port.in.campaign.ListCampaignVouchersInputPort;
 import com.aionn.promotion.application.service.PromotionCampaignService;
+import com.aionn.promotion.domain.valueobject.VoucherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,5 +23,22 @@ public class ListCampaignVouchersUseCase implements ListCampaignVouchersInputPor
     public List<VoucherResult> execute(String campaignId, int limit) {
         return voucherResultMapper.toResults(
                 promotionCampaignService.listVouchersByCampaignId(campaignId, limit));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<VoucherResult> execute(String campaignId, int limit, VoucherType type) {
+        return voucherResultMapper.toResults(
+                promotionCampaignService.listVouchersByCampaignId(campaignId, type, limit));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<VoucherResult> execute(String campaignId, int limit, VoucherType type, boolean availableOnly) {
+        if (!availableOnly) {
+            return execute(campaignId, limit, type);
+        }
+        return voucherResultMapper.toResults(
+                promotionCampaignService.listAvailableVouchersByCampaignId(campaignId, type, limit));
     }
 }

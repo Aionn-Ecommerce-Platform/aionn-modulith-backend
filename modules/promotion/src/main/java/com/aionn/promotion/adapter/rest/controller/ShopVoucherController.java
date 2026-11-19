@@ -9,6 +9,7 @@ import com.aionn.promotion.application.port.in.analytics.GetMerchantVoucherAnaly
 import com.aionn.promotion.application.port.in.voucher.IssueShopVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.ListMyShopVouchersInputPort;
 import com.aionn.promotion.application.port.in.voucher.ListShopVouchersByMerchantInputPort;
+import com.aionn.promotion.domain.valueobject.VoucherType;
 import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -75,9 +76,13 @@ public class ShopVoucherController {
         @Operation(summary = "List collectible vouchers for a public shop page")
         public ResponseEntity<ApiResponse<List<VoucherResponse>>> listByMerchant(
                         @PathVariable String merchantId,
-                        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit) {
+                        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit,
+                        @RequestParam(required = false) VoucherType type,
+                        @RequestParam(defaultValue = "false") boolean available) {
                 return ResponseEntity.ok(ApiResponse.success(
-                                dtoMapper.toResponses(listShopVouchersByMerchantInputPort.execute(merchantId, limit)),
+                                dtoMapper.toResponses(
+                                                listShopVouchersByMerchantInputPort.execute(
+                                                                merchantId, limit, type, available)),
                                 "Shop vouchers fetched"));
         }
 }

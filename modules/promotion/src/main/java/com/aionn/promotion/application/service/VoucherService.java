@@ -41,6 +41,11 @@ public class VoucherService {
     private final VoucherReservationPolicy reservationPolicy;
     private final Clock clock;
 
+    @Transactional(readOnly = true)
+    public VoucherPersistencePort.VoucherSummary countAvailable() {
+        return voucherPersistencePort.countAvailable(clock.instant());
+    }
+
     public UserVoucherResult claim(VoucherCommands.ClaimVoucher command) {
         Voucher voucher = voucherPersistencePort.lockByCode(command.voucherCode())
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.VOUCHER_NOT_FOUND));
@@ -65,10 +70,6 @@ public class VoucherService {
                 .orElseThrow(() -> new PromotionException(PromotionErrorCode.VOUCHER_NOT_FOUND));
         runningCampaignOrNull(voucher);
 
-        // Deduplicate on the per-delivery entitlement when one is supplied so a
-        // repeated delivery webhook stays idempotent, while each distinct late
-        // order earns its own grant. A voucher already applied to a past order is
-        // never reclaimed - a new grant mints a fresh UserVoucher instead.
         Optional<UserVoucher> existingOpt = command.entitlementKey() != null
                 ? userVoucherPersistencePort.findByUserAndCodeAndEntitlement(
                         command.userId(), command.voucherCode(), command.entitlementKey())

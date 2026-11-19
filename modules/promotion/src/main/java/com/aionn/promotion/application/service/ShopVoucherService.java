@@ -68,6 +68,19 @@ public class ShopVoucherService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<Voucher> listByMerchant(String merchantId, VoucherType type, int limit) {
+        return voucherPersistencePort.findByMerchantId(merchantId, type, safeLimit(limit)).stream()
+                .filter(voucher -> voucher.isValidNow(clock.instant()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Voucher> listAvailableByMerchant(String merchantId, VoucherType type, int limit) {
+        return voucherPersistencePort.findAvailableByMerchantId(
+                merchantId, type, clock.instant(), safeLimit(limit));
+    }
+
     private int safeLimit(int limit) {
         return Math.min(Math.max(limit, 1), limitPolicy.maxListLimit());
     }

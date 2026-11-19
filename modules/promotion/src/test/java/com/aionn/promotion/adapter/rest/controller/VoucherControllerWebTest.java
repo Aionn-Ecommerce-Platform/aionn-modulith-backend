@@ -11,6 +11,7 @@ import com.aionn.promotion.application.dto.voucher.result.UserVoucherResult;
 import com.aionn.promotion.application.port.in.voucher.ApplyVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.ClaimVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.GetMyVoucherInputPort;
+import com.aionn.promotion.application.port.in.voucher.GetVoucherSummaryInputPort;
 import com.aionn.promotion.application.port.in.voucher.GrantVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.ListMyVouchersInputPort;
 import com.aionn.promotion.application.port.in.voucher.ReleaseVoucherInputPort;
@@ -60,6 +61,8 @@ class VoucherControllerWebTest {
         private GetMyVoucherInputPort getMyVoucherInputPort;
         @Mock
         private GrantVoucherInputPort grantVoucherInputPort;
+        @Mock
+        private GetVoucherSummaryInputPort getVoucherSummaryInputPort;
 
         private MockMvc mockMvc;
 
@@ -68,7 +71,7 @@ class VoucherControllerWebTest {
                 VoucherController controller = new VoucherController(
                                 claimVoucherInputPort, reserveVoucherInputPort, applyVoucherInputPort,
                                 releaseVoucherInputPort, listMyVouchersInputPort, getMyVoucherInputPort,
-                                grantVoucherInputPort,
+                                grantVoucherInputPort, getVoucherSummaryInputPort,
                                 Mappers.getMapper(VoucherDtoMapper.class));
 
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)

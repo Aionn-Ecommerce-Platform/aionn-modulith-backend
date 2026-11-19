@@ -21,10 +21,7 @@ public interface PromotionCampaignPersistencePort {
 
     List<PromotionCampaign> listByStatus(String status, int limit);
 
-    /**
-     * Returns campaigns that are RUNNING and inside their start/end window,
-     * ordered by the nearest end date. Used by storefront listings so the
-     * campaign limit is applied in the database instead of after filtering.
-     */
     List<PromotionCampaign> findRunning(Instant now, int limit);
+
+    List<PromotionCampaign> findStorefrontSlots(Instant now, int limit);
 }

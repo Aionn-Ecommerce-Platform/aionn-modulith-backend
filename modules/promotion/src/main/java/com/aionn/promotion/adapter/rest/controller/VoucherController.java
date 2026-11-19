@@ -6,11 +6,13 @@ import com.aionn.promotion.application.port.in.voucher.GrantVoucherInputPort;
 import com.aionn.promotion.adapter.rest.dto.voucher.request.ReleaseVoucherRequest;
 import com.aionn.promotion.adapter.rest.dto.voucher.request.ReserveVoucherRequest;
 import com.aionn.promotion.adapter.rest.dto.voucher.response.UserVoucherResponse;
+import com.aionn.promotion.adapter.rest.dto.voucher.response.VoucherSummaryResponse;
 import com.aionn.promotion.adapter.rest.mapper.voucher.VoucherDtoMapper;
 import com.aionn.promotion.adapter.rest.support.session.CurrentUserId;
 import com.aionn.promotion.application.port.in.voucher.ApplyVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.ClaimVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.GetMyVoucherInputPort;
+import com.aionn.promotion.application.port.in.voucher.GetVoucherSummaryInputPort;
 import com.aionn.promotion.application.port.in.voucher.ListMyVouchersInputPort;
 import com.aionn.promotion.application.port.in.voucher.ReleaseVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.ReserveVoucherInputPort;
@@ -47,7 +49,19 @@ public class VoucherController {
         private final ListMyVouchersInputPort listMyVouchersInputPort;
         private final GetMyVoucherInputPort getMyVoucherInputPort;
         private final GrantVoucherInputPort grantVoucherInputPort;
+        private final GetVoucherSummaryInputPort getVoucherSummaryInputPort;
         private final VoucherDtoMapper dtoMapper;
+
+        @GetMapping("/summary")
+        @Operation(summary = "Public - available voucher counts by scope and type")
+        public ResponseEntity<ApiResponse<VoucherSummaryResponse>> summary() {
+                var summary = getVoucherSummaryInputPort.execute();
+                return ResponseEntity.ok(ApiResponse.success(
+                                new VoucherSummaryResponse(
+                                                summary.all(), summary.platform(),
+                                                summary.shop(), summary.shipping()),
+                                "Voucher summary fetched"));
+        }
 
         @PostMapping("/{voucherCode}/claim")
         @IdempotentRequest(ttlSeconds = 300)

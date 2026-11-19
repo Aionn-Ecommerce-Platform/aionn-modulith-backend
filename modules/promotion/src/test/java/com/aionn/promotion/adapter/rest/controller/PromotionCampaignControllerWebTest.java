@@ -256,7 +256,7 @@ class PromotionCampaignControllerWebTest {
 
         @Test
         void listVouchersReturnsCampaignVouchers() throws Exception {
-                when(listCampaignVouchersInputPort.execute("camp-1", 50))
+                when(listCampaignVouchersInputPort.execute("camp-1", 50, null, false))
                                 .thenReturn(List.of(voucherSample("V-1")));
 
                 mockMvc.perform(get("/api/v1/promotions/campaigns/camp-1/vouchers"))

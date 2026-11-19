@@ -18,6 +18,7 @@ import com.aionn.promotion.application.port.in.campaign.GetCampaignInputPort;
 import com.aionn.promotion.application.port.in.campaign.IssueCampaignVoucherInputPort;
 import com.aionn.promotion.application.port.in.campaign.ListCampaignVouchersInputPort;
 import com.aionn.promotion.application.port.in.campaign.ListCampaignsByStatusInputPort;
+import com.aionn.promotion.domain.valueobject.VoucherType;
 import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -144,10 +145,13 @@ public class PromotionCampaignController {
         @Operation(summary = "List campaign vouchers", description = "Get claimable vouchers of a specific campaign")
         public ResponseEntity<ApiResponse<List<VoucherResponse>>> listVouchers(
                         @PathVariable String campaignId,
-                        @RequestParam(defaultValue = "50") @Min(1) @Max(100) int limit) {
+                        @RequestParam(defaultValue = "50") @Min(1) @Max(100) int limit,
+                        @RequestParam(required = false) VoucherType type,
+                        @RequestParam(defaultValue = "false") boolean available) {
                 return ResponseEntity.ok(ApiResponse.success(
                                 voucherDtoMapper.toResponses(
-                                                listCampaignVouchersInputPort.execute(campaignId, limit)),
+                                                listCampaignVouchersInputPort.execute(
+                                                                campaignId, limit, type, available)),
                                 "Vouchers fetched"));
         }
 }

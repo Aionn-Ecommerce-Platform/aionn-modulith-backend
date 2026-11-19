@@ -157,7 +157,7 @@ class ShopVoucherControllerWebTest {
 
     @Test
     void listByMerchantUsesDefaultLimit() throws Exception {
-        when(listShopVouchersByMerchantInputPort.execute("mer-1", 20))
+        when(listShopVouchersByMerchantInputPort.execute("mer-1", 20, null, false))
                 .thenReturn(List.of(sample("SHOP10"), sample("SHOP20")));
 
         mockMvc.perform(get("/api/v1/promotions/shop-vouchers/merchant/mer-1"))
