@@ -23,12 +23,19 @@ public class CategoryResultMapper {
         Category.Translation trans = category.translations().stream()
                 .filter(t -> t.locale() != null && normalize(t.locale()).equals(fullTag))
                 .findFirst()
-                .or(() -> category.translations().stream()
-                        .filter(t -> t.locale() != null
-                                && (normalize(t.locale()).equals(language)
-                                        || normalize(t.locale()).startsWith(language + "-")))
-                        .findFirst())
                 .orElse(null);
+        if (trans == null) {
+            Category.Translation languageMatch = category.translations().stream()
+                    .filter(t -> t.locale() != null && normalize(t.locale()).equals(language))
+                    .findFirst()
+                    .orElse(null);
+            Category.Translation regionalMatch = category.translations().stream()
+                    .filter(t -> t.locale() != null
+                            && normalize(t.locale()).startsWith(language + "-"))
+                    .findFirst()
+                    .orElse(null);
+            trans = languageMatch != null ? languageMatch : regionalMatch;
+        }
         if (trans != null) {
             name = trans.name();
         }

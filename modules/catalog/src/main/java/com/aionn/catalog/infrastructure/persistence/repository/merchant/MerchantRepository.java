@@ -28,7 +28,8 @@ public interface MerchantRepository extends JpaRepository<MerchantEntity, String
                    FROM merchant_followers f
                   WHERE f.merchant_id = m.merchant_id
                ) DESC,
-               m.name ASC
+               m.name ASC,
+               m.merchant_id ASC
       """, countQuery = "SELECT COUNT(*) FROM merchants", nativeQuery = true)
   Page<MerchantEntity> findAllForStorefront(Pageable pageable);
 }
