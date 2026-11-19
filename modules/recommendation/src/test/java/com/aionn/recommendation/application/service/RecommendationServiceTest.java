@@ -1,5 +1,6 @@
 package com.aionn.recommendation.application.service;
 
+import com.aionn.recommendation.application.dto.product.ProductAttributes;
 import com.aionn.contracts.port.promotion.FlashSaleQueryPort;
 
 import com.aionn.recommendation.application.dto.result.RecommendationItemResult;
@@ -8,7 +9,6 @@ import com.aionn.recommendation.application.policy.ColdStartThresholdPolicy;
 import com.aionn.recommendation.application.policy.HybridRankingPolicy;
 import com.aionn.recommendation.application.policy.RankingWeightPolicy;
 import com.aionn.recommendation.application.policy.RecommendationServingPolicy;
-import com.aionn.recommendation.application.port.out.ProductAttributeQueryPort;
 import com.aionn.recommendation.application.port.out.observability.RecommendationMetricsPort;
 import com.aionn.recommendation.domain.model.UserAffinityProfile;
 import com.aionn.recommendation.domain.valueobject.AffinityScore;
@@ -332,8 +332,10 @@ class RecommendationServiceTest {
 
     @Test
     void aColdStartHomeFeedCountsAsATrendingFallback() {
-        // Counting cold starts too is deliberate: a profile pipeline that stopped building profiles looks
-        // identical to a catalogue of brand-new users from the response alone, and this counter is the
+        // Counting cold starts too is deliberate: a profile pipeline that stopped
+        // building profiles looks
+        // identical to a catalogue of brand-new users from the response alone, and this
+        // counter is the
         // only place the difference shows up.
         when(profileRefreshService.profileOf("user-1"))
                 .thenReturn(UserAffinityProfile.empty("user-1"));
@@ -366,8 +368,10 @@ class RecommendationServiceTest {
 
     @Test
     void aFallbackIsCountedAgainstTheSurfaceBeingServedNotAlwaysTheHomeFeed() {
-        // The tag is what makes the counter actionable: "trending fallbacks went up" is useless if it
-        // cannot say whether similar-products or the home feed stopped producing results.
+        // The tag is what makes the counter actionable: "trending fallbacks went up" is
+        // useless if it
+        // cannot say whether similar-products or the home feed stopped producing
+        // results.
         when(candidateGeneration.productExists("p-missing")).thenReturn(false);
         when(candidateGeneration.popularityScores(anyInt())).thenReturn(Map.of("p-pop", score(5)));
         when(candidateGeneration.newArrivalScores(anyInt())).thenReturn(Map.of());
@@ -394,8 +398,10 @@ class RecommendationServiceTest {
 
     @Test
     void anExtremePageSizeDoesNotOverflowTheCandidateLimit() {
-        // limit * overFetchFactor overflows int for a large enough page and comes back negative, which
-        // then fails every ArrayList built from it. Clamping to the largest page any surface builds keeps
+        // limit * overFetchFactor overflows int for a large enough page and comes back
+        // negative, which
+        // then fails every ArrayList built from it. Clamping to the largest page any
+        // surface builds keeps
         // the product positive: 50 * 3 rather than something near Integer.MIN_VALUE.
         when(candidateGeneration.productExists("p-1")).thenReturn(true);
         when(candidateGeneration.collaborativeScores(anyCollection(), anyInt()))
@@ -410,7 +416,8 @@ class RecommendationServiceTest {
 
     @Test
     void theOverFetchIsStillCappedAtTheConfiguredMaximum() {
-        // The cap is what stops a full-size page from scanning the whole catalogue: 50 * 5 candidates is
+        // The cap is what stops a full-size page from scanning the whole catalogue: 50
+        // * 5 candidates is
         // more than the configured ceiling, so the ceiling wins.
         when(candidateGeneration.productExists("p-1")).thenReturn(true);
         when(candidateGeneration.collaborativeScores(anyCollection(), anyInt()))
@@ -450,7 +457,8 @@ class RecommendationServiceTest {
 
         assertThat(results).extracting(RecommendationItemResult::productId)
                 .containsExactly("p-cat-1", "p-cat-2");
-        // Category-only matches are still a similarity answer on the similar surface, not a
+        // Category-only matches are still a similarity answer on the similar surface,
+        // not a
         // personal-interest match.
         assertThat(results)
                 .extracting(RecommendationItemResult::reason)
@@ -475,7 +483,7 @@ class RecommendationServiceTest {
     private void hydrationEchoesEveryProductExcept(String retiredProductId) {
         when(candidateGeneration.hydrate(anyCollection())).thenAnswer(invocation -> {
             Collection<String> productIds = invocation.getArgument(0);
-            Map<String, ProductAttributeQueryPort.ProductAttributes> attributes = new LinkedHashMap<>();
+            Map<String, ProductAttributes> attributes = new LinkedHashMap<>();
             for (String productId : productIds) {
                 if (!productId.equals(retiredProductId)) {
                     attributes.put(productId, attributes(productId));
@@ -491,8 +499,8 @@ class RecommendationServiceTest {
         return pool;
     }
 
-    private static ProductAttributeQueryPort.ProductAttributes attributes(String productId) {
-        return new ProductAttributeQueryPort.ProductAttributes(
+    private static ProductAttributes attributes(String productId) {
+        return new ProductAttributes(
                 productId,
                 "Product " + productId,
                 "brand-apple",
@@ -551,7 +559,8 @@ class RecommendationServiceTest {
         };
     }
 
-    private static RankingWeightPolicy weights(int overFetchFactor, int maxCandidates) {        return new RankingWeightPolicy() {
+    private static RankingWeightPolicy weights(int overFetchFactor, int maxCandidates) {
+        return new RankingWeightPolicy() {
             @Override
             public BigDecimal collaborativeWeight() {
                 return BigDecimal.valueOf(0.50);

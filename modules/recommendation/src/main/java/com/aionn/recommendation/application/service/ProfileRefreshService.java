@@ -1,5 +1,6 @@
 package com.aionn.recommendation.application.service;
 
+import com.aionn.recommendation.application.dto.product.ProductAttributes;
 import java.util.Objects;
 
 import com.aionn.recommendation.application.policy.InteractionWeightPolicy;
@@ -73,7 +74,7 @@ public class ProfileRefreshService {
 
     private UserAffinityProfile buildProfile(
             String userId, List<UserInteraction> interactions, Instant now, int maxAffinities) {
-        Map<String, ProductAttributeQueryPort.ProductAttributes> attributes =
+        Map<String, ProductAttributes> attributes =
                 productAttributeQuery.findByProductIds(
                         interactions.stream()
                                 .map(UserInteraction::getProductId)
@@ -99,7 +100,7 @@ public class ProfileRefreshService {
                     brandWeights.merge(interaction.getBrandId(), decayed, BigDecimal::add);
                 }
             } else {
-                ProductAttributeQueryPort.ProductAttributes product =
+                ProductAttributes product =
                         attributes.get(interaction.getProductId());
                 if (product == null) {
                     // Deleted/taken-down product: its history must not shape recommendations.

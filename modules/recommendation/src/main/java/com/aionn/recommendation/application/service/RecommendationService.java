@@ -1,11 +1,11 @@
 package com.aionn.recommendation.application.service;
 
+import com.aionn.recommendation.application.dto.product.ProductAttributes;
 import com.aionn.recommendation.application.dto.result.RecommendationItemResult;
 import com.aionn.recommendation.application.policy.ColdStartPolicy;
 import com.aionn.recommendation.application.policy.HybridRankingPolicy;
 import com.aionn.recommendation.application.policy.RankingWeightPolicy;
 import com.aionn.recommendation.application.policy.RecommendationServingPolicy;
-import com.aionn.recommendation.application.port.out.ProductAttributeQueryPort;
 import com.aionn.recommendation.application.port.out.observability.RecommendationMetricsPort;
 import com.aionn.recommendation.domain.model.RecommendationSlate;
 import com.aionn.recommendation.domain.model.UserAffinityProfile;
@@ -243,7 +243,7 @@ public class RecommendationService {
             return List.of();
         }
 
-        Map<String, ProductAttributeQueryPort.ProductAttributes> attributes = candidateGeneration
+        Map<String, ProductAttributes> attributes = candidateGeneration
                 .hydrate(slate.productIds());
         if (attributes.isEmpty()) {
             return List.of();
@@ -251,7 +251,7 @@ public class RecommendationService {
 
         List<RecommendationItemResult> results = new ArrayList<>(slate.items().size());
         for (RecommendationSlate.ScoredProduct scored : slate.items()) {
-            ProductAttributeQueryPort.ProductAttributes product = attributes.get(scored.productId());
+            ProductAttributes product = attributes.get(scored.productId());
             if (product == null) {
                 continue;
             }

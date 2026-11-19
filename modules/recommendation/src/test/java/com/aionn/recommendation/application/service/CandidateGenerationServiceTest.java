@@ -1,5 +1,6 @@
 package com.aionn.recommendation.application.service;
 
+import com.aionn.recommendation.application.dto.product.ProductAttributes;
 import com.aionn.recommendation.application.policy.RankingWeightPolicy;
 import com.aionn.recommendation.application.policy.RecommendationServingPolicy;
 import com.aionn.recommendation.application.port.out.InteractionPersistencePort;
@@ -228,9 +229,9 @@ class CandidateGenerationServiceTest {
         return new ProductPopularity(productId, BigDecimal.valueOf(score), 10, 2, NOW);
     }
 
-    private static ProductAttributeQueryPort.ProductAttributes product(
+    private static ProductAttributes product(
             String productId, String brandId, List<String> categoryIds, long price) {
-        return new ProductAttributeQueryPort.ProductAttributes(
+        return new ProductAttributes(
                 productId,
                 "Product " + productId,
                 brandId,

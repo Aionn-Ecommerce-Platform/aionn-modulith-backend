@@ -1,5 +1,6 @@
 package com.aionn.recommendation.infrastructure.integration.catalog;
 
+import com.aionn.recommendation.application.dto.product.ProductAttributes;
 import com.aionn.recommendation.application.port.out.ProductAttributeQueryPort;
 import com.aionn.contracts.port.catalog.CatalogProductAttributeQueryPort;
 import lombok.RequiredArgsConstructor;
