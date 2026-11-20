@@ -1,15 +1,17 @@
 package com.aionn.shipping.adapter.rest.mapper.shipment;
 
-import com.aionn.shipping.adapter.rest.dto.shipment.response.ShipmentResponse;
 import com.aionn.shipping.adapter.rest.dto.shipment.request.CancelShipmentRequest;
 import com.aionn.shipping.adapter.rest.dto.shipment.request.CreateShipmentRequest;
 import com.aionn.shipping.adapter.rest.dto.shipment.request.QuoteShippingRequest;
 import com.aionn.shipping.adapter.rest.dto.shipment.request.ResolveIssueRequest;
+import com.aionn.shipping.adapter.rest.dto.shipment.response.ShipmentEventResponse;
+import com.aionn.shipping.adapter.rest.dto.shipment.response.ShipmentResponse;
 import com.aionn.shipping.application.dto.shipment.command.CancelShipmentCommand;
 import com.aionn.shipping.application.dto.shipment.command.CreateShipmentCommand;
 import com.aionn.shipping.application.dto.shipment.command.FetchLabelCommand;
 import com.aionn.shipping.application.dto.shipment.command.QuoteShippingCommand;
 import com.aionn.shipping.application.dto.shipment.command.ResolveIssueCommand;
+import com.aionn.shipping.application.dto.shipment.result.ShipmentEventResult;
 import com.aionn.shipping.application.dto.shipment.result.ShipmentResult;
 import com.aionn.shipping.application.service.ParcelResolver;
 import com.aionn.shipping.application.usecase.shipment.QuoteShippingUseCase;
@@ -21,6 +23,9 @@ import java.util.List;
 public interface ShipmentDtoMapper {
     ShipmentResponse toResponse(ShipmentResult result);
     List<ShipmentResponse> toResponses(List<ShipmentResult> results);
+
+    ShipmentEventResponse toResponse(ShipmentEventResult result);
+    List<ShipmentEventResponse> toEventResponses(List<ShipmentEventResult> results);
 
     CancelShipmentCommand toCommand(CancelShipmentRequest request, String shipmentId, String ownerId);
 

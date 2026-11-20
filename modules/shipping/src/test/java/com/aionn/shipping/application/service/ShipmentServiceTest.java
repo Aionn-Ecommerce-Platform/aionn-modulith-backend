@@ -11,6 +11,7 @@ import com.aionn.shipping.application.policy.ShippingDefaultsPolicy;
 import com.aionn.shipping.application.port.out.CarrierClient;
 import com.aionn.shipping.application.port.out.CarrierWebhookIdempotencyPort;
 import com.aionn.shipping.application.port.out.ShipmentPersistencePort;
+import com.aionn.shipping.application.port.out.ShipmentEventPersistencePort;
 import com.aionn.shipping.application.port.out.ShippingRatePersistencePort;
 import com.aionn.shipping.application.port.out.integration.ShippingIntegrationEventPublisherPort;
 import com.aionn.shipping.domain.exception.ShippingErrorCode;
@@ -50,6 +51,8 @@ class ShipmentServiceTest {
 
         @Mock
         ShipmentPersistencePort shipmentRepository;
+        @Mock
+        ShipmentEventPersistencePort shipmentEventRepository;
         @Mock
         ShippingRatePersistencePort rateRepository;
         @Mock
@@ -93,7 +96,7 @@ class ShipmentServiceTest {
                                 .thenReturn(Optional.of(new OrderQueryPort.OrderSummary(
                                                 "ORDER_1", "U_1", "M_1",
                                                 BigDecimal.valueOf(30000), "VND")));
-                service = new ShipmentService(shipmentRepository, rateRepository, eventPublisher,
+                service = new ShipmentService(shipmentRepository, shipmentEventRepository, rateRepository, eventPublisher,
                                 carrierClient, integrationEventPublisher, merchantQueryPort,
                                 orderQueryPort, defaultsPolicy, Clock.systemUTC(),
                                 webhookSecurityPolicy, webhookIdempotencyPort, transactionTemplate);
@@ -107,6 +110,7 @@ class ShipmentServiceTest {
                                 ADDRESS, PARCELS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND"));
 
                 verify(shipmentRepository).save(any(Shipment.class));
+                verify(shipmentEventRepository).record(any(), eq("REQUESTED"), isNull(), isNull(), any());
                 verify(eventPublisher).publish(anyCollection());
         }
 
@@ -185,6 +189,7 @@ class ShipmentServiceTest {
                 service.applyCarrierWebhook(new CarrierWebhookCommand(
                                 "TRACK_1", "DELIVERED", null, null, null, null, "https://sig", null, null, null));
 
+                verify(shipmentEventRepository).record(eq("S_1"), eq("DELIVERED"), isNull(), isNull(), any());
                 verify(integrationEventPublisher).publishDelivered(
                                 eq("S_1"), eq("ORDER_1"), any(), eq("https://sig"), any(), any(), anyBoolean());
         }
@@ -298,6 +303,7 @@ class ShipmentServiceTest {
                 service.applyCancel("S_1", "cancelled");
 
                 verify(shipmentRepository).save(shipment);
+                verify(shipmentEventRepository).record(eq("S_1"), eq("CANCELLED"), eq("cancelled"), isNull(), any());
                 assertThat(shipment.getStatus())
                                 .isEqualTo(ShipmentStatus.CANCELLED);
         }

@@ -43,7 +43,10 @@ public class Shipment extends AggregateRoot {
     private ShipmentStatus status;
     private final Instant createdAt;
     private Instant updatedAt;
+    private Instant registeredAt;
     private Instant pickedAt;
+    private Instant inTransitAt;
+    private Instant outForDeliveryAt;
     private Instant deliveredAt;
     private Instant cancelledAt;
     private Instant returnedAt;
@@ -54,7 +57,8 @@ public class Shipment extends AggregateRoot {
             String labelUrl, String currentLocation, String shipperName, String shipperPhone,
             String signatureUrl, int attemptCount, String lastFailureReason, String issueType,
             String issueResolution, Instant expectedDeliveryDate, ShipmentStatus status, Instant createdAt, Instant updatedAt,
-            Instant pickedAt, Instant deliveredAt, Instant cancelledAt, Instant returnedAt) {
+            Instant registeredAt, Instant pickedAt, Instant inTransitAt, Instant outForDeliveryAt,
+            Instant deliveredAt, Instant cancelledAt, Instant returnedAt) {
         this.shipmentId = shipmentId;
         this.orderId = orderId;
         this.merchantId = merchantId;
@@ -79,7 +83,10 @@ public class Shipment extends AggregateRoot {
         this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.registeredAt = registeredAt;
         this.pickedAt = pickedAt;
+        this.inTransitAt = inTransitAt;
+        this.outForDeliveryAt = outForDeliveryAt;
         this.deliveredAt = deliveredAt;
         this.cancelledAt = cancelledAt;
         this.returnedAt = returnedAt;
@@ -111,7 +118,8 @@ public class Shipment extends AggregateRoot {
         Shipment s = new Shipment(shipmentId, orderId, merchantId, userId, address, dimensions,
                 codAmount, shippingFee, currency,
                 null, null, null, null, null, null, null, 0, null, null, null,
-                null, ShipmentStatus.REQUESTED, now, now, null, null, null, null);
+                null, ShipmentStatus.REQUESTED, now, now,
+                null, null, null, null, null, null, null);
         s.registerEvent(new ShipmentEvents.ShipmentRequested(shipmentId, orderId,
                 dimensions.weightGram(), dimensionsString(dimensions),
                 address.districtId(), address.wardCode(), now));
@@ -136,6 +144,7 @@ public class Shipment extends AggregateRoot {
         this.carrierOrderId = carrierOrderId;
         this.expectedDeliveryDate = expectedDate;
         this.status = ShipmentStatus.REGISTERED;
+        this.registeredAt = clock.instant();
         touch(clock);
         registerEvent(new ShipmentEvents.ShipmentRegistered(shipmentId, orderId, trackingCode, carrierOrderId, expectedDate,
                 updatedAt));
@@ -165,6 +174,9 @@ public class Shipment extends AggregateRoot {
     public void updateInTransitStatus(String currentLocation, String statusDesc, Clock clock) {
         if (status == ShipmentStatus.IN_TRANSIT) {
             this.currentLocation = currentLocation;
+            if (this.inTransitAt == null) {
+                this.inTransitAt = clock.instant();
+            }
             touch(clock);
             registerEvent(new ShipmentEvents.ShipmentStatusUpdated(shipmentId, status.name(), currentLocation,
                     statusDesc, updatedAt));
@@ -173,6 +185,7 @@ public class Shipment extends AggregateRoot {
         ensureTransition(ShipmentStatus.IN_TRANSIT);
         this.currentLocation = currentLocation;
         this.status = ShipmentStatus.IN_TRANSIT;
+        this.inTransitAt = clock.instant();
         touch(clock);
         registerEvent(new ShipmentEvents.ShipmentStatusUpdated(shipmentId, status.name(), currentLocation, statusDesc,
                 updatedAt));
@@ -186,6 +199,7 @@ public class Shipment extends AggregateRoot {
         this.shipperName = shipperName;
         this.shipperPhone = shipperPhone;
         this.status = ShipmentStatus.OUT_FOR_DELIVERY;
+        this.outForDeliveryAt = clock.instant();
         touch(clock);
         registerEvent(new ShipmentEvents.ShipmentOutForDelivery(shipmentId, orderId, shipperName, shipperPhone, updatedAt));
     }

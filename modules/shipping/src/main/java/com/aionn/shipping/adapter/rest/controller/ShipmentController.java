@@ -4,6 +4,7 @@ import com.aionn.shipping.adapter.rest.dto.shipment.request.CancelShipmentReques
 import com.aionn.shipping.adapter.rest.dto.shipment.request.CreateShipmentRequest;
 import com.aionn.shipping.adapter.rest.dto.shipment.request.QuoteShippingRequest;
 import com.aionn.shipping.adapter.rest.dto.shipment.request.ResolveIssueRequest;
+import com.aionn.shipping.adapter.rest.dto.shipment.response.ShipmentEventResponse;
 import com.aionn.shipping.adapter.rest.dto.shipment.response.ShipmentResponse;
 import com.aionn.shipping.adapter.rest.dto.rate.response.ShippingQuoteResponse;
 import com.aionn.shipping.adapter.rest.mapper.shipment.ShipmentDtoMapper;
@@ -15,16 +16,17 @@ import com.aionn.shipping.application.dto.shipment.command.QuoteShippingCommand;
 import com.aionn.shipping.application.dto.shipment.command.ResolveIssueCommand;
 import com.aionn.shipping.application.dto.rate.result.ShippingQuoteResult;
 import com.aionn.shipping.application.dto.shipment.result.ShipmentResult;
-import com.aionn.shipping.application.service.ParcelResolver;
-import com.aionn.shipping.application.port.in.shipment.QuoteShippingInputPort;
-import com.aionn.shipping.application.usecase.shipment.QuoteShippingUseCase;
-import com.aionn.shipping.application.port.in.shipment.CreateShipmentInputPort;
-import com.aionn.shipping.application.port.in.shipment.RegisterShipmentInputPort;
-import com.aionn.shipping.application.port.in.shipment.FetchLabelInputPort;
 import com.aionn.shipping.application.port.in.shipment.CancelShipmentInputPort;
-import com.aionn.shipping.application.port.in.shipment.ResolveIssueInputPort;
+import com.aionn.shipping.application.port.in.shipment.CreateShipmentInputPort;
+import com.aionn.shipping.application.port.in.shipment.FetchLabelInputPort;
 import com.aionn.shipping.application.port.in.shipment.GetShipmentInputPort;
+import com.aionn.shipping.application.port.in.shipment.ListShipmentEventsInputPort;
 import com.aionn.shipping.application.port.in.shipment.ListShipmentsByOrderInputPort;
+import com.aionn.shipping.application.port.in.shipment.QuoteShippingInputPort;
+import com.aionn.shipping.application.port.in.shipment.RegisterShipmentInputPort;
+import com.aionn.shipping.application.port.in.shipment.ResolveIssueInputPort;
+import com.aionn.shipping.application.service.ParcelResolver;
+import com.aionn.shipping.application.usecase.shipment.QuoteShippingUseCase;
 import com.aionn.platform.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -55,6 +57,7 @@ public class ShipmentController {
         private final ResolveIssueInputPort resolveIssueInputPort;
         private final GetShipmentInputPort getShipmentInputPort;
         private final ListShipmentsByOrderInputPort listShipmentsByOrderInputPort;
+        private final ListShipmentEventsInputPort listShipmentEventsInputPort;
         private final ShipmentDtoMapper shipmentDtoMapper;
         private final ShippingRateDtoMapper shippingRateDtoMapper;
         private final ParcelResolver parcelResolver;
@@ -147,6 +150,17 @@ public class ShipmentController {
                 return ResponseEntity.ok(ApiResponse.success(
                                 shipmentDtoMapper.toResponse(result),
                                 "Shipment fetched"));
+        }
+
+        @GetMapping("/{shipmentId}/events")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(summary = "List tracking events for a shipment")
+        public ResponseEntity<ApiResponse<List<ShipmentEventResponse>>> events(
+                        @CurrentUserId String userId,
+                        @PathVariable String shipmentId) {
+                List<ShipmentEventResponse> events = shipmentDtoMapper.toEventResponses(
+                                listShipmentEventsInputPort.execute(shipmentId, userId));
+                return ResponseEntity.ok(ApiResponse.success(events, "Shipment events fetched"));
         }
 
         @GetMapping("/by-order/{orderId}")

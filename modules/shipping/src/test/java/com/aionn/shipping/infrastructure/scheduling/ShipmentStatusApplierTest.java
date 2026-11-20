@@ -4,6 +4,7 @@ import org.mockito.ArgumentMatchers;
 
 import com.aionn.shipping.application.port.out.CarrierClient;
 import com.aionn.shipping.application.port.out.ShipmentPersistencePort;
+import com.aionn.shipping.application.port.out.ShipmentEventPersistencePort;
 import com.aionn.shipping.application.port.out.integration.ShippingIntegrationEventPublisherPort;
 import com.aionn.shipping.domain.model.Shipment;
 import com.aionn.shipping.domain.valueobject.ShipmentStatus;
@@ -37,6 +38,9 @@ class ShipmentStatusApplierTest {
 
     @Mock
     private ShipmentPersistencePort shipmentPersistencePort;
+
+    @Mock
+    private ShipmentEventPersistencePort shipmentEventPersistencePort;
 
     @Mock
     private EventPublisher eventPublisher;

@@ -25,7 +25,9 @@ public class ShipmentDomainMapper {
                                 e.getAttemptCount(), e.getLastFailureReason(), e.getIssueType(), e.getIssueResolution(),
                                 e.getExpectedDeliveryDate(),
                                 ShipmentStatus.valueOf(e.getStatus()),
-                                e.getCreatedAt(), e.getUpdatedAt(), e.getPickedAt(), e.getDeliveredAt(),
+                                e.getCreatedAt(), e.getUpdatedAt(),
+                                e.getRegisteredAt(), e.getPickedAt(), e.getInTransitAt(),
+                                e.getOutForDeliveryAt(), e.getDeliveredAt(),
                                 e.getCancelledAt(), e.getReturnedAt());
         }
 
@@ -65,6 +67,9 @@ public class ShipmentDomainMapper {
                 entity.setExpectedDeliveryDate(s.getExpectedDeliveryDate());
                 entity.setStatus(s.getStatus().name());
                 entity.setPickedAt(s.getPickedAt());
+                entity.setRegisteredAt(s.getRegisteredAt());
+                entity.setInTransitAt(s.getInTransitAt());
+                entity.setOutForDeliveryAt(s.getOutForDeliveryAt());
                 entity.setDeliveredAt(s.getDeliveredAt());
                 entity.setCancelledAt(s.getCancelledAt());
                 entity.setReturnedAt(s.getReturnedAt());

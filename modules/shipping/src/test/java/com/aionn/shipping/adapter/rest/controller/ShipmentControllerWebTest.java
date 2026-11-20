@@ -14,16 +14,18 @@ import com.aionn.shipping.application.dto.rate.result.ShippingQuoteResult;
 import com.aionn.shipping.application.dto.shipment.command.CancelShipmentCommand;
 import com.aionn.shipping.application.dto.shipment.command.CreateShipmentCommand;
 import com.aionn.shipping.application.dto.shipment.command.QuoteShippingCommand;
+import com.aionn.shipping.application.dto.shipment.result.ShipmentEventResult;
 import com.aionn.shipping.application.dto.shipment.result.ShipmentResult;
-import com.aionn.shipping.application.usecase.shipment.QuoteShippingUseCase;
-import com.aionn.shipping.application.port.in.shipment.QuoteShippingInputPort;
-import com.aionn.shipping.application.port.in.shipment.CreateShipmentInputPort;
-import com.aionn.shipping.application.port.in.shipment.RegisterShipmentInputPort;
-import com.aionn.shipping.application.port.in.shipment.FetchLabelInputPort;
 import com.aionn.shipping.application.port.in.shipment.CancelShipmentInputPort;
-import com.aionn.shipping.application.port.in.shipment.ResolveIssueInputPort;
+import com.aionn.shipping.application.port.in.shipment.CreateShipmentInputPort;
+import com.aionn.shipping.application.port.in.shipment.FetchLabelInputPort;
 import com.aionn.shipping.application.port.in.shipment.GetShipmentInputPort;
+import com.aionn.shipping.application.port.in.shipment.ListShipmentEventsInputPort;
 import com.aionn.shipping.application.port.in.shipment.ListShipmentsByOrderInputPort;
+import com.aionn.shipping.application.port.in.shipment.QuoteShippingInputPort;
+import com.aionn.shipping.application.port.in.shipment.RegisterShipmentInputPort;
+import com.aionn.shipping.application.port.in.shipment.ResolveIssueInputPort;
+import com.aionn.shipping.application.usecase.shipment.QuoteShippingUseCase;
 import com.aionn.shipping.domain.exception.ShippingErrorCode;
 import com.aionn.shipping.domain.exception.ShippingException;
 import com.aionn.shipping.domain.valueobject.ShipmentAddress;
@@ -80,6 +82,8 @@ class ShipmentControllerWebTest {
     @Mock
     private ListShipmentsByOrderInputPort listShipmentsByOrderInputPort;
     @Mock
+    private ListShipmentEventsInputPort listShipmentEventsInputPort;
+    @Mock
     private ParcelResolver parcelResolver;
 
     private final ShipmentDtoMapper shipmentDtoMapper = Mappers.getMapper(ShipmentDtoMapper.class);
@@ -99,6 +103,7 @@ class ShipmentControllerWebTest {
                 resolveIssueInputPort,
                 getShipmentInputPort,
                 listShipmentsByOrderInputPort,
+                listShipmentEventsInputPort,
                 shipmentDtoMapper,
                 shippingRateDtoMapper,
                 parcelResolver
@@ -247,11 +252,22 @@ class ShipmentControllerWebTest {
                 .andExpect(jsonPath("$.data[0].shipmentId").value("S_1"));
     }
 
+    @Test
+    void listEventsReturnsTrackingTimeline() throws Exception {
+        when(listShipmentEventsInputPort.execute("S_1", "user-1")).thenReturn(List.of(
+                new ShipmentEventResult("E_1", "S_1", "REGISTERED", "Picked up", "HN", Instant.now())));
+
+        mockMvc.perform(get("/api/v1/shipping/shipments/S_1/events"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].eventId").value("E_1"))
+                .andExpect(jsonPath("$.data[0].status").value("REGISTERED"));
+    }
+
     private ShipmentResult sample(String id, String status) {
         Instant now = Instant.now();
         return new ShipmentResult(id, "ORDER_1", "M_1", "U_1",
                 null, null, null, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND",
-                status, null, null, null, 0, null, null, null, null, null, null, now, now);
+                status, null, null, null, 0, null, null, null, null, null, null, null, null, null, now, now);
     }
 
     private static class StubCurrentUserIdResolver implements HandlerMethodArgumentResolver {

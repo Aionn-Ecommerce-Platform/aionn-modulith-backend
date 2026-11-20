@@ -1,6 +1,7 @@
 package com.aionn.shipping.infrastructure.scheduling;
 
 import com.aionn.shipping.application.port.out.CarrierClient;
+import com.aionn.shipping.application.port.out.ShipmentEventPersistencePort;
 import com.aionn.shipping.application.port.out.ShipmentPersistencePort;
 import com.aionn.shipping.application.port.out.integration.ShippingIntegrationEventPublisherPort;
 import com.aionn.shipping.domain.model.Shipment;
@@ -18,6 +19,7 @@ import java.time.Clock;
 public class ShipmentStatusApplier {
 
     private final ShipmentPersistencePort shipmentPersistencePort;
+    private final ShipmentEventPersistencePort shipmentEventPersistencePort;
     private final EventPublisher eventPublisher;
     private final ShippingIntegrationEventPublisherPort integrationEventPublisher;
     private final Clock clock;
@@ -43,6 +45,11 @@ public class ShipmentStatusApplier {
             }
         }
         Shipment saved = shipmentPersistencePort.save(shipment);
+        String description = detail.reason() != null && !detail.reason().isBlank()
+                ? detail.reason()
+                : detail.status();
+        shipmentEventPersistencePort.record(saved.getShipmentId(), target.name(),
+                description, detail.currentLocation(), clock.instant());
         eventPublisher.publish(shipment.pullEvents());
         publishIntegration(saved, before, target, detail);
     }
