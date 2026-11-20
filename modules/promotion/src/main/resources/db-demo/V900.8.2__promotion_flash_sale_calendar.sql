@@ -10,8 +10,8 @@
 
 WITH days AS (
     SELECT generate_series(
-               CURRENT_DATE,
-               CURRENT_DATE + 120,
+               (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date,
+               (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date + 120,
                INTERVAL '1 day'
            )::date AS day
 ),
@@ -20,7 +20,7 @@ windows(slot_no, start_hour, end_hour) AS (
 ),
 slots AS (
     SELECT CASE
-               WHEN d.day = CURRENT_DATE AND w.slot_no = 1
+               WHEN d.day = (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AND w.slot_no = 1
                    THEN '01M74HC0WB53JNDNF03G2Z7274'
                ELSE 'FS_' || to_char(d.day, 'YYYYMMDD') || '_' || w.slot_no
            END AS campaign_id,
@@ -70,8 +70,8 @@ ON CONFLICT (campaign_id) DO UPDATE
 -- carries the whole seed pool.
 WITH days AS (
     SELECT generate_series(
-               CURRENT_DATE,
-               CURRENT_DATE + 120,
+               (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date,
+               (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date + 120,
                INTERVAL '1 day'
            )::date AS day
 ),
@@ -80,7 +80,7 @@ windows(slot_no, start_hour, end_hour) AS (
 ),
 slots AS (
     SELECT CASE
-               WHEN d.day = CURRENT_DATE AND w.slot_no = 1
+               WHEN d.day = (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AND w.slot_no = 1
                    THEN '01M74HC0WB53JNDNF03G2Z7274'
                ELSE 'FS_' || to_char(d.day, 'YYYYMMDD') || '_' || w.slot_no
            END AS campaign_id,
@@ -112,8 +112,8 @@ UPDATE flash_sale_registrations AS r
 -- product pool that V900.8.0 and V900.8.1 already registered.
 WITH days AS (
     SELECT generate_series(
-               CURRENT_DATE,
-               CURRENT_DATE + 120,
+               (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date,
+               (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date + 120,
                INTERVAL '1 day'
            )::date AS day
 ),
@@ -122,7 +122,7 @@ windows(slot_no, start_hour, end_hour) AS (
 ),
 slots AS (
     SELECT CASE
-               WHEN d.day = CURRENT_DATE AND w.slot_no = 1
+               WHEN d.day = (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AND w.slot_no = 1
                    THEN '01M74HC0WB53JNDNF03G2Z7274'
                ELSE 'FS_' || to_char(d.day, 'YYYYMMDD') || '_' || w.slot_no
            END AS campaign_id,

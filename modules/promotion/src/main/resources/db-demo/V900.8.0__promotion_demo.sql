@@ -27,7 +27,7 @@ INSERT INTO promotion_campaigns
 VALUES
     ('FREESHIP_DEMO_CAMPAIGN', 'Miễn phí vận chuyển', 'FREESHIP',
      100000000.00, 100000000.00, 'VND',
-     NOW() - INTERVAL '1 hour', NOW() + INTERVAL '90 days',
+     NOW() - INTERVAL '1 hour', NOW() + INTERVAL '365 days',
      'sys_admin_01', 'RUNNING', 0.00, NULL, 1000, 0, NOW(), NOW())
 ON CONFLICT (campaign_id) DO NOTHING;
 
@@ -678,3 +678,26 @@ INSERT INTO user_vouchers (
 ('AIONN25K_DEMO_USER_VOUCHER', 'AIONN25K', '01KV05RTC7NA4KZMMP8KXX7461', 'CLAIMED', NULL, NULL, NULL, NOW() - INTERVAL '3 hours', NULL, 0, NOW() - INTERVAL '3 hours'),
 ('MEMBER150K_DEMO_USER_VOUCHER', 'MEMBER150K', '01KV05RTC7NA4KZMMP8KXX7461', 'CLAIMED', NULL, NULL, NULL, NOW() - INTERVAL '4 hours', NULL, 0, NOW() - INTERVAL '4 hours')
 ON CONFLICT (user_voucher_id) DO NOTHING;
+
+-- Keep the expired summer campaign as history, but move the vouchers that
+-- should remain usable onto running campaigns.
+INSERT INTO promotion_campaigns
+    (campaign_id, name, type, budget, budget_remaining, currency,
+     start_date, end_date, created_by, status, min_order_value,
+     max_claims_per_user, max_uses_per_voucher, version, created_at, updated_at)
+VALUES
+    ('AIONN_DEMO_CAMPAIGN', 'Aionn Demo Sale', 'DISCOUNT',
+     500000000.00, 500000000.00, 'VND',
+     NOW() - INTERVAL '7 days', NOW() + INTERVAL '365 days',
+     'sys_admin_01', 'RUNNING', 0.00, NULL, 1000, 0, NOW(), NOW())
+ON CONFLICT (campaign_id) DO NOTHING;
+
+UPDATE vouchers
+   SET campaign_id = 'AIONN_DEMO_CAMPAIGN',
+       updated_at = NOW()
+ WHERE voucher_code IN ('AIONNNEW', 'MEGA100', 'MEGA300');
+
+UPDATE vouchers
+   SET campaign_id = 'FREESHIP_DEMO_CAMPAIGN',
+       updated_at = NOW()
+ WHERE voucher_code IN ('FREESHIP', 'FREESHIP50');
