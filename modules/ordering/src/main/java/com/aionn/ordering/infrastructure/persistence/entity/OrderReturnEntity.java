@@ -47,6 +47,9 @@ public class OrderReturnEntity {
     @Column(name = "reason", columnDefinition = "TEXT", nullable = false)
     private String reason;
 
+    @Column(name = "reason_type", length = 30, nullable = false)
+    private String reasonType;
+
     @Column(name = "evidence_url", columnDefinition = "TEXT")
     private String evidenceUrl;
 

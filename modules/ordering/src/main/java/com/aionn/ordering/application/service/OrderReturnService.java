@@ -1,5 +1,6 @@
 package com.aionn.ordering.application.service;
 
+import com.aionn.ordering.domain.valueobject.ReturnReasonType;
 import com.aionn.ordering.domain.valueobject.ReturnRefundStatus;
 import com.aionn.ordering.domain.valueobject.ReturnStatus;
 import java.math.BigDecimal;
@@ -88,8 +89,21 @@ public class OrderReturnService {
             throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
                     "Select at least one item to return");
         }
+        ReturnReasonType reasonType = command.reasonType();
+        if (reasonType == null) {
+            throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
+                    "Return reason type is required");
+        }
+        boolean evidenceRequired = reasonType == ReturnReasonType.DAMAGED
+                || reasonType == ReturnReasonType.DEFECTIVE
+                || reasonType == ReturnReasonType.NOT_AS_DESCRIBED;
+        if (evidenceRequired && (command.evidenceUrl() == null || command.evidenceUrl().isBlank())) {
+            throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
+                    "Evidence image is required for this return reason");
+        }
         OrderReturn r = OrderReturn.request(IdGenerator.ulid(), order.getOrderId(),
-                order.getUserId(), order.getMerchantId(), command.reason(), command.evidenceUrl(), now);
+                order.getUserId(), order.getMerchantId(), reasonType, command.reason(),
+                command.evidenceUrl(), now);
         OrderReturn saved = orderReturnPersistencePort.save(r);
         saveSelectedItems(saved.getReturnId(), order, command.items());
         eventPublisher.publish(r.pullEvents());
@@ -236,12 +250,16 @@ public class OrderReturnService {
 
         Map<String, Long> byStatus = new LinkedHashMap<>();
         Map<String, Long> byReason = new LinkedHashMap<>();
+        Map<String, Long> byReasonType = new LinkedHashMap<>();
         BigDecimal refundTotal = BigDecimal.ZERO;
         String currency = orderDefaultsPolicy.defaultCurrency();
         for (var row : rows) {
             byStatus.merge(row.status(), 1L, Long::sum);
             String reason = (row.reason() == null || row.reason().isBlank()) ? "UNKNOWN" : row.reason();
             byReason.merge(reason, 1L, Long::sum);
+            String reasonType = (row.reasonType() == null || row.reasonType().isBlank())
+                    ? "OTHER" : row.reasonType();
+            byReasonType.merge(reasonType, 1L, Long::sum);
             if (row.refundAmount() != null) {
                 refundTotal = refundTotal.add(row.refundAmount());
                 if (row.refundCurrency() != null && !row.refundCurrency().isBlank()) {
@@ -257,8 +275,12 @@ public class OrderReturnService {
                 .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
                 .map(e -> new ReturnAnalyticsResult.ReasonCount(e.getKey(), e.getValue()))
                 .toList();
+        var reasonTypeList = byReasonType.entrySet().stream()
+                .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
+                .map(e -> new ReturnAnalyticsResult.ReasonTypeCount(e.getKey(), e.getValue()))
+                .toList();
         return new ReturnAnalyticsResult(safeFrom, safeTo, rows.size(), completedOrders,
-                returnRate, refundTotal, currency, statusList, reasonList);
+                returnRate, refundTotal, currency, statusList, reasonList, reasonTypeList);
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)

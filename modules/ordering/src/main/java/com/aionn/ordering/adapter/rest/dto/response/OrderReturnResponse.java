@@ -8,6 +8,7 @@ public record OrderReturnResponse(
         String orderId,
         String userId,
         String merchantId,
+        String reasonType,
         String reason,
         String evidenceUrl,
         BigDecimal refundAmount,

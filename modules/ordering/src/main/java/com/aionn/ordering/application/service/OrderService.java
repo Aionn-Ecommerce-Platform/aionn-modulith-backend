@@ -269,10 +269,14 @@ public class OrderService {
         for (StockReservationGateway.Reservation r : reservations) {
             Money unit = Money.of(r.unitPrice(), currency);
             CatalogPricingGateway.SkuPricing sku = pricing.get(r.skuId());
+            Money originalUnit = sku == null || sku.originalPrice() == null
+                    ? null
+                    : Money.of(sku.originalPrice(), currency);
             items.add(new OrderItem(r.skuId(), r.qty(), unit, r.warehouseId(), r.reservationId(),
                     sku == null ? null : sku.productName(),
                     sku == null ? null : sku.imageUrl(),
-                    sku == null ? null : sku.variantLabel()));
+                    sku == null ? null : sku.variantLabel(),
+                    originalUnit));
             lineSubtotal = lineSubtotal.add(unit.multiply(r.qty()));
         }
 

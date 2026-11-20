@@ -12,10 +12,11 @@ public record OrderItem(
         String reservationId,
         String productName,
         String imageUrl,
-        String variantLabel) {
+        String variantLabel,
+        Money originalUnitPrice) {
 
     public OrderItem(String skuId, int qty, Money unitPrice, String warehouseId, String reservationId) {
-        this(skuId, qty, unitPrice, warehouseId, reservationId, null, null, null);
+        this(skuId, qty, unitPrice, warehouseId, reservationId, null, null, null, null);
     }
 
     public OrderItem {

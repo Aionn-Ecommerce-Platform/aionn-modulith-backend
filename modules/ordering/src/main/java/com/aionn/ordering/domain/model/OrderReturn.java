@@ -6,8 +6,9 @@ import com.aionn.ordering.domain.event.ReturnEvents;
 import com.aionn.ordering.domain.exception.OrderingErrorCode;
 import com.aionn.ordering.domain.exception.OrderingException;
 import com.aionn.sharedkernel.domain.vo.Money;
-import com.aionn.ordering.domain.valueobject.ReturnStatus;
+import com.aionn.ordering.domain.valueobject.ReturnReasonType;
 import com.aionn.ordering.domain.valueobject.ReturnRefundStatus;
+import com.aionn.ordering.domain.valueobject.ReturnStatus;
 import lombok.Getter;
 
 import java.time.Instant;
@@ -19,6 +20,7 @@ public class OrderReturn extends AggregateRoot {
     private final String orderId;
     private final String userId;
     private final String merchantId;
+    private final ReturnReasonType reasonType;
     private final String reason;
     private final String evidenceUrl;
     private Money refundAmount;
@@ -49,22 +51,25 @@ public class OrderReturn extends AggregateRoot {
             Instant requestedAt,
             Instant decidedAt,
             Instant receivedAt) {
-        this(returnId, orderId, userId, merchantId, reason, evidenceUrl, refundAmount,
-                returnWarehouseId, itemCondition, rejectionReason, status, requestedAt, decidedAt,
-                receivedAt, refundAmount == null ? ReturnRefundStatus.NOT_REQUIRED : ReturnRefundStatus.PENDING,
+        this(returnId, orderId, userId, merchantId, ReturnReasonType.OTHER, reason, evidenceUrl,
+                refundAmount, returnWarehouseId, itemCondition, rejectionReason, status, requestedAt,
+                decidedAt, receivedAt,
+                refundAmount == null ? ReturnRefundStatus.NOT_REQUIRED : ReturnRefundStatus.PENDING,
                 0, null, null);
     }
 
     public OrderReturn(
-            String returnId, String orderId, String userId, String merchantId, String reason,
-            String evidenceUrl, Money refundAmount, String returnWarehouseId, String itemCondition,
-            String rejectionReason, ReturnStatus status, Instant requestedAt, Instant decidedAt,
-            Instant receivedAt, ReturnRefundStatus refundStatus, int refundAttempts,
-            String refundFailureReason, Instant nextRefundAttemptAt) {
+            String returnId, String orderId, String userId, String merchantId,
+            ReturnReasonType reasonType, String reason, String evidenceUrl, Money refundAmount,
+            String returnWarehouseId, String itemCondition, String rejectionReason,
+            ReturnStatus status, Instant requestedAt, Instant decidedAt, Instant receivedAt,
+            ReturnRefundStatus refundStatus, int refundAttempts, String refundFailureReason,
+            Instant nextRefundAttemptAt) {
         this.returnId = returnId;
         this.orderId = orderId;
         this.userId = userId;
         this.merchantId = merchantId;
+        this.reasonType = reasonType == null ? ReturnReasonType.OTHER : reasonType;
         this.reason = reason;
         this.evidenceUrl = evidenceUrl;
         this.refundAmount = refundAmount;
@@ -86,14 +91,18 @@ public class OrderReturn extends AggregateRoot {
             String orderId,
             String userId,
             String merchantId,
+            ReturnReasonType reasonType,
             String reason,
             String evidenceUrl,
             Instant now) {
+        Guard.require(reasonType != null,
+                () -> new OrderingException(OrderingErrorCode.INVALID_ARGUMENT, "reasonType must not be null"));
         Guard.require(reason != null && !reason.isBlank(),
                 () -> new OrderingException(OrderingErrorCode.INVALID_ARGUMENT, "reason must not be blank"));
-        OrderReturn r = new OrderReturn(returnId, orderId, userId, merchantId, reason, evidenceUrl,
-                null, null, null, null, ReturnStatus.REQUESTED, now, null, null);
-        r.registerEvent(new ReturnEvents.ReturnRequested(returnId, orderId, reason, evidenceUrl, now));
+        OrderReturn r = new OrderReturn(returnId, orderId, userId, merchantId, reasonType, reason,
+                evidenceUrl, null, null, null, null, ReturnStatus.REQUESTED, now, null, null,
+                ReturnRefundStatus.NOT_REQUIRED, 0, null, null);
+        r.registerEvent(new ReturnEvents.ReturnRequested(returnId, orderId, reasonType, reason, evidenceUrl, now));
         return r;
     }
 
