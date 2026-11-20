@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -141,11 +140,14 @@ class PresenceTrackerTest {
 
         tracker.markOnline("user-1", "s1");
         tracker.markOffline("user-1", "s1");
-        clearInvocations(valueOps);
-
         tracker.markOffline("user-1", "s1");
 
-        verify(valueOps, never()).set(anyString(), anyString(), any(Duration.class));
+        // markOnline + first disconnect; the duplicate disconnect must not move
+        // the last-seen timestamp forward.
+        verify(valueOps, times(2)).set(
+                eq("chat:last-seen:user-1"),
+                anyString(),
+                eq(Duration.ofDays(30)));
     }
 
     @Test

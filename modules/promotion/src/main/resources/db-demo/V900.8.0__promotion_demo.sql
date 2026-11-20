@@ -1,9 +1,9 @@
-INSERT INTO promotion_campaigns (campaign_id, name, type, budget, budget_remaining, currency, start_date, end_date, created_by, status, min_order_value, max_claims_per_user, max_uses_per_voucher, version, created_at, updated_at) VALUES ('01M74HC0WJJ18697Q14HJMVT5A', 'Summer Mega Sale', 'DISCOUNT', 500000000.00, 500000000.00, 'VND', '2026-06-13 16:42:22', '2026-09-11 16:42:22', 'sys_admin_01', 'RUNNING', 200000.00, NULL, 1000, 0, NOW(), NOW());
+INSERT INTO promotion_campaigns (campaign_id, name, type, budget, budget_remaining, currency, start_date, end_date, created_by, status, min_order_value, max_claims_per_user, max_uses_per_voucher, version, created_at, updated_at) VALUES ('01M74HC0WJJ18697Q14HJMVT5A', 'Summer Mega Sale', 'DISCOUNT', 500000000.00, 500000000.00, 'VND', NOW() - INTERVAL '120 days', NOW() - INTERVAL '60 days', 'sys_admin_01', 'ENDED', 200000.00, NULL, 1000, 0, NOW(), NOW());
 
 INSERT INTO vouchers (voucher_code, campaign_id, discount_amount, currency, usage_limit, used_count, reserved_count, valid_from, valid_until, version, created_at, updated_at, scope, type, merchant_id) VALUES
-('SUMMER50', '01M74HC0WJJ18697Q14HJMVT5A', 500000.0, 'VND', 500, 0, 0, '2026-06-13 16:42:22', '2026-09-11 16:42:22', 0, NOW(), NOW(), 'PLATFORM', 'ORDER_DISCOUNT', NULL),
-('SUMMER10', '01M74HC0WJJ18697Q14HJMVT5A', 100000.0, 'VND', 1000, 0, 0, '2026-06-13 16:42:22', '2026-09-11 16:42:22', 0, NOW(), NOW(), 'PLATFORM', 'ORDER_DISCOUNT', NULL),
-('FREESHIP', '01M74HC0WJJ18697Q14HJMVT5A', 30000.0, 'VND', 1000, 0, 0, '2026-06-13 16:42:22', '2026-09-11 16:42:22', 0, NOW(), NOW(), 'PLATFORM', 'FREE_SHIPPING', NULL);
+('SUMMER50', '01M74HC0WJJ18697Q14HJMVT5A', 500000.0, 'VND', 500, 0, 0, NOW() - INTERVAL '120 days', NOW() - INTERVAL '60 days', 0, NOW(), NOW(), 'PLATFORM', 'ORDER_DISCOUNT', NULL),
+('SUMMER10', '01M74HC0WJJ18697Q14HJMVT5A', 100000.0, 'VND', 1000, 0, 0, NOW() - INTERVAL '120 days', NOW() - INTERVAL '60 days', 0, NOW(), NOW(), 'PLATFORM', 'ORDER_DISCOUNT', NULL),
+('FREESHIP', '01M74HC0WJJ18697Q14HJMVT5A', 30000.0, 'VND', 1000, 0, 0, NOW() - INTERVAL '120 days', NOW() - INTERVAL '60 days', 0, NOW(), NOW(), 'PLATFORM', 'FREE_SHIPPING', NULL);
 
 INSERT INTO promotion_banners (banner_id, title, image_url, link_url, image_public_id, display_order, active, version, created_at, updated_at) VALUES
 ('01M74HDESQ5AQ3YMTKR3FHTGZ0', 'Aionn Siêu Sale Công Nghệ', 'https://res.cloudinary.com/dkb9l6kfy/image/upload/v1790350793/aionn/promotion/banners/in5okxd74ez0q9cjpnla.png', '/products?categoryId=01M74HE3MQBQ0KZ9R3T2FV6DV0', 'aionn/promotion/banners/in5okxd74ez0q9cjpnla', 1, TRUE, 0, NOW(), NOW()),
@@ -27,7 +27,7 @@ INSERT INTO promotion_campaigns
 VALUES
     ('FREESHIP_DEMO_CAMPAIGN', 'Miễn phí vận chuyển', 'FREESHIP',
      100000000.00, 100000000.00, 'VND',
-     NOW() - INTERVAL '1 hour', NOW() + INTERVAL '90 days',
+     NOW() - INTERVAL '1 hour', NOW() + INTERVAL '365 days',
      'sys_admin_01', 'RUNNING', 0.00, NULL, 1000, 0, NOW(), NOW())
 ON CONFLICT (campaign_id) DO NOTHING;
 
@@ -678,3 +678,26 @@ INSERT INTO user_vouchers (
 ('AIONN25K_DEMO_USER_VOUCHER', 'AIONN25K', '01KV05RTC7NA4KZMMP8KXX7461', 'CLAIMED', NULL, NULL, NULL, NOW() - INTERVAL '3 hours', NULL, 0, NOW() - INTERVAL '3 hours'),
 ('MEMBER150K_DEMO_USER_VOUCHER', 'MEMBER150K', '01KV05RTC7NA4KZMMP8KXX7461', 'CLAIMED', NULL, NULL, NULL, NOW() - INTERVAL '4 hours', NULL, 0, NOW() - INTERVAL '4 hours')
 ON CONFLICT (user_voucher_id) DO NOTHING;
+
+-- Keep the expired summer campaign as history, but move the vouchers that
+-- should remain usable onto running campaigns.
+INSERT INTO promotion_campaigns
+    (campaign_id, name, type, budget, budget_remaining, currency,
+     start_date, end_date, created_by, status, min_order_value,
+     max_claims_per_user, max_uses_per_voucher, version, created_at, updated_at)
+VALUES
+    ('AIONN_DEMO_CAMPAIGN', 'Aionn Demo Sale', 'DISCOUNT',
+     500000000.00, 500000000.00, 'VND',
+     NOW() - INTERVAL '7 days', NOW() + INTERVAL '365 days',
+     'sys_admin_01', 'RUNNING', 0.00, NULL, 1000, 0, NOW(), NOW())
+ON CONFLICT (campaign_id) DO NOTHING;
+
+UPDATE vouchers
+   SET campaign_id = 'AIONN_DEMO_CAMPAIGN',
+       updated_at = NOW()
+ WHERE voucher_code IN ('AIONNNEW', 'MEGA100', 'MEGA300');
+
+UPDATE vouchers
+   SET campaign_id = 'FREESHIP_DEMO_CAMPAIGN',
+       updated_at = NOW()
+ WHERE voucher_code IN ('FREESHIP', 'FREESHIP50');

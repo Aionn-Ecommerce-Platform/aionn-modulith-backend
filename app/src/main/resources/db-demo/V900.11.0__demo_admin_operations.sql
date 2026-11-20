@@ -339,7 +339,7 @@ templates(discount_amount, type, prefix) AS (
 INSERT INTO vouchers
     (voucher_code, campaign_id, discount_amount, currency, usage_limit,
      used_count, reserved_count, valid_from, valid_until, scope, type,
-     merchant_id, version, created_at, updated_at)
+     min_order_value, merchant_id, version, created_at, updated_at)
 SELECT t.prefix || '-' || lpad(m.rn::text, 3, '0'),
        NULL,
        t.discount_amount,
@@ -348,9 +348,19 @@ SELECT t.prefix || '-' || lpad(m.rn::text, 3, '0'),
        20,
        0,
        NOW() - INTERVAL '7 days',
-       TIMESTAMPTZ '2027-01-31 22:00:00+07',
+       NOW() + INTERVAL '120 days',
        'SHOP',
        t.type,
+       CASE
+           WHEN t.discount_amount >= 300000 THEN 699000
+           WHEN t.discount_amount >= 200000 THEN 499000
+           WHEN t.discount_amount >= 100000 THEN 299000
+           WHEN t.discount_amount >= 75000 THEN 249000
+           WHEN t.discount_amount >= 50000 THEN 199000
+           WHEN t.discount_amount >= 30000 THEN 149000
+           WHEN t.discount_amount >= 20000 THEN 99000
+           ELSE 49000
+       END,
        m.merchant_id,
        0,
        NOW() - INTERVAL '7 days',
