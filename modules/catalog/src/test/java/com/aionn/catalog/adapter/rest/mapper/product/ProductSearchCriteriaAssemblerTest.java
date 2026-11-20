@@ -21,7 +21,7 @@ class ProductSearchCriteriaAssemblerTest {
         SearchCatalogRequest request = new SearchCatalogRequest(
                 " widget ", "merchant-1", List.of("category-1"), List.of("brand-1"),
                 BigDecimal.ONE, BigDecimal.TEN, 4.5, true, List.of("collection-1"),
-                "price_asc", 2, 50,
+                List.of("HN"), "price_asc", 2, 50,
                 Map.of("attr.color", " red, blue ", "attr.size", " ", "q", "ignored"));
 
         ProductSearchCriteria criteria = assembler.toCriteria(request);
@@ -36,6 +36,7 @@ class ProductSearchCriteriaAssemblerTest {
         assertThat(criteria.ratingMin()).isEqualTo(4.5);
         assertThat(criteria.onSale()).isTrue();
         assertThat(criteria.collectionIds()).containsExactly("collection-1");
+        assertThat(criteria.provinceCodes()).containsExactly("HN");
         assertThat(criteria.sort()).isEqualTo(ProductSearchCriteria.Sort.PRICE_ASC);
         assertThat(criteria.page()).isEqualTo(2);
         assertThat(criteria.size()).isEqualTo(50);
@@ -46,7 +47,7 @@ class ProductSearchCriteriaAssemblerTest {
     @Test
     void fallsBackToRelevanceForUnknownSortAndNoFacets() {
         SearchCatalogRequest request = new SearchCatalogRequest(
-                "widget", null, null, null, null, null, null, null, null,
+                "widget", null, null, null, null, null, null, null, null, null,
                 "not-a-sort", 0, 20, null);
 
         ProductSearchCriteria criteria = assembler.toCriteria(request);
@@ -61,7 +62,7 @@ class ProductSearchCriteriaAssemblerTest {
     @Test
     void fallsBackToRelevanceForABlankSort() {
         SearchCatalogRequest request = new SearchCatalogRequest(
-                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null,
                 " ", 0, 20, Map.of());
 
         assertThat(assembler.toCriteria(request).sort())
@@ -78,7 +79,7 @@ class ProductSearchCriteriaAssemblerTest {
         params.put("attr.value", "a,,b");
 
         SearchCatalogRequest request = new SearchCatalogRequest(
-                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null,
                 "RELEVANCE", 0, 20, params);
 
         assertThat(assembler.toCriteria(request).attributes())

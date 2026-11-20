@@ -883,8 +883,8 @@ class ProductServiceTest {
                 ProductSearchDocument doc = new ProductSearchDocument(
                                 PRODUCT_ID, MERCHANT_ID, "Widget", null, null, List.of(CATEGORY_ID),
                                 List.of(), List.of(), List.of(), Map.of(), null, null, null, null, "PUBLISHED",
-                                Instant.now(), 0.0, 0L);
-                when(searchDocumentMapper.toSearchDocument(ArgumentMatchers.eq(product), any(), anyDouble(),
+                                Instant.now(), 0.0, 0L, null);
+                when(searchDocumentMapper.toSearchDocument(ArgumentMatchers.eq(product), any(), any(), anyDouble(),
                                 anyLong()))
                                 .thenReturn(doc);
 

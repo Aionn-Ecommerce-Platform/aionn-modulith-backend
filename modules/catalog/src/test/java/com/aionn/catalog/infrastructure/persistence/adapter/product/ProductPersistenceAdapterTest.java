@@ -309,15 +309,15 @@ class ProductPersistenceAdapterTest {
                 new BigDecimal("10"), new BigDecimal("50"),
                 Map.of("color", List.of("red", "blue")),
                 ProductPersistencePort.FallbackSort.PRICE_ASC, 4.0,
-                Boolean.TRUE);
+                Boolean.TRUE, List.of());
         when(jsonMapper.writeValueAsString(filter.attributes())).thenReturn("{\"color\":[\"red\",\"blue\"]}");
         when(jpa.searchFallback("widget", MERCHANT_ID, "PUBLISHED", "brand-1,brand-2", "cat-1",
                 new BigDecimal("10"), new BigDecimal("50"),
-                "{\"color\":[\"red\",\"blue\"]}", 4.0, true, "PRICE_ASC", 20, 40))
+                "{\"color\":[\"red\",\"blue\"]}", 4.0, true, "", "PRICE_ASC", 20, 40))
                 .thenReturn(List.of(entity));
         when(jpa.countFallback("widget", MERCHANT_ID, "PUBLISHED", "brand-1,brand-2", "cat-1",
                 new BigDecimal("10"), new BigDecimal("50"),
-                "{\"color\":[\"red\",\"blue\"]}", 4.0, true)).thenReturn(41L);
+                "{\"color\":[\"red\",\"blue\"]}", 4.0, true, "")).thenReturn(41L);
         when(mapper.toDomain(entity)).thenReturn(domain);
 
         var page = adapter.searchFallback(filter, OffsetPagination.of(2, 20));

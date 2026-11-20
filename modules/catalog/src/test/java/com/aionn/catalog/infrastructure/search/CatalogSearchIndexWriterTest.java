@@ -3,6 +3,7 @@ package com.aionn.catalog.infrastructure.search;
 import com.aionn.catalog.application.dto.search.ProductSearchDocument;
 import com.aionn.catalog.application.mapper.ProductSearchDocumentMapper;
 import com.aionn.catalog.application.port.out.attribute.AttributeTemplatePersistencePort;
+import com.aionn.catalog.application.port.out.merchant.MerchantPersistencePort;
 import com.aionn.catalog.application.port.out.product.ProductPersistencePort;
 import com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort;
 import com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort;
@@ -59,6 +60,8 @@ class CatalogSearchIndexWriterTest {
     @Mock
     private ProductSoldCounterPersistencePort productSoldCounterPersistencePort;
     @Mock
+    private MerchantPersistencePort merchantPersistencePort;
+    @Mock
     private TransactionTemplate transactionTemplate;
 
     @InjectMocks
@@ -74,7 +77,7 @@ class CatalogSearchIndexWriterTest {
     @Test
     void reindexWritesTheDocument() {
         when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(publishedProduct()));
-        when(searchDocumentMapper.toSearchDocument(any(), any(), anyDouble(), anyLong())).thenReturn(doc());
+        when(searchDocumentMapper.toSearchDocument(any(), any(), any(), anyDouble(), anyLong())).thenReturn(doc());
 
         writer.reindexAsync(PRODUCT_ID);
 
@@ -102,7 +105,7 @@ class CatalogSearchIndexWriterTest {
     void merchantReindexIndexesEveryPublishedProductPage() {
         when(productPersistencePort.listByMerchant(MERCHANT_ID, OffsetPagination.of(0, 100)))
                 .thenReturn(List.of(publishedProduct()));
-        when(searchDocumentMapper.toSearchDocument(any(), any(), anyDouble(), anyLong())).thenReturn(doc());
+        when(searchDocumentMapper.toSearchDocument(any(), any(), any(), anyDouble(), anyLong())).thenReturn(doc());
 
         writer.reindexMerchantAsync(MERCHANT_ID);
 
@@ -127,11 +130,11 @@ class CatalogSearchIndexWriterTest {
         AttributeTemplate template = AttributeTemplate.create("t1", "c1", List.of("color"), FIXED);
         when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
         when(attributeTemplatePersistencePort.findByCategoryId("c1")).thenReturn(Optional.of(template));
-        when(searchDocumentMapper.toSearchDocument(any(), any(), anyDouble(), anyLong())).thenReturn(doc());
+        when(searchDocumentMapper.toSearchDocument(any(), any(), any(), anyDouble(), anyLong())).thenReturn(doc());
 
         writer.reindexAsync(PRODUCT_ID);
 
-        verify(searchDocumentMapper).toSearchDocument(any(), ArgumentMatchers.argThat(
+        verify(searchDocumentMapper).toSearchDocument(any(), any(), ArgumentMatchers.argThat(
                 attributes -> "red".equals(attributes.get("color"))), anyDouble(), anyLong());
     }
 
@@ -146,7 +149,7 @@ class CatalogSearchIndexWriterTest {
         when(productPersistencePort.listByMerchant(MERCHANT_ID, OffsetPagination.of(1, 100)))
                 .thenReturn(java.util.List.of(
                         publishedProduct("01HZPRD000000000000009999")));
-        when(searchDocumentMapper.toSearchDocument(any(), any(), anyDouble(), anyLong()))
+        when(searchDocumentMapper.toSearchDocument(any(), any(), any(), anyDouble(), anyLong()))
                 .thenReturn(doc());
 
         writer.reindexMerchantAsync(MERCHANT_ID);
@@ -195,6 +198,6 @@ class CatalogSearchIndexWriterTest {
     private ProductSearchDocument doc() {
         return new ProductSearchDocument(PRODUCT_ID, MERCHANT_ID, "Widget", null, null, List.of("c1"),
                 List.of(), List.of(), List.of(), Map.of(), null, null, null, null, "PUBLISHED", Instant.now(),
-                0.0, 0L);
+                0.0, 0L, null);
     }
 }

@@ -19,6 +19,7 @@ public class ProductSearchDocumentMapper {
 
         public ProductSearchDocument toSearchDocument(
                         Product product,
+                        String provinceCode,
                         Map<String, String> filterableAttributes,
                         double rating,
                         long soldCount) {
@@ -77,6 +78,7 @@ public class ProductSearchDocumentMapper {
                                 product.getStatus().name(),
                                 product.getUpdatedAt(),
                                 rating,
-                                soldCount);
+                                soldCount,
+                                provinceCode);
         }
 }

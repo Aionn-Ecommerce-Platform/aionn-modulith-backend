@@ -3,8 +3,10 @@ package com.aionn.catalog.application.mapper;
 import com.aionn.catalog.application.dto.common.PageResult;
 import com.aionn.catalog.application.dto.product.result.ProductResult;
 import com.aionn.catalog.application.policy.BestSellerPolicy;
+import com.aionn.catalog.application.port.out.merchant.MerchantPersistencePort;
 import com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort;
 import com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort;
+import com.aionn.catalog.domain.model.Merchant;
 import com.aionn.catalog.domain.model.Product;
 import com.aionn.catalog.domain.model.ProductVariant;
 import com.aionn.catalog.domain.valueobject.ReviewStatus;
@@ -23,15 +25,18 @@ public class ProductResultMapper {
     private final ProductSoldCounterPersistencePort productSoldCounterPersistencePort;
     private final BestSellerPolicy bestSellerPolicy;
     private final ProductReviewPersistencePort productReviewPersistencePort;
+    private final MerchantPersistencePort merchantPersistencePort;
 
     public ProductResultMapper(
             ProductSoldCounterPersistencePort productSoldCounterPersistencePort,
             BestSellerPolicy bestSellerPolicy,
-            ProductReviewPersistencePort productReviewPersistencePort
+            ProductReviewPersistencePort productReviewPersistencePort,
+            MerchantPersistencePort merchantPersistencePort
     ) {
         this.productSoldCounterPersistencePort = productSoldCounterPersistencePort;
         this.bestSellerPolicy = bestSellerPolicy;
         this.productReviewPersistencePort = productReviewPersistencePort;
+        this.merchantPersistencePort = merchantPersistencePort;
     }
 
     public ProductResult toResult(Product product) {
@@ -41,10 +46,12 @@ public class ProductResultMapper {
         long soldCount = productSoldCounterPersistencePort.getSoldCount(product.getProductId());
         double rating = productReviewPersistencePort.getAverageRating(product.getProductId());
         long reviewCount = productReviewPersistencePort.countByProductIdAndStatus(product.getProductId(), ReviewStatus.VISIBLE);
-        return toResult(product, soldCount, rating, reviewCount);
+        Merchant merchant = merchantPersistencePort.findById(product.getMerchantId()).orElse(null);
+        return toResult(product, soldCount, rating, reviewCount, merchant);
     }
 
-    private ProductResult toResult(Product product, long soldCount, double rating, long reviewCount) {
+    private ProductResult toResult(Product product, long soldCount, double rating, long reviewCount,
+            Merchant merchant) {
         Locale locale = LocaleContextHolder.getLocale();
         String fullTag = locale.toLanguageTag();
         String language = locale.getLanguage();
@@ -89,7 +96,9 @@ public class ProductResultMapper {
                 isBestSeller,
                 rating,
                 reviewCount,
-                product.getSlug());
+                product.getSlug(),
+                merchant == null ? null : merchant.getProvinceCode(),
+                merchant == null ? null : merchant.getProvinceName());
     }
 
     public List<ProductResult> toResults(List<Product> products) {
@@ -99,13 +108,16 @@ public class ProductResultMapper {
         List<String> productIds = products.stream().map(Product::getProductId).toList();
         Map<String, Long> soldCounts = productSoldCounterPersistencePort.getSoldCountsByProductIds(productIds);
         Map<String, ProductReviewPersistencePort.RatingStats> ratingStats = productReviewPersistencePort.getRatingStatsByProductIds(productIds);
+        List<String> merchantIds = products.stream().map(Product::getMerchantId).distinct().toList();
+        Map<String, Merchant> merchants = merchantPersistencePort.findByIds(merchantIds);
         return products.stream()
                 .map(product -> {
                     long sold = soldCounts.getOrDefault(product.getProductId(), 0L);
                     var stats = ratingStats.get(product.getProductId());
                     double rating = stats != null ? stats.averageRating() : 0.0;
                     long reviews = stats != null ? stats.reviewCount() : 0L;
-                    return toResult(product, sold, rating, reviews);
+                    return toResult(product, sold, rating, reviews,
+                            merchants.get(product.getMerchantId()));
                 })
                 .toList();
     }

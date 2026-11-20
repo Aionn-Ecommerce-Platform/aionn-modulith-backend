@@ -3,6 +3,7 @@ package com.aionn.catalog.infrastructure.search;
 import com.aionn.catalog.application.dto.search.ProductSearchDocument;
 import com.aionn.catalog.application.mapper.ProductSearchDocumentMapper;
 import com.aionn.catalog.application.port.out.attribute.AttributeTemplatePersistencePort;
+import com.aionn.catalog.application.port.out.merchant.MerchantPersistencePort;
 import com.aionn.catalog.application.port.out.product.ProductPersistencePort;
 import com.aionn.catalog.application.port.out.product.ProductSoldCounterPersistencePort;
 import com.aionn.catalog.application.port.out.review.ProductReviewPersistencePort;
@@ -54,6 +55,7 @@ public class CatalogSearchIndexWriter {
     private final AttributeTemplatePersistencePort attributeTemplatePersistencePort;
     private final ProductReviewPersistencePort productReviewPersistencePort;
     private final ProductSoldCounterPersistencePort productSoldCounterPersistencePort;
+    private final MerchantPersistencePort merchantPersistencePort;
     private final TransactionTemplate transactionTemplate;
 
     /** Indexes a product regardless of status, used after publish or restore. */
@@ -122,8 +124,11 @@ public class CatalogSearchIndexWriter {
     private ProductSearchDocument buildSearchDocument(Product product) {
         double rating = productReviewPersistencePort.getAverageRating(product.getProductId());
         long soldCount = productSoldCounterPersistencePort.getSoldCount(product.getProductId());
+        String provinceCode = merchantPersistencePort.findById(product.getMerchantId())
+                .map(merchant -> merchant.getProvinceCode())
+                .orElse(null);
         return searchDocumentMapper.toSearchDocument(
-                product, collectFilterableAttributes(product), rating, soldCount);
+                product, provinceCode, collectFilterableAttributes(product), rating, soldCount);
     }
 
     private Map<String, String> collectFilterableAttributes(Product product) {

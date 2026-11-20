@@ -516,7 +516,10 @@ public class ProductService {
         }
         double rating = productReviewPersistencePort.getAverageRating(product.getProductId());
         long soldCount = productSoldCounterPersistencePort.getSoldCount(product.getProductId());
-        return searchDocumentMapper.toSearchDocument(product, filterable, rating, soldCount);
+        String provinceCode = merchantPersistencePort.findById(product.getMerchantId())
+                .map(merchant -> merchant.getProvinceCode())
+                .orElse(null);
+        return searchDocumentMapper.toSearchDocument(product, provinceCode, filterable, rating, soldCount);
     }
 
     private PageResult<ProductResult> jpaSearchFallback(ProductSearchCriteria criteria) {
@@ -525,7 +528,7 @@ public class ProductService {
                         criteria.q(), criteria.merchantId(), criteria.status(), criteria.brandIds(),
                         criteria.categoryIds(), criteria.priceMin(), criteria.priceMax(), criteria.attributes(),
                         ProductPersistencePort.FallbackSort.valueOf(criteria.sort().name()), criteria.ratingMin(),
-                        criteria.onSale()),
+                        criteria.onSale(), criteria.provinceCodes()),
                 OffsetPagination.of(criteria.page(), criteria.size()));
         List<ProductResult> results = page.content().stream()
                 .map(productResultMapper::toResult)

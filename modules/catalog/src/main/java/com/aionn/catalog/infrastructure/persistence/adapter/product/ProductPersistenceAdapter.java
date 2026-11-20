@@ -212,15 +212,17 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
         String brands = csv(filter.brandIds());
         String categories = csv(filter.categoryIds());
         String attributesJson = jsonMapper.writeValueAsString(filter.attributes());
+        String provinceCodes = csv(filter.provinceCodes());
         String status = (filter.status() == null ? ProductStatus.PUBLISHED : filter.status()).name();
         boolean onSale = Boolean.TRUE.equals(filter.onSale());
         List<Product> content = jpa.searchFallback(query, merchantId, status, brands, categories,
                         filter.priceMin(), filter.priceMax(), attributesJson, filter.ratingMin(), onSale,
-                        filter.sort().name(), pagination.size(), pagination.offset()).stream()
+                        provinceCodes, filter.sort().name(), pagination.size(), pagination.offset()).stream()
                 .map(mapper::toDomain)
                 .toList();
         long total = jpa.countFallback(query, merchantId, status, brands, categories,
-                filter.priceMin(), filter.priceMax(), attributesJson, filter.ratingMin(), onSale);
+                filter.priceMin(), filter.priceMax(), attributesJson, filter.ratingMin(), onSale,
+                provinceCodes);
         return new FallbackPage(content, total);
     }
 

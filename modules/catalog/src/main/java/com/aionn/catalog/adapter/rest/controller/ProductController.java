@@ -488,6 +488,7 @@ public class ProductController {
                         @RequestParam(required = false) Double ratingMin,
                         @RequestParam(required = false) Boolean onSale,
                         @RequestParam(required = false) List<String> collectionIds,
+                        @RequestParam(required = false) List<String> provinceCodes,
                         @RequestParam(required = false, defaultValue = "RELEVANCE") String sort,
                         @RequestParam(defaultValue = "0") @Min(0) int page,
                         @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
@@ -495,7 +496,8 @@ public class ProductController {
                 ProductSearchResult result = searchProductCatalogInputPort.execute(
                                 productSearchCriteriaAssembler.toCriteria(new SearchCatalogRequest(
                                                 q, merchantId, categoryIds, brandIds, priceMin, priceMax,
-                                                ratingMin, onSale, collectionIds, sort, page, size, allParams)),
+                                                ratingMin, onSale, collectionIds, provinceCodes, sort, page,
+                                                size, allParams)),
                                 userId);
                 return ResponseEntity.ok(
                                 ApiResponse.success(productDtoMapper.toSearchResponse(result), PRODUCTS_FETCHED));
