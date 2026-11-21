@@ -20,6 +20,7 @@ import com.aionn.shipping.domain.model.Shipment;
 import com.aionn.shipping.domain.model.ShippingRate;
 import com.aionn.shipping.domain.valueobject.ShipmentAddress;
 import com.aionn.shipping.domain.valueobject.ShipmentDimensions;
+import com.aionn.shipping.domain.valueobject.ShipmentTrackingEvent;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import com.aionn.contracts.port.ordering.OrderQueryPort;
@@ -306,6 +307,31 @@ class ShipmentServiceTest {
                 verify(shipmentEventRepository).record(eq("S_1"), eq("CANCELLED"), eq("cancelled"), isNull(), any());
                 assertThat(shipment.getStatus())
                                 .isEqualTo(ShipmentStatus.CANCELLED);
+        }
+
+        @Test
+        void applyCancelIgnoresAlreadyCancelledShipment() {
+                Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
+                shipment.cancel("first", FIXED);
+                when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
+
+                service.applyCancel("S_1", "second");
+
+                verify(shipmentRepository, never()).save(any());
+                verify(shipmentEventRepository, never()).record(any(), any(), any(), any(), any());
+        }
+
+        @Test
+        void listEventsReturnsTimelineForBuyer() {
+                Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
+                ShipmentTrackingEvent event = new ShipmentTrackingEvent(
+                                "E_1", "S_1", "REQUESTED", null, null, FIXED.instant());
+                when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
+                when(shipmentEventRepository.findByShipmentId("S_1")).thenReturn(List.of(event));
+
+                assertThat(service.listEvents("S_1", "U_1")).containsExactly(event);
         }
 
         @Test

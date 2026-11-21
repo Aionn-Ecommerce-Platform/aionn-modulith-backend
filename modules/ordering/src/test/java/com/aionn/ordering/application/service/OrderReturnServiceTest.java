@@ -164,6 +164,18 @@ class OrderReturnServiceTest {
     }
 
     @Test
+    void requestReturnRejectsMissingReasonType() {
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+
+        RequestReturnCommand command = new RequestReturnCommand(
+                ORDER_ID, USER_ID, null, "broken", null,
+                List.of(new RequestReturnCommand.Item("sku-1", 1)));
+
+        assertThrows(OrderingException.class, () -> service.requestReturn(command));
+        verify(orderReturnPersistencePort, never()).save(any());
+    }
+
+    @Test
     void requestReturnRequiresEvidenceForDamageReason() {
         when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
 

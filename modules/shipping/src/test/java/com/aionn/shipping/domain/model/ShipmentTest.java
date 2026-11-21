@@ -9,6 +9,7 @@ import com.aionn.shipping.domain.valueobject.ShipmentStatus;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
 
 import static com.aionn.sharedkernel.testing.fixture.TestClocks.FIXED;
@@ -175,6 +176,36 @@ class ShipmentTest {
         s.updateInTransitStatus("HUB_1", "at hub", FIXED);
         assertThat(s.getStatus()).isEqualTo(ShipmentStatus.IN_TRANSIT);
         assertThat(s.getCurrentLocation()).isEqualTo("HUB_1");
+    }
+
+    @Test
+    void repeatedInTransitUpdateKeepsFirstTimestamp() {
+        Clock later = Clock.fixed(FIXED.instant().plusSeconds(3600), FIXED.getZone());
+        Shipment s = newRequested();
+        s.registerWithCarrier("TRACK_1", "CARRIER_1", null, FIXED);
+        s.markPickedUp("WH_1", FIXED);
+        s.updateInTransitStatus("HUB_1", "at hub", FIXED);
+        Instant firstTransitAt = s.getInTransitAt();
+
+        s.updateInTransitStatus("HUB_2", "moved", later);
+
+        assertThat(s.getInTransitAt()).isEqualTo(firstTransitAt);
+        assertThat(s.getCurrentLocation()).isEqualTo("HUB_2");
+    }
+
+    @Test
+    void repeatedOutForDeliveryUpdateIsIgnored() {
+        Clock later = Clock.fixed(FIXED.instant().plusSeconds(3600), FIXED.getZone());
+        Shipment s = newRequested();
+        s.registerWithCarrier("TRACK_1", "CARRIER_1", null, FIXED);
+        s.markPickedUp("WH_1", FIXED);
+        s.markOutForDelivery("Driver A", "090", FIXED);
+        Instant firstOutForDeliveryAt = s.getOutForDeliveryAt();
+
+        s.markOutForDelivery("Driver B", "091", later);
+
+        assertThat(s.getOutForDeliveryAt()).isEqualTo(firstOutForDeliveryAt);
+        assertThat(s.getShipperName()).isEqualTo("Driver A");
     }
 
     @Test

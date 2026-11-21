@@ -27,6 +27,12 @@ class OrderReturnTest {
     }
 
     @Test
+    void requestRejectsMissingReasonType() {
+        assertThatThrownBy(() -> OrderReturn.request("ret-1", "ord-1", "u", "m", null, "broken", null, now))
+                .isInstanceOf(OrderingException.class);
+    }
+
+    @Test
     void requestRejectsBlankReason() {
         assertThatThrownBy(() -> OrderReturn.request("ret-1", "ord-1", "u", "m", ReturnReasonType.OTHER, " ", null, now))
                 .isInstanceOf(OrderingException.class);
