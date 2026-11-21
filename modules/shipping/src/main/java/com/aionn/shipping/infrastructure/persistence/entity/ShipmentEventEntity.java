@@ -38,7 +38,7 @@ public class ShipmentEventEntity {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "location", length = 255)
+    @Column(name = "location", columnDefinition = "TEXT")
     private String location;
 
     @Column(name = "occurred_at", nullable = false)

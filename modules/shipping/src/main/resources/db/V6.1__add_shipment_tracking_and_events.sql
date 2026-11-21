@@ -8,7 +8,7 @@ CREATE TABLE shipment_events (
     shipment_id VARCHAR(50) NOT NULL REFERENCES shipments (shipment_id) ON DELETE CASCADE,
     status VARCHAR(30) NOT NULL,
     description TEXT,
-    location VARCHAR(255),
+    location TEXT,
     occurred_at TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
