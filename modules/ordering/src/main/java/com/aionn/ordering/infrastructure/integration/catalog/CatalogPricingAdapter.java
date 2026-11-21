@@ -7,6 +7,7 @@ import com.aionn.contracts.port.promotion.FlashSaleQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +33,11 @@ public class CatalogPricingAdapter implements CatalogPricingGateway {
             FlashSaleQueryPort.SkuFlashSale flashSale = flashSales.get(p.skuId());
             boolean usesFlashSale = flashSale != null && p.currency().equals(flashSale.currency());
             var effectivePrice = usesFlashSale ? flashSale.salePrice() : p.price();
-            java.math.BigDecimal originalPrice = p.originalPrice() != null ? p.originalPrice() : p.price();
+            BigDecimal originalPrice = p.originalPrice() != null ? p.originalPrice() : p.price();
+            if (originalPrice != null && effectivePrice != null
+                    && originalPrice.compareTo(effectivePrice) < 0) {
+                originalPrice = effectivePrice;
+            }
             PricingQueryPort.SkuPricing.Parcel pz = p.parcel();
             SkuPricing.Parcel parcel = pz == null ? null
                     : new SkuPricing.Parcel(pz.weightGram(), pz.lengthCm(), pz.widthCm(), pz.heightCm());
