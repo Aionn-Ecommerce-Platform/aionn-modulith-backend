@@ -11,6 +11,7 @@ import com.aionn.shipping.application.policy.ShippingDefaultsPolicy;
 import com.aionn.shipping.application.port.out.CarrierClient;
 import com.aionn.shipping.application.port.out.CarrierWebhookIdempotencyPort;
 import com.aionn.shipping.application.port.out.ShipmentPersistencePort;
+import com.aionn.shipping.application.port.out.ShipmentEventPersistencePort;
 import com.aionn.shipping.application.port.out.ShippingRatePersistencePort;
 import com.aionn.shipping.application.port.out.integration.ShippingIntegrationEventPublisherPort;
 import com.aionn.shipping.domain.exception.ShippingErrorCode;
@@ -19,6 +20,7 @@ import com.aionn.shipping.domain.model.Shipment;
 import com.aionn.shipping.domain.model.ShippingRate;
 import com.aionn.shipping.domain.valueobject.ShipmentAddress;
 import com.aionn.shipping.domain.valueobject.ShipmentDimensions;
+import com.aionn.shipping.domain.valueobject.ShipmentTrackingEvent;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import com.aionn.contracts.port.ordering.OrderQueryPort;
@@ -50,6 +52,8 @@ class ShipmentServiceTest {
 
         @Mock
         ShipmentPersistencePort shipmentRepository;
+        @Mock
+        ShipmentEventPersistencePort shipmentEventRepository;
         @Mock
         ShippingRatePersistencePort rateRepository;
         @Mock
@@ -93,7 +97,7 @@ class ShipmentServiceTest {
                                 .thenReturn(Optional.of(new OrderQueryPort.OrderSummary(
                                                 "ORDER_1", "U_1", "M_1",
                                                 BigDecimal.valueOf(30000), "VND")));
-                service = new ShipmentService(shipmentRepository, rateRepository, eventPublisher,
+                service = new ShipmentService(shipmentRepository, shipmentEventRepository, rateRepository, eventPublisher,
                                 carrierClient, integrationEventPublisher, merchantQueryPort,
                                 orderQueryPort, defaultsPolicy, Clock.systemUTC(),
                                 webhookSecurityPolicy, webhookIdempotencyPort, transactionTemplate);
@@ -107,6 +111,7 @@ class ShipmentServiceTest {
                                 ADDRESS, PARCELS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND"));
 
                 verify(shipmentRepository).save(any(Shipment.class));
+                verify(shipmentEventRepository).record(any(), eq("REQUESTED"), isNull(), isNull(), any());
                 verify(eventPublisher).publish(anyCollection());
         }
 
@@ -185,6 +190,7 @@ class ShipmentServiceTest {
                 service.applyCarrierWebhook(new CarrierWebhookCommand(
                                 "TRACK_1", "DELIVERED", null, null, null, null, "https://sig", null, null, null));
 
+                verify(shipmentEventRepository).record(eq("S_1"), eq("DELIVERED"), isNull(), isNull(), any());
                 verify(integrationEventPublisher).publishDelivered(
                                 eq("S_1"), eq("ORDER_1"), any(), eq("https://sig"), any(), any(), anyBoolean());
         }
@@ -298,8 +304,34 @@ class ShipmentServiceTest {
                 service.applyCancel("S_1", "cancelled");
 
                 verify(shipmentRepository).save(shipment);
+                verify(shipmentEventRepository).record(eq("S_1"), eq("CANCELLED"), eq("cancelled"), isNull(), any());
                 assertThat(shipment.getStatus())
                                 .isEqualTo(ShipmentStatus.CANCELLED);
+        }
+
+        @Test
+        void applyCancelIgnoresAlreadyCancelledShipment() {
+                Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
+                shipment.cancel("first", FIXED);
+                when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
+
+                service.applyCancel("S_1", "second");
+
+                verify(shipmentRepository, never()).save(any());
+                verify(shipmentEventRepository, never()).record(any(), any(), any(), any(), any());
+        }
+
+        @Test
+        void listEventsReturnsTimelineForBuyer() {
+                Shipment shipment = Shipment.request("S_1", "ORDER_1", "M_1", "U_1",
+                                ADDRESS, DIMENSIONS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND", FIXED);
+                ShipmentTrackingEvent event = new ShipmentTrackingEvent(
+                                "E_1", "S_1", "REQUESTED", null, null, FIXED.instant());
+                when(shipmentRepository.findById("S_1")).thenReturn(Optional.of(shipment));
+                when(shipmentEventRepository.findByShipmentId("S_1")).thenReturn(List.of(event));
+
+                assertThat(service.listEvents("S_1", "U_1")).containsExactly(event);
         }
 
         @Test

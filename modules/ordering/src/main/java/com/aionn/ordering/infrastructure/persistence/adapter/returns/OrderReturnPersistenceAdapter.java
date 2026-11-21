@@ -78,6 +78,7 @@ public class OrderReturnPersistenceAdapter implements OrderReturnPersistencePort
         return jpa.findReturnAnalyticsRows(from, to).stream()
                 .map(row -> new ReturnAnalyticsRow(
                         row.getStatus(),
+                        row.getReasonType(),
                         row.getReason(),
                         row.getRefundAmount(),
                         row.getRefundCurrency()))

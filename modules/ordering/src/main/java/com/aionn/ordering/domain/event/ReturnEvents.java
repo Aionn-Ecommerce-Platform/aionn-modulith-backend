@@ -1,5 +1,7 @@
 package com.aionn.ordering.domain.event;
 
+import com.aionn.ordering.domain.valueobject.ReturnReasonType;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 
@@ -9,7 +11,8 @@ public final class ReturnEvents {
     }
 
     public record ReturnRequested(
-            String returnId, String orderId, String reason, String evidenceUrl, Instant occurredAt)
+            String returnId, String orderId, ReturnReasonType reasonType,
+            String reason, String evidenceUrl, Instant occurredAt)
             implements OrderingEvent {
     }
 

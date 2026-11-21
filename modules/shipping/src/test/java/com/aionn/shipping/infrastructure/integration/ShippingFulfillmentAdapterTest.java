@@ -82,7 +82,7 @@ class ShippingFulfillmentAdapterTest {
                 ShipmentResult registeredResult = new ShipmentResult(
                                 "S_1", "O_1", "M_1", "U_1", "TR_1", "C_1", "L_1",
                                 BigDecimal.ZERO, BigDecimal.valueOf(20000), "VND", "REGISTERED",
-                                null, null, null, 0, null, null, null, null, null, null, now, now);
+                                null, null, null, 0, null, null, null, null, null, null, null, null, null, now, now);
 
                 when(shipmentService.createShipmentsPerConsignment(any(CreateShipmentCommand.class)))
                                 .thenReturn(List.of(createdShipment));

@@ -30,6 +30,7 @@ public interface OrderReturnRepository extends JpaRepository<OrderReturnEntity, 
 
     @Query("""
         SELECT r.status AS status,
+               r.reasonType AS reasonType,
                r.reason AS reason,
                r.refundAmount AS refundAmount,
                r.refundCurrency AS refundCurrency
@@ -49,6 +50,8 @@ public interface OrderReturnRepository extends JpaRepository<OrderReturnEntity, 
 
     interface ReturnAnalyticsProjection {
         String getStatus();
+
+        String getReasonType();
 
         String getReason();
 

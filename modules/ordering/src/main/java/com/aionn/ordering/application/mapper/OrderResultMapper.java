@@ -31,6 +31,7 @@ public interface OrderResultMapper {
 
     List<OrderResult> toResults(List<Order> orders);
 
+    @Mapping(target = "originalUnitPrice", source = "originalUnitPrice", qualifiedByName = "moneyAmount")
     OrderResult.OrderItemResult toItemResult(OrderItem item);
 
     default BigDecimal mapUnitPrice(Money price) {

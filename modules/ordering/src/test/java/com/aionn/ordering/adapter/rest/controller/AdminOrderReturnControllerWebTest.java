@@ -70,13 +70,13 @@ class AdminOrderReturnControllerWebTest {
         }
 
         private static ReturnResult sampleResult() {
-                return new ReturnResult("ret-1", "order-1", "user-1", "merch-1", "broken", null, null, null, null, null,
+                return new ReturnResult("ret-1", "order-1", "user-1", "merch-1", "OTHER", "broken", null, null, null, null, null,
                                 null,
                                 "REQUESTED", Instant.now(), null, null);
         }
 
         private static OrderReturnResponse sampleResponse() {
-                return new OrderReturnResponse("ret-1", "order-1", "user-1", "merch-1", "broken", null, null, null,
+                return new OrderReturnResponse("ret-1", "order-1", "user-1", "merch-1", "OTHER", "broken", null, null, null,
                                 null, null,
                                 null, "REQUESTED", Instant.now(), null, null);
         }
@@ -95,7 +95,7 @@ class AdminOrderReturnControllerWebTest {
         void analyticsReturnsSuccess() throws Exception {
                 var result = new ReturnAnalyticsResult(
                                 LocalDate.now().minusDays(29), LocalDate.now(),
-                                0, 0, 0.0, BigDecimal.ZERO, "VND", List.of(), List.of());
+                                0, 0, 0.0, BigDecimal.ZERO, "VND", List.of(), List.of(), List.of());
                 when(adminReturnAnalyticsInputPort.execute(any(), any())).thenReturn(result);
 
                 mockMvc.perform(get("/api/v1/admin/ordering/returns/analytics"))

@@ -137,6 +137,6 @@ class ShippingWebhookControllerWebTest {
                 Instant now = Instant.now();
                 return new ShipmentResult(id, "ORDER_1", "M_1", "U_1",
                                 "TRACK_1", "CARRIER_1", null, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND",
-                                status, null, null, null, 0, null, null, null, null, null, null, now, now);
+                                status, null, null, null, 0, null, null, null, null, null, null, null, null, null, now, now);
         }
 }

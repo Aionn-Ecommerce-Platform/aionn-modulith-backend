@@ -25,7 +25,14 @@ class InMemoryFacetProductSearchIndexTest {
                         BigDecimal priceFrom, Map<String, String> attrs, long sold, double rating, String status) {
                 return new ProductSearchDocument(id, "m-1", "Widget " + id, "desc " + id, brandId, categories,
                                 List.of(), List.of("tag"), List.of(), attrs, priceFrom, priceFrom, "VND", false,
-                                status, Instant.now(), rating, sold);
+                                status, Instant.now(), rating, sold, null);
+        }
+
+        private static ProductSearchDocument docWithProvince(String id, String provinceCode) {
+                return new ProductSearchDocument(id, "m-1", "Widget " + id, null, null, List.of(),
+                                List.of(), List.of(), List.of(), Map.of(), new BigDecimal("100"),
+                                new BigDecimal("100"), "VND", false, "PUBLISHED", Instant.now(), 0.0, 0L,
+                                provinceCode);
         }
 
         private static ProductSearchCriteria criteria(List<String> categoryIds, List<String> brandIds,
@@ -168,6 +175,16 @@ class InMemoryFacetProductSearchIndexTest {
                                 null, null, Map.of(), ProductSearchCriteria.Sort.RELEVANCE, 0, 20);
 
                 assertThat(index.search(c).get().productIds()).isEmpty();
+        }
+
+        @Test
+        void searchFiltersByProvinceCode() {
+                index.index(docWithProvince("p4", "HN"));
+                ProductSearchCriteria c = new ProductSearchCriteria(null, null, null, List.of(), List.of(),
+                                null, null, Map.of(), ProductSearchCriteria.Sort.RELEVANCE, 0, 20,
+                                null, null, List.of(), List.of("HN"));
+
+                assertThat(index.search(c).get().productIds()).containsExactly("p4");
         }
 
         @Test

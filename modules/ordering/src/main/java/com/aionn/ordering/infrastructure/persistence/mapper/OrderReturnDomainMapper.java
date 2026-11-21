@@ -4,6 +4,7 @@ import com.aionn.ordering.domain.model.OrderReturn;
 import com.aionn.sharedkernel.domain.vo.Money;
 import com.aionn.ordering.domain.valueobject.ReturnStatus;
 import com.aionn.ordering.domain.valueobject.ReturnRefundStatus;
+import com.aionn.ordering.domain.valueobject.ReturnReasonType;
 import com.aionn.ordering.infrastructure.persistence.entity.OrderReturnEntity;
 import org.springframework.stereotype.Component;
 
@@ -19,6 +20,7 @@ public class OrderReturnDomainMapper {
                 e.getOrderId(),
                 e.getUserId(),
                 e.getMerchantId(),
+                ReturnReasonType.valueOf(e.getReasonType()),
                 e.getReason(),
                 e.getEvidenceUrl(),
                 refund,
@@ -42,10 +44,12 @@ public class OrderReturnDomainMapper {
                         .orderId(r.getOrderId())
                         .userId(r.getUserId())
                         .merchantId(r.getMerchantId())
+                        .reasonType(r.getReasonType().name())
                         .reason(r.getReason())
                         .evidenceUrl(r.getEvidenceUrl())
                         .build();
         entity.setRefundAmount(r.getRefundAmount() == null ? null : r.getRefundAmount().amount());
+        entity.setReasonType(r.getReasonType().name());
         entity.setRefundCurrency(r.getRefundAmount() == null ? null : r.getRefundAmount().currency());
         entity.setReturnWarehouseId(r.getReturnWarehouseId());
         entity.setItemCondition(r.getItemCondition());

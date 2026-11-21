@@ -11,6 +11,7 @@ import com.aionn.shipping.application.policy.CarrierWebhookSecurityPolicy;
 import com.aionn.shipping.application.policy.ShippingDefaultsPolicy;
 import com.aionn.shipping.application.port.out.CarrierClient;
 import com.aionn.shipping.application.port.out.CarrierWebhookIdempotencyPort;
+import com.aionn.shipping.application.port.out.ShipmentEventPersistencePort;
 import com.aionn.shipping.application.port.out.ShipmentPersistencePort;
 import com.aionn.shipping.application.port.out.ShippingRatePersistencePort;
 import com.aionn.shipping.application.port.out.integration.ShippingIntegrationEventPublisherPort;
@@ -19,6 +20,7 @@ import com.aionn.shipping.domain.exception.ShippingException;
 import com.aionn.shipping.domain.model.Shipment;
 import com.aionn.shipping.domain.valueobject.ShipmentDimensions;
 import com.aionn.shipping.domain.valueobject.ShipmentStatus;
+import com.aionn.shipping.domain.valueobject.ShipmentTrackingEvent;
 import com.aionn.sharedkernel.application.port.EventPublisher;
 import com.aionn.contracts.port.catalog.MerchantQueryPort;
 import com.aionn.contracts.port.ordering.OrderQueryPort;
@@ -43,6 +45,7 @@ import java.util.List;
 public class ShipmentService {
 
     private final ShipmentPersistencePort shipmentPersistencePort;
+    private final ShipmentEventPersistencePort shipmentEventPersistencePort;
     private final ShippingRatePersistencePort shippingRatePersistencePort;
     private final EventPublisher eventPublisher;
     private final CarrierClient carrierClient;
@@ -111,6 +114,8 @@ public class ShipmentService {
                     created.isEmpty() ? command.shippingFee() : BigDecimal.ZERO,
                     currency, clock);
             Shipment saved = shipmentPersistencePort.save(shipment);
+            shipmentEventPersistencePort.record(saved.getShipmentId(), ShipmentStatus.REQUESTED.name(),
+                    null, null, saved.getCreatedAt());
             eventPublisher.publish(shipment.pullEvents());
             created.add(saved);
         }
@@ -124,6 +129,8 @@ public class ShipmentService {
         }
         shipment.registerWithCarrier(reg.trackingCode(), reg.carrierOrderId(), reg.expectedDate(), clock);
         Shipment saved = shipmentPersistencePort.save(shipment);
+        shipmentEventPersistencePort.record(saved.getShipmentId(), ShipmentStatus.REGISTERED.name(),
+                null, null, saved.getRegisteredAt() == null ? clock.instant() : saved.getRegisteredAt());
         eventPublisher.publish(shipment.pullEvents());
         return saved;
     }
@@ -138,8 +145,14 @@ public class ShipmentService {
 
     public Shipment applyCancel(String shipmentId, String reason) {
         Shipment shipment = required(shipmentId);
+        if (shipment.getStatus() == ShipmentStatus.CANCELLED) {
+            return shipment;
+        }
         shipment.cancel(reason, clock);
         Shipment saved = shipmentPersistencePort.save(shipment);
+        shipmentEventPersistencePort.record(saved.getShipmentId(), ShipmentStatus.CANCELLED.name(),
+                reason, saved.getCurrentLocation(), saved.getCancelledAt() == null
+                        ? clock.instant() : saved.getCancelledAt());
         eventPublisher.publish(shipment.pullEvents());
         integrationEventPublisher.publishCancelled(saved.getShipmentId(), saved.getOrderId(), reason);
         return saved;
@@ -175,6 +188,11 @@ public class ShipmentService {
                     "Unknown webhook type: " + webhook.type());
         }
         Shipment saved = shipmentPersistencePort.save(shipment);
+        String eventDescription = webhook.statusDesc() != null && !webhook.statusDesc().isBlank()
+                ? webhook.statusDesc()
+                : webhook.reason();
+        shipmentEventPersistencePort.record(saved.getShipmentId(), saved.getStatus().name(),
+                eventDescription, webhook.currentLocation(), clock.instant());
         eventPublisher.publish(shipment.pullEvents());
         if (saved.getStatus() != previousStatus) {
             publishIntegration(saved, webhook);
@@ -349,6 +367,13 @@ public class ShipmentService {
                 .toList();
         return !active.isEmpty()
                 && active.stream().allMatch(shipment -> shipment.getStatus() == ShipmentStatus.DELIVERED);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ShipmentTrackingEvent> listEvents(String shipmentId, String requesterUserId) {
+        Shipment shipment = required(shipmentId);
+        ensureViewable(shipment, requesterUserId);
+        return shipmentEventPersistencePort.findByShipmentId(shipmentId);
     }
 
     public void ensureViewable(Shipment shipment, String requesterUserId) {

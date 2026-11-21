@@ -138,6 +138,15 @@ public class ShipmentEntity {
     @Column(name = "picked_at")
     private Instant pickedAt;
 
+    @Column(name = "registered_at")
+    private Instant registeredAt;
+
+    @Column(name = "in_transit_at")
+    private Instant inTransitAt;
+
+    @Column(name = "out_for_delivery_at")
+    private Instant outForDeliveryAt;
+
     @Column(name = "delivered_at")
     private Instant deliveredAt;
 

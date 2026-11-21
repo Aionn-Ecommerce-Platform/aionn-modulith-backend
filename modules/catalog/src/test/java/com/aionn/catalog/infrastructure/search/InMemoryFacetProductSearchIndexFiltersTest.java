@@ -163,7 +163,7 @@ class InMemoryFacetProductSearchIndexFiltersTest {
             Map<String, List<String>> attributes, ProductSearchCriteria.Sort sort, Double ratingMin,
             Boolean onSale, List<String> collectionIds) {
         ProductSearchCriteria criteria = new ProductSearchCriteria(q, merchantId, status, categories, brands,
-                min, max, attributes, sort, 0, 20, ratingMin, onSale, collectionIds);
+                min, max, attributes, sort, 0, 20, ratingMin, onSale, collectionIds, List.of());
         return index.search(criteria).orElseThrow();
     }
 
@@ -173,6 +173,6 @@ class InMemoryFacetProductSearchIndexFiltersTest {
             Double rating, long sold, Instant updatedAt) {
         return new ProductSearchDocument(id, merchantId, name, description, brandId, categories, collections,
                 tags, List.of(), attributes, price, price, "VND", discounted, status.name(), updatedAt,
-                rating, sold);
+                rating, sold, null);
     }
 }

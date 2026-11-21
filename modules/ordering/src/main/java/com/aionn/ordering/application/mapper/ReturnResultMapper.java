@@ -13,6 +13,7 @@ public interface ReturnResultMapper {
     @Mapping(target = "refundAmount", expression = "java(orderReturn.getRefundAmount() == null ? null : orderReturn.getRefundAmount().amount())")
     @Mapping(target = "currency", expression = "java(orderReturn.getRefundAmount() == null ? null : orderReturn.getRefundAmount().currency())")
     @Mapping(target = "status", expression = "java(orderReturn.getStatus().name())")
+    @Mapping(target = "reasonType", expression = "java(orderReturn.getReasonType().name())")
     ReturnResult toResult(OrderReturn orderReturn);
 
     List<ReturnResult> toResults(List<OrderReturn> orderReturns);

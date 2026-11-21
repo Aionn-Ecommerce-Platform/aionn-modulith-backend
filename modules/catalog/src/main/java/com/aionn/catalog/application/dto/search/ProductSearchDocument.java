@@ -23,5 +23,6 @@ public record ProductSearchDocument(
         String status,
         Instant updatedAt,
         Double rating,
-        Long soldCount) {
+        Long soldCount,
+        String provinceCode) {
 }

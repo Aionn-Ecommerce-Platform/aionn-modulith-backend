@@ -46,13 +46,19 @@ public class PricingQueryAdapter implements PricingQueryPort {
                         ? productProperties.defaultCurrency()
                         : variant.price().currency();
                 BigDecimal price = variant.price() == null ? null : variant.price().amount();
+                BigDecimal originalPrice = variant.originalPrice() == null
+                        ? price
+                        : variant.originalPrice().amount();
+                if (originalPrice != null && price != null && originalPrice.compareTo(price) < 0) {
+                    originalPrice = price;
+                }
                 ProductVariant.ParcelDimensions pd = variant.parcel();
                 SkuPricing.Parcel parcel = pd == null ? null
                         : new SkuPricing.Parcel(pd.weightGram(), pd.lengthCm(), pd.widthCm(), pd.heightCm());
                 result.put(variant.skuId(), new SkuPricing(
                         variant.skuId(), product.getMerchantId(), price, currency, active,
                         product.categoryIds(), parcel, product.getName(), firstImage(product),
-                        variantLabel(variant)));
+                        variantLabel(variant), originalPrice));
             }
         }
         return result;

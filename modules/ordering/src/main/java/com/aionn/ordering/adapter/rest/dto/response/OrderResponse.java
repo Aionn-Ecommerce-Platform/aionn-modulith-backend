@@ -68,10 +68,10 @@ public record OrderResponse(
 
     public record OrderItemResponse(
             String skuId, int qty, BigDecimal unitPrice, String warehouseId, String reservationId,
-            String productName, String imageUrl, String variantLabel) {
+            String productName, String imageUrl, String variantLabel, BigDecimal originalUnitPrice) {
         public OrderItemResponse(String skuId, int qty, BigDecimal unitPrice, String warehouseId,
                 String reservationId) {
-            this(skuId, qty, unitPrice, warehouseId, reservationId, null, null, null);
+            this(skuId, qty, unitPrice, warehouseId, reservationId, null, null, null, null);
         }
     }
 }

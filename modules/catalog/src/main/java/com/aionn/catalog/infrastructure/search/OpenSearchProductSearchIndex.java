@@ -47,6 +47,7 @@ public class OpenSearchProductSearchIndex implements ProductSearchIndex {
     private static final String FIELD_BRAND_ID = "brandId";
     private static final String FIELD_CATEGORY_IDS = "categoryIds";
     private static final String FIELD_COLLECTION_IDS = "collectionIds";
+    private static final String FIELD_PROVINCE_CODE = "provinceCode";
 
     private final OpenSearchClient client;
     private final CatalogSearchProperties searchProperties;
@@ -156,6 +157,9 @@ public class OpenSearchProductSearchIndex implements ProductSearchIndex {
         }
         if (!criteria.collectionIds().isEmpty()) {
             filters.add(termsFilter(FIELD_COLLECTION_IDS, criteria.collectionIds()));
+        }
+        if (!criteria.provinceCodes().isEmpty()) {
+            filters.add(termsFilter(FIELD_PROVINCE_CODE, criteria.provinceCodes()));
         }
         if (criteria.priceMin() != null || criteria.priceMax() != null) {
             filters.add(Query.of(q -> q.range(r -> {

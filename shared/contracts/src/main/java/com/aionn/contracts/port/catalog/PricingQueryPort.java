@@ -18,19 +18,20 @@ public interface PricingQueryPort {
             Parcel parcel,
             String productName,
             String imageUrl,
-            String variantLabel) {
+            String variantLabel,
+            BigDecimal originalPrice) {
         public SkuPricing(String skuId, String merchantId, BigDecimal price, String currency, boolean active) {
-            this(skuId, merchantId, price, currency, active, List.of(), null, null, null, null);
+            this(skuId, merchantId, price, currency, active, List.of(), null, null, null, null, null);
         }
 
         public SkuPricing(String skuId, String merchantId, BigDecimal price, String currency,
                 boolean active, List<String> categoryIds) {
-            this(skuId, merchantId, price, currency, active, categoryIds, null, null, null, null);
+            this(skuId, merchantId, price, currency, active, categoryIds, null, null, null, null, null);
         }
 
         public SkuPricing(String skuId, String merchantId, BigDecimal price, String currency,
                 boolean active, List<String> categoryIds, Parcel parcel) {
-            this(skuId, merchantId, price, currency, active, categoryIds, parcel, null, null, null);
+            this(skuId, merchantId, price, currency, active, categoryIds, parcel, null, null, null, null);
         }
 
         public SkuPricing {

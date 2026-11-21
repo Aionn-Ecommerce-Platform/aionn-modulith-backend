@@ -139,6 +139,9 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String> 
       WHERE p.status = :status
         AND (:q IS NULL OR p.name ILIKE CONCAT('%', :q, '%'))
         AND (:merchantId IS NULL OR p.merchant_id = :merchantId)
+        AND (:provinceCodesCsv = '' OR p.merchant_id IN (
+          SELECT m.merchant_id FROM merchants m
+          WHERE m.province_code = ANY(string_to_array(:provinceCodesCsv, ','))))
         AND (:brandIdsCsv = '' OR p.brand_id = ANY(string_to_array(:brandIdsCsv, ',')))
         AND (:categoryIdsCsv = '' OR EXISTS (
           SELECT 1 FROM jsonb_array_elements_text(p.category_ids) category_id
@@ -183,6 +186,7 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String> 
       @Param("attributesJson") String attributesJson,
       @Param("ratingMin") Double ratingMin,
       @Param("onSale") boolean onSale,
+      @Param("provinceCodesCsv") String provinceCodesCsv,
       @Param("sort") String sort,
       @Param("limit") int limit,
       @Param("offset") int offset);
@@ -192,6 +196,9 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String> 
       WHERE p.status = :status
         AND (:q IS NULL OR p.name ILIKE CONCAT('%', :q, '%'))
         AND (:merchantId IS NULL OR p.merchant_id = :merchantId)
+        AND (:provinceCodesCsv = '' OR p.merchant_id IN (
+          SELECT m.merchant_id FROM merchants m
+          WHERE m.province_code = ANY(string_to_array(:provinceCodesCsv, ','))))
         AND (:brandIdsCsv = '' OR p.brand_id = ANY(string_to_array(:brandIdsCsv, ',')))
         AND (:categoryIdsCsv = '' OR EXISTS (
           SELECT 1 FROM jsonb_array_elements_text(p.category_ids) category_id
@@ -226,7 +233,8 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String> 
       @Param("priceMax") BigDecimal priceMax,
       @Param("attributesJson") String attributesJson,
       @Param("ratingMin") Double ratingMin,
-      @Param("onSale") boolean onSale);
+      @Param("onSale") boolean onSale,
+      @Param("provinceCodesCsv") String provinceCodesCsv);
 
   @Query("SELECT p.status AS status, COUNT(p) AS cnt FROM ProductEntity p GROUP BY p.status")
   List<ProductStatusCount> countGroupedByStatus();

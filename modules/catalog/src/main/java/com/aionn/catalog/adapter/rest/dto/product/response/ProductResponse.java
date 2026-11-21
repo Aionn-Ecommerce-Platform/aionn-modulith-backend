@@ -23,7 +23,9 @@ public record ProductResponse(
         boolean isBestSeller,
         Double rating,
         Long reviewCount,
-        String slug) {
+        String slug,
+        String provinceCode,
+        String provinceName) {
 
     public record Variant(String skuId, Map<String, String> attributeValues, BigDecimal price,
             BigDecimal originalPrice, String currency, Integer weightGram, BigDecimal lengthCm,

@@ -109,6 +109,10 @@ public class InMemoryFacetProductSearchIndex implements ProductSearchIndex {
                         || doc.collectionIds().stream().noneMatch(criteria.collectionIds()::contains))) {
             return false;
         }
+        if (!criteria.provinceCodes().isEmpty()
+                && (doc.provinceCode() == null || !criteria.provinceCodes().contains(doc.provinceCode()))) {
+            return false;
+        }
         if (!matchesPrice(doc, criteria)) {
             return false;
         }

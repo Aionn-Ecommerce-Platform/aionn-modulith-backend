@@ -23,7 +23,9 @@ public record ProductResult(
         boolean isBestSeller,
         Double rating,
         Long reviewCount,
-        String slug) {
+        String slug,
+        String provinceCode,
+        String provinceName) {
 
     public ProductResult(
             String productId,
@@ -40,7 +42,8 @@ public record ProductResult(
             Instant createdAt,
             Instant updatedAt) {
         this(productId, merchantId, name, brandId, categoryIds, imageList, tags,
-                attributes, variants, aiDescription, status, createdAt, updatedAt, 0L, false, 0.0, 0L, null);
+                attributes, variants, aiDescription, status, createdAt, updatedAt, 0L, false, 0.0, 0L, null,
+                null, null);
     }
 
     public ProductResult(
@@ -59,7 +62,8 @@ public record ProductResult(
             Instant updatedAt,
             long soldCount) {
         this(productId, merchantId, name, brandId, categoryIds, imageList, tags,
-                attributes, variants, aiDescription, status, createdAt, updatedAt, soldCount, false, 0.0, 0L, null);
+                attributes, variants, aiDescription, status, createdAt, updatedAt, soldCount, false, 0.0, 0L, null,
+                null, null);
     }
 
     public ProductResult(
@@ -79,7 +83,8 @@ public record ProductResult(
             long soldCount,
             boolean isBestSeller) {
         this(productId, merchantId, name, brandId, categoryIds, imageList, tags,
-                attributes, variants, aiDescription, status, createdAt, updatedAt, soldCount, isBestSeller, 0.0, 0L, null);
+                attributes, variants, aiDescription, status, createdAt, updatedAt, soldCount, isBestSeller, 0.0, 0L, null,
+                null, null);
     }
 
     public record Variant(String skuId, Map<String, String> attributeValues, BigDecimal price,

@@ -42,6 +42,9 @@ public class OrderItemEntity {
     @Column(name = "unit_price", precision = 18, scale = 2, nullable = false)
     private BigDecimal unitPrice;
 
+    @Column(name = "original_unit_price", precision = 18, scale = 2)
+    private BigDecimal originalUnitPrice;
+
     @Column(name = "warehouse_id", length = 50)
     private String warehouseId;
 

@@ -71,9 +71,11 @@ public interface ProductPersistencePort {
             Map<String, List<String>> attributes,
             FallbackSort sort,
             Double ratingMin,
-            Boolean onSale) {
+            Boolean onSale,
+            List<String> provinceCodes) {
         public FallbackFilter {
             attributes = attributes == null ? Map.of() : Map.copyOf(attributes);
+            provinceCodes = provinceCodes == null ? List.of() : List.copyOf(provinceCodes);
             sort = sort == null ? FallbackSort.RELEVANCE : sort;
         }
     }

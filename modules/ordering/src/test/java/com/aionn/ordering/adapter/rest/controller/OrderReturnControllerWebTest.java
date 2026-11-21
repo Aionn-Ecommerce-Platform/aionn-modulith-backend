@@ -87,13 +87,13 @@ class OrderReturnControllerWebTest {
     }
 
     private static ReturnResult sampleReturn() {
-        return new ReturnResult("ret-1", "order-1", "user-1", "merch-1", "damaged",
+        return new ReturnResult("ret-1", "order-1", "user-1", "merch-1", "OTHER", "damaged",
                 "http://ev", BigDecimal.valueOf(100), "VND", "wh-1", "NEW",
                 null, "REQUESTED", Instant.now(), null, null);
     }
 
     private static OrderReturnResponse sampleResponse() {
-        return new OrderReturnResponse("ret-1", "order-1", "user-1", "merch-1", "damaged",
+        return new OrderReturnResponse("ret-1", "order-1", "user-1", "merch-1", "OTHER", "damaged",
                 "http://ev", BigDecimal.valueOf(100), "VND", "wh-1", "NEW",
                 null, "REQUESTED", Instant.now(), null, null);
     }
@@ -106,7 +106,7 @@ class OrderReturnControllerWebTest {
 
         mockMvc.perform(post("/api/v1/ordering/returns/orders/order-1")
                         .contentType(APPLICATION_JSON)
-                        .content("{\"reason\":\"damaged\",\"evidenceUrl\":\"http://ev\",\"items\":[{\"skuId\":\"sku-1\",\"qty\":1}]}"))
+                        .content("{\"reasonType\":\"DAMAGED\",\"reason\":\"damaged\",\"evidenceUrl\":\"http://ev\",\"items\":[{\"skuId\":\"sku-1\",\"qty\":1}]}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.statusCode").value("201"))
                 .andExpect(jsonPath("$.data.returnId").value("ret-1"));

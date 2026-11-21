@@ -30,6 +30,7 @@ public interface OrderReturnPersistencePort {
 
     record ReturnAnalyticsRow(
             String status,
+            String reasonType,
             String reason,
             BigDecimal refundAmount,
             String refundCurrency) {

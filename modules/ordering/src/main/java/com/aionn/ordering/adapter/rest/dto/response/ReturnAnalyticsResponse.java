@@ -7,7 +7,9 @@ import java.util.List;
 public record ReturnAnalyticsResponse(
         LocalDate from, LocalDate to, long totalReturns, long totalCompletedOrders,
         double returnRate, BigDecimal totalRefundAmount, String currency,
-        List<StatusCount> returnsByStatus, List<ReasonCount> returnsByReason) {
+        List<StatusCount> returnsByStatus, List<ReasonCount> returnsByReason,
+        List<ReasonTypeCount> returnsByReasonType) {
     public record StatusCount(String status, long count) {}
     public record ReasonCount(String reason, long count) {}
+    public record ReasonTypeCount(String reasonType, long count) {}
 }

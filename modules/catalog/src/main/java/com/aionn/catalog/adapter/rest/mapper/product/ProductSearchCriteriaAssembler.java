@@ -26,7 +26,8 @@ public class ProductSearchCriteriaAssembler {
                 request.categoryIds(), request.brandIds(),
                 request.priceMin(), request.priceMax(), attributes(request.allParams()),
                 parseSort(request.sort()), request.page(), request.size(),
-                request.ratingMin(), request.onSale(), request.collectionIds());
+                request.ratingMin(), request.onSale(), request.collectionIds(),
+                request.provinceCodes());
     }
 
     private static ProductSearchCriteria.Sort parseSort(String sort) {

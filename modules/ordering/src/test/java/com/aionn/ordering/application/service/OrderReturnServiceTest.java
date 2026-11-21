@@ -3,6 +3,7 @@ package com.aionn.ordering.application.service;
 import com.aionn.ordering.application.dto.returns.command.ApproveReturnCommand;
 import com.aionn.ordering.application.dto.returns.command.ConfirmItemReceivedCommand;
 import com.aionn.ordering.domain.valueobject.ReturnRefundStatus;
+import com.aionn.ordering.domain.valueobject.ReturnReasonType;
 import java.lang.reflect.Field;
 import java.time.Clock;
 import java.time.Duration;
@@ -155,7 +156,7 @@ class OrderReturnServiceTest {
                 .thenAnswer(inv -> inv.getArgument(0));
 
         OrderReturn result = service.requestReturn(
-                new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null,
+                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", null,
                         List.of(new RequestReturnCommand.Item("sku-1", 1))));
 
         assertEquals(ReturnStatus.REQUESTED, result.getStatus());
@@ -163,11 +164,35 @@ class OrderReturnServiceTest {
     }
 
     @Test
+    void requestReturnRejectsMissingReasonType() {
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+
+        RequestReturnCommand command = new RequestReturnCommand(
+                ORDER_ID, USER_ID, null, "broken", null,
+                List.of(new RequestReturnCommand.Item("sku-1", 1)));
+
+        assertThrows(OrderingException.class, () -> service.requestReturn(command));
+        verify(orderReturnPersistencePort, never()).save(any());
+    }
+
+    @Test
+    void requestReturnRequiresEvidenceForDamageReason() {
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+
+        RequestReturnCommand command = new RequestReturnCommand(
+                ORDER_ID, USER_ID, ReturnReasonType.DAMAGED, "broken", null,
+                List.of(new RequestReturnCommand.Item("sku-1", 1)));
+
+        assertThrows(OrderingException.class, () -> service.requestReturn(command));
+        verify(orderReturnPersistencePort, never()).save(any());
+    }
+
+    @Test
     void requestReturnRejectsEmptyItemSelection() {
         when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
 
         RequestReturnCommand command = new RequestReturnCommand(
-                ORDER_ID, USER_ID, "broken", null, List.of());
+                ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", null, List.of());
         assertThrows(OrderingException.class, () -> service.requestReturn(command));
 
         verify(orderReturnPersistencePort, never()).save(any());
@@ -388,9 +413,9 @@ class OrderReturnServiceTest {
         LocalDate from = to.minusDays(5);
         var mockRows = List.of(
                 new OrderReturnPersistencePort.ReturnAnalyticsRow(
-                        "APPROVED", "damaged", BigDecimal.valueOf(100), "VND"),
+                        "APPROVED", "DAMAGED", "damaged", BigDecimal.valueOf(100), "VND"),
                 new OrderReturnPersistencePort.ReturnAnalyticsRow(
-                        "REQUESTED", null, null, null)
+                        "REQUESTED", "OTHER", null, null, null)
         );
         when(orderReturnPersistencePort.findReturnAnalyticsRows(any(), any())).thenReturn(mockRows);
         when(orderReturnPersistencePort.countCompletedOrdersBetween(any(), any())).thenReturn(10L);
@@ -508,7 +533,7 @@ class OrderReturnServiceTest {
         when(orderReturnPersistencePort.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
 
         assertThrows(OrderingException.class, () -> service.requestReturn(
-                new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null,
+                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", null,
                         List.of(new RequestReturnCommand.Item(" ", 1)))));
 
         verify(orderReturnItemPersistencePort, never()).saveAll(any(), any());
@@ -520,7 +545,7 @@ class OrderReturnServiceTest {
         when(orderReturnPersistencePort.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
 
         assertThrows(OrderingException.class, () -> service.requestReturn(
-                new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null,
+                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", null,
                         List.of(new RequestReturnCommand.Item("sku-1", 1),
                                 new RequestReturnCommand.Item("sku-1", 1)))));
 
@@ -533,7 +558,7 @@ class OrderReturnServiceTest {
         when(orderReturnPersistencePort.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
 
         assertThrows(OrderingException.class, () -> service.requestReturn(
-                new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null,
+                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", null,
                         List.of(new RequestReturnCommand.Item("sku-9", 1)))));
 
         verify(orderReturnItemPersistencePort, never()).saveAll(any(), any());
@@ -545,7 +570,7 @@ class OrderReturnServiceTest {
         when(orderReturnPersistencePort.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
 
         assertThrows(OrderingException.class, () -> service.requestReturn(
-                new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null,
+                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", null,
                         List.of(new RequestReturnCommand.Item("sku-1", 2)))));
 
         verify(orderReturnItemPersistencePort, never()).saveAll(any(), any());
@@ -562,7 +587,7 @@ class OrderReturnServiceTest {
             return null;
         }).when(orderReturnItemPersistencePort).saveAll(any(), any());
 
-        service.requestReturn(new RequestReturnCommand(ORDER_ID, USER_ID, "broken", null,
+        service.requestReturn(new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", null,
                 List.of(new RequestReturnCommand.Item("sku-1", 1))));
 
         assertEquals(1, saved.get().size());

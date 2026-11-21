@@ -26,7 +26,10 @@ public class OrderDomainMapper {
                     item.getReservationId(),
                     item.getProductName(),
                     item.getImageUrl(),
-                    item.getVariantLabel()));
+                    item.getVariantLabel(),
+                    item.getOriginalUnitPrice() == null
+                            ? null
+                            : Money.of(item.getOriginalUnitPrice(), e.getCurrency())));
         }
         boolean hasAddress = e.getAddressId() != null
                 || e.getAddressFullName() != null
@@ -110,6 +113,9 @@ public class OrderDomainMapper {
                     .order(entity)
                     .qty(item.qty())
                     .unitPrice(item.unitPrice().amount())
+                    .originalUnitPrice(item.originalUnitPrice() == null
+                            ? null
+                            : item.originalUnitPrice().amount())
                     .warehouseId(item.warehouseId())
                     .reservationId(item.reservationId())
                     .productName(item.productName())

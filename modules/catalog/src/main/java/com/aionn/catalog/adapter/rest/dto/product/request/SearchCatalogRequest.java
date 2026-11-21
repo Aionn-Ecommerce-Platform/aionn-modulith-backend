@@ -18,6 +18,7 @@ public record SearchCatalogRequest(
         Double ratingMin,
         Boolean onSale,
         List<String> collectionIds,
+        List<String> provinceCodes,
         String sort,
         int page,
         int size,

@@ -24,31 +24,32 @@ public interface CatalogPricingGateway {
             Parcel parcel,
             String productName,
             String imageUrl,
-            String variantLabel) {
+            String variantLabel,
+            BigDecimal originalPrice) {
         public SkuPricing(String skuId, String merchantId, String warehouseId,
                 BigDecimal price, String currency, boolean active) {
             this(skuId, merchantId, warehouseId, price, currency, active, List.of(), null, null,
-                    null, null, null);
+                    null, null, null, null);
         }
 
         public SkuPricing(String skuId, String merchantId, String warehouseId,
                 BigDecimal price, String currency, boolean active, List<String> categoryIds) {
             this(skuId, merchantId, warehouseId, price, currency, active, categoryIds, null, null,
-                    null, null, null);
+                    null, null, null, null);
         }
 
         public SkuPricing(String skuId, String merchantId, String warehouseId,
                 BigDecimal price, String currency, boolean active, List<String> categoryIds,
                 String flashSaleRegistrationId) {
             this(skuId, merchantId, warehouseId, price, currency, active, categoryIds,
-                    flashSaleRegistrationId, null, null, null, null);
+                    flashSaleRegistrationId, null, null, null, null, null);
         }
 
         public SkuPricing(String skuId, String merchantId, String warehouseId,
                 BigDecimal price, String currency, boolean active, List<String> categoryIds,
                 String flashSaleRegistrationId, Parcel parcel) {
             this(skuId, merchantId, warehouseId, price, currency, active, categoryIds,
-                    flashSaleRegistrationId, parcel, null, null, null);
+                    flashSaleRegistrationId, parcel, null, null, null, null);
         }
 
         public SkuPricing {
