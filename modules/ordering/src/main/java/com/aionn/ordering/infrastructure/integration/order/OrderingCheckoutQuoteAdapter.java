@@ -53,6 +53,7 @@ public class OrderingCheckoutQuoteAdapter implements CheckoutQuotePort {
             CatalogPricingGateway.SkuPricing.Parcel parcel = sku.parcel();
             if (parcel != null && parcel.hasWeight()) {
                 parcels.add(new ShippingGateway.Parcel(
+                        line.skuId(),
                         parcel.weightGram() * line.qty(),
                         parcel.lengthCm(),
                         parcel.widthCm(),

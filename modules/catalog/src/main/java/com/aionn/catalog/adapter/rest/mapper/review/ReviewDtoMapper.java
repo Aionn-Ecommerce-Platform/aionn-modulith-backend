@@ -85,7 +85,8 @@ public interface ReviewDtoMapper {
         return new GetAdminProductReviewsQuery(productId, OffsetPagination.of(page, size));
     }
 
-    default CheckReviewEligibilityQuery toEligibilityQuery(String userId, String productId) {
-        return new CheckReviewEligibilityQuery(userId, productId);
+    default CheckReviewEligibilityQuery toEligibilityQuery(
+            String userId, String productId, String orderId, String skuId) {
+        return new CheckReviewEligibilityQuery(userId, productId, orderId, skuId);
     }
 }

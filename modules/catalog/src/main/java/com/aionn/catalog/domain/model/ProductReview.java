@@ -19,6 +19,7 @@ public class ProductReview extends AggregateRoot {
     private final String productId;
     private final String userId;
     private final String orderId;
+    private final String skuId;
     private int rating;
     private String title;
     private String content;
@@ -37,6 +38,7 @@ public class ProductReview extends AggregateRoot {
             String productId,
             String userId,
             String orderId,
+            String skuId,
             int rating,
             String title,
             String content,
@@ -53,6 +55,7 @@ public class ProductReview extends AggregateRoot {
         this.productId = productId;
         this.userId = userId;
         this.orderId = orderId;
+        this.skuId = skuId;
         validateRating(rating);
         this.rating = rating;
         this.title = title;
@@ -76,6 +79,7 @@ public class ProductReview extends AggregateRoot {
             String productId,
             String userId,
             String orderId,
+            String skuId,
             int rating,
             String title,
             String content,
@@ -87,18 +91,20 @@ public class ProductReview extends AggregateRoot {
             String productId,
             String userId,
             String orderId,
+            String skuId,
             int rating,
             String title,
             String content,
             List<String> imageUrls,
             Clock clock) {
-        return create(new ReviewDraft(reviewId, productId, userId, orderId, rating, title, content, imageUrls), clock);
+        return create(new ReviewDraft(reviewId, productId, userId, orderId, skuId, rating, title, content,
+                imageUrls), clock);
     }
 
     public static ProductReview create(ReviewDraft draft, Clock clock) {
         Instant now = clock.instant();
         ProductReview review = new ProductReview(
-                draft.reviewId(), draft.productId(), draft.userId(), draft.orderId(),
+                draft.reviewId(), draft.productId(), draft.userId(), draft.orderId(), draft.skuId(),
                 draft.rating(), draft.title(), draft.content(), draft.imageUrls(),
                 ReviewStatus.VISIBLE, null, null, null, null, null, now, now);
         review.registerEvent(new ReviewEvents.ReviewCreated(

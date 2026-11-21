@@ -1,6 +1,7 @@
 package com.aionn.contracts.port.ordering;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -11,9 +12,10 @@ public interface OrderQueryPort {
 
     boolean hasOpenOrdersForUser(String userId);
 
-    boolean hasCompletedPurchaseForSkus(String userId, Collection<String> skuIds);
+    Optional<ReviewablePurchase> findReviewablePurchase(String userId, String orderId, String skuId);
 
-    String findCompletedOrderIdForSkus(String userId, Collection<String> skuIds);
+    Optional<ReviewablePurchase> findLatestReviewablePurchase(
+            String userId, Collection<String> skuIds);
 
     Optional<OrderSummary> findOrderSummary(String orderId);
 
@@ -29,5 +31,8 @@ public interface OrderQueryPort {
     }
 
     record OrderPurchase(String userId, List<String> skuIds) {
+    }
+
+    record ReviewablePurchase(String orderId, String skuId, Instant deliveredAt) {
     }
 }

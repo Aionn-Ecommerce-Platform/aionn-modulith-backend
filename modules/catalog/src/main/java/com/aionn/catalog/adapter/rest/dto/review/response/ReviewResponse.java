@@ -8,6 +8,7 @@ public record ReviewResponse(
         String productId,
         String userId,
         String orderId,
+        String skuId,
         int rating,
         String title,
         String content,

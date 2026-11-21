@@ -111,24 +111,16 @@ public interface OrderRepository extends JpaRepository<OrderEntity, String> {
 
   boolean existsByUserIdAndStatusNotIn(String userId, Collection<String> terminalStatuses);
 
+  @EntityGraph(attributePaths = "items")
   @Query("""
-      SELECT COUNT(o) > 0 FROM OrderEntity o
+      SELECT DISTINCT o FROM OrderEntity o
         JOIN o.items item
-        WHERE o.userId = :userId
-          AND o.status = 'COMPLETED'
-          AND item.id.skuId IN :skuIds
+       WHERE o.userId = :userId
+         AND item.id.skuId IN :skuIds
+         AND o.status NOT IN ('CANCELLED', 'REJECTED')
+       ORDER BY o.createdAt DESC
       """)
-  boolean existsCompletedPurchaseForSkus(String userId, Collection<String> skuIds);
-
-  @Query(value = """
-      SELECT o.order_id FROM orders o
-        JOIN order_items item ON o.order_id = item.order_id
-        WHERE o.user_id = :userId
-          AND o.status = 'COMPLETED'
-          AND item.sku_id IN (:skuIds)
-        LIMIT 1
-      """, nativeQuery = true)
-  String findCompletedOrderIdForSkus(String userId, Collection<String> skuIds);
+  List<OrderEntity> findReviewableOrders(String userId, Collection<String> skuIds, Pageable pageable);
 
   interface OrderAnalyticsProjection {
     String getStatus();

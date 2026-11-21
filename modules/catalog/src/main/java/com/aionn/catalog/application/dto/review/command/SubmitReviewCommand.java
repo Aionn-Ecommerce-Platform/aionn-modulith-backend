@@ -7,6 +7,8 @@ import java.util.List;
 public record SubmitReviewCommand(
         String userId,
         String productId,
+        String orderId,
+        String skuId,
         int rating,
         String title,
         String content,

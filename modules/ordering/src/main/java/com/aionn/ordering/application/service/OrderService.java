@@ -576,7 +576,7 @@ public class OrderService {
             }
             int totalWeight = p.weightGram() * line.qty();
             parcels.add(new ShippingGateway.Parcel(
-                    totalWeight, p.lengthCm(), p.widthCm(), p.heightCm(), line.qty()));
+                    line.skuId(), totalWeight, p.lengthCm(), p.widthCm(), p.heightCm(), line.qty()));
         }
         return parcels;
     }

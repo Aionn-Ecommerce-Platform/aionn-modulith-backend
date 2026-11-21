@@ -37,7 +37,8 @@ public class ParcelResolver {
             }
             int totalWeight = parcel.weightGram() * item.qty();
             parcels.add(new QuoteShippingCommand.Parcel(
-                    totalWeight, parcel.lengthCm(), parcel.widthCm(), parcel.heightCm(), item.qty()));
+                    item.skuId(), totalWeight, parcel.lengthCm(), parcel.widthCm(), parcel.heightCm(),
+                    item.qty()));
         }
         return parcels;
     }

@@ -14,6 +14,7 @@ public class CheckReviewEligibilityUseCase implements CheckReviewEligibilityInpu
 
     @Override
     public ReviewEligibilityResult execute(CheckReviewEligibilityQuery query) {
-        return reviewService.checkEligibility(query.userId(), query.productId());
+        return reviewService.checkEligibility(
+                query.userId(), query.productId(), query.orderId(), query.skuId());
     }
 }

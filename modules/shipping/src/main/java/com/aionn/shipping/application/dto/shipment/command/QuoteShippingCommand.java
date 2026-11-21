@@ -14,7 +14,6 @@ public record QuoteShippingCommand(
         String currency,
         String serviceCode) implements Command {
 
-    /** Backwards-compatible constructor for callers without a goods subtotal. */
     public QuoteShippingCommand(String orderId, ShipmentAddress address, List<Parcel> parcels, String currency) {
         this(orderId, address, parcels, null, currency, "STANDARD");
     }
@@ -24,11 +23,8 @@ public record QuoteShippingCommand(
         this(orderId, address, parcels, goodsSubtotal, currency, "STANDARD");
     }
 
-    /**
-     * Parcel characteristics for one SKU in the shipment. {@code weightGram} is
-     * the total weight for {@code qty} units; box dims describe one unit.
-     */
     public record Parcel(
+            String skuId,
             Integer weightGram,
             BigDecimal lengthCm,
             BigDecimal widthCm,

@@ -79,7 +79,7 @@ class ReviewResultMapperTest {
     }
 
     private static ProductReview review(String userId) {
-        return ProductReview.create("review-1", "product-1", userId, "order-1", 5,
+        return ProductReview.create("review-1", "product-1", userId, "order-1", "sku-1", 5,
                 "Great", "Works", List.of(), Clock.fixed(NOW, ZoneOffset.UTC));
     }
 }

@@ -113,7 +113,7 @@ public class ShippingFulfillmentAdapter implements ShippingFulfillmentPort {
         }
         return parcels.stream()
                 .map(p -> new QuoteShippingCommand.Parcel(
-                        p.weightGram(), p.lengthCm(), p.widthCm(), p.heightCm(), p.qty()))
+                        p.skuId(), p.weightGram(), p.lengthCm(), p.widthCm(), p.heightCm(), p.qty()))
                 .toList();
     }
 

@@ -1,22 +1,26 @@
 package com.aionn.ordering.infrastructure.integration.order;
 
+import com.aionn.contracts.port.ordering.OrderQueryPort;
+import com.aionn.contracts.port.shipping.ShipmentItemQueryPort;
+import com.aionn.ordering.application.port.out.OrderReturnItemPersistencePort;
 import com.aionn.ordering.infrastructure.persistence.entity.OrderEntity;
 import com.aionn.ordering.infrastructure.persistence.entity.OrderItemEntity;
 import com.aionn.ordering.infrastructure.persistence.repository.OrderRepository;
-import com.aionn.contracts.port.ordering.OrderQueryPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
@@ -27,6 +31,10 @@ class OrderingOrderQueryAdapterTest {
 
     @Mock
     private OrderRepository orderJpaRepository;
+    @Mock
+    private ShipmentItemQueryPort shipmentItemQueryPort;
+    @Mock
+    private OrderReturnItemPersistencePort orderReturnItemPersistencePort;
 
     @InjectMocks
     private OrderingOrderQueryAdapter adapter;
@@ -58,19 +66,84 @@ class OrderingOrderQueryAdapterTest {
     }
 
     @Test
-    void hasCompletedPurchaseForSkusQueriesRepository() {
-        assertFalse(adapter.hasCompletedPurchaseForSkus(null, List.of("sku-1")));
-        when(orderJpaRepository.existsCompletedPurchaseForSkus("usr-1", List.of("sku-1"))).thenReturn(true);
+    void findReviewablePurchaseRequiresDeliveredQuantityAboveReturnedQuantity() {
+        OrderEntity entity = order("ord-1", "COMPLETED", Instant.now());
+        entity.setItems(List.of(orderItem("ord-1", "sku-1", 1)));
+        when(orderJpaRepository.findById("ord-1")).thenReturn(Optional.of(entity));
+        when(shipmentItemQueryPort.deliveredItems("ord-1"))
+                .thenReturn(List.of(new ShipmentItemQueryPort.DeliveredItem(
+                        "sku-1", 1, Instant.parse("2026-01-02T00:00:00Z"))));
+        when(orderReturnItemPersistencePort.returnedQuantities("ord-1")).thenReturn(Map.of());
 
-        assertTrue(adapter.hasCompletedPurchaseForSkus("usr-1", List.of("sku-1")));
+        Optional<OrderQueryPort.ReviewablePurchase> purchase =
+                adapter.findReviewablePurchase("u-1", "ord-1", "sku-1");
+
+        assertTrue(purchase.isPresent());
+        assertEquals("sku-1", purchase.get().skuId());
+        assertEquals(Instant.parse("2026-01-02T00:00:00Z"), purchase.get().deliveredAt());
     }
 
     @Test
-    void findCompletedOrderIdForSkusQueriesRepository() {
-        assertNull(adapter.findCompletedOrderIdForSkus(null, List.of("sku-1")));
-        when(orderJpaRepository.findCompletedOrderIdForSkus("usr-1", List.of("sku-1"))).thenReturn("ord-1");
+    void findReviewablePurchaseExcludesFullyReturnedItem() {
+        OrderEntity entity = order("ord-1", "COMPLETED", Instant.now());
+        entity.setItems(List.of(orderItem("ord-1", "sku-1", 1)));
+        when(orderJpaRepository.findById("ord-1")).thenReturn(Optional.of(entity));
+        when(shipmentItemQueryPort.deliveredItems("ord-1"))
+                .thenReturn(List.of(new ShipmentItemQueryPort.DeliveredItem("sku-1", 1, Instant.now())));
+        when(orderReturnItemPersistencePort.returnedQuantities("ord-1"))
+                .thenReturn(Map.of("sku-1", 1));
 
-        assertEquals("ord-1", adapter.findCompletedOrderIdForSkus("usr-1", List.of("sku-1")));
+        assertTrue(adapter.findReviewablePurchase("u-1", "ord-1", "sku-1").isEmpty());
+    }
+
+    @Test
+    void findReviewablePurchaseFallsBackToCompletedOrderForLegacyShipments() {
+        Instant completedAt = Instant.parse("2026-01-03T00:00:00Z");
+        OrderEntity entity = order("ord-1", "COMPLETED", completedAt);
+        entity.setItems(List.of(orderItem("ord-1", "sku-1", 2)));
+        when(orderJpaRepository.findById("ord-1")).thenReturn(Optional.of(entity));
+        when(shipmentItemQueryPort.deliveredItems("ord-1")).thenReturn(List.of());
+        when(orderReturnItemPersistencePort.returnedQuantities("ord-1")).thenReturn(Map.of());
+
+        Optional<OrderQueryPort.ReviewablePurchase> purchase =
+                adapter.findReviewablePurchase("u-1", "ord-1", "sku-1");
+
+        assertTrue(purchase.isPresent());
+        assertEquals(completedAt, purchase.get().deliveredAt());
+    }
+
+    @Test
+    void findLatestReviewablePurchaseReturnsNewestEligibleOrder() {
+        OrderEntity entity = order("ord-1", "COMPLETED", Instant.now());
+        entity.setItems(List.of(orderItem("ord-1", "sku-1", 1)));
+        when(orderJpaRepository.findReviewableOrders(
+                eq("u-1"), eq(List.of("sku-1")), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(List.of(entity));
+        when(shipmentItemQueryPort.deliveredItems("ord-1")).thenReturn(List.of());
+        when(orderReturnItemPersistencePort.returnedQuantities("ord-1")).thenReturn(Map.of());
+
+        assertTrue(adapter.findLatestReviewablePurchase("u-1", List.of("sku-1")).isPresent());
+    }
+
+    @Test
+    void findLatestReviewablePurchaseContinuesPastFirstPage() {
+        OrderEntity ineligible = order("ord-old", "SHIPPED", null);
+        ineligible.setItems(List.of(orderItem("ord-old", "sku-1", 1)));
+        OrderEntity eligible = order("ord-new", "COMPLETED", Instant.parse("2026-01-04T00:00:00Z"));
+        eligible.setItems(List.of(orderItem("ord-new", "sku-1", 1)));
+
+        when(orderJpaRepository.findReviewableOrders(
+                eq("u-1"), eq(List.of("sku-1")), eq(PageRequest.of(0, 50))))
+                .thenReturn(java.util.Collections.nCopies(50, ineligible));
+        when(orderJpaRepository.findReviewableOrders(
+                eq("u-1"), eq(List.of("sku-1")), eq(PageRequest.of(1, 50))))
+                .thenReturn(List.of(eligible));
+        when(shipmentItemQueryPort.deliveredItems("ord-old")).thenReturn(List.of());
+        when(orderReturnItemPersistencePort.returnedQuantities("ord-old")).thenReturn(Map.of());
+        when(shipmentItemQueryPort.deliveredItems("ord-new")).thenReturn(List.of());
+        when(orderReturnItemPersistencePort.returnedQuantities("ord-new")).thenReturn(Map.of());
+
+        assertTrue(adapter.findLatestReviewablePurchase("u-1", List.of("sku-1")).isPresent());
     }
 
     @Test
@@ -117,9 +190,23 @@ class OrderingOrderQueryAdapterTest {
         assertEquals(List.of("sku-1", "sku-2"), purchase.get().skuIds());
     }
 
+    private static OrderEntity order(String orderId, String status, Instant completedAt) {
+        OrderEntity entity = new OrderEntity();
+        entity.setOrderId(orderId);
+        entity.setUserId("u-1");
+        entity.setStatus(status);
+        entity.setCompletedAt(completedAt);
+        return entity;
+    }
+
     private static OrderItemEntity orderItem(String orderId, String skuId) {
+        return orderItem(orderId, skuId, 1);
+    }
+
+    private static OrderItemEntity orderItem(String orderId, String skuId, int qty) {
         OrderItemEntity entity = new OrderItemEntity();
         entity.setId(new OrderItemEntity.OrderItemId(orderId, skuId));
+        entity.setQty(qty);
         return entity;
     }
 }

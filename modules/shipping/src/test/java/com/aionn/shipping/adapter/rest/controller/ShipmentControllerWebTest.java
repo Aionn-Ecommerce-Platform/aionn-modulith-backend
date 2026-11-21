@@ -148,7 +148,7 @@ class ShipmentControllerWebTest {
         when(createShipmentInputPort.execute(any(CreateShipmentCommand.class)))
                 .thenReturn(sample("S_1", "REQUESTED"));
         when(parcelResolver.resolveParcels(anyList()))
-                .thenReturn(List.of(new QuoteShippingCommand.Parcel(500, null, null, null, 1)));
+                .thenReturn(List.of(new QuoteShippingCommand.Parcel("sku-1", 500, null, null, null, 1)));
 
         ShipmentAddress address = new ShipmentAddress(
                 "John", "0912345678", "addr", "00001", "001", "HN", "VN");
@@ -171,7 +171,7 @@ class ShipmentControllerWebTest {
         when(createShipmentInputPort.execute(any(CreateShipmentCommand.class)))
                 .thenThrow(new ShippingException(ShippingErrorCode.SHIPMENT_FORBIDDEN));
         when(parcelResolver.resolveParcels(anyList()))
-                .thenReturn(List.of(new QuoteShippingCommand.Parcel(500, null, null, null, 1)));
+                .thenReturn(List.of(new QuoteShippingCommand.Parcel("sku-1", 500, null, null, null, 1)));
 
         ShipmentAddress address = new ShipmentAddress(
                 "John", "0912345678", "addr", "00001", "001", "HN", "VN");

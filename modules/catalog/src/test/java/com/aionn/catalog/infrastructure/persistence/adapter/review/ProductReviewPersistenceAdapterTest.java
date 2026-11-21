@@ -40,7 +40,7 @@ class ProductReviewPersistenceAdapterTest {
     @InjectMocks private ProductReviewPersistenceAdapter adapter;
 
     private ProductReview domainReview() {
-        return ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, "order-1", 5, "t", "c", List.of(), FIXED);
+        return ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, "order-1", "sku-1", 5, "t", "c", List.of(), FIXED);
     }
 
     @Test void saveMapsThroughEntityAndBack() {
@@ -50,10 +50,10 @@ class ProductReviewPersistenceAdapterTest {
         assertThat(adapter.save(domain)).isSameAs(domain);
     }
 
-    @Test void duplicateUserProductConstraintBecomesStableDomainError() {
+    @Test void duplicateUserOrderSkuConstraintBecomesStableDomainError() {
         ProductReview domain = domainReview(); ProductReviewEntity entity = new ProductReviewEntity();
         when(mapper.toEntity(domain)).thenReturn(entity);
-        when(jpa.save(entity)).thenThrow(new DataIntegrityViolationException("uq_reviews_user_product"));
+        when(jpa.save(entity)).thenThrow(new DataIntegrityViolationException("uq_reviews_user_order_sku"));
         assertThatThrownBy(() -> adapter.save(domain)).isInstanceOf(CatalogException.class)
                 .extracting("errorCode").isEqualTo(CatalogErrorCode.REVIEW_ALREADY_EXISTS.getCode());
     }
@@ -77,10 +77,6 @@ class ProductReviewPersistenceAdapterTest {
         when(jpa.findById("missing")).thenReturn(Optional.empty()); assertThat(adapter.findById("missing")).isEmpty();
     }
 
-    @Test void existsByUserIdAndProductIdDelegates() {
-        when(jpa.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(true);
-        assertThat(adapter.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).isTrue();
-    }
 
     @Test void findByProductIdAndStatusMapsResults() {
         ProductReviewEntity entity = new ProductReviewEntity(); ProductReview review = domainReview();

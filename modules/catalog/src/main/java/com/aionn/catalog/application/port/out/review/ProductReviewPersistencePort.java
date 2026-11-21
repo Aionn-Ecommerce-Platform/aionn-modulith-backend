@@ -14,7 +14,7 @@ public interface ProductReviewPersistencePort {
 
     Optional<ProductReview> findById(String reviewId);
 
-    boolean existsByUserIdAndProductId(String userId, String productId);
+    boolean existsByUserIdAndOrderIdAndSkuId(String userId, String orderId, String skuId);
 
     List<ProductReview> findByProductIdAndStatus(String productId, ReviewStatus status, OffsetPagination pagination);
 

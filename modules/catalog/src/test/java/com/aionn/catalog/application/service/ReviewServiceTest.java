@@ -87,7 +87,7 @@ class ReviewServiceTest {
     }
 
     private ProductReview makeReview() {
-        ProductReview review = ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, ORDER_ID,
+        ProductReview review = ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, ORDER_ID, "sku-1",
                 5, "t", "c", List.of(), FIXED);
         review.pullEvents();
         return review;
@@ -95,10 +95,14 @@ class ReviewServiceTest {
 
     @Test
     void submitRejectsWhenUserAlreadyReviewed() {
-        when(productReviewPersistencePort.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(true);
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
+        when(orderQueryPort.findReviewablePurchase(USER_ID, ORDER_ID, "sku-1"))
+                .thenReturn(Optional.of(reviewablePurchase()));
+        when(productReviewPersistencePort.existsByUserIdAndOrderIdAndSkuId(
+                USER_ID, ORDER_ID, "sku-1")).thenReturn(true);
 
         assertThatThrownBy(() -> reviewService.submit(new SubmitReviewCommand(
-                USER_ID, PRODUCT_ID, 5, "t", "c", List.of())))
+                USER_ID, PRODUCT_ID, ORDER_ID, "sku-1", 5, "t", "c", List.of())))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.REVIEW_ALREADY_EXISTS.getCode());
@@ -106,11 +110,10 @@ class ReviewServiceTest {
 
     @Test
     void submitRejectsWhenProductNotFound() {
-        when(productReviewPersistencePort.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(false);
         when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> reviewService.submit(new SubmitReviewCommand(
-                USER_ID, PRODUCT_ID, 5, "t", "c", List.of())))
+                USER_ID, PRODUCT_ID, ORDER_ID, "sku-1", 5, "t", "c", List.of())))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.PRODUCT_NOT_FOUND.getCode());
@@ -118,28 +121,52 @@ class ReviewServiceTest {
 
     @Test
     void submitRejectsWhenUserNotPurchased() {
-        when(productReviewPersistencePort.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(false);
         when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
-        when(orderQueryPort.findCompletedOrderIdForSkus(USER_ID, List.of("sku-1"))).thenReturn(null);
+        when(orderQueryPort.findLatestReviewablePurchase(USER_ID, List.of("sku-1")))
+                .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> reviewService.submit(new SubmitReviewCommand(
-                USER_ID, PRODUCT_ID, 5, "t", "c", List.of())))
+                USER_ID, PRODUCT_ID, null, null, 5, "t", "c", List.of())))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.REVIEW_NOT_PURCHASED.getCode());
     }
 
     @Test
-    void submitPersistsWhenEligible() {
-        when(productReviewPersistencePort.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(false);
+    void submitRejectsPartialPurchaseSelector() {
         when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
-        when(orderQueryPort.findCompletedOrderIdForSkus(USER_ID, List.of("sku-1"))).thenReturn(ORDER_ID);
+
+        assertThatThrownBy(() -> reviewService.submit(new SubmitReviewCommand(
+                USER_ID, PRODUCT_ID, ORDER_ID, null, 5, "t", "c", List.of())))
+                .isInstanceOf(CatalogException.class)
+                .extracting("errorCode")
+                .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
+
+        assertThatThrownBy(() -> reviewService.submit(new SubmitReviewCommand(
+                USER_ID, PRODUCT_ID, null, "sku-1", 5, "t", "c", List.of())))
+                .isInstanceOf(CatalogException.class)
+                .extracting("errorCode")
+                .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
+    }
+
+    @Test
+    void submitPersistsWhenEligible() {
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
+        when(orderQueryPort.findLatestReviewablePurchase(USER_ID, List.of("sku-1")))
+                .thenReturn(Optional.of(reviewablePurchase()));
+        when(productReviewPersistencePort.existsByUserIdAndOrderIdAndSkuId(
+                USER_ID, ORDER_ID, "sku-1")).thenReturn(false);
         when(productReviewPersistencePort.save(any(ProductReview.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        reviewService.submit(new SubmitReviewCommand(USER_ID, PRODUCT_ID, 5, "t", "c", List.of()));
+        reviewService.submit(new SubmitReviewCommand(
+                USER_ID, PRODUCT_ID, null, null, 5, "t", "c", List.of()));
 
         verify(productReviewPersistencePort).save(any(ProductReview.class));
         verify(eventPublisher).publish(anyCollection());
+    }
+
+    private static OrderQueryPort.ReviewablePurchase reviewablePurchase() {
+        return new OrderQueryPort.ReviewablePurchase(ORDER_ID, "sku-1", FIXED.instant());
     }
 
     @Test
@@ -354,22 +381,45 @@ class ReviewServiceTest {
     }
 
     @Test
-    void checkEligibilityReturnsAlreadyReviewed() {
-        when(productReviewPersistencePort.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(true);
+    void checkEligibilityRejectsPartialPurchaseSelector() {
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
 
-        ReviewEligibilityResult r = reviewService.checkEligibility(USER_ID, PRODUCT_ID);
+        assertThatThrownBy(() -> reviewService.checkEligibility(USER_ID, PRODUCT_ID, ORDER_ID, null))
+                .isInstanceOf(CatalogException.class)
+                .extracting("errorCode")
+                .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
+
+        assertThatThrownBy(() -> reviewService.checkEligibility(USER_ID, PRODUCT_ID, null, "sku-1"))
+                .isInstanceOf(CatalogException.class)
+                .extracting("errorCode")
+                .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
+    }
+
+    @Test
+    void checkEligibilityReturnsAlreadyReviewed() {
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
+        when(orderQueryPort.findLatestReviewablePurchase(USER_ID, List.of("sku-1")))
+                .thenReturn(Optional.of(reviewablePurchase()));
+        when(productReviewPersistencePort.existsByUserIdAndOrderIdAndSkuId(
+                USER_ID, ORDER_ID, "sku-1")).thenReturn(true);
+
+        ReviewEligibilityResult r = reviewService.checkEligibility(
+                USER_ID, PRODUCT_ID, null, null);
 
         assertThat(r.canReview()).isFalse();
         assertThat(r.reason()).isEqualTo("ALREADY_REVIEWED");
+        assertThat(r.orderId()).isEqualTo(ORDER_ID);
+        assertThat(r.skuId()).isEqualTo("sku-1");
     }
 
     @Test
     void checkEligibilityReturnsNotPurchased() {
-        when(productReviewPersistencePort.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(false);
         when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
-        when(orderQueryPort.findCompletedOrderIdForSkus(USER_ID, List.of("sku-1"))).thenReturn(null);
+        when(orderQueryPort.findLatestReviewablePurchase(USER_ID, List.of("sku-1")))
+                .thenReturn(Optional.empty());
 
-        ReviewEligibilityResult r = reviewService.checkEligibility(USER_ID, PRODUCT_ID);
+        ReviewEligibilityResult r = reviewService.checkEligibility(
+                USER_ID, PRODUCT_ID, null, null);
 
         assertThat(r.canReview()).isFalse();
         assertThat(r.reason()).isEqualTo("NOT_PURCHASED");
@@ -377,14 +427,19 @@ class ReviewServiceTest {
 
     @Test
     void checkEligibilityReturnsTrueWhenPurchased() {
-        when(productReviewPersistencePort.existsByUserIdAndProductId(USER_ID, PRODUCT_ID)).thenReturn(false);
         when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
-        when(orderQueryPort.findCompletedOrderIdForSkus(USER_ID, List.of("sku-1"))).thenReturn(ORDER_ID);
+        when(orderQueryPort.findLatestReviewablePurchase(USER_ID, List.of("sku-1")))
+                .thenReturn(Optional.of(reviewablePurchase()));
+        when(productReviewPersistencePort.existsByUserIdAndOrderIdAndSkuId(
+                USER_ID, ORDER_ID, "sku-1")).thenReturn(false);
 
-        ReviewEligibilityResult r = reviewService.checkEligibility(USER_ID, PRODUCT_ID);
+        ReviewEligibilityResult r = reviewService.checkEligibility(
+                USER_ID, PRODUCT_ID, null, null);
 
         assertThat(r.canReview()).isTrue();
         assertThat(r.reason()).isNull();
+        assertThat(r.orderId()).isEqualTo(ORDER_ID);
+        assertThat(r.skuId()).isEqualTo("sku-1");
     }
 
     @Test

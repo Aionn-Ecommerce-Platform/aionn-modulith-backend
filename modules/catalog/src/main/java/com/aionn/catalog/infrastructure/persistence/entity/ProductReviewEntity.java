@@ -40,6 +40,9 @@ public class ProductReviewEntity {
     @Column(name = "order_id", length = 50)
     private String orderId;
 
+    @Column(name = "sku_id", length = 50)
+    private String skuId;
+
     @Column(name = "rating", nullable = false)
     private int rating;
 

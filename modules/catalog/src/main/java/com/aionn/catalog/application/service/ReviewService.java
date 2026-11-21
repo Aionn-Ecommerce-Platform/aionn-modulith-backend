@@ -47,19 +47,35 @@ public class ReviewService {
     private final Clock clock;
 
     public ProductReview submit(SubmitReviewCommand command) {
-        if (productReviewPersistencePort.existsByUserIdAndProductId(command.userId(), command.productId())) {
-            throw new CatalogException(CatalogErrorCode.REVIEW_ALREADY_EXISTS);
-        }
         Product product = productPersistencePort.findById(command.productId())
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.PRODUCT_NOT_FOUND));
         List<String> skuIds = product.variants().stream().map(ProductVariant::skuId).toList();
-        String orderId = orderQueryPort.findCompletedOrderIdForSkus(command.userId(), skuIds);
-        if (orderId == null) {
-            throw new CatalogException(CatalogErrorCode.REVIEW_NOT_PURCHASED);
+        boolean hasOrderId = command.orderId() != null && !command.orderId().isBlank();
+        boolean hasSkuId = command.skuId() != null && !command.skuId().isBlank();
+        if (hasOrderId != hasSkuId) {
+            throw new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
+                    "orderId and skuId must be provided together");
+        }
+        OrderQueryPort.ReviewablePurchase purchase;
+        if (hasOrderId) {
+            if (!skuIds.contains(command.skuId())) {
+                throw new CatalogException(CatalogErrorCode.REVIEW_NOT_PURCHASED);
+            }
+            purchase = orderQueryPort.findReviewablePurchase(
+                            command.userId(), command.orderId(), command.skuId())
+                    .orElseThrow(() -> new CatalogException(CatalogErrorCode.REVIEW_NOT_PURCHASED));
+        } else {
+            purchase = orderQueryPort.findLatestReviewablePurchase(command.userId(), skuIds)
+                    .orElseThrow(() -> new CatalogException(CatalogErrorCode.REVIEW_NOT_PURCHASED));
+        }
+        if (productReviewPersistencePort.existsByUserIdAndOrderIdAndSkuId(
+                command.userId(), purchase.orderId(), purchase.skuId())) {
+            throw new CatalogException(CatalogErrorCode.REVIEW_ALREADY_EXISTS);
         }
         ProductReview review = ProductReview.create(
                 new ProductReview.ReviewDraft(
-                        IdGenerator.ulid(), command.productId(), command.userId(), orderId,
+                        IdGenerator.ulid(), command.productId(), command.userId(),
+                        purchase.orderId(), purchase.skuId(),
                         command.rating(), command.title(), command.content(), command.imageUrls()),
                 clock);
         ProductReview saved = productReviewPersistencePort.save(review);
@@ -181,18 +197,36 @@ public class ReviewService {
     }
 
     @Transactional(readOnly = true)
-    public ReviewEligibilityResult checkEligibility(String userId, String productId) {
-        if (productReviewPersistencePort.existsByUserIdAndProductId(userId, productId)) {
-            return new ReviewEligibilityResult(false, "ALREADY_REVIEWED");
-        }
+    public ReviewEligibilityResult checkEligibility(String userId, String productId,
+            String orderId, String skuId) {
         Product product = productPersistencePort.findById(productId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.PRODUCT_NOT_FOUND));
         List<String> skuIds = product.variants().stream().map(ProductVariant::skuId).toList();
-        String orderId = orderQueryPort.findCompletedOrderIdForSkus(userId, skuIds);
-        if (orderId == null) {
-            return new ReviewEligibilityResult(false, "NOT_PURCHASED");
+        boolean hasOrderId = orderId != null && !orderId.isBlank();
+        boolean hasSkuId = skuId != null && !skuId.isBlank();
+        if (hasOrderId != hasSkuId) {
+            throw new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
+                    "orderId and skuId must be provided together");
         }
-        return new ReviewEligibilityResult(true, null);
+        OrderQueryPort.ReviewablePurchase purchase;
+        if (hasOrderId) {
+            if (!skuIds.contains(skuId)) {
+                return new ReviewEligibilityResult(false, "NOT_PURCHASED", null, null);
+            }
+            purchase = orderQueryPort.findReviewablePurchase(userId, orderId, skuId).orElse(null);
+        } else {
+            purchase = orderQueryPort.findLatestReviewablePurchase(userId, skuIds).orElse(null);
+        }
+        if (purchase == null) {
+            return new ReviewEligibilityResult(false, "NOT_PURCHASED", null, null);
+        }
+        if (productReviewPersistencePort.existsByUserIdAndOrderIdAndSkuId(
+                userId, purchase.orderId(), purchase.skuId())) {
+            return new ReviewEligibilityResult(
+                    false, "ALREADY_REVIEWED", purchase.orderId(), purchase.skuId());
+        }
+        return new ReviewEligibilityResult(
+                true, null, purchase.orderId(), purchase.skuId());
     }
 
     private ProductReview required(String reviewId) {

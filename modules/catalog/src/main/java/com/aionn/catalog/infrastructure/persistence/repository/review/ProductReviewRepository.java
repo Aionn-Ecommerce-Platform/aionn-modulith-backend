@@ -12,7 +12,7 @@ import java.util.List;
 
 public interface ProductReviewRepository extends JpaRepository<ProductReviewEntity, String> {
 
-    boolean existsByUserIdAndProductId(String userId, String productId);
+    boolean existsByUserIdAndOrderIdAndSkuId(String userId, String orderId, String skuId);
 
     Page<ProductReviewEntity> findByProductIdAndStatus(String productId, String status, Pageable pageable);
 

@@ -52,6 +52,7 @@ import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
@@ -63,6 +64,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -134,7 +136,7 @@ class ReviewControllerWebTest {
     }
 
     private ReviewResult sample() {
-        return new ReviewResult(REVIEW_ID, PRODUCT_ID, "user-1", "order-1", 5,
+        return new ReviewResult(REVIEW_ID, PRODUCT_ID, "user-1", "order-1", "sku-1", 5,
                 "t", "c", List.of(), "VISIBLE", null, null, null, null, null,
                 Instant.now(), Instant.now(), null, null, null);
     }
@@ -147,9 +149,29 @@ class ReviewControllerWebTest {
                 .with(TestAuth.authUser("user-1"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(
-                        new SubmitReviewRequest(5, "t", "c", List.of()))))
+                        new SubmitReviewRequest("order-1", "sku-1", 5, "t", "c", List.of()))))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.reviewId").value(REVIEW_ID));
+                .andExpect(jsonPath("$.data.reviewId").value(REVIEW_ID))
+                .andExpect(jsonPath("$.data.orderId").value("order-1"))
+                .andExpect(jsonPath("$.data.skuId").value("sku-1"));
+
+        ArgumentCaptor<SubmitReviewCommand> captor =
+                ArgumentCaptor.forClass(SubmitReviewCommand.class);
+        verify(submitReviewInputPort).execute(captor.capture());
+        assertEquals("order-1", captor.getValue().orderId());
+        assertEquals("sku-1", captor.getValue().skuId());
+    }
+
+    @Test
+    void submitWithoutPurchaseSelectorStillUsesAutomaticSelection() throws Exception {
+        when(submitReviewInputPort.execute(any(SubmitReviewCommand.class))).thenReturn(sample());
+
+        mockMvc.perform(post("/api/v1/catalog/products/" + PRODUCT_ID + "/reviews")
+                .with(TestAuth.authUser("user-1"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(
+                        new SubmitReviewRequest(null, null, 5, "t", "c", List.of()))))
+                .andExpect(status().isCreated());
     }
 
     @Test
@@ -297,12 +319,16 @@ class ReviewControllerWebTest {
     @Test
     void eligibilityReturnsOk() throws Exception {
         when(checkReviewEligibilityInputPort.execute(any(CheckReviewEligibilityQuery.class)))
-                .thenReturn(new ReviewEligibilityResult(true, null));
+                .thenReturn(new ReviewEligibilityResult(true, null, "order-1", "sku-1"));
 
         mockMvc.perform(get("/api/v1/catalog/products/" + PRODUCT_ID + "/reviews/eligibility")
+                .param("orderId", "order-1")
+                .param("skuId", "sku-1")
                 .with(TestAuth.authUser("user-1")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.canReview").value(true));
+                .andExpect(jsonPath("$.data.canReview").value(true))
+                .andExpect(jsonPath("$.data.orderId").value("order-1"))
+                .andExpect(jsonPath("$.data.skuId").value("sku-1"));
     }
 }
 

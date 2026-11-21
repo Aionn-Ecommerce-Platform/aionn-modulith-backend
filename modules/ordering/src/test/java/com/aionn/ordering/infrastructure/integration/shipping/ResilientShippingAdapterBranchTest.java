@@ -58,7 +58,7 @@ class ResilientShippingAdapterBranchTest {
 
         assertThrows(RuntimeException.class, () ->
                 adapter.createAndRegister("ord-1", "m-1", "usr-1", null, BigDecimal.ZERO, BigDecimal.TEN, "VND",
-                        List.of(new ShippingGateway.Parcel(500, null, null, null, 1))));
+                        List.of(new ShippingGateway.Parcel("sku-1", 500, null, null, null, 1))));
 
         verify(metrics).gatewayOutcome("shipping", "failure");
     }
