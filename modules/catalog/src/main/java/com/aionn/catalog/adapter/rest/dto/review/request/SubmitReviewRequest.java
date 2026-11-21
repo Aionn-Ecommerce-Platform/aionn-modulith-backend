@@ -9,6 +9,8 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record SubmitReviewRequest(
+        String orderId,
+        String skuId,
         @Min(1) @Max(5) int rating,
         @Size(max = 200) String title,
         @Size(max = 5000) String content,

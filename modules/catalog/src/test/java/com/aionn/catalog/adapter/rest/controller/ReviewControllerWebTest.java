@@ -134,7 +134,7 @@ class ReviewControllerWebTest {
     }
 
     private ReviewResult sample() {
-        return new ReviewResult(REVIEW_ID, PRODUCT_ID, "user-1", "order-1", 5,
+        return new ReviewResult(REVIEW_ID, PRODUCT_ID, "user-1", "order-1", "sku-1", 5,
                 "t", "c", List.of(), "VISIBLE", null, null, null, null, null,
                 Instant.now(), Instant.now(), null, null, null);
     }
@@ -147,7 +147,7 @@ class ReviewControllerWebTest {
                 .with(TestAuth.authUser("user-1"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(
-                        new SubmitReviewRequest(5, "t", "c", List.of()))))
+                        new SubmitReviewRequest(null, null, 5, "t", "c", List.of()))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.reviewId").value(REVIEW_ID));
     }
@@ -297,7 +297,7 @@ class ReviewControllerWebTest {
     @Test
     void eligibilityReturnsOk() throws Exception {
         when(checkReviewEligibilityInputPort.execute(any(CheckReviewEligibilityQuery.class)))
-                .thenReturn(new ReviewEligibilityResult(true, null));
+                .thenReturn(new ReviewEligibilityResult(true, null, "order-1", "sku-1"));
 
         mockMvc.perform(get("/api/v1/catalog/products/" + PRODUCT_ID + "/reviews/eligibility")
                 .with(TestAuth.authUser("user-1")))

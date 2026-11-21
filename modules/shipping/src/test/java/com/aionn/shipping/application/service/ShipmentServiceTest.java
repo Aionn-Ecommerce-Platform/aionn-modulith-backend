@@ -12,6 +12,7 @@ import com.aionn.shipping.application.port.out.CarrierClient;
 import com.aionn.shipping.application.port.out.CarrierWebhookIdempotencyPort;
 import com.aionn.shipping.application.port.out.ShipmentPersistencePort;
 import com.aionn.shipping.application.port.out.ShipmentEventPersistencePort;
+import com.aionn.shipping.application.port.out.ShipmentItemPersistencePort;
 import com.aionn.shipping.application.port.out.ShippingRatePersistencePort;
 import com.aionn.shipping.application.port.out.integration.ShippingIntegrationEventPublisherPort;
 import com.aionn.shipping.domain.exception.ShippingErrorCode;
@@ -55,6 +56,8 @@ class ShipmentServiceTest {
         @Mock
         ShipmentEventPersistencePort shipmentEventRepository;
         @Mock
+        ShipmentItemPersistencePort shipmentItemRepository;
+        @Mock
         ShippingRatePersistencePort rateRepository;
         @Mock
         EventPublisher eventPublisher;
@@ -82,7 +85,7 @@ class ShipmentServiceTest {
         private static final ShipmentDimensions DIMENSIONS = new ShipmentDimensions(
                         500, BigDecimal.valueOf(20), BigDecimal.valueOf(15), BigDecimal.valueOf(10));
         private static final List<QuoteShippingCommand.Parcel> PARCELS = List.of(
-                        new QuoteShippingCommand.Parcel(500, BigDecimal.valueOf(20), BigDecimal.valueOf(15),
+                        new QuoteShippingCommand.Parcel("sku-1", 500, BigDecimal.valueOf(20), BigDecimal.valueOf(15),
                                         BigDecimal.valueOf(10), 1));
 
         @BeforeEach
@@ -97,7 +100,8 @@ class ShipmentServiceTest {
                                 .thenReturn(Optional.of(new OrderQueryPort.OrderSummary(
                                                 "ORDER_1", "U_1", "M_1",
                                                 BigDecimal.valueOf(30000), "VND")));
-                service = new ShipmentService(shipmentRepository, shipmentEventRepository, rateRepository, eventPublisher,
+                service = new ShipmentService(shipmentRepository, shipmentEventRepository, shipmentItemRepository,
+                                rateRepository, eventPublisher,
                                 carrierClient, integrationEventPublisher, merchantQueryPort,
                                 orderQueryPort, defaultsPolicy, Clock.systemUTC(),
                                 webhookSecurityPolicy, webhookIdempotencyPort, transactionTemplate);
@@ -111,6 +115,7 @@ class ShipmentServiceTest {
                                 ADDRESS, PARCELS, BigDecimal.ZERO, BigDecimal.valueOf(30000), "VND"));
 
                 verify(shipmentRepository).save(any(Shipment.class));
+                verify(shipmentItemRepository).saveAll(any(), eq("ORDER_1"), any());
                 verify(shipmentEventRepository).record(any(), eq("REQUESTED"), isNull(), isNull(), any());
                 verify(eventPublisher).publish(anyCollection());
         }
@@ -135,7 +140,7 @@ class ShipmentServiceTest {
                 ShippingRate rate = ShippingRate.configure("R_1", "HN", BigDecimal.valueOf(30000), "VND", null,
                                 1000, 500, BigDecimal.valueOf(5000), null, BigDecimal.valueOf(500000), FIXED);
                 when(rateRepository.findByZoneCode("HN")).thenReturn(Optional.of(rate));
-                var parcels = List.of(new QuoteShippingCommand.Parcel(
+                var parcels = List.of(new QuoteShippingCommand.Parcel("sku-1",
                                 1200, BigDecimal.valueOf(20), BigDecimal.valueOf(15), BigDecimal.valueOf(10), 1));
 
                 ShippingQuoteResult regular = service.quote(new QuoteShippingCommand(

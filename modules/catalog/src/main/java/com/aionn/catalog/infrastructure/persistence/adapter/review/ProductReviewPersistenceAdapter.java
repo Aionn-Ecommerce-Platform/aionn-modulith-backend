@@ -48,8 +48,8 @@ public class ProductReviewPersistenceAdapter implements ProductReviewPersistence
     }
 
     @Override
-    public boolean existsByUserIdAndProductId(String userId, String productId) {
-        return jpa.existsByUserIdAndProductId(userId, productId);
+    public boolean existsByUserIdAndOrderIdAndSkuId(String userId, String orderId, String skuId) {
+        return jpa.existsByUserIdAndOrderIdAndSkuId(userId, orderId, skuId);
     }
 
     @Override
@@ -187,8 +187,9 @@ public class ProductReviewPersistenceAdapter implements ProductReviewPersistence
             String message = current.getMessage();
             if (message != null) {
                 String normalized = message.toLowerCase(Locale.ROOT);
-                if (normalized.contains("uq_reviews_user_product")
-                        || (normalized.contains("user_id") && normalized.contains("product_id"))) {
+                if (normalized.contains("uq_reviews_user_order_sku")
+                        || (normalized.contains("user_id") && normalized.contains("order_id")
+                                && normalized.contains("sku_id"))) {
                     return true;
                 }
             }

@@ -72,7 +72,7 @@ public class ShippingFulfillmentAdapter implements ShippingGateway {
         }
         return parcels.stream()
                 .map(p -> new ShippingFulfillmentPort.Parcel(
-                        p.weightGram(), p.lengthCm(), p.widthCm(), p.heightCm(), p.qty()))
+                        p.skuId(), p.weightGram(), p.lengthCm(), p.widthCm(), p.heightCm(), p.qty()))
                 .toList();
     }
 

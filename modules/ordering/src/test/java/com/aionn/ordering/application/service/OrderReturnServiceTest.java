@@ -577,6 +577,19 @@ class OrderReturnServiceTest {
     }
 
     @Test
+    void requestReturnRejectsQuantityAlreadyReturned() {
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+        when(orderReturnPersistencePort.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(orderReturnItemPersistencePort.returnedQuantities(ORDER_ID))
+                .thenReturn(java.util.Map.of("sku-1", 1));
+
+        assertThrows(OrderingException.class, () -> service.requestReturn(
+                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", null,
+                        List.of(new RequestReturnCommand.Item("sku-1", 1)))));
+        verify(orderReturnItemPersistencePort, never()).saveAll(any(), any());
+    }
+
+    @Test
     void requestReturnPersistsTheSelectedItemsWithTheirUnitPrice() {
         when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
         when(orderReturnPersistencePort.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));

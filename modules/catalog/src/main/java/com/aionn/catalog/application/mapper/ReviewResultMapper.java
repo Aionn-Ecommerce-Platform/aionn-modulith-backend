@@ -58,6 +58,7 @@ public class ReviewResultMapper {
                 review.getProductId(),
                 review.getUserId(),
                 review.getOrderId(),
+                review.getSkuId(),
                 review.getRating(),
                 review.getTitle(),
                 review.getContent(),

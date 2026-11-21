@@ -43,7 +43,7 @@ class ShippingFulfillmentAdapterTest {
         private ShippingFulfillmentAdapter adapter;
 
         private static List<ShippingFulfillmentPort.Parcel> parcels() {
-                return List.of(new ShippingFulfillmentPort.Parcel(
+                return List.of(new ShippingFulfillmentPort.Parcel("sku-1",
                                 500, BigDecimal.valueOf(15), BigDecimal.valueOf(10), BigDecimal.valueOf(5), 1));
         }
 

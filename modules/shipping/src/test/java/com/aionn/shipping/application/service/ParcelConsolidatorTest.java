@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class ParcelConsolidatorTest {
 
     private static QuoteShippingCommand.Parcel parcel(int weightGram, int qty) {
-        return new QuoteShippingCommand.Parcel(weightGram, BigDecimal.valueOf(20), BigDecimal.valueOf(15),
+        return new QuoteShippingCommand.Parcel("sku-1", weightGram, BigDecimal.valueOf(20), BigDecimal.valueOf(15),
                 BigDecimal.valueOf(10), qty);
     }
 
@@ -26,6 +26,8 @@ class ParcelConsolidatorTest {
         assertThat(consignments).hasSize(1);
         assertThat(consignments.get(0).weightGram()).isEqualTo(1300);
         assertThat(consignments.get(0).totalQty()).isEqualTo(3);
+        assertThat(consignments.get(0).lines())
+                .containsExactly(new ParcelConsolidator.Line("sku-1", 3));
         // the envelope box takes the max side across lines
         assertThat(consignments.get(0).lengthCm()).isEqualByComparingTo("20");
     }
@@ -52,6 +54,10 @@ class ParcelConsolidatorTest {
         assertThat(consignments).hasSize(2);
         assertThat(consignments.stream().mapToInt(ParcelConsolidator.Consignment::weightGram).sum())
                 .isEqualTo(40_000);
+        assertThat(consignments.stream()
+                .flatMap(c -> c.lines().stream())
+                .mapToInt(ParcelConsolidator.Line::qty)
+                .sum()).isEqualTo(4);
         assertThat(consignments).allSatisfy(c ->
                 assertThat(c.weightGram()).isLessThanOrEqualTo(ParcelConsolidator.MAX_PARCEL_WEIGHT_GRAM));
     }
@@ -71,7 +77,7 @@ class ParcelConsolidatorTest {
 
     @Test
     void rejectsLinesWithoutWeight() {
-        var missing = new QuoteShippingCommand.Parcel(null, null, null, null, 1);
+        var missing = new QuoteShippingCommand.Parcel("sku-1", null, null, null, null, 1);
 
         assertThatThrownBy(() -> ParcelConsolidator.consolidate(List.of(missing)))
                 .isInstanceOf(ShippingException.class);
@@ -79,8 +85,8 @@ class ParcelConsolidatorTest {
 
     @Test
     void rejectsNullParcelsAndNonPositiveQuantities() {
-        var zeroQty = new QuoteShippingCommand.Parcel(1000, null, null, null, 0);
-        var zeroWeight = new QuoteShippingCommand.Parcel(0, null, null, null, 1);
+        var zeroQty = new QuoteShippingCommand.Parcel("sku-1", 1000, null, null, null, 0);
+        var zeroWeight = new QuoteShippingCommand.Parcel("sku-1", 0, null, null, null, 1);
 
         assertThatThrownBy(() -> ParcelConsolidator.consolidate(java.util.Arrays.asList(
                 (QuoteShippingCommand.Parcel) null))).isInstanceOf(ShippingException.class);
@@ -102,7 +108,7 @@ class ParcelConsolidatorTest {
 
     @Test
     void treatsMissingDimensionsAsZero() {
-        var noDimensions = new QuoteShippingCommand.Parcel(1_000, null, null, null, 1);
+        var noDimensions = new QuoteShippingCommand.Parcel("sku-1", 1_000, null, null, null, 1);
 
         var consignments = ParcelConsolidator.consolidate(List.of(noDimensions));
 

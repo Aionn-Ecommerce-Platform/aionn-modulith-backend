@@ -25,7 +25,7 @@ class ProductReviewTest {
     private static final String ADMIN_ID = "admin-1";
 
     private ProductReview freshReview() {
-        ProductReview review = ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, ORDER_ID,
+        ProductReview review = ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, ORDER_ID, "sku-1",
                 5, "title", "content", List.of(), FIXED);
         review.pullEvents();
         return review;
@@ -33,7 +33,7 @@ class ProductReviewTest {
 
     @Test
     void createInitializesVisibleAndEmitsEvent() {
-        ProductReview review = ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, ORDER_ID,
+        ProductReview review = ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, ORDER_ID, "sku-1",
                 4, "t", "c", List.of(), FIXED);
 
         assertThat(review.getStatus()).isEqualTo(ReviewStatus.VISIBLE);
@@ -42,7 +42,7 @@ class ProductReviewTest {
 
     @Test
     void createRejectsInvalidRating() {
-        assertThatThrownBy(() -> ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, ORDER_ID,
+        assertThatThrownBy(() -> ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, ORDER_ID, "sku-1",
                 0, "t", "c", List.of(), FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")
@@ -51,7 +51,7 @@ class ProductReviewTest {
 
     @Test
     void createRejectsTooManyImages() {
-        assertThatThrownBy(() -> ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, ORDER_ID,
+        assertThatThrownBy(() -> ProductReview.create(REVIEW_ID, PRODUCT_ID, USER_ID, ORDER_ID, "sku-1",
                 5, "t", "c", List.of("a", "b", "c", "d", "e", "f"), FIXED))
                 .isInstanceOf(CatalogException.class)
                 .extracting("errorCode")

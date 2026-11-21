@@ -35,7 +35,7 @@ class ResilientShippingAdapterTest {
     }
 
     private static List<ShippingGateway.Parcel> parcels() {
-        return List.of(new ShippingGateway.Parcel(500, null, null, null, 1));
+        return List.of(new ShippingGateway.Parcel("sku-1", 500, null, null, null, 1));
     }
 
     @BeforeEach

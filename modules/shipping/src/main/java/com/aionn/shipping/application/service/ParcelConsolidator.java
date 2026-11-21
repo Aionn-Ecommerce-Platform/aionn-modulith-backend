@@ -7,6 +7,7 @@ import com.aionn.shipping.application.dto.shipment.command.QuoteShippingCommand;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 public final class ParcelConsolidator {
@@ -24,10 +25,11 @@ public final class ParcelConsolidator {
         }
         MutableConsignment current = new MutableConsignment();
         for (QuoteShippingCommand.Parcel p : parcels) {
-            if (p == null || p.weightGram() == null || p.weightGram() <= 0 || p.qty() <= 0) {
+            if (p == null || p.skuId() == null || p.skuId().isBlank()
+                    || p.weightGram() == null || p.weightGram() <= 0 || p.qty() <= 0) {
                 throw new ShippingException(
                         ShippingErrorCode.INVALID_ARGUMENT,
-                        "Cannot ship: a SKU is missing its parcel weight");
+                        "Cannot ship: a SKU is missing its parcel details");
             }
             int unitWeight = Math.max(1, (p.weightGram() + p.qty() - 1) / p.qty());
             if (unitWeight > MAX_PARCEL_WEIGHT_GRAM) {
@@ -60,10 +62,14 @@ public final class ParcelConsolidator {
     }
 
     public record Consignment(int weightGram, BigDecimal lengthCm, BigDecimal widthCm,
-            BigDecimal heightCm, int totalQty) {
+            BigDecimal heightCm, int totalQty, List<Line> lines) {
+    }
+
+    public record Line(String skuId, int qty) {
     }
 
     private static final class MutableConsignment {
+        private final LinkedHashMap<String, Integer> lines = new LinkedHashMap<>();
         private int weightGram;
         private int qty;
         private BigDecimal lengthCm = BigDecimal.ZERO;
@@ -81,13 +87,17 @@ public final class ParcelConsolidator {
         void add(QuoteShippingCommand.Parcel p, int units, int addedWeightGram) {
             weightGram += addedWeightGram;
             qty += units;
+            lines.merge(p.skuId(), units, Integer::sum);
             lengthCm = lengthCm.max(p.lengthCm() == null ? BigDecimal.ZERO : p.lengthCm());
             widthCm = widthCm.max(p.widthCm() == null ? BigDecimal.ZERO : p.widthCm());
             heightCm = heightCm.max(p.heightCm() == null ? BigDecimal.ZERO : p.heightCm());
         }
 
         Consignment toConsignment() {
-            return new Consignment(weightGram, lengthCm, widthCm, heightCm, qty);
+            return new Consignment(weightGram, lengthCm, widthCm, heightCm, qty,
+                    lines.entrySet().stream()
+                            .map(e -> new Line(e.getKey(), e.getValue()))
+                            .toList());
         }
     }
 }

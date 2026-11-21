@@ -254,9 +254,12 @@ public class ReviewController {
         @Operation(summary = "Check if authenticated user can review this product")
         public ResponseEntity<ApiResponse<ReviewEligibilityResponse>> checkEligibility(
                         @CurrentOwnerId String userId,
-                        @PathVariable String productId) {
+                        @PathVariable String productId,
+                        @RequestParam(required = false) String orderId,
+                        @RequestParam(required = false) String skuId) {
                 ReviewEligibilityResult result = checkReviewEligibilityInputPort
-                                .execute(reviewDtoMapper.toEligibilityQuery(userId, productId));
+                                .execute(reviewDtoMapper.toEligibilityQuery(
+                                                userId, productId, orderId, skuId));
                 return ResponseEntity.ok(ApiResponse.success(
                                 reviewDtoMapper.toResponse(result), "Eligibility checked"));
         }

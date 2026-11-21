@@ -117,6 +117,8 @@ public class OrderReturnService {
         }
         java.util.Map<String, OrderItem> orderItems = order.items().stream()
                 .collect(java.util.stream.Collectors.toMap(OrderItem::skuId, item -> item));
+        java.util.Map<String, Integer> alreadyReturned =
+                orderReturnItemPersistencePort.returnedQuantities(order.getOrderId());
         java.util.Set<String> seen = new java.util.HashSet<>();
         java.util.List<OrderReturnItemPersistencePort.Item> items = new java.util.ArrayList<>();
         for (RequestReturnCommand.Item line : requested) {
@@ -133,9 +135,10 @@ public class OrderReturnService {
                 throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
                         "Item is not part of this order: " + line.skuId());
             }
-            if (line.qty() > ordered.qty()) {
+            int previouslyReturned = alreadyReturned.getOrDefault(line.skuId(), 0);
+            if (previouslyReturned + line.qty() > ordered.qty()) {
                 throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
-                        "Return quantity exceeds ordered quantity for " + line.skuId());
+                        "Return quantity exceeds the remaining returnable quantity for " + line.skuId());
             }
             java.math.BigDecimal unit = ordered.unitPrice().amount();
             items.add(new OrderReturnItemPersistencePort.Item(

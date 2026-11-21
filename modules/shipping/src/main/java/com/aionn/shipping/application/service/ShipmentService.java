@@ -12,6 +12,7 @@ import com.aionn.shipping.application.policy.ShippingDefaultsPolicy;
 import com.aionn.shipping.application.port.out.CarrierClient;
 import com.aionn.shipping.application.port.out.CarrierWebhookIdempotencyPort;
 import com.aionn.shipping.application.port.out.ShipmentEventPersistencePort;
+import com.aionn.shipping.application.port.out.ShipmentItemPersistencePort;
 import com.aionn.shipping.application.port.out.ShipmentPersistencePort;
 import com.aionn.shipping.application.port.out.ShippingRatePersistencePort;
 import com.aionn.shipping.application.port.out.integration.ShippingIntegrationEventPublisherPort;
@@ -46,6 +47,7 @@ public class ShipmentService {
 
     private final ShipmentPersistencePort shipmentPersistencePort;
     private final ShipmentEventPersistencePort shipmentEventPersistencePort;
+    private final ShipmentItemPersistencePort shipmentItemPersistencePort;
     private final ShippingRatePersistencePort shippingRatePersistencePort;
     private final EventPublisher eventPublisher;
     private final CarrierClient carrierClient;
@@ -114,6 +116,10 @@ public class ShipmentService {
                     created.isEmpty() ? command.shippingFee() : BigDecimal.ZERO,
                     currency, clock);
             Shipment saved = shipmentPersistencePort.save(shipment);
+            shipmentItemPersistencePort.saveAll(saved.getShipmentId(), saved.getOrderId(),
+                    consignment.lines().stream()
+                            .map(line -> new ShipmentItemPersistencePort.Line(line.skuId(), line.qty()))
+                            .toList());
             shipmentEventPersistencePort.record(saved.getShipmentId(), ShipmentStatus.REQUESTED.name(),
                     null, null, saved.getCreatedAt());
             eventPublisher.publish(shipment.pullEvents());

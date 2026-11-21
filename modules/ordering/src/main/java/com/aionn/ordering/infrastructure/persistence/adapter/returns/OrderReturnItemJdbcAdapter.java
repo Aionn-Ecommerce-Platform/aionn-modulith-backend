@@ -5,7 +5,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 @RequiredArgsConstructor
@@ -43,5 +45,23 @@ public class OrderReturnItemJdbcAdapter implements OrderReturnItemPersistencePor
                         rs.getInt("qty"),
                         rs.getBigDecimal("unit_price"),
                         rs.getBigDecimal("refund_amount")), returnId);
+    }
+
+    @Override
+    public Map<String, Integer> returnedQuantities(String orderId) {
+        return jdbcTemplate.query("""
+                SELECT ri.sku_id, COALESCE(SUM(ri.qty), 0) AS returned_qty
+                  FROM order_return_items ri
+                  JOIN order_returns r ON r.return_id = ri.return_id
+                 WHERE r.order_id = ?
+                   AND r.status <> 'REJECTED'
+                 GROUP BY ri.sku_id
+                """, rs -> {
+                    Map<String, Integer> result = new LinkedHashMap<>();
+                    while (rs.next()) {
+                        result.put(rs.getString("sku_id"), rs.getInt("returned_qty"));
+                    }
+                    return result;
+                }, orderId);
     }
 }
