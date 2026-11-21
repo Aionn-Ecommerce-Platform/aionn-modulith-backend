@@ -136,7 +136,7 @@ public class OrderReturnService {
                         "Item is not part of this order: " + line.skuId());
             }
             int previouslyReturned = alreadyReturned.getOrDefault(line.skuId(), 0);
-            if (previouslyReturned + line.qty() > ordered.qty()) {
+            if ((long) previouslyReturned + line.qty() > ordered.qty()) {
                 throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
                         "Return quantity exceeds the remaining returnable quantity for " + line.skuId());
             }

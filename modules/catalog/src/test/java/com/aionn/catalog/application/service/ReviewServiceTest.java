@@ -133,6 +133,23 @@ class ReviewServiceTest {
     }
 
     @Test
+    void submitRejectsPartialPurchaseSelector() {
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
+
+        assertThatThrownBy(() -> reviewService.submit(new SubmitReviewCommand(
+                USER_ID, PRODUCT_ID, ORDER_ID, null, 5, "t", "c", List.of())))
+                .isInstanceOf(CatalogException.class)
+                .extracting("errorCode")
+                .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
+
+        assertThatThrownBy(() -> reviewService.submit(new SubmitReviewCommand(
+                USER_ID, PRODUCT_ID, null, "sku-1", 5, "t", "c", List.of())))
+                .isInstanceOf(CatalogException.class)
+                .extracting("errorCode")
+                .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
+    }
+
+    @Test
     void submitPersistsWhenEligible() {
         when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
         when(orderQueryPort.findLatestReviewablePurchase(USER_ID, List.of("sku-1")))
@@ -361,6 +378,21 @@ class ReviewServiceTest {
         assertThat(summary.average()).isEqualTo(4.5);
         assertThat(summary.total()).isEqualTo(2L);
         assertThat(summary.distribution()).containsEntry(5, 1L);
+    }
+
+    @Test
+    void checkEligibilityRejectsPartialPurchaseSelector() {
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(productWithSku("sku-1")));
+
+        assertThatThrownBy(() -> reviewService.checkEligibility(USER_ID, PRODUCT_ID, ORDER_ID, null))
+                .isInstanceOf(CatalogException.class)
+                .extracting("errorCode")
+                .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
+
+        assertThatThrownBy(() -> reviewService.checkEligibility(USER_ID, PRODUCT_ID, null, "sku-1"))
+                .isInstanceOf(CatalogException.class)
+                .extracting("errorCode")
+                .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
     }
 
     @Test

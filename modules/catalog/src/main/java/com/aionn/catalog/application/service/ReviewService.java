@@ -50,8 +50,14 @@ public class ReviewService {
         Product product = productPersistencePort.findById(command.productId())
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.PRODUCT_NOT_FOUND));
         List<String> skuIds = product.variants().stream().map(ProductVariant::skuId).toList();
+        boolean hasOrderId = command.orderId() != null && !command.orderId().isBlank();
+        boolean hasSkuId = command.skuId() != null && !command.skuId().isBlank();
+        if (hasOrderId != hasSkuId) {
+            throw new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
+                    "orderId and skuId must be provided together");
+        }
         OrderQueryPort.ReviewablePurchase purchase;
-        if (command.orderId() != null && command.skuId() != null) {
+        if (hasOrderId) {
             if (!skuIds.contains(command.skuId())) {
                 throw new CatalogException(CatalogErrorCode.REVIEW_NOT_PURCHASED);
             }
@@ -196,8 +202,14 @@ public class ReviewService {
         Product product = productPersistencePort.findById(productId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.PRODUCT_NOT_FOUND));
         List<String> skuIds = product.variants().stream().map(ProductVariant::skuId).toList();
+        boolean hasOrderId = orderId != null && !orderId.isBlank();
+        boolean hasSkuId = skuId != null && !skuId.isBlank();
+        if (hasOrderId != hasSkuId) {
+            throw new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
+                    "orderId and skuId must be provided together");
+        }
         OrderQueryPort.ReviewablePurchase purchase;
-        if (orderId != null && skuId != null) {
+        if (hasOrderId) {
             if (!skuIds.contains(skuId)) {
                 return new ReviewEligibilityResult(false, "NOT_PURCHASED", null, null);
             }

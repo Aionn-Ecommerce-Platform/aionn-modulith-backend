@@ -70,27 +70,35 @@ public class OrderingOrderQueryAdapter implements OrderQueryPort {
         if (userId == null || skuIds == null || skuIds.isEmpty()) {
             return Optional.empty();
         }
-        for (OrderEntity order : orderJpaRepository.findReviewableOrders(
-                userId, skuIds, PageRequest.of(0, REVIEWABLE_ORDER_PAGE_SIZE))) {
-            Map<String, Integer> returned = orderReturnItemPersistencePort
-                    .returnedQuantities(order.getOrderId());
-            List<ShipmentItemQueryPort.DeliveredItem> delivered =
-                    shipmentItemQueryPort.deliveredItems(order.getOrderId());
-            if (delivered == null) {
-                delivered = List.of();
+        for (int page = 0; ; page++) {
+            List<OrderEntity> candidates = orderJpaRepository.findReviewableOrders(
+                    userId, skuIds, PageRequest.of(page, REVIEWABLE_ORDER_PAGE_SIZE));
+            if (candidates.isEmpty()) {
+                return Optional.empty();
             }
-            for (OrderItemEntity item : order.getItems()) {
-                if (!skuIds.contains(item.getId().getSkuId())) {
-                    continue;
+            for (OrderEntity order : candidates) {
+                Map<String, Integer> returned = orderReturnItemPersistencePort
+                        .returnedQuantities(order.getOrderId());
+                List<ShipmentItemQueryPort.DeliveredItem> delivered =
+                        shipmentItemQueryPort.deliveredItems(order.getOrderId());
+                if (delivered == null) {
+                    delivered = List.of();
                 }
-                Optional<ReviewablePurchase> purchase =
-                        reviewable(order, item, returned, delivered);
-                if (purchase.isPresent()) {
-                    return purchase;
+                for (OrderItemEntity item : order.getItems()) {
+                    if (!skuIds.contains(item.getId().getSkuId())) {
+                        continue;
+                    }
+                    Optional<ReviewablePurchase> purchase =
+                            reviewable(order, item, returned, delivered);
+                    if (purchase.isPresent()) {
+                        return purchase;
+                    }
                 }
+            }
+            if (candidates.size() < REVIEWABLE_ORDER_PAGE_SIZE) {
+                return Optional.empty();
             }
         }
-        return Optional.empty();
     }
 
     private Optional<ReviewablePurchase> reviewable(OrderEntity order, String skuId) {

@@ -47,6 +47,11 @@ public class ProductReviewPersistenceAdapter implements ProductReviewPersistence
         return jpa.findById(reviewId).map(mapper::toDomain);
     }
 
+    /**
+     * Legacy reviews created before item-level reviews can have a NULL sku_id.
+     * They are intentionally not backfilled and do not consume item-level review
+     * eligibility: only a review matching the same order and SKU blocks a duplicate.
+     */
     @Override
     public boolean existsByUserIdAndOrderIdAndSkuId(String userId, String orderId, String skuId) {
         return jpa.existsByUserIdAndOrderIdAndSkuId(userId, orderId, skuId);

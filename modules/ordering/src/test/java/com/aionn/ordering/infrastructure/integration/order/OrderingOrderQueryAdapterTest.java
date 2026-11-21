@@ -11,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -120,6 +121,27 @@ class OrderingOrderQueryAdapterTest {
                 .thenReturn(List.of(entity));
         when(shipmentItemQueryPort.deliveredItems("ord-1")).thenReturn(List.of());
         when(orderReturnItemPersistencePort.returnedQuantities("ord-1")).thenReturn(Map.of());
+
+        assertTrue(adapter.findLatestReviewablePurchase("u-1", List.of("sku-1")).isPresent());
+    }
+
+    @Test
+    void findLatestReviewablePurchaseContinuesPastFirstPage() {
+        OrderEntity ineligible = order("ord-old", "SHIPPED", null);
+        ineligible.setItems(List.of(orderItem("ord-old", "sku-1", 1)));
+        OrderEntity eligible = order("ord-new", "COMPLETED", Instant.parse("2026-01-04T00:00:00Z"));
+        eligible.setItems(List.of(orderItem("ord-new", "sku-1", 1)));
+
+        when(orderJpaRepository.findReviewableOrders(
+                eq("u-1"), eq(List.of("sku-1")), eq(PageRequest.of(0, 50))))
+                .thenReturn(java.util.Collections.nCopies(50, ineligible));
+        when(orderJpaRepository.findReviewableOrders(
+                eq("u-1"), eq(List.of("sku-1")), eq(PageRequest.of(1, 50))))
+                .thenReturn(List.of(eligible));
+        when(shipmentItemQueryPort.deliveredItems("ord-old")).thenReturn(List.of());
+        when(orderReturnItemPersistencePort.returnedQuantities("ord-old")).thenReturn(Map.of());
+        when(shipmentItemQueryPort.deliveredItems("ord-new")).thenReturn(List.of());
+        when(orderReturnItemPersistencePort.returnedQuantities("ord-new")).thenReturn(Map.of());
 
         assertTrue(adapter.findLatestReviewablePurchase("u-1", List.of("sku-1")).isPresent());
     }
