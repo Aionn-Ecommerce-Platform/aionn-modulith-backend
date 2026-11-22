@@ -78,6 +78,7 @@ public interface OrderingDtoMapper {
     }
 
     // Order Return mappings
+    @Mapping(target = "evidenceUrl", expression = "java(request.evidenceUrls() == null ? null : String.join(\"\\n\", request.evidenceUrls()))")
     RequestReturnCommand toRequestReturnCommand(String orderId, String userId, RequestReturnRequest request);
 
     ApproveReturnCommand toApproveReturnCommand(String returnId, String ownerId, ApproveReturnRequest request);

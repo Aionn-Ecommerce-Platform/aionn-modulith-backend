@@ -7,4 +7,6 @@ public interface MediaUploadSignatureProviderPort {
     UploadSignatureResult generateAvatarUploadSignature(String userId);
 
     UploadSignatureResult generateKycDocumentUploadSignature(String userId);
+
+    UploadSignatureResult generateReturnEvidenceUploadSignature(String userId);
 }

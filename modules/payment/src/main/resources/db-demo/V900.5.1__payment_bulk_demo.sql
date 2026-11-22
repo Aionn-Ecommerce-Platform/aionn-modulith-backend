@@ -108521,3 +108521,12 @@ INSERT INTO merchant_balances (merchant_id, currency, pending, available, receiv
 ('01M9MC00000000000000000031', 'VND', 245871897000.00, 573670197000.00, 0, 0, NOW(), NOW()),
 ('01M9MC00000000000000000032', 'VND', 301981135000.00, 841640918000.00, 0, 0, NOW(), NOW());
 
+
+
+-- Demo chronology: payment master data must exist before historical orders/payouts.
+UPDATE payment_methods
+SET created_at = TIMESTAMPTZ '2025-02-15 00:00:00+00'
+WHERE created_at > TIMESTAMPTZ '2026-01-01 00:00:00+00';
+
+UPDATE merchant_balances
+SET created_at = TIMESTAMPTZ '2025-03-01 00:00:00+00';

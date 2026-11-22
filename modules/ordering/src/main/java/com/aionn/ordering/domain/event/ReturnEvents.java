@@ -44,5 +44,13 @@ public final class ReturnEvents {
             Instant rejectedAt,
             Instant occurredAt) implements OrderingEvent {
     }
+
+    public record ReturnCancelled(
+            String returnId,
+            String orderId,
+            String userId,
+            Instant cancelledAt,
+            Instant occurredAt) implements OrderingEvent {
+    }
 }
 

@@ -13,7 +13,7 @@ import java.util.List;
 public record RequestReturnRequest(
         @NotNull ReturnReasonType reasonType,
         @NotBlank @Size(max = 1000) String reason,
-        @Size(max = 2048) String evidenceUrl,
+        @NotEmpty @Size(max = 5) List<@NotBlank @Size(max = 2048) String> evidenceUrls,
         @NotEmpty @Valid List<ItemRequest> items) {
 
     public record ItemRequest(@NotBlank String skuId, @Positive int qty) {

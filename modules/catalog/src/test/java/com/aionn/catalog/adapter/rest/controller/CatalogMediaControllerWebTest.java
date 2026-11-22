@@ -52,7 +52,8 @@ class CatalogMediaControllerWebTest {
     private UploadSignatureResult sample() {
         return new UploadSignatureResult(
                 "sig-1", "1700000000", "api-key", "cloud-name",
-                "https://api.cloudinary.com/v1_1/cloud-name/image/upload", "catalog/products/owner-1");
+                "https://api.cloudinary.com/v1_1/cloud-name/image/upload", "catalog/products/owner-1",
+                "jpg,jpeg,png,webp", 8388608L);
     }
 
     @Test

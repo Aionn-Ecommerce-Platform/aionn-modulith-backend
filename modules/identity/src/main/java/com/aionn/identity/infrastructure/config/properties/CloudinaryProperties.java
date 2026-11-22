@@ -6,5 +6,6 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @ConfigurationProperties(prefix = "identity.media.cloudinary")
 public record CloudinaryProperties(
         @DefaultValue("identity/avatars") String avatarFolder,
-        @DefaultValue("identity/kyc") String kycFolder) {
+        @DefaultValue("identity/kyc") String kycFolder,
+        @DefaultValue("returns/evidence") String returnEvidenceFolder) {
 }

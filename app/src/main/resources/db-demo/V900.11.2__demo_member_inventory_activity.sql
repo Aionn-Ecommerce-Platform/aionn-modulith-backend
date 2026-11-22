@@ -61,9 +61,9 @@ SELECT 'PM_DEMO_' || lpad(((b.rn - 1) * 2 + c.card_no)::text, 5, '0'),
        'pm_demo_' || b.rn || '_' || c.card_no,
        'LINKED',
        0,
-       NOW() - make_interval(days => (30 - b.rn)::int),
-       NOW() - make_interval(days => (30 - b.rn)::int),
-       NOW() - make_interval(days => (30 - b.rn)::int)
+       TIMESTAMPTZ '2025-02-15 00:00:00+00' + make_interval(days => b.rn),
+       TIMESTAMPTZ '2025-02-15 00:00:00+00' + make_interval(days => b.rn),
+       TIMESTAMPTZ '2025-02-15 00:00:00+00' + make_interval(days => b.rn)
   FROM buyers b
   CROSS JOIN cards c
 ON CONFLICT (method_id) DO NOTHING;
@@ -203,8 +203,8 @@ SELECT 'WH_DEMO_' || lpad(p.rn::text, 3, '0'),
        2,
        'ACTIVE',
        0,
-       NOW(),
-       NOW()
+       TIMESTAMPTZ '2025-03-01 00:00:00+00',
+       TIMESTAMPTZ '2025-03-01 00:00:00+00'
   FROM picked p
 ON CONFLICT (warehouse_id) DO NOTHING;
 

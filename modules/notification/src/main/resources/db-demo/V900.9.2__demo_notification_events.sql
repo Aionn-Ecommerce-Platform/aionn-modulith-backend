@@ -388,3 +388,9 @@ VALUES
      '{"endpoint":"/ws/notifications","topic":"/user/queue/notifications"}'::jsonb,
      true, 600, (SELECT user_id FROM user_roles WHERE role = 'SYSTEM_ADMIN' ORDER BY user_id LIMIT 1), 0, NOW(), NOW())
 ON CONFLICT (provider_id) DO NOTHING;
+
+
+-- Demo chronology: keep generated notification timestamps in the past.
+UPDATE notifications
+SET created_at = now(), updated_at = now()
+WHERE created_at > now();

@@ -12,6 +12,7 @@ import com.aionn.ordering.domain.valueobject.ReturnStatus;
 import lombok.Getter;
 
 import java.time.Instant;
+import java.util.List;
 
 @Getter
 public class OrderReturn extends AggregateRoot {
@@ -106,6 +107,15 @@ public class OrderReturn extends AggregateRoot {
         return r;
     }
 
+    public List<String> evidenceUrls() {
+        if (evidenceUrl == null || evidenceUrl.isBlank()) {
+            return List.of();
+        }
+        return java.util.Arrays.stream(evidenceUrl.split("\n"))
+                .filter(url -> !url.isBlank())
+                .toList();
+    }
+
     public void approve(Money refundAmount, String returnWarehouseId, Instant now) {
         ensureTransition(ReturnStatus.APPROVED);
         Guard.require(refundAmount != null,
@@ -165,6 +175,13 @@ public class OrderReturn extends AggregateRoot {
         this.decidedAt = now;
         registerEvent(new ReturnEvents.ReturnRejected(returnId, orderId, merchantId, rejectionReason,
                 decidedAt, decidedAt));
+    }
+
+    public void cancel(Instant now) {
+        ensureTransition(ReturnStatus.CANCELLED);
+        this.status = ReturnStatus.CANCELLED;
+        this.decidedAt = now;
+        registerEvent(new ReturnEvents.ReturnCancelled(returnId, orderId, userId, now, now));
     }
 
     private void ensureTransition(ReturnStatus next) {

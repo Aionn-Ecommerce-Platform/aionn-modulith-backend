@@ -46,6 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class OrderReturnControllerWebTest {
 
     @Mock private RequestReturnInputPort requestReturnInputPort;
+    @Mock private CancelReturnInputPort cancelReturnInputPort;
     @Mock private ApproveReturnInputPort approveReturnInputPort;
     @Mock private RejectReturnInputPort rejectReturnInputPort;
     @Mock private ConfirmItemReceivedInputPort confirmItemReceivedInputPort;
@@ -60,7 +61,7 @@ class OrderReturnControllerWebTest {
     @BeforeEach
     void setUp() {
         OrderReturnController controller = new OrderReturnController(
-                requestReturnInputPort, approveReturnInputPort, rejectReturnInputPort,
+                requestReturnInputPort, cancelReturnInputPort, approveReturnInputPort, rejectReturnInputPort,
                 confirmItemReceivedInputPort, getReturnInputPort, listReturnsInputPort, returnService,
                 dtoMapper);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
@@ -88,13 +89,13 @@ class OrderReturnControllerWebTest {
 
     private static ReturnResult sampleReturn() {
         return new ReturnResult("ret-1", "order-1", "user-1", "merch-1", "OTHER", "damaged",
-                "http://ev", BigDecimal.valueOf(100), "VND", "wh-1", "NEW",
+                "http://ev", List.of("http://ev"), BigDecimal.valueOf(100), "VND", "wh-1", "NEW",
                 null, "REQUESTED", Instant.now(), null, null);
     }
 
     private static OrderReturnResponse sampleResponse() {
         return new OrderReturnResponse("ret-1", "order-1", "user-1", "merch-1", "OTHER", "damaged",
-                "http://ev", BigDecimal.valueOf(100), "VND", "wh-1", "NEW",
+                "http://ev", List.of("http://ev"), BigDecimal.valueOf(100), "VND", "wh-1", "NEW",
                 null, "REQUESTED", Instant.now(), null, null);
     }
 
@@ -106,7 +107,7 @@ class OrderReturnControllerWebTest {
 
         mockMvc.perform(post("/api/v1/ordering/returns/orders/order-1")
                         .contentType(APPLICATION_JSON)
-                        .content("{\"reasonType\":\"DAMAGED\",\"reason\":\"damaged\",\"evidenceUrl\":\"http://ev\",\"items\":[{\"skuId\":\"sku-1\",\"qty\":1}]}"))
+                        .content("{\"reasonType\":\"DAMAGED\",\"reason\":\"damaged\",\"evidenceUrls\":[\"http://ev\"],\"items\":[{\"skuId\":\"sku-1\",\"qty\":1}]}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.statusCode").value("201"))
                 .andExpect(jsonPath("$.data.returnId").value("ret-1"));
@@ -118,6 +119,17 @@ class OrderReturnControllerWebTest {
                         .contentType(APPLICATION_JSON)
                         .content("{\"reason\":\"\",\"evidenceUrl\":\"\"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void cancelReturnsSuccess() throws Exception {
+        ReturnResult result = sampleReturn();
+        when(cancelReturnInputPort.execute("ret-1", "user-1")).thenReturn(result);
+        when(dtoMapper.toResponse(result)).thenReturn(sampleResponse());
+
+        mockMvc.perform(post("/api/v1/ordering/returns/ret-1/cancel"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.returnId").value("ret-1"));
     }
 
     @Test

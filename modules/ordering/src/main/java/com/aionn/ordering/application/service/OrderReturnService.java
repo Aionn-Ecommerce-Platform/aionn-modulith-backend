@@ -94,10 +94,7 @@ public class OrderReturnService {
             throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
                     "Return reason type is required");
         }
-        boolean evidenceRequired = reasonType == ReturnReasonType.DAMAGED
-                || reasonType == ReturnReasonType.DEFECTIVE
-                || reasonType == ReturnReasonType.NOT_AS_DESCRIBED;
-        if (evidenceRequired && (command.evidenceUrl() == null || command.evidenceUrl().isBlank())) {
+        if (command.evidenceUrl() == null || command.evidenceUrl().isBlank()) {
             throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
                     "Evidence image is required for this return reason");
         }
@@ -181,6 +178,22 @@ public class OrderReturnService {
         r.reject(command.reason(), clock.instant());
         OrderReturn saved = orderReturnPersistencePort.save(r);
         eventPublisher.publish(r.pullEvents());
+        return saved;
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public OrderReturn cancelReturn(String returnId, String userId) {
+        OrderReturn saved = transactionTemplate.execute(status -> {
+            OrderReturn r = orderReturnPersistencePort.findById(returnId)
+                    .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
+            if (!r.getUserId().equals(userId)) {
+                throw new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND);
+            }
+            r.cancel(clock.instant());
+            OrderReturn persisted = orderReturnPersistencePort.save(r);
+            eventPublisher.publish(r.pullEvents());
+            return persisted;
+        });
         return saved;
     }
 

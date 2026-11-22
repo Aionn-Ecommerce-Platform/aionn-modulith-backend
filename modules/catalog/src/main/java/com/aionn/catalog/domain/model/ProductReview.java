@@ -203,8 +203,9 @@ public class ProductReview extends AggregateRoot {
     }
 
     private void validateImages(List<String> images) {
-        if (images.size() > 5) {
-            throw new CatalogException(CatalogErrorCode.INVALID_ARGUMENT, "A review cannot have more than 5 images");
+        if (images.size() > 3) {
+            throw new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
+                    "A review cannot have more than 3 media items");
         }
     }
 }

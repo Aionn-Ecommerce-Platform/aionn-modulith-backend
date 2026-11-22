@@ -35,6 +35,7 @@ import java.util.List;
 public class OrderReturnController {
 
         private final RequestReturnInputPort requestReturnInputPort;
+        private final CancelReturnInputPort cancelReturnInputPort;
         private final ApproveReturnInputPort approveReturnInputPort;
         private final RejectReturnInputPort rejectReturnInputPort;
         private final ConfirmItemReceivedInputPort confirmItemReceivedInputPort;
@@ -54,6 +55,17 @@ public class OrderReturnController {
                                 requestReturnInputPort
                                                 .execute(dtoMapper.toRequestReturnCommand(orderId, userId, request)));
                 return ApiResponse.createdResponse("Return requested", response);
+        }
+
+        @PostMapping("/{returnId}/cancel")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(summary = "Cancel return request")
+        public ResponseEntity<ApiResponse<OrderReturnResponse>> cancel(
+                        @CurrentUserId String userId,
+                        @PathVariable String returnId) {
+                OrderReturnResponse response = dtoMapper.toResponse(
+                                cancelReturnInputPort.execute(returnId, userId));
+                return ResponseEntity.ok(ApiResponse.success(response, "Return cancelled"));
         }
 
         @PostMapping("/{returnId}/approve")

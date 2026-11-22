@@ -27,20 +27,24 @@ public class CloudinaryProductMediaUploadSignatureProvider
 
     @Override
     public UploadSignatureResult generateProductImageUploadSignature(String merchantId) {
-        return sign(folders.productImageFolder() + "/" + merchantId, "product-image");
+        return sign(folders.productImageFolder() + "/" + merchantId, "product-image",
+                "image", "jpg,jpeg,png,webp", 8L * 1024 * 1024);
     }
 
     @Override
     public UploadSignatureResult generateReviewImageUploadSignature(String userId) {
-        return sign(folders.reviewImageFolder() + "/" + userId, "review-image");
+        return sign(folders.reviewImageFolder() + "/" + userId, "review-image",
+                "auto", "jpg,jpeg,png,webp,gif,mp4,mov,webm", 50L * 1024 * 1024);
     }
 
-    private UploadSignatureResult sign(String folder, String label) {
+    private UploadSignatureResult sign(String folder, String label, String resourceType,
+            String allowedFormats, long maxFileSize) {
         long timestamp = clock.instant().getEpochSecond();
 
         Map<String, String> params = new TreeMap<>();
         params.put("folder", folder);
         params.put("timestamp", String.valueOf(timestamp));
+        params.put("allowed_formats", allowedFormats);
 
         String signature = CloudinarySigner.sign(params, credentials.apiSecret());
 
@@ -50,7 +54,9 @@ public class CloudinaryProductMediaUploadSignatureProvider
                 String.valueOf(timestamp),
                 credentials.apiKey(),
                 credentials.cloudName(),
-                credentials.uploadUrl("image"),
-                folder);
+                credentials.uploadUrl(resourceType),
+                folder,
+                allowedFormats,
+                maxFileSize);
     }
 }

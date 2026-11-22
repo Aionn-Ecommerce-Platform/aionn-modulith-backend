@@ -49,6 +49,28 @@ class OrderReturnTest {
     }
 
     @Test
+    void cancelTransitionsRequestedReturnToCancelled() {
+        OrderReturn r = OrderReturn.request("ret-1", "ord-1", "u", "m", ReturnReasonType.OTHER, "broken", "img://1", now);
+
+        r.cancel(now);
+
+        assertThat(r.getStatus()).isEqualTo(ReturnStatus.CANCELLED);
+        assertThat(r.getDecidedAt()).isNotNull();
+        assertThat(r.peekEvents()).anyMatch(env -> env.payload() instanceof ReturnEvents.ReturnCancelled);
+    }
+
+    @Test
+    void cancelRejectsAnApprovedReturn() {
+        OrderReturn r = OrderReturn.request("ret-1", "ord-1", "u", "m", ReturnReasonType.OTHER, "broken", "img://1", now);
+        r.approve(Money.of(new BigDecimal("100000"), "VND"), "wh-1", now);
+
+        assertThatThrownBy(() -> r.cancel(now))
+                .isInstanceOf(OrderingException.class)
+                .extracting("errorCode")
+                .isEqualTo(OrderingErrorCode.RETURN_INVALID_STATE.getCode());
+    }
+
+    @Test
     void approveTransitionsToApproved() {
         OrderReturn r = OrderReturn.request("ret-1", "ord-1", "u", "m", ReturnReasonType.OTHER, "broken", null, now);
 

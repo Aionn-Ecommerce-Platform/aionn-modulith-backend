@@ -150,6 +150,7 @@ public class Message extends AggregateRoot {
         return switch (type) {
             case TEXT, SYSTEM -> payload.body() == null ? "" : payload.body();
             case IMAGE -> "[Photo]";
+            case FILE -> "[File]";
             case PRODUCT_CARD -> "[Product]";
             case ORDER_REF -> "[Order]";
         };
@@ -170,6 +171,8 @@ public class Message extends AggregateRoot {
         }
         Guard.require(type != MessageType.IMAGE || (payload.body() != null && !payload.body().isBlank()) || payload.metadata().containsKey("imageUrl"),
                 () -> new ChatException(ChatErrorCode.INVALID_ARGUMENT, "imageUrl required for IMAGE message"));
+        Guard.require(type != MessageType.FILE || (payload.body() != null && !payload.body().isBlank()) || payload.metadata().containsKey("imageUrl"),
+                () -> new ChatException(ChatErrorCode.INVALID_ARGUMENT, "file URL required for FILE message"));
         Guard.require(type != MessageType.PRODUCT_CARD || payload.metadata().containsKey("productId"),
                 () -> new ChatException(ChatErrorCode.INVALID_ARGUMENT, "productId required for PRODUCT_CARD message"));
         Guard.require(type != MessageType.ORDER_REF || payload.metadata().containsKey("orderId"),
