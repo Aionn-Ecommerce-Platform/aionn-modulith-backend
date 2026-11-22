@@ -46,6 +46,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
@@ -61,6 +62,7 @@ class OrderReturnServiceTest {
     private static final String MERCHANT_ID = "merchant-1";
     private static final String ORDER_ID = "order-1";
     private static final String RETURN_ID = "return-1";
+    private static final String EVIDENCE_URL = "https://cdn.example.com/evidence.jpg";
 
     @Mock private OrderPersistencePort orderPersistencePort;
     @Mock private OrderReturnPersistencePort orderReturnPersistencePort;
@@ -156,7 +158,8 @@ class OrderReturnServiceTest {
                 .thenAnswer(inv -> inv.getArgument(0));
 
         OrderReturn result = service.requestReturn(
-                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", null,
+                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken",
+                        "https://cdn.example.com/evidence.jpg",
                         List.of(new RequestReturnCommand.Item("sku-1", 1))));
 
         assertEquals(ReturnStatus.REQUESTED, result.getStatus());
@@ -181,6 +184,18 @@ class OrderReturnServiceTest {
 
         RequestReturnCommand command = new RequestReturnCommand(
                 ORDER_ID, USER_ID, ReturnReasonType.DAMAGED, "broken", null,
+                List.of(new RequestReturnCommand.Item("sku-1", 1)));
+
+        assertThrows(OrderingException.class, () -> service.requestReturn(command));
+        verify(orderReturnPersistencePort, never()).save(any());
+    }
+
+    @Test
+    void requestReturnRequiresEvidenceForEveryReason() {
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(completedOrder()));
+
+        RequestReturnCommand command = new RequestReturnCommand(
+                ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", null,
                 List.of(new RequestReturnCommand.Item("sku-1", 1)));
 
         assertThrows(OrderingException.class, () -> service.requestReturn(command));
@@ -339,6 +354,20 @@ class OrderReturnServiceTest {
         when(orderReturnPersistencePort.findByMerchantId(MERCHANT_ID, 10)).thenReturn(List.of());
 
         assertEquals(0, service.listMerchant(MERCHANT_ID, 10).size());
+    }
+
+    @Test
+    void summarizeMerchantDelegatesToTheRepository() {
+        var summary = new OrderReturnPersistencePort.ReturnSummary(5, 4, BigDecimal.valueOf(250));
+        Instant from = Instant.parse("2026-11-01T00:00:00Z");
+        Instant to = Instant.parse("2026-12-01T00:00:00Z");
+        when(orderReturnPersistencePort.summarizeByMerchant(MERCHANT_ID, from, to)).thenReturn(summary);
+
+        var result = service.summarizeMerchant(MERCHANT_ID, from, to);
+
+        assertEquals(5, result.requests());
+        assertEquals(4, result.approved());
+        assertEquals(BigDecimal.valueOf(250), result.refundTotal());
     }
 
     @Test
@@ -533,7 +562,7 @@ class OrderReturnServiceTest {
         when(orderReturnPersistencePort.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
 
         assertThrows(OrderingException.class, () -> service.requestReturn(
-                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", null,
+                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", EVIDENCE_URL,
                         List.of(new RequestReturnCommand.Item(" ", 1)))));
 
         verify(orderReturnItemPersistencePort, never()).saveAll(any(), any());
@@ -545,7 +574,7 @@ class OrderReturnServiceTest {
         when(orderReturnPersistencePort.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
 
         assertThrows(OrderingException.class, () -> service.requestReturn(
-                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", null,
+                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", EVIDENCE_URL,
                         List.of(new RequestReturnCommand.Item("sku-1", 1),
                                 new RequestReturnCommand.Item("sku-1", 1)))));
 
@@ -558,7 +587,7 @@ class OrderReturnServiceTest {
         when(orderReturnPersistencePort.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
 
         assertThrows(OrderingException.class, () -> service.requestReturn(
-                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", null,
+                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", EVIDENCE_URL,
                         List.of(new RequestReturnCommand.Item("sku-9", 1)))));
 
         verify(orderReturnItemPersistencePort, never()).saveAll(any(), any());
@@ -570,7 +599,7 @@ class OrderReturnServiceTest {
         when(orderReturnPersistencePort.save(any(OrderReturn.class))).thenAnswer(inv -> inv.getArgument(0));
 
         assertThrows(OrderingException.class, () -> service.requestReturn(
-                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", null,
+                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", EVIDENCE_URL,
                         List.of(new RequestReturnCommand.Item("sku-1", 2)))));
 
         verify(orderReturnItemPersistencePort, never()).saveAll(any(), any());
@@ -584,9 +613,34 @@ class OrderReturnServiceTest {
                 .thenReturn(java.util.Map.of("sku-1", 1));
 
         assertThrows(OrderingException.class, () -> service.requestReturn(
-                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", null,
+                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", EVIDENCE_URL,
                         List.of(new RequestReturnCommand.Item("sku-1", 1)))));
         verify(orderReturnItemPersistencePort, never()).saveAll(any(), any());
+    }
+
+    @Test
+    void cancelReturnMarksRequestedReturnCancelled() {
+        OrderReturn ret = OrderReturn.request(RETURN_ID, ORDER_ID, USER_ID, MERCHANT_ID,
+                ReturnReasonType.OTHER, "broken", "img://1", Instant.parse("2026-07-18T12:00:00Z"));
+        when(orderReturnPersistencePort.findById(RETURN_ID)).thenReturn(Optional.of(ret));
+        when(orderReturnPersistencePort.save(any(OrderReturn.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        OrderReturn result = service.cancelReturn(RETURN_ID, USER_ID);
+
+        assertEquals(ReturnStatus.CANCELLED, result.getStatus());
+        verify(orderReturnPersistencePort).save(any(OrderReturn.class));
+        verify(eventPublisher).publish(anyCollection());
+    }
+
+    @Test
+    void cancelReturnHidesReturnsOwnedByAnotherUser() {
+        OrderReturn ret = OrderReturn.request(RETURN_ID, ORDER_ID, USER_ID, MERCHANT_ID,
+                ReturnReasonType.OTHER, "broken", "img://1", Instant.parse("2026-07-18T12:00:00Z"));
+        when(orderReturnPersistencePort.findById(RETURN_ID)).thenReturn(Optional.of(ret));
+
+        assertThrows(OrderingException.class, () -> service.cancelReturn(RETURN_ID, "intruder"));
+        verify(orderReturnPersistencePort, never()).save(any(OrderReturn.class));
     }
 
     @Test
@@ -597,7 +651,7 @@ class OrderReturnServiceTest {
                 .thenReturn(java.util.Map.of("sku-1", 1));
 
         assertThrows(OrderingException.class, () -> service.requestReturn(
-                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", null,
+                new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", EVIDENCE_URL,
                         List.of(new RequestReturnCommand.Item("sku-1", Integer.MAX_VALUE)))));
         verify(orderReturnItemPersistencePort, never()).saveAll(any(), any());
     }
@@ -613,7 +667,8 @@ class OrderReturnServiceTest {
             return null;
         }).when(orderReturnItemPersistencePort).saveAll(any(), any());
 
-        service.requestReturn(new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken", null,
+        service.requestReturn(new RequestReturnCommand(ORDER_ID, USER_ID, ReturnReasonType.OTHER, "broken",
+                "https://cdn.example.com/evidence.jpg",
                 List.of(new RequestReturnCommand.Item("sku-1", 1))));
 
         assertEquals(1, saved.get().size());

@@ -28,7 +28,7 @@ class CloudinaryMediaUploadSignatureProviderTest {
     @BeforeEach
     void setUp() {
         credentials = new CloudinaryCredentialsProperties(CLOUD_NAME, API_KEY, API_SECRET, UPLOAD_BASE_URL);
-        folders = new CloudinaryProperties("identity/avatars", "identity/kyc");
+        folders = new CloudinaryProperties("identity/avatars", "identity/kyc", "returns/evidence");
         provider = new CloudinaryMediaUploadSignatureProvider(credentials, folders, Clock.systemUTC());
     }
 
@@ -42,7 +42,7 @@ class CloudinaryMediaUploadSignatureProviderTest {
         assertThat(result.uploadUrl()).isEqualTo(UPLOAD_BASE_URL + "/" + CLOUD_NAME + "/image/upload");
         assertThat(result.timestamp()).isNotBlank();
         assertThat(result.type()).isEqualTo("upload");
-        assertThat(result.signature()).isEqualTo(expectedSignature(result.folder(), result.timestamp(), "upload"));
+        assertThat(result.signature()).isEqualTo(expectedSignature(result));
     }
 
     @Test
@@ -52,22 +52,42 @@ class CloudinaryMediaUploadSignatureProviderTest {
         assertThat(result.folder()).isEqualTo("identity/kyc/user-2");
         assertThat(result.uploadUrl()).isEqualTo(UPLOAD_BASE_URL + "/" + CLOUD_NAME + "/auto/upload");
         assertThat(result.type()).isEqualTo("private");
-        assertThat(result.signature()).isEqualTo(expectedSignature(result.folder(), result.timestamp(), "private"));
+        assertThat(result.signature()).isEqualTo(expectedSignature(result));
     }
 
     @Test
     void signatureIsDeterministicForSameFolderAndTimestamp() {
         UploadSignatureResult result = provider.generateAvatarUploadSignature("user-3");
 
-        String recomputed = expectedSignature(result.folder(), result.timestamp(), "upload");
+        String recomputed = expectedSignature(result);
         assertThat(result.signature()).isEqualTo(recomputed);
     }
 
-    private String expectedSignature(String folder, String timestamp, String type) {
+    @Test
+    void returnEvidenceSignatureAllowsVideoFormats() {
+        UploadSignatureResult result = provider.generateReturnEvidenceUploadSignature("user-4");
+
+        assertThat(result.folder()).isEqualTo("returns/evidence/user-4");
+        assertThat(result.uploadUrl()).isEqualTo(UPLOAD_BASE_URL + "/" + CLOUD_NAME + "/auto/upload");
+        assertThat(result.allowedFormats()).contains("mp4", "webm");
+        assertThat(result.maxFileSize()).isEqualTo(50L * 1024 * 1024);
+        assertThat(result.signature()).isEqualTo(expectedSignature(result));
+    }
+
+    @Test
+    void avatarAndKycSignaturesKeepAllowedFormatsUnsignedForLegacyClients() {
+        assertThat(provider.generateAvatarUploadSignature("user-5").allowedFormats()).isNull();
+        assertThat(provider.generateKycDocumentUploadSignature("user-6").allowedFormats()).isNull();
+    }
+
+    private String expectedSignature(UploadSignatureResult result) {
         Map<String, String> params = new TreeMap<>();
-        params.put("folder", folder);
-        params.put("timestamp", timestamp);
-        params.put("type", type);
+        params.put("folder", result.folder());
+        params.put("timestamp", result.timestamp());
+        params.put("type", result.type());
+        if (result.allowedFormats() != null) {
+            params.put("allowed_formats", result.allowedFormats());
+        }
         return CloudinarySigner.sign(params, API_SECRET);
     }
 }

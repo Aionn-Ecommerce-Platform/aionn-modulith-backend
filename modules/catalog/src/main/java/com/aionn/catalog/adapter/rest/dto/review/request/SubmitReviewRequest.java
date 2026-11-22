@@ -14,5 +14,5 @@ public record SubmitReviewRequest(
         @Min(1) @Max(5) int rating,
         @Size(max = 200) String title,
         @Size(max = 5000) String content,
-        List<@NotBlank String> imageUrls) {
+        @Size(max = 3) List<@NotBlank String> imageUrls) {
 }

@@ -48,3 +48,11 @@ UPDATE vouchers AS v
    AND v.scope = 'PLATFORM'
    AND v.min_order_value IS NULL
    AND c.min_order_value IS NOT NULL;
+
+
+-- Demo chronology: promotions and vouchers must exist before historical orders.
+UPDATE promotion_campaigns
+SET created_at = TIMESTAMPTZ '2025-02-01 00:00:00+00';
+
+UPDATE vouchers
+SET created_at = TIMESTAMPTZ '2025-03-01 00:00:00+00';

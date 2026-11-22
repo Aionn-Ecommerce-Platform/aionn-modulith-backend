@@ -49,6 +49,28 @@ class OrderReturnTest {
     }
 
     @Test
+    void cancelTransitionsRequestedReturnToCancelled() {
+        OrderReturn r = OrderReturn.request("ret-1", "ord-1", "u", "m", ReturnReasonType.OTHER, "broken", "img://1", now);
+
+        r.cancel(now);
+
+        assertThat(r.getStatus()).isEqualTo(ReturnStatus.CANCELLED);
+        assertThat(r.getDecidedAt()).isNotNull();
+        assertThat(r.peekEvents()).anyMatch(env -> env.payload() instanceof ReturnEvents.ReturnCancelled);
+    }
+
+    @Test
+    void cancelRejectsAnApprovedReturn() {
+        OrderReturn r = OrderReturn.request("ret-1", "ord-1", "u", "m", ReturnReasonType.OTHER, "broken", "img://1", now);
+        r.approve(Money.of(new BigDecimal("100000"), "VND"), "wh-1", now);
+
+        assertThatThrownBy(() -> r.cancel(now))
+                .isInstanceOf(OrderingException.class)
+                .extracting("errorCode")
+                .isEqualTo(OrderingErrorCode.RETURN_INVALID_STATE.getCode());
+    }
+
+    @Test
     void approveTransitionsToApproved() {
         OrderReturn r = OrderReturn.request("ret-1", "ord-1", "u", "m", ReturnReasonType.OTHER, "broken", null, now);
 
@@ -87,5 +109,24 @@ class OrderReturnTest {
                 .isInstanceOf(OrderingException.class)
                 .extracting("errorCode")
                 .isEqualTo(OrderingErrorCode.RETURN_INVALID_STATE.getCode());
+    }
+
+    @Test
+    void evidenceUrlsReturnsEmptyListWhenEvidenceIsMissingOrBlank() {
+        OrderReturn missing = OrderReturn.request("ret-1", "ord-1", "u", "m", ReturnReasonType.OTHER, "broken", null, now);
+        OrderReturn blank = OrderReturn.request("ret-2", "ord-2", "u", "m", ReturnReasonType.OTHER, "broken", " ", now);
+
+        assertThat(missing.evidenceUrls()).isEmpty();
+        assertThat(blank.evidenceUrls()).isEmpty();
+    }
+
+    @Test
+    void evidenceUrlsSplitsStoredUrlsAndDropsEmptyEntries() {
+        OrderReturn r = OrderReturn.request("ret-1", "ord-1", "u", "m", ReturnReasonType.OTHER, "broken",
+                "https://cdn.example.com/a.jpg\n\nhttps://cdn.example.com/b.mp4\n", now);
+
+        assertThat(r.evidenceUrls()).containsExactly(
+                "https://cdn.example.com/a.jpg",
+                "https://cdn.example.com/b.mp4");
     }
 }

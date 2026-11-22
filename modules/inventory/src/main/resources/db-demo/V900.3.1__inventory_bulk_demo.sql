@@ -22627,3 +22627,11 @@ INSERT INTO inventory_items (sku_id, warehouse_id, physical_qty, available_qty, 
 ('01M9SK00000000000000006976', '01M9WH00000000000000000031', 145, 144, 5, FALSE, 0, NOW(), NOW()),
 ('01M9SK00000000000000006977', '01M9WH00000000000000000031', 146, 136, 5, FALSE, 0, NOW(), NOW());
 
+
+
+-- Demo chronology: warehouses and stock must exist before historical orders.
+UPDATE warehouses
+SET created_at = TIMESTAMPTZ '2025-03-01 00:00:00+00';
+
+UPDATE inventory_items
+SET created_at = TIMESTAMPTZ '2025-03-15 00:00:00+00';

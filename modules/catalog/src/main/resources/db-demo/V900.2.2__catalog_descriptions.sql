@@ -359967,3 +359967,24 @@ DELETE FROM product_translations
    'Max 4 Hydrating Tee',
    'Alpha 5 Eco Foldable Phone'
  );
+
+
+-- Demo chronology: catalog master data must exist before historical orders/reviews.
+UPDATE merchants
+SET created_at = TIMESTAMPTZ '2025-02-01 00:00:00+00';
+
+UPDATE brands
+SET created_at = TIMESTAMPTZ '2025-02-01 00:00:00+00';
+
+UPDATE categories
+SET created_at = TIMESTAMPTZ '2025-02-01 00:00:00+00';
+
+UPDATE collections
+SET created_at = TIMESTAMPTZ '2025-02-01 00:00:00+00';
+
+UPDATE products
+SET created_at = TIMESTAMPTZ '2025-03-01 00:00:00+00';
+
+UPDATE product_reviews
+SET created_at = now(), updated_at = now()
+WHERE created_at > now();

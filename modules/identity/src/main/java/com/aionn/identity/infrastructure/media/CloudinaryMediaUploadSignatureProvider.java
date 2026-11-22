@@ -24,22 +24,44 @@ public class CloudinaryMediaUploadSignatureProvider implements MediaUploadSignat
     private final CloudinaryProperties folders;
     private final Clock clock;
 
+    private static final long AVATAR_MAX_BYTES = 5L * 1024 * 1024;
+    private static final long KYC_MAX_BYTES = 10L * 1024 * 1024;
+    private static final String RETURN_EVIDENCE_FORMATS =
+            "jpg,jpeg,png,webp,gif,mp4,mov,webm";
+    private static final long RETURN_EVIDENCE_MAX_BYTES = 50L * 1024 * 1024;
+
     @Override
     public UploadSignatureResult generateAvatarUploadSignature(String userId) {
-        return sign(folders.avatarFolder() + "/" + userId, "image", "upload");
+        // Legacy endpoint: keep allowed_formats out of the signed payload so older
+        // clients that do not echo it back still produce a valid signature.
+        return sign(folders.avatarFolder() + "/" + userId, "image", "upload",
+                null, AVATAR_MAX_BYTES);
     }
 
     @Override
     public UploadSignatureResult generateKycDocumentUploadSignature(String userId) {
-        return sign(folders.kycFolder() + "/" + userId, "auto", "private");
+        return sign(folders.kycFolder() + "/" + userId, "auto", "private",
+                null, KYC_MAX_BYTES);
     }
 
-    private UploadSignatureResult sign(String folder, String resourceType, String type) {
+    @Override
+    public UploadSignatureResult generateReturnEvidenceUploadSignature(String userId) {
+        return sign(folders.returnEvidenceFolder() + "/" + userId, "auto", "upload",
+                RETURN_EVIDENCE_FORMATS, RETURN_EVIDENCE_MAX_BYTES);
+    }
+
+    private UploadSignatureResult sign(String folder, String resourceType, String type,
+            String allowedFormats, long maxFileSize) {
         long timestamp = clock.instant().getEpochSecond();
         Map<String, String> params = new TreeMap<>();
         params.put("folder", folder);
         params.put("timestamp", String.valueOf(timestamp));
         params.put("type", type);
+        if (allowedFormats != null) {
+            // Only signed for the new return-evidence flow; legacy avatar/KYC
+            // clients never send this field.
+            params.put("allowed_formats", allowedFormats);
+        }
         String signature = CloudinarySigner.sign(params, credentials.apiSecret());
         log.debug("Generated {} upload signature", resourceType);
         return new UploadSignatureResult(
@@ -49,6 +71,8 @@ public class CloudinaryMediaUploadSignatureProvider implements MediaUploadSignat
                 credentials.cloudName(),
                 credentials.uploadUrl(resourceType),
                 folder,
-                type);
+                type,
+                allowedFormats,
+                maxFileSize);
     }
 }

@@ -5,6 +5,7 @@ import com.aionn.ordering.domain.valueobject.ReturnRefundStatus;
 import com.aionn.ordering.domain.valueobject.ReturnStatus;
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.LinkedHashMap;
@@ -94,10 +95,7 @@ public class OrderReturnService {
             throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
                     "Return reason type is required");
         }
-        boolean evidenceRequired = reasonType == ReturnReasonType.DAMAGED
-                || reasonType == ReturnReasonType.DEFECTIVE
-                || reasonType == ReturnReasonType.NOT_AS_DESCRIBED;
-        if (evidenceRequired && (command.evidenceUrl() == null || command.evidenceUrl().isBlank())) {
+        if (command.evidenceUrl() == null || command.evidenceUrl().isBlank()) {
             throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
                     "Evidence image is required for this return reason");
         }
@@ -184,6 +182,22 @@ public class OrderReturnService {
         return saved;
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public OrderReturn cancelReturn(String returnId, String userId) {
+        OrderReturn saved = transactionTemplate.execute(status -> {
+            OrderReturn r = orderReturnPersistencePort.findById(returnId)
+                    .orElseThrow(() -> new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND));
+            if (!r.getUserId().equals(userId)) {
+                throw new OrderingException(OrderingErrorCode.RETURN_NOT_FOUND);
+            }
+            r.cancel(clock.instant());
+            OrderReturn persisted = orderReturnPersistencePort.save(r);
+            eventPublisher.publish(r.pullEvents());
+            return persisted;
+        });
+        return saved;
+    }
+
     public OrderReturn confirmItemReceived(ConfirmItemReceivedCommand command) {
         OrderReturn r = ownedByOwner(command.returnId(), command.ownerId());
         r.confirmReceived(command.itemCondition(), clock.instant());
@@ -221,6 +235,12 @@ public class OrderReturnService {
     @Transactional(readOnly = true)
     public List<OrderReturn> listMerchant(String merchantId, int limit) {
         return orderReturnPersistencePort.findByMerchantId(merchantId, limit);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderReturnPersistencePort.ReturnSummary summarizeMerchant(
+            String merchantId, Instant from, Instant to) {
+        return orderReturnPersistencePort.summarizeByMerchant(merchantId, from, to);
     }
 
     @Transactional(readOnly = true)

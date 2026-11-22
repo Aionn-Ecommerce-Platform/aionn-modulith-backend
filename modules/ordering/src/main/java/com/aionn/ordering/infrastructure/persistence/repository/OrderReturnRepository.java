@@ -4,6 +4,7 @@ import com.aionn.ordering.infrastructure.persistence.entity.OrderReturnEntity;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -16,6 +17,21 @@ public interface OrderReturnRepository extends JpaRepository<OrderReturnEntity, 
     List<OrderReturnEntity> findByUserIdOrderByRequestedAtDesc(String userId, Pageable pageable);
 
     List<OrderReturnEntity> findByMerchantIdOrderByRequestedAtDesc(String merchantId, Pageable pageable);
+
+    @Query("""
+        SELECT COUNT(r) AS requests,
+               COALESCE(SUM(CASE WHEN r.status IN ('APPROVED', 'ITEM_RECEIVED', 'REFUNDED') THEN 1 ELSE 0 END), 0) AS approved,
+               COALESCE(SUM(CASE WHEN r.status IN ('APPROVED', 'ITEM_RECEIVED', 'REFUNDED')
+                                 THEN COALESCE(r.refundAmount, 0) ELSE 0 END), 0) AS refundTotal
+          FROM OrderReturnEntity r
+         WHERE r.merchantId = :merchantId
+           AND (:from IS NULL OR r.requestedAt >= :from)
+           AND (:to IS NULL OR r.requestedAt < :to)
+        """)
+    MerchantReturnSummaryProjection summarizeByMerchant(
+            @Param("merchantId") String merchantId,
+            @Param("from") Instant from,
+            @Param("to") Instant to);
 
     boolean existsByOrderIdAndStatusIn(String orderId, java.util.Collection<String> statuses);
 
@@ -58,5 +74,13 @@ public interface OrderReturnRepository extends JpaRepository<OrderReturnEntity, 
         BigDecimal getRefundAmount();
 
         String getRefundCurrency();
+    }
+
+    interface MerchantReturnSummaryProjection {
+        Long getRequests();
+
+        Long getApproved();
+
+        BigDecimal getRefundTotal();
     }
 }

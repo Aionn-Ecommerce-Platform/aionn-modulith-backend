@@ -2185,3 +2185,15 @@ INSERT INTO user_addresses (address_id, user_id, contact_name, phone, province_c
 ('01M9AD00000000000000000342', '01M9MO00000000000000000031', 'Đặng Thị Dũng', '+8490200049', '68', 'Tỉnh Lâm Đồng', '672', 'Thành phố Đà Lạt', '24775', 'Phường 1', '7 Trần Quốc Toản', '7 Trần Quốc Toản, Phường 1, Thành phố Đà Lạt, Tỉnh Lâm Đồng', 'HOME', TRUE, NOW(), NOW()),
 ('01M9AD00000000000000000343', '01M9MO00000000000000000032', 'Bùi Minh Tùng', '+8490200050', '01', 'Thành phố Hà Nội', '002', 'Quận Hoàn Kiếm', '00076', 'Phường Hàng Bông', '12 Hàng Bông', '12 Hàng Bông, Phường Hàng Bông, Quận Hoàn Kiếm, Thành phố Hà Nội', 'HOME', TRUE, NOW(), NOW());
 
+
+
+-- Demo chronology: users and their addresses must exist before historical orders.
+UPDATE users
+SET created_at = TIMESTAMPTZ '2025-01-01 00:00:00+00'
+WHERE email LIKE '%@example.test';
+
+UPDATE user_addresses
+SET created_at = TIMESTAMPTZ '2025-02-15 00:00:00+00'
+WHERE user_id IN (
+  SELECT user_id FROM users WHERE email LIKE '%@example.test'
+);

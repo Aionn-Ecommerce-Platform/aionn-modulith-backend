@@ -35,7 +35,6 @@ public class CloudinaryChatMediaUploadSignatureProvider
         params.put("folder", folder);
         params.put("timestamp", String.valueOf(timestamp));
         params.put("allowed_formats", folders.allowedFormats());
-        params.put("max_file_size", String.valueOf(folders.maxFileSizeBytes()));
 
         String signature = CloudinarySigner.sign(params, credentials.apiSecret());
 
@@ -45,7 +44,7 @@ public class CloudinaryChatMediaUploadSignatureProvider
                 String.valueOf(timestamp),
                 credentials.apiKey(),
                 credentials.cloudName(),
-                credentials.uploadUrl("image"),
+                credentials.uploadUrl("auto"),
                 folder,
                 folders.allowedFormats(),
                 folders.maxFileSizeBytes());

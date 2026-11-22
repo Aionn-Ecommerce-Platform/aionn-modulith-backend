@@ -37,7 +37,7 @@ class CloudinaryKycDocumentStorageAdapterTest {
     @BeforeEach
     void setUp() {
         adapter = new CloudinaryKycDocumentStorageAdapter(cloudinary,
-                new CloudinaryProperties("identity/avatars", FOLDER));
+                new CloudinaryProperties("identity/avatars", FOLDER, "returns/evidence"));
     }
 
     @Test

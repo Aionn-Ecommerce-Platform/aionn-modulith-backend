@@ -70,15 +70,14 @@ class AdminOrderReturnControllerWebTest {
         }
 
         private static ReturnResult sampleResult() {
-                return new ReturnResult("ret-1", "order-1", "user-1", "merch-1", "OTHER", "broken", null, null, null, null, null,
-                                null,
+                return new ReturnResult("ret-1", "order-1", "user-1", "merch-1", "OTHER", "broken", null, List.of(), null, null, null, null, null,
                                 "REQUESTED", Instant.now(), null, null);
         }
 
         private static OrderReturnResponse sampleResponse() {
-                return new OrderReturnResponse("ret-1", "order-1", "user-1", "merch-1", "OTHER", "broken", null, null, null,
+                return new OrderReturnResponse("ret-1", "order-1", "user-1", "merch-1", "OTHER", "broken", null, List.of(), null, null, null,
                                 null, null,
-                                null, "REQUESTED", Instant.now(), null, null);
+                                "REQUESTED", Instant.now(), null, null);
         }
 
         @Test

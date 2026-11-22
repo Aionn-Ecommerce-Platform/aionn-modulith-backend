@@ -35,7 +35,7 @@ class CloudinaryChatMediaUploadSignatureProviderTest {
         assertThat(result.folder()).isEqualTo("aionn/chat/images/" + USER_ID);
         assertThat(result.apiKey()).isEqualTo("api-key");
         assertThat(result.cloudName()).isEqualTo("demo-cloud");
-        assertThat(result.uploadUrl()).isEqualTo("https://api.cloudinary.com/v1_1/demo-cloud/image/upload");
+        assertThat(result.uploadUrl()).isEqualTo("https://api.cloudinary.com/v1_1/demo-cloud/auto/upload");
         assertThat(result.timestamp()).isEqualTo(String.valueOf(NOW.getEpochSecond()));
         assertThat(result.signature()).isNotBlank();
         assertThat(result.allowedFormats()).isEqualTo("jpg,jpeg,png,webp,gif");

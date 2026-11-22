@@ -2,6 +2,7 @@ package com.aionn.ordering.application.dto.returns.result;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 public record ReturnResult(
         String returnId,
@@ -11,6 +12,7 @@ public record ReturnResult(
         String reasonType,
         String reason,
         String evidenceUrl,
+        List<String> evidenceUrls,
         BigDecimal refundAmount,
         String currency,
         String returnWarehouseId,

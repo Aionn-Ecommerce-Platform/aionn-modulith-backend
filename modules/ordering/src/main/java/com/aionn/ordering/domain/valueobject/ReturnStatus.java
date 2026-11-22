@@ -13,13 +13,14 @@ public enum ReturnStatus {
     REQUESTED,
     APPROVED,
     ITEM_RECEIVED,
-    REJECTED;
+    REJECTED,
+    CANCELLED;
 
     public boolean canTransitionTo(ReturnStatus next) {
         return switch (this) {
-            case REQUESTED -> next == APPROVED || next == REJECTED;
+            case REQUESTED -> next == APPROVED || next == REJECTED || next == CANCELLED;
             case APPROVED -> next == ITEM_RECEIVED || next == REJECTED;
-            case ITEM_RECEIVED, REJECTED -> false;
+            case ITEM_RECEIVED, REJECTED, CANCELLED -> false;
         };
     }
 }

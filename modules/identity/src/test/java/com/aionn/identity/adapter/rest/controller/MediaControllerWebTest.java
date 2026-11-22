@@ -8,6 +8,7 @@ import com.aionn.identity.adapter.rest.support.MockSecurityInterceptor;
 import com.aionn.identity.application.dto.media.result.UploadSignatureResult;
 import com.aionn.identity.application.port.in.media.GenerateAvatarUploadSignatureInputPort;
 import com.aionn.identity.application.port.in.media.GenerateKycDocumentUploadSignatureInputPort;
+import com.aionn.identity.application.port.in.media.GenerateReturnEvidenceUploadSignatureInputPort;
 import com.aionn.platform.web.support.clientip.ClientIpArgumentResolver;
 import com.aionn.platform.infrastructure.web.ClientIpResolver;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +39,8 @@ class MediaControllerWebTest {
     @Mock
     private GenerateKycDocumentUploadSignatureInputPort generateKycDocumentUploadSignatureInputPort;
     @Mock
+    private GenerateReturnEvidenceUploadSignatureInputPort generateReturnEvidenceUploadSignatureInputPort;
+    @Mock
     private MediaDtoMapper mediaDtoMapper;
 
     private MockMvc mockMvc;
@@ -47,6 +50,7 @@ class MediaControllerWebTest {
         MediaController controller = new MediaController(
                 generateAvatarUploadSignatureInputPort,
                 generateKycDocumentUploadSignatureInputPort,
+                generateReturnEvidenceUploadSignatureInputPort,
                 mediaDtoMapper);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new IdentityExceptionHandler())
@@ -68,7 +72,9 @@ class MediaControllerWebTest {
                 "aionn-cloud",
                 "https://api.cloudinary.com/v1_1/aionn-cloud/image/upload",
                 "identity/avatars",
-                "upload");
+                "upload",
+                "jpg,jpeg,png,webp,gif",
+                5242880L);
         UploadSignatureResponse response = new UploadSignatureResponse(
                 "abcdef1234567890signature",
                 "1717000000",
@@ -76,7 +82,9 @@ class MediaControllerWebTest {
                 "aionn-cloud",
                 "https://api.cloudinary.com/v1_1/aionn-cloud/image/upload",
                 "identity/avatars",
-                "upload");
+                "upload",
+                "jpg,jpeg,png,webp,gif",
+                5242880L);
 
         when(generateAvatarUploadSignatureInputPort.execute("alice@example.com")).thenReturn(result);
         when(mediaDtoMapper.toUploadSignatureResponse(result)).thenReturn(response);
@@ -102,7 +110,9 @@ class MediaControllerWebTest {
                 "aionn-cloud",
                 "https://api.cloudinary.com/v1_1/aionn-cloud/auto/upload",
                 "identity/kyc/alice@example.com",
-                "private");
+                "private",
+                "jpg,jpeg,png,webp,pdf",
+                10485760L);
         UploadSignatureResponse response = new UploadSignatureResponse(
                 "kyc-signature",
                 "1717000001",
@@ -110,7 +120,9 @@ class MediaControllerWebTest {
                 "aionn-cloud",
                 "https://api.cloudinary.com/v1_1/aionn-cloud/auto/upload",
                 "identity/kyc/alice@example.com",
-                "private");
+                "private",
+                "jpg,jpeg,png,webp,pdf",
+                10485760L);
 
         when(generateKycDocumentUploadSignatureInputPort.execute("alice@example.com")).thenReturn(result);
         when(mediaDtoMapper.toUploadSignatureResponse(result)).thenReturn(response);
@@ -122,6 +134,41 @@ class MediaControllerWebTest {
                 .andExpect(jsonPath("$.data.folder").value("identity/kyc/alice@example.com"));
 
         verify(generateKycDocumentUploadSignatureInputPort).execute("alice@example.com");
+    }
+
+    @Test
+    void generateReturnEvidenceSignatureReturnsVideoCapableParams() throws Exception {
+        UploadSignatureResult result = new UploadSignatureResult(
+                "return-signature",
+                "1717000002",
+                "cloudinary-api-key",
+                "aionn-cloud",
+                "https://api.cloudinary.com/v1_1/aionn-cloud/auto/upload",
+                "returns/evidence/alice@example.com",
+                "upload",
+                "jpg,jpeg,png,webp,gif,mp4,mov,webm",
+                52428800L);
+        UploadSignatureResponse response = new UploadSignatureResponse(
+                "return-signature",
+                "1717000002",
+                "cloudinary-api-key",
+                "aionn-cloud",
+                "https://api.cloudinary.com/v1_1/aionn-cloud/auto/upload",
+                "returns/evidence/alice@example.com",
+                "upload",
+                "jpg,jpeg,png,webp,gif,mp4,mov,webm",
+                52428800L);
+
+        when(generateReturnEvidenceUploadSignatureInputPort.execute("alice@example.com")).thenReturn(result);
+        when(mediaDtoMapper.toUploadSignatureResponse(result)).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/media/upload-signatures/return-evidence")
+                .with(user("alice@example.com").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.allowedFormats").value("jpg,jpeg,png,webp,gif,mp4,mov,webm"))
+                .andExpect(jsonPath("$.data.maxFileSize").value(52428800));
+
+        verify(generateReturnEvidenceUploadSignatureInputPort).execute("alice@example.com");
     }
 
     @Test

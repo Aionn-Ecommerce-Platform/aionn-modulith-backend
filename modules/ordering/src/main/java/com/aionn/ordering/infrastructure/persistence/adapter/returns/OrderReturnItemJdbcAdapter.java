@@ -54,7 +54,7 @@ public class OrderReturnItemJdbcAdapter implements OrderReturnItemPersistencePor
                   FROM order_return_items ri
                   JOIN order_returns r ON r.return_id = ri.return_id
                  WHERE r.order_id = ?
-                   AND r.status <> 'REJECTED'
+                   AND r.status NOT IN ('REJECTED', 'CANCELLED')
                  GROUP BY ri.sku_id
                 """, rs -> {
                     Map<String, Integer> result = new LinkedHashMap<>();

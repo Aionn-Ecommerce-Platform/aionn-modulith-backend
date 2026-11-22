@@ -167,8 +167,33 @@ class MessageTest {
     }
 
     @Test
-    void send_productCardWithoutProductId_throwsInvalidArgument() {
-        assertThatThrownBy(() -> Message.send("M_1", "C_1", "U_b", ParticipantRole.BUYER,
+    void send_fileWithBlankMetadata_throwsInvalidArgument() {
+        assertThatThrownBy(() -> Message.send("M_1", "C_1", "U_b", ParticipantRole.BUYER, MessageType.FILE,
+                new MessagePayload(null, Map.of("imageUrl", " ")), List.of("U_m"), FIXED))
+                .isInstanceOf(ChatException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "CHT_900");
+    }
+
+    @Test
+    void send_fileWithBody_success() {
+        Message m = Message.send("M_1", "C_1", "U_b", ParticipantRole.BUYER, MessageType.FILE,
+                new MessagePayload("https://cdn.example.com/invoice.pdf", Map.of()), List.of("U_m"), FIXED);
+
+        assertThat(m.getType()).isEqualTo(MessageType.FILE);
+        assertThat(m.previewBody()).isEqualTo("[File]");
+    }
+
+    @Test
+    void send_fileWithMetadata_success() {
+        Message m = Message.send("M_1", "C_1", "U_b", ParticipantRole.BUYER, MessageType.FILE,
+                new MessagePayload(null, Map.of("imageUrl", "https://cdn.example.com/invoice.pdf")),
+                List.of("U_m"), FIXED);
+
+        assertThat(m.getType()).isEqualTo(MessageType.FILE);
+    }
+
+    @Test
+    void send_productCardWithoutProductId_throwsInvalidArgument() {        assertThatThrownBy(() -> Message.send("M_1", "C_1", "U_b", ParticipantRole.BUYER,
                 MessageType.PRODUCT_CARD, new MessagePayload(null, Map.of()), List.of("U_m"), FIXED))
                 .isInstanceOf(ChatException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "CHT_900");

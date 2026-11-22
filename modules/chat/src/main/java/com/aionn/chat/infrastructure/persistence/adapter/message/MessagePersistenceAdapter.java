@@ -62,7 +62,7 @@ public class MessagePersistenceAdapter implements MessagePersistencePort {
         StringBuilder sql = new StringBuilder("""
                 SELECT conversation_id, COUNT(*) AS unread
                   FROM chat_messages
-                 WHERE recalled = FALSE AND (
+                 WHERE is_recalled = FALSE AND (
                 """);
         List<Object> args = new ArrayList<>();
         boolean first = true;
