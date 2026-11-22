@@ -61,9 +61,9 @@ SELECT 'PM_DEMO_' || lpad(((b.rn - 1) * 2 + c.card_no)::text, 5, '0'),
        'pm_demo_' || b.rn || '_' || c.card_no,
        'LINKED',
        0,
-       TIMESTAMPTZ '2025-02-15 00:00:00+00' + make_interval(days => b.rn),
-       TIMESTAMPTZ '2025-02-15 00:00:00+00' + make_interval(days => b.rn),
-       TIMESTAMPTZ '2025-02-15 00:00:00+00' + make_interval(days => b.rn)
+       TIMESTAMPTZ '2025-02-15 00:00:00+00' + make_interval(days => b.rn::int),
+       TIMESTAMPTZ '2025-02-15 00:00:00+00' + make_interval(days => b.rn::int),
+       TIMESTAMPTZ '2025-02-15 00:00:00+00' + make_interval(days => b.rn::int)
   FROM buyers b
   CROSS JOIN cards c
 ON CONFLICT (method_id) DO NOTHING;
