@@ -24,9 +24,7 @@ public class CloudinaryMediaUploadSignatureProvider implements MediaUploadSignat
     private final CloudinaryProperties folders;
     private final Clock clock;
 
-    private static final String AVATAR_FORMATS = "jpg,jpeg,png,webp,gif";
     private static final long AVATAR_MAX_BYTES = 5L * 1024 * 1024;
-    private static final String KYC_FORMATS = "jpg,jpeg,png,webp,pdf";
     private static final long KYC_MAX_BYTES = 10L * 1024 * 1024;
     private static final String RETURN_EVIDENCE_FORMATS =
             "jpg,jpeg,png,webp,gif,mp4,mov,webm";
@@ -34,14 +32,16 @@ public class CloudinaryMediaUploadSignatureProvider implements MediaUploadSignat
 
     @Override
     public UploadSignatureResult generateAvatarUploadSignature(String userId) {
+        // Legacy endpoint: keep allowed_formats out of the signed payload so older
+        // clients that do not echo it back still produce a valid signature.
         return sign(folders.avatarFolder() + "/" + userId, "image", "upload",
-                AVATAR_FORMATS, AVATAR_MAX_BYTES);
+                null, AVATAR_MAX_BYTES);
     }
 
     @Override
     public UploadSignatureResult generateKycDocumentUploadSignature(String userId) {
         return sign(folders.kycFolder() + "/" + userId, "auto", "private",
-                KYC_FORMATS, KYC_MAX_BYTES);
+                null, KYC_MAX_BYTES);
     }
 
     @Override
@@ -57,7 +57,11 @@ public class CloudinaryMediaUploadSignatureProvider implements MediaUploadSignat
         params.put("folder", folder);
         params.put("timestamp", String.valueOf(timestamp));
         params.put("type", type);
-        params.put("allowed_formats", allowedFormats);
+        if (allowedFormats != null) {
+            // Only signed for the new return-evidence flow; legacy avatar/KYC
+            // clients never send this field.
+            params.put("allowed_formats", allowedFormats);
+        }
         String signature = CloudinarySigner.sign(params, credentials.apiSecret());
         log.debug("Generated {} upload signature", resourceType);
         return new UploadSignatureResult(

@@ -68,7 +68,9 @@ class CloudinaryMediaUploadSignatureProviderTest {
         params.put("folder", result.folder());
         params.put("timestamp", result.timestamp());
         params.put("type", result.type());
-        params.put("allowed_formats", result.allowedFormats());
+        if (result.allowedFormats() != null) {
+            params.put("allowed_formats", result.allowedFormats());
+        }
         return CloudinarySigner.sign(params, API_SECRET);
     }
 }
