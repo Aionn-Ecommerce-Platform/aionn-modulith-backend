@@ -63,6 +63,23 @@ class CloudinaryMediaUploadSignatureProviderTest {
         assertThat(result.signature()).isEqualTo(recomputed);
     }
 
+    @Test
+    void returnEvidenceSignatureAllowsVideoFormats() {
+        UploadSignatureResult result = provider.generateReturnEvidenceUploadSignature("user-4");
+
+        assertThat(result.folder()).isEqualTo("returns/evidence/user-4");
+        assertThat(result.uploadUrl()).isEqualTo(UPLOAD_BASE_URL + "/" + CLOUD_NAME + "/auto/upload");
+        assertThat(result.allowedFormats()).contains("mp4", "webm");
+        assertThat(result.maxFileSize()).isEqualTo(50L * 1024 * 1024);
+        assertThat(result.signature()).isEqualTo(expectedSignature(result));
+    }
+
+    @Test
+    void avatarAndKycSignaturesKeepAllowedFormatsUnsignedForLegacyClients() {
+        assertThat(provider.generateAvatarUploadSignature("user-5").allowedFormats()).isNull();
+        assertThat(provider.generateKycDocumentUploadSignature("user-6").allowedFormats()).isNull();
+    }
+
     private String expectedSignature(UploadSignatureResult result) {
         Map<String, String> params = new TreeMap<>();
         params.put("folder", result.folder());

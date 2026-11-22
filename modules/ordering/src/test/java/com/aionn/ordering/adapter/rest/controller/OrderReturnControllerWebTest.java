@@ -196,6 +196,22 @@ class OrderReturnControllerWebTest {
     }
 
     @Test
+    void merchantSummaryReturnsAggregatedTotals() throws Exception {
+        when(returnService.summarizeMerchant(eq("M_1"), any(), any()))
+                .thenReturn(new com.aionn.ordering.application.port.out.OrderReturnPersistencePort.ReturnSummary(
+                        4, 3, BigDecimal.valueOf(300)));
+
+        mockMvc.perform(get("/api/v1/ordering/returns/merchant/summary")
+                        .header("X-Merchant-Id", "M_1")
+                        .param("from", "2026-11-01")
+                        .param("to", "2026-11-30"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.requests").value(4))
+                .andExpect(jsonPath("$.data.approved").value(3))
+                .andExpect(jsonPath("$.data.refundTotal").value(300));
+    }
+
+    @Test
     void getReturnReturnsItem() throws Exception {
         ReturnResult result = sampleReturn();
         when(getReturnInputPort.execute("ret-1", "user-1")).thenReturn(result);

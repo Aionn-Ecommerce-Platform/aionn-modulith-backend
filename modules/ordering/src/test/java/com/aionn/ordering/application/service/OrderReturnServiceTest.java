@@ -357,6 +357,20 @@ class OrderReturnServiceTest {
     }
 
     @Test
+    void summarizeMerchantDelegatesToTheRepository() {
+        var summary = new OrderReturnPersistencePort.ReturnSummary(5, 4, BigDecimal.valueOf(250));
+        Instant from = Instant.parse("2026-11-01T00:00:00Z");
+        Instant to = Instant.parse("2026-12-01T00:00:00Z");
+        when(orderReturnPersistencePort.summarizeByMerchant(MERCHANT_ID, from, to)).thenReturn(summary);
+
+        var result = service.summarizeMerchant(MERCHANT_ID, from, to);
+
+        assertEquals(5, result.requests());
+        assertEquals(4, result.approved());
+        assertEquals(BigDecimal.valueOf(250), result.refundTotal());
+    }
+
+    @Test
     void adminGetReturnsFetchedReturn() {
         OrderReturn r = requestedReturn();
         when(orderReturnPersistencePort.findById(RETURN_ID)).thenReturn(Optional.of(r));

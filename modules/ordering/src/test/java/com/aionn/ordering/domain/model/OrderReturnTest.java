@@ -110,4 +110,23 @@ class OrderReturnTest {
                 .extracting("errorCode")
                 .isEqualTo(OrderingErrorCode.RETURN_INVALID_STATE.getCode());
     }
+
+    @Test
+    void evidenceUrlsReturnsEmptyListWhenEvidenceIsMissingOrBlank() {
+        OrderReturn missing = OrderReturn.request("ret-1", "ord-1", "u", "m", ReturnReasonType.OTHER, "broken", null, now);
+        OrderReturn blank = OrderReturn.request("ret-2", "ord-2", "u", "m", ReturnReasonType.OTHER, "broken", " ", now);
+
+        assertThat(missing.evidenceUrls()).isEmpty();
+        assertThat(blank.evidenceUrls()).isEmpty();
+    }
+
+    @Test
+    void evidenceUrlsSplitsStoredUrlsAndDropsEmptyEntries() {
+        OrderReturn r = OrderReturn.request("ret-1", "ord-1", "u", "m", ReturnReasonType.OTHER, "broken",
+                "https://cdn.example.com/a.jpg\n\nhttps://cdn.example.com/b.mp4\n", now);
+
+        assertThat(r.evidenceUrls()).containsExactly(
+                "https://cdn.example.com/a.jpg",
+                "https://cdn.example.com/b.mp4");
+    }
 }

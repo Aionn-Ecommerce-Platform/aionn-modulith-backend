@@ -137,6 +137,41 @@ class MediaControllerWebTest {
     }
 
     @Test
+    void generateReturnEvidenceSignatureReturnsVideoCapableParams() throws Exception {
+        UploadSignatureResult result = new UploadSignatureResult(
+                "return-signature",
+                "1717000002",
+                "cloudinary-api-key",
+                "aionn-cloud",
+                "https://api.cloudinary.com/v1_1/aionn-cloud/auto/upload",
+                "returns/evidence/alice@example.com",
+                "upload",
+                "jpg,jpeg,png,webp,gif,mp4,mov,webm",
+                52428800L);
+        UploadSignatureResponse response = new UploadSignatureResponse(
+                "return-signature",
+                "1717000002",
+                "cloudinary-api-key",
+                "aionn-cloud",
+                "https://api.cloudinary.com/v1_1/aionn-cloud/auto/upload",
+                "returns/evidence/alice@example.com",
+                "upload",
+                "jpg,jpeg,png,webp,gif,mp4,mov,webm",
+                52428800L);
+
+        when(generateReturnEvidenceUploadSignatureInputPort.execute("alice@example.com")).thenReturn(result);
+        when(mediaDtoMapper.toUploadSignatureResponse(result)).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/media/upload-signatures/return-evidence")
+                .with(user("alice@example.com").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.allowedFormats").value("jpg,jpeg,png,webp,gif,mp4,mov,webm"))
+                .andExpect(jsonPath("$.data.maxFileSize").value(52428800));
+
+        verify(generateReturnEvidenceUploadSignatureInputPort).execute("alice@example.com");
+    }
+
+    @Test
     void unauthenticatedRequestReturns401() throws Exception {
         mockMvc.perform(post("/api/v1/media/upload-signatures/avatar"))
                 .andExpect(status().isUnauthorized());
