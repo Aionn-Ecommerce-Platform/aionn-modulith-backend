@@ -26,7 +26,12 @@ public interface OrderReturnPersistencePort {
 
     List<ReturnAnalyticsRow> findReturnAnalyticsRows(Instant from, Instant to);
 
+    ReturnSummary summarizeByMerchant(String merchantId, Instant from, Instant to);
+
     long countCompletedOrdersBetween(Instant from, Instant to);
+
+    record ReturnSummary(long requests, long approved, BigDecimal refundTotal) {
+    }
 
     record ReturnAnalyticsRow(
             String status,

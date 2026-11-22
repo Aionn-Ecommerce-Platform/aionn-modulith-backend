@@ -5,6 +5,7 @@ import com.aionn.ordering.adapter.rest.dto.request.ConfirmItemReceivedRequest;
 import com.aionn.ordering.adapter.rest.dto.request.RejectReturnRequest;
 import com.aionn.ordering.adapter.rest.dto.request.RequestReturnRequest;
 import com.aionn.ordering.adapter.rest.dto.response.OrderReturnResponse;
+import com.aionn.ordering.adapter.rest.dto.response.MerchantReturnSummaryResponse;
 import com.aionn.ordering.adapter.rest.dto.response.ReturnItemResponse;
 import com.aionn.ordering.adapter.rest.mapper.OrderingDtoMapper;
 import com.aionn.ordering.adapter.rest.support.session.CurrentMerchantId;
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,6 +28,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 @RestController
@@ -128,6 +133,23 @@ public class OrderReturnController {
                                 .map(dtoMapper::toResponse)
                                 .toList();
                 return ResponseEntity.ok(ApiResponse.success(responses, "Returns fetched"));
+        }
+
+        @GetMapping("/merchant/summary")
+        @PreAuthorize("hasAuthority('ROLE_MERCHANT')")
+        @Operation(summary = "Aggregate return requests for the merchant")
+        public ResponseEntity<ApiResponse<MerchantReturnSummaryResponse>> merchantSummary(
+                        @CurrentMerchantId String merchantId,
+                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+                ZoneId zone = ZoneId.systemDefault();
+                Instant fromInstant = from == null ? null : from.atStartOfDay(zone).toInstant();
+                Instant toInstant = to == null ? null : to.plusDays(1).atStartOfDay(zone).toInstant();
+                var summary = returnService.summarizeMerchant(merchantId, fromInstant, toInstant);
+                return ResponseEntity.ok(ApiResponse.success(
+                                new MerchantReturnSummaryResponse(
+                                                summary.requests(), summary.approved(), summary.refundTotal()),
+                                "Return summary fetched"));
         }
 
         @GetMapping("/{returnId}")

@@ -61,7 +61,6 @@ public class ProductReview extends AggregateRoot {
         this.title = title;
         this.content = content;
         if (imageUrls != null) {
-            validateImages(imageUrls);
             this.imageUrls.addAll(imageUrls);
         }
         this.status = status != null ? status : ReviewStatus.VISIBLE;
@@ -103,6 +102,7 @@ public class ProductReview extends AggregateRoot {
 
     public static ProductReview create(ReviewDraft draft, Clock clock) {
         Instant now = clock.instant();
+        validateImages(draft.imageUrls());
         ProductReview review = new ProductReview(
                 draft.reviewId(), draft.productId(), draft.userId(), draft.orderId(), draft.skuId(),
                 draft.rating(), draft.title(), draft.content(), draft.imageUrls(),
@@ -202,7 +202,7 @@ public class ProductReview extends AggregateRoot {
         }
     }
 
-    private void validateImages(List<String> images) {
+    private static void validateImages(List<String> images) {
         if (images.size() > 3) {
             throw new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
                     "A review cannot have more than 3 media items");

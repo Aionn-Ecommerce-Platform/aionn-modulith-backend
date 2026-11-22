@@ -156,6 +156,11 @@ public class Message extends AggregateRoot {
         };
     }
 
+    private static boolean nonBlankMetadata(MessagePayload payload, String key) {
+        Object value = payload.metadata().get(key);
+        return value instanceof String text && !text.isBlank();
+    }
+
     private static void validatePayload(MessageType type, MessagePayload payload, int maxTextLength) {
         if (payload == null) {
             throw new ChatException(ChatErrorCode.MESSAGE_EMPTY);
@@ -169,9 +174,11 @@ public class Message extends AggregateRoot {
                 throw new ChatException(ChatErrorCode.MESSAGE_TOO_LONG);
             }
         }
-        Guard.require(type != MessageType.IMAGE || (payload.body() != null && !payload.body().isBlank()) || payload.metadata().containsKey("imageUrl"),
+        Guard.require(type != MessageType.IMAGE || (payload.body() != null && !payload.body().isBlank())
+                        || nonBlankMetadata(payload, "imageUrl"),
                 () -> new ChatException(ChatErrorCode.INVALID_ARGUMENT, "imageUrl required for IMAGE message"));
-        Guard.require(type != MessageType.FILE || (payload.body() != null && !payload.body().isBlank()) || payload.metadata().containsKey("imageUrl"),
+        Guard.require(type != MessageType.FILE || (payload.body() != null && !payload.body().isBlank())
+                        || nonBlankMetadata(payload, "imageUrl"),
                 () -> new ChatException(ChatErrorCode.INVALID_ARGUMENT, "file URL required for FILE message"));
         Guard.require(type != MessageType.PRODUCT_CARD || payload.metadata().containsKey("productId"),
                 () -> new ChatException(ChatErrorCode.INVALID_ARGUMENT, "productId required for PRODUCT_CARD message"));

@@ -5,6 +5,7 @@ import com.aionn.ordering.domain.valueobject.ReturnRefundStatus;
 import com.aionn.ordering.domain.valueobject.ReturnStatus;
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.LinkedHashMap;
@@ -234,6 +235,12 @@ public class OrderReturnService {
     @Transactional(readOnly = true)
     public List<OrderReturn> listMerchant(String merchantId, int limit) {
         return orderReturnPersistencePort.findByMerchantId(merchantId, limit);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderReturnPersistencePort.ReturnSummary summarizeMerchant(
+            String merchantId, Instant from, Instant to) {
+        return orderReturnPersistencePort.summarizeByMerchant(merchantId, from, to);
     }
 
     @Transactional(readOnly = true)

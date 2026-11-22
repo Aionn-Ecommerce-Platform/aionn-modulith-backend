@@ -86,6 +86,17 @@ public class OrderReturnPersistenceAdapter implements OrderReturnPersistencePort
     }
 
     @Override
+    public ReturnSummary summarizeByMerchant(String merchantId, Instant from, Instant to) {
+        var row = jpa.summarizeByMerchant(merchantId, from, to);
+        return new ReturnSummary(
+                row == null || row.getRequests() == null ? 0L : row.getRequests(),
+                row == null || row.getApproved() == null ? 0L : row.getApproved(),
+                row == null || row.getRefundTotal() == null
+                        ? java.math.BigDecimal.ZERO
+                        : row.getRefundTotal());
+    }
+
+    @Override
     public long countCompletedOrdersBetween(Instant from, Instant to) {
         return jpa.countCompletedOrdersBetween(from, to);
     }

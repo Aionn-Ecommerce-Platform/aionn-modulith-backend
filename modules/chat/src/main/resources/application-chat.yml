@@ -33,5 +33,5 @@ chat:
     provider: ${CHAT_MEDIA_PROVIDER:cloudinary}
     cloudinary:
       chat-image-folder: ${CLOUDINARY_CHAT_IMAGE_FOLDER:aionn/chat/images}
-      allowed-formats: ${CLOUDINARY_CHAT_IMAGE_FORMATS:jpg,jpeg,png,webp,gif}
-      max-file-size-bytes: ${CLOUDINARY_CHAT_IMAGE_MAX_BYTES:5242880}
+      allowed-formats: ${CLOUDINARY_CHAT_IMAGE_FORMATS:jpg,jpeg,png,webp,gif,mp4,mov,webm}
+      max-file-size-bytes: ${CLOUDINARY_CHAT_IMAGE_MAX_BYTES:26214400}
