@@ -7,7 +7,9 @@ import com.aionn.catalog.application.dto.product.command.RejectProductCommand;
 import com.aionn.catalog.application.dto.product.command.RemoveVariantCommand;
 import com.aionn.catalog.application.dto.product.command.RestoreProductCommand;
 import com.aionn.catalog.application.dto.product.command.SubmitForReviewCommand;
+import com.aionn.catalog.application.dto.product.command.UpdateDescriptionCommand;
 import com.aionn.catalog.application.dto.product.command.UpdateMediaCommand;
+import com.aionn.catalog.application.dto.product.command.UpdateProductContentCommand;
 import com.aionn.catalog.application.dto.search.ProductSearchCriteria;
 import com.aionn.catalog.application.dto.search.ProductSearchDocument;
 import com.aionn.catalog.application.dto.search.ProductSearchResult;
@@ -158,7 +160,73 @@ class ProductServiceTest {
                 new ProductVariant.ParcelDimensions(
                         500, BigDecimal.valueOf(15), BigDecimal.valueOf(10), BigDecimal.valueOf(5));
 
-        private Product publishableProduct() {
+        @Test
+    void updateContentAppliesMediaDescriptionAndTags() {
+        Product product = publishableProduct();
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+        when(productPersistencePort.save(ArgumentMatchers.any(Product.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Product result = productService.updateContent(new UpdateProductContentCommand(
+                PRODUCT_ID, MERCHANT_ID, List.of("https://cdn.example.com/cover.jpg"),
+                "  detailed description  ", List.of("new", "sale")));
+
+        assertThat(result.imageList()).containsExactly("https://cdn.example.com/cover.jpg");
+        assertThat(result.getDescription()).isEqualTo("detailed description");
+        assertThat(result.tags()).containsExactly("new", "sale");
+    }
+
+    @Test
+    void updateDescriptionStoresTrimmedValue() {
+        Product product = publishableProduct();
+        when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+        when(productPersistencePort.save(ArgumentMatchers.any(Product.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Product result = productService.updateDescription(
+                new UpdateDescriptionCommand(PRODUCT_ID, MERCHANT_ID, "  short text  "));
+
+        assertThat(result.getDescription()).isEqualTo("short text");
+    }
+
+    @Test
+    void listByMerchantWithFiltersUsesSearchCounts() {
+        OffsetPagination pagination = OffsetPagination.of(0, 20);
+        Product product = publishableProduct();
+        when(productPersistencePort.searchByMerchant(
+                MERCHANT_ID, "widget", ProductStatus.DRAFT, List.of(CATEGORY_ID),
+                BigDecimal.ONE, BigDecimal.TEN, "NEWEST", pagination))
+                .thenReturn(List.of(product));
+        when(productPersistencePort.countSearchByMerchant(
+                MERCHANT_ID, "widget", ProductStatus.DRAFT, List.of(CATEGORY_ID),
+                BigDecimal.ONE, BigDecimal.TEN))
+                .thenReturn(1L);
+
+        PageResult<Product> result = productService.listByMerchant(MERCHANT_ID, pagination,
+                "widget", ProductStatus.DRAFT, List.of(CATEGORY_ID),
+                BigDecimal.ONE, BigDecimal.TEN, "NEWEST");
+
+        assertThat(result.content()).containsExactly(product);
+        assertThat(result.totalElements()).isEqualTo(1L);
+    }
+
+    @Test
+    void merchantStatsAggregatesCounters() {
+        when(productPersistencePort.countByMerchant(MERCHANT_ID)).thenReturn(5L);
+        when(productPersistencePort.countByMerchantAndStatus(MERCHANT_ID, ProductStatus.PUBLISHED))
+                .thenReturn(3L);
+        when(productPersistencePort.countVariantsByMerchant(MERCHANT_ID)).thenReturn(9L);
+        when(productPersistencePort.sumSoldCountByMerchant(MERCHANT_ID)).thenReturn(42L);
+
+        ProductService.MerchantProductStats stats = productService.merchantStats(MERCHANT_ID);
+
+        assertThat(stats.total()).isEqualTo(5L);
+        assertThat(stats.published()).isEqualTo(3L);
+        assertThat(stats.variants()).isEqualTo(9L);
+        assertThat(stats.sold()).isEqualTo(42L);
+    }
+
+    private Product publishableProduct() {
                 Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
                 product.categorize(List.of(CATEGORY_ID), FIXED);
                 product.defineVariant("sku-1", Map.of("color", "red"),

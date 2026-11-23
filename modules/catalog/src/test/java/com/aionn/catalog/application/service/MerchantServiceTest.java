@@ -5,6 +5,7 @@ import com.aionn.catalog.application.dto.merchant.command.SuspendMerchantCommand
 import com.aionn.catalog.application.dto.merchant.command.UpdateMerchantCommissionRateCommand;
 import com.aionn.catalog.application.port.out.observability.CatalogMetricsPort;
 import com.aionn.catalog.application.port.out.settings.CatalogSettingsPort;
+import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import java.time.ZoneOffset;
 
 import com.aionn.catalog.application.dto.merchant.command.CloseMerchantCommand;
@@ -26,6 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.math.BigDecimal;
 
@@ -221,5 +223,16 @@ class MerchantServiceTest {
 
                 assertThat(result.getName()).isEqualTo("Acme");
                 assertThat(merchant.getCommissionRate()).isEqualByComparingTo("0.0800");
+        }
+        @Test
+        void listWithSearchAndProvinceUsesPagedResults() {
+                OffsetPagination pagination = OffsetPagination.of(0, 12);
+                when(merchantPersistencePort.search(pagination, "shop", "P1"))
+                                .thenReturn(new MerchantPersistencePort.MerchantPage(List.of(), 2L));
+
+                var result = merchantService.list(pagination, "shop", "P1");
+
+                assertThat(result.totalElements()).isEqualTo(2L);
+                assertThat(result.content()).isEmpty();
         }
 }

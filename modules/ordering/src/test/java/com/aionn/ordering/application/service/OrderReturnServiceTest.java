@@ -100,6 +100,44 @@ class OrderReturnServiceTest {
                 orderDefaultsPolicy, analyticsPolicy, paymentGateway, clock, transactionTemplate);
     }
 
+    @Test
+    void pageMerchantReturnsContentAndCount() {
+        when(orderReturnPersistencePort.findByMerchantId(MERCHANT_ID, 0, 10))
+                .thenReturn(List.of());
+        when(orderReturnPersistencePort.countByMerchantId(MERCHANT_ID)).thenReturn(3L);
+
+        OrderReturnService.ReturnPage page =
+                service.pageMerchant(MERCHANT_ID, 0, 10);
+
+        assertEquals(3L, page.totalElements());
+        assertEquals(List.of(), page.content());
+    }
+
+    @Test
+    void searchMerchantPageUsesSearchCounts() {
+        when(orderReturnPersistencePort.searchByMerchant(MERCHANT_ID, "REQUESTED", "DAMAGED",
+                "broken", 0, 10)).thenReturn(List.of());
+        when(orderReturnPersistencePort.countSearchByMerchant(MERCHANT_ID, "REQUESTED",
+                "DAMAGED", "broken")).thenReturn(1L);
+
+        OrderReturnService.ReturnPage page = service.searchMerchantPage(MERCHANT_ID,
+                "REQUESTED", "DAMAGED", "broken", 0, 10);
+
+        assertEquals(1L, page.totalElements());
+    }
+
+    @Test
+    void countMerchantReturnsByStatusBuildsStatusMap() {
+        when(orderReturnPersistencePort.countByMerchantGroupByStatus(MERCHANT_ID))
+                .thenReturn(List.of(
+                        new OrderReturnPersistencePort.ReturnStatusCount("REQUESTED", 2L),
+                        new OrderReturnPersistencePort.ReturnStatusCount("APPROVED", 1L)));
+
+        var counts = service.countMerchantReturnsByStatus(MERCHANT_ID);
+
+        assertEquals(java.util.Map.of("REQUESTED", 2L, "APPROVED", 1L), counts);
+    }
+
     private static ShippingAddress address() {
         return new ShippingAddress("addr-1", "User", "+84912345678",
                 "12 main", "WARD", "DIST", "PROV", "VN");

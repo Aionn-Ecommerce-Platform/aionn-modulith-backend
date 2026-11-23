@@ -312,4 +312,48 @@ class ProductTest {
                 .extracting("errorCode")
                 .isEqualTo(CatalogErrorCode.PRODUCT_INVALID_TRANSITION.getCode());
     }
+    @Test
+    void updateDescriptionTrimsAndClearsBlank() {
+        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
+
+        product.updateDescription("  hello  ", FIXED);
+        assertThat(product.getDescription()).isEqualTo("hello");
+
+        product.updateDescription("   ", FIXED);
+        assertThat(product.getDescription()).isNull();
+        assertThat(product.translations()).isEmpty();
+    }
+
+    @Test
+    void updateTagsReplacesExistingTags() {
+        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
+
+        product.updateTags(List.of("sale", "new"), FIXED);
+
+        assertThat(product.tags()).containsExactly("sale", "new");
+    }
+
+    @Test
+    void updateMediaRejectsMoreThanTwelveItems() {
+        Product product = Product.create(PRODUCT_ID, MERCHANT_ID, "Widget", FIXED);
+        List<String> tooMany = java.util.stream.IntStream.range(0, 13)
+                .mapToObj(index -> "https://cdn.example.com/" + index + ".jpg")
+                .toList();
+
+        assertThatThrownBy(() -> product.updateMedia(tooMany, FIXED))
+                .isInstanceOf(CatalogException.class)
+                .extracting("errorCode")
+                .isEqualTo(CatalogErrorCode.INVALID_ARGUMENT.getCode());
+    }
+
+    @Test
+    void removeVariantRejectsLastVariantOfPublishedProduct() {
+        Product product = publishableProduct();
+        product.publish("admin-1", FIXED);
+
+        assertThatThrownBy(() -> product.removeVariant("sku-1", FIXED))
+                .isInstanceOf(CatalogException.class)
+                .extracting("errorCode")
+                .isEqualTo(CatalogErrorCode.PRODUCT_LAST_VARIANT.getCode());
+    }
 }
