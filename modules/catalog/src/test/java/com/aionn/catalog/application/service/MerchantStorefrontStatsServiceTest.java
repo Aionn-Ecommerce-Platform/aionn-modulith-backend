@@ -86,7 +86,7 @@ class MerchantStorefrontStatsServiceTest {
         assertThat(result.conversations()).isZero();
         assertThat(result.responseRatePercent()).isZero();
         assertThat(result.medianFirstResponseSeconds()).isNull();
-        assertThat(result.responseTimeBucket()).isEqualTo("UNKNOWN");
+        assertThat(result.responseTimeBucket()).isEqualTo("MINUTES");
         assertThat(result.following()).isFalse();
     }
 
@@ -103,7 +103,7 @@ class MerchantStorefrontStatsServiceTest {
         assertThat(bucketFor(chatPort, 3600L)).isEqualTo("HOURS");
         assertThat(bucketFor(chatPort, 86_401L)).isEqualTo("DAYS");
         assertThat(bucketFor(chatPort, 86_400L * 30)).isEqualTo("WEEKS");
-        assertThat(bucketFor(chatPort, null)).isEqualTo("UNKNOWN");
+        assertThat(bucketFor(chatPort, null)).isEqualTo("MINUTES");
     }
 
     @Test

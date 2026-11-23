@@ -55,6 +55,19 @@ public class OrderPersistenceAdapter implements OrderPersistencePort {
     }
 
     @Override
+    public List<Order> findByUser(String userId, int page, int limit) {
+        return jpa.findByUserIdOrderByCreatedAtDesc(userId,
+                        PageRequest.of(Math.max(0, page), Math.max(1, limit))).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countByUser(String userId) {
+        return jpa.countByUserId(userId);
+    }
+
+    @Override
     public List<Order> findByUserAndStatuses(String userId, List<String> statuses, int limit) {
         return jpa.findByUserIdAndStatusInOrderByCreatedAtDesc(
                         userId,
@@ -66,10 +79,39 @@ public class OrderPersistenceAdapter implements OrderPersistencePort {
     }
 
     @Override
+    public List<Order> findByUserAndStatuses(String userId, List<String> statuses, int page, int limit) {
+        return jpa.findByUserIdAndStatusInOrderByCreatedAtDesc(
+                        userId,
+                        statuses,
+                        PageRequest.of(Math.max(0, page), Math.max(1, limit)))
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countByUserAndStatuses(String userId, List<String> statuses) {
+        return jpa.countByUserIdAndStatusIn(userId, statuses);
+    }
+
+    @Override
     public List<Order> findByMerchant(String merchantId, int limit) {
         return jpa.findByMerchantIdOrderByCreatedAtDesc(merchantId, PageRequest.of(0, Math.max(1, limit))).stream()
                 .map(mapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    public List<Order> findByMerchant(String merchantId, int page, int limit) {
+        return jpa.findByMerchantIdOrderByCreatedAtDesc(merchantId,
+                        PageRequest.of(Math.max(0, page), Math.max(1, limit))).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countByMerchant(String merchantId) {
+        return jpa.countByMerchantId(merchantId);
     }
 
     @Override
@@ -80,6 +122,81 @@ public class OrderPersistenceAdapter implements OrderPersistencePort {
                         PageRequest.of(0, Math.max(1, limit)))
                 .stream()
                 .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<Order> findByMerchantAndStatuses(String merchantId, List<String> statuses, int page, int limit) {
+        return jpa.findByMerchantIdAndStatusInOrderByCreatedAtDesc(
+                        merchantId,
+                        statuses,
+                        PageRequest.of(Math.max(0, page), Math.max(1, limit)))
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countByMerchantAndStatuses(String merchantId, List<String> statuses) {
+        return jpa.countByMerchantIdAndStatusIn(merchantId, statuses);
+    }
+
+    @Override
+    public List<Order> searchByMerchant(
+            String merchantId,
+            List<String> statuses,
+            String search,
+            Instant from,
+            Instant to,
+            int page,
+            int limit) {
+        String normalizedSearch = search == null || search.isBlank() ? null : search.trim().toLowerCase();
+        boolean hasSearch = normalizedSearch != null;
+        String pattern = hasSearch ? "%" + normalizedSearch + "%" : "";
+        boolean hasStatuses = statuses != null && !statuses.isEmpty();
+        Instant fromValue = from == null ? Instant.EPOCH : from;
+        Instant toValue = to == null ? Instant.parse("9999-12-31T23:59:59Z") : to;
+        return jpa.searchMerchantOrders(
+                        merchantId,
+                        hasStatuses,
+                        hasStatuses ? statuses : List.of("__NONE__"),
+                        hasSearch,
+                        pattern,
+                        fromValue,
+                        toValue,
+                        PageRequest.of(Math.max(0, page), Math.max(1, limit)))
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countSearchByMerchant(
+            String merchantId,
+            List<String> statuses,
+            String search,
+            Instant from,
+            Instant to) {
+        String normalizedSearch = search == null || search.isBlank() ? null : search.trim().toLowerCase();
+        boolean hasSearch = normalizedSearch != null;
+        String pattern = hasSearch ? "%" + normalizedSearch + "%" : "";
+        boolean hasStatuses = statuses != null && !statuses.isEmpty();
+        Instant fromValue = from == null ? Instant.EPOCH : from;
+        Instant toValue = to == null ? Instant.parse("9999-12-31T23:59:59Z") : to;
+        return jpa.countSearchMerchantOrders(
+                merchantId,
+                hasStatuses,
+                hasStatuses ? statuses : List.of("__NONE__"),
+                hasSearch,
+                pattern,
+                fromValue,
+                toValue);
+    }
+
+    @Override
+    public List<OrderStatusCount> countByMerchantGroupByStatus(String merchantId) {
+        return jpa.countMerchantOrdersByStatus(merchantId).stream()
+                .map(row -> new OrderStatusCount(row.getStatus(), row.getCount()))
                 .toList();
     }
 

@@ -1,24 +1,23 @@
 package com.aionn.catalog.adapter.rest.controller;
 
-import com.aionn.catalog.adapter.rest.dto.product.request.AssignCollectionsRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.EmergencyTakedownRequest;
-import com.aionn.catalog.adapter.rest.dto.product.request.UpdateAiMetadataRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.UpdateDescriptionRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.UpdateMediaRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.UpdateProductContentRequest;
 import com.aionn.catalog.adapter.rest.support.MockOwnershipVerifier;
 import com.aionn.catalog.application.dto.analytics.result.ProductAnalyticsResult;
-import com.aionn.catalog.application.dto.product.command.AssignCollectionsCommand;
 import com.aionn.catalog.application.dto.product.command.EmergencyTakedownCommand;
 import com.aionn.catalog.application.dto.product.command.RemoveVariantCommand;
 import com.aionn.catalog.application.dto.product.command.TrackProductViewCommand;
-import com.aionn.catalog.application.dto.product.command.UpdateAiMetadataCommand;
+import com.aionn.catalog.application.dto.product.command.UpdateDescriptionCommand;
 import com.aionn.catalog.application.dto.product.command.UpdateMediaCommand;
+import com.aionn.catalog.application.dto.product.command.UpdateProductContentCommand;
 import com.aionn.catalog.application.dto.product.query.GetPersonalizedProductsQuery;
 import com.aionn.catalog.application.dto.product.query.GetPopularProductsQuery;
 import com.aionn.catalog.application.dto.product.query.GetRelatedProductsQuery;
 import com.aionn.catalog.application.dto.product.query.SearchProductsQuery;
 import com.aionn.catalog.application.dto.search.ProductSearchCriteria;
 import com.aionn.catalog.application.dto.search.ProductSearchResult;
-import com.aionn.catalog.application.port.in.product.AssignCollectionsInputPort;
 import com.aionn.catalog.application.port.in.product.ChangeVariantParcelInputPort;
 import com.aionn.catalog.application.port.in.product.EmergencyTakedownInputPort;
 import com.aionn.catalog.application.port.in.product.GetPersonalizedProductsInputPort;
@@ -30,9 +29,9 @@ import com.aionn.catalog.application.port.in.product.SearchProductCatalogInputPo
 import com.aionn.catalog.application.port.in.product.SearchProductsInputPort;
 import com.aionn.catalog.application.port.in.product.TrackProductViewInputPort;
 import com.aionn.catalog.adapter.rest.mapper.product.ProductSearchCriteriaAssembler;
-import com.aionn.catalog.application.port.in.product.UpdateAiMetadataInputPort;
+import com.aionn.catalog.application.port.in.product.UpdateDescriptionInputPort;
 import com.aionn.catalog.application.port.in.product.UpdateMediaInputPort;
-
+import com.aionn.catalog.application.port.in.product.UpdateProductContentInputPort;
 import com.aionn.catalog.adapter.rest.mapper.product.ProductDtoMapper;
 
 import org.mapstruct.factory.Mappers;
@@ -69,6 +68,7 @@ import com.aionn.catalog.application.dto.product.command.PublishProductCommand;
 import com.aionn.catalog.application.dto.product.command.RejectProductCommand;
 import com.aionn.catalog.application.dto.product.command.RestoreProductCommand;
 import com.aionn.catalog.application.dto.product.command.SubmitForReviewCommand;
+import com.aionn.catalog.application.dto.product.command.WithdrawReviewCommand;
 import com.aionn.catalog.application.dto.product.query.GetProductQuery;
 import com.aionn.catalog.application.dto.product.query.GetProductsBySkuIdsQuery;
 import com.aionn.catalog.application.dto.product.query.ListProductsByMerchantQuery;
@@ -92,6 +92,7 @@ import com.aionn.catalog.application.port.in.product.PublishProductInputPort;
 import com.aionn.catalog.application.port.in.product.RejectProductInputPort;
 import com.aionn.catalog.application.port.in.product.RestoreProductInputPort;
 import com.aionn.catalog.application.port.in.product.SubmitForReviewInputPort;
+import com.aionn.catalog.application.port.in.product.WithdrawReviewInputPort;
 import com.aionn.catalog.domain.exception.CatalogErrorCode;
 import com.aionn.catalog.domain.exception.CatalogException;
 import com.aionn.platform.infrastructure.config.JacksonMapperFactory;
@@ -151,6 +152,8 @@ class ProductControllerWebTest {
         @Mock
         private SubmitForReviewInputPort submitForReviewInputPort;
         @Mock
+        private WithdrawReviewInputPort withdrawReviewInputPort;
+        @Mock
         private RejectProductInputPort rejectProductInputPort;
         @Mock
         private DeactivateProductInputPort deactivateProductInputPort;
@@ -169,9 +172,9 @@ class ProductControllerWebTest {
         @Mock
         private UpdateMediaInputPort updateMediaInputPort;
         @Mock
-        private UpdateAiMetadataInputPort updateAiMetadataInputPort;
+        private UpdateDescriptionInputPort updateDescriptionInputPort;
         @Mock
-        private AssignCollectionsInputPort assignCollectionsInputPort;
+        private UpdateProductContentInputPort updateProductContentInputPort;
         @Mock
         private EmergencyTakedownInputPort emergencyTakedownInputPort;
         @Mock
@@ -188,6 +191,8 @@ class ProductControllerWebTest {
         private GetProductAnalyticsInputPort getProductAnalyticsInputPort;
         @Mock
         private SearchProductCatalogInputPort searchProductCatalogInputPort;
+        @Mock
+        private com.aionn.catalog.application.service.ProductService productService;
 
         private MockMvc mockMvc;
         private final JsonMapper objectMapper = JacksonMapperFactory.create();
@@ -199,11 +204,12 @@ class ProductControllerWebTest {
                                 changeVariantPriceInputPort, changeVariantParcelInputPort, bulkPriceUpdateInputPort,
                                 assignBrandInputPort,
                                 assignCategoriesInputPort, defineAttributesInputPort, publishProductInputPort,
-                                submitForReviewInputPort, rejectProductInputPort, deactivateProductInputPort,
+                                submitForReviewInputPort, productService, withdrawReviewInputPort, rejectProductInputPort, deactivateProductInputPort,
                                 restoreProductInputPort, getProductInputPort, getProductsBySkuIdsInputPort,
                                 listProductsByMerchantInputPort, listProductsByStatusInputPort,
-                                removeVariantInputPort, updateMediaInputPort, updateAiMetadataInputPort,
-                                assignCollectionsInputPort, emergencyTakedownInputPort, searchProductsInputPort,
+                                removeVariantInputPort, updateMediaInputPort, updateDescriptionInputPort,
+                                updateProductContentInputPort,
+                                emergencyTakedownInputPort, searchProductsInputPort,
                                 getRelatedProductsInputPort, getPopularProductsInputPort,
                                 getPersonalizedProductsInputPort, trackProductViewInputPort,
                                 getProductAnalyticsInputPort, searchProductCatalogInputPort,
@@ -358,6 +364,15 @@ class ProductControllerWebTest {
         }
 
         @Test
+        void withdrawReviewReturnsOk() throws Exception {
+                when(withdrawReviewInputPort.execute(any(WithdrawReviewCommand.class))).thenReturn(sample());
+
+                mockMvc.perform(post("/api/v1/catalog/products/" + PRODUCT_ID + "/withdraw-review")
+                                .with(TestAuth.authMerchant("owner-1", MERCHANT_ID)))
+                                .andExpect(status().isOk());
+        }
+
+        @Test
         void publishReturnsOk() throws Exception {
                 when(publishProductInputPort.execute(any(PublishProductCommand.class))).thenReturn(sample());
 
@@ -464,6 +479,37 @@ class ProductControllerWebTest {
         }
 
         @Test
+        void updateContentReturnsOk() throws Exception {
+                when(updateProductContentInputPort.execute(
+                                any(UpdateProductContentCommand.class)))
+                                .thenReturn(sample());
+
+                mockMvc.perform(put("/api/v1/catalog/products/" + PRODUCT_ID + "/content")
+                                .with(TestAuth.authMerchant("owner-1", MERCHANT_ID))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(
+                                                new UpdateProductContentRequest(
+                                                                List.of("img1"),
+                                                                "Description",
+                                                                List.of("tag")))))
+                                .andExpect(status().isOk());
+        }
+
+        @Test
+        void updateDescriptionReturnsOk() throws Exception {
+                when(updateDescriptionInputPort.execute(
+                                any(UpdateDescriptionCommand.class)))
+                                .thenReturn(sample());
+
+                mockMvc.perform(put("/api/v1/catalog/products/" + PRODUCT_ID + "/description")
+                                .with(TestAuth.authMerchant("owner-1", MERCHANT_ID))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(
+                                                new UpdateDescriptionRequest("A detailed description"))))
+                                .andExpect(status().isOk());
+        }
+
+        @Test
         void updateMediaReturnsOk() throws Exception {
                 when(updateMediaInputPort.execute(
                                 any(UpdateMediaCommand.class)))
@@ -475,36 +521,6 @@ class ProductControllerWebTest {
                                 .content(objectMapper.writeValueAsString(
                                                 new UpdateMediaRequest(
                                                                 List.of("img1", "img2")))))
-                                .andExpect(status().isOk());
-        }
-
-        @Test
-        void updateAiMetadataReturnsOk() throws Exception {
-                when(updateAiMetadataInputPort.execute(
-                                any(UpdateAiMetadataCommand.class)))
-                                .thenReturn(sample());
-
-                mockMvc.perform(put("/api/v1/catalog/products/" + PRODUCT_ID + "/ai-metadata")
-                                .with(TestAuth.authMerchant("owner-1", MERCHANT_ID))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(
-                                                new UpdateAiMetadataRequest(
-                                                                List.of("premium"), "handmade"))))
-                                .andExpect(status().isOk());
-        }
-
-        @Test
-        void assignCollectionsReturnsOk() throws Exception {
-                when(assignCollectionsInputPort.execute(
-                                any(AssignCollectionsCommand.class)))
-                                .thenReturn(sample());
-
-                mockMvc.perform(put("/api/v1/catalog/products/" + PRODUCT_ID + "/collections")
-                                .with(TestAuth.authMerchant("owner-1", MERCHANT_ID))
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(
-                                                new AssignCollectionsRequest(
-                                                                List.of("coll-1")))))
                                 .andExpect(status().isOk());
         }
 

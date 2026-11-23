@@ -22635,3 +22635,132 @@ SET created_at = TIMESTAMPTZ '2025-03-01 00:00:00+00';
 
 UPDATE inventory_items
 SET created_at = TIMESTAMPTZ '2025-03-15 00:00:00+00';
+
+-- Moved from app/V900.11.2__demo_member_inventory_activity.sql
+WITH buyers AS (
+    SELECT user_id,
+           ROW_NUMBER() OVER (ORDER BY user_id) AS rn
+      FROM user_roles
+     WHERE role = 'BUYER'
+     ORDER BY user_id
+     LIMIT 15
+)
+INSERT INTO stock_alerts (alert_id, user_id, product_id, sku_id, created_at, notified_at)
+SELECT 'SA_DEMO_' || lpad(ROW_NUMBER() OVER (ORDER BY b.rn, v.sku_id)::text, 5, '0'),
+       b.user_id,
+       v.product_id,
+       v.sku_id,
+       NOW() - make_interval(days => (b.rn % 10)::int),
+       CASE WHEN (b.rn % 3) = 0
+             THEN NOW() - make_interval(days => (b.rn % 4)::int) END
+  FROM buyers b
+  CROSS JOIN LATERAL (
+      SELECT p.product_id, v.sku_id
+        FROM products p
+        JOIN product_variants v ON v.product_id = p.product_id
+       WHERE p.status = 'PUBLISHED'
+       ORDER BY md5(b.user_id || v.sku_id)
+       LIMIT 2
+  ) v
+ON CONFLICT (user_id, sku_id) DO NOTHING;
+
+-- Moved from app/V900.11.2__demo_member_inventory_activity.sql
+WITH picked AS (
+    SELECT sku_id, warehouse_id,
+           ROW_NUMBER() OVER (ORDER BY md5(sku_id || warehouse_id)) AS rn
+      FROM inventory_items
+     WHERE available_qty > 0
+     ORDER BY md5(sku_id || warehouse_id)
+     LIMIT 40
+)
+INSERT INTO stock_adjustments (adj_id, sku_id, warehouse_id, qty, type, reason, order_id, occurred_at)
+SELECT 'ADJ_DEMO_' || lpad(p.rn::text, 5, '0'),
+       p.sku_id,
+       p.warehouse_id,
+       (p.rn % 15) + 1,
+       CASE p.rn % 5
+           WHEN 0 THEN 'MANUAL_INCREASE'
+           WHEN 1 THEN 'MANUAL_DECREASE'
+           WHEN 2 THEN 'DAMAGED'
+           WHEN 3 THEN 'TRANSFER_IN'
+           ELSE 'TRANSFER_OUT'
+       END,
+       CASE p.rn % 5
+           WHEN 0 THEN 'Nhập thêm hàng từ nhà cung cấp'
+           WHEN 1 THEN 'Điều chỉnh kiểm kê định kỳ'
+           WHEN 2 THEN 'Hàng hỏng trong quá trình bảo quản'
+           WHEN 3 THEN 'Nhận hàng chuyển từ kho phụ'
+           ELSE 'Chuyển hàng sang kho phụ'
+       END,
+       NULL,
+       NOW() - make_interval(days => (p.rn % 60)::int)
+  FROM picked p
+ON CONFLICT (adj_id) DO NOTHING;
+
+-- Moved from app/V900.11.2__demo_member_inventory_activity.sql
+WITH picked AS (
+    SELECT merchant_id,
+           ROW_NUMBER() OVER (ORDER BY merchant_id) AS rn
+      FROM merchants
+     ORDER BY merchant_id
+     LIMIT 5
+)
+INSERT INTO warehouses
+    (warehouse_id, merchant_id, address, priority_level, status, version, created_at, updated_at)
+SELECT 'WH_DEMO_' || lpad(p.rn::text, 3, '0'),
+       p.merchant_id,
+       'Kho phụ demo số ' || p.rn || ' - TP. Hồ Chí Minh',
+       2,
+       'ACTIVE',
+       0,
+       TIMESTAMPTZ '2025-03-01 00:00:00+00',
+       TIMESTAMPTZ '2025-03-01 00:00:00+00'
+  FROM picked p
+ON CONFLICT (warehouse_id) DO NOTHING;
+
+-- Moved from app/V900.11.2__demo_member_inventory_activity.sql
+WITH picked AS (
+    SELECT m.merchant_id,
+           m.rn,
+           (SELECT w.warehouse_id FROM warehouses w
+             WHERE w.merchant_id = m.merchant_id
+             ORDER BY w.priority_level, w.warehouse_id
+             LIMIT 1) AS from_wh
+      FROM (
+          SELECT merchant_id,
+                 ROW_NUMBER() OVER (ORDER BY merchant_id) AS rn
+            FROM merchants
+           ORDER BY merchant_id
+           LIMIT 5
+      ) m
+),
+slots AS (
+    SELECT generate_series(0, 2) AS slot
+)
+INSERT INTO stock_transfers
+    (transfer_id, merchant_id, from_warehouse_id, to_warehouse_id, sku_id, qty,
+     status, initiated_at, completed_at, cancelled_at, version)
+SELECT 'TRF_DEMO_' || lpad(((p.rn - 1) * 3 + s.slot + 1)::text, 5, '0'),
+       p.merchant_id,
+       p.from_wh,
+       'WH_DEMO_' || lpad(p.rn::text, 3, '0'),
+       (SELECT ii.sku_id FROM inventory_items ii
+         WHERE ii.warehouse_id = p.from_wh AND ii.available_qty > 0
+         ORDER BY ii.sku_id LIMIT 1),
+       (s.slot % 4) + 2,
+       CASE s.slot
+           WHEN 0 THEN 'INITIATED'
+           WHEN 1 THEN 'COMPLETED'
+           ELSE 'CANCELLED'
+       END,
+       NOW() - make_interval(days => ((p.rn + s.slot) % 20)::int),
+       CASE WHEN s.slot = 1 THEN NOW() - make_interval(days => (p.rn % 7)::int) END,
+       CASE WHEN s.slot = 2 THEN NOW() - make_interval(days => (p.rn % 5)::int) END,
+       0
+  FROM picked p
+  CROSS JOIN slots s
+ WHERE p.from_wh IS NOT NULL
+   AND EXISTS (
+       SELECT 1 FROM inventory_items ii
+        WHERE ii.warehouse_id = p.from_wh AND ii.available_qty > 0)
+ON CONFLICT (transfer_id) DO NOTHING;

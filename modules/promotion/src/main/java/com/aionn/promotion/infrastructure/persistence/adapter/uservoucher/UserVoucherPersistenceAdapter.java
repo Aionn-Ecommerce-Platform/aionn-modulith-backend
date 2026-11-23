@@ -96,6 +96,28 @@ public class UserVoucherPersistenceAdapter implements UserVoucherPersistencePort
     }
 
     @Override
+    public List<UserVoucher> searchByUser(String userId, List<String> statuses, int page, int limit) {
+        boolean hasStatuses = statuses != null && !statuses.isEmpty();
+        return jpa.searchByUserId(
+                        userId,
+                        hasStatuses,
+                        hasStatuses ? statuses : List.of("__NONE__"),
+                        PageRequest.of(Math.max(0, page), Math.max(1, limit)))
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countSearchByUser(String userId, List<String> statuses) {
+        boolean hasStatuses = statuses != null && !statuses.isEmpty();
+        return jpa.countSearchByUserId(
+                userId,
+                hasStatuses,
+                hasStatuses ? statuses : List.of("__NONE__"));
+    }
+
+    @Override
     public List<UserVoucher> findExpiredReservations(Instant now, int limit) {
         return jpa.findExpiredReservations(now, PageRequest.of(0, Math.max(1, limit))).stream()
                 .map(mapper::toDomain)

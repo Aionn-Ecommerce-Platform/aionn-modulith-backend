@@ -2,7 +2,6 @@ package com.aionn.catalog.adapter.rest.mapper.product;
 
 import com.aionn.catalog.adapter.rest.dto.product.request.AssignBrandRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.AssignCategoriesRequest;
-import com.aionn.catalog.adapter.rest.dto.product.request.AssignCollectionsRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.BulkPriceUpdateRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.ChangeVariantParcelRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.ChangeVariantPriceRequest;
@@ -12,8 +11,9 @@ import com.aionn.catalog.adapter.rest.dto.product.request.DefineAttributesReques
 import com.aionn.catalog.adapter.rest.dto.product.request.DefineVariantRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.EmergencyTakedownRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.RejectProductRequest;
-import com.aionn.catalog.adapter.rest.dto.product.request.UpdateAiMetadataRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.UpdateDescriptionRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.UpdateMediaRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.UpdateProductContentRequest;
 import com.aionn.catalog.adapter.rest.dto.product.response.BulkPriceUpdateResponse;
 import com.aionn.catalog.adapter.rest.dto.product.response.ProductAnalyticsResponse;
 import com.aionn.catalog.adapter.rest.dto.product.response.ProductResponse;
@@ -22,7 +22,6 @@ import com.aionn.catalog.application.dto.analytics.result.ProductAnalyticsResult
 import com.aionn.catalog.application.dto.common.PageResult;
 import com.aionn.catalog.application.dto.product.command.AssignBrandCommand;
 import com.aionn.catalog.application.dto.product.command.AssignCategoriesCommand;
-import com.aionn.catalog.application.dto.product.command.AssignCollectionsCommand;
 import com.aionn.catalog.application.dto.product.command.BulkPriceUpdateCommand;
 import com.aionn.catalog.application.dto.product.command.ChangeVariantParcelCommand;
 import com.aionn.catalog.application.dto.product.command.ChangeVariantPriceCommand;
@@ -37,9 +36,11 @@ import com.aionn.catalog.application.dto.product.command.RejectProductCommand;
 import com.aionn.catalog.application.dto.product.command.RemoveVariantCommand;
 import com.aionn.catalog.application.dto.product.command.RestoreProductCommand;
 import com.aionn.catalog.application.dto.product.command.SubmitForReviewCommand;
+import com.aionn.catalog.application.dto.product.command.WithdrawReviewCommand;
 import com.aionn.catalog.application.dto.product.command.TrackProductViewCommand;
-import com.aionn.catalog.application.dto.product.command.UpdateAiMetadataCommand;
+import com.aionn.catalog.application.dto.product.command.UpdateDescriptionCommand;
 import com.aionn.catalog.application.dto.product.command.UpdateMediaCommand;
+import com.aionn.catalog.application.dto.product.command.UpdateProductContentCommand;
 import com.aionn.catalog.application.dto.product.query.GetPersonalizedProductsQuery;
 import com.aionn.catalog.application.dto.product.query.GetPopularProductsQuery;
 import com.aionn.catalog.application.dto.product.query.GetProductQuery;
@@ -56,6 +57,7 @@ import com.aionn.sharedkernel.domain.vo.OffsetPagination;
 import org.mapstruct.Mapper;
 
 import java.util.List;
+import java.math.BigDecimal;
 
 @Mapper(componentModel = "spring")
 public interface ProductDtoMapper {
@@ -93,11 +95,11 @@ public interface ProductDtoMapper {
 
         UpdateMediaCommand toUpdateMediaCommand(String productId, String merchantId, UpdateMediaRequest request);
 
-        UpdateAiMetadataCommand toUpdateAiMetadataCommand(String productId, String merchantId,
-                        UpdateAiMetadataRequest request);
+        UpdateDescriptionCommand toUpdateDescriptionCommand(String productId, String merchantId,
+                        UpdateDescriptionRequest request);
 
-        AssignCollectionsCommand toAssignCollectionsCommand(String productId, String merchantId,
-                        AssignCollectionsRequest request);
+        UpdateProductContentCommand toUpdateProductContentCommand(String productId, String merchantId,
+                        UpdateProductContentRequest request);
 
         EmergencyTakedownCommand toEmergencyTakedownCommand(String productId, String adminId,
                         EmergencyTakedownRequest request);
@@ -114,6 +116,10 @@ public interface ProductDtoMapper {
                 return new SubmitForReviewCommand(productId, merchantId);
         }
 
+        default WithdrawReviewCommand toWithdrawReviewCommand(String productId, String merchantId) {
+                return new WithdrawReviewCommand(productId, merchantId);
+        }
+
         default RestoreProductCommand toRestoreProductCommand(String productId, String adminId) {
                 return new RestoreProductCommand(productId, adminId);
         }
@@ -123,7 +129,7 @@ public interface ProductDtoMapper {
         }
 
         default RemoveVariantCommand toRemoveVariantCommand(String productId, String skuId, String merchantId) {
-                return new RemoveVariantCommand(productId, skuId, merchantId);
+                return new RemoveVariantCommand(productId, merchantId, skuId);
         }
 
         ProductResponse toResponse(ProductResult result);
@@ -164,6 +170,27 @@ public interface ProductDtoMapper {
 
         default ListProductsByMerchantQuery toListByMerchantQuery(String merchantId, int page, int size) {
                 return new ListProductsByMerchantQuery(merchantId, OffsetPagination.of(page, size));
+        }
+
+        default ListProductsByMerchantQuery toListByMerchantQuery(
+                        String merchantId,
+                        int page,
+                        int size,
+                        String search,
+                        ProductStatus status,
+                        List<String> categoryIds,
+                        BigDecimal minPrice,
+                        BigDecimal maxPrice,
+                        String sort) {
+                return new ListProductsByMerchantQuery(
+                                merchantId,
+                                OffsetPagination.of(page, size),
+                                search,
+                                status,
+                                categoryIds == null ? List.of() : categoryIds,
+                                minPrice,
+                                maxPrice,
+                                sort == null ? "NEWEST" : sort);
         }
 
         default ListProductsByStatusQuery toListByStatusQuery(ProductStatus status, int page, int size) {

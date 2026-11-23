@@ -24,4 +24,9 @@ public interface MerchantPersistencePort {
     List<Merchant> list(OffsetPagination pagination);
 
     long count();
+
+    MerchantPage search(OffsetPagination pagination, String search, String provinceCode);
+
+    record MerchantPage(List<Merchant> content, long totalElements) {
+    }
 }

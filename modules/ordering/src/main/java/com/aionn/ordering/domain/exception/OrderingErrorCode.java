@@ -25,6 +25,8 @@ public enum OrderingErrorCode {
             "Cart contains items from multiple merchants; place one order per merchant"),
     ORDER_PLACEMENT_IN_PROGRESS("ORD_110",
             "An order with this idempotency key is already being placed"),
+    SHIPPING_QUOTE_UNAVAILABLE("ORD_111",
+            "Could not calculate the shipping fee for the new address; please try again"),
 
     // Returns
     RETURN_NOT_FOUND("ORD_201", "Order return not found"),

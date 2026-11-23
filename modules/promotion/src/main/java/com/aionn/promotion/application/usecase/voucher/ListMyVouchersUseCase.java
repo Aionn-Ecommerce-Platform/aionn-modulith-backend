@@ -1,5 +1,6 @@
 package com.aionn.promotion.application.usecase.voucher;
 
+import com.aionn.promotion.application.dto.voucher.result.UserVoucherPageResult;
 import com.aionn.promotion.application.dto.voucher.result.UserVoucherResult;
 import com.aionn.promotion.application.port.in.voucher.ListMyVouchersInputPort;
 import com.aionn.promotion.application.service.VoucherService;
@@ -19,5 +20,12 @@ public class ListMyVouchersUseCase implements ListMyVouchersInputPort {
     @Transactional(readOnly = true)
     public List<UserVoucherResult> execute(String userId, int limit) {
         return voucherService.listMine(userId, limit);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserVoucherPageResult executePaged(
+            String userId, List<String> statuses, int page, int limit) {
+        return voucherService.pageMine(userId, statuses, page, limit);
     }
 }

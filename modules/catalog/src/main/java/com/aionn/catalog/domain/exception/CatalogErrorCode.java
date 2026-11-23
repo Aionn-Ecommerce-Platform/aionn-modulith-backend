@@ -36,6 +36,7 @@ public enum CatalogErrorCode {
     PRODUCT_BRAND_NOT_APPROVED("CATALOG_307", "Brand has not been approved for use"),
     PRODUCT_CATEGORY_REQUIRED("CATALOG_308", "Product must belong to at least one category"),
     PRODUCT_BULK_TOO_LARGE("CATALOG_309", "Bulk price update exceeds the allowed batch size"),
+    PRODUCT_LAST_VARIANT("CATALOG_310", "Cannot remove the last variant of a published product"),
 
     // Attribute templates
     ATTRIBUTE_TEMPLATE_NOT_FOUND("CATALOG_401", "Attribute template not found"),

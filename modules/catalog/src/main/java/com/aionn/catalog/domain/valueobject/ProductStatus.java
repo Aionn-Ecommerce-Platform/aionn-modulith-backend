@@ -13,7 +13,7 @@ public enum ProductStatus {
             case DRAFT -> next == PENDING_REVIEW || next == PUBLISHED || next == REJECTED || next == HIDDEN;
             case PENDING_REVIEW -> next == PUBLISHED || next == REJECTED || next == DRAFT;
             case PUBLISHED -> next == HIDDEN || next == TAKEN_DOWN;
-            case REJECTED -> next == DRAFT;
+            case REJECTED -> next == DRAFT || next == PENDING_REVIEW;
             case HIDDEN -> next == PUBLISHED || next == DRAFT;
             case TAKEN_DOWN -> false;
         };

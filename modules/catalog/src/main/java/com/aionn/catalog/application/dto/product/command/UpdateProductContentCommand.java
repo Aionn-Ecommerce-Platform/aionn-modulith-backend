@@ -4,9 +4,10 @@ import com.aionn.sharedkernel.application.command.Command;
 
 import java.util.List;
 
-public record UpdateAiMetadataCommand(
+public record UpdateProductContentCommand(
         String productId,
         String merchantId,
-        List<String> tags,
-        String aiDescription) implements Command {
+        List<String> images,
+        String description,
+        List<String> tags) implements Command {
 }

@@ -77,6 +77,65 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
     }
 
     @Override
+    public List<Product> searchByMerchant(
+            String merchantId,
+            String search,
+            ProductStatus status,
+            List<String> categoryIds,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String sort,
+            OffsetPagination pagination) {
+        String normalizedSearch = search == null || search.isBlank() ? null : search.trim().toLowerCase();
+        String pattern = normalizedSearch == null ? null : "%" + normalizedSearch + "%";
+        String categoryCsv = categoryIds == null ? "" : String.join(",", categoryIds);
+        String normalizedSort = sort == null ? "NEWEST" : sort;
+        return jpa.searchMerchantProducts(
+                        merchantId,
+                        status == null ? null : status.name(),
+                        pattern,
+                        categoryCsv,
+                        minPrice,
+                        maxPrice,
+                        normalizedSort,
+                        pagination.size(),
+                        pagination.offset())
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countSearchByMerchant(
+            String merchantId,
+            String search,
+            ProductStatus status,
+            List<String> categoryIds,
+            BigDecimal minPrice,
+            BigDecimal maxPrice) {
+        String normalizedSearch = search == null || search.isBlank() ? null : search.trim().toLowerCase();
+        String pattern = normalizedSearch == null ? null : "%" + normalizedSearch + "%";
+        String categoryCsv = categoryIds == null ? "" : String.join(",", categoryIds);
+        return jpa.countSearchMerchantProducts(
+                merchantId,
+                status == null ? null : status.name(),
+                pattern,
+                categoryCsv,
+                minPrice,
+                maxPrice);
+    }
+
+    @Override
+    public long countVariantsByMerchant(String merchantId) {
+        return jpa.countVariantsByMerchant(merchantId);
+    }
+
+    @Override
+    public long sumSoldCountByMerchant(String merchantId) {
+        return jpa.sumSoldCountByMerchant(merchantId);
+    }
+
+    @Override
     public long countByMerchant(String merchantId) {
         return jpa.countByMerchantId(merchantId);
     }

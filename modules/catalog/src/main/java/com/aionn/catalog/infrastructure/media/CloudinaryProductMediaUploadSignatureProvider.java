@@ -27,8 +27,9 @@ public class CloudinaryProductMediaUploadSignatureProvider
 
     @Override
     public UploadSignatureResult generateProductImageUploadSignature(String merchantId) {
-        return sign(folders.productImageFolder() + "/" + merchantId, "product-image",
-                "image", "jpg,jpeg,png,webp", 8L * 1024 * 1024);
+        // "auto" lets Cloudinary accept both images and videos for product media.
+        return sign(folders.productImageFolder() + "/" + merchantId, "product-media",
+                "auto", "jpg,jpeg,png,webp,mp4,mov,webm", 50L * 1024 * 1024);
     }
 
     @Override

@@ -18,6 +18,73 @@ public interface ProductRepository extends JpaRepository<ProductEntity, String> 
   @EntityGraph(attributePaths = { "variants", "translations" })
   Page<ProductEntity> findByMerchantId(String merchantId, Pageable pageable);
 
+  @Query(value = """
+      SELECT p.* FROM products p
+      LEFT JOIN product_sold_counters s ON s.product_id = p.product_id
+      WHERE p.merchant_id = :merchantId
+        AND (CAST(:status AS text) IS NULL OR p.status = CAST(:status AS text))
+        AND (CAST(:searchPattern AS text) IS NULL OR LOWER(p.name) LIKE CAST(:searchPattern AS text))
+        AND (CAST(:categoryCsv AS text) = ''
+             OR jsonb_exists_any(p.category_ids, string_to_array(CAST(:categoryCsv AS text), ',')))
+        AND (CAST(:minPrice AS numeric) IS NULL
+             OR (SELECT MIN(v.price) FROM product_variants v WHERE v.product_id = p.product_id) >= CAST(:minPrice AS numeric))
+        AND (CAST(:maxPrice AS numeric) IS NULL
+             OR (SELECT MIN(v.price) FROM product_variants v WHERE v.product_id = p.product_id) <= CAST(:maxPrice AS numeric))
+      ORDER BY
+        CASE WHEN CAST(:sort AS text) = 'BEST_SELLER' THEN COALESCE(s.sold_count, 0) END DESC NULLS LAST,
+        CASE WHEN CAST(:sort AS text) = 'PRICE_ASC'
+             THEN (SELECT MIN(v.price) FROM product_variants v WHERE v.product_id = p.product_id) END ASC NULLS LAST,
+        CASE WHEN CAST(:sort AS text) = 'PRICE_DESC'
+             THEN (SELECT MIN(v.price) FROM product_variants v WHERE v.product_id = p.product_id) END DESC NULLS LAST,
+        p.created_at DESC,
+        p.product_id ASC
+      LIMIT :limit OFFSET :offset
+      """, nativeQuery = true)
+  List<ProductEntity> searchMerchantProducts(
+      @Param("merchantId") String merchantId,
+      @Param("status") String status,
+      @Param("searchPattern") String searchPattern,
+      @Param("categoryCsv") String categoryCsv,
+      @Param("minPrice") BigDecimal minPrice,
+      @Param("maxPrice") BigDecimal maxPrice,
+      @Param("sort") String sort,
+      @Param("limit") int limit,
+      @Param("offset") int offset);
+
+  @Query(value = """
+      SELECT COUNT(*) FROM products p
+      WHERE p.merchant_id = :merchantId
+        AND (CAST(:status AS text) IS NULL OR p.status = CAST(:status AS text))
+        AND (CAST(:searchPattern AS text) IS NULL OR LOWER(p.name) LIKE CAST(:searchPattern AS text))
+        AND (CAST(:categoryCsv AS text) = ''
+             OR jsonb_exists_any(p.category_ids, string_to_array(CAST(:categoryCsv AS text), ',')))
+        AND (CAST(:minPrice AS numeric) IS NULL
+             OR (SELECT MIN(v.price) FROM product_variants v WHERE v.product_id = p.product_id) >= CAST(:minPrice AS numeric))
+        AND (CAST(:maxPrice AS numeric) IS NULL
+             OR (SELECT MIN(v.price) FROM product_variants v WHERE v.product_id = p.product_id) <= CAST(:maxPrice AS numeric))
+      """, nativeQuery = true)
+  long countSearchMerchantProducts(
+      @Param("merchantId") String merchantId,
+      @Param("status") String status,
+      @Param("searchPattern") String searchPattern,
+      @Param("categoryCsv") String categoryCsv,
+      @Param("minPrice") BigDecimal minPrice,
+      @Param("maxPrice") BigDecimal maxPrice);
+
+  @Query("""
+      SELECT COUNT(v) FROM ProductVariantEntity v
+       WHERE v.product.merchantId = :merchantId
+      """)
+  long countVariantsByMerchant(@Param("merchantId") String merchantId);
+
+  @Query("""
+      SELECT COALESCE(SUM(s.soldCount), 0) FROM ProductSoldCounterEntity s
+       WHERE s.productId IN (
+         SELECT p.productId FROM ProductEntity p WHERE p.merchantId = :merchantId
+       )
+      """)
+  long sumSoldCountByMerchant(@Param("merchantId") String merchantId);
+
   long countByMerchantId(String merchantId);
 
   long countByMerchantIdAndStatus(String merchantId, String status);

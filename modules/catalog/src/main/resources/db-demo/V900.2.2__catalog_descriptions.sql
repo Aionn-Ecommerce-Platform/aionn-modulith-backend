@@ -359988,3 +359988,142 @@ SET created_at = TIMESTAMPTZ '2025-03-01 00:00:00+00';
 UPDATE product_reviews
 SET created_at = now(), updated_at = now()
 WHERE created_at > now();
+
+-- Catalog owns product translations. Create them here so the description
+-- backfill below sees a complete catalog dataset.
+INSERT INTO product_translations (product_id, locale, name, ai_description, created_at, updated_at)
+SELECT p.product_id, 'en-US', p.name, p.ai_description, NOW(), NOW()
+  FROM products p
+ WHERE p.status = 'PUBLISHED'
+ ORDER BY md5(p.product_id)
+ LIMIT 1000
+ON CONFLICT (product_id, locale) DO NOTHING;
+
+-- Demo products only had ai_description. Copy it into the customer-facing
+-- description column so the storefront does not need an AI-description fallback.
+UPDATE products
+   SET description = ai_description
+ WHERE description IS NULL
+   AND ai_description IS NOT NULL;
+
+UPDATE product_translations
+   SET description = ai_description
+ WHERE description IS NULL
+   AND ai_description IS NOT NULL;
+
+-- Moved from app/V900.11.0__demo_admin_operations.sql
+INSERT INTO attribute_templates
+    (template_id, category_id, attributes, created_at, updated_at, version)
+SELECT 'AT_' || c.category_id,
+       c.category_id,
+       CASE
+           WHEN c.name ILIKE '%thời trang%' OR c.name ILIKE '%giày%'
+                OR c.name ILIKE '%túi%' OR c.name ILIKE '%trang sức%'
+               THEN jsonb_build_object('size', true, 'color', true, 'material', true)
+           WHEN c.name ILIKE '%điện tử%' OR c.name ILIKE '%máy tính%'
+                OR c.name ILIKE '%điện thoại%' OR c.name ILIKE '%âm thanh%'
+               THEN jsonb_build_object('capacity', true, 'voltage', true, 'warranty', true)
+           WHEN c.name ILIKE '%sức khỏe%' OR c.name ILIKE '%làm đẹp%'
+                OR c.name ILIKE '%chăm sóc da%' OR c.name ILIKE '%trang điểm%'
+               THEN jsonb_build_object('skinType', true, 'volume', true, 'origin', true)
+           WHEN c.name ILIKE '%nhà%' OR c.name ILIKE '%bếp%'
+               THEN jsonb_build_object('material', true, 'dimensions', true, 'color', true)
+           ELSE jsonb_build_object('color', true, 'material', true, 'size', true)
+       END,
+       NOW(), NOW(), 0
+  FROM categories c
+ON CONFLICT (category_id) DO NOTHING;
+
+-- Moved from app/V900.11.2__demo_member_inventory_activity.sql
+WITH buyers AS (
+    SELECT user_id,
+           ROW_NUMBER() OVER (ORDER BY user_id) AS rn
+      FROM user_roles
+     WHERE role = 'BUYER'
+     ORDER BY user_id
+     LIMIT 20
+)
+INSERT INTO wishlist_items (user_id, product_id, added_at)
+SELECT b.user_id,
+       p.product_id,
+       NOW() - make_interval(days => ((b.rn + p.pick) % 20)::int)
+  FROM buyers b
+  CROSS JOIN LATERAL (
+      SELECT product_id,
+             ROW_NUMBER() OVER (ORDER BY md5(b.user_id || product_id)) AS pick
+        FROM products
+       WHERE status = 'PUBLISHED'
+       ORDER BY md5(b.user_id || product_id)
+       LIMIT 5
+  ) p
+ON CONFLICT (user_id, product_id) DO NOTHING;
+
+-- Moved from app/V900.11.3__demo_remaining_tables.sql
+WITH translations(name, en_name) AS (
+    VALUES ('Điện tử', 'Electronics'),
+           ('Máy tính xách tay', 'Laptops'),
+           ('Điện thoại thông minh', 'Smartphones'),
+           ('Thiết bị nhà bếp', 'Kitchen Appliances'),
+           ('Thời trang', 'Fashion'),
+           ('Giày dép', 'Shoes'),
+           ('Thời trang nữ', 'Women''s Fashion'),
+           ('Phụ kiện công nghệ', 'Tech Accessories'),
+           ('Chăm sóc da', 'Skincare'),
+           ('Nội thất', 'Furniture'),
+           ('Sức khỏe & Làm đẹp', 'Health & Beauty'),
+           ('Nhà cửa & Bếp', 'Home & Kitchen'),
+           ('Điều hòa nhiệt độ', 'Climate Control'),
+           ('Nhà thông minh', 'Smart Home'),
+           ('Chiếu sáng thông minh', 'Smart Lighting'),
+           ('Thời trang nam', 'Men''s Fashion'),
+           ('Vitamin & Thực phẩm chức năng', 'Vitamins & Supplements'),
+           ('An ninh thông minh', 'Smart Security'),
+           ('Thể thao & Dã ngoại', 'Sports & Outdoors'),
+           ('Ô tô & Xe máy', 'Cars & Motorbikes'),
+           ('Máy tính bảng', 'Tablets'),
+           ('Âm thanh', 'Audio'),
+           ('Thiết bị đeo thông minh', 'Smart Wearables'),
+           ('Đồng hồ', 'Watches'),
+           ('Kính râm', 'Sunglasses'),
+           ('Túi xách', 'Handbags'),
+           ('Trang sức', 'Jewelry'),
+           ('Trang phục thể thao', 'Sportswear'),
+           ('Trang trí nhà cửa', 'Home Decor'),
+           ('Thực phẩm', 'Groceries'),
+           ('Đồ uống', 'Beverages'),
+           ('Dụng cụ nhà bếp', 'Kitchen Tools'),
+           ('Trang điểm', 'Makeup'),
+           ('Nước hoa', 'Fragrance'),
+           ('Chăm sóc tóc', 'Hair Care'),
+           ('Dụng cụ thể thao', 'Sports Equipment'),
+           ('Thiết bị tập luyện', 'Fitness Equipment'),
+           ('Đồ dã ngoại', 'Camping Gear'),
+           ('Ô tô', 'Cars'),
+           ('Xe máy', 'Motorbikes')
+)
+INSERT INTO category_translations (category_id, locale, name, created_at, updated_at)
+SELECT c.category_id, 'en-US', COALESCE(t.en_name, c.name), NOW(), NOW()
+  FROM categories c
+  LEFT JOIN translations t ON t.name = c.name
+ON CONFLICT (category_id, locale) DO NOTHING;
+
+-- Moved from app/V900.11.3__demo_remaining_tables.sql
+INSERT INTO brand_translations (brand_id, locale, name, description, created_at, updated_at)
+SELECT b.brand_id, 'en-US', b.name,
+       COALESCE(b.description, 'Official ' || b.name || ' products on Aionn.'),
+       NOW(), NOW()
+  FROM brands b
+ON CONFLICT (brand_id, locale) DO NOTHING;
+
+-- Seeded descriptions include the editor heading; remove it from stored data.
+UPDATE products
+   SET description = regexp_replace(description, '^[[:space:]]*MÔ TẢ SẢN PHẨM[[:space:]]+', '', 'i')
+ WHERE description ~* '^[[:space:]]*MÔ TẢ SẢN PHẨM[[:space:]]+';
+
+UPDATE product_translations
+   SET description = regexp_replace(description, '^[[:space:]]*MÔ TẢ SẢN PHẨM[[:space:]]+', '', 'i')
+ WHERE description ~* '^[[:space:]]*MÔ TẢ SẢN PHẨM[[:space:]]+';
+
+-- ai_description is legacy and no longer used by the application.
+ALTER TABLE product_translations DROP COLUMN IF EXISTS ai_description;
+ALTER TABLE products DROP COLUMN IF EXISTS ai_description;

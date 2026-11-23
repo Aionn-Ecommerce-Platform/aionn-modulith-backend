@@ -20,11 +20,48 @@ public interface OrderPersistencePort {
 
     List<Order> findByUser(String userId, int limit);
 
+    List<Order> findByUser(String userId, int page, int limit);
+
+    long countByUser(String userId);
+
     List<Order> findByUserAndStatuses(String userId, List<String> statuses, int limit);
+
+    List<Order> findByUserAndStatuses(String userId, List<String> statuses, int page, int limit);
+
+    long countByUserAndStatuses(String userId, List<String> statuses);
 
     List<Order> findByMerchant(String merchantId, int limit);
 
+    List<Order> findByMerchant(String merchantId, int page, int limit);
+
+    long countByMerchant(String merchantId);
+
     List<Order> findByMerchantAndStatuses(String merchantId, List<String> statuses, int limit);
+
+    List<Order> findByMerchantAndStatuses(String merchantId, List<String> statuses, int page, int limit);
+
+    long countByMerchantAndStatuses(String merchantId, List<String> statuses);
+
+    List<Order> searchByMerchant(
+            String merchantId,
+            List<String> statuses,
+            String search,
+            Instant from,
+            Instant to,
+            int page,
+            int limit);
+
+    long countSearchByMerchant(
+            String merchantId,
+            List<String> statuses,
+            String search,
+            Instant from,
+            Instant to);
+
+    List<OrderStatusCount> countByMerchantGroupByStatus(String merchantId);
+
+    record OrderStatusCount(String status, long count) {
+    }
 
     List<OrderAnalyticsRow> findMerchantAnalyticsRows(String merchantId, Instant from, Instant to);
 

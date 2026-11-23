@@ -102,3 +102,70 @@ SELECT s.return_id, s.sku_id, s.qty, s.unit_price, s.qty * s.unit_price
   FROM seed s
   JOIN inserted_returns ir ON ir.return_id = s.return_id
 ON CONFLICT DO NOTHING;
+
+-- Moved from app/V900.11.3__demo_remaining_tables.sql
+WITH picked AS (
+    SELECT order_id, user_id,
+           ROW_NUMBER() OVER (ORDER BY order_id) AS rn
+      FROM orders
+     ORDER BY order_id
+     LIMIT 20
+)
+INSERT INTO order_placement_operations
+    (user_id, idempotency_key, request_hash, order_id, status, created_at, updated_at)
+SELECT p.user_id,
+       'IDEM_DEMO_' || lpad(p.rn::text, 4, '0'),
+       md5('request-' || p.rn) || md5('payload-' || p.rn),
+       p.order_id,
+       'COMPLETED',
+       NOW() - make_interval(days => (p.rn % 30)::int),
+       NOW() - make_interval(days => (p.rn % 30)::int)
+  FROM picked p
+ON CONFLICT (user_id, idempotency_key) DO NOTHING;
+
+-- Moved from app/V900.11.3__demo_remaining_tables.sql
+WITH picked AS (
+    SELECT order_id, user_id,
+           ROW_NUMBER() OVER (ORDER BY order_id) AS rn
+      FROM orders
+     ORDER BY order_id
+     LIMIT 12
+)
+INSERT INTO ordering_compensation_tasks
+    (task_id, task_type, resource_id, user_id, order_id, reason, status,
+     attempts, next_attempt_at, last_error, completed_at, created_at, updated_at)
+SELECT 'TASK_DEMO_' || lpad(p.rn::text, 4, '0'),
+       CASE p.rn % 6
+           WHEN 0 THEN 'VOUCHER_RELEASE'
+           WHEN 1 THEN 'RESERVATION_RELEASE'
+           WHEN 2 THEN 'FLASH_SALE_RELEASE'
+           WHEN 3 THEN 'REFUND'
+           WHEN 4 THEN 'STOCK_COMMIT'
+           ELSE 'SHIPMENT_REGISTER'
+       END,
+       p.order_id,
+       p.user_id,
+       p.order_id,
+       'Xử lý bù sau sự kiện đơn hàng thất bại',
+       CASE
+           WHEN p.rn <= 4 THEN 'COMPLETED'
+           WHEN p.rn <= 8 THEN 'PENDING'
+           WHEN p.rn <= 10 THEN 'FAILED'
+           ELSE 'DEAD_LETTER'
+       END,
+       CASE WHEN p.rn <= 4 THEN 1 WHEN p.rn <= 8 THEN 0 ELSE 5 END,
+       NOW() + make_interval(mins => (p.rn * 3)::int),
+       CASE WHEN p.rn > 8 THEN 'Provider timeout after retries' END,
+       CASE WHEN p.rn <= 4 THEN NOW() - make_interval(days => (p.rn % 5)::int) END,
+       NOW() - make_interval(days => (p.rn % 15)::int),
+       NOW() - make_interval(days => (p.rn % 5)::int)
+  FROM picked p
+ON CONFLICT (task_id) DO NOTHING;
+
+-- Moved from app/V900.11.4__demo_inventory_and_compensation_consistency.sql
+-- Demo compensation tasks should not be picked up immediately by the worker.
+UPDATE ordering_compensation_tasks
+   SET next_attempt_at = NOW() + INTERVAL '30 days',
+       updated_at = NOW()
+ WHERE task_id LIKE 'TASK_DEMO_%'
+   AND status = 'PENDING';

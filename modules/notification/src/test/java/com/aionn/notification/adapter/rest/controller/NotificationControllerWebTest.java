@@ -55,6 +55,8 @@ class NotificationControllerWebTest {
         private GetMyNotificationInputPort getMyNotificationInputPort;
         @Mock
         private ListMyNotificationsInputPort listMyNotificationsInputPort;
+        @Mock
+        private com.aionn.notification.application.service.NotificationDispatchService dispatchService;
 
         private MockMvc mockMvc;
 
@@ -63,7 +65,7 @@ class NotificationControllerWebTest {
                 NotificationController controller = new NotificationController(
                                 sendNotificationByEventInputPort, markNotificationReadInputPort,
                                 deleteNotificationInputPort, getMyNotificationInputPort,
-                                listMyNotificationsInputPort, Mappers.getMapper(NotificationDtoMapper.class));
+                                listMyNotificationsInputPort, dispatchService, Mappers.getMapper(NotificationDtoMapper.class));
 
                 mockMvc = MockMvcBuilders.standaloneSetup(controller)
                                 .setControllerAdvice(new NotificationExceptionHandler())
@@ -181,14 +183,15 @@ class NotificationControllerWebTest {
 
         @Test
         void listMineUsesDefaultLimit() throws Exception {
-                when(listMyNotificationsInputPort.execute("user-123", 50))
-                                .thenReturn(List.of(sample("noti-5", "SENT")));
+                when(listMyNotificationsInputPort.executePaged("user-123", 0, 20))
+                                .thenReturn(new com.aionn.notification.application.dto.notification.result.NotificationPageResult(
+                                                List.of(sample("noti-5", "SENT")), 1));
 
                 mockMvc.perform(get("/api/v1/notifications"))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.data[0].notiId").value("noti-5"));
 
-                verify(listMyNotificationsInputPort).execute("user-123", 50);
+                verify(listMyNotificationsInputPort).executePaged("user-123", 0, 20);
         }
 
         @Test

@@ -71,6 +71,11 @@ public interface OrderingDtoMapper {
     ChangeShippingInfoCommand toChangeShippingInfoCommand(String orderId, String userId,
             ChangeShippingInfoRequest request);
 
+    default ChangeShippingAddressCommand toChangeShippingAddressCommand(
+            String orderId, String merchantId, ChangeShippingInfoRequest request) {
+        return new ChangeShippingAddressCommand(orderId, merchantId, request.newAddress());
+    }
+
     ConfirmShippedCommand toConfirmShippedCommand(String orderId, ConfirmShippedRequest request);
 
     default ConfirmDeliveredCommand toConfirmDeliveredCommand(String orderId) {

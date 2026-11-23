@@ -278,6 +278,29 @@ class ProductTest {
     }
 
     @Test
+    void rejectedProductCanBeResubmittedForReview() {
+        Product product = publishableProduct();
+        product.submitForReview(MERCHANT_ID, FIXED);
+        product.reject("admin-1", "IMG_ISSUE", "Missing photos", FIXED);
+        product.pullEvents();
+
+        product.submitForReview(MERCHANT_ID, FIXED);
+
+        assertThat(product.getStatus()).isEqualTo(ProductStatus.PENDING_REVIEW);
+    }
+
+    @Test
+    void withdrawingReviewReturnsProductToDraft() {
+        Product product = publishableProduct();
+        product.submitForReview(MERCHANT_ID, FIXED);
+        product.pullEvents();
+
+        product.withdrawReview(FIXED);
+
+        assertThat(product.getStatus()).isEqualTo(ProductStatus.DRAFT);
+    }
+
+    @Test
     void publishFromTakedownStateThrows() {
         Product product = publishableProduct();
         product.publish("admin-1", FIXED);

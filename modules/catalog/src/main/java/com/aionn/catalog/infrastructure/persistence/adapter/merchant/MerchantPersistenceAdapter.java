@@ -70,4 +70,18 @@ public class MerchantPersistenceAdapter implements MerchantPersistencePort {
     public long count() {
         return jpa.count();
     }
+
+    @Override
+    public MerchantPage search(OffsetPagination pagination, String search, String provinceCode) {
+        String normalized = search == null || search.isBlank() ? null : search.trim().toLowerCase();
+        String pattern = normalized == null ? null : "%" + normalized + "%";
+        String province = provinceCode == null || provinceCode.isBlank() ? null : provinceCode.trim();
+        var page = jpa.searchStorefront(
+                pattern,
+                province,
+                PageRequest.of(pagination.page(), pagination.size()));
+        return new MerchantPage(
+                page.stream().map(mapper::toDomain).toList(),
+                page.getTotalElements());
+    }
 }

@@ -1,15 +1,15 @@
 package com.aionn.catalog.adapter.rest.controller;
 
-import com.aionn.catalog.adapter.rest.dto.product.request.AssignCollectionsRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.AssignCategoriesRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.EmergencyTakedownRequest;
-import com.aionn.catalog.adapter.rest.dto.product.request.UpdateAiMetadataRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.UpdateDescriptionRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.UpdateMediaRequest;
+import com.aionn.catalog.adapter.rest.dto.product.request.UpdateProductContentRequest;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
 import com.aionn.catalog.adapter.rest.dto.product.request.AssignBrandRequest;
-import com.aionn.catalog.adapter.rest.dto.product.request.AssignCategoriesRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.BulkPriceUpdateRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.ChangeVariantParcelRequest;
 import com.aionn.catalog.adapter.rest.dto.product.request.ChangeVariantPriceRequest;
@@ -22,6 +22,8 @@ import com.aionn.catalog.adapter.rest.dto.product.request.SearchCatalogRequest;
 import com.aionn.catalog.adapter.rest.dto.product.response.BulkPriceUpdateResponse;
 import com.aionn.catalog.adapter.rest.dto.product.response.ProductAnalyticsResponse;
 import com.aionn.catalog.adapter.rest.dto.product.response.ProductResponse;
+import com.aionn.catalog.adapter.rest.dto.product.response.MerchantProductStatsResponse;
+import com.aionn.catalog.application.service.ProductService;
 import com.aionn.catalog.adapter.rest.dto.product.response.ProductSearchResponse;
 import com.aionn.catalog.adapter.rest.mapper.product.ProductDtoMapper;
 import com.aionn.catalog.adapter.rest.mapper.product.ProductSearchCriteriaAssembler;
@@ -32,7 +34,6 @@ import com.aionn.catalog.application.dto.product.result.BulkPriceUpdateResult;
 import com.aionn.catalog.application.dto.product.result.ProductResult;
 import com.aionn.catalog.application.port.in.product.AssignBrandInputPort;
 import com.aionn.catalog.application.port.in.product.AssignCategoriesInputPort;
-import com.aionn.catalog.application.port.in.product.AssignCollectionsInputPort;
 import com.aionn.catalog.application.port.in.product.BulkPriceUpdateInputPort;
 import com.aionn.catalog.application.port.in.product.ChangeVariantParcelInputPort;
 import com.aionn.catalog.application.port.in.product.ChangeVariantPriceInputPort;
@@ -61,9 +62,11 @@ import com.aionn.catalog.application.port.in.product.RejectProductInputPort;
 import com.aionn.catalog.application.port.in.product.RemoveVariantInputPort;
 import com.aionn.catalog.application.port.in.product.RestoreProductInputPort;
 import com.aionn.catalog.application.port.in.product.SubmitForReviewInputPort;
+import com.aionn.catalog.application.port.in.product.WithdrawReviewInputPort;
 import com.aionn.catalog.application.port.in.product.SearchProductsInputPort;
-import com.aionn.catalog.application.port.in.product.UpdateAiMetadataInputPort;
+import com.aionn.catalog.application.port.in.product.UpdateDescriptionInputPort;
 import com.aionn.catalog.application.port.in.product.UpdateMediaInputPort;
+import com.aionn.catalog.application.port.in.product.UpdateProductContentInputPort;
 import com.aionn.catalog.domain.valueobject.ProductStatus;
 import com.aionn.platform.web.response.ApiResponse;
 import com.aionn.platform.web.response.PageMetadata;
@@ -103,6 +106,8 @@ public class ProductController {
         private final DefineAttributesInputPort defineAttributesInputPort;
         private final PublishProductInputPort publishProductInputPort;
         private final SubmitForReviewInputPort submitForReviewInputPort;
+        private final ProductService productService;
+        private final WithdrawReviewInputPort withdrawReviewInputPort;
         private final RejectProductInputPort rejectProductInputPort;
         private final DeactivateProductInputPort deactivateProductInputPort;
         private final RestoreProductInputPort restoreProductInputPort;
@@ -112,8 +117,8 @@ public class ProductController {
         private final ListProductsByStatusInputPort listProductsByStatusInputPort;
         private final RemoveVariantInputPort removeVariantInputPort;
         private final UpdateMediaInputPort updateMediaInputPort;
-        private final UpdateAiMetadataInputPort updateAiMetadataInputPort;
-        private final AssignCollectionsInputPort assignCollectionsInputPort;
+        private final UpdateDescriptionInputPort updateDescriptionInputPort;
+        private final UpdateProductContentInputPort updateProductContentInputPort;
         private final EmergencyTakedownInputPort emergencyTakedownInputPort;
         private final SearchProductsInputPort searchProductsInputPort;
         private final GetRelatedProductsInputPort getRelatedProductsInputPort;
@@ -260,6 +265,18 @@ public class ProductController {
                                 "Product submitted for review"));
         }
 
+        @PostMapping("/{productId}/withdraw-review")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(summary = "Withdraw product review submission")
+        public ResponseEntity<ApiResponse<ProductResponse>> withdrawReview(
+                        @CurrentMerchantId String merchantId,
+                        @PathVariable String productId) {
+                ProductResult result = withdrawReviewInputPort
+                                .execute(productDtoMapper.toWithdrawReviewCommand(productId, merchantId));
+                return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result),
+                                "Product review withdrawn"));
+        }
+
         @PostMapping("/{productId}/reject")
         @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
         @Operation(summary = "Reject product creation/update")
@@ -311,14 +328,34 @@ public class ProductController {
         @Operation(summary = "List merchant products")
         public ResponseEntity<ApiResponse<List<ProductResponse>>> listMyProducts(
                         @CurrentMerchantId String merchantId,
+                        @RequestParam(required = false) String search,
+                        @RequestParam(required = false) ProductStatus status,
+                        @RequestParam(required = false) List<String> categoryIds,
+                        @RequestParam(required = false) BigDecimal minPrice,
+                        @RequestParam(required = false) BigDecimal maxPrice,
+                        @RequestParam(required = false) String sort,
                         @RequestParam(defaultValue = "0") @Min(0) int page,
                         @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
                 PageResult<ProductResult> results = listProductsByMerchantInputPort.execute(
-                                productDtoMapper.toListByMerchantQuery(merchantId, page, size));
+                                productDtoMapper.toListByMerchantQuery(
+                                                merchantId, page, size, search, status,
+                                                categoryIds, minPrice, maxPrice, sort));
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
                                 productDtoMapper.toResponses(results.content()),
                                 PageMetadata.of(results.page(), results.size(), results.totalElements()),
                                 PRODUCTS_FETCHED));
+        }
+
+        @GetMapping("/merchant/stats")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(summary = "Merchant product counters")
+        public ResponseEntity<ApiResponse<MerchantProductStatsResponse>> merchantStats(
+                        @CurrentMerchantId String merchantId) {
+                ProductService.MerchantProductStats stats = productService.merchantStats(merchantId);
+                return ResponseEntity.ok(ApiResponse.success(
+                                new MerchantProductStatsResponse(
+                                                stats.total(), stats.published(), stats.variants(), stats.sold()),
+                                "Product stats fetched"));
         }
 
         @GetMapping("/admin/reviews")
@@ -359,30 +396,31 @@ public class ProductController {
                 return ResponseEntity.ok(ApiResponse.success(productDtoMapper.toResponse(result), "Media updated"));
         }
 
-        @PutMapping("/{productId}/ai-metadata")
+        @PutMapping("/{productId}/content")
         @PreAuthorize("isAuthenticated()")
-        @Operation(summary = "Update product AI metadata")
-        public ResponseEntity<ApiResponse<ProductResponse>> updateAiMetadata(
+        @Operation(summary = "Update product content in one request")
+        public ResponseEntity<ApiResponse<ProductResponse>> updateContent(
                         @CurrentMerchantId String merchantId,
                         @PathVariable String productId,
-                        @Valid @RequestBody UpdateAiMetadataRequest request) {
-                ProductResult result = updateAiMetadataInputPort.execute(
-                                productDtoMapper.toUpdateAiMetadataCommand(productId, merchantId, request));
+                        @Valid @RequestBody UpdateProductContentRequest request) {
+                ProductResult result = updateProductContentInputPort.execute(
+                                productDtoMapper.toUpdateProductContentCommand(productId, merchantId, request));
                 return ResponseEntity
-                                .ok(ApiResponse.success(productDtoMapper.toResponse(result), "AI metadata updated"));
+                                .ok(ApiResponse.success(productDtoMapper.toResponse(result),
+                                                "Product content updated"));
         }
 
-        @PutMapping("/{productId}/collections")
+        @PutMapping("/{productId}/description")
         @PreAuthorize("isAuthenticated()")
-        @Operation(summary = "Assign product collections")
-        public ResponseEntity<ApiResponse<ProductResponse>> assignCollections(
+        @Operation(summary = "Update product description")
+        public ResponseEntity<ApiResponse<ProductResponse>> updateDescription(
                         @CurrentMerchantId String merchantId,
                         @PathVariable String productId,
-                        @Valid @RequestBody AssignCollectionsRequest request) {
-                ProductResult result = assignCollectionsInputPort.execute(
-                                productDtoMapper.toAssignCollectionsCommand(productId, merchantId, request));
+                        @Valid @RequestBody UpdateDescriptionRequest request) {
+                ProductResult result = updateDescriptionInputPort.execute(
+                                productDtoMapper.toUpdateDescriptionCommand(productId, merchantId, request));
                 return ResponseEntity
-                                .ok(ApiResponse.success(productDtoMapper.toResponse(result), "Collections assigned"));
+                                .ok(ApiResponse.success(productDtoMapper.toResponse(result), "Description updated"));
         }
 
         @PostMapping("/{productId}/takedown")

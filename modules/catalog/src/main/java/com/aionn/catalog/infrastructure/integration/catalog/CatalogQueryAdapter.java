@@ -124,7 +124,7 @@ public class CatalogQueryAdapter implements CatalogQueryPort {
         return new ProductView(
                 p.getProductId(),
                 p.getName(),
-                p.getAiDescription(),
+                p.getDescription(),
                 p.imageList(),
                 variants);
     }

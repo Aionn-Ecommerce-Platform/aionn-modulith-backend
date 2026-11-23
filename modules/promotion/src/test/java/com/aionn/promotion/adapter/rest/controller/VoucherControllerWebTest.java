@@ -186,8 +186,11 @@ class VoucherControllerWebTest {
 
         @Test
         void listMineReturnsMyVouchers() throws Exception {
-                when(listMyVouchersInputPort.execute("user-1", 50))
-                                .thenReturn(List.of(sample("V-1", "CLAIMED"), sample("V-2", "RESERVED")));
+                when(listMyVouchersInputPort.executePaged(org.mockito.ArgumentMatchers.eq("user-1"), any(),
+                                org.mockito.ArgumentMatchers.anyInt(),
+                                org.mockito.ArgumentMatchers.anyInt()))
+                                .thenReturn(new com.aionn.promotion.application.dto.voucher.result.UserVoucherPageResult(
+                                                List.of(sample("V-1", "CLAIMED"), sample("V-2", "RESERVED")), 2));
 
                 mockMvc.perform(get("/api/v1/promotions/vouchers/me"))
                                 .andExpect(status().isOk())

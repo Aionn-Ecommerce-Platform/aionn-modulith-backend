@@ -99,3 +99,24 @@ INSERT INTO chat_merchant_auto_replies (
 ('01M74HBREYHVRKRQRRFATMWBRG', TRUE, 'Xin chào! Shop 01M74HBREYHVRKRQRRFATMWBRG có thể hỗ trợ gì cho bạn?', 'Shop hiện ngoài giờ làm việc và sẽ phản hồi sớm.', '00:00:00', '23:59:59', '["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"]'::jsonb, 'Asia/Ho_Chi_Minh', 0, NOW(), NOW()),
 ('01M74HBREZ61R0J1RKC89RKK9Z', TRUE, 'Cảm ơn bạn đã liên hệ shop 01M74HBREZ61R0J1RKC89RKK9Z.', 'Tin nhắn đã được ghi nhận. Shop sẽ phản hồi vào ngày mai.', '08:30', '17:30', '["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"]'::jsonb, 'Asia/Ho_Chi_Minh', 0, NOW(), NOW());
 
+-- Moved from app/V900.11.3__demo_remaining_tables.sql
+INSERT INTO chat_user_blocks
+    (block_id, blocker_id, blocked_id, reason, is_active, version, created_at, updated_at)
+SELECT 'BLK_DEMO_' || lpad(v.rn::text, 5, '0'),
+       blocker.user_id,
+       blocked.user_id,
+       v.reason,
+       true,
+       0,
+       NOW() - make_interval(days => v.rn::int),
+       NOW() - make_interval(days => v.rn::int)
+  FROM (VALUES
+        (1, 'buyer_001@example.test', 'buyer_050@example.test', 'Spam tin nhắn quảng cáo'),
+        (2, 'buyer_002@example.test', 'buyer_051@example.test', 'Nội dung không phù hợp'),
+        (3, 'buyer_003@example.test', 'buyer_052@example.test', 'Quấy rối trong chat'),
+        (4, 'merchant_001@example.test', 'buyer_100@example.test', 'Khách gửi tin nhắn lặp lại'),
+        (5, 'buyer_101@example.test', 'merchant_002@example.test', 'Tư vấn không mong muốn')
+  ) AS v(rn, blocker_email, blocked_email, reason)
+  JOIN users blocker ON blocker.email = v.blocker_email
+  JOIN users blocked ON blocked.email = v.blocked_email
+ON CONFLICT (block_id) DO NOTHING;

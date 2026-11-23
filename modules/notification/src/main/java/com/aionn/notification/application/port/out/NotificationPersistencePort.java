@@ -13,6 +13,12 @@ public interface NotificationPersistencePort {
 
     List<Notification> findByUser(String userId, int limit);
 
+    List<Notification> findByUser(String userId, int page, int limit);
+
+    long countByUser(String userId);
+
+    long countUnreadByUser(String userId);
+
 List<Notification> findRetryable(int limit);
 
 long countByCampaignAndStatus(String campaignId, String status);

@@ -32,7 +32,7 @@ public class Product extends AggregateRoot {
     private final List<String> collectionIds = new ArrayList<>();
     private final Map<String, String> attributes = new LinkedHashMap<>();
     private final List<ProductVariant> variants = new ArrayList<>();
-    private String aiDescription;
+    private String description;
     private ProductStatus status;
     private String slug;
     private final Instant createdAt;
@@ -40,7 +40,7 @@ public class Product extends AggregateRoot {
     private final long version;
     private final List<Translation> translations = new ArrayList<>();
 
-    public record Translation(String locale, String name, String aiDescription) {}
+    public record Translation(String locale, String name, String description) {}
 
     public List<Translation> translations() {
         return List.copyOf(translations);
@@ -57,7 +57,7 @@ public class Product extends AggregateRoot {
             List<String> collectionIds,
             Map<String, String> attributes,
             List<ProductVariant> variants,
-            String aiDescription,
+            String description,
             ProductStatus status,
             Instant createdAt,
             Instant updatedAt,
@@ -79,7 +79,7 @@ public class Product extends AggregateRoot {
             this.attributes.putAll(attributes);
         if (variants != null)
             this.variants.addAll(variants);
-        this.aiDescription = aiDescription;
+        this.description = description;
         this.status = status;
         this.slug = com.aionn.catalog.domain.util.ProductSlug.generate(name);
         this.createdAt = createdAt;
@@ -145,8 +145,7 @@ public class Product extends AggregateRoot {
         ProductVariant existing = findVariant(skuId)
                 .orElseThrow(() -> new CatalogException(CatalogErrorCode.PRODUCT_VARIANT_NOT_FOUND));
         Guard.require(status != ProductStatus.PUBLISHED || variants.size() > 1,
-                () -> new CatalogException(CatalogErrorCode.PRODUCT_INVALID_TRANSITION,
-                        "Cannot remove the last variant from a published product"));
+                () -> new CatalogException(CatalogErrorCode.PRODUCT_LAST_VARIANT));
         variants.remove(existing);
         touch(clock);
         registerEvent(new ProductEvents.ProductVariantRemoved(productId, skuId, merchantId, updatedAt, updatedAt));
@@ -179,6 +178,9 @@ public class Product extends AggregateRoot {
     }
 
     public void updateMedia(List<String> images, Clock clock) {
+        Guard.require(images == null || images.size() <= 12,
+                () -> new CatalogException(CatalogErrorCode.INVALID_ARGUMENT,
+                        "A product cannot have more than 12 media items"));
         this.imageList.clear();
         if (images != null) {
             this.imageList.addAll(images);
@@ -234,6 +236,13 @@ public class Product extends AggregateRoot {
         registerEvent(new ProductEvents.ProductSubmittedForReview(productId, ownerId, updatedAt));
     }
 
+    public void withdrawReview(Clock clock) {
+        ensureTransitionAllowed(ProductStatus.DRAFT);
+        this.status = ProductStatus.DRAFT;
+        touch(clock);
+        registerEvent(new ProductEvents.ProductReviewWithdrawn(productId, merchantId, updatedAt));
+    }
+
     public void reject(String adminId, String reasonCode, String feedback, Clock clock) {
         ensureTransitionAllowed(ProductStatus.REJECTED);
         this.status = ProductStatus.REJECTED;
@@ -262,26 +271,19 @@ public class Product extends AggregateRoot {
         registerEvent(new ProductEvents.ProductEmergencyTakedown(productId, adminId, reason, updatedAt, updatedAt));
     }
 
-    public void updateAiMetadata(List<String> tags, String aiDescription, Clock clock) {
+    public void updateDescription(String description, Clock clock) {
+        this.description = description == null || description.isBlank() ? null : description.trim();
+        touch(clock);
+        registerEvent(new ProductEvents.ProductMetadataUpdated(productId, List.copyOf(this.tags), updatedAt));
+    }
+
+    public void updateTags(List<String> tags, Clock clock) {
         this.tags.clear();
         if (tags != null) {
             this.tags.addAll(tags);
         }
-        if (aiDescription != null) {
-            this.aiDescription = aiDescription;
-        }
         touch(clock);
-        registerEvent(new ProductEvents.ProductMetadataUpdated(productId, List.copyOf(this.tags), this.aiDescription,
-                updatedAt));
-    }
-
-    public void assignToCollections(List<String> collectionIds, Clock clock) {
-        this.collectionIds.clear();
-        if (collectionIds != null) {
-            this.collectionIds.addAll(collectionIds);
-        }
-        touch(clock);
-        registerEvent(new ProductEvents.ProductCollectionAssigned(productId, List.copyOf(this.collectionIds), updatedAt));
+        registerEvent(new ProductEvents.ProductMetadataUpdated(productId, List.copyOf(this.tags), updatedAt));
     }
 
     public void defineAttributes(Map<String, String> attributes, Clock clock) {

@@ -72,11 +72,6 @@ public class ProductSearchIndexUpdater {
     }
 
     @EventListener
-    public void onProductCollectionAssigned(ProductEvents.ProductCollectionAssigned event) {
-        writer.reindexIfSearchableAsync(event.productId());
-    }
-
-    @EventListener
     public void onProductAttributesDefined(ProductEvents.ProductAttributesDefined event) {
         writer.reindexIfSearchableAsync(event.productId());
     }

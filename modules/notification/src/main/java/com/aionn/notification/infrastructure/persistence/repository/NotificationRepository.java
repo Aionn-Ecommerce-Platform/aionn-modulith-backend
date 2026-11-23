@@ -16,6 +16,16 @@ public interface NotificationRepository extends JpaRepository<NotificationEntity
     List<NotificationEntity> findByUserIdAndChannelAndStatusNotOrderByCreatedAtDesc(
             String userId, String channel, String excludedStatus, Pageable pageable);
 
+    long countByUserIdAndChannelAndStatusNot(String userId, String channel, String excludedStatus);
+
+    @Query("""
+        SELECT COUNT(n) FROM NotificationEntity n
+         WHERE n.userId = :userId
+           AND n.channel = 'IN_APP'
+           AND n.status NOT IN ('DELETED', 'READ')
+        """)
+    long countUnreadInApp(String userId);
+
     @Query("""
             SELECT n FROM NotificationEntity n
               WHERE n.status = 'PENDING' AND n.retryCount < :maxRetry

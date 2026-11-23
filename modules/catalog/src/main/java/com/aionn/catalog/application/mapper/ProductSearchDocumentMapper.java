@@ -48,15 +48,15 @@ public class ProductSearchDocumentMapper {
 
                 Locale locale = LocaleContextHolder.getLocale();
                 String name = product.getName();
-                String aiDescription = product.getAiDescription();
+                String description = product.getDescription();
                 Product.Translation trans = product.translations().stream()
                                 .filter(t -> t.locale().equalsIgnoreCase(locale.getLanguage()))
                                 .findFirst()
                                 .orElse(null);
                 if (trans != null) {
                         name = trans.name();
-                        if (trans.aiDescription() != null) {
-                                aiDescription = trans.aiDescription();
+                        if (trans.description() != null) {
+                                description = trans.description();
                         }
                 }
 
@@ -64,7 +64,7 @@ public class ProductSearchDocumentMapper {
                                 product.getProductId(),
                                 product.getMerchantId(),
                                 name,
-                                aiDescription,
+                                description,
                                 product.getBrandId(),
                                 product.categoryIds(),
                                 product.collectionIds(),

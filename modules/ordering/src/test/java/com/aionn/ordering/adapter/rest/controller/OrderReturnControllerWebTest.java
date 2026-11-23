@@ -187,7 +187,8 @@ class OrderReturnControllerWebTest {
     @Test
     void listMerchantReturnsList() throws Exception {
         ReturnResult result = sampleReturn();
-        when(listReturnsInputPort.execute("M_1", "MERCHANT", 50)).thenReturn(List.of(result));
+        when(listReturnsInputPort.executePaged(any(), eq("MERCHANT"), any(), any(), any(), anyInt(), anyInt()))
+                .thenReturn(new com.aionn.ordering.application.dto.returns.result.ReturnPageResult(List.of(result), 1));
         when(dtoMapper.toResponse(result)).thenReturn(sampleResponse());
 
         mockMvc.perform(get("/api/v1/ordering/returns/merchant")

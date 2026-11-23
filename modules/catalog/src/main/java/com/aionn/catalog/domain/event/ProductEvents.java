@@ -55,6 +55,12 @@ public final class ProductEvents {
             Instant occurredAt) implements CatalogEvent {
     }
 
+    public record ProductReviewWithdrawn(
+            String productId,
+            String merchantId,
+            Instant occurredAt) implements CatalogEvent {
+    }
+
     public record ProductRejected(
             String productId,
             String adminId,
@@ -114,13 +120,6 @@ public final class ProductEvents {
     public record ProductMetadataUpdated(
             String productId,
             List<String> tags,
-            String aiDescription,
-            Instant occurredAt) implements CatalogEvent {
-    }
-
-    public record ProductCollectionAssigned(
-            String productId,
-            List<String> collectionIds,
             Instant occurredAt) implements CatalogEvent {
     }
 

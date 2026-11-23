@@ -57,7 +57,7 @@ public class ProductResultMapper {
         String language = locale.getLanguage();
 
         String name = product.getName();
-        String aiDescription = product.getAiDescription();
+        String description = product.getDescription();
         Product.Translation trans = product.translations().stream()
                 .filter(t -> t.locale().equalsIgnoreCase(fullTag))
                 .findFirst()
@@ -67,8 +67,8 @@ public class ProductResultMapper {
                 .orElse(null);
         if (trans != null) {
             name = trans.name();
-            if (trans.aiDescription() != null) {
-                aiDescription = trans.aiDescription();
+            if (trans.description() != null) {
+                description = trans.description();
             }
         }
 
@@ -88,7 +88,7 @@ public class ProductResultMapper {
                 product.tags(),
                 product.attributes(),
                 variants,
-                aiDescription,
+                description,
                 product.getStatus() != null ? product.getStatus().name() : null,
                 product.getCreatedAt(),
                 product.getUpdatedAt(),

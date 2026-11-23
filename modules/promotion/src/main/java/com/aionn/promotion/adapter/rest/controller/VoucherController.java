@@ -17,6 +17,7 @@ import com.aionn.promotion.application.port.in.voucher.ListMyVouchersInputPort;
 import com.aionn.promotion.application.port.in.voucher.ReleaseVoucherInputPort;
 import com.aionn.promotion.application.port.in.voucher.ReserveVoucherInputPort;
 import com.aionn.platform.web.response.ApiResponse;
+import com.aionn.platform.web.response.PageMetadata;
 import com.aionn.platform.web.support.idempotency.IdempotentRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -119,10 +120,13 @@ public class VoucherController {
         @Operation(summary = "List my vouchers")
         public ResponseEntity<ApiResponse<List<UserVoucherResponse>>> listMine(
                         @CurrentUserId String userId,
-                        @RequestParam(defaultValue = "50") @Min(1) @Max(100) int limit) {
-                return ResponseEntity.ok(ApiResponse.success(
-                                dtoMapper.toUserVoucherResponses(
-                                                listMyVouchersInputPort.execute(userId, limit)),
+                        @RequestParam(required = false) List<String> status,
+                        @RequestParam(defaultValue = "0") @Min(0) int page,
+                        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit) {
+                var result = listMyVouchersInputPort.executePaged(userId, status, page, limit);
+                return ResponseEntity.ok(ApiResponse.successWithPaging(
+                                dtoMapper.toUserVoucherResponses(result.content()),
+                                PageMetadata.of(page, limit, result.totalElements()),
                                 "Vouchers fetched"));
         }
 

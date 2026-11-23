@@ -1,57 +1,4 @@
-﻿WITH upcoming AS (
-    SELECT campaign_id
-      FROM promotion_campaigns
-     WHERE type = 'FLASH_SALE'
-       AND campaign_id LIKE 'FS\_%' ESCAPE '\'
-       AND start_date > NOW()
-     ORDER BY start_date
-     LIMIT 5
-),
-candidates AS (
-    SELECT c.campaign_id,
-           p.product_id,
-           p.merchant_id,
-           v.sku_id,
-           COALESCE(v.price, 100000) AS price,
-           ROW_NUMBER() OVER (ORDER BY c.campaign_id, md5(c.campaign_id || p.product_id)) AS rn
-      FROM upcoming c
-      CROSS JOIN LATERAL (
-          SELECT p.product_id, p.merchant_id, v.sku_id, v.price
-            FROM products p
-            JOIN product_variants v ON v.product_id = p.product_id
-           WHERE p.status = 'PUBLISHED'
-             AND NOT EXISTS (
-                 SELECT 1 FROM flash_sale_registrations r
-                  WHERE r.campaign_id = c.campaign_id AND r.sku_id = v.sku_id)
-           ORDER BY md5(c.campaign_id || p.product_id)
-           LIMIT 3
-      ) p
-      JOIN product_variants v ON v.sku_id = p.sku_id
-)
-INSERT INTO flash_sale_registrations
-    (registration_id, campaign_id, merchant_id, product_id, sku_id,
-     sale_price, currency, sale_stock, sold_count, status, reject_reason,
-     submitted_at, decided_at, decided_by, updated_at, version)
-SELECT 'FSR_PENDING_' || lpad(c.rn::text, 4, '0'),
-       c.campaign_id,
-       c.merchant_id,
-       c.product_id,
-       c.sku_id,
-       ROUND(c.price * 0.9),
-       'VND',
-       40,
-       0,
-       'PENDING',
-       NULL,
-       NOW() - make_interval(hours => c.rn::int),
-       NULL,
-       NULL,
-       NOW() - make_interval(hours => c.rn::int),
-       0
-  FROM candidates c
-ON CONFLICT DO NOTHING;
-
-
+-- ===== V900.11.0__demo_admin_operations.sql =====
 UPDATE products
    SET status = 'PENDING_REVIEW',
        updated_at = NOW()
@@ -64,52 +11,6 @@ UPDATE products
               SELECT 1 FROM flash_sale_registrations r WHERE r.product_id = p.product_id)
         ORDER BY md5(p.product_id)
         LIMIT 12);
-
-
-
-
-
-WITH seeded AS (
-    SELECT m.merchant_id,
-           m.name,
-           b.available,
-           ROW_NUMBER() OVER (ORDER BY m.merchant_id) AS rn
-      FROM merchants m
-      JOIN merchant_balances b ON b.merchant_id = m.merchant_id AND b.currency = 'VND'
-)
-INSERT INTO merchant_payouts
-    (payout_id, merchant_id, amount, currency, status, bank_name,
-     bank_account_no, bank_account_name, external_ref, note,
-     requested_at, completed_at, failed_at, failure_reason, version)
-SELECT 'PAY_DEMO_' || lpad(s.rn::text, 5, '0'),
-       s.merchant_id,
-       LEAST(GREATEST(ROUND(s.available * 0.02), 1000000), 50000000),
-       'VND',
-       CASE
-           WHEN s.rn <= 10 THEN 'PENDING'
-           WHEN s.rn <= 16 THEN 'PROCESSING'
-           WHEN s.rn <= 46 THEN 'COMPLETED'
-           ELSE 'FAILED'
-       END,
-       CASE (s.rn % 4)
-           WHEN 0 THEN 'Vietcombank'
-           WHEN 1 THEN 'Techcombank'
-           WHEN 2 THEN 'MB Bank'
-           ELSE 'ACB'
-       END,
-       '00' || lpad((100000000 + s.rn)::text, 10, '0'),
-       s.name,
-       CASE WHEN s.rn <= 46 AND s.rn > 16 THEN 'VCB-' || lpad(s.rn::text, 8, '0') END,
-       'Rút tiền định kỳ cho gian hàng ' || s.name,
-       NOW() - make_interval(days => ((s.rn % 20) + 1)::int),
-       CASE WHEN s.rn > 16 AND s.rn <= 46
-             THEN NOW() - make_interval(days => (s.rn % 10)::int) END,
-       CASE WHEN s.rn > 46
-             THEN NOW() - make_interval(days => (s.rn % 5)::int) END,
-       CASE WHEN s.rn > 46 THEN 'Tài khoản ngân hàng không khớp tên chủ sở hữu' END,
-       0
-  FROM seeded s
-ON CONFLICT (payout_id) DO NOTHING;
 
 CREATE TEMP TABLE demo_kyc_seed AS
 WITH owners AS (
@@ -172,113 +73,209 @@ ON CONFLICT (document_id) DO NOTHING;
 
 DROP TABLE demo_kyc_seed;
 
-WITH buyers AS (
-    SELECT u.user_id, u.email,
-           ROW_NUMBER() OVER (ORDER BY u.user_id) AS rn
-      FROM users u
-      JOIN user_roles r ON r.user_id = u.user_id AND r.role = 'BUYER'
-)
-INSERT INTO user_feedbacks
-    (feedback_id, user_id, category, subject, content, rating,
-     contact_email, contact_phone, status, handled_by, handled_at,
-     created_at, updated_at, admin_reply)
-SELECT 'FB_DEMO_' || lpad(b.rn::text, 5, '0'),
-       b.user_id,
-       CASE b.rn % 5
-           WHEN 0 THEN 'COMPLAINT'
-           WHEN 1 THEN 'BUG'
-           WHEN 2 THEN 'FEATURE_REQUEST'
-           WHEN 3 THEN 'CONTACT'
-           ELSE 'GENERAL'
-       END,
-       CASE b.rn % 5
-           WHEN 0 THEN 'Đơn hàng giao chậm hơn dự kiến'
-           WHEN 1 THEN 'Không áp dụng được mã giảm giá'
-           WHEN 2 THEN 'Đề xuất thêm bộ lọc theo thương hiệu'
-           WHEN 3 THEN 'Cần hỗ trợ đổi địa chỉ nhận hàng'
-           ELSE 'Góp ý trải nghiệm tìm kiếm sản phẩm'
-       END,
-       'Nội dung góp ý chi tiết từ khách hàng, kèm thông tin đơn hàng và mong muốn được hỗ trợ thêm.',
-       (b.rn % 5) + 1,
-       b.email,
-       NULL,
-       CASE
-           WHEN b.rn <= 6 THEN 'OPEN'
-           WHEN b.rn <= 10 THEN 'IN_REVIEW'
-           WHEN b.rn <= 16 THEN 'RESOLVED'
-           ELSE 'CLOSED'
-       END,
-       CASE WHEN b.rn > 6
-             THEN (SELECT user_id FROM user_roles WHERE role = 'CS_ADMIN' ORDER BY user_id LIMIT 1) END,
-       CASE WHEN b.rn > 6 THEN NOW() - make_interval(days => (b.rn % 7)::int) END,
-       NOW() - make_interval(days => ((b.rn % 20) + 1)::int),
-       NOW() - make_interval(days => (b.rn % 5)::int),
-       CASE WHEN b.rn > 10
-             THEN 'Cảm ơn bạn đã phản hồi. Bộ phận CSKH đã kiểm tra và xử lý xong yêu cầu này.' END
-  FROM buyers b
- WHERE b.rn <= 20
-ON CONFLICT (feedback_id) DO NOTHING;
-
-INSERT INTO attribute_templates
-    (template_id, category_id, attributes, created_at, updated_at, version)
-SELECT 'AT_' || c.category_id,
-       c.category_id,
-       CASE
-           WHEN c.name ILIKE '%thời trang%' OR c.name ILIKE '%giày%'
-                OR c.name ILIKE '%túi%' OR c.name ILIKE '%trang sức%'
-               THEN jsonb_build_object('size', true, 'color', true, 'material', true)
-           WHEN c.name ILIKE '%điện tử%' OR c.name ILIKE '%máy tính%'
-                OR c.name ILIKE '%điện thoại%' OR c.name ILIKE '%âm thanh%'
-               THEN jsonb_build_object('capacity', true, 'voltage', true, 'warranty', true)
-           WHEN c.name ILIKE '%sức khỏe%' OR c.name ILIKE '%làm đẹp%'
-                OR c.name ILIKE '%chăm sóc da%' OR c.name ILIKE '%trang điểm%'
-               THEN jsonb_build_object('skinType', true, 'volume', true, 'origin', true)
-           WHEN c.name ILIKE '%nhà%' OR c.name ILIKE '%bếp%'
-               THEN jsonb_build_object('material', true, 'dimensions', true, 'color', true)
-           ELSE jsonb_build_object('color', true, 'material', true, 'size', true)
-       END,
-       NOW(), NOW(), 0
-  FROM categories c
-ON CONFLICT (category_id) DO NOTHING;
-
-WITH merchants_ranked AS (
-    SELECT merchant_id,
-           ROW_NUMBER() OVER (ORDER BY name, merchant_id) AS rn
-      FROM merchants
+-- ===== V900.11.2__demo_member_inventory_activity.sql =====
+WITH picked_inventory AS (
+    SELECT sku_id, warehouse_id,
+           ROW_NUMBER() OVER (ORDER BY md5(sku_id || warehouse_id)) AS rn
+      FROM inventory_items
+     WHERE available_qty > 0
+     ORDER BY md5(sku_id || warehouse_id)
+     LIMIT 20
 ),
-templates(discount_amount, type, prefix) AS (
-    VALUES (20000.00, 'ORDER_DISCOUNT', 'SHOP10'),
-           (50000.00, 'ORDER_DISCOUNT', 'SHOP25')
+picked_orders AS (
+    SELECT order_id,
+           ROW_NUMBER() OVER (ORDER BY order_id) AS rn
+      FROM orders
+     WHERE status = 'COMPLETED'
+     ORDER BY order_id
+     LIMIT 20
 )
-INSERT INTO vouchers
-    (voucher_code, campaign_id, discount_amount, currency, usage_limit,
-     used_count, reserved_count, valid_from, valid_until, scope, type,
-     min_order_value, merchant_id, version, created_at, updated_at)
-SELECT t.prefix || '-' || lpad(m.rn::text, 3, '0'),
-       NULL,
-       t.discount_amount,
-       'VND',
-       200,
-       20,
-       0,
-       NOW() - INTERVAL '7 days',
-       NOW() + INTERVAL '120 days',
-       'SHOP',
-       t.type,
+INSERT INTO stock_reservations
+    (reservation_id, sku_id, warehouse_id, order_id, qty, status,
+     reserved_at, expires_at, decided_at, version)
+SELECT 'RSV_DEMO_' || lpad(i.rn::text, 5, '0'),
+       i.sku_id,
+       i.warehouse_id,
+       o.order_id,
+       1 + (i.rn % 3),
        CASE
-           WHEN t.discount_amount >= 300000 THEN 699000
-           WHEN t.discount_amount >= 200000 THEN 499000
-           WHEN t.discount_amount >= 100000 THEN 299000
-           WHEN t.discount_amount >= 75000 THEN 249000
-           WHEN t.discount_amount >= 50000 THEN 199000
-           WHEN t.discount_amount >= 30000 THEN 149000
-           WHEN t.discount_amount >= 20000 THEN 99000
-           ELSE 49000
+           WHEN i.rn <= 6 THEN 'RESERVED'
+           WHEN i.rn <= 11 THEN 'COMMITTED'
+           WHEN i.rn <= 16 THEN 'RELEASED'
+           ELSE 'FAILED'
        END,
-       m.merchant_id,
+       NOW() - make_interval(hours => (i.rn * 2)::int),
+       CASE WHEN i.rn <= 6 THEN NOW() + INTERVAL '1 hour' END,
+       CASE WHEN i.rn > 6 THEN NOW() - make_interval(hours => i.rn::int) END,
+       0
+  FROM picked_inventory i
+  JOIN picked_orders o ON o.rn = i.rn
+ON CONFLICT (reservation_id) DO NOTHING;
+
+-- ===== V900.11.3__demo_remaining_tables.sql =====
+WITH buyers AS (
+    SELECT user_id,
+           ROW_NUMBER() OVER (ORDER BY user_id) AS rn
+      FROM user_roles
+     WHERE role = 'BUYER'
+     ORDER BY user_id
+     LIMIT 15
+)
+INSERT INTO carts (cart_id, user_id, voucher_code, version, created_at, updated_at)
+SELECT 'CART_DEMO_' || lpad(b.rn::text, 4, '0'),
+       b.user_id,
+       CASE WHEN b.rn = 1 THEN 'SHOP10-001' END,
        0,
-       NOW() - INTERVAL '7 days',
-       NOW()
-  FROM merchants_ranked m
-  CROSS JOIN templates t
-ON CONFLICT (voucher_code) DO NOTHING;
+       NOW() - make_interval(days => (b.rn % 10)::int),
+       NOW() - make_interval(hours => b.rn::int)
+  FROM buyers b
+ON CONFLICT (user_id) DO NOTHING;
+
+INSERT INTO cart_items (cart_id, sku_id, qty)
+SELECT c.cart_id, v.sku_id, 1 + (v.pick % 3)
+  FROM carts c
+  JOIN users u ON u.user_id = c.user_id
+  CROSS JOIN LATERAL (
+      SELECT pv.sku_id,
+             ROW_NUMBER() OVER (ORDER BY md5(c.cart_id || pv.sku_id)) AS pick
+        FROM product_variants pv
+        JOIN products p ON p.product_id = pv.product_id
+       WHERE p.status = 'PUBLISHED'
+       ORDER BY md5(c.cart_id || pv.sku_id)
+       LIMIT 3
+  ) v
+ WHERE c.cart_id LIKE 'CART_DEMO_%'
+    OR u.email = 'buyer_001@example.test'
+ON CONFLICT (cart_id, sku_id) DO NOTHING;
+
+WITH buyers AS (
+    SELECT user_id,
+           ROW_NUMBER() OVER (ORDER BY user_id) AS rn
+      FROM user_roles
+     WHERE role = 'BUYER'
+     ORDER BY user_id
+     LIMIT 10
+)
+INSERT INTO ucp_identity_links
+    (link_id, platform_id, platform_subject, customer_id, status, scopes,
+     linked_at, expires_at, metadata)
+SELECT 'UCPLINK_' || lpad(b.rn::text, 5, '0'),
+       CASE WHEN b.rn % 2 = 0 THEN 'shopify' ELSE 'tiktok-shop' END,
+       'platform-subject-' || b.rn,
+       b.user_id,
+       'ACTIVE',
+       '["checkout:write","orders:read"]'::jsonb,
+       NOW() - make_interval(days => (b.rn * 3)::int),
+       NOW() + INTERVAL '6 months',
+       jsonb_build_object('source', 'demo', 'sequence', b.rn)
+  FROM buyers b
+ON CONFLICT (link_id) DO NOTHING;
+
+WITH picked AS (
+    SELECT u.user_id,
+           u.rn,
+           v.sku_id,
+           o.order_id,
+           c.cart_id
+      FROM (
+          SELECT u.user_id,
+                 ROW_NUMBER() OVER (ORDER BY u.user_id) AS rn
+            FROM users u
+            JOIN user_roles r ON r.user_id = u.user_id AND r.role = 'BUYER'
+            ORDER BY u.user_id
+            LIMIT 10
+      ) u
+      LEFT JOIN LATERAL (
+          SELECT pv.sku_id
+            FROM product_variants pv
+            JOIN products p ON p.product_id = pv.product_id
+           WHERE p.status = 'PUBLISHED'
+           ORDER BY md5(u.user_id || pv.sku_id)
+           LIMIT 1
+      ) v ON TRUE
+      LEFT JOIN LATERAL (
+          SELECT o.order_id
+            FROM orders o
+           WHERE o.user_id = u.user_id
+           ORDER BY o.created_at DESC
+           LIMIT 1
+      ) o ON TRUE
+      LEFT JOIN LATERAL (
+          SELECT c.cart_id
+            FROM carts c
+           WHERE c.user_id = u.user_id
+           LIMIT 1
+      ) c ON TRUE
+)
+INSERT INTO ucp_checkout_sessions
+    (id, user_id, cart_id, status, currency, items, buyer, context, order_id,
+     created_at, updated_at, expires_at, price_snapshot, payment, fulfillment,
+     voucher_code, version)
+SELECT 'UCPSESS_' || lpad(p.rn::text, 5, '0'),
+       p.user_id,
+       p.cart_id,
+       CASE p.rn % 3 WHEN 0 THEN 'completed' WHEN 1 THEN 'incomplete' ELSE 'canceled' END,
+       'VND',
+       jsonb_build_object(p.sku_id, 1),
+       jsonb_build_object('email', 'buyer-' || p.rn || '@example.test', 'name', 'Demo Buyer ' || p.rn),
+       jsonb_build_object('locale', 'vi-VN', 'source', 'ucp-demo'),
+       CASE WHEN p.rn % 3 = 0 THEN p.order_id END,
+       NOW() - make_interval(days => (p.rn % 6)::int),
+       NOW() - make_interval(days => (p.rn % 2)::int),
+       CASE WHEN p.rn % 3 = 1 THEN NOW() + INTERVAL '1 hour' END,
+       jsonb_build_object('subtotal', 250000, 'shipping', 30000, 'total', 280000),
+       CASE WHEN p.rn % 3 = 0
+             THEN jsonb_build_object('gateway', 'STRIPE', 'status', 'PAID') END,
+       CASE WHEN p.rn % 3 = 0
+             THEN jsonb_build_object('method', 'STANDARD', 'status', 'DELIVERED') END,
+       CASE WHEN p.rn % 3 = 0 THEN 'SHOP10-001' END,
+       1
+  FROM picked p
+ WHERE p.sku_id IS NOT NULL
+ON CONFLICT (id) DO NOTHING;
+
+WITH picked AS (
+    SELECT order_id,
+           ROW_NUMBER() OVER (ORDER BY order_id) AS rn
+      FROM orders
+     ORDER BY order_id
+     LIMIT 10
+)
+INSERT INTO ucp_webhook_deliveries
+    (delivery_id, event_type, order_id, webhook_url, payload, status,
+     attempts, next_attempt_at, last_error, created_at, updated_at)
+SELECT 'UCPDEL_' || lpad(p.rn::text, 5, '0'),
+       CASE WHEN p.rn % 2 = 0 THEN 'order.updated' ELSE 'order.created' END,
+       p.order_id,
+       'https://merchant.example.test/ucp/webhook',
+       jsonb_build_object(
+           'event_id', 'UCPDEL_' || lpad(p.rn::text, 5, '0'),
+           'event_type', CASE WHEN p.rn % 2 = 0 THEN 'order.updated' ELSE 'order.created' END,
+           'order_id', p.order_id,
+           'occurred_at', to_char(NOW() - make_interval(days => (p.rn % 5)::int), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+           'data', jsonb_build_object('sequence', p.rn)
+       ),
+       CASE WHEN p.rn <= 7 THEN 'DELIVERED' ELSE 'DEAD' END,
+       CASE WHEN p.rn <= 7 THEN 1 ELSE 10 END,
+       NOW(),
+       CASE WHEN p.rn > 7 THEN 'Webhook endpoint returned 500 after max retries' END,
+       NOW() - make_interval(days => (p.rn % 10)::int),
+       NOW() - make_interval(days => (p.rn % 5)::int)
+  FROM picked p
+ON CONFLICT (delivery_id) DO NOTHING;
+
+-- ===== V900.11.4__demo_inventory_and_compensation_consistency.sql =====
+-- Keep demo reservations consistent with stock: reserved units are not available.
+WITH reserved AS (
+    SELECT sku_id, warehouse_id, SUM(qty)::int AS qty
+      FROM stock_reservations
+     WHERE reservation_id LIKE 'RSV_DEMO_%'
+       AND status = 'RESERVED'
+     GROUP BY sku_id, warehouse_id
+)
+UPDATE inventory_items AS i
+   SET available_qty = GREATEST(i.available_qty - r.qty, 0),
+       updated_at = NOW()
+  FROM reserved r
+ WHERE i.sku_id = r.sku_id
+   AND i.warehouse_id = r.warehouse_id;

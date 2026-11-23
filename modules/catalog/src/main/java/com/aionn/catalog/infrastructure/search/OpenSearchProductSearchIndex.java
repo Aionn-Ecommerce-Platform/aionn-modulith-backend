@@ -117,7 +117,7 @@ public class OpenSearchProductSearchIndex implements ProductSearchIndex {
                 if (criteria.hasText()) {
                     b.must(m -> m.multiMatch(mm -> mm
                             .query(criteria.q())
-                            .fields("name^3", "aiDescription", "tags")
+                            .fields("name^3", "description", "tags")
                             .fuzziness("AUTO")));
                 }
                 return b;

@@ -32,4 +32,33 @@ public interface MerchantRepository extends JpaRepository<MerchantEntity, String
                m.merchant_id ASC
       """, countQuery = "SELECT COUNT(*) FROM merchants", nativeQuery = true)
   Page<MerchantEntity> findAllForStorefront(Pageable pageable);
+
+  @Query(value = """
+      SELECT m.*
+        FROM merchants m
+       WHERE (CAST(:searchPattern AS text) IS NULL OR LOWER(m.name) LIKE CAST(:searchPattern AS text))
+         AND (CAST(:provinceCode AS text) IS NULL OR m.province_code = CAST(:provinceCode AS text))
+       ORDER BY (
+                 SELECT COALESCE(SUM(psc.sold_count), 0)
+                   FROM products p
+                   JOIN product_sold_counters psc ON psc.product_id = p.product_id
+                  WHERE p.merchant_id = m.merchant_id
+               ) DESC,
+               (
+                 SELECT COUNT(*)
+                   FROM merchant_followers f
+                  WHERE f.merchant_id = m.merchant_id
+               ) DESC,
+               m.name ASC,
+               m.merchant_id ASC
+      """, countQuery = """
+      SELECT COUNT(*)
+        FROM merchants m
+       WHERE (CAST(:searchPattern AS text) IS NULL OR LOWER(m.name) LIKE CAST(:searchPattern AS text))
+         AND (CAST(:provinceCode AS text) IS NULL OR m.province_code = CAST(:provinceCode AS text))
+      """, nativeQuery = true)
+  Page<MerchantEntity> searchStorefront(
+      String searchPattern,
+      String provinceCode,
+      Pageable pageable);
 }

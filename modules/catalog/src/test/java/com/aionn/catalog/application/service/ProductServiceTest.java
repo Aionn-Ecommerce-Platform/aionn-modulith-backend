@@ -1,6 +1,5 @@
 package com.aionn.catalog.application.service;
 
-import com.aionn.catalog.application.dto.product.command.AssignCollectionsCommand;
 import com.aionn.catalog.application.dto.product.command.CloneProductCommand;
 import com.aionn.catalog.application.dto.product.command.DefineAttributesCommand;
 import com.aionn.catalog.application.dto.product.command.EmergencyTakedownCommand;
@@ -8,7 +7,6 @@ import com.aionn.catalog.application.dto.product.command.RejectProductCommand;
 import com.aionn.catalog.application.dto.product.command.RemoveVariantCommand;
 import com.aionn.catalog.application.dto.product.command.RestoreProductCommand;
 import com.aionn.catalog.application.dto.product.command.SubmitForReviewCommand;
-import com.aionn.catalog.application.dto.product.command.UpdateAiMetadataCommand;
 import com.aionn.catalog.application.dto.product.command.UpdateMediaCommand;
 import com.aionn.catalog.application.dto.search.ProductSearchCriteria;
 import com.aionn.catalog.application.dto.search.ProductSearchDocument;
@@ -439,33 +437,6 @@ class ProductServiceTest {
                                 PRODUCT_ID, MERCHANT_ID, List.of("img1", "img2")));
 
                 assertThat(product.imageList()).containsExactly("img1", "img2");
-        }
-
-        @Test
-        void updateAiMetadataAppliesTagsAndDescription() {
-                Product product = publishableProduct();
-                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-
-                productService.updateAiMetadata(
-                                new UpdateAiMetadataCommand(
-                                                PRODUCT_ID, MERCHANT_ID, List.of("premium"), "handmade widget"));
-
-                assertThat(product.tags()).containsExactly("premium");
-                assertThat(product.getAiDescription()).isEqualTo("handmade widget");
-        }
-
-        @Test
-        void assignCollectionsReplacesList() {
-                Product product = publishableProduct();
-                when(productPersistencePort.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-                when(productPersistencePort.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-
-                productService.assignCollections(
-                                new AssignCollectionsCommand(
-                                                PRODUCT_ID, MERCHANT_ID, List.of("coll-1", "coll-2")));
-
-                assertThat(product.collectionIds()).containsExactly("coll-1", "coll-2");
         }
 
         @Test

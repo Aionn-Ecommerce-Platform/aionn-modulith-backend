@@ -10,6 +10,8 @@ import com.aionn.notification.application.port.in.notification.ListMyNotificatio
 import com.aionn.notification.application.port.in.notification.MarkNotificationReadInputPort;
 import com.aionn.notification.application.port.in.notification.SendNotificationByEventInputPort;
 import com.aionn.platform.web.response.ApiResponse;
+import com.aionn.platform.web.response.PageMetadata;
+import com.aionn.notification.application.dto.notification.result.NotificationPageResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -40,6 +42,7 @@ public class NotificationController {
         private final DeleteNotificationInputPort deleteNotificationInputPort;
         private final GetMyNotificationInputPort getMyNotificationInputPort;
         private final ListMyNotificationsInputPort listMyNotificationsInputPort;
+        private final com.aionn.notification.application.service.NotificationDispatchService dispatchService;
         private final NotificationDtoMapper dtoMapper;
 
         @PostMapping("/dispatch")
@@ -93,9 +96,21 @@ public class NotificationController {
         @Operation(summary = "List my notifications")
         public ResponseEntity<ApiResponse<List<NotificationResponse>>> listMine(
                         @CurrentUserId String userId,
-                        @RequestParam(defaultValue = "50") @Min(1) @Max(100) int limit) {
-                return ResponseEntity.ok(ApiResponse.success(
-                                dtoMapper.toResponses(listMyNotificationsInputPort.execute(userId, limit)),
+                        @RequestParam(defaultValue = "0") @Min(0) int page,
+                        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit) {
+                NotificationPageResult result = listMyNotificationsInputPort.executePaged(userId, page, limit);
+                return ResponseEntity.ok(ApiResponse.successWithPaging(
+                                dtoMapper.toResponses(result.content()),
+                                PageMetadata.of(page, limit, result.totalElements()),
                                 "Notifications fetched"));
+        }
+
+        @GetMapping("/unread-count")
+        @PreAuthorize("isAuthenticated()")
+        @Operation(summary = "Count my unread notifications")
+        public ResponseEntity<ApiResponse<Long>> unreadCount(@CurrentUserId String userId) {
+                return ResponseEntity.ok(ApiResponse.success(
+                                dispatchService.unreadCount(userId),
+                                "Unread count fetched"));
         }
 }

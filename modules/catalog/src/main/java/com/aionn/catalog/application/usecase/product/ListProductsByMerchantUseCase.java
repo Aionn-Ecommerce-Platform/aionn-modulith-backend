@@ -21,7 +21,15 @@ public class ListProductsByMerchantUseCase implements ListProductsByMerchantInpu
     @Override
     @Transactional(readOnly = true)
     public PageResult<ProductResult> execute(ListProductsByMerchantQuery query) {
-        PageResult<Product> page = productService.listByMerchant(query.merchantId(), query.pagination());
+        PageResult<Product> page = productService.listByMerchant(
+                query.merchantId(),
+                query.pagination(),
+                query.search(),
+                query.status(),
+                query.categoryIds(),
+                query.minPrice(),
+                query.maxPrice(),
+                query.sort());
         return productResultMapper.toPageResult(page);
     }
 }

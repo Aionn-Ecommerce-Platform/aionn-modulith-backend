@@ -70,13 +70,11 @@ class ProductSearchIndexUpdaterTest {
         updater.onProductCategorized(new ProductEvents.ProductCategorized(
                 PRODUCT_ID, List.of("c1"), Instant.now()));
         updater.onProductMetadataUpdated(new ProductEvents.ProductMetadataUpdated(
-                PRODUCT_ID, List.of("tag"), "desc", Instant.now()));
-        updater.onProductCollectionAssigned(new ProductEvents.ProductCollectionAssigned(
-                PRODUCT_ID, List.of("col"), Instant.now()));
+                PRODUCT_ID, List.of("tag"), Instant.now()));
         updater.onProductAttributesDefined(new ProductEvents.ProductAttributesDefined(
                 PRODUCT_ID, Map.of("color", "red"), Instant.now()));
 
-        verify(writer, times(9)).reindexIfSearchableAsync(PRODUCT_ID);
+        verify(writer, times(8)).reindexIfSearchableAsync(PRODUCT_ID);
     }
 
     @Test

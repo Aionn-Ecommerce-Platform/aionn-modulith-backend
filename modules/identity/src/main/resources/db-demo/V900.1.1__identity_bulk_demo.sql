@@ -2197,3 +2197,207 @@ SET created_at = TIMESTAMPTZ '2025-02-15 00:00:00+00'
 WHERE user_id IN (
   SELECT user_id FROM users WHERE email LIKE '%@example.test'
 );
+
+-- Moved from app/V900.11.0__demo_admin_operations.sql
+WITH buyers AS (
+    SELECT u.user_id, u.email,
+           ROW_NUMBER() OVER (ORDER BY u.user_id) AS rn
+      FROM users u
+      JOIN user_roles r ON r.user_id = u.user_id AND r.role = 'BUYER'
+)
+INSERT INTO user_feedbacks
+    (feedback_id, user_id, category, subject, content, rating,
+     contact_email, contact_phone, status, handled_by, handled_at,
+     created_at, updated_at, admin_reply)
+SELECT 'FB_DEMO_' || lpad(b.rn::text, 5, '0'),
+       b.user_id,
+       CASE b.rn % 5
+           WHEN 0 THEN 'COMPLAINT'
+           WHEN 1 THEN 'BUG'
+           WHEN 2 THEN 'FEATURE_REQUEST'
+           WHEN 3 THEN 'CONTACT'
+           ELSE 'GENERAL'
+       END,
+       CASE b.rn % 5
+           WHEN 0 THEN 'Đơn hàng giao chậm hơn dự kiến'
+           WHEN 1 THEN 'Không áp dụng được mã giảm giá'
+           WHEN 2 THEN 'Đề xuất thêm bộ lọc theo thương hiệu'
+           WHEN 3 THEN 'Cần hỗ trợ đổi địa chỉ nhận hàng'
+           ELSE 'Góp ý trải nghiệm tìm kiếm sản phẩm'
+       END,
+       'Nội dung góp ý chi tiết từ khách hàng, kèm thông tin đơn hàng và mong muốn được hỗ trợ thêm.',
+       (b.rn % 5) + 1,
+       b.email,
+       NULL,
+       CASE
+           WHEN b.rn <= 6 THEN 'OPEN'
+           WHEN b.rn <= 10 THEN 'IN_REVIEW'
+           WHEN b.rn <= 16 THEN 'RESOLVED'
+           ELSE 'CLOSED'
+       END,
+       CASE WHEN b.rn > 6
+             THEN (SELECT user_id FROM user_roles WHERE role = 'CS_ADMIN' ORDER BY user_id LIMIT 1) END,
+       CASE WHEN b.rn > 6 THEN NOW() - make_interval(days => (b.rn % 7)::int) END,
+       NOW() - make_interval(days => ((b.rn % 20) + 1)::int),
+       NOW() - make_interval(days => (b.rn % 5)::int),
+       CASE WHEN b.rn > 10
+             THEN 'Cảm ơn bạn đã phản hồi. Bộ phận CSKH đã kiểm tra và xử lý xong yêu cầu này.' END
+  FROM buyers b
+ WHERE b.rn <= 20
+ON CONFLICT (feedback_id) DO NOTHING;
+
+-- Moved from app/V900.11.2__demo_member_inventory_activity.sql
+WITH picked_users AS (
+    SELECT user_id,
+           ROW_NUMBER() OVER (ORDER BY user_id) AS user_rank
+      FROM users
+     ORDER BY user_id
+     LIMIT 20
+),
+slots AS (
+    SELECT generate_series(0, 4) AS slot
+)
+INSERT INTO security_audits
+    (audit_id, user_id, event_type, description, ip_address, device_id, timestamp)
+SELECT '01M9AUD' || lpad(ROW_NUMBER() OVER (ORDER BY u.user_rank, s.slot)::text, 19, '0'),
+       u.user_id,
+       CASE (u.user_rank + s.slot) % 8
+           WHEN 0 THEN 'PASSWORD_CHANGED'
+           WHEN 1 THEN 'PASSWORD_RESET_REQUESTED'
+           WHEN 2 THEN 'PASSWORD_RESET_COMPLETED'
+           WHEN 3 THEN 'MFA_SETUP_INITIATED'
+           WHEN 4 THEN 'MFA_ENABLED'
+           WHEN 5 THEN 'MFA_DISABLED'
+           WHEN 6 THEN 'MFA_BACKUP_CODES_REGENERATED'
+           ELSE 'AGENT_SUSPENDED'
+       END,
+       CASE (u.user_rank + s.slot) % 8
+           WHEN 0 THEN 'Đổi mật khẩu tài khoản'
+           WHEN 1 THEN 'Yêu cầu đặt lại mật khẩu'
+           WHEN 2 THEN 'Hoàn tất đặt lại mật khẩu'
+           WHEN 3 THEN 'Bắt đầu thiết lập xác thực 2 lớp'
+           WHEN 4 THEN 'Bật xác thực 2 lớp'
+           WHEN 5 THEN 'Tắt xác thực 2 lớp'
+           WHEN 6 THEN 'Tạo lại mã dự phòng'
+           ELSE 'Tạm khóa một AI agent'
+       END,
+       '203.113.1.' || ((u.user_rank * 7 + s.slot * 13) % 250),
+       'device-demo-' || u.user_rank || '-' || s.slot,
+       NOW() - make_interval(days => ((u.user_rank * 3 + s.slot) % 90)::int,
+                             hours => (s.slot * 2)::int)
+  FROM picked_users u
+  CROSS JOIN slots s
+ON CONFLICT (audit_id) DO NOTHING;
+
+-- Moved from app/V900.11.2__demo_member_inventory_activity.sql
+INSERT INTO data_export_requests
+    (export_request_id, user_id, status, requested_at, file_url, completed_at)
+SELECT '01M9EXP' || lpad('1', 19, '0'),
+       u.user_id,
+       'COMPLETED',
+       NOW() - INTERVAL '12 days',
+       '/demo/exports/buyer-001.json',
+       NOW() - INTERVAL '12 days' + INTERVAL '2 minutes'
+  FROM users u
+ WHERE u.email = 'buyer_001@example.test'
+ON CONFLICT (export_request_id) DO NOTHING;
+
+-- Moved from app/V900.11.2__demo_member_inventory_activity.sql
+INSERT INTO account_deletion_requests
+    (deletion_request_id, user_id, status, requested_at,
+     scheduled_deletion_at, canceled_at, completed_at)
+SELECT '01M9DEL' || lpad('1', 19, '0'),
+       u.user_id,
+       'CANCELLED',
+       NOW() - INTERVAL '20 days',
+       NOW() - INTERVAL '6 days',
+       NOW() - INTERVAL '19 days',
+       NULL
+  FROM users u
+ WHERE u.email = 'buyer_002@example.test'
+ON CONFLICT (deletion_request_id) DO NOTHING;
+
+-- Moved from app/V900.11.3__demo_remaining_tables.sql
+WITH consent_types(consent_type, marketing) AS (
+    VALUES ('TERMS_OF_SERVICE', false),
+           ('PRIVACY_POLICY', false),
+           ('MARKETING', true)
+)
+INSERT INTO user_consents
+    (consent_id, user_id, consent_type, version, agreed_at, revoked_at, ip_address)
+SELECT '01M9CON' || lpad(ROW_NUMBER() OVER (ORDER BY u.user_id, c.consent_type)::text, 19, '0'),
+       u.user_id,
+       c.consent_type,
+       '1.0',
+       NOW() - make_interval(days => (abs(hashtext(u.user_id)) % 180)::int),
+       CASE WHEN c.marketing AND (abs(hashtext(u.user_id)) % 4 = 0)
+             THEN NOW() - make_interval(days => (abs(hashtext(u.user_id)) % 30)::int) END,
+       '203.113.1.' || (abs(hashtext(u.user_id)) % 250)
+  FROM users u
+  CROSS JOIN consent_types c
+ WHERE NOT EXISTS (
+       SELECT 1 FROM user_consents existing
+        WHERE existing.user_id = u.user_id
+          AND existing.consent_type = c.consent_type);
+
+-- Moved from app/V900.11.3__demo_remaining_tables.sql
+WITH buyers AS (
+    SELECT user_id,
+           ROW_NUMBER() OVER (ORDER BY user_id) AS rn
+      FROM user_roles
+     WHERE role = 'BUYER'
+     ORDER BY user_id
+     LIMIT 10
+)
+INSERT INTO agent_identities
+    (agent_id, owner_id, name, key_hash, permissions, status, expiry_at, created_at)
+SELECT '01M9AGT' || lpad(b.rn::text, 19, '0'),
+       b.user_id,
+       'Shopping assistant ' || b.rn,
+       'agent-demo-hash-' || lpad(b.rn::text, 6, '0'),
+       '["catalog:read","orders:read","cart:write"]'::jsonb,
+       CASE WHEN b.rn = 10 THEN 'SUSPENDED' ELSE 'ACTIVE' END,
+       NOW() + INTERVAL '1 year',
+       NOW() - make_interval(days => (b.rn * 3)::int)
+  FROM buyers b
+ON CONFLICT (agent_id) DO NOTHING;
+
+-- Moved from app/V900.11.3__demo_remaining_tables.sql
+WITH picked AS (
+    SELECT user_id,
+           ROW_NUMBER() OVER (ORDER BY user_id) AS rn
+      FROM users
+     ORDER BY user_id
+     LIMIT 5
+),
+codes AS (
+    SELECT generate_series(1, 5) AS code_no
+)
+INSERT INTO backup_codes (backup_code_id, user_id, code_hash, generated_at, used_at)
+SELECT '01M9BC' || lpad(ROW_NUMBER() OVER (ORDER BY p.rn, c.code_no)::text, 19, '0'),
+       p.user_id,
+       'bc-demo-hash-' || p.rn || '-' || c.code_no,
+       NOW() - make_interval(days => (p.rn * 2)::int),
+       CASE WHEN c.code_no = 5 THEN NOW() - make_interval(days => p.rn::int) END
+  FROM picked p
+  CROSS JOIN codes c
+ON CONFLICT (backup_code_id) DO NOTHING;
+
+-- Moved from app/V900.11.3__demo_remaining_tables.sql
+WITH buyers AS (
+    SELECT user_id,
+           ROW_NUMBER() OVER (ORDER BY user_id) AS rn
+      FROM user_roles
+     WHERE role = 'BUYER'
+     ORDER BY user_id
+     LIMIT 20
+)
+INSERT INTO social_accounts
+    (social_account_id, user_id, provider, provider_user_id, created_at)
+SELECT '01M9SOC' || lpad(b.rn::text, 19, '0'),
+       b.user_id,
+       CASE WHEN b.rn % 2 = 0 THEN 'GOOGLE' ELSE 'FACEBOOK' END,
+       'social-demo-' || b.rn,
+       NOW() - make_interval(days => (b.rn * 4)::int)
+  FROM buyers b
+ON CONFLICT (social_account_id) DO NOTHING;

@@ -1,15 +1,15 @@
 package com.aionn.catalog.application.service;
 
-import com.aionn.catalog.application.dto.product.command.AssignCollectionsCommand;
+import com.aionn.catalog.application.dto.product.command.AssignBrandCommand;
 import com.aionn.catalog.application.dto.product.command.ChangeVariantParcelCommand;
 import com.aionn.catalog.application.dto.product.command.EmergencyTakedownCommand;
 import com.aionn.catalog.application.dto.product.command.RecordSearchIntentCommand;
 import com.aionn.catalog.application.dto.product.command.RemoveVariantCommand;
-import com.aionn.catalog.application.dto.product.command.UpdateAiMetadataCommand;
+import com.aionn.catalog.application.dto.product.command.UpdateDescriptionCommand;
 import com.aionn.catalog.application.dto.product.command.UpdateMediaCommand;
+import com.aionn.catalog.application.dto.product.command.UpdateProductContentCommand;
 
 import com.aionn.catalog.application.dto.common.PageResult;
-import com.aionn.catalog.application.dto.product.command.AssignBrandCommand;
 import com.aionn.catalog.application.dto.product.command.AssignCategoriesCommand;
 import com.aionn.catalog.application.dto.product.command.BulkPriceUpdateCommand;
 import com.aionn.catalog.application.dto.product.command.ChangeVariantPriceCommand;
@@ -22,6 +22,7 @@ import com.aionn.catalog.application.dto.product.command.PublishProductCommand;
 import com.aionn.catalog.application.dto.product.command.RejectProductCommand;
 import com.aionn.catalog.application.dto.product.command.RestoreProductCommand;
 import com.aionn.catalog.application.dto.product.command.SubmitForReviewCommand;
+import com.aionn.catalog.application.dto.product.command.WithdrawReviewCommand;
 import com.aionn.catalog.application.dto.product.result.BulkPriceUpdateResult;
 import com.aionn.catalog.application.dto.product.result.ProductResult;
 import com.aionn.catalog.application.dto.search.ProductSearchCriteria;
@@ -67,6 +68,7 @@ import java.time.Clock;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Optional;
 
@@ -131,7 +133,7 @@ public class ProductService {
                 source.collectionIds(),
                 source.attributes(),
                 clonedVariants,
-                source.getAiDescription(),
+                source.getDescription(),
                 ProductStatus.DRAFT,
                 clock.instant(),
                 clock.instant(),
@@ -172,19 +174,26 @@ public class ProductService {
         return saved;
     }
 
-    public Product updateAiMetadata(
-            UpdateAiMetadataCommand command) {
+    public Product updateContent(UpdateProductContentCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
-        product.updateAiMetadata(command.tags(), command.aiDescription(), clock);
+        if (command.images() != null) {
+            product.updateMedia(command.images(), clock);
+        }
+        if (command.description() != null) {
+            product.updateDescription(command.description(), clock);
+        }
+        if (command.tags() != null) {
+            product.updateTags(command.tags(), clock);
+        }
         Product saved = productPersistencePort.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
     }
 
-    public Product assignCollections(
-            AssignCollectionsCommand command) {
+    public Product updateDescription(
+            UpdateDescriptionCommand command) {
         Product product = ownedBy(command.productId(), command.merchantId());
-        product.assignToCollections(command.collectionIds(), clock);
+        product.updateDescription(command.description(), clock);
         Product saved = productPersistencePort.save(product);
         eventPublisher.publish(product.pullEvents());
         return saved;
@@ -320,6 +329,14 @@ public class ProductService {
         return saved;
     }
 
+    public Product withdrawReview(WithdrawReviewCommand command) {
+        Product product = ownedBy(command.productId(), command.merchantId());
+        product.withdrawReview(clock);
+        Product saved = productPersistencePort.save(product);
+        eventPublisher.publish(product.pullEvents());
+        return saved;
+    }
+
     public Product reject(RejectProductCommand command) {
         Product product = required(command.productId());
         product.reject(command.adminId(), command.reasonCode(), command.feedback(), clock);
@@ -359,6 +376,33 @@ public class ProductService {
         List<Product> content = productPersistencePort.listByMerchant(merchantId, pagination);
         long total = productPersistencePort.countByMerchant(merchantId);
         return new PageResult<>(content, pagination.page(), pagination.size(), total);
+    }
+
+    public PageResult<Product> listByMerchant(
+            String merchantId,
+            OffsetPagination pagination,
+            String search,
+            ProductStatus status,
+            List<String> categoryIds,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String sort) {
+        List<Product> content = productPersistencePort.searchByMerchant(
+                merchantId, search, status, categoryIds, minPrice, maxPrice, sort, pagination);
+        long total = productPersistencePort.countSearchByMerchant(
+                merchantId, search, status, categoryIds, minPrice, maxPrice);
+        return new PageResult<>(content, pagination.page(), pagination.size(), total);
+    }
+
+    public record MerchantProductStats(long total, long published, long variants, long sold) {
+    }
+
+    public MerchantProductStats merchantStats(String merchantId) {
+        return new MerchantProductStats(
+                productPersistencePort.countByMerchant(merchantId),
+                productPersistencePort.countByMerchantAndStatus(merchantId, ProductStatus.PUBLISHED),
+                productPersistencePort.countVariantsByMerchant(merchantId),
+                productPersistencePort.sumSoldCountByMerchant(merchantId));
     }
 
     @Transactional(readOnly = true)
@@ -405,7 +449,8 @@ public class ProductService {
             return popularProducts(limit);
         }
 
-        List<Product> products = productPersistencePort.findPersonalizedProducts(activeCategoryIds, activeBrandIds, limit);
+        List<Product> products = productPersistencePort.findPersonalizedProducts(activeCategoryIds, activeBrandIds,
+                limit);
         if (products.isEmpty()) {
             return popularProducts(limit);
         }
@@ -431,8 +476,10 @@ public class ProductService {
     }
 
     /**
-     * Records a user's explicit search intent as a behavioural signal for the recommendation module.
-     * Only published when there is something to learn from - a keyword or a chosen facet - and only
+     * Records a user's explicit search intent as a behavioural signal for the
+     * recommendation module.
+     * Only published when there is something to learn from - a keyword or a chosen
+     * facet - and only
      * for real users; anonymous browsing is not personalised.
      */
     public void recordSearchIntent(RecordSearchIntentCommand command) {
@@ -483,8 +530,8 @@ public class ProductService {
         long total = 0;
         while (true) {
             int pageOffset = offset;
-            List<ProductSearchDocument> docs = transactionTemplate.execute(status ->
-                    productPersistencePort.findPublished(limit, pageOffset).stream()
+            List<ProductSearchDocument> docs = transactionTemplate
+                    .execute(status -> productPersistencePort.findPublished(limit, pageOffset).stream()
                             .map(this::buildSearchDocument)
                             .toList());
             if (docs == null || docs.isEmpty()) {

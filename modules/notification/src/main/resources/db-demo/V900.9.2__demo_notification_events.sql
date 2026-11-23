@@ -394,3 +394,59 @@ ON CONFLICT (provider_id) DO NOTHING;
 UPDATE notifications
 SET created_at = now(), updated_at = now()
 WHERE created_at > now();
+
+-- Moved from app/V900.11.2__demo_member_inventory_activity.sql
+WITH picked AS (
+    SELECT noti_id,
+           ROW_NUMBER() OVER (ORDER BY noti_id) AS rn
+      FROM notifications
+     WHERE noti_id LIKE 'NOTI_ORD_%'
+     ORDER BY noti_id
+     LIMIT 10
+),
+attempts AS (
+    SELECT noti_id, rn, 0 AS attempt_number,
+           CASE WHEN rn <= 3 THEN 'FAILED' ELSE 'SUCCEEDED' END AS status
+      FROM picked
+    UNION ALL
+    SELECT noti_id, rn, 1 AS attempt_number, 'SUCCEEDED' AS status
+      FROM picked
+     WHERE rn <= 3
+)
+INSERT INTO notification_delivery_attempts
+    (attempt_id, notification_id, channel, attempt_number, status,
+     provider_message_id, error, started_at, completed_at, updated_at)
+SELECT a.noti_id || ':IN_APP:' || a.attempt_number,
+       a.noti_id,
+       'IN_APP',
+       a.attempt_number,
+       a.status,
+       CASE WHEN a.status = 'SUCCEEDED' THEN 'inapp-' || a.noti_id || '-' || a.attempt_number END,
+       CASE WHEN a.status = 'FAILED' THEN 'PROVIDER_TIMEOUT' END,
+       NOW() - make_interval(days => (a.rn % 5)::int, mins => (a.attempt_number * 2)::int),
+       NOW() - make_interval(days => (a.rn % 5)::int, mins => (a.attempt_number * 2)::int),
+       NOW() - make_interval(days => (a.rn % 5)::int)
+  FROM attempts a
+ON CONFLICT (notification_id, attempt_number) DO NOTHING;
+
+-- Moved from app/V900.11.3__demo_remaining_tables.sql
+WITH buyers AS (
+    SELECT user_id,
+           ROW_NUMBER() OVER (ORDER BY user_id) AS rn
+      FROM user_roles
+     WHERE role = 'BUYER'
+     ORDER BY user_id
+     LIMIT 20
+)
+INSERT INTO device_tokens
+    (token_id, user_id, device_token, os, is_active, version, registered_at, updated_at)
+SELECT 'DT_DEMO_' || lpad(b.rn::text, 5, '0'),
+       b.user_id,
+       'fcm-demo-token-' || b.rn || '-aionn',
+       CASE WHEN b.rn % 2 = 0 THEN 'ANDROID' ELSE 'IOS' END,
+       true,
+       0,
+       NOW() - make_interval(days => (b.rn % 30)::int),
+       NOW() - make_interval(days => (b.rn % 7)::int)
+  FROM buyers b
+ON CONFLICT (token_id) DO NOTHING;

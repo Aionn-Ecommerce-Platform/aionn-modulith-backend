@@ -20,6 +20,29 @@ public interface OrderReturnPersistencePort {
 
     List<OrderReturn> findByMerchantId(String merchantId, int limit);
 
+    List<OrderReturn> findByMerchantId(String merchantId, int page, int limit);
+
+    long countByMerchantId(String merchantId);
+
+    List<OrderReturn> searchByMerchant(
+            String merchantId,
+            String status,
+            String reasonType,
+            String search,
+            int page,
+            int limit);
+
+    long countSearchByMerchant(
+            String merchantId,
+            String status,
+            String reasonType,
+            String search);
+
+    List<ReturnStatusCount> countByMerchantGroupByStatus(String merchantId);
+
+    record ReturnStatusCount(String status, long count) {
+    }
+
     boolean hasActiveReturn(String orderId);
 
     List<String> findRefundRetryIds(Instant now, int maxAttempts, int limit);

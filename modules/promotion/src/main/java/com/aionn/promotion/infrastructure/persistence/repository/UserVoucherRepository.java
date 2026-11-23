@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -59,6 +60,31 @@ public interface UserVoucherRepository extends JpaRepository<UserVoucherEntity, 
     long countActiveByUserId(@Param("userId") String userId, @Param("now") Instant now);
 
     List<UserVoucherEntity> findByUserIdOrderByClaimedAtDesc(String userId, Pageable pageable);
+
+    @Query("""
+            SELECT uv FROM UserVoucherEntity uv
+             WHERE uv.userId = :userId
+               AND (:hasStatuses = false OR uv.status IN :statuses)
+             ORDER BY CASE WHEN uv.status IN ('CLAIMED', 'RELEASED') THEN 0
+                           WHEN uv.status IN ('APPLIED', 'RESERVED') THEN 1
+                           ELSE 2 END,
+                      uv.claimedAt DESC
+            """)
+    List<UserVoucherEntity> searchByUserId(
+            @Param("userId") String userId,
+            @Param("hasStatuses") boolean hasStatuses,
+            @Param("statuses") Collection<String> statuses,
+            Pageable pageable);
+
+    @Query("""
+            SELECT COUNT(uv) FROM UserVoucherEntity uv
+             WHERE uv.userId = :userId
+               AND (:hasStatuses = false OR uv.status IN :statuses)
+            """)
+    long countSearchByUserId(
+            @Param("userId") String userId,
+            @Param("hasStatuses") boolean hasStatuses,
+            @Param("statuses") Collection<String> statuses);
 
     @Query("""
             SELECT uv FROM UserVoucherEntity uv

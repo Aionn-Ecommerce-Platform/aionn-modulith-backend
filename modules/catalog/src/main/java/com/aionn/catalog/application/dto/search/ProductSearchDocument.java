@@ -9,7 +9,7 @@ public record ProductSearchDocument(
         String productId,
         String merchantId,
         String name,
-        String aiDescription,
+        String description,
         String brandId,
         List<String> categoryIds,
         List<String> collectionIds,
