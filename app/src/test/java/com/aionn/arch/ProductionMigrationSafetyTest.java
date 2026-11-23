@@ -31,7 +31,12 @@ class ProductionMigrationSafetyTest {
                                     && stmt.contains("cmp_late_delivery")),
                     new ApprovedBackfill("vouchers",
                             stmt -> stmt.startsWith("insert into vouchers")
-                                    && stmt.contains("latedelivery15k"))));
+                                    && stmt.contains("latedelivery15k"))),
+            "modules/catalog/src/main/resources/db/V2.2__add_product_description.sql", List.of(
+                    new ApprovedBackfill("products",
+                            stmt -> stmt.startsWith("update products set description = ai_description")),
+                    new ApprovedBackfill("product_translations",
+                            stmt -> stmt.startsWith("update product_translations set description = ai_description"))));
 
     private static final Set<String> DEMO_TABLES = Set.of(
             "users",
