@@ -41,8 +41,8 @@ public class ProductTranslationEntity {
     @Column(name = "name", nullable = false, length = 255)
     private String name;
 
-    @Column(name = "ai_description", columnDefinition = "TEXT")
-    private String aiDescription;
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

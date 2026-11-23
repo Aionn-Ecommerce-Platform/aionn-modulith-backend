@@ -1,5 +1,6 @@
 package com.aionn.notification.application.usecase.notification;
 
+import com.aionn.notification.application.dto.notification.result.NotificationPageResult;
 import com.aionn.notification.application.dto.notification.result.NotificationResult;
 import com.aionn.notification.application.mapper.NotificationResultMapper;
 import com.aionn.notification.application.port.in.notification.ListMyNotificationsInputPort;
@@ -21,5 +22,14 @@ public class ListMyNotificationsUseCase implements ListMyNotificationsInputPort 
     @Transactional(readOnly = true)
     public List<NotificationResult> execute(String userId, int limit) {
         return notificationResultMapper.toResults(dispatchService.listMine(userId, limit));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public NotificationPageResult executePaged(String userId, int page, int limit) {
+        NotificationDispatchService.NotificationPage result =
+                dispatchService.pageMine(userId, page, limit);
+        return new NotificationPageResult(
+                notificationResultMapper.toResults(result.content()), result.totalElements());
     }
 }

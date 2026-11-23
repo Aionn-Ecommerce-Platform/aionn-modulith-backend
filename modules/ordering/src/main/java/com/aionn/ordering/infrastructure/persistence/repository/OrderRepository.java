@@ -46,6 +46,69 @@ public interface OrderRepository extends JpaRepository<OrderEntity, String> {
   @EntityGraph(attributePaths = "items")
   List<OrderEntity> findByMerchantIdAndStatusInOrderByCreatedAtDesc(String merchantId, Collection<String> statuses, Pageable pageable);
 
+  @EntityGraph(attributePaths = "items")
+  @Query("""
+      SELECT o FROM OrderEntity o
+       WHERE o.merchantId = :merchantId
+         AND (:hasStatuses = false OR o.status IN :statuses)
+         AND (:hasSearch = false
+              OR LOWER(o.orderId) LIKE :searchPattern
+              OR LOWER(o.orderSn) LIKE :searchPattern)
+         AND o.createdAt >= :from
+         AND o.createdAt < :to
+       ORDER BY o.createdAt DESC
+      """)
+  List<OrderEntity> searchMerchantOrders(
+      String merchantId,
+      boolean hasStatuses,
+      Collection<String> statuses,
+      boolean hasSearch,
+      String searchPattern,
+      Instant from,
+      Instant to,
+      Pageable pageable);
+
+  @Query("""
+      SELECT COUNT(o) FROM OrderEntity o
+       WHERE o.merchantId = :merchantId
+         AND (:hasStatuses = false OR o.status IN :statuses)
+         AND (:hasSearch = false
+              OR LOWER(o.orderId) LIKE :searchPattern
+              OR LOWER(o.orderSn) LIKE :searchPattern)
+         AND o.createdAt >= :from
+         AND o.createdAt < :to
+      """)
+  long countSearchMerchantOrders(
+      String merchantId,
+      boolean hasStatuses,
+      Collection<String> statuses,
+      boolean hasSearch,
+      String searchPattern,
+      Instant from,
+      Instant to);
+
+  @Query("""
+      SELECT o.status AS status, COUNT(o) AS count
+        FROM OrderEntity o
+       WHERE o.merchantId = :merchantId
+       GROUP BY o.status
+      """)
+  List<OrderStatusCount> countMerchantOrdersByStatus(String merchantId);
+
+  interface OrderStatusCount {
+    String getStatus();
+
+    Long getCount();
+  }
+
+  long countByMerchantId(String merchantId);
+
+  long countByMerchantIdAndStatusIn(String merchantId, Collection<String> statuses);
+
+  long countByUserId(String userId);
+
+  long countByUserIdAndStatusIn(String userId, Collection<String> statuses);
+
   @Query("""
       SELECT o.status AS status,
              o.totalAmount AS totalAmount,

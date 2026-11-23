@@ -132,8 +132,8 @@ public class InMemoryFacetProductSearchIndex implements ProductSearchIndex {
         if (doc.name() != null) {
             haystack.append(doc.name().toLowerCase(Locale.ROOT)).append(' ');
         }
-        if (doc.aiDescription() != null) {
-            haystack.append(doc.aiDescription().toLowerCase(Locale.ROOT)).append(' ');
+        if (doc.description() != null) {
+            haystack.append(doc.description().toLowerCase(Locale.ROOT)).append(' ');
         }
         doc.tags().forEach(t -> haystack.append(t.toLowerCase(Locale.ROOT)).append(' '));
         return haystack.toString().contains(needle);

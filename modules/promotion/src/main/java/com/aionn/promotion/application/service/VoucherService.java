@@ -258,6 +258,18 @@ public class VoucherService {
         return userVoucherPersistencePort.findByUser(userId, limit).stream().map(this::toResult).toList();
     }
 
+    @Transactional(readOnly = true)
+    public com.aionn.promotion.application.dto.voucher.result.UserVoucherPageResult pageMine(
+            String userId, List<String> statuses, int page, int limit) {
+        List<UserVoucherResult> content = userVoucherPersistencePort
+                .searchByUser(userId, statuses, page, limit)
+                .stream()
+                .map(this::toResult)
+                .toList();
+        long total = userVoucherPersistencePort.countSearchByUser(userId, statuses);
+        return new com.aionn.promotion.application.dto.voucher.result.UserVoucherPageResult(content, total);
+    }
+
     private UserVoucherResult toResult(UserVoucher userVoucher) {
         UserVoucherResult base = mapper.toResult(userVoucher);
         Voucher voucher = voucherPersistencePort.findByCode(userVoucher.getVoucherCode()).orElse(null);

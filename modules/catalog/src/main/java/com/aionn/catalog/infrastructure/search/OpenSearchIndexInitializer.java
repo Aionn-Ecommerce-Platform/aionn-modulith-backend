@@ -112,13 +112,13 @@ public class OpenSearchIndexInitializer {
                                                 .analyzer(ANALYZER_AUTOCOMPLETE)
                                                 .searchAnalyzer(ANALYZER_TEXT)))))
                                 .fields("raw", keyword))));
-                Property aiDescField = Property.of(b -> b.text(TextProperty.of(t -> t.analyzer(ANALYZER_TEXT))));
+                Property descriptionField = Property.of(b -> b.text(TextProperty.of(t -> t.analyzer(ANALYZER_TEXT))));
 
                 return TypeMapping.of(b -> b
                                 .properties("productId", keyword)
                                 .properties("merchantId", keyword)
                                 .properties("name", nameField)
-                                .properties("aiDescription", aiDescField)
+                                .properties("description", descriptionField)
                                 .properties("brandId", keyword)
                                 .properties("categoryIds", keyword)
                                 .properties("collectionIds", keyword)

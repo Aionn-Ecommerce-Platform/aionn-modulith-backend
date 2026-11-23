@@ -15,7 +15,7 @@ public record ProductResponse(
         List<String> tags,
         Map<String, String> attributes,
         List<Variant> variants,
-        String aiDescription,
+        String description,
         String status,
         Instant createdAt,
         Instant updatedAt,

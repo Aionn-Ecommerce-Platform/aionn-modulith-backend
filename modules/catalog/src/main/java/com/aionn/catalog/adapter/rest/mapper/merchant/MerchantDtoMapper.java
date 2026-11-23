@@ -57,6 +57,11 @@ public interface MerchantDtoMapper {
     }
 
     default ListMerchantsQuery toListQuery(int page, int size) {
-        return new ListMerchantsQuery(OffsetPagination.of(page, size));
+        return new ListMerchantsQuery(OffsetPagination.of(page, size), null, null);
+    }
+
+    default ListMerchantsQuery toListQuery(
+            int page, int size, String search, String provinceCode) {
+        return new ListMerchantsQuery(OffsetPagination.of(page, size), search, provinceCode);
     }
 }

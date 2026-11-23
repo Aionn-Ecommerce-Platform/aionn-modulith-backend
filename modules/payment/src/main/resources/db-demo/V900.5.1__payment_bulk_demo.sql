@@ -108530,3 +108530,75 @@ WHERE created_at > TIMESTAMPTZ '2026-01-01 00:00:00+00';
 
 UPDATE merchant_balances
 SET created_at = TIMESTAMPTZ '2025-03-01 00:00:00+00';
+
+-- Moved from app/V900.11.0__demo_admin_operations.sql
+WITH seeded AS (
+    SELECT m.merchant_id,
+           m.name,
+           b.available,
+           ROW_NUMBER() OVER (ORDER BY m.merchant_id) AS rn
+      FROM merchants m
+      JOIN merchant_balances b ON b.merchant_id = m.merchant_id AND b.currency = 'VND'
+)
+INSERT INTO merchant_payouts
+    (payout_id, merchant_id, amount, currency, status, bank_name,
+     bank_account_no, bank_account_name, external_ref, note,
+     requested_at, completed_at, failed_at, failure_reason, version)
+SELECT 'PAY_DEMO_' || lpad(s.rn::text, 5, '0'),
+       s.merchant_id,
+       LEAST(GREATEST(ROUND(s.available * 0.02), 1000000), 50000000),
+       'VND',
+       CASE
+           WHEN s.rn <= 10 THEN 'PENDING'
+           WHEN s.rn <= 16 THEN 'PROCESSING'
+           WHEN s.rn <= 46 THEN 'COMPLETED'
+           ELSE 'FAILED'
+       END,
+       CASE (s.rn % 4)
+           WHEN 0 THEN 'Vietcombank'
+           WHEN 1 THEN 'Techcombank'
+           WHEN 2 THEN 'MB Bank'
+           ELSE 'ACB'
+       END,
+       '00' || lpad((100000000 + s.rn)::text, 10, '0'),
+       s.name,
+       CASE WHEN s.rn <= 46 AND s.rn > 16 THEN 'VCB-' || lpad(s.rn::text, 8, '0') END,
+       'Rút tiền định kỳ cho gian hàng ' || s.name,
+       NOW() - make_interval(days => ((s.rn % 20) + 1)::int),
+       CASE WHEN s.rn > 16 AND s.rn <= 46
+             THEN NOW() - make_interval(days => (s.rn % 10)::int) END,
+       CASE WHEN s.rn > 46
+             THEN NOW() - make_interval(days => (s.rn % 5)::int) END,
+       CASE WHEN s.rn > 46 THEN 'Tài khoản ngân hàng không khớp tên chủ sở hữu' END,
+       0
+  FROM seeded s
+ON CONFLICT (payout_id) DO NOTHING;
+
+-- Moved from app/V900.11.2__demo_member_inventory_activity.sql
+WITH buyers AS (
+    SELECT user_id,
+           ROW_NUMBER() OVER (ORDER BY user_id) AS rn
+      FROM user_roles
+     WHERE role = 'BUYER'
+     ORDER BY user_id
+     LIMIT 20
+),
+cards(card_no, provider, last_4) AS (
+    VALUES (1, 'STRIPE', '4242'), (2, 'VISA', '1881')
+)
+INSERT INTO payment_methods
+    (method_id, user_id, provider, last_4_digits, gateway_token, status,
+     version, created_at, updated_at, verified_at)
+SELECT 'PM_DEMO_' || lpad(((b.rn - 1) * 2 + c.card_no)::text, 5, '0'),
+       b.user_id,
+       c.provider,
+       c.last_4,
+       'pm_demo_' || b.rn || '_' || c.card_no,
+       'LINKED',
+       0,
+       TIMESTAMPTZ '2025-02-15 00:00:00+00' + make_interval(days => b.rn::int),
+       TIMESTAMPTZ '2025-02-15 00:00:00+00' + make_interval(days => b.rn::int),
+       TIMESTAMPTZ '2025-02-15 00:00:00+00' + make_interval(days => b.rn::int)
+  FROM buyers b
+  CROSS JOIN cards c
+ON CONFLICT (method_id) DO NOTHING;

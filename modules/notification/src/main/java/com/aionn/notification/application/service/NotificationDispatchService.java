@@ -143,6 +143,21 @@ public class NotificationDispatchService {
         return notificationPersistencePort.findByUser(userId, limit);
     }
 
+    public record NotificationPage(List<Notification> content, long totalElements) {
+    }
+
+    @Transactional(readOnly = true)
+    public NotificationPage pageMine(String userId, int page, int limit) {
+        return new NotificationPage(
+                notificationPersistencePort.findByUser(userId, page, limit),
+                notificationPersistencePort.countByUser(userId));
+    }
+
+    @Transactional(readOnly = true)
+    public long unreadCount(String userId) {
+        return notificationPersistencePort.countUnreadByUser(userId);
+    }
+
     @Transactional(readOnly = true)
     public List<Notification> findRetryable(int batchSize) {
         return notificationPersistencePort.findRetryable(batchSize);

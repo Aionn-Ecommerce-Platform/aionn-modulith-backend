@@ -41,6 +41,24 @@ public class NotificationPersistenceAdapter implements NotificationPersistencePo
     }
 
     @Override
+    public List<Notification> findByUser(String userId, int page, int limit) {
+        return jpa.findByUserIdAndChannelAndStatusNotOrderByCreatedAtDesc(userId, "IN_APP", "DELETED",
+                PageRequest.of(Math.max(0, page), Math.max(1, limit))).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countByUser(String userId) {
+        return jpa.countByUserIdAndChannelAndStatusNot(userId, "IN_APP", "DELETED");
+    }
+
+    @Override
+    public long countUnreadByUser(String userId) {
+        return jpa.countUnreadInApp(userId);
+    }
+
+    @Override
     public List<Notification> findRetryable(int limit) {
         return jpa.findRetryable(Notification.MAX_RETRY,
                 PageRequest.of(0, Math.max(1, limit))).stream()

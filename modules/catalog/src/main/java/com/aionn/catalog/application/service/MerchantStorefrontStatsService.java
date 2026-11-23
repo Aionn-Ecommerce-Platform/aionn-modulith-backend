@@ -69,7 +69,7 @@ public class MerchantStorefrontStatsService {
 
     private static String responseBucket(Long seconds) {
         if (seconds == null) {
-            return "UNKNOWN";
+            return "MINUTES";
         }
         if (seconds <= Duration.ofMinutes(30).toSeconds()) {
             return "MINUTES";

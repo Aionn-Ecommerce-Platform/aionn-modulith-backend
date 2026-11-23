@@ -77,8 +77,8 @@ public class ProductEntity {
     @Column(name = "attributes", columnDefinition = "jsonb")
     private Map<String, String> attributes;
 
-    @Column(name = "ai_description", columnDefinition = "TEXT")
-    private String aiDescription;
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
 
     @Column(name = "status", length = 20, nullable = false)
     private String status;

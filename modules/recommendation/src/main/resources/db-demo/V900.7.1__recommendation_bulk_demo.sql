@@ -310080,3 +310080,14 @@ INSERT INTO recommendation_popularity (product_id, popularity_score, view_count,
 ('01M9PR00000000000000002327', 24, 4, 4, NOW()),
 ('01M9PR00000000000000002328', 30, 5, 5, NOW());
 
+-- Moved from app/V900.11.3__demo_remaining_tables.sql
+INSERT INTO recommendation_erased_users (user_id, erased_at)
+SELECT u.user_id, NOW() - make_interval(days => (u.rn * 5)::int)
+  FROM (
+      SELECT user_id,
+             ROW_NUMBER() OVER (ORDER BY user_id) AS rn
+        FROM users
+       ORDER BY user_id
+       OFFSET 500 LIMIT 3
+  ) u
+ON CONFLICT (user_id) DO NOTHING;

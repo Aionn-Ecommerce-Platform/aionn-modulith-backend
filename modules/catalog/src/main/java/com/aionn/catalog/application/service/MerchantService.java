@@ -120,6 +120,13 @@ public class MerchantService {
         return new PageResult<>(merchants, pagination.page(), pagination.size(), total);
     }
 
+    public PageResult<Merchant> list(OffsetPagination pagination, String search, String provinceCode) {
+        MerchantPersistencePort.MerchantPage page =
+                merchantPersistencePort.search(pagination, search, provinceCode);
+        return new PageResult<>(
+                page.content(), pagination.page(), pagination.size(), page.totalElements());
+    }
+
     public Merchant updateCommissionRate(UpdateMerchantCommissionRateCommand command) {
         Merchant merchant = required(command.merchantId());
         merchant.updateCommissionRate(command.commissionRate(), clock);

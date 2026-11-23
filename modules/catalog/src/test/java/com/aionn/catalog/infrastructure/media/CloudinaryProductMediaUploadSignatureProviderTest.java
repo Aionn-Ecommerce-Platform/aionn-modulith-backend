@@ -33,7 +33,9 @@ class CloudinaryProductMediaUploadSignatureProviderTest {
         assertThat(result.folder()).isEqualTo("aionn/catalog/products/" + MERCHANT_ID);
         assertThat(result.apiKey()).isEqualTo("api-key");
         assertThat(result.cloudName()).isEqualTo("demo-cloud");
-        assertThat(result.uploadUrl()).isEqualTo("https://api.cloudinary.com/v1_1/demo-cloud/image/upload");
+        assertThat(result.uploadUrl()).isEqualTo("https://api.cloudinary.com/v1_1/demo-cloud/auto/upload");
+        assertThat(result.allowedFormats()).contains("jpg", "mp4", "webm");
+        assertThat(result.maxFileSize()).isEqualTo(50L * 1024 * 1024);
         assertThat(result.signature()).isNotBlank();
         assertThat(result.timestamp()).isNotBlank();
     }

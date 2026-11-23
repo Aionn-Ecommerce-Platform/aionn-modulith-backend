@@ -20,6 +20,28 @@ public interface ProductPersistencePort {
 
     List<Product> listByMerchant(String merchantId, OffsetPagination pagination);
 
+    List<Product> searchByMerchant(
+            String merchantId,
+            String search,
+            ProductStatus status,
+            List<String> categoryIds,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String sort,
+            OffsetPagination pagination);
+
+    long countSearchByMerchant(
+            String merchantId,
+            String search,
+            ProductStatus status,
+            List<String> categoryIds,
+            BigDecimal minPrice,
+            BigDecimal maxPrice);
+
+    long countVariantsByMerchant(String merchantId);
+
+    long sumSoldCountByMerchant(String merchantId);
+
     long countByMerchant(String merchantId);
 
     long countByMerchantAndStatus(String merchantId, ProductStatus status);

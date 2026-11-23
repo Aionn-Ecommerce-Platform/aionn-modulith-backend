@@ -1,5 +1,7 @@
 package com.aionn.payment.adapter.rest.controller;
 
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.ordering.OrderQueryPort;
 import com.aionn.payment.adapter.rest.dto.payment.request.InitiatePaymentRequest;
 import com.aionn.payment.adapter.rest.dto.payment.request.RefundRequest;
 import com.aionn.payment.adapter.rest.dto.payment.response.PaymentResponse;
@@ -11,6 +13,8 @@ import com.aionn.payment.application.port.in.payment.GetPaymentForUserInputPort;
 import com.aionn.payment.application.port.in.payment.InitiatePaymentInputPort;
 import com.aionn.payment.application.port.in.payment.ListPaymentsByOrderInputPort;
 import com.aionn.payment.application.port.in.payment.RefundPaymentInputPort;
+import com.aionn.payment.domain.exception.PaymentErrorCode;
+import com.aionn.payment.domain.exception.PaymentException;
 import com.aionn.platform.web.response.ApiResponse;
 import com.aionn.platform.web.support.idempotency.IdempotentRequest;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,6 +23,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,6 +47,8 @@ public class PaymentController {
     private final GetPaymentForUserInputPort getPaymentForUserInputPort;
     private final ListPaymentsByOrderInputPort listPaymentsByOrderInputPort;
     private final PaymentDtoMapper paymentDtoMapper;
+    private final OrderQueryPort orderQueryPort;
+    private final MerchantQueryPort merchantQueryPort;
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
@@ -77,11 +86,28 @@ public class PaymentController {
     }
 
     @GetMapping("/by-order/{orderId}")
-    @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN','ROLE_MERCHANT')")
     @Operation(summary = "List payments by order")
-    public ResponseEntity<ApiResponse<List<PaymentResponse>>> listByOrder(@PathVariable String orderId) {
+    public ResponseEntity<ApiResponse<List<PaymentResponse>>> listByOrder(
+            @CurrentUserId String userId,
+            @PathVariable String orderId) {
+        OrderQueryPort.OrderSummary order = orderQueryPort.findOrderSummary(orderId)
+                .orElseThrow(() -> new PaymentException(PaymentErrorCode.PAYMENT_NOT_FOUND));
+        if (!isAdmin()) {
+            String merchantId = merchantQueryPort.findMerchantIdByOwnerId(userId).orElse(null);
+            if (merchantId == null || !merchantId.equals(order.merchantId())) {
+                throw new PaymentException(PaymentErrorCode.PAYMENT_FORBIDDEN);
+            }
+        }
         return ResponseEntity.ok(ApiResponse.success(
                 paymentDtoMapper.toResponses(listPaymentsByOrderInputPort.execute(orderId)),
                 "Payments fetched"));
+    }
+
+    private boolean isAdmin() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority -> "ROLE_SYSTEM_ADMIN".equals(authority) || "ROLE_CS_ADMIN".equals(authority));
     }
 }

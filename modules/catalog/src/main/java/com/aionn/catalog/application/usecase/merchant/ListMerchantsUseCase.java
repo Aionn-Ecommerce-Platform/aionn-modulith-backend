@@ -21,7 +21,8 @@ public class ListMerchantsUseCase implements ListMerchantsInputPort {
     @Override
     @Transactional(readOnly = true)
     public PageResult<MerchantResult> execute(ListMerchantsQuery query) {
-        PageResult<Merchant> page = merchantService.list(query.pagination());
+        PageResult<Merchant> page = merchantService.list(
+                query.pagination(), query.search(), query.provinceCode());
         return merchantResultMapper.toPageResult(page);
     }
 }

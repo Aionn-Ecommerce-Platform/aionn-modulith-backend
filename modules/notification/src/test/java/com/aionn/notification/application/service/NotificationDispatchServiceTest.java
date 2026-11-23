@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
@@ -466,5 +467,19 @@ class NotificationDispatchServiceTest {
 
         assertThat(chat).hasSize(1);
         assertThat(system).hasSize(1);
+    }
+    @Test
+    void pageMineReturnsPagedNotificationsAndUnreadCount() {
+        NotificationDispatchService dispatch = service();
+        when(notificationPersistencePort.findByUser("user-1", 0, 10))
+                .thenReturn(List.of());
+        when(notificationPersistencePort.countByUser("user-1")).thenReturn(0L);
+        when(notificationPersistencePort.countUnreadByUser("user-1")).thenReturn(4L);
+
+        var page = dispatch.pageMine("user-1", 0, 10);
+
+        assertEquals(0L, page.totalElements());
+        assertEquals(List.of(), page.content());
+        assertEquals(4L, dispatch.unreadCount("user-1"));
     }
 }

@@ -1,5 +1,7 @@
 package com.aionn.payment.adapter.rest.controller;
 
+import com.aionn.contracts.port.catalog.MerchantQueryPort;
+import com.aionn.contracts.port.ordering.OrderQueryPort;
 import com.aionn.payment.adapter.rest.dto.payment.request.InitiatePaymentRequest;
 import com.aionn.payment.adapter.rest.mapper.payment.PaymentDtoMapper;
 import com.aionn.payment.application.port.in.payment.GetPaymentForUserInputPort;
@@ -35,8 +37,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -58,6 +62,10 @@ class PaymentControllerWebTest {
     private ListPaymentsByOrderInputPort listPaymentsByOrderInputPort;
     @Mock
     private PaymentDtoMapper paymentDtoMapper;
+    @Mock
+    private OrderQueryPort orderQueryPort;
+    @Mock
+    private MerchantQueryPort merchantQueryPort;
 
     private MockMvc mockMvc;
 
@@ -68,7 +76,9 @@ class PaymentControllerWebTest {
                 refundPaymentInputPort,
                 getPaymentForUserInputPort,
                 listPaymentsByOrderInputPort,
-                paymentDtoMapper
+                paymentDtoMapper,
+                orderQueryPort,
+                merchantQueryPort
         );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
@@ -226,6 +236,12 @@ class PaymentControllerWebTest {
     void listByOrderReturnsPayments() throws Exception {
         PaymentResult result = sampleResult("pay-4", "PAID");
         PaymentResponse response = sampleResponse("pay-4", "PAID");
+        when(orderQueryPort.findOrderSummary("order-9"))
+                .thenReturn(Optional.of(new OrderQueryPort.OrderSummary(
+                        "order-9", "user-123", "merchant-1",
+                        new BigDecimal("100.00"), "VND", "COMPLETED")));
+        when(merchantQueryPort.findMerchantIdByOwnerId("user-123"))
+                .thenReturn(Optional.of("merchant-1"));
         when(listPaymentsByOrderInputPort.execute("order-9")).thenReturn(List.of(result));
         when(paymentDtoMapper.toResponses(List.of(result))).thenReturn(List.of(response));
 
@@ -234,5 +250,69 @@ class PaymentControllerWebTest {
                 .andExpect(jsonPath("$.data[0].paymentId").value("pay-4"));
 
         verify(listPaymentsByOrderInputPort).execute("order-9");
+    }
+
+    @Test
+    void merchantCanListPaymentsForOwnOrder() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        "merchant-owner", "n/a",
+                        List.of(new SimpleGrantedAuthority("ROLE_MERCHANT"))));
+        PaymentResult result = sampleResult("pay-5", "PAID");
+        PaymentResponse response = sampleResponse("pay-5", "PAID");
+        when(orderQueryPort.findOrderSummary("order-9"))
+                .thenReturn(Optional.of(new OrderQueryPort.OrderSummary(
+                        "order-9", "buyer-1", "merchant-1",
+                        new BigDecimal("100.00"), "VND", "COMPLETED")));
+        when(merchantQueryPort.findMerchantIdByOwnerId("merchant-owner"))
+                .thenReturn(Optional.of("merchant-1"));
+        when(listPaymentsByOrderInputPort.execute("order-9")).thenReturn(List.of(result));
+        when(paymentDtoMapper.toResponses(List.of(result))).thenReturn(List.of(response));
+
+        mockMvc.perform(get("/api/v1/payments/by-order/order-9"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].paymentId").value("pay-5"));
+    }
+
+    @Test
+    void merchantCannotListPaymentsForOtherMerchantOrder() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        "merchant-owner", "n/a",
+                        List.of(new SimpleGrantedAuthority("ROLE_MERCHANT"))));
+        when(orderQueryPort.findOrderSummary("order-9"))
+                .thenReturn(Optional.of(new OrderQueryPort.OrderSummary(
+                        "order-9", "buyer-1", "merchant-2",
+                        new BigDecimal("100.00"), "VND", "COMPLETED")));
+        when(merchantQueryPort.findMerchantIdByOwnerId("merchant-owner"))
+                .thenReturn(Optional.of("merchant-1"));
+
+        mockMvc.perform(get("/api/v1/payments/by-order/order-9"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.data.errorCode").value("PAY_009"));
+
+        verify(listPaymentsByOrderInputPort, never()).execute(any());
+    }
+
+    @Test
+    void adminCanListPaymentsForAnyOrder() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        "admin-1", "n/a",
+                        List.of(new SimpleGrantedAuthority("ROLE_SYSTEM_ADMIN"))));
+        PaymentResult result = sampleResult("pay-6", "PAID");
+        PaymentResponse response = sampleResponse("pay-6", "PAID");
+        when(orderQueryPort.findOrderSummary("order-9"))
+                .thenReturn(Optional.of(new OrderQueryPort.OrderSummary(
+                        "order-9", "buyer-1", "merchant-2",
+                        new BigDecimal("100.00"), "VND", "COMPLETED")));
+        when(listPaymentsByOrderInputPort.execute("order-9")).thenReturn(List.of(result));
+        when(paymentDtoMapper.toResponses(List.of(result))).thenReturn(List.of(response));
+
+        mockMvc.perform(get("/api/v1/payments/by-order/order-9"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].paymentId").value("pay-6"));
+
+        verify(merchantQueryPort, never()).findMerchantIdByOwnerId(any());
     }
 }

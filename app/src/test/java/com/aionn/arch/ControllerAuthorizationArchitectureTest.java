@@ -32,8 +32,6 @@ class ControllerAuthorizationArchitectureTest {
             "com.aionn.catalog.adapter.rest.controller.MerchantFollowController#followerCount",
             "com.aionn.catalog.adapter.rest.controller.MerchantFollowController#stats",
             "com.aionn.catalog.adapter.rest.controller.ProductQuestionController#listByProduct",
-            "com.aionn.catalog.adapter.rest.controller.CollectionController#list",
-            "com.aionn.catalog.adapter.rest.controller.CollectionController#get",
             "com.aionn.catalog.adapter.rest.controller.ProductController#get",
             "com.aionn.catalog.adapter.rest.controller.ProductController#getBySkuIds",
             "com.aionn.catalog.adapter.rest.controller.ProductController#getPersonalized",

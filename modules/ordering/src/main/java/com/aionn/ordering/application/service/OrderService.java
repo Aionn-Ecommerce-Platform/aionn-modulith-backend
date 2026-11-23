@@ -3,11 +3,13 @@ package com.aionn.ordering.application.service;
 import com.aionn.ordering.domain.valueobject.ShippingAddress;
 import java.time.Clock;
 import java.util.Arrays;
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.stream.Collectors;
 
 import com.aionn.ordering.application.dto.order.command.CancelOrderCommand;
 import com.aionn.ordering.application.dto.order.command.ChangeShippingInfoCommand;
+import com.aionn.ordering.application.dto.order.command.ChangeShippingAddressCommand;
 import com.aionn.ordering.application.dto.order.command.ConfirmDeliveredCommand;
 import com.aionn.ordering.application.dto.order.command.ConfirmPreparationCommand;
 import com.aionn.ordering.application.dto.order.command.ConfirmShippedCommand;
@@ -539,6 +541,27 @@ public class OrderService {
         });
     }
 
+    public Order changeShippingAddress(ChangeShippingAddressCommand command) {
+        Order snapshot = transactionTemplate.execute(status ->
+                ownedByMerchant(command.orderId(), command.merchantId()));
+        Money newFee;
+        try {
+            newFee = quoteShippingFee(snapshot.getOrderId(), snapshot.getMerchantId(),
+                    command.newAddress(), snapshot.getCurrency(), toParcels(snapshot),
+                    orderGoodsSubtotal(snapshot));
+        } catch (RuntimeException ex) {
+            log.warn("Shipping fee re-quote failed for order {}", snapshot.getOrderId(), ex);
+            throw new OrderingException(OrderingErrorCode.SHIPPING_QUOTE_UNAVAILABLE);
+        }
+        return transactionTemplate.execute(status -> {
+            Order order = ownedByMerchant(command.orderId(), command.merchantId());
+            order.changeShippingInfo(command.newAddress(), newFee, clock.instant());
+            Order saved = orderPersistencePort.save(order);
+            eventPublisher.publish(order.pullEvents());
+            return saved;
+        });
+    }
+
     private static String placementRequestHash(String userId,
             List<PlaceOrderHeadlessCommand.Line> lines, String voucherCode, String paymentMethodId,
             String currency, ShippingAddress address) {
@@ -811,6 +834,61 @@ public class OrderService {
             return orderPersistencePort.findByMerchant(merchantId, limit);
         }
         return orderPersistencePort.findByMerchantAndStatuses(merchantId, statuses, limit);
+    }
+
+    public record OrderPage(List<Order> content, long totalElements) {
+    }
+
+    @Transactional(readOnly = true)
+    public OrderPage pageByUser(String userId, String statusFilter, int page, int limit) {
+        List<String> statuses = parseStatusFilter(statusFilter);
+        if (statuses.isEmpty()) {
+            return new OrderPage(
+                    orderPersistencePort.findByUser(userId, page, limit),
+                    orderPersistencePort.countByUser(userId));
+        }
+        return new OrderPage(
+                orderPersistencePort.findByUserAndStatuses(userId, statuses, page, limit),
+                orderPersistencePort.countByUserAndStatuses(userId, statuses));
+    }
+
+    @Transactional(readOnly = true)
+    public OrderPage pageByMerchantOwner(String ownerId, String statusFilter, int page, int limit) {
+        String merchantId = requireMerchantIdForOwner(ownerId);
+        List<String> statuses = parseStatusFilter(statusFilter);
+        if (statuses.isEmpty()) {
+            return new OrderPage(
+                    orderPersistencePort.findByMerchant(merchantId, page, limit),
+                    orderPersistencePort.countByMerchant(merchantId));
+        }
+        return new OrderPage(
+                orderPersistencePort.findByMerchantAndStatuses(merchantId, statuses, page, limit),
+                orderPersistencePort.countByMerchantAndStatuses(merchantId, statuses));
+    }
+
+    @Transactional(readOnly = true)
+    public OrderPage searchMerchantPage(
+            String ownerId,
+            String statusFilter,
+            String search,
+            Instant from,
+            Instant to,
+            int page,
+            int limit) {
+        String merchantId = requireMerchantIdForOwner(ownerId);
+        List<String> statuses = parseStatusFilter(statusFilter);
+        return new OrderPage(
+                orderPersistencePort.searchByMerchant(merchantId, statuses, search, from, to, page, limit),
+                orderPersistencePort.countSearchByMerchant(merchantId, statuses, search, from, to));
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Long> countMerchantOrdersByStatus(String ownerId) {
+        String merchantId = requireMerchantIdForOwner(ownerId);
+        return orderPersistencePort.countByMerchantGroupByStatus(merchantId).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        OrderPersistencePort.OrderStatusCount::status,
+                        OrderPersistencePort.OrderStatusCount::count));
     }
 
     @Transactional(readOnly = true)

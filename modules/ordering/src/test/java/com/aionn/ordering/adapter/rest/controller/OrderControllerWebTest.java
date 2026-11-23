@@ -48,10 +48,12 @@ class OrderControllerWebTest {
     @Mock private CancelOrderInputPort cancelOrderInputPort;
     @Mock private RejectOrderInputPort rejectOrderInputPort;
     @Mock private ChangeShippingInfoInputPort changeShippingInfoInputPort;
+    @Mock private ChangeShippingAddressInputPort changeShippingAddressInputPort;
     @Mock private ConfirmShippedInputPort confirmShippedInputPort;
     @Mock private ConfirmDeliveredInputPort confirmDeliveredInputPort;
     @Mock private GetOrderInputPort getOrderInputPort;
     @Mock private ListOrdersInputPort listOrdersInputPort;
+    @Mock private com.aionn.ordering.application.service.OrderService orderService;
     @Mock private GetMerchantOrderAnalyticsInputPort getMerchantOrderAnalyticsInputPort;
     @Mock private GetPlatformOrderAnalyticsInputPort getPlatformOrderAnalyticsInputPort;
     @Mock private GetTopProductsInputPort getTopProductsInputPort;
@@ -64,8 +66,8 @@ class OrderControllerWebTest {
     void setUp() {
         OrderController controller = new OrderController(
                 placeOrderInputPort, confirmPreparationInputPort, cancelOrderInputPort, rejectOrderInputPort,
-                changeShippingInfoInputPort, confirmShippedInputPort, confirmDeliveredInputPort,
-                getOrderInputPort, listOrdersInputPort, getMerchantOrderAnalyticsInputPort,
+                changeShippingInfoInputPort, changeShippingAddressInputPort, confirmShippedInputPort, confirmDeliveredInputPort,
+                getOrderInputPort, listOrdersInputPort, orderService, getMerchantOrderAnalyticsInputPort,
                 getPlatformOrderAnalyticsInputPort, getTopProductsInputPort, dtoMapper);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new OrderingExceptionHandler(), new GlobalExceptionHandler())
@@ -212,7 +214,8 @@ class OrderControllerWebTest {
     @Test
     void listMineReturnsOrders() throws Exception {
         OrderResult result = sampleResult("PENDING");
-        when(listOrdersInputPort.execute("user-1", "USER", null, 20)).thenReturn(List.of(result));
+        when(listOrdersInputPort.executePaged(any(), any(), any(), any(), any(), any(), anyInt(), anyInt()))
+                .thenReturn(new com.aionn.ordering.application.dto.order.result.OrderPageResult(List.of(result), 1));
         when(dtoMapper.toResponse(result)).thenReturn(sampleResponse("PENDING"));
 
         mockMvc.perform(get("/api/v1/ordering/orders"))
@@ -222,8 +225,8 @@ class OrderControllerWebTest {
     @Test
     void listForMerchantReturnsOrders() throws Exception {
         OrderResult result = sampleResult("PENDING");
-        when(listOrdersInputPort.execute(any(), eq("MERCHANT"), any(), any(int.class)))
-                .thenReturn(List.of(result));
+        when(listOrdersInputPort.executePaged(any(), eq("MERCHANT"), any(), any(), any(), any(), anyInt(), anyInt()))
+                .thenReturn(new com.aionn.ordering.application.dto.order.result.OrderPageResult(List.of(result), 1));
         when(dtoMapper.toResponse(result)).thenReturn(sampleResponse("PENDING"));
 
         mockMvc.perform(get("/api/v1/ordering/orders/merchant").header("X-Merchant-Id", "merchant-1"))

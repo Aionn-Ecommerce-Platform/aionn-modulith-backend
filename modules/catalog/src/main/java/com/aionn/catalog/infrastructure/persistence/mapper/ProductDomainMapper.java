@@ -59,7 +59,7 @@ public interface ProductDomainMapper {
                         .id(new ProductTranslationEntity.ProductTranslationId(product.getProductId(), trans.locale()))
                         .product(entity)
                         .name(trans.name())
-                        .aiDescription(trans.aiDescription())
+                        .description(trans.description())
                         .build();
                 translationEntities.add(te);
             }
@@ -105,7 +105,8 @@ public interface ProductDomainMapper {
         List<Product.Translation> translations = new ArrayList<>();
         if (entity.getTranslations() != null) {
             for (ProductTranslationEntity te : entity.getTranslations()) {
-                translations.add(new Product.Translation(te.getId().getLocale(), te.getName(), te.getAiDescription()));
+                translations.add(new Product.Translation(te.getId().getLocale(), te.getName(),
+                        te.getDescription()));
             }
         }
 
@@ -120,7 +121,7 @@ public interface ProductDomainMapper {
                 base.collectionIds() != null ? base.collectionIds() : List.of(),
                 base.attributes() != null ? base.attributes() : Map.of(),
                 variants,
-                base.getAiDescription(),
+                base.getDescription(),
                 entity.getStatus() != null ? ProductStatus.valueOf(entity.getStatus()) : null,
                 base.getCreatedAt(),
                 base.getUpdatedAt(),

@@ -35,5 +35,9 @@ public interface UserVoucherPersistencePort {
 
     List<UserVoucher> findByUser(String userId, int limit);
 
+    List<UserVoucher> searchByUser(String userId, List<String> statuses, int page, int limit);
+
+    long countSearchByUser(String userId, List<String> statuses);
+
     List<UserVoucher> findExpiredReservations(Instant now, int limit);
 }

@@ -43,8 +43,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.support.TransactionTemplate;
 
-
-import java.time.Instant;
 import java.util.Objects;
 
 @Slf4j
@@ -115,8 +113,8 @@ public class OrderReturnService {
         }
         java.util.Map<String, OrderItem> orderItems = order.items().stream()
                 .collect(java.util.stream.Collectors.toMap(OrderItem::skuId, item -> item));
-        java.util.Map<String, Integer> alreadyReturned =
-                orderReturnItemPersistencePort.returnedQuantities(order.getOrderId());
+        java.util.Map<String, Integer> alreadyReturned = orderReturnItemPersistencePort
+                .returnedQuantities(order.getOrderId());
         java.util.Set<String> seen = new java.util.HashSet<>();
         java.util.List<OrderReturnItemPersistencePort.Item> items = new java.util.ArrayList<>();
         for (RequestReturnCommand.Item line : requested) {
@@ -153,7 +151,8 @@ public class OrderReturnService {
             Order order = orderPersistencePort.findById(r.getOrderId())
                     .orElseThrow(() -> new OrderingException(OrderingErrorCode.ORDER_NOT_FOUND));
             String currency = command.currency() == null
-                    ? order.getTotalAmount().currency() : command.currency();
+                    ? order.getTotalAmount().currency()
+                    : command.currency();
             if (!currency.equalsIgnoreCase(order.getTotalAmount().currency())) {
                 throw new OrderingException(OrderingErrorCode.INVALID_ARGUMENT,
                         "Refund currency must match the order currency");
@@ -237,6 +236,37 @@ public class OrderReturnService {
         return orderReturnPersistencePort.findByMerchantId(merchantId, limit);
     }
 
+    public record ReturnPage(List<OrderReturn> content, long totalElements) {
+    }
+
+    @Transactional(readOnly = true)
+    public ReturnPage pageMerchant(String merchantId, int page, int limit) {
+        return new ReturnPage(
+                orderReturnPersistencePort.findByMerchantId(merchantId, page, limit),
+                orderReturnPersistencePort.countByMerchantId(merchantId));
+    }
+
+    @Transactional(readOnly = true)
+    public ReturnPage searchMerchantPage(
+            String merchantId,
+            String status,
+            String reasonType,
+            String search,
+            int page,
+            int limit) {
+        return new ReturnPage(
+                orderReturnPersistencePort.searchByMerchant(merchantId, status, reasonType, search, page, limit),
+                orderReturnPersistencePort.countSearchByMerchant(merchantId, status, reasonType, search));
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Long> countMerchantReturnsByStatus(String merchantId) {
+        return orderReturnPersistencePort.countByMerchantGroupByStatus(merchantId).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        OrderReturnPersistencePort.ReturnStatusCount::status,
+                        OrderReturnPersistencePort.ReturnStatusCount::count));
+    }
+
     @Transactional(readOnly = true)
     public OrderReturnPersistencePort.ReturnSummary summarizeMerchant(
             String merchantId, Instant from, Instant to) {
@@ -281,7 +311,8 @@ public class OrderReturnService {
             String reason = (row.reason() == null || row.reason().isBlank()) ? "UNKNOWN" : row.reason();
             byReason.merge(reason, 1L, Long::sum);
             String reasonType = (row.reasonType() == null || row.reasonType().isBlank())
-                    ? "OTHER" : row.reasonType();
+                    ? "OTHER"
+                    : row.reasonType();
             byReasonType.merge(reasonType, 1L, Long::sum);
             if (row.refundAmount() != null) {
                 refundTotal = refundTotal.add(row.refundAmount());
@@ -361,8 +392,8 @@ public class OrderReturnService {
     }
 
     private Money resolveRefundAmount(OrderReturn r, Order order, BigDecimal requested, String currency) {
-        List<OrderReturnItemPersistencePort.Item> items =
-                orderReturnItemPersistencePort.findByReturnId(r.getReturnId());
+        List<OrderReturnItemPersistencePort.Item> items = orderReturnItemPersistencePort
+                .findByReturnId(r.getReturnId());
         BigDecimal selectedTotal = items == null ? BigDecimal.ZERO
                 : items.stream()
                         .map(OrderReturnItemPersistencePort.Item::refundAmount)
@@ -441,7 +472,8 @@ public class OrderReturnService {
         });
     }
 
-    private record RefundRequest(String paymentId, BigDecimal amount, String currency, String reason) {}
+    private record RefundRequest(String paymentId, BigDecimal amount, String currency, String reason) {
+    }
 
     private void ensureSameApproval(OrderReturn existing, Money refund, String warehouseId) {
         boolean sameRefund = existing.getRefundAmount() != null && refund != null

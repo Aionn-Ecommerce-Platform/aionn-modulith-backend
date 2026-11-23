@@ -9,10 +9,13 @@ import com.aionn.ordering.adapter.rest.mapper.OrderingDtoMapper;
 import com.aionn.ordering.adapter.rest.support.session.CurrentMerchantId;
 import com.aionn.ordering.adapter.rest.support.session.CurrentUserId;
 import com.aionn.ordering.application.dto.order.result.MerchantOrderAnalyticsResult;
+import com.aionn.ordering.application.dto.order.result.OrderPageResult;
 import com.aionn.ordering.application.dto.order.result.PlatformOrderAnalyticsResult;
 import com.aionn.ordering.application.dto.order.result.TopProductResult;
 import com.aionn.ordering.application.port.in.order.*;
+import com.aionn.ordering.application.service.OrderService;
 import com.aionn.platform.web.response.ApiResponse;
+import com.aionn.platform.web.response.PageMetadata;
 import com.aionn.platform.web.support.idempotency.IdempotentRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,8 +36,10 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/ordering/orders")
@@ -47,10 +52,12 @@ public class OrderController {
         private final CancelOrderInputPort cancelOrderInputPort;
         private final RejectOrderInputPort rejectOrderInputPort;
         private final ChangeShippingInfoInputPort changeShippingInfoInputPort;
+    private final ChangeShippingAddressInputPort changeShippingAddressInputPort;
         private final ConfirmShippedInputPort confirmShippedInputPort;
         private final ConfirmDeliveredInputPort confirmDeliveredInputPort;
         private final GetOrderInputPort getOrderInputPort;
         private final ListOrdersInputPort listOrdersInputPort;
+private final OrderService orderService;
         private final GetMerchantOrderAnalyticsInputPort getMerchantOrderAnalyticsInputPort;
         private final GetPlatformOrderAnalyticsInputPort getPlatformOrderAnalyticsInputPort;
         private final GetTopProductsInputPort getTopProductsInputPort;
@@ -121,6 +128,20 @@ public class OrderController {
                 return ResponseEntity.ok(ApiResponse.success(response, "Shipping info changed"));
         }
 
+        @PutMapping("/{orderId}/merchant/shipping-address")
+        @PreAuthorize("hasAuthority('ROLE_MERCHANT')")
+        @Operation(summary = "Merchant updates the shipping address (keeps the shipping fee)")
+        public ResponseEntity<ApiResponse<OrderResponse>> changeShippingAddress(
+                        @CurrentMerchantId String merchantId,
+                        @PathVariable String orderId,
+                        @Valid @RequestBody ChangeShippingInfoRequest request) {
+                OrderResponse response = dtoMapper.toResponse(
+                                changeShippingAddressInputPort.execute(
+                                                dtoMapper.toChangeShippingAddressCommand(
+                                                                orderId, merchantId, request)));
+                return ResponseEntity.ok(ApiResponse.success(response, "Shipping address changed"));
+        }
+
         @PostMapping("/{orderId}/ship")
         @PreAuthorize("hasAnyAuthority('ROLE_SYSTEM_ADMIN','ROLE_CS_ADMIN')")
         @Operation(summary = "Mark shipped")
@@ -147,12 +168,30 @@ public class OrderController {
         public ResponseEntity<ApiResponse<List<OrderResponse>>> listForMerchant(
                         @CurrentMerchantId String ownerId,
                         @RequestParam(required = false) String status,
+                        @RequestParam(required = false) String search,
+                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+                        @RequestParam(defaultValue = "0") @Min(0) int page,
                         @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit) {
-                List<OrderResponse> responses = listOrdersInputPort.execute(
-                                ownerId, "MERCHANT", status, limit).stream()
+                OrderPageResult result = listOrdersInputPort.executePaged(
+                                ownerId, "MERCHANT", status, search, from, to, page, limit);
+                List<OrderResponse> responses = result.content().stream()
                                 .map(dtoMapper::toResponse)
                                 .toList();
-                return ResponseEntity.ok(ApiResponse.success(responses, "Orders fetched"));
+                return ResponseEntity.ok(ApiResponse.successWithPaging(
+                                responses,
+                                PageMetadata.of(page, limit, result.totalElements()),
+                                "Orders fetched"));
+        }
+
+        @GetMapping("/merchant/stats")
+        @PreAuthorize("hasAuthority('ROLE_MERCHANT')")
+        @Operation(summary = "Merchant order counts by status")
+        public ResponseEntity<ApiResponse<Map<String, Long>>> merchantOrderStats(
+                        @CurrentMerchantId String ownerId) {
+                return ResponseEntity.ok(ApiResponse.success(
+                                orderService.countMerchantOrdersByStatus(ownerId),
+                                "Order stats fetched"));
         }
 
         @GetMapping("/merchant/analytics")
@@ -204,11 +243,16 @@ public class OrderController {
         public ResponseEntity<ApiResponse<List<OrderResponse>>> listMine(
                         @CurrentUserId String userId,
                         @RequestParam(required = false) String status,
+                        @RequestParam(defaultValue = "0") @Min(0) int page,
                         @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit) {
-                List<OrderResponse> responses = listOrdersInputPort.execute(
-                                userId, "USER", status, limit).stream()
+                OrderPageResult result = listOrdersInputPort.executePaged(
+                                userId, "USER", status, null, null, null, page, limit);
+                List<OrderResponse> responses = result.content().stream()
                                 .map(dtoMapper::toResponse)
                                 .toList();
-                return ResponseEntity.ok(ApiResponse.success(responses, "Orders fetched"));
+                return ResponseEntity.ok(ApiResponse.successWithPaging(
+                                responses,
+                                PageMetadata.of(page, limit, result.totalElements()),
+                                "Orders fetched"));
         }
 }

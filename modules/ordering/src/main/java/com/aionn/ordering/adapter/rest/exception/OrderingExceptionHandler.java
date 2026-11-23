@@ -25,6 +25,7 @@ public class OrderingExceptionHandler extends AbstractModuleExceptionHandler {
         registerErrors(HttpStatus.FORBIDDEN, "ORD_002", "ORD_102", "ORD_106");
         registerErrors(HttpStatus.BAD_REQUEST,
                 "ORD_004", "ORD_105", "ORD_107", "ORD_108", "ORD_109", "ORD_900");
+        registerErrors(HttpStatus.SERVICE_UNAVAILABLE, "ORD_111");
         setDefaultStatus(HttpStatus.UNPROCESSABLE_CONTENT);
     }
 

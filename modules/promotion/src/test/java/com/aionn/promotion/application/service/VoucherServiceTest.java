@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -72,6 +73,19 @@ class VoucherServiceTest {
         when(limitPolicy.activeVouchersPerUser()).thenReturn(50);
         return new VoucherService(voucherPersistencePort, userVoucherPersistencePort, promotionCampaignPersistencePort,
                 mapper, eventPublisher, reservationPolicy, limitPolicy, CLOCK);
+    }
+
+    @Test
+    void pageMineReturnsPagedUserVouchers() {
+        when(userVoucherPersistencePort.searchByUser("user-1", List.of("UNUSED"), 0, 10))
+                .thenReturn(List.of());
+        when(userVoucherPersistencePort.countSearchByUser("user-1", List.of("UNUSED")))
+                .thenReturn(0L);
+
+        var page = service().pageMine("user-1", List.of("UNUSED"), 0, 10);
+
+        assertEquals(0L, page.totalElements());
+        assertEquals(List.of(), page.content());
     }
 
     private static Voucher platformVoucher(String campaignId) {

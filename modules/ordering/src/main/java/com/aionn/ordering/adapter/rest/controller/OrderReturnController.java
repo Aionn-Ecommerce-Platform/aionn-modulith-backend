@@ -11,11 +11,15 @@ import com.aionn.ordering.adapter.rest.mapper.OrderingDtoMapper;
 import com.aionn.ordering.adapter.rest.support.session.CurrentMerchantId;
 import com.aionn.ordering.adapter.rest.support.session.CurrentUserId;
 import com.aionn.ordering.application.port.in.returns.*;
+import com.aionn.ordering.application.dto.returns.result.ReturnPageResult;
 import com.aionn.ordering.application.service.OrderReturnService;
 import com.aionn.platform.web.response.ApiResponse;
+import com.aionn.platform.web.response.PageMetadata;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -26,6 +30,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import java.util.Map;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
@@ -128,11 +133,30 @@ public class OrderReturnController {
         @Operation(summary = "List return requests for the merchant")
         public ResponseEntity<ApiResponse<List<OrderReturnResponse>>> listMerchant(
                         @CurrentMerchantId String merchantId,
-                        @RequestParam(defaultValue = "50") int limit) {
-                List<OrderReturnResponse> responses = listReturnsInputPort.execute(merchantId, "MERCHANT", limit).stream()
+                        @RequestParam(required = false) String status,
+                        @RequestParam(required = false) String reasonType,
+                        @RequestParam(required = false) String search,
+                        @RequestParam(defaultValue = "0") @Min(0) int page,
+                        @RequestParam(defaultValue = "50") @Min(1) @Max(100) int limit) {
+                ReturnPageResult result = listReturnsInputPort.executePaged(
+                                merchantId, "MERCHANT", status, reasonType, search, page, limit);
+                List<OrderReturnResponse> responses = result.content().stream()
                                 .map(dtoMapper::toResponse)
                                 .toList();
-                return ResponseEntity.ok(ApiResponse.success(responses, "Returns fetched"));
+                return ResponseEntity.ok(ApiResponse.successWithPaging(
+                                responses,
+                                PageMetadata.of(page, limit, result.totalElements()),
+                                "Returns fetched"));
+        }
+
+        @GetMapping("/merchant/stats")
+        @PreAuthorize("hasAuthority('ROLE_MERCHANT')")
+        @Operation(summary = "Merchant return counts by status")
+        public ResponseEntity<ApiResponse<Map<String, Long>>> merchantReturnStats(
+                        @CurrentMerchantId String merchantId) {
+                return ResponseEntity.ok(ApiResponse.success(
+                                returnService.countMerchantReturnsByStatus(merchantId),
+                                "Return stats fetched"));
         }
 
         @GetMapping("/merchant/summary")

@@ -18,6 +18,62 @@ public interface OrderReturnRepository extends JpaRepository<OrderReturnEntity, 
 
     List<OrderReturnEntity> findByMerchantIdOrderByRequestedAtDesc(String merchantId, Pageable pageable);
 
+    long countByMerchantId(String merchantId);
+
+    @Query("""
+        SELECT r FROM OrderReturnEntity r
+         WHERE r.merchantId = :merchantId
+           AND (:hasStatus = false OR r.status = :status)
+           AND (:hasReasonType = false OR r.reasonType = :reasonType)
+           AND (:hasSearch = false
+                OR LOWER(r.returnId) LIKE :searchPattern
+                OR LOWER(r.orderId) LIKE :searchPattern
+                OR LOWER(r.userId) LIKE :searchPattern)
+         ORDER BY r.requestedAt DESC
+        """)
+    List<OrderReturnEntity> searchMerchantReturns(
+        String merchantId,
+        boolean hasStatus,
+        String status,
+        boolean hasReasonType,
+        String reasonType,
+        boolean hasSearch,
+        String searchPattern,
+        Pageable pageable);
+
+    @Query("""
+        SELECT COUNT(r) FROM OrderReturnEntity r
+         WHERE r.merchantId = :merchantId
+           AND (:hasStatus = false OR r.status = :status)
+           AND (:hasReasonType = false OR r.reasonType = :reasonType)
+           AND (:hasSearch = false
+                OR LOWER(r.returnId) LIKE :searchPattern
+                OR LOWER(r.orderId) LIKE :searchPattern
+                OR LOWER(r.userId) LIKE :searchPattern)
+        """)
+    long countSearchMerchantReturns(
+        String merchantId,
+        boolean hasStatus,
+        String status,
+        boolean hasReasonType,
+        String reasonType,
+        boolean hasSearch,
+        String searchPattern);
+
+    @Query("""
+        SELECT r.status AS status, COUNT(r) AS count
+          FROM OrderReturnEntity r
+         WHERE r.merchantId = :merchantId
+         GROUP BY r.status
+        """)
+    List<ReturnStatusCount> countMerchantReturnsByStatus(String merchantId);
+
+    interface ReturnStatusCount {
+        String getStatus();
+
+        Long getCount();
+    }
+
     @Query("""
         SELECT COUNT(r) AS requests,
                COALESCE(SUM(CASE WHEN r.status IN ('APPROVED', 'ITEM_RECEIVED', 'REFUNDED') THEN 1 ELSE 0 END), 0) AS approved,

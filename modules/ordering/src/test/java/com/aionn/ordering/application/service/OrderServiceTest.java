@@ -1,5 +1,6 @@
 package com.aionn.ordering.application.service;
 
+import com.aionn.ordering.application.dto.order.command.ChangeShippingAddressCommand;
 import com.aionn.ordering.application.dto.order.command.ChangeShippingInfoCommand;
 import com.aionn.ordering.application.dto.order.command.PlaceOrderCommand;
 import com.aionn.ordering.application.dto.order.command.PlaceOrderHeadlessCommand;
@@ -134,6 +135,148 @@ class OrderServiceTest {
         lenient().when(analyticsPolicy.platformDefaultRangeDays()).thenReturn(30);
         lenient().when(analyticsPolicy.topMerchantsLimit()).thenReturn(10);
         lenient().when(analyticsPolicy.maxTopProductsLimit()).thenReturn(20);
+    }
+
+
+    private static ShippingAddress secondAddress() {
+        return new ShippingAddress("addr-2", "New User", "+84900000000",
+                "12 New Street", "W1", "D1", "P1", "VN");
+    }
+
+    private static CatalogPricingGateway.SkuPricing parcelPricing() {
+        return new CatalogPricingGateway.SkuPricing(
+                "sku-1", MERCHANT_ID, "wh-1", BigDecimal.valueOf(100), "VND", true,
+                List.of(), "registration-1",
+                new CatalogPricingGateway.SkuPricing.Parcel(500, null, null, null));
+    }
+
+    @Test
+    void changeShippingAddressRequotesFeeAndUpdatesTotals() {
+        Order order = pendingOrder();
+        order.approve("pay-1", Instant.parse("2026-07-18T12:00:00Z"));
+        ShippingAddress newAddress = secondAddress();
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderPersistencePort.save(ArgumentMatchers.any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(catalogPricingGateway.resolve(List.of("sku-1")))
+                .thenReturn(Map.of("sku-1", parcelPricing()));
+        when(shippingGateway.quote(eq(ORDER_ID), eq(MERCHANT_ID), eq(newAddress), eq("VND"),
+                anyList(), any()))
+                .thenReturn(new ShippingGateway.ShippingQuote(BigDecimal.valueOf(30000), "VND"));
+
+        Order result = orderService.changeShippingAddress(
+                new ChangeShippingAddressCommand(ORDER_ID, MERCHANT_ID, newAddress));
+
+        assertEquals(newAddress, result.getShippingAddress());
+        assertEquals(BigDecimal.valueOf(30200), result.getTotalAmount().amount());
+        verify(eventPublisher).publish(ArgumentMatchers.anyList());
+    }
+
+    @Test
+    void changeShippingAddressReportsQuoteUnavailableWhenGatewayFails() {
+        Order order = pendingOrder();
+        order.approve("pay-1", Instant.parse("2026-07-18T12:00:00Z"));
+        ShippingAddress newAddress = secondAddress();
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(catalogPricingGateway.resolve(List.of("sku-1")))
+                .thenReturn(Map.of("sku-1", parcelPricing()));
+        when(shippingGateway.quote(eq(ORDER_ID), eq(MERCHANT_ID), eq(newAddress), eq("VND"),
+                anyList(), any()))
+                .thenThrow(new IllegalStateException("carrier down"));
+
+        OrderingException ex = assertThrows(OrderingException.class,
+                () -> orderService.changeShippingAddress(
+                        new ChangeShippingAddressCommand(ORDER_ID, MERCHANT_ID, newAddress)));
+
+        assertEquals(OrderingErrorCode.SHIPPING_QUOTE_UNAVAILABLE.getCode(), ex.getErrorCode());
+        verify(orderPersistencePort, never()).save(ArgumentMatchers.any(Order.class));
+    }
+
+    @Test
+    void pageByUserUsesUnfilteredQueriesWhenStatusIsBlank() {
+        Order order = pendingOrder();
+        when(orderPersistencePort.findByUser(USER_ID, 0, 10)).thenReturn(List.of(order));
+        when(orderPersistencePort.countByUser(USER_ID)).thenReturn(1L);
+
+        OrderService.OrderPage page = orderService.pageByUser(USER_ID, null, 0, 10);
+
+        assertEquals(List.of(order), page.content());
+        assertEquals(1L, page.totalElements());
+    }
+
+    @Test
+    void pageByUserUsesStatusQueriesWhenFilterIsPresent() {
+        Order order = pendingOrder();
+        List<String> statuses = List.of("PENDING", "APPROVED");
+        when(orderPersistencePort.findByUserAndStatuses(USER_ID, statuses, 1, 20))
+                .thenReturn(List.of(order));
+        when(orderPersistencePort.countByUserAndStatuses(USER_ID, statuses)).thenReturn(1L);
+
+        OrderService.OrderPage page = orderService.pageByUser(USER_ID, "PENDING,APPROVED", 1, 20);
+
+        assertEquals(List.of(order), page.content());
+        assertEquals(1L, page.totalElements());
+    }
+
+    @Test
+    void pageByMerchantOwnerSupportsUnfilteredAndStatusQueries() {
+        Order order = pendingOrder();
+        when(orderPersistencePort.findByMerchant(MERCHANT_ID, 0, 10)).thenReturn(List.of(order));
+        when(orderPersistencePort.countByMerchant(MERCHANT_ID)).thenReturn(3L);
+        when(orderPersistencePort.findByMerchantAndStatuses(MERCHANT_ID,
+                List.of("SHIPPED"), 0, 10)).thenReturn(List.of(order));
+        when(orderPersistencePort.countByMerchantAndStatuses(MERCHANT_ID,
+                List.of("SHIPPED"))).thenReturn(2L);
+
+        OrderService.OrderPage all = orderService.pageByMerchantOwner(MERCHANT_ID, "", 0, 10);
+        OrderService.OrderPage shipped = orderService.pageByMerchantOwner(MERCHANT_ID,
+                "SHIPPED", 0, 10);
+
+        assertEquals(3L, all.totalElements());
+        assertEquals(2L, shipped.totalElements());
+        assertEquals(List.of(order), shipped.content());
+    }
+
+    @Test
+    void searchMerchantPageReturnsRepositoryCounts() {
+        Order order = pendingOrder();
+        Instant from = Instant.parse("2026-07-01T00:00:00Z");
+        Instant to = Instant.parse("2026-07-31T00:00:00Z");
+        when(orderPersistencePort.searchByMerchant(MERCHANT_ID, List.of("SHIPPED"),
+                "order", from, to, 0, 10)).thenReturn(List.of(order));
+        when(orderPersistencePort.countSearchByMerchant(MERCHANT_ID, List.of("SHIPPED"),
+                "order", from, to)).thenReturn(4L);
+
+        OrderService.OrderPage page = orderService.searchMerchantPage(MERCHANT_ID, "SHIPPED",
+                "order", from, to, 0, 10);
+
+        assertEquals(List.of(order), page.content());
+        assertEquals(4L, page.totalElements());
+    }
+
+    @Test
+    void countMerchantOrdersByStatusReturnsStatusMap() {
+        when(orderPersistencePort.countByMerchantGroupByStatus(MERCHANT_ID))
+                .thenReturn(List.of(new OrderPersistencePort.OrderStatusCount("PAID", 2L),
+                        new OrderPersistencePort.OrderStatusCount("SHIPPED", 1L)));
+
+        Map<String, Long> counts = orderService.countMerchantOrdersByStatus(MERCHANT_ID);
+
+        assertEquals(Map.of("PAID", 2L, "SHIPPED", 1L), counts);
+    }
+
+    @Test
+    void retryShipmentRegistrationSkipsOrdersNotPreparingAndQueuesWhenAsked() {
+        Order order = pendingOrder();
+        when(orderPersistencePort.findById(ORDER_ID)).thenReturn(Optional.of(order));
+
+        orderService.retryShipmentRegistration(ORDER_ID);
+        orderService.enqueueShipmentRegistration(ORDER_ID);
+
+        verify(shippingGateway, never()).createAndRegister(anyString(), anyString(), anyString(),
+                any(), any(), any(), anyString(), anyList());
+        verify(compensationTaskPort).enqueue(ArgumentMatchers.argThat(
+                task -> task.type() == CompensationTaskPort.Type.SHIPMENT_REGISTER));
     }
 
     private static ShippingAddress address() {

@@ -135,8 +135,11 @@ public class MerchantController {
         @Operation(summary = "List merchants", description = "Public list of all merchants on the platform")
         public ResponseEntity<ApiResponse<List<MerchantResponse>>> list(
                         @RequestParam(defaultValue = "0") int page,
-                        @RequestParam(defaultValue = "20") int size) {
-                PageResult<MerchantResult> results = listMerchantsInputPort.execute(merchantDtoMapper.toListQuery(page, size));
+                        @RequestParam(defaultValue = "20") int size,
+                        @RequestParam(required = false) String search,
+                        @RequestParam(required = false) String provinceCode) {
+                PageResult<MerchantResult> results = listMerchantsInputPort.execute(
+                                merchantDtoMapper.toListQuery(page, size, search, provinceCode));
                 return ResponseEntity.ok(ApiResponse.successWithPaging(
                                 merchantDtoMapper.toResponses(results.content()),
                                 PageMetadata.of(results.page(), results.size(), results.totalElements()),

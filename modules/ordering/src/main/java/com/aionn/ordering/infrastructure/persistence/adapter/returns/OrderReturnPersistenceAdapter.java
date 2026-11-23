@@ -62,6 +62,81 @@ public class OrderReturnPersistenceAdapter implements OrderReturnPersistencePort
     }
 
     @Override
+    public List<OrderReturn> findByMerchantId(String merchantId, int page, int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 200));
+        return jpa.findByMerchantIdOrderByRequestedAtDesc(
+                        merchantId,
+                        PageRequest.of(Math.max(0, page), safeLimit))
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countByMerchantId(String merchantId) {
+        return jpa.countByMerchantId(merchantId);
+    }
+
+    @Override
+    public List<OrderReturn> searchByMerchant(
+            String merchantId,
+            String status,
+            String reasonType,
+            String search,
+            int page,
+            int limit) {
+        String normalizedSearch = search == null || search.isBlank() ? null : search.trim().toLowerCase();
+        boolean hasSearch = normalizedSearch != null;
+        String pattern = hasSearch ? "%" + normalizedSearch + "%" : "";
+        String normalizedStatus = normalize(status);
+        String normalizedReason = normalize(reasonType);
+        return jpa.searchMerchantReturns(
+                        merchantId,
+                        normalizedStatus != null,
+                        normalizedStatus == null ? "" : normalizedStatus,
+                        normalizedReason != null,
+                        normalizedReason == null ? "" : normalizedReason,
+                        hasSearch,
+                        pattern,
+                        PageRequest.of(Math.max(0, page), Math.max(1, Math.min(limit, 100))))
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countSearchByMerchant(
+            String merchantId,
+            String status,
+            String reasonType,
+            String search) {
+        String normalizedSearch = search == null || search.isBlank() ? null : search.trim().toLowerCase();
+        boolean hasSearch = normalizedSearch != null;
+        String pattern = hasSearch ? "%" + normalizedSearch + "%" : "";
+        String normalizedStatus = normalize(status);
+        String normalizedReason = normalize(reasonType);
+        return jpa.countSearchMerchantReturns(
+                merchantId,
+                normalizedStatus != null,
+                normalizedStatus == null ? "" : normalizedStatus,
+                normalizedReason != null,
+                normalizedReason == null ? "" : normalizedReason,
+                hasSearch,
+                pattern);
+    }
+
+    @Override
+    public List<ReturnStatusCount> countByMerchantGroupByStatus(String merchantId) {
+        return jpa.countMerchantReturnsByStatus(merchantId).stream()
+                .map(row -> new ReturnStatusCount(row.getStatus(), row.getCount()))
+                .toList();
+    }
+
+    private static String normalize(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    @Override
     public boolean hasActiveReturn(String orderId) {
         return jpa.existsByOrderIdAndStatusIn(orderId,
                 List.of("REQUESTED", "APPROVED", "ITEM_RECEIVED"));
